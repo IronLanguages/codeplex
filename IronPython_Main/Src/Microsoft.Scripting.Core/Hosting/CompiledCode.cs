@@ -13,12 +13,11 @@
  *
  * ***************************************************************************/
 
-using System.Diagnostics;
+using System;
 using System.Runtime.Remoting;
+using System.Security.Permissions;
 
 using Microsoft.Scripting.Utils;
-using System;
-using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -58,7 +57,7 @@ namespace Microsoft.Scripting.Hosting {
         /// The module must be local with respect to the compiled code object.
         /// </summary>
         public object Evaluate(ScriptScope/*!*/ scope) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
             return _code.Run(scope.Scope);
         }
 

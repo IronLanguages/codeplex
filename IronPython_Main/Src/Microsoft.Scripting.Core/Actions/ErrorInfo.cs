@@ -56,8 +56,8 @@ namespace Microsoft.Scripting.Actions {
         /// be thrown.
         /// </summary>
         public static ErrorInfo FromException(Expression/*!*/ exceptionValue) {
-            Contract.RequiresNotNull(exceptionValue, "exceptionValue");
-            Contract.Requires(typeof(Exception).IsAssignableFrom(exceptionValue.Type), "exceptionValue", "must by an Exception instance");
+            ContractUtils.RequiresNotNull(exceptionValue, "exceptionValue");
+            ContractUtils.Requires(typeof(Exception).IsAssignableFrom(exceptionValue.Type), "exceptionValue", "must by an Exception instance");
 
             return new ErrorInfo(exceptionValue, ErrorInfoKind.Exception);
         }
@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Actions {
         /// returned to the user.
         /// </summary>
         public static ErrorInfo FromValue(Expression/*!*/ resultValue) {
-            Contract.RequiresNotNull(resultValue, "resultValue");
+            ContractUtils.RequiresNotNull(resultValue, "resultValue");
 
             return new ErrorInfo(resultValue, ErrorInfoKind.Error);
         }
@@ -79,7 +79,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="resultValue"></param>
         /// <returns></returns>
         public static ErrorInfo FromValueNoError(Expression/*!*/ resultValue) {
-            Contract.RequiresNotNull(resultValue, "resultValue");
+            ContractUtils.RequiresNotNull(resultValue, "resultValue");
 
             return new ErrorInfo(resultValue, ErrorInfoKind.Success);
         }

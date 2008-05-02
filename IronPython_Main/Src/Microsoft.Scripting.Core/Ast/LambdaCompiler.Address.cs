@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
@@ -33,12 +34,14 @@ namespace Microsoft.Scripting.Ast {
                     EmitExpressionAddress(node, type);
                     break;
 
+                // TODO: remove
                 case AstNodeType.Conditional:
                     AddresOf((ConditionalExpression)node, type);
                     break;
 
-                case AstNodeType.BoundAssignment:
-                    AddresOf((BoundAssignment)node);
+                // TODO: remove
+                case AstNodeType.Assign:
+                    AddresOf((AssignmentExpression)node);
                     break;
 
                 case AstNodeType.GlobalVariable:
@@ -48,6 +51,7 @@ namespace Microsoft.Scripting.Ast {
                     AddressOfVariable(node, type);
                     break;
 
+                // TODO: remove
                 case AstNodeType.Block:
                     AddresOf((Block)node, type);
                     break;
@@ -56,39 +60,42 @@ namespace Microsoft.Scripting.Ast {
                     AddresOf((MemberExpression)node, type);
                     break;
 
+                // TODO: remove
                 case AstNodeType.Convert:
                     AddresOf((UnaryExpression)node, type);
                     break;
             }
         }
 
-        private void AddresOf(BoundAssignment node) {
+        private void AddresOf(AssignmentExpression node) {
+            ContractUtils.Requires(node.Expression is VariableExpression || node.Expression is ParameterExpression, "node");
+
             EmitExpression(node.Value);
-            Slot slot = _info.GetVariableSlot(node.Variable);
-            slot.EmitSet(this);
-            slot.EmitGetAddr(this);
+            Slot slot = _info.ReferenceSlots[node.Expression];
+            slot.EmitSet(_ilg);
+            slot.EmitGetAddr(_ilg);
         }
 
         private void AddressOfVariable(Expression node, Type type) {
             Debug.Assert(node is VariableExpression || node is ParameterExpression);
 
             if (type == node.Type) {
-                _info.GetVariableSlot(node).EmitGetAddr(this);
+                _info.ReferenceSlots[node].EmitGetAddr(_ilg);
             } else {
                 EmitExpressionAddress(node, type);
             }
         }
 
         private void AddresOf(ConditionalExpression node, Type type) {
-            Label eoi = DefineLabel();
-            Label next = DefineLabel();
+            Label eoi = _ilg.DefineLabel();
+            Label next = _ilg.DefineLabel();
             EmitExpression(node.Test);
-            Emit(OpCodes.Brfalse, next);
+            _ilg.Emit(OpCodes.Brfalse, next);
             EmitAddress(node.IfTrue, type);
-            Emit(OpCodes.Br, eoi);
-            MarkLabel(next);
+            _ilg.Emit(OpCodes.Br, eoi);
+            _ilg.MarkLabel(next);
             EmitAddress(node.IfFalse, type);
-            MarkLabel(eoi);
+            _ilg.MarkLabel(eoi);
         }
 
         private void AddresOf(Block node, Type type) {
@@ -110,7 +117,7 @@ namespace Microsoft.Scripting.Ast {
                     // If we don't want the expression just emitted as the result,
                     // pop it off of the stack, unless it is a void expression.
                     if (current.Type != typeof(void)) {
-                        Emit(OpCodes.Pop);
+                        _ilg.Emit(OpCodes.Pop);
                     }
                 }
             }
@@ -121,7 +128,7 @@ namespace Microsoft.Scripting.Ast {
                 EmitExpressionAddress(node, type);
             } else {
                 EmitInstance(node.Expression, node.Member.DeclaringType);
-                EmitFieldAddress((FieldInfo)node.Member);
+                _ilg.EmitFieldAddress((FieldInfo)node.Member);
             }
         }
 
@@ -130,7 +137,7 @@ namespace Microsoft.Scripting.Ast {
 
             if (node.Operand.Type == typeof(object) && type.IsValueType) {
                 EmitExpression(node.Operand);
-                Emit(OpCodes.Unbox, type);
+                _ilg.Emit(OpCodes.Unbox, type);
             } else {
                 EmitExpressionAddress(node, type);
             }
@@ -140,9 +147,9 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(TypeUtils.CanAssign(type, node.Type));
 
             EmitExpression(node);
-            Slot tmp = GetLocalTmp(type);
-            tmp.EmitSet(this);
-            tmp.EmitGetAddr(this);
+            Slot tmp = _ilg.GetLocalTmp(type);
+            tmp.EmitSet(_ilg);
+            tmp.EmitGetAddr(_ilg);
         }
     }
 }

@@ -22,7 +22,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Utils;
     using Microsoft.Scripting.Generation;
 
@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Actions {
 
         public MemberBinderHelper(CodeContext context, TActionKind action, object []args)
             : base(context, action) {
-            Contract.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(args, "args");
             if (args.Length == 0) throw new ArgumentException("args must have at least one member");
 
             _args = args;

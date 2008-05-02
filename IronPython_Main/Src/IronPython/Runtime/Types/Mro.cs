@@ -62,13 +62,13 @@ namespace IronPython.Runtime.Types {
         public Mro() {
         }
 
-        public static IList<PythonType> Calculate(PythonType startingType, IList<PythonType> bases) {
+        public static List<PythonType> Calculate(PythonType startingType, IList<PythonType> bases) {
             return Calculate(startingType, new List<PythonType>(bases), false);
         }
 
         /// <summary>
         /// </summary>
-        public static IList<PythonType> Calculate(PythonType startingType, IList<PythonType> baseTypes, bool forceNewStyle) {
+        public static List<PythonType> Calculate(PythonType startingType, IList<PythonType> baseTypes, bool forceNewStyle) {
             List<PythonType> bases = new List<PythonType>();
             foreach (PythonType dt in baseTypes) bases.Add(dt);
 

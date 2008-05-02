@@ -26,11 +26,13 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using System.Runtime.CompilerServices;
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Expression;
+
     [PythonSystemType("instancemethod")]
-    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, ICustomMembers, IDynamicObject {
+    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicObject, ICodeFormattable {
         private object _func;
         private object _inst;
         private object _declaringClass;
@@ -123,21 +125,6 @@ namespace IronPython.Runtime.Calls {
             return im_class.ToString();
         }
 
-        public override string ToString() {
-            object name;
-            if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, _func, Symbols.Name, out name)) {
-                name = "?";
-            }
-            if (_inst != null) {
-                return string.Format("<bound method {0}.{1} of {2}>",
-                    DeclaringClassAsString(),
-                    name,
-                    PythonOps.StringRepr(_inst));
-            } else {
-                return string.Format("<unbound method {0}.{1}>", DeclaringClassAsString(), name);
-            }
-        }
-
         public override bool Equals(object obj) {
             Method other = obj as Method;
             if (other == null) return false;
@@ -153,20 +140,6 @@ namespace IronPython.Runtime.Calls {
             return PythonOps.Hash(_inst) ^ PythonOps.Hash(_func);
         }
         
-        #endregion
-
-        #region Descriptor Protocol Members
-
-        public object __get__(object instance) { return __get__(instance, im_class); }
-
-        public object __get__(object instance, object owner) {
-            if (this.im_self == null) {
-                if (owner == im_class || PythonOps.IsSubClass((PythonType)owner, im_class)) {
-                    return new Method(_func, instance, owner);
-                }
-            }
-            return this;
-        }
         #endregion
 
         #region IWeakReferenceable Members
@@ -186,57 +159,54 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
 
-        #region ICustomMembers Members
+        #region Custom member access
 
-        bool ICustomMembers.TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return ((ICustomMembers)this).TryGetBoundCustomMember(context, name, out value);
-        }
-
-        bool ICustomMembers.TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            if (name == Symbols.Module) {
+        [SpecialName]
+        public object GetCustomMember(CodeContext context, string name) {
+            if (name == "__module__") {
                 // Get the module name from the function and pass that out.  Note that CPython's method has
                 // no __module__ attribute and this value can be gotten via a call to method.__getattribute__ 
                 // there as well.
-                value = PythonOps.GetBoundAttr(context, _func, Symbols.Module);
-                return true;
+                return PythonOps.GetBoundAttr(context, _func, Symbols.Module);                
+            }
+            
+            object value;
+            SymbolId symbol = SymbolTable.StringToId(name);
+            if (TypeCache.Method.TryGetBoundMember(context, this, symbol, out value) ||       // look on method
+                PythonOps.TryGetBoundAttr(context, _func, symbol, out value)) {               // Forward to the func
+                return value;
             }
 
-            if (TypeCache.Method.TryGetBoundMember(context, this, name, out value)) return true;
-
-            // Forward to the func
-            return PythonOps.TryGetBoundAttr(context, _func, name, out value);
+            
+            return OperationFailed.Value;
         }
 
-        void ICustomMembers.SetCustomMember(CodeContext context, SymbolId name, object value) {
-            TypeCache.Method.SetMember(context, this, name, value);
+        [SpecialName]
+        public void SetMemberAfter(CodeContext context, string name, object value) {
+            TypeCache.Method.SetMember(context, this, SymbolTable.StringToId(name), value);
         }
 
-        bool ICustomMembers.DeleteCustomMember(CodeContext context, SymbolId name) {
-            TypeCache.Method.DeleteMember(context, this, name);
-            return true;
+        [SpecialName]
+        public void DeleteMember(CodeContext context, string name) {
+            TypeCache.Method.DeleteMember(context, this, SymbolTable.StringToId(name));
         }
 
         IList<object> IMembersList.GetMemberNames(CodeContext context) {
-            List ret = new List();
-            foreach(SymbolId si in TypeCache.Method.GetMemberNames(context, this)) {
-                ret.AddNoLock(SymbolTable.IdToString(si));
-            }
+            List ret = TypeCache.Method.GetMemberNames(context);
 
             ret.AddNoLockNoDups(SymbolTable.IdToString(Symbols.Module));
 
-            IAttributesCollection dict = ((PythonFunction)_func).func_dict;
-            if (dict != null) {
+            PythonFunction pf = _func as PythonFunction;
+            if (pf != null) {
+                IAttributesCollection dict = pf.func_dict;
+                
                 // Check the func
                 foreach (KeyValuePair<object, object> kvp in ((PythonFunction)_func).func_dict) {
                     ret.AddNoLockNoDups(kvp.Key);
-                }
+                }                
             }
 
             return ret;
-        }
-
-        IDictionary<object, object> ICustomMembers.GetCustomMemberDictionary(CodeContext context) {
-            return TypeCache.Method.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
         }
 
         #endregion
@@ -244,7 +214,13 @@ namespace IronPython.Runtime.Calls {
         #region PythonTypeSlot Overrides
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-            value = __get__(instance, owner);
+            if (this.im_self == null) {
+                if (owner == null || owner == im_class || PythonOps.IsSubClass((PythonType)owner, im_class)) {
+                    value = new Method(_func, instance, owner);
+                    return true;
+                }
+            }
+            value = this;
             return true;
         }
 
@@ -301,7 +277,7 @@ namespace IronPython.Runtime.Calls {
                         ),
                         Ast.Null()
                     ),
-                    Ast.Action.Call(GetNotNullCallAction(action), typeof(object), notNullArgs),
+                    Ast.Action.Call(GetNotNullCallAction(context, action), typeof(object), notNullArgs),
                     nullSelf
                 )
             );
@@ -382,8 +358,28 @@ namespace IronPython.Runtime.Calls {
             return args;
         }
 
-        private static CallAction GetNotNullCallAction(CallAction action) {
-            return CallAction.Make(action.Signature.InsertArgument(new ArgumentInfo(ArgumentKind.Simple)));
+        private static CallAction GetNotNullCallAction(CodeContext context, CallAction action) {
+            return CallAction.Make(PythonContext.GetContext(context).Binder, action.Signature.InsertArgument(new ArgumentInfo(ArgumentKind.Simple)));
+        }
+
+        #endregion
+
+        #region ICodeFormattable Members
+
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
+            object name;
+            if (!PythonOps.TryGetBoundAttr(context, _func, Symbols.Name, out name)) {
+                name = "?";
+            }
+
+            if (_inst != null) {
+                return string.Format("<bound method {0}.{1} of {2}>",
+                    DeclaringClassAsString(),
+                    name,
+                    PythonOps.StringRepr(_inst));
+            } else {
+                return string.Format("<unbound method {0}.{1}>", DeclaringClassAsString(), name);
+            }
         }
 
         #endregion

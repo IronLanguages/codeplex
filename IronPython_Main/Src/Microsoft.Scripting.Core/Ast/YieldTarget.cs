@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
 
         internal Label EnsureLabel(LambdaCompiler cg) {
             if (!_initialized) {
-                _label = cg.DefineLabel();
+                _label = cg.IL.DefineLabel();
                 _initialized = true;
             }
             return _label;

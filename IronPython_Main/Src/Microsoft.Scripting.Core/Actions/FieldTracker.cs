@@ -24,14 +24,14 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using System.Diagnostics;
 
     public class FieldTracker : MemberTracker {
         private readonly FieldInfo _field;
 
         public FieldTracker(FieldInfo field) {
-            Contract.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(field, "field");
             _field = field;
         }
 
@@ -127,7 +127,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Internal expression builders
 
-        internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
             if (DeclaringType.IsGenericType && DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
                 // work around a CLR bug where we can't access generic fields from dynamic methods.
                 return Ast.Call(
@@ -150,7 +150,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        internal override MemberTracker BindToInstance(Expression instance) {
+        public override MemberTracker BindToInstance(Expression instance) {
             if (IsStatic) return this;
 
             return new BoundMemberTracker(this, instance);

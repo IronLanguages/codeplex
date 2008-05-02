@@ -15,17 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.Remoting;
 using System.Diagnostics;
 
+using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
-using System.Security.Permissions;
-using Microsoft.Scripting.Runtime;
-using System.Threading;
 
 namespace Microsoft.Scripting.Runtime {
 
@@ -64,7 +59,7 @@ namespace Microsoft.Scripting.Runtime {
         private const int ClearThreshold = 50;
 
         public DynamicOperations(CodeContext/*!*/ context) {
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             _context = context;
         }
@@ -81,24 +76,24 @@ namespace Microsoft.Scripting.Runtime {
             // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
             switch(parameters.Length) {
                 case 0: {
-                        FastCallSite<FastDynamicSiteTarget<object, object>> site;
-                        site = GetSite<object, object>(CallAction.Make(new CallSignature(0)));
-                        return site.Target(site, obj);
+                        CallSite<DynamicSiteTarget<object, object>> site;
+                        site = GetSite<object, object>(CallAction.Make(Binder, new CallSignature(0)));
+                        return site.Target(site, _context, obj);
                     }
                 case 1: {
-                        FastCallSite<FastDynamicSiteTarget<object, object, object>> site;
-                        site = GetSite<object, object, object>(CallAction.Make(new CallSignature(1)));
-                        return site.Target(site, obj, parameters[0]);
+                        CallSite<DynamicSiteTarget<object, object, object>> site;
+                        site = GetSite<object, object, object>(CallAction.Make(Binder, new CallSignature(1)));
+                        return site.Target(site, _context, obj, parameters[0]);
                     }
                 case 2: {
-                        FastCallSite<FastDynamicSiteTarget<object, object, object, object>> site;
-                        site = GetSite<object, object, object, object>(CallAction.Make(new CallSignature(2)));
-                        return site.Target(site, obj, parameters[0], parameters[1]);
+                        CallSite<DynamicSiteTarget<object, object, object, object>> site;
+                        site = GetSite<object, object, object, object>(CallAction.Make(Binder, new CallSignature(2)));
+                        return site.Target(site, _context, obj, parameters[0], parameters[1]);
                     }
                 default: {
-                        FastCallSite<FastDynamicSiteTarget<object, object[], object>> site;
-                        site = GetSite<object, object[], object>(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
-                        return site.Target(site, obj, parameters);
+                        CallSite<DynamicSiteTarget<object, object[], object>> site;
+                        site = GetSite<object, object[], object>(CallAction.Make(Binder, new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+                        return site.Target(site, _context, obj, parameters);
                     }
             }
         }
@@ -107,9 +102,9 @@ namespace Microsoft.Scripting.Runtime {
         /// Gets the member name from the object obj.  Throws an exception if the member does not exist or is write-only.
         /// </summary>
         public object GetMember(object obj, string name) {
-            FastCallSite<FastDynamicSiteTarget<object, object>> site;
-            site = GetSite<object, object>(GetMemberAction.Make(name));
-            return site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, object>> site;
+            site = GetSite<object, object>(GetMemberAction.Make(Binder, name));
+            return site.Target(site, _context, obj);
         }
 
         /// <summary>
@@ -117,9 +112,9 @@ namespace Microsoft.Scripting.Runtime {
         /// member does not exist, is write-only, or cannot be converted.
         /// </summary>
         public T GetMember<T>(object obj, string name) {
-            FastCallSite<FastDynamicSiteTarget<object, T>> site;
-            site = GetSite<object, T>(GetMemberAction.Make(name));
-            return site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, T>> site;
+            site = GetSite<object, T>(GetMemberAction.Make(Binder, name));
+            return site.Target(site, _context, obj);
         }
 
         /// <summary>
@@ -127,9 +122,9 @@ namespace Microsoft.Scripting.Runtime {
         /// stores the value in the value out param.
         /// </summary>
         public bool TryGetMember(object obj, string name, out object value) {
-            FastCallSite<FastDynamicSiteTarget<object, object>> site;
-            site = GetSite<object, object>(GetMemberAction.Make(name, GetMemberBindingFlags.NoThrow));
-            object res = site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, object>> site;
+            site = GetSite<object, object>(GetMemberAction.Make(Binder, name, GetMemberBindingFlags.NoThrow));
+            object res = site.Target(site, _context, obj);
 
             if (res != OperationFailed.Value) {
                 value = res;
@@ -153,18 +148,18 @@ namespace Microsoft.Scripting.Runtime {
         /// or false if the member does not exist.
         /// </summary>
         public bool RemoveMember(object obj, string name) {
-            FastCallSite<FastDynamicSiteTarget<object, bool>> site;
-            site = GetSite<object, bool>(DeleteMemberAction.Make(name));
-            return site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, bool>> site;
+            site = GetSite<object, bool>(DeleteMemberAction.Make(Binder, name));
+            return site.Target(site, _context, obj);
         }
 
         /// <summary>
         /// Sets the member name on object obj to value.
         /// </summary>
         public void SetMember(object obj, string name, object value) {
-            FastCallSite<FastDynamicSiteTarget<object, object, object>> site;
-            site = GetSite<object, object, object>(SetMemberAction.Make(name));
-            site.Target(site, obj, value);
+            CallSite<DynamicSiteTarget<object, object, object>> site;
+            site = GetSite<object, object, object>(SetMemberAction.Make(Binder, name));
+            site.Target(site, _context, obj, value);
         }
 
         /// <summary>
@@ -172,36 +167,36 @@ namespace Microsoft.Scripting.Runtime {
         /// boxing and casting of strongly typed members.
         /// </summary>
         public void SetMember<T>(object obj, string name, T value) {
-            FastCallSite<FastDynamicSiteTarget<object, T, object>> site;
-            site = GetSite<object, T, object>(SetMemberAction.Make(name));
-            site.Target(site, obj, value);
+            CallSite<DynamicSiteTarget<object, T, object>> site;
+            site = GetSite<object, T, object>(SetMemberAction.Make(Binder, name));
+            site.Target(site, _context, obj, value);
         }
 
         /// <summary>
         /// Convers the object obj to the type T.
         /// </summary>
         public T ConvertTo<T>(object obj) {
-            FastCallSite<FastDynamicSiteTarget<object, T>> site;
-            site = GetSite<object, T>(ConvertToAction.Make(typeof(T)));
-            return site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, T>> site;
+            site = GetSite<object, T>(ConvertToAction.Make(Binder, typeof(T)));
+            return site.Target(site, _context, obj);
         }
 
         /// <summary>
         /// Converts the object obj to the type type.
         /// </summary>
         public object ConvertTo(object obj, Type type) {
-            FastCallSite<FastDynamicSiteTarget<object, object>> site;
-            site = GetSite<object, object>(ConvertToAction.Make(type));
-            return site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, object>> site;
+            site = GetSite<object, object>(ConvertToAction.Make(Binder, type));
+            return site.Target(site, _context, obj);
         }
 
         /// <summary>
         /// Converts the object obj to the type T.  Returns true if the value can be converted, false if it cannot.
         /// </summary>
         public bool TryConvertTo<T>(object obj, out T result) {
-            FastCallSite<FastDynamicSiteTarget<object, object>> site;
-            site = GetSite<object, object>(ConvertToAction.Make(typeof(T), ConversionResultKind.ExplicitTry));
-            object res = site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, object>> site;
+            site = GetSite<object, object>(ConvertToAction.Make(Binder, typeof(T), ConversionResultKind.ExplicitTry));
+            object res = site.Target(site, _context, obj);
             
             if (res == null) {
                 // conversion failed or it's null -> null on a value type or a nullable type
@@ -217,9 +212,9 @@ namespace Microsoft.Scripting.Runtime {
         /// Converts the object obj to the type type.  Returns true if the value can be converted, false if it cannot.
         /// </summary>
         public bool TryConvertTo(object obj, Type type, out object result) {
-            FastCallSite<FastDynamicSiteTarget<object, object>> site;
-            site = GetSite<object, object>(ConvertToAction.Make(type, ConversionResultKind.ExplicitTry));
-            result = site.Target(site, obj);
+            CallSite<DynamicSiteTarget<object, object>> site;
+            site = GetSite<object, object>(ConvertToAction.Make(Binder, type, ConversionResultKind.ExplicitTry));
+            result = site.Target(site, _context, obj);
 
             if (result == null) {
                 // conversion failed or it's null -> null on a value type or a nullable type
@@ -240,9 +235,9 @@ namespace Microsoft.Scripting.Runtime {
         /// Performs a generic unary operation on the strongly typed target and returns the value as the specified type
         /// </summary>
         public TResult DoOperation<TTarget, TResult>(Operators op, TTarget target) {
-            FastCallSite<FastDynamicSiteTarget<TTarget, TResult>> site;
-            site = GetSite<TTarget, TResult>(DoOperationAction.Make(op));
-            return site.Target(site, target);
+            CallSite<DynamicSiteTarget<TTarget, TResult>> site;
+            site = GetSite<TTarget, TResult>(DoOperationAction.Make(Binder, op));
+            return site.Target(site, _context, target);
         }
 
         /// <summary>
@@ -257,23 +252,19 @@ namespace Microsoft.Scripting.Runtime {
         /// the strongly typed result.
         /// </summary>
         public TResult DoOperation<TTarget, TOther, TResult>(Operators op, TTarget target, TOther other) {
-            FastCallSite<FastDynamicSiteTarget<TTarget, TOther, TResult>> site;
-            site = GetSite<TTarget, TOther, TResult>(DoOperationAction.Make(op));
-            return site.Target(site, target, other);
+            CallSite<DynamicSiteTarget<TTarget, TOther, TResult>> site;
+            site = GetSite<TTarget, TOther, TResult>(DoOperationAction.Make(Binder, op));
+            return site.Target(site, _context, target, other);
         }
 
         #endregion
 
         #region Private implementation details
 
-        /// <summary>
-        /// Helper to create a new dynamic site w/ the specified type parameters for the provided action.
-        /// 
-        /// This will either get the site from the cache or create a new site and return it.  The cache
-        /// may be cleaned if it's gotten too big since the last usage.
-        /// </summary>
-        private FastCallSite<FastDynamicSiteTarget<T0, Tret>> GetSite<T0, Tret>(DynamicAction action) {
-            return GetSiteWorker<FastCallSite<FastDynamicSiteTarget<T0, Tret>>>(action, FastCallSite<FastDynamicSiteTarget<T0, Tret>>.Create);
+        private ActionBinder Binder {
+            get {
+                return _context.LanguageContext.Binder;
+            }
         }
 
         /// <summary>
@@ -282,8 +273,8 @@ namespace Microsoft.Scripting.Runtime {
         /// This will either get the site from the cache or create a new site and return it.  The cache
         /// may be cleaned if it's gotten too big since the last usage.
         /// </summary>
-        private FastCallSite<FastDynamicSiteTarget<T0, T1, Tret>> GetSite<T0, T1, Tret>(DynamicAction action) {
-            return GetSiteWorker<FastCallSite<FastDynamicSiteTarget<T0, T1, Tret>>>(action, FastCallSite<FastDynamicSiteTarget<T0, T1, Tret>>.Create);
+        private CallSite<DynamicSiteTarget<T0, Tret>> GetSite<T0, Tret>(DynamicAction action) {
+            return GetSiteWorker<CallSite<DynamicSiteTarget<T0, Tret>>>(action, CallSite<DynamicSiteTarget<T0, Tret>>.Create);
         }
 
         /// <summary>
@@ -292,14 +283,24 @@ namespace Microsoft.Scripting.Runtime {
         /// This will either get the site from the cache or create a new site and return it.  The cache
         /// may be cleaned if it's gotten too big since the last usage.
         /// </summary>
-        private FastCallSite<FastDynamicSiteTarget<T0, T1, T2, Tret>> GetSite<T0, T1, T2, Tret>(DynamicAction action) {
-            return GetSiteWorker<FastCallSite<FastDynamicSiteTarget<T0, T1, T2, Tret>>>(action, FastCallSite<FastDynamicSiteTarget<T0, T1, T2, Tret>>.Create);
+        private CallSite<DynamicSiteTarget<T0, T1, Tret>> GetSite<T0, T1, Tret>(DynamicAction action) {
+            return GetSiteWorker<CallSite<DynamicSiteTarget<T0, T1, Tret>>>(action, CallSite<DynamicSiteTarget<T0, T1, Tret>>.Create);
+        }
+
+        /// <summary>
+        /// Helper to create a new dynamic site w/ the specified type parameters for the provided action.
+        /// 
+        /// This will either get the site from the cache or create a new site and return it.  The cache
+        /// may be cleaned if it's gotten too big since the last usage.
+        /// </summary>
+        private CallSite<DynamicSiteTarget<T0, T1, T2, Tret>> GetSite<T0, T1, T2, Tret>(DynamicAction action) {
+            return GetSiteWorker<CallSite<DynamicSiteTarget<T0, T1, T2, Tret>>>(action, CallSite<DynamicSiteTarget<T0, T1, T2, Tret>>.Create);
         }
         
         /// <summary>
         /// Helper to create to get or create the dynamic site - called by the GetSite methods.
         /// </summary>
-        private T GetSiteWorker<T>(DynamicAction action, Function<CodeContext, DynamicAction, T> ctor) where T : FastCallSite {
+        private T GetSiteWorker<T>(DynamicAction action, Function<DynamicAction, T> ctor) where T : CallSite {
             SiteKey sk = new SiteKey(typeof(T), action);
 
             lock (_sites) {
@@ -311,7 +312,7 @@ namespace Microsoft.Scripting.Runtime {
                         SitesCreated = 0;
                         LastCleanup = 0;
                     }
-                    sk.Site = ctor(_context, sk.Action);
+                    sk.Site = ctor(sk.Action);
                     _sites[sk] = sk;
                 } else {
                     sk = old;                    
@@ -394,7 +395,7 @@ namespace Microsoft.Scripting.Runtime {
 
             // not used for equality, used for caching strategy
             public int HitCount;
-            public FastCallSite Site;
+            public CallSite Site;
 
             public SiteKey(Type/*!*/ siteType, DynamicAction/*!*/ action) {
                 Debug.Assert(siteType != null);

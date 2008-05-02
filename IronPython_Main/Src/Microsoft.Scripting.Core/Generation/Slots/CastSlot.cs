@@ -31,16 +31,16 @@ namespace Microsoft.Scripting.Generation {
         private Type _type;
 
         public CastSlot(Slot instance, Type type) {
-            Contract.RequiresNotNull(instance, "instance");
-            Contract.RequiresNotNull(type, "type");
-            if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
+            ContractUtils.RequiresNotNull(instance, "instance");
+            ContractUtils.RequiresNotNull(type, "type");
+            if (!type.IsVisible) throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, type.FullName));
 
             this._instance = instance;
             this._type = type;
         }
 
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             _instance.EmitGet(cg);
             if (!_type.IsAssignableFrom(_instance.Type)) {
@@ -53,12 +53,12 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            throw new NotImplementedException(Resources.NotImplemented);
+        public override void EmitGetAddr(ILGen cg) {
+            throw new NotImplementedException(ResourceUtils.GetString(ResourceUtils.NotImplemented));
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             if (_instance.Type.IsAssignableFrom(_type)) {
                 if (_type.IsValueType) {
@@ -71,7 +71,7 @@ namespace Microsoft.Scripting.Generation {
             _instance.EmitSet(cg);
         }
 
-        public override void EmitSetUninitialized(LambdaCompiler cg) {
+        public override void EmitSetUninitialized(ILGen cg) {
             // Cannot initialize non-object to "Uninitialized"
             if (_type == typeof(object)) {
                 base.EmitSetUninitialized(cg);

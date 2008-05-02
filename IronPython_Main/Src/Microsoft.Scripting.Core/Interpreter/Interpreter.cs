@@ -63,8 +63,8 @@ namespace Microsoft.Scripting.Interpreter {
         #endregion
 
         private static object Interpret(CodeContext context, Expression expr) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(expr, "expr");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(expr, "expr");
 
             int kind = (int)expr.NodeType;
             Debug.Assert(kind < _Interpreters.Length);
@@ -100,6 +100,7 @@ namespace Microsoft.Scripting.Interpreter {
 
         private static object InterpretConditionalExpression(CodeContext context, Expression expr) {
             ConditionalExpression node = (ConditionalExpression)expr;
+            context.Scope.SourceLocation = node.Start;
             object test;
 
             if (InterpretAndCheckFlow(context, node.Test, out test)) {
@@ -117,7 +118,7 @@ namespace Microsoft.Scripting.Interpreter {
             return !pi.IsOut || (pi.Attributes & ParameterAttributes.In) != 0;
         }
 
-        private static object InvokeMethod(MethodInfo method, object instance, object[] parameters) {
+        private static object InvokeMethod(MethodInfo method, object instance, params object[] parameters) {
             // TODO: Cache !!!
             ReflectedCaller _caller = null;
 
@@ -131,8 +132,26 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
+        private static object InterpretInvocationExpression(CodeContext context, Expression expr) {
+            InvocationExpression node = (InvocationExpression)expr;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, ArrayUtils.Insert(node.Expression, node.Arguments));
+            }
+
+            // TODO: when compiler gets a smarter implementation, this
+            // will need to change to match the new semantics
+            return InterpretMethodCallExpression(context, Expression.Call(node.Expression, node.Expression.Type.GetMethod("Invoke"), node.Arguments));
+        }
+
         private static object InterpretMethodCallExpression(CodeContext context, Expression expr) {
             MethodCallExpression node = (MethodCallExpression)expr;
+            context.Scope.SourceLocation = node.Start;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, ArrayUtils.Insert(node.Instance, node.Arguments));
+            }
+
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
             if (!node.Method.IsStatic) {
@@ -226,6 +245,11 @@ namespace Microsoft.Scripting.Interpreter {
 
         private static object InterpretBinaryExpression(CodeContext context, Expression expr) {
             BinaryExpression node = (BinaryExpression)expr;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, node.Left, node.Right);
+            }
+
             object left, right;
 
             if (InterpretAndCheckFlow(context, node.Left, out left)) {
@@ -386,6 +410,11 @@ namespace Microsoft.Scripting.Interpreter {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         private static object InterpretUnaryExpression(CodeContext context, Expression expr) {
             UnaryExpression node = (UnaryExpression)expr;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, node.Operand);
+            }
+
             object value;
             if (InterpretAndCheckFlow(context, node.Operand, out value)) {
                 return value;
@@ -428,7 +457,6 @@ namespace Microsoft.Scripting.Interpreter {
                 case AstNodeType.CodeContextExpression:
                     return context;
                 case AstNodeType.GeneratorIntrinsic:
-                case AstNodeType.EnvironmentExpression:
                     throw new NotImplementedException();
                 default:
                     throw new InvalidOperationException();
@@ -437,6 +465,11 @@ namespace Microsoft.Scripting.Interpreter {
 
         private static object InterpretNewExpression(CodeContext context, Expression expr) {
             NewExpression node = (NewExpression)expr;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, node.Arguments);
+            }
+
             object[] args = new object[node.Arguments.Count];
             for (int i = 0; i < node.Arguments.Count; i++) {
                 object argValue;
@@ -465,17 +498,29 @@ namespace Microsoft.Scripting.Interpreter {
 
         private static object InterpretActionExpression(CodeContext context, Expression expr) {
             ActionExpression node = (ActionExpression)expr;
-            object[] args = new object[node.Arguments.Count];
-            for (int i = 0; i < node.Arguments.Count; i++) {
+            context.Scope.SourceLocation = node.Start;
+            return InterpretCallSite(context, node.BindingInfo, node.Type, node.Arguments);
+        }
+
+        private static object InterpretCallSite(CodeContext context, Expression node, params Expression[] arguments) {
+            return InterpretCallSite(context, node.BindingInfo, node.Type, arguments);
+        }
+
+        private static object InterpretCallSite(CodeContext context, Expression node, IList<Expression> arguments) {
+            return InterpretCallSite(context, node.BindingInfo, node.Type, arguments);
+        }
+
+        private static object InterpretCallSite(CodeContext context, DynamicAction action, Type returnType, IList<Expression> arguments) {
+            object[] args = new object[arguments.Count];
+            for (int i = 0; i < arguments.Count; i++) {
                 object argValue;
-                if (InterpretAndCheckFlow(context, node.Arguments[i], out argValue)) {
+                if (InterpretAndCheckFlow(context, arguments[i], out argValue)) {
                     return argValue;
                 }
                 args[i] = argValue;
             }
 
-            Type[] types = CompilerHelpers.GetSiteTypes(node);
-            CallSite site = DynamicSiteHelpers.MakeSite(node.Action, DynamicSiteHelpers.MakeDynamicSiteType(types));
+            Type[] types = CompilerHelpers.GetSiteTypes(arguments, returnType);
 
             ReflectedCaller rc;
             lock (_executeSites) {
@@ -487,35 +532,58 @@ namespace Microsoft.Scripting.Interpreter {
                 }
             }
 
-            return rc.Invoke(context.LanguageContext.Binder, context, args, site);
+            return rc.Invoke(action, context, args);
         }
 
-        private static object InterpretArrayIndexAssignment(CodeContext context, Expression expr) {
-            ArrayIndexAssignment node = (ArrayIndexAssignment)expr;
+        private static object InterpretArrayIndexAssignment(CodeContext context, AssignmentExpression node) {
+            BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, arrayIndex.Left, arrayIndex.Right, node.Value);
+            }
+
             object value, array, index;
 
             // evaluate the value first
             if (InterpretAndCheckFlow(context, node.Value, out value)) {
                 return value;
             }
-            if (InterpretAndCheckFlow(context, node.Array, out array)) {
+            if (InterpretAndCheckFlow(context, arrayIndex.Left, out array)) {
                 return array;
             }
-            if (InterpretAndCheckFlow(context, node.Index, out index)) {
+            if (InterpretAndCheckFlow(context, arrayIndex.Right, out index)) {
                 return index;
             }
             ((Array)array).SetValue(value, (int)index);
             return value;
         }
 
-        private static object InterpretBoundAssignment(CodeContext context, Expression expr) {
-            BoundAssignment node = (BoundAssignment)expr;
+        private static object InterpretVariableAssignment(CodeContext context, Expression expr) {
+            AssignmentExpression node = (AssignmentExpression)expr;
+            context.Scope.SourceLocation = expr.Start;
             object value;
             if (InterpretAndCheckFlow(context, node.Value, out value)) {
                 return value;
             }
-            EvaluateAssignVariable(context, node.Variable, value);
+            EvaluateAssignVariable(context, node.Expression, value);
             return value;
+        }
+
+        private static object InterpretAssignmentExpression(CodeContext context, Expression expr) {
+            AssignmentExpression node = (AssignmentExpression)expr;
+            switch (node.Expression.NodeType) {
+                case AstNodeType.ArrayIndex:
+                    return InterpretArrayIndexAssignment(context, node);
+                case AstNodeType.MemberExpression:
+                    return InterpretMemberAssignment(context, node);
+                case AstNodeType.Parameter:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.TemporaryVariable:
+                    return InterpretVariableAssignment(context, node);
+                default:
+                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
+            }
         }
 
         private static object InterpretVariableExpression(CodeContext context, Expression expr) {
@@ -524,7 +592,13 @@ namespace Microsoft.Scripting.Interpreter {
             switch (node.NodeType) {
                 case AstNodeType.TemporaryVariable:
                     if (!context.Scope.TemporaryStorage.TryGetValue(node, out ret)) {
-                        throw context.LanguageContext.MissingName(node.Name);
+                        // return default(T) for temporary variables, this is the equivelent
+                        // of allocating a temporary on the stack and using it before
+                        // initializing it.
+                        if (node.Type.IsValueType) {
+                            return Activator.CreateInstance(node.Type);
+                        }
+                        return null;
                     } else {
                         return ret;
                     }
@@ -564,20 +638,16 @@ namespace Microsoft.Scripting.Interpreter {
             return GetDelegateForInterpreter(context, node);
         }
 
-        private static object EvaluateCodeContext(CodeContext context) {
-            return context;
-        }
+        private static object InterpretMemberAssignment(CodeContext context, AssignmentExpression node) {
+            MemberExpression lvalue = (MemberExpression)node.Expression;
 
-        private static object InterpretDeleteUnboundExpression(CodeContext context, Expression expr) {
-            DeleteUnboundExpression node = (DeleteUnboundExpression)expr;
-            return RuntimeHelpers.RemoveName(context, node.Name);
-        }
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, lvalue.Expression, node.Value);
+            }
 
-        private static object InterpretMemberAssignment(CodeContext context, Expression expr) {
-            MemberAssignment node = (MemberAssignment)expr;
             object target = null, value;
-            if (node.Expression != null) {
-                if (InterpretAndCheckFlow(context, node.Expression, out target)) {
+            if (lvalue.Expression != null) {
+                if (InterpretAndCheckFlow(context, lvalue.Expression, out target)) {
                     return target;
                 }
             }
@@ -585,24 +655,29 @@ namespace Microsoft.Scripting.Interpreter {
                 return value;
             }
 
-            switch (node.Member.MemberType) {
+            switch (lvalue.Member.MemberType) {
                 case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)node.Member;
+                    FieldInfo field = (FieldInfo)lvalue.Member;
                     field.SetValue(target, value);
                     break;
                 case MemberTypes.Property:
-                    PropertyInfo property = (PropertyInfo)node.Member;
+                    PropertyInfo property = (PropertyInfo)lvalue.Member;
                     property.SetValue(target, value, null);
                     break;
                 default:
                     Debug.Assert(false, "Invalid member type");
                     break;
             }
-            return null;
+            return value;
         }
 
         private static object InterpretMemberExpression(CodeContext context, Expression expr) {
             MemberExpression node = (MemberExpression)expr;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, node.Expression);
+            }
+
             object self = null;
             if (node.Expression != null) {
                 if (InterpretAndCheckFlow(context, node.Expression, out self)) {
@@ -672,21 +747,6 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
-        private static object InterpretUnboundAssignment(CodeContext context, Expression expr) {
-            UnboundAssignment node = (UnboundAssignment)expr;
-            object value;
-            if (InterpretAndCheckFlow(context, node.Value, out value)) {
-                return value;
-            }
-            RuntimeHelpers.SetName(context, node.Name, value);
-            return value;
-        }
-
-        private static object InterpretUnboundExpression(CodeContext context, Expression expr) {
-            UnboundExpression node = (UnboundExpression)expr;
-            return RuntimeHelpers.LookupName(context, node.Name);
-        }
-
         private static object InterpretBlock(CodeContext context, Expression expr) {
             Block node = (Block)expr;
             context.Scope.SourceLocation = node.Start;
@@ -726,6 +786,11 @@ namespace Microsoft.Scripting.Interpreter {
         private static object InterpretDeleteStatement(CodeContext context, Expression expr) {
             DeleteStatement node = (DeleteStatement)expr;
             context.Scope.SourceLocation = node.Start;
+
+            if (node.IsDynamic) {
+                return InterpretCallSite(context, node, node.Variable);
+            }
+
             switch (node.Variable.NodeType) {
                 case AstNodeType.TemporaryVariable:
                     context.Scope.TemporaryStorage.Remove(node.Variable);
@@ -781,16 +846,6 @@ namespace Microsoft.Scripting.Interpreter {
         private static object InterpretEmptyStatement(CodeContext context, Expression expr) {
             EmptyStatement node = (EmptyStatement)expr;
             context.Scope.SourceLocation = node.Start;
-            return ControlFlow.NextStatement;
-        }
-
-        private static object InterpretExpressionStatement(CodeContext context, Expression expr) {
-            ExpressionStatement node = (ExpressionStatement)expr;
-            context.Scope.SourceLocation = node.Start;
-            object value;
-            if (InterpretAndCheckFlow(context, node.Expression, out value)) {
-                return value;
-            }
             return ControlFlow.NextStatement;
         }
 
@@ -873,22 +928,9 @@ namespace Microsoft.Scripting.Interpreter {
         private static object InterpretScopeStatement(CodeContext context, Expression expr) {
             ScopeStatement node = (ScopeStatement)expr;
             context.Scope.SourceLocation = node.Start;
-            CodeContext scopeContext;
-            ControlFlow cf;
 
-            // TODO: should work with LocalScope
-            if (node.Scope != null) {
-                object scope = Interpret(context, node.Scope);
-                if ((cf = scope as ControlFlow) != null) {
-                    if (cf.Kind == ControlFlowKind.Return) {
-                        return cf;
-                    }
-                }
-                scopeContext = RuntimeHelpers.CreateNestedCodeContext(scope as IAttributesCollection, context, true);
-            } else {
-                scopeContext = RuntimeHelpers.CreateCodeContext(context);
-            }
-
+            CodeContext scopeContext = CreateLocalScope(node.Factory, context, true);
+            
             object body;
             if (InterpretAndCheckFlow(scopeContext, node.Body, out body)) {
                 return body;
@@ -985,10 +1027,9 @@ namespace Microsoft.Scripting.Interpreter {
             object ret = ControlFlow.NextStatement;
 
             try {
-                if (InterpretAndCheckFlow(context, node.Body, out ret)) {
-                    return ret;
-                }
-                ret = ControlFlow.NextStatement;
+                if (!InterpretAndCheckFlow(context, node.Body, out ret)) {
+                    ret = ControlFlow.NextStatement;
+                }                
             } catch (Exception exc) {
                 rethrow = true;
                 savedExc = exc;
@@ -1036,6 +1077,10 @@ namespace Microsoft.Scripting.Interpreter {
             throw new NotImplementedException();
         }
 
+        private static object InterpretExtensionExpression(CodeContext context, Expression expr) {
+            return Interpret(context, Expression.ReduceToKnown(expr));
+        }
+
         #endregion
 
         internal static object EvaluateAssign(CodeContext context, Expression node, object value) {
@@ -1045,8 +1090,8 @@ namespace Microsoft.Scripting.Interpreter {
                 case AstNodeType.Parameter:
                 case AstNodeType.TemporaryVariable:
                     return EvaluateAssignVariable(context, node, value);
-                case AstNodeType.BoundAssignment:
-                    return EvaluateAssign(context, (BoundAssignment)node, value);
+                case AstNodeType.Assign:
+                    return EvaluateAssign(context, (AssignmentExpression)node, value);
                 case AstNodeType.MemberExpression:
                     return EvaluateAssign(context, (MemberExpression)node, value);
                 default:
@@ -1054,8 +1099,8 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
-        private static object EvaluateAssign(CodeContext context, BoundAssignment node, object value) {
-            return EvaluateAssignVariable(context, node.Variable, value);
+        private static object EvaluateAssign(CodeContext context, AssignmentExpression node, object value) {
+            return EvaluateAssignVariable(context, node.Expression, value);
         }
 
         private static object EvaluateAssignVariable(CodeContext context, Expression var, object value) {

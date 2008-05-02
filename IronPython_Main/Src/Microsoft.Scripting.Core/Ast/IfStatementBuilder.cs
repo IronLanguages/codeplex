@@ -24,8 +24,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public IfStatementBuilder ElseIf(Expression test, params Expression[] body) {
-            Contract.RequiresNotNullItems(body, "body");
-            return ElseIf(SourceSpan.None, test, SourceLocation.None, Ast.Block(body));
+            ContractUtils.RequiresNotNullItems(body, "body");
+            return ElseIf(SourceSpan.None, test, SourceLocation.None, Expression.Block(body));
         }
 
         public IfStatementBuilder ElseIf(Expression test, Expression body) {
@@ -33,25 +33,25 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public IfStatementBuilder ElseIf(SourceSpan span, Expression test, SourceLocation bodyLocation, Expression body) {
-            Contract.RequiresNotNull(test, "test");
-            Contract.Requires(test.Type == typeof(bool), "test");
-            Contract.RequiresNotNull(body, "body");
-            _clauses.Add(Ast.IfCondition(span, bodyLocation, test, body));
+            ContractUtils.RequiresNotNull(test, "test");
+            ContractUtils.Requires(test.Type == typeof(bool), "test");
+            ContractUtils.RequiresNotNull(body, "body");
+            _clauses.Add(Expression.IfCondition(span, bodyLocation, test, body));
             return this;
         }
 
         public Expression Else(params Expression[] body) {
-            Contract.RequiresNotNullItems(body, "body");
-            return Else(Ast.Block(body));
+            ContractUtils.RequiresNotNullItems(body, "body");
+            return Else(Expression.Block(body));
         }
 
         public Expression Else(Expression body) {
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
             return BuildConditions(_clauses, body);
         }
 
         internal static Expression BuildConditions(IList<IfStatementTest> clauses, Expression @else) {
-            Expression result = @else != null ? Ast.Void(@else) : Ast.Empty();
+            Expression result = @else != null ? Expression.Void(@else) : Expression.Empty();
 
             int index = clauses.Count;
             while (index-- > 0) {
@@ -59,12 +59,12 @@ namespace Microsoft.Scripting.Ast {
 
                 Expression test = ist.Test;
                 if (ist.Start.IsValid && ist.Header.IsValid) {
-                    test = Ast.Statement(new SourceSpan(ist.Start, ist.Header), test);
+                    test = Expression.Comma(new SourceSpan(ist.Start, ist.Header), test);
                 }
 
-                result = Ast.Condition(
+                result = Expression.Condition(                    
                     test,
-                    Ast.Void(ist.Body),
+                    Expression.Void(ist.Body),
                     result
                 );
             }
@@ -77,12 +77,12 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static implicit operator Expression(IfStatementBuilder builder) {
-            Contract.RequiresNotNull(builder, "builder");
+            ContractUtils.RequiresNotNull(builder, "builder");
             return builder.ToStatement();
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static IfStatementBuilder If() {
             return new IfStatementBuilder();
         }
@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Expression If(IfStatementTest[] tests, Expression @else) {
-            Contract.RequiresNotNullItems(tests, "tests");
+            ContractUtils.RequiresNotNullItems(tests, "tests");
             return IfStatementBuilder.BuildConditions(tests, @else);
         }
 
@@ -115,14 +115,14 @@ namespace Microsoft.Scripting.Ast {
         public static Expression IfThenElse(Expression test, Expression body, Expression @else) {
             return If(
                 new IfStatementTest[] {
-                    Ast.IfCondition(SourceSpan.None, SourceLocation.None, test, body)
+                    Expression.IfCondition(SourceSpan.None, SourceLocation.None, test, body)
                 },
                 @else
             );
         }
 
         public static Expression Unless(Expression test, Expression body) {
-            return IfThenElse(test, Ast.Empty(), body);
+            return IfThenElse(test, Expression.Empty(), body);
         }
     }
 }

@@ -14,21 +14,23 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class ScopeStatement : Expression {
-        private readonly Expression _scope;
         private readonly Expression/*!*/ _body;
+        private readonly MethodInfo/*!*/ _factory;
 
-        internal ScopeStatement(Annotations annotations, Expression scope, Expression/*!*/ body)
+        internal ScopeStatement(Annotations annotations, MethodInfo/*!*/ factory, Expression/*!*/ body)
             : base(annotations, AstNodeType.ScopeStatement, typeof(void)) {
-            _scope = scope;
+            
+            _factory = factory;
             _body = body;
         }
 
-        public Expression Scope {
+        public MethodInfo/*!*/ Factory {
             get {
-                return _scope;
+                return _factory;
             }
         }
 
@@ -42,29 +44,24 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")] // TODO: fix
-        public static ScopeStatement Scope(Expression/*!*/ scope, Expression/*!*/ body) {
-            return Scope(SourceSpan.None, scope, body);
+    public partial class Expression {
+        public static ScopeStatement Scope(MethodInfo/*!*/ factory, Expression/*!*/ body) {
+            return Scope(SourceSpan.None, factory, body);
+        }
+        
+        public static ScopeStatement Scope(SourceSpan span, MethodInfo/*!*/ factory, Expression/*!*/ body) {
+            return Scope(Annotate(span), factory, body);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")] // TODO: fix
-        public static ScopeStatement Scope(SourceSpan span, Expression/*!*/ scope, Expression/*!*/ body) {
-            // TODO:            Contract.RequiresNotNull(scope, "scope");
-            Contract.RequiresNotNull(body, "body");
-            // TODO:            Contract.Requires(TypeUtils.CanAssign(typeof(LocalScope), scope.Type), "scope", "Scope must of type LocalScope");
+        public static ScopeStatement Scope(Annotations annotations, MethodInfo/*!*/ factory, Expression/*!*/ body) {
+            ContractUtils.RequiresNotNull(body, "body");
 
-            return new ScopeStatement(Annotations(span), scope, body);
+            // TODO: this requirement won't be necessary as soon as we have variables on scope:
+            ContractUtils.RequiresNotNull(factory, "factory");
+
+            ValidateScopeFactory(factory, "factory");
+            
+            return new ScopeStatement(annotations, factory, body);
         }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")] // TODO: fix
-        public static ScopeStatement Scope(Annotations annotations, Expression/*!*/ scope, Expression/*!*/ body) {
-            // TODO:            Contract.RequiresNotNull(scope, "scope");
-            Contract.RequiresNotNull(body, "body");
-            // TODO:            Contract.Requires(TypeUtils.CanAssign(typeof(LocalScope), scope.Type), "scope", "Scope must of type LocalScope");
-
-            return new ScopeStatement(annotations, scope, body);
-        }
-
     }
 }

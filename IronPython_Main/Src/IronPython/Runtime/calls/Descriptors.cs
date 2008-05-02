@@ -24,6 +24,7 @@ using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Calls {
+    [PythonSystemType]
     public class staticmethod : PythonTypeSlot {
         private object _func;
 
@@ -47,6 +48,7 @@ namespace IronPython.Runtime.Calls {
         #endregion
     }
 
+    [PythonSystemType]
     public class classmethod : PythonTypeSlot {
         internal object func;
 

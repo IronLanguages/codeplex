@@ -30,6 +30,8 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Expression;
+
     class PythonGetMemberBinderHelper<T> : GetMemberBinderHelper<T> {
 
         public PythonGetMemberBinderHelper(CodeContext context, GetMemberAction action, object []args)
@@ -175,12 +177,6 @@ namespace IronPython.Runtime.Calls {
         }
 
         private RuleBuilder<T> MakePythonTypeRule(PythonTypeSlot slot, PythonType argType, bool clsOnly) {
-            if (Arguments[0] is ICustomMembers) {
-                Rule.Target = UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, PythonTypeOps.GetName(argType), Rule);
-                PythonBinderHelper.MakeTest(Rule, argType);
-                return Rule;
-            }
-                       
             if (TryMakeGetMemberRule(argType, slot, Rule.Parameters[0], clsOnly)) {
                 PythonBinderHelper.MakeTest(Rule, argType);                
                 return Rule;

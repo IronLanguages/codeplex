@@ -24,7 +24,8 @@ namespace Microsoft.Scripting.Actions {
             get { return _name; }
         }
 
-        protected MemberAction(SymbolId name) {
+        protected MemberAction(ActionBinder binder, SymbolId name)
+            : base(binder) {
             _name = name;
         }
 

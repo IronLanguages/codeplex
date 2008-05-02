@@ -1677,9 +1677,11 @@ def test_override_mro():
     except NotImplementedError: pass
     else: Fail("Expected NotImplementedError, got none")
 
-@skip("win32")    
 def test_type_mro():
-    AssertError(NotImplementedError, type.mro, int)
+    AssertError(TypeError, type.mro)	
+    AreEqual(object.mro(), list(object.__mro__))
+    AreEqual(type(object.mro()), list)
+    AreEqual(type(object.__mro__), tuple)
 
 def test_derived_tuple_eq():
     # verify overriding __eq__ on tuple still allows us to call the super version
@@ -1790,6 +1792,31 @@ def test_getattribute_getattr():
         def __getattribute__(self, name):
             return Base.__getattribute__(self, name)
     
+    a = Derived()
+    AreEqual(a.bar, 23)
+
+    # getattr doesn't get called when calling object.__getattribute__
+    class x(object):
+        def __getattr__(self, name): return 23
+
+    AssertError(AttributeError, object.__getattribute__, x(), 'abc')
+
+    # verify __getattr__ gets called after __getattribute__ fails, not
+    # during the base call to object.
+    state = []
+    class Derived(object):
+        def __getattr__(self, name):
+            if name == "bar": 
+                AreEqual(state, [])
+                return 23
+            raise AttributeError(name)
+        def __getattribute__(self, name):
+            try:
+                state.append('getattribute')
+                return object.__getattribute__(self, name)
+            finally:
+                AreEqual(state.pop(), 'getattribute')	
+
     a = Derived()
     AreEqual(a.bar, 23)
 
@@ -2449,7 +2476,9 @@ def test_oldstyle_fancycallable():
             pass
     
     x = C(*(2,))
-    #Merlin 382112 AssertError(TypeError, lambda: C(*(None,)))
+    #Merlin 382112 
+    x = C(*(None,))
+    Assert(x.__class__ is C)
     x = C(**{'a': None})
 
 def test_oldclass_newclass_construction():
@@ -2596,5 +2625,93 @@ def test_keyword_type_construction():
     
     obj = x.__call__(*(), **{'abc':3})
     AreEqual(obj.abc, 3)
+
+def test_mixed_mro_respected():
+    """creates a class with an mro of "MC, NC, OC2, NC2, object, OC" and verifies that we get NC2 member, not OC"""    
+    class OC:
+        abc = 3
+    
+    class OC2(OC):
+        pass
+    
+    class NC(object):
+        pass
+    
+    class NC2(object):
+        abc = 5
+    
+    class MC(NC, OC2, NC2, OC): pass
+    
+    AreEqual(MC.abc, 5)
+
+def test_descriptor_object_getattribute_interactions():
+    class nondata_desc(object):
+        def __init__(self, value): self.value = value
+        def __get__(self, inst, ctx = None):
+            return (self.value, inst, ctx)
+    
+    class data_desc(object):
+        def __init__(self, value): self.value = value
+        def __get__(self, inst, ctx = None):
+            return (self.value, inst, ctx)
+        def __set__(self, inst, value):
+            self.value = value
+        def __delete__(self, inst):
+            del self.value
+    
+    class readonly_data_desc(object):
+        def __init__(self, value): self.value = value
+        def __get__(self, inst, ctx = None):
+            return (self.value, inst, ctx)
+        def __set__(self, inst, value):
+            raise AttributeError()
+        def __delete__(self, inst):
+            raise AttributeError()
+    
+    class meta(type):
+        nondata = nondata_desc(1)
+        data = data_desc(2)
+        nondata_shadowed_class = nondata_desc(3)
+        data_shadowed_class = data_desc(4)
+        nondata_shadowed_inst = nondata_desc(5)
+        data_shadowed_inst = data_desc(6)
+        ro_data = readonly_data_desc(7)
+        ro_shadowed_class = readonly_data_desc(8)
+        ro_shadowed_inst = readonly_data_desc(9)
+    
+    class x(object):
+        __metaclass__ = meta
+        def __init__(self):
+            self.nondata_shadowed_inst = "nondata_inst"
+            self.data_shadowed_inst = "data_inst"
+            self.ro_shadowed_inst = 'ro_inst'        
+        nondata_shadowed_class = 'nondata_shadowed_class'
+        data_shadowed_class = 'data_shadowed_class'
+        ro_shadowed_class = 'ro_shadowed_class'
+        
+    a = x()
+    AssertError(AttributeError, object.__getattribute__, a, 'nondata')
+    AssertError(AttributeError, object.__getattribute__, a, 'data')
+    AssertError(AttributeError, object.__getattribute__, a, 'ro_data')
+    
+    AreEqual(object.__getattribute__(a, 'nondata_shadowed_class'), 'nondata_shadowed_class')
+    AreEqual(object.__getattribute__(a, 'data_shadowed_class'), 'data_shadowed_class')
+    AreEqual(object.__getattribute__(a, 'ro_shadowed_class'), 'ro_shadowed_class')
+    
+    AreEqual(object.__getattribute__(a, 'nondata_shadowed_inst'), 'nondata_inst')
+    AreEqual(object.__getattribute__(a, 'data_shadowed_inst'), 'data_inst')       
+    AreEqual(object.__getattribute__(a, 'ro_shadowed_inst'), 'ro_inst')
+    
+    AreEqual(object.__getattribute__(x, 'nondata_shadowed_class'), 'nondata_shadowed_class')
+    AreEqual(object.__getattribute__(x, 'data_shadowed_class'), (4, x, meta))
+    AreEqual(object.__getattribute__(x, 'ro_shadowed_class'), (8, x, meta))
+    
+    AreEqual(object.__getattribute__(x, 'nondata_shadowed_inst'), (5, x, meta))
+    AreEqual(object.__getattribute__(x, 'data_shadowed_inst'), (6, x, meta))       
+    AreEqual(object.__getattribute__(x, 'ro_shadowed_inst'), (9, x, meta))
+
+    AreEqual(object.__getattribute__(x, 'ro_data'), (7, x, meta))
+    AreEqual(object.__getattribute__(x, 'nondata'), (1, x, meta))
+    AreEqual(object.__getattribute__(x, 'data'), (2, x, meta))       
 
 run_test(__name__)

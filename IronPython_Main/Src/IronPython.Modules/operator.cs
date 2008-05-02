@@ -450,76 +450,101 @@ namespace IronPython.Modules {
             return new Slice(SliceToInt(a), SliceToInt(b), null);
         }
 
-        private static readonly FastDynamicSite<object, object, object> _iadd = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceAdd));
-        private static readonly FastDynamicSite<object, object, object> _iand = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceBitwiseAnd));
-        private static readonly FastDynamicSite<object, object, object> _idiv = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceDivide));
-        private static readonly FastDynamicSite<object, object, object> _ilshift = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceLeftShift));
-        private static readonly FastDynamicSite<object, object, object> _imod = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceMod));
-        private static readonly FastDynamicSite<object, object, object> _imul = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceMultiply));
-        private static readonly FastDynamicSite<object, object, object> _ior = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceBitwiseOr));
-        private static readonly FastDynamicSite<object, object, object> _ipow = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlacePower));
-        private static readonly FastDynamicSite<object, object, object> _irshift = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceRightShift));
-        private static readonly FastDynamicSite<object, object, object> _isub = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceSubtract));
-        private static readonly FastDynamicSite<object, object, object> _itruediv = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceTrueDivide));
-        private static readonly FastDynamicSite<object, object, object> _ifloordiv = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceFloorDivide));
-        private static readonly FastDynamicSite<object, object, object> _ixor = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.InPlaceExclusiveOr));
+        private static readonly DynamicSite<object, object, object> _iadd =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceAdd));
+
+        private static readonly DynamicSite<object, object, object> _iand =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceBitwiseAnd));
+
+        private static readonly DynamicSite<object, object, object> _idiv =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceDivide));
+
+        private static readonly DynamicSite<object, object, object> _ilshift =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceLeftShift));
+
+        private static readonly DynamicSite<object, object, object> _imod =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceMod));
+
+        private static readonly DynamicSite<object, object, object> _imul =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceMultiply));
+
+        private static readonly DynamicSite<object, object, object> _ior =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceBitwiseOr));
+
+        private static readonly DynamicSite<object, object, object> _ipow =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlacePower));
+
+        private static readonly DynamicSite<object, object, object> _irshift =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceRightShift));
+
+        private static readonly DynamicSite<object, object, object> _isub =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceSubtract));
+
+        private static readonly DynamicSite<object, object, object> _itruediv =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceTrueDivide));
+
+        private static readonly DynamicSite<object, object, object> _ifloordiv =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceFloorDivide));
+
+        private static readonly DynamicSite<object, object, object> _ixor =
+            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceExclusiveOr));
 
         public static object iadd(object a, object b) {
-            return _iadd.Invoke(a, b);
+            return _iadd.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object iand(object a, object b) {
-            return _iand.Invoke(a, b);
+            return _iand.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object idiv(object a, object b) {
-            return _idiv.Invoke(a, b);
+            return _idiv.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object ifloordiv(object a, object b) {
-            return _ifloordiv.Invoke(a, b);
+            return _ifloordiv.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object ilshift(object a, object b) {
-            return _ilshift.Invoke(a, b);
+            return _ilshift.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object imod(object a, object b) {
-            return _imod.Invoke(a, b);
+            return _imod.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object imul(object a, object b) {
-            return _imul.Invoke(a, b);
+            return _imul.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object ior(object a, object b) {
-            return _ior.Invoke(a, b);
+            return _ior.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object ipow(object a, object b) {
-            return _ipow.Invoke(a, b);
+            return _ipow.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object irshift(object a, object b) {
-            return _irshift.Invoke(a, b);
+            return _irshift.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object isub(object a, object b) {
-            return _isub.Invoke(a, b);
+            return _isub.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object itruediv(object a, object b) {
-            return _itruediv.Invoke(a, b);
+            return _itruediv.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object ixor(object a, object b) {
-            return _ixor.Invoke(a, b);
+            return _ixor.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object iconcat(object a, object b) {
             TestBothSequence(a, b);
 
-            return _iadd.Invoke(a, b);
+            return _iadd.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object irepeat(object a, object b) {
@@ -533,7 +558,7 @@ namespace IronPython.Modules {
                 throw PythonOps.TypeError("integer required");
             }
 
-            return _imul.Invoke(a, b);
+            return _imul.Invoke(DefaultContext.Default, a, b);
         }
 
         public static object __iadd__(object a, object b) {

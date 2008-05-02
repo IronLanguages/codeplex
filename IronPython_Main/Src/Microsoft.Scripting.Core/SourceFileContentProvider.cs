@@ -37,7 +37,7 @@ namespace Microsoft.Scripting {
         #region Construction
 
         internal FileStreamContentProvider(PlatformAdaptationLayer/*!*/ manager, string/*!*/ path) {
-            Contract.RequiresNotNull(path, "path");
+            ContractUtils.RequiresNotNull(path, "path");
 
             _path = path;
             _pal = new PALHolder(manager);

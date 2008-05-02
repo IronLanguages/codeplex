@@ -32,15 +32,15 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static BreakStatement Break(LabelTarget target) {
             return Break(SourceSpan.None, target);
         }
         public static BreakStatement Break(SourceSpan span, LabelTarget target) {
-            return new BreakStatement(Annotations(span), target);
+            return new BreakStatement(Annotate(span), target);
         }
         public static BreakStatement Break(Annotations annotations, LabelTarget target) {
-            Contract.RequiresNotNull(target, "target");
+            ContractUtils.RequiresNotNull(target, "target");
             return new BreakStatement(annotations, target);
         }
     }

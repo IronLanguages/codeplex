@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 Int32 = "Int32"
 Double = "Double"
@@ -184,7 +184,13 @@ def generate_enum_casts(cw):
         generate_enum_cast(cw, t)
         cw.writeline()
 
-CodeGenerator("Nullable Instance", generate_nullable_instance).doit()
-CodeGenerator("Type Cache", generate_type_cache).doit()
-CodeGenerator("Type Casts", generate_type_casts).doit()
-CodeGenerator("Enum Casts", generate_enum_casts).doit()
+def main():
+    return generate(
+        ("Nullable Instance", generate_nullable_instance),
+        ("Type Cache", generate_type_cache),
+        ("Type Casts", generate_type_casts),
+        ("Enum Casts", generate_enum_casts),
+    )
+
+if __name__ == "__main__":
+    main()

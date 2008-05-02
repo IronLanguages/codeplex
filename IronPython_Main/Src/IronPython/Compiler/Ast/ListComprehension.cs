@@ -19,7 +19,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Utils;
 
     public abstract class ListComprehensionIterator : Node {
@@ -47,7 +47,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.VariableExpression list = ag.MakeTempExpression("list_comprehension_list", typeof(List));
 
             // 1. Initialization code - create list and store it in the temp variable
-            MSAst.BoundAssignment initialize =
+            MSAst.AssignmentExpression initialize =
                 Ast.Assign(
                     list,
                     Ast.Call(
@@ -56,13 +56,11 @@ namespace IronPython.Compiler.Ast {
                 );
 
             // 2. Create body from _item:   list.Append(_item)
-            MSAst.Expression body = Ast.Statement(
+            MSAst.Expression body = Ast.Call(
                 _item.Span,
-                Ast.Call(
-                    list,
-                    typeof(List).GetMethod("append"),                    
-                    ag.TransformAsObject(_item)
-                )
+                list,
+                typeof(List).GetMethod("append"),                    
+                ag.TransformAsObject(_item)
             );
 
             // 3. Transform all iterators in reverse order, building the true body:

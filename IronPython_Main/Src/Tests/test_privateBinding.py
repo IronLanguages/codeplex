@@ -91,12 +91,30 @@ else:
         
         
     def test_PrivateStaticMethod():
-        AreEqual(ClsPart.privateStaticMethod(), 100)
+        AreEqual(ClsPart._ClsPart__privateStaticMethod(), 100)
         
-        # !!! AreEqual("_InternalClsPart__privateField" in dir(IronPythonTest.InternalClsPart), True)
-        # !!! AreEqual("_InternalClsPart__privateProperty" in dir(InternalClsPart), True)
-        # !!! AreEqual("_InternalClsPart__privateEvent" in dir(InternalClsPart), True)
-        # !!! AreEqual("_InternalClsPart__privateMethod" in dir(InternalClsPart), True)
+        AreEqual("_InternalClsPart__Field" in dir(IronPythonTest.InternalClsPart), True)
+        AreEqual("_InternalClsPart__Property" in dir(InternalClsPart), True)
+        AreEqual("_InternalClsPart__Method" in dir(InternalClsPart), True)
+
+    @skip("silverlight") # no winforms
+    def test_override_createparams():        
+        """verify we can override the CreateParams property and get the expected value from the base class"""
+    
+        clr.AddReference("System.Windows.Forms")
+        from System.Windows.Forms import Label, Control
+        
+        for val in [20, 0xffff]:
+            class TransLabel(Label):
+                def get_CreateParams(self):
+                    global style
+                    cp = Label().CreateParams
+                    cp.ExStyle = cp.ExStyle | val
+                    style = cp.ExStyle
+                    return cp
+                CreateParams = property(fget=get_CreateParams)
+        
+            AreEqual(Control.CreateParams.GetValue(TransLabel() ).ExStyle, style)
 
 # use this when running standalone
 #run_test(__name__)

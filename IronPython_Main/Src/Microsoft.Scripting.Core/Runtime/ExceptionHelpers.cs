@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
@@ -101,6 +100,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public static void UpdateStackTrace(CodeContext context, MethodBase method, string funcName, string filename, int line) {
+            Debug.Assert(filename != null);
             if (_stackFrames == null) _stackFrames = new List<DynamicStackFrame>();
 
             Debug.Assert(line != SourceLocation.None.Line);
@@ -115,10 +115,16 @@ namespace Microsoft.Scripting.Runtime {
             return _stackFrames;
         }
 
-        public static void ClearDynamicStackFrames() {
-            _stackFrames = null;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public static List<DynamicStackFrame> DynamicStackFrames {
+            get {
+                return _stackFrames;
+            }
+            set {
+                _stackFrames = value;
+            }
         }
-
+        
         public static void PushExceptionHandler(Exception clrException) {
             // _currentExceptions is thread static
             if (_currentExceptions == null) {
@@ -237,8 +243,12 @@ namespace Microsoft.Scripting.Runtime {
                     continue;
                 }
 
-                // TODO: also try to use dynamic frames directly for non-interpreted dynamic methods
-                yield return GetStackFrame(frame);
+                if (dynamicFrames.Count > 0 && frame.GetMethod() == dynamicFrames[dynamicFrames.Count - 1].GetMethod()) {
+                    yield return dynamicFrames[dynamicFrames.Count - 1];
+                    dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
+                } else {
+                    yield return GetStackFrame(frame);
+                }
             }
         }
 

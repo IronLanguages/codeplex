@@ -1,4 +1,3 @@
-
 /* ****************************************************************************
  *
  * Copyright (c) Microsoft Corporation. 
@@ -15,30 +14,23 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using System.Reflection;
-using System.Collections;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     
     public class InvokeMemberBinderHelper<T> : BinderHelper<T, InvokeMemberAction> {
         public InvokeMemberBinderHelper(CodeContext context, InvokeMemberAction action, object[] args)
             : base(context, action) {
-            Contract.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(args, "args");
             if (args.Length < 1) throw new ArgumentException("Must receive at least one argument, the target to call", "args");
         }
 
         public virtual RuleBuilder<T> MakeRule() {
-            CallAction callAction = CallAction.Make(Action.Signature);
+            CallAction callAction = CallAction.Make(Binder, Action.Signature);
 
             // TODO: First try to make a rule for get-member and see if we get back a constant method to call
             //GetMemberAction getAction = GetMemberAction.Make(Action.Name);
@@ -47,7 +39,7 @@ namespace Microsoft.Scripting.Actions {
             // otherwise, make a generic rule with embedded dynamic sites
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.Test = Ast.True();
-            Expression getExpr = Ast.Action.GetMember(Action.Name, typeof(object), rule.Parameters[0]);
+            Expression getExpr = Ast.Action.GetMember(Binder, Action.Name, typeof(object), rule.Parameters[0]);
 
             Expression[] callArgs = new Expression[rule.ParameterCount];
             callArgs[0] = getExpr;

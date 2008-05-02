@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator
+from generate import generate
 import operator
 
 nullValue = 0
@@ -160,4 +158,10 @@ def generate_symbols(cw):
         cw.exit_block()
         cw.exit_block()
 
-CodeGenerator("Symbols - Other Symbols", generate_symbols).doit()
+def main():
+    return generate(
+        ("Symbols - Other Symbols", generate_symbols),
+    )
+
+if __name__ == "__main__":
+    main()

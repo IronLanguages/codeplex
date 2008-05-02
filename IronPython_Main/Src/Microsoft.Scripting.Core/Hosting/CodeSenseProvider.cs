@@ -14,9 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
@@ -32,7 +29,7 @@ namespace Microsoft.Scripting.Hosting {
         protected ScriptScope Module { get { return _module; } }
 
         protected CodeSenseProvider(ScriptEngine engine, ScriptScope module) {
-            Contract.RequiresNotNull(engine, "engine");
+            ContractUtils.RequiresNotNull(engine, "engine");
             _engine = engine;
             _module = module;
         }

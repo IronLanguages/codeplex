@@ -26,67 +26,64 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
-    /// TODO
+    /// TODO: Rename to LocalScope
     /// </summary>    
-    public sealed class CodeContext {
+    public class CodeContext {
         public const string ContextFieldName = "__global_context";
 
-        /// <summary> can be any dictionary or IMapping. </summary>        
+        // TODO: move to subclasses
         private readonly Scope _scope;
-        private readonly LanguageContext _languageContext;
-        private readonly ScopeExtension _moduleContext; // internally mutable, optional (shouldn't be used when not set)
-        private LocalScope _localScope;
-        private readonly CodeContext _parent; // TODO: Ruby hack, move to local scope
 
-        public LocalScope LocalScope {
-            get { return _localScope; }
-            set { _localScope = value; }
-        }
+        // TODO: move to subclasses
+        private readonly LanguageContext _languageContext;
+
+        private readonly CodeContext _parent;
 
         public CodeContext Parent {
             get { return _parent; }
         }
 
-        // emitted (OptimizedModuleGenerator, Compiler, Interpreter, PropertyEnvironmentFactory, TupleSlotFactory)
+        // TODO: remove
         public Scope Scope {
             get {
                 return _scope;
             }
         }
 
-        public LanguageContext LanguageContext {
+        public virtual Scope GlobalScope {
+            get {
+                Debug.Assert(_scope != null, "Global scope not available");
+                return _scope.ModuleScope;
+            }
+        }
+
+        public LanguageContext/*!*/ LanguageContext {
             get {
                 return _languageContext;
             }
         }
 
-        public ScopeExtension ModuleContext {
-            get {
-                return _moduleContext ?? _languageContext.EnsureScopeExtension(_scope);
-            }
+        // TODO: remove: DLR should use an internal tuple chain instead of asking code context:
+        internal protected virtual TTuple/*!*/ GetStorage<TTuple>() where TTuple : Tuple {
+            return ((TupleDictionary<TTuple>)_scope.Dict).TupleData;
         }
 
-        public CodeContext(CodeContext parent)
-            : this(parent.Scope, parent.LanguageContext, parent.ModuleContext) {
-            _parent = parent;
+        // TODO: remove: DLR should use an internal tuple chain instead of asking code context:
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        internal protected virtual CodeContext GetStorageParent() {
+            return _parent;
         }
 
-        public CodeContext(Scope scope, LanguageContext languageContext)
+        public CodeContext(Scope scope, LanguageContext/*!*/ languageContext)
             : this(scope, languageContext, null) {
         }
 
-        internal CodeContext(Scope scope, LanguageContext languageContext, ScopeExtension moduleContext) 
-            : this(scope, languageContext, moduleContext, null) {
-        }
-
-        internal CodeContext(Scope scope, LanguageContext languageContext, ScopeExtension moduleContext, CodeContext parent) {
-            Assert.NotNull(scope, languageContext);
+        public CodeContext(Scope scope, LanguageContext/*!*/ languageContext, CodeContext parent) {
+            Assert.NotNull(languageContext);
 
             _languageContext = languageContext;
-            _moduleContext = moduleContext;
             _scope = scope;
             _parent = parent;
         }
-        
     }   
 }

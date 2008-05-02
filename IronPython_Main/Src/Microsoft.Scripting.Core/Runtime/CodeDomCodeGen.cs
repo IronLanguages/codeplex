@@ -39,9 +39,9 @@ namespace Microsoft.Scripting.Runtime {
         abstract protected string QuoteString(string val);
 
         public SourceUnit/*!*/ GenerateCode(CodeMemberMethod/*!*/ codeDom, LanguageContext/*!*/ context, string path, SourceCodeKind kind) {
-            Contract.RequiresNotNull(codeDom, "codeDom");
-            Contract.RequiresNotNull(context, "context");
-            Contract.Requires(path == null || path.Length > 0, "path");
+            ContractUtils.RequiresNotNull(codeDom, "codeDom");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.Requires(path == null || path.Length > 0, "path");
 
             // Convert the CodeDom to source code
             if (_writer != null) {

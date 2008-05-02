@@ -24,7 +24,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class CreateInstanceBinderHelper<T> : CallBinderHelper<T, CreateInstanceAction> {
         public CreateInstanceBinderHelper(CodeContext context, CreateInstanceAction action, object []args)

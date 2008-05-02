@@ -24,7 +24,7 @@ using Microsoft.Scripting.Utils;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class IndexExpression : Expression {
         private readonly Expression _target;
@@ -45,11 +45,12 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Action.Operator(
+                ag.Binder,
                 GetOperator,
                 type,
                 GetActionArgumentsForGetOrDelete(ag)
             );
-            
+
         }
 
         private MSAst.Expression[] GetActionArgumentsForGetOrDelete(AstGenerator ag) {
@@ -82,9 +83,9 @@ namespace IronPython.Compiler.Ast {
         private static MSAst.Expression GetSliceValue(AstGenerator ag, Expression expr) {
             if (expr != null) {
                 return ag.Transform(expr);
-            } 
+            }
 
-            return Ast.ReadField(null, typeof(MissingParameter).GetField("Value"));            
+            return Ast.ReadField(null, typeof(MissingParameter).GetField("Value"));
         }
 
         private MSAst.Expression[] GetActionArgumentsForSet(AstGenerator ag, MSAst.Expression right) {
@@ -92,38 +93,39 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
-            if(op != Operators.None) {
-                right = Ast.Action.Operator(op,
-                            typeof(object),
-                            Ast.Action.Operator(
-                                GetOperator,
-                                typeof(object),
-                                GetActionArgumentsForGetOrDelete(ag)
-                            ),
-                            right
-                        );
+            if (op != Operators.None) {
+                right = Ast.Action.Operator(
+                    ag.Binder,
+                    op,
+                    typeof(object),
+                    Ast.Action.Operator(
+                        ag.Binder,
+                        GetOperator,
+                        typeof(object),
+                        GetActionArgumentsForGetOrDelete(ag)
+                    ),
+                    right
+                );
             }
 
-            return Ast.Statement(
+            return Ast.Block(
                 Span,
-                Ast.Void(
-                    Ast.Action.Operator(
-                        SetOperator,
-                        typeof(object),
-                        GetActionArgumentsForSet(ag, right)
-                    )
+                Ast.Action.Operator(
+                    ag.Binder,
+                    SetOperator,
+                    typeof(object),
+                    GetActionArgumentsForSet(ag, right)
                 )
             );
         }
-        
+
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return Ast.Statement(
+            return Ast.Action.Operator(
                 Span,
-                Ast.Action.Operator(
-                    DeleteOperator,
-                    typeof(object),
-                    GetActionArgumentsForGetOrDelete(ag)
-                )
+                ag.Binder,
+                DeleteOperator,
+                typeof(object),
+                GetActionArgumentsForGetOrDelete(ag)
             );
         }
 

@@ -192,18 +192,6 @@ namespace Microsoft.Scripting.Generation {
             return ParameterWrapper.CompareParameters(this._parameters, other._parameters, actualTypes);
         }
 
-        private bool IsApplicable(Type[] types, NarrowingLevel allowNarrowing) {
-            Debug.Assert(types.Length == _parameters.Count);
-
-            for (int i = 0; i < types.Length; i++) {
-                if (!_parameters[i].HasConversionFrom(types[i], allowNarrowing)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         internal bool HasParamsDictionary() {
             foreach (ParameterWrapper pw in _parameters) {
                 // can't bind to methods that are params dictionaries, only to their extended forms.

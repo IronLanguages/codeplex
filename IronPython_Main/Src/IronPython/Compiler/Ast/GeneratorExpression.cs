@@ -23,7 +23,7 @@ using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class GeneratorExpression : Expression {
         private readonly FunctionDefinition _function;
@@ -41,6 +41,7 @@ namespace IronPython.Compiler.Ast {
             // Generator expressions always return functions.  We could do even better here when all PythonFunction's are in the same class.
 
             return Ast.Action.Call(
+                ag.Binder,
                 typeof(object),
                 func,
                 ag.TransformAsObject(_iterable)

@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public ArgumentInfo(ArgumentKind kind, SymbolId name) {
-            Contract.Requires((kind == ArgumentKind.Named) ^ (name == SymbolId.Empty), "kind");
+            ContractUtils.Requires((kind == ArgumentKind.Named) ^ (name == SymbolId.Empty), "kind");
             _kind = kind;
             _name = name;
         }

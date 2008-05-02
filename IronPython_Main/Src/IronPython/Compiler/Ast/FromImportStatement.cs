@@ -18,7 +18,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class FromImportStatement : Statement {
         private static readonly SymbolId[] _star = new SymbolId[1];
@@ -66,14 +66,12 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {            
             if (_names == _star) {
                 // from a[.b] import *
-                return Ast.Statement(
+                return Ast.Call(
                     Span,
-                    Ast.Call(
-                        AstGenerator.GetHelperMethod("ImportStar"),
-                        Ast.CodeContext(),
-                        Ast.Constant(_root.MakeString()),
-                        Ast.Constant(GetLevel())
-                    )
+                    AstGenerator.GetHelperMethod("ImportStar"),
+                    Ast.CodeContext(),
+                    Ast.Constant(_root.MakeString()),
+                    Ast.Constant(GetLevel())
                 );
             } else {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
@@ -89,17 +87,15 @@ namespace IronPython.Compiler.Ast {
 
                 // module = PythonOps.ImportWithNames(<context>, _root, make_array(_names))
                 statements.Add(
-                    Ast.Statement(
+                    Ast.Assign(
                         _root.Span,
-                        Ast.Assign(
-                            module,
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod("ImportWithNames"),
-                                Ast.CodeContext(),
-                                Ast.Constant(_root.MakeString()),
-                                Ast.NewArray(typeof(string[]), names),
-                                Ast.Constant(GetLevel())
-                            )
+                        module,
+                        Ast.Call(
+                            AstGenerator.GetHelperMethod("ImportWithNames"),
+                            Ast.CodeContext(),
+                            Ast.Constant(_root.MakeString()),
+                            Ast.NewArray(typeof(string[]), names),
+                            Ast.Constant(GetLevel())
                         )
                     )
                 );
@@ -107,16 +103,14 @@ namespace IronPython.Compiler.Ast {
                 // now load all the names being imported and assign the variables
                 for (int i = 0; i < names.Length; i++) {
                     statements.Add(
-                        Ast.Statement(
+                        Ast.Assign(
                             Span,
-                            Ast.Assign(
-                                _variables[i].Variable,
-                                Ast.Call(
-                                    AstGenerator.GetHelperMethod("ImportFrom"),
-                                    Ast.CodeContext(),
-                                    module,
-                                    names[i]
-                                )
+                            _variables[i].Variable,
+                            Ast.Call(
+                                AstGenerator.GetHelperMethod("ImportFrom"),
+                                Ast.CodeContext(),
+                                module,
+                                names[i]
                             )
                         )
                     );

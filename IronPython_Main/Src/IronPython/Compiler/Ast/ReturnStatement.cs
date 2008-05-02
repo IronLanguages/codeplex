@@ -18,7 +18,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class ReturnStatement : Statement {
         private readonly Expression _expression;

@@ -16,12 +16,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Expression;
+
     public abstract class ScopeStatement : Statement {
         private ScopeStatement _parent;
 
@@ -30,8 +33,9 @@ namespace IronPython.Compiler.Ast {
         private bool _nestedFreeVariables;          // nested function with free variable
         private bool _locals;                       // The scope needs locals dictionary
                                                     // due to "exec" or call to dir, locals, eval, vars...
-        private bool _closure;                      // the scope is a closure (its locals are referenced by nested scopes)
-
+        
+        // the scope contains variables that are bound to parent scope forming a closure:
+        private bool _closure;
 
         private Dictionary<SymbolId, PythonVariable> _variables;
         private Dictionary<SymbolId, PythonReference> _references;
@@ -45,18 +49,22 @@ namespace IronPython.Compiler.Ast {
             get { return _importStar; }
             set { _importStar = value; }
         }
+
         internal bool ContainsUnqualifiedExec {
             get { return _unqualifiedExec; }
             set { _unqualifiedExec = value; }
         }
+
         internal bool ContainsNestedFreeVariables {
             get { return _nestedFreeVariables; }
             set { _nestedFreeVariables = value; }
         }
+
         internal bool NeedsLocalsDictionary {
             get { return _locals; }
             set { _locals = value; }
         }
+
         internal bool IsClosure {
             get { return _closure; }
             set { _closure = value; }
@@ -70,6 +78,8 @@ namespace IronPython.Compiler.Ast {
             get { return false; }
         }
 
+        protected abstract bool ExposesLocalVariables { get; }
+
         internal virtual void CreateVariables(AstGenerator ag, List<MSAst.Expression> init) {
             if (_variables != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _variables) {
@@ -79,11 +89,38 @@ namespace IronPython.Compiler.Ast {
                     // Do not publish parameters, they will get created separately.
                     if (pv.Scope == this && pv.Kind != VariableKind.Parameter) {
                         MSAst.Expression var = pv.Transform(ag);
-                        if (pv.Unassigned && pv.Kind == VariableKind.Local) {
+
+                        //
+                        // Initializes variable to Uninitialized.Instance:
+                        //
+                        // 1) Local variables (variables that has been assigned within the scope)
+                        //    - do not initialize in module scope, ModuleGlobalWrappers do
+                        //    - initialize variables that are read before initialized by assignment or deletion
+                        //    - initialize variables that are accessed from within a nested scope:
+                        //        def f(): 
+                        //          def g(): 
+                        //            read(a) 
+                        //          g()
+                        //          write(a)
+                        //
+                        //    - initialize in a scope that exposes locals (i.e. class scope, function scope with unqualified exec, eval, locals())
+                        // 2) Global local variables (variables that weren't assigned within the child scope and were hoisted to the global scope)
+                        //    - we need to initialize them because the runtime lookup is relying on that (ModuleGlobalWrapper checks for uninitialized and fethes the value then)
+                        //      TODO: this is hacky, the global variable lookup should be implemented better
+                        // 3) Hidden local variables (variables that weren't assigned within the scope that contains unqualified exec, eval, locals())
+                        //    - initialize them to skip the local slot while looking up the name in scope chain
+                        //      TODO: this is hacky as well
+                        //
+                        if (pv.Kind == VariableKind.Local && !IsGlobal && (pv.ReadBeforeInitialized || pv.AccessedInNestedScope || ExposesLocalVariables) ||
+                            pv.Kind == VariableKind.GlobalLocal && pv.ReadBeforeInitialized ||
+                            pv.Kind == VariableKind.HiddenLocal) {
+
+                            Debug.Assert(pv.Kind != VariableKind.HiddenLocal || pv.ReadBeforeInitialized, "Hidden variable is always uninitialized");
+
                             init.Add(
-                                MSAst.Ast.Assign(
+                                MSAst.Expression.Assign(
                                     var,
-                                    MSAst.Ast.ReadField(null, typeof(Uninitialized).GetField("Instance"))
+                                    MSAst.Expression.ReadField(null, typeof(Uninitialized).GetField("Instance"))
                                 )
                             );
                         }
@@ -107,7 +144,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal bool TryGetVariable(SymbolId name, out PythonVariable variable) {
-            if (TryGetAnyVariable(name, out variable) && variable.Visible) {
+            if (TryGetAnyVariable(name, out variable) && variable.Kind != VariableKind.HiddenLocal) {
                 return true;
             } else {
                 variable = null;
@@ -179,7 +216,7 @@ namespace IronPython.Compiler.Ast {
             EnsureVariables();
             Debug.Assert(!_variables.ContainsKey(name));
             PythonVariable variable;
-            _variables[name] = variable = new PythonVariable(name, kind, this);
+            _variables[name] = variable = new PythonVariable(name, typeof(object), kind, this);
             return variable;
         }
 
@@ -191,11 +228,18 @@ namespace IronPython.Compiler.Ast {
             return variable;
         }
 
+        internal PythonVariable EnsureUnboundVariable(SymbolId name) {
+            PythonVariable variable;
+            if (!TryGetVariable(name, out variable)) {
+                return CreateVariable(name, VariableKind.GlobalLocal);
+            }
+            return variable;
+        }
+
         internal PythonVariable EnsureHiddenVariable(SymbolId name) {
             PythonVariable variable;
             if (!TryGetAnyVariable(name, out variable)) {
-                variable = CreateVariable(name, VariableKind.Local);
-                variable.Hide();
+                variable = CreateVariable(name, VariableKind.HiddenLocal);
             }
             return variable;
         }

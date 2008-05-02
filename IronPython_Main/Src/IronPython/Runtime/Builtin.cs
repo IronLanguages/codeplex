@@ -43,7 +43,7 @@ namespace IronPython.Runtime {
     [Documentation("")]  // Documentation suppresses XML Doc on startup.
     public static partial class Builtin {
         [MultiRuntimeAware]
-        private static FastDynamicSite<object, object, object> _divmodSite, _rdivmodSite, _addForSum;
+        private static DynamicSite<object, object, object> _divmodSite, _rdivmodSite, _addForSum;
 
         public static object True {
             get {
@@ -263,6 +263,8 @@ namespace IronPython.Runtime {
             if ((cflags & CompileFlags.CO_DONT_IMPLY_DEDENT) != 0) {
                 opts.DontImplyDedent = true;
             }
+            opts.Module |= ModuleOptions.ExecOrEvalCode;
+
             SourceUnit sourceUnit;
             string unitPath = String.IsNullOrEmpty(filename) ? null : filename;
 
@@ -337,19 +339,19 @@ namespace IronPython.Runtime {
             Debug.Assert(PythonOps.NotImplemented != null);
 
             if (!_divmodSite.IsInitialized) {
-                _divmodSite.EnsureInitialized(DefaultContext.Default, DoOperationAction.Make(Operators.DivMod));
+                _divmodSite.EnsureInitialized(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.DivMod));
             }
 
-            object ret = _divmodSite.Invoke(x, y);
+            object ret = _divmodSite.Invoke(DefaultContext.Default, x, y);
             if (ret != PythonOps.NotImplemented) {
                 return ret;
             }
 
             if (!_rdivmodSite.IsInitialized) {
-                _rdivmodSite.EnsureInitialized(DefaultContext.Default, DoOperationAction.Make(Operators.ReverseDivMod));
+                _rdivmodSite.EnsureInitialized(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.ReverseDivMod));
             }
 
-            ret = _rdivmodSite.Invoke(x, y);
+            ret = _rdivmodSite.Invoke(DefaultContext.Default, x, y);
             if (ret != PythonOps.NotImplemented) {
                 return ret;
             }
@@ -381,10 +383,8 @@ namespace IronPython.Runtime {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            Scope scope = GetExecEvalScope(context, globals, locals);
-
-            return code.Call(context, scope, false); // Do not try evaluate mode for compiled code
-
+            Scope localScope = GetExecEvalScopeOptional(context, globals, locals, false);
+            return code.Call(localScope, false); // Do not try evaluate mode for compiled code
         }
 
         internal static IAttributesCollection GetAttrLocals(CodeContext/*!*/ context, object locals) {
@@ -392,7 +392,7 @@ namespace IronPython.Runtime {
             if (locals == null) {
                 attrLocals = LocalsAsAttributesCollection(context);
             } else {
-                attrLocals = locals as IAttributesCollection ?? new ObjectAttributesAdapter(locals);
+                attrLocals = locals as IAttributesCollection ?? new PythonDictionary(new ObjectAttributesAdapter(locals));
             }
             return attrLocals;
         }
@@ -419,13 +419,13 @@ namespace IronPython.Runtime {
                 throw PythonOps.TypeError("locals must be mapping");
             }
 
-            Scope scope = GetExecEvalScope(context, globals, locals);
+            Scope scope = GetExecEvalScopeOptional(context, globals, locals, false);
 
             // TODO: remove TrimStart
             SourceUnit source = context.LanguageContext.CreateSnippet(expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
             ScriptCode compiledCode = source.Compile(GetDefaultCompilerOptions(context, true, 0), ThrowingErrorSink.Default);
 
-            return compiledCode.Run(scope, context.ModuleContext, true);
+            return compiledCode.Run(scope, true);
         }
 
         public static void execfile(CodeContext/*!*/ context, object filename) {
@@ -449,7 +449,7 @@ namespace IronPython.Runtime {
 
             if (l == null) l = g;
 
-            Scope execScope = GetExecEvalScope(context, g, l);
+            Scope execScope = GetExecEvalScopeOptional(context, g, l, true);
             string path = Converter.ConvertToString(filename);
             PythonContext pc = PythonContext.GetContext(context);
             SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, path, pc.DefaultEncoding, SourceCodeKind.File);
@@ -466,7 +466,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError(x);
             }
 
-            code.Run(execScope, ((PythonModule)context.ModuleContext).Clone(), false); // Do not attempt evaluation mode for execfile
+            code.Run(execScope, false); // Do not attempt evaluation mode for execfile
         }
 
         public static PythonType file {
@@ -664,17 +664,16 @@ namespace IronPython.Runtime {
                     doc.AppendLine();
                 }
 
-                List<SymbolId> names = new List<SymbolId>(type.GetMemberNames(context, null));
-                names.Sort(delegate(SymbolId left, SymbolId right) {
-                    return String.Compare(left.ToString(), right.ToString());
-                });
+                List names = type.GetMemberNames(context);
+                names.sort();
 
-                foreach (SymbolId name in names) {
-                    if (name == Symbols.Class) continue;
+                foreach (string name in names) {
+                    if (name == "__class__") continue;
 
                     PythonTypeSlot value;
                     object val;
-                    if (type.TryLookupSlot(context, name, out value) && value.TryGetValue(context, null, type, out val)) {
+                    if (type.TryLookupSlot(context, SymbolTable.StringToId(name), out value) && 
+                        value.TryGetValue(context, null, type, out val)) {
                         help(context, doced, doc, indent + 1, val);
                     }
                 }
@@ -863,7 +862,7 @@ namespace IronPython.Runtime {
                 return adapter.Backing;
             }
 
-            return LocalsAsAttributesCollection(context);
+            return LocalScopeDictionaryStorage.GetObjectFromScope(context.Scope);
         }
 
         internal static IAttributesCollection LocalsAsAttributesCollection(CodeContext/*!*/ context) {
@@ -884,14 +883,14 @@ namespace IronPython.Runtime {
             object func = param[0];
 
             if (param.Length == 2) {
-                FastDynamicSite<object, object, object> mapSite;
-                if (func != null) mapSite = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
+                DynamicSite<object, object, object> mapSite;
+                if (func != null) mapSite = CallSiteFactory.CreateSimpleCallSite<object, object, object>(DefaultContext.DefaultPythonBinder);
 
 
                 IEnumerator i = PythonOps.GetEnumerator(param[1]);
                 while (i.MoveNext()) {
                     if (func == null) ret.AddNoLock(i.Current);
-                    else ret.AddNoLock(mapSite.Invoke(func, i.Current));
+                    else ret.AddNoLock(mapSite.Invoke(DefaultContext.Default, func, i.Current));
                 }
                 return ret;
             } else {
@@ -901,7 +900,7 @@ namespace IronPython.Runtime {
                 }
 
                 object[] args = new object[enums.Length];
-                FastDynamicSite<object, object[], object> mapSite;
+                DynamicSite<object, object[], object> mapSite;
                 while (true) {
                     bool done = true;
                     for (int i = 0; i < enums.Length; i++) {
@@ -919,12 +918,11 @@ namespace IronPython.Runtime {
                         // splat call w/ args, can't use site here yet...
                         if (!mapSite.IsInitialized) {
                             mapSite.EnsureInitialized(
-                                DefaultContext.Default,
-                                CallAction.Make(new CallSignature(ArgumentKind.List))
+                                CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List))
                             );
                         }
 
-                        ret.AddNoLock(mapSite.Invoke(func, args));
+                        ret.AddNoLock(mapSite.Invoke(DefaultContext.Default, func, args));
                     } else {
                         ret.AddNoLock(PythonTuple.MakeTuple(args));
                         args = new object[enums.Length];    // Tuple does not copy the array, allocate new one.
@@ -1439,12 +1437,12 @@ namespace IronPython.Runtime {
             }
 
             if (!_addForSum.IsInitialized) {
-                _addForSum.EnsureInitialized(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Add));
+                _addForSum.EnsureInitialized(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Add));
             }
 
             object ret = start;
             while (i.MoveNext()) {
-                ret = _addForSum.Invoke(ret, i.Current); // Ops.Add(ret, i.Current);
+                ret = _addForSum.Invoke(DefaultContext.DefaultCLS, ret, i.Current); // Ops.Add(ret, i.Current);
             }
             return ret;
         }
@@ -1551,7 +1549,8 @@ namespace IronPython.Runtime {
         internal static PythonCompilerOptions GetDefaultCompilerOptions(CodeContext/*!*/ context, bool inheritContext, CompileFlags cflags) {
             PythonCompilerOptions pco;
             if (inheritContext) {
-                if (((PythonModule)context.ModuleContext).TrueDivision) {
+                PythonModule pm = (PythonModule)context.GlobalScope.GetExtension(context.LanguageContext.ContextId);
+                if (pm != null && pm.TrueDivision) {
                     pco = new PythonCompilerOptions(true);
                 } else {
                     pco = new PythonCompilerOptions(false);
@@ -1589,18 +1588,43 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets a scope used for executing new code in optionally replacing the globals and locals dictionaries.
         /// </summary>
-        private static Scope GetExecEvalScope(CodeContext/*!*/ context, IAttributesCollection globals, object localsDict) {
+        private static Scope/*!*/ GetExecEvalScopeOptional(CodeContext/*!*/ context, IAttributesCollection globals, object localsDict, bool copyModule) {
+            Assert.NotNull(context);
+
             if (globals == null) globals = Builtin.globals(context);
             if (localsDict == null) localsDict = locals(context);
 
+            return GetExecEvalScope(context, globals, GetAttrLocals(context, localsDict), copyModule, true);
+        }
+
+        internal static Scope/*!*/ GetExecEvalScope(CodeContext/*!*/ context, IAttributesCollection/*!*/ globals, 
+            IAttributesCollection/*!*/ locals, bool copyModule, bool setBuiltinsToModule) {
+
+            Assert.NotNull(context, globals, locals);
+
             PythonContext python = PythonContext.GetContext(context);
 
-            Scope scope = new Scope(new Scope(globals), GetAttrLocals(context, localsDict));
+            Scope globalScope = new Scope(globals);
+
+            // get module associated with the current global scope:
+            PythonModule module = python.GetPythonModule(context.GlobalScope);
+            if (module != null) {
+                if (copyModule) {
+                    module = new PythonModule(globalScope, module);
+                }
+                globalScope.SetExtension(python.ContextId, module);
+            }
+
+            Scope localScope = new Scope(globalScope, locals);
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
-                globals[Symbols.Builtins] = python.BuiltinModuleInstance.Dict;
+                if (setBuiltinsToModule) {
+                    globals[Symbols.Builtins] = python.SystemStateModules["__builtin__"];
+                } else {
+                    globals[Symbols.Builtins] = python.BuiltinModuleInstance.Dict;
+                }
             }
-            return scope;
+            return localScope;
         }
 
         public static void PerformModuleReload(PythonContext context, IAttributesCollection dict) {

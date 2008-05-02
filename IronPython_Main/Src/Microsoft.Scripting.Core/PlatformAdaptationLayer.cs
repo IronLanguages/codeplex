@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.Collections;
 using System.IO;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
@@ -150,7 +149,7 @@ namespace Microsoft.Scripting {
 
         #region Virtual File System
 
-        public StringComparer/*!*/ PathComparer {
+        public virtual StringComparer/*!*/ PathComparer {
             get {
                 return StringComparer.Ordinal;
             }

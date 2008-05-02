@@ -26,20 +26,26 @@ namespace Microsoft.Scripting.Generation {
         private ActionBinder _actionBinder;
         private RuleBuilder _rule;
 
-        public MethodBinderContext(ActionBinder actionBinder, RuleBuilder rule) {
+        internal MethodBinderContext(ActionBinder actionBinder, RuleBuilder rule) {
             _actionBinder = actionBinder;
             _rule = rule;
         }
 
-        public Expression ConvertExpression(Expression expr, Type type) {
+        internal ActionBinder Binder {
+            get {
+                return _actionBinder;
+            }
+        }
+
+        internal Expression ConvertExpression(Expression expr, Type type) {
             return _actionBinder.ConvertExpression(expr, type);
         }
 
-        public VariableExpression GetTemporary(Type type, string name) {            
+        internal VariableExpression GetTemporary(Type type, string name) {            
             return _rule.GetTemporary(type, name);
         }
 
-        public bool CanConvert(Type fromType, Type toType, NarrowingLevel level) {
+        internal bool CanConvert(Type fromType, Type toType, NarrowingLevel level) {
             return _actionBinder.CanConvertFrom(fromType, toType, level);
         }
     }

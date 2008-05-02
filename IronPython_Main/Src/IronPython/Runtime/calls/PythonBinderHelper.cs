@@ -27,6 +27,8 @@ using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Expression;
+
     static class PythonBinderHelper {
         /// <summary>
         /// dictionary of templated type error rules.
@@ -102,39 +104,27 @@ namespace IronPython.Runtime.Calls {
             if (!templatable) {
                 test = RuleBuilder.MakeTypeTestExpression(type.UnderlyingSystemType, tested);
             } else {
-                test = Ast.Equal(
-                    Ast.Call(
-                        typeof(CompilerHelpers).GetMethod("GetType", new Type[] { typeof(object) }),
-                        Ast.ConvertHelper(tested, typeof(object))
-                    ),
-                    rule.AddTemplatedConstant(typeof(Type), type.UnderlyingSystemType)
-                );
+                test =                     
+                    Ast.Equal(
+                        Ast.Call(
+                            typeof(CompilerHelpers).GetMethod("GetType", new Type[] { typeof(object) }),
+                            Ast.ConvertHelper(tested, typeof(object))
+                        ),
+                        rule.AddTemplatedConstant(typeof(Type), type.UnderlyingSystemType)
+                    );
             }
 
             if (!isStaticType) {
                 int version = type.Version;
-                if (version != PythonType.DynamicVersion) {
-                    test = Ast.AndAlso(
-                        test,
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("CheckTypeVersion"),
-                            Ast.ConvertHelper(tested, typeof(object)),
-                            GetVersionExpression(rule, templatable, version)
-                        )
-                    );
-                    rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).Validate);
-                } else {
-                    version = type.AlternateVersion;
-                    test = Ast.AndAlso(
-                        test,
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("CheckAlternateTypeVersion"),
-                            Ast.ConvertHelper(tested, typeof(object)),
-                            GetVersionExpression(rule, templatable, version)
-                        )
-                    );
-                    rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).AlternateValidate);
-                }
+                test = Ast.AndAlso(
+                    test,
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("CheckTypeVersion"),
+                        Ast.ConvertHelper(tested, typeof(object)),
+                        GetVersionExpression(rule, templatable, version)
+                    )
+                );
+                rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).Validate);
             }
 
             return test;
@@ -242,10 +232,6 @@ namespace IronPython.Runtime.Calls {
                 PythonType dt = _pythonType.Target as PythonType;
                 return dt != null && dt.Version == _version;
             }
-            public bool AlternateValidate() {
-                PythonType dt = _pythonType.Target as PythonType;
-                return dt != null && dt.AlternateVersion == _version;
-            }
         }
 
         //
@@ -271,11 +257,14 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Used for conversions to bool
         /// </summary>
-        internal static Expression GetConvertByLengthBody(VariableExpression tmp) {
+        internal static Expression GetConvertByLengthBody(CodeContext context, VariableExpression tmp) {
+            ActionBinder binder = PythonContext.GetContext(context).Binder;
             return Ast.NotEqual(
                 Ast.Action.ConvertTo(
+                    binder,
                     typeof(int),
                     Ast.Action.Call(
+                        binder,
                         typeof(object),
                         Ast.Read(tmp)
                     )
@@ -339,6 +328,7 @@ namespace IronPython.Runtime.Calls {
                     context.LanguageContext.Binder,
                     Ast.NotEqual(
                         Ast.Action.GetMember(
+                            PythonContext.GetContext(context).Binder,
                             Symbols.Call,
                             GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow,
                             typeof(System.Object),

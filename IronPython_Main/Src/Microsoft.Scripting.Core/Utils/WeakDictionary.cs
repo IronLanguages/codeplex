@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Utils {
         // The one and only comparer instance.
         static readonly IEqualityComparer<object> comparer = new WeakComparer<object>();
 
-        IDictionary<object, TValue> dict = new Dictionary<object, TValue>();
+        IDictionary<object, TValue> dict = new Dictionary<object, TValue>(comparer);
         int version, cleanupVersion;
 
 #if SILVERLIGHT // GC

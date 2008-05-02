@@ -45,8 +45,8 @@ namespace Microsoft.Scripting.Runtime {
         /// no new methods under a given name will result in the same method group for both types.
         /// </summary>
         public static MethodGroup GetMethodGroup(Type type, string name, BindingFlags bindingFlags, MemberFilter filter) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
             MemberInfo[] mems = type.FindMembers(MemberTypes.Method,
                 bindingFlags,

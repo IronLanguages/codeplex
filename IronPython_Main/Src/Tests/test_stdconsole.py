@@ -129,7 +129,7 @@ def test_exit():
 usageRegex = "Usage.*"
 
 TestCommandLine(("-c", "print 'foo'"), "foo\n")
-TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo\n"), 1)
+TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo"), 1)
 TestCommandLine(("-c", "import sys; sys.exit(123)"), "", 123)
 TestCommandLine(("-c", "import sys; print sys.argv", "foo", "bar", "baz"), "['-c', 'foo', 'bar', 'baz']\n")
 TestCommandLine(("-c",), "Argument expected for the -c option.\n", -1)
@@ -155,7 +155,7 @@ TestCommandLine(("-c", "print 'site' in dir()"), "False\n")
 TestCommandLine(("-S", "-c", "import sys; print str(sys.exec_prefix + '\\lib').lower() in [x.lower() for x in sys.path]"), "True\n")
 
 # Now check that we can suppress this with -S.
-TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'\n"), 1)
+TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
 
 # Test the -V (print version and exit) option.
 TestCommandLine(("-V",), ("regexp", "IronPython ([0-9.]+)(.*) on .NET ([0-9.]+)\n"))
@@ -178,7 +178,7 @@ f.close()
 
 TestCommandLine((tmpscript, ), "OK\n")
 msg = "inconsistent use of tabs and spaces in indentation"
-TestCommandLine(("-t", tmpscript), ("lastline", "SyntaxWarning: %s (%s, line %d)\n"  % (msg, tmpscript, 3)), 1)
+TestCommandLine(("-t", tmpscript), ("lastline", "SyntaxWarning: %s (%s, line %d)"  % (msg, tmpscript, 3)), 1)
 TestCommandLine(("-tt", tmpscript), ("lastline", "TabError: " + msg + "\n"), 1)
 
 
@@ -186,7 +186,7 @@ TestCommandLine(("-tt", tmpscript), ("lastline", "TabError: " + msg + "\n"), 1)
 
 # Re-use the generated site.py from above and verify that we can stop it being picked up from IRONPYTHONPATH
 # using -E.
-TestCommandLine(("-E", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'\n"), 1)
+TestCommandLine(("-E", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
 
 # Create an override startup script that exits right away
 tmpscript = tmpdir + "\\startupdie.py"

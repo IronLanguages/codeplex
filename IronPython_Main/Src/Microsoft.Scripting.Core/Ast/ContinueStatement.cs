@@ -32,15 +32,15 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static ContinueStatement Continue(LabelTarget target) {
             return Continue(SourceSpan.None, target);
         }
         public static ContinueStatement Continue(SourceSpan span, LabelTarget target) {
-            return new ContinueStatement(Annotations(span), target);
+            return new ContinueStatement(Annotate(span), target);
         }
         public static ContinueStatement Continue(Annotations annotations, LabelTarget target) {
-            Contract.RequiresNotNull(target, "target");
+            ContractUtils.RequiresNotNull(target, "target");
             return new ContinueStatement(annotations, target);
         }
     }

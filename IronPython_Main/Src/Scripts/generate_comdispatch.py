@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 class VariantType:
     def __init__(self, 
@@ -227,13 +225,19 @@ def gen_ConvertByrefToPtrDelegates(cw):
     for variantType in variantTypes:
         variantType.write_ConvertByrefToPtrDelegates(cw)
 
-CodeGenerator("Variant union types", gen_UnionTypes).doit()
-CodeGenerator("Variant ToObject", gen_ToObject).doit()
-CodeGenerator("Variant accessors", gen_accessors).doit()
-CodeGenerator("Variant accessors PropertyInfos", gen_accessor_propertyinfo).doit()
-CodeGenerator("Variant byref setter", gen_byref_setters).doit()
-CodeGenerator("HasCommonLayout", gen_hasCommonLayout).doit()
-CodeGenerator("ComToManagedPrimitiveTypes", gen_ComToManagedPrimitiveTypes).doit()
-CodeGenerator("Variant IsPrimitiveType", gen_IsPrimitiveType).doit()
-CodeGenerator("ConvertByrefToPtr", gen_ConvertByrefToPtr).doit()
-CodeGenerator("ConvertByrefToPtrDelegates", gen_ConvertByrefToPtrDelegates).doit()
+def main():
+    return generate(
+        ("Variant union types", gen_UnionTypes),
+        ("Variant ToObject", gen_ToObject),
+        ("Variant accessors", gen_accessors),
+        ("Variant accessors PropertyInfos", gen_accessor_propertyinfo),
+        ("Variant byref setter", gen_byref_setters),
+        ("HasCommonLayout", gen_hasCommonLayout),
+        ("ComToManagedPrimitiveTypes", gen_ComToManagedPrimitiveTypes),
+        ("Variant IsPrimitiveType", gen_IsPrimitiveType),
+        ("ConvertByrefToPtr", gen_ConvertByrefToPtr),
+        ("ConvertByrefToPtrDelegates", gen_ConvertByrefToPtrDelegates),
+    )
+
+if __name__ == "__main__":
+    main()

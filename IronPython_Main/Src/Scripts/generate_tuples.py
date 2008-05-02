@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 def make_arg_list(size, name ='T%(id)d'):
     return ', '.join([name % {'id': x} for x in range(size)])
@@ -103,7 +101,11 @@ def gen_get_size(cw):
     cw.exit_block()
     cw.exit_block()
 
+def main():
+    return generate(
+        ("Tuples", gen_tuples),
+        ("Tuple Get From Size", gen_get_size),
+    )
 
-CodeGenerator("Tuples", gen_tuples).doit()
-
-generate.CodeGenerator("Tuple Get From Size", gen_get_size).doit()
+if __name__ == "__main__":
+    main()

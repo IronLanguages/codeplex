@@ -117,28 +117,8 @@ namespace IronPython.Runtime {
         }
     }
 
-    /// <summary>
-    /// PythonTypeAttribute is used for type impersonation:
-    ///    There might be multiple types in the engine which represent the same
-    ///    built-in type in Python. In such cases, the multiple types in the engine point
-    ///    to a single type in the engine which represents a built-in Python type.
-    ///    For eg, Function0, Function1, etc all point to IronPython.Runtime.Function.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, Inherited = false)]
-    public sealed class PythonTypeAttribute : ScriptTypeAttribute {
-        
-
-        /// <summary>
-        /// Marks a type as impersonating another type.  The type's implementation will come from
-        /// the type this is added on, but this type will logically appear to be a subclass of the
-        /// impersonated type and will have its repr.
-        /// </summary>
-        public PythonTypeAttribute(Type impersonateType) : base(PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(impersonateType)), impersonateType) {            
-        }
-
-        internal override ExtensionNameTransformer GetTransformer(PythonType type) {
-            return new PythonExtensionTypeAttribute(type).PythonNameTransformer;
-        }
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true, Inherited = false)]
+    public class WrapperDescriptorAttribute : Attribute {        
     }
 
     /// <summary>
@@ -158,8 +138,8 @@ namespace IronPython.Runtime {
         /// <param name="name">The built-in module name</param>
         /// <param name="type">The type that implements the built-in module.</param>
         public PythonModuleAttribute(string/*!*/ name, Type/*!*/ type) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
 
             this._name = name;
             this._type = type;

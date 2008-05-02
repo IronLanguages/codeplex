@@ -15,14 +15,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Ast;
 using System.Reflection;
+
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// Updates fields/properties of the returned value with unused keyword parameters.
@@ -75,7 +76,7 @@ namespace Microsoft.Scripting.Generation {
                                 Ast.AssignField(
                                     Ast.Read(tmp),
                                     fi,
-                                    ConvertToHelper(value, fi.FieldType)
+                                    ConvertToHelper(context.Binder, value, fi.FieldType)
                                 )
                             );
                         } else {
@@ -99,7 +100,7 @@ namespace Microsoft.Scripting.Generation {
                                 Ast.AssignProperty(
                                     Ast.Read(tmp),
                                     pi,
-                                    ConvertToHelper(value, pi.PropertyType)
+                                    ConvertToHelper(context.Binder, value, pi.PropertyType)
                                 )
                             );
                         } else {
@@ -130,11 +131,16 @@ namespace Microsoft.Scripting.Generation {
             return _builder.ToExpression(context, args, parameters, newCall);
         }
 
-        private static Expression ConvertToHelper(Expression value, Type type) {
-            if (type == value.Type) return value;
-            if (type.IsAssignableFrom(value.Type)) return Ast.ConvertHelper(value, type);
+        private static Expression ConvertToHelper(ActionBinder binder, Expression value, Type type) {
+            if (type == value.Type) {
+                return value;
+            }
 
-            return Ast.Action.ConvertTo(type, value);
+            if (type.IsAssignableFrom(value.Type)) {
+                return Ast.ConvertHelper(value, type);
+            }
+
+            return Ast.Action.ConvertTo(binder, type, value);
         }
     }
 }

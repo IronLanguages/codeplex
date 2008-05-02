@@ -30,9 +30,9 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static ParameterExpression Parameter(Type type, string name) {
-            Contract.Requires(type != typeof(void));
+            ContractUtils.Requires(type != typeof(void));
             return new ParameterExpression(type, name);
         }
     }

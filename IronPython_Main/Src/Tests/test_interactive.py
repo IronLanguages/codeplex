@@ -53,6 +53,18 @@ def test_strings():
     
     ipi.End()
 
+def test_exceptions():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    # parameterless exception
+    response = ipi.ExecuteLine("raise Exception", True)
+    Assert(response.find("Traceback (most recent call last):") > -1)
+    Assert(response.find('  File "<stdin>", line 1, in <module>') > -1)
+    Assert(response.find("Exception") > -1)
+    Assert(response.find("Exception: ") == -1)
+            
+    ipi.End()
 
 ###############################################################################
 # Test "ipy.exe -i script.py"
@@ -117,8 +129,7 @@ def test_sys_exitfunc():
     AreEqual(exitCode, 0)
     AreEqual(output2.find('Error in sys.exitfunc:') > -1, True)
     
-    if ScriptDomainManager.Options.DebugMode:
-        AreEqual(output2.find('exitFuncRaises.py, line 19, in foo') > -1, True)
+    AreEqual(output2.find('exitFuncRaises.py", line 19, in foo') > -1, True)
 		
     ipi.End()
 

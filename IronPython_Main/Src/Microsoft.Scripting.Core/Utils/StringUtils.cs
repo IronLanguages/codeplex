@@ -32,13 +32,13 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string GetSuffix(string str, char separator, bool includeSeparator) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
             int last = str.LastIndexOf(separator);
             return (last != -1) ? str.Substring(includeSeparator ? last : last + 1) : null;
         }
 
         public static string GetLongestPrefix(string str, char separator, bool includeSeparator) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
             int last = str.LastIndexOf(separator);
             return (last != -1) ? str.Substring(0, (includeSeparator || last == 0) ? last : last - 1) : null;
         }
@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string[] Split(string str, string separator, int maxComponents, StringSplitOptions options) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
 #if SILVERLIGHT
             if (string.IsNullOrEmpty(separator)) throw new ArgumentNullException("separator");
 
@@ -87,7 +87,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string[] Split(string str, char[] separators, int maxComponents, StringSplitOptions options) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
 #if SILVERLIGHT
             if (separators == null) return SplitOnWhiteSpace(str, maxComponents, options);
 
@@ -119,7 +119,7 @@ namespace Microsoft.Scripting.Utils {
 
 #if SILVERLIGHT
         public static string[] SplitOnWhiteSpace(string str, int maxComponents, StringSplitOptions options) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
 
             bool keep_empty = (options & StringSplitOptions.RemoveEmptyEntries) != StringSplitOptions.RemoveEmptyEntries;
 
@@ -145,7 +145,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static int IndexOfWhiteSpace(string str, int start) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
             if (start < 0 || start > str.Length) throw new ArgumentOutOfRangeException("start");
 
             while (start < str.Length && !Char.IsWhiteSpace(str[start])) start++;
@@ -158,7 +158,7 @@ namespace Microsoft.Scripting.Utils {
         /// Splits text and optionally indents first lines - breaks along words, not characters.
         /// </summary>
         public static string SplitWords(string text, bool indentFirst, int lineWidth) {
-            Contract.RequiresNotNull(text, "text");
+            ContractUtils.RequiresNotNull(text, "text");
 
             const string indent = "    ";
 
@@ -194,7 +194,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string AddSlashes(string str) {
-            Contract.RequiresNotNull(str, "str");
+            ContractUtils.RequiresNotNull(str, "str");
 
             // TODO: optimize
             StringBuilder result = new StringBuilder(str.Length);

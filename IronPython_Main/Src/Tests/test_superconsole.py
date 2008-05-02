@@ -338,7 +338,7 @@ def test_control_character_rendering():
     verifyResults(getTestOutput()[0], testRegex)
     #stderr should contain the exceptions       
     errlines = getTestOutput()[1]
-    Assert("KeyboardInterrupt: " + newline in errlines, 
+    Assert("KeyboardInterrupt" + newline in errlines, 
            "KeyboardInterrupt not found in:" + str(errlines))  
     #for i in xrange(len(errlines)):
     #    Assert(errlines[i].startswith(errors[i]), str(errlines) + " != " + str(errors))

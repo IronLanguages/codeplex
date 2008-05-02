@@ -62,7 +62,7 @@ namespace Microsoft.Scripting.Actions {
         }
         
         public CallSignature(int argumentCount) {
-            Contract.Requires(argumentCount >= 0, "argumentCount");
+            ContractUtils.Requires(argumentCount >= 0, "argumentCount");
             _argumentCount = argumentCount;
             _infos = null;
         }
@@ -262,7 +262,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public SymbolId GetArgumentName(int index) {
-            Contract.Requires(index >= 0 && index < _argumentCount);
+            ContractUtils.Requires(index >= 0 && index < _argumentCount);
             return _infos != null ? _infos[index].Name : SymbolId.Empty;
         }
 

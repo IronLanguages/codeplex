@@ -39,8 +39,10 @@ namespace Microsoft.Scripting.Actions {
         MethodGroup = 0x80,
         /// <summary> Specifies that the member is a group of types that very by arity, representing a TypeGroup</summary>
         TypeGroup = 0x100,
-        /// <summary> Specifies that the member is a bound to an instance, representing a BoundMemberTracker</summary>
-        Bound = 0x200,
+        /// <summary> Specifies that the member is a custom meber, represetning a CustomTracker </summary>
+        Custom = 0x200,
+        /// <summary> Specifies that the member is a bound to an instance, representing a BoundMemberTracker</summary>        
+        Bound = 0x400,
         //
         // Summary:
         //     Specifies all member types.

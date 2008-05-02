@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Ast {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")] // TODO: fix
         public SwitchStatementBuilder Test(Expression test) {
-            Contract.RequiresNotNull(test, "test");
+            ContractUtils.RequiresNotNull(test, "test");
             _test = test;
             return this;
         }
@@ -46,8 +46,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public SwitchStatementBuilder Default(SourceLocation header, Expression body) {
-            Contract.Requires(_default == false, "body", "Already has default clause");
-            _cases.Add(Ast.DefaultCase(header, body));
+            ContractUtils.Requires(_default == false, "body", "Already has default clause");
+            _cases.Add(Expression.DefaultCase(header, body));
             _default = true;
             return this;
         }
@@ -57,13 +57,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public SwitchStatementBuilder Case(SourceLocation header, int value, Expression body) {
-            _cases.Add(Ast.SwitchCase(header, value, body));
+            _cases.Add(Expression.SwitchCase(header, value, body));
             return this;
         }
 
         public Expression ToStatement() {
-            Contract.Requires(_test != null);
-            return Ast.Switch(_span, _header, _label, _test, _cases.ToArray());
+            ContractUtils.Requires(_test != null);
+            return Expression.Switch(_span, _header, _label, _test, _cases.ToArray());
         }
 
         public static implicit operator Expression(SwitchStatementBuilder builder) {
@@ -71,7 +71,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static SwitchStatementBuilder Switch() {
             return Switch(SourceSpan.None, SourceLocation.None, null, null);
         }
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static SwitchStatementBuilder Switch(SourceSpan span, SourceLocation header, LabelTarget label, Expression test) {
-            Contract.RequiresNotNull(test, "test");
+            ContractUtils.RequiresNotNull(test, "test");
             return new SwitchStatementBuilder(span, header, label, test);
         }
     }

@@ -154,8 +154,8 @@ namespace Microsoft.Scripting.Generation {
         /// a RuleBuilder, or be used for performing an abstract call.
         /// </summary>
         public BindingTarget MakeBindingTarget(CallTypes callType, Type/*!*/[]/*!*/ types) {
-            Contract.RequiresNotNull(types, "types");
-            Contract.RequiresNotNullItems(types, "types");
+            ContractUtils.RequiresNotNull(types, "types");
+            ContractUtils.RequiresNotNullItems(types, "types");
 
             TargetSet ts = GetTargetSet(types.Length);
             if (ts != null && !ts.IsParamsDictionaryOnly()) {
@@ -196,8 +196,8 @@ namespace Microsoft.Scripting.Generation {
         /// and report their own errors on failure.
         /// </summary>
         public object CallReflected(CodeContext/*!*/ context, CallTypes callType, params object[]/*!*/ args) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(args, "args");
 
             Type[] types = CompilerHelpers.GetTypes(args);
             BindingTarget bt = MakeBindingTarget(callType, types);
@@ -220,9 +220,9 @@ namespace Microsoft.Scripting.Generation {
         /// and report their own errors on failure.
         /// </summary>
         public object CallInstanceReflected(CodeContext/*!*/ context, object/*!*/ instance, params object[]/*!*/ args) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(instance, "instance");
-            Contract.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(instance, "instance");
+            ContractUtils.RequiresNotNull(args, "args");
 
             return CallReflected(context, CallTypes.ImplicitInstance, ArrayUtils.Insert(instance, args));
         }
@@ -238,8 +238,8 @@ namespace Microsoft.Scripting.Generation {
         /// and report their own errors on failure.
         /// </summary>
         public AbstractValue AbstractCall(CallTypes callType, IList<AbstractValue/*!*/>/*!*/ args) {
-            Contract.RequiresNotNull(args, "args");
-            Contract.RequiresNotNullItems(args, "args");
+            ContractUtils.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNullItems(args, "args");
 
             Type[] types = AbstractValue.GetTypes(args);
             BindingTarget bt = MakeBindingTarget(callType, types);
@@ -821,7 +821,7 @@ namespace Microsoft.Scripting.Generation {
                 return new BindingTarget(_binder.Name, callType == CallTypes.None ? types.Length : types.Length - 1, failures.ToArray());
             }            
                         
-            private bool TryGetApplicableTarget(CallTypes callType, List<MethodCandidate> applicableTargets, Type[] actualTypes, out List<MethodCandidate> result) {
+            private static bool TryGetApplicableTarget(CallTypes callType, List<MethodCandidate> applicableTargets, Type[] actualTypes, out List<MethodCandidate> result) {
                 result = null;
                 if (applicableTargets.Count == 1) {
                     result = applicableTargets;

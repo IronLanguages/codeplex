@@ -254,12 +254,13 @@ def test_str_equals():
 
 def test_str_dict():
     print "CodePlex Work Item 13115"
-    extra_str_dict_keys = [ "__cmp__", "__init__", "__radd__", "isdecimal", "isnumeric", "isunicode"]
+    extra_str_dict_keys = [ "__cmp__", "__radd__", "isdecimal", "isnumeric", "isunicode"]
     missing_str_dict_keys = ["__rmod__"]
     
     #It's OK that __getattribute__ does not show up in the __dict__.  It is
     #implemented.
     Assert(hasattr(str, "__getattribute__"), "str has no __getattribute__ method")
+    Assert('__init__' not in str.__dict__.keys())
     
     for temp_key in extra_str_dict_keys:
         if sys.platform=="win32":
@@ -268,10 +269,13 @@ def test_str_dict():
             Assert(temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")    
         
     for temp_key in missing_str_dict_keys:
-        if sys.platform=="win32":
-            Assert(temp_key in str.__dict__.keys())    
-        else:
-            Assert(not temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")
+        Assert(temp_key in str.__dict__.keys())    
+        
+    class x(str): pass
+    
+    AreEqual('abc'.__rmod__('-%s-'), '-abc-')
+    AreEqual(x('abc').__rmod__('-%s-'), '-abc-')
+    AreEqual(x('abc').__rmod__(2), NotImplemented)
     
 def test_formatting_userdict():
     """verify user mapping object works with string formatting"""

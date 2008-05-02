@@ -26,46 +26,7 @@ using Microsoft.Scripting;
 
 [assembly: PythonExtensionType(typeof(Enum), typeof(EnumOps))]
 namespace IronPython.Runtime.Operations {
-    public static class EnumOps {
-
-        [SpecialName]
-        public static new bool Equals(object self, object other) {
-            if (self is Enum) {
-                if (other is Enum) {
-                    Type selfType = self.GetType();
-                    Type otherType = other.GetType();
-
-                    if (selfType == otherType) {
-                        Type underType = Enum.GetUnderlyingType(selfType);
-                        if (underType == typeof(int)) {
-                            return (int)self == (int)other;
-                        } else if (underType == typeof(long)) {
-                            return (long)self == (long)other;
-                        } else if (underType == typeof(short)) {
-                            return (short)self == (short)other;
-                        } else if (underType == typeof(byte)) {
-                            return (byte)self == (byte)other;
-                        } else if (underType == typeof(sbyte)) {
-                            return (sbyte)self == (sbyte)other;
-                        } else if (underType == typeof(uint)) {
-                            return (uint)self == (uint)other;
-                        } else if (underType == typeof(ulong)) {
-                            return (ulong)self == (ulong)other;
-                        } else if (underType == typeof(ushort)) {
-                            return (ushort)self == (ushort)other;
-                        }
-                    }
-                } else if (other == null) return false;
-            }
-
-            throw PythonOps.ValueError("Equal cannot be applied to {0} and {1}", self.GetType(), other.GetType());
-        }
-
-        [SpecialName]
-        public static bool NotEquals(object self, object other) {
-            return !Equals(self, other);
-        }
-
+    public static class EnumOps {        
         [SpecialName]
         public static object BitwiseOr(object self, object other) {
             if (self is Enum && other is Enum) {

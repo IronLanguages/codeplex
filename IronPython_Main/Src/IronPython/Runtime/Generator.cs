@@ -28,7 +28,7 @@ using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonSystemType("generator")]
-    public sealed class PythonGenerator : Generator, IEnumerable, IEnumerable<object> {
+    public sealed class PythonGenerator : Generator, IEnumerable, IEnumerable<object>, ICodeFormattable {
         private NextTarget _next;
 
         /// <summary>
@@ -98,8 +98,14 @@ namespace IronPython.Runtime {
 
                 // Sample error message from CPython 2.5 looks like:
                 //     Exception __main__.MyError: MyError() in <generator object at 0x00D7F6E8> ignored
-                string message = string.Format("Exception {0} in {1} ignored\n", e.Message, this);
-                PythonOps.Write(Context, PythonContext.GetContext(Context).SystemStandardError, message);
+                try {
+                    string message = string.Format("Exception in generator {1} ignored", PythonOps.StringRepr(this));
+
+                    PythonOps.PrintWithDest(Context, PythonContext.GetContext(Context).SystemStandardError, message);
+                    PythonOps.PrintWithDest(Context, PythonContext.GetContext(Context).SystemStandardError, Context.LanguageContext.FormatException(e));
+                } catch {
+                    // if stderr is closed then ignore any exceptions.
+                }
             }
         }
 #endif // !SILVERLIGHT
@@ -149,6 +155,8 @@ namespace IronPython.Runtime {
                 if (!ret) {
                     next = null;
                     _closed = true;
+                    // if we're closed the finalizer won't do anything, so suppress it.
+                    GC.SuppressFinalize(this);
                 }
             }
             this.Current = next;
@@ -257,11 +265,6 @@ namespace IronPython.Runtime {
             }
         }
 
-
-        public override string ToString() {
-            return string.Format("<generator object at {0}>", PythonOps.HexId(this));
-        }
-        
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
@@ -319,6 +322,14 @@ namespace IronPython.Runtime {
                 Exception e = PythonOps.MakeException(Context, throwableBackup, _value, _traceback);
                 throw e;
             }
+        }
+
+        #endregion
+
+        #region ICodeFormattable Members
+
+        public string __repr__(CodeContext context) {
+            return string.Format("<generator object at {0}>", PythonOps.HexId(this));
         }
 
         #endregion

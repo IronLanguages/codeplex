@@ -20,14 +20,14 @@ using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Runtime;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     internal class ComObjectWithTypeInfoSetMemberBinderHelper<T> : MemberBinderHelper<T, SetMemberAction> {
+
         private Type _comType;
 
         internal ComObjectWithTypeInfoSetMemberBinderHelper(CodeContext context, Type comType, SetMemberAction action, object[] args)
@@ -36,9 +36,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         internal RuleBuilder<T> MakeNewRule() {
-            // Since the only way to get this rule in the first place is to pass through the statically defined pre-binders,
-            // the test here essentially redundant.  We need one though, so we'll use the basic type test.
-            Rule.MakeTest(typeof(ComObjectWithTypeInfo));
+
+            Rule.Test = ComObject.MakeComObjectTest(typeof(ComObjectWithTypeInfo), typeof(ComObjectWithTypeInfo).GetProperty("ComType"), _comType, Rule);
             Rule.Target = MakeSetMemberTarget();
 
             return Rule;
@@ -56,7 +55,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 // COM implementations are centered around interface definitions.  Consequently,
                 // the standard binder fails to find methods/properties for class types.
                 MemberInfo[] foundMembers = ComObjectWithTypeInfo.WalkType(_comType, StringName);
-                members = new MemberGroup(ActionBinder.FilterNonVisibleMembers(_comType, foundMembers));
+                if (!Context.LanguageContext.DomainManager.GlobalOptions.PrivateBinding) {
+                    members = new MemberGroup(CompilerHelpers.FilterNonVisibleMembers(_comType, foundMembers));
+                }
             }
 
             // If the MemberGroup is still empty, try to find the property as a language extension property.

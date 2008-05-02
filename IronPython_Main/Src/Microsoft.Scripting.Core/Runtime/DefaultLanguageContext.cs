@@ -20,7 +20,6 @@ using System.Threading;
 using System.Globalization;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using System.Runtime.CompilerServices;
@@ -83,7 +82,7 @@ namespace Microsoft.Scripting.Runtime {
             if (toType.IsAssignableFrom(expr.Type)) {
                 return expr;
             }
-            return Ast.Ast.Convert(expr, toType);
+            return Ast.Expression.Convert(expr, toType);
         }
     }
 }

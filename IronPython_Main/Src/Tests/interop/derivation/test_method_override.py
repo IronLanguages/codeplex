@@ -103,7 +103,7 @@ def test_interface_methods():
         AssertError(AttributeError, IInterface110c.m110, x)
         f = C.m110  # no AttributeError
         AssertError(AttributeError, f, x)
-        AssertError(TypeError, f, x, 1)  # !!! better AttributeError
+        AssertError(TypeError, f, x, 1)   # a hides b, type error calling a
         f = x.m110  # no AttributeError
         AssertError(AttributeError, f)
         AssertError(TypeError, f, 1)  # !!!

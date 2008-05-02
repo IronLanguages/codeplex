@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
             WriteBinaryExpression,                  //    ExclusiveOr
             WriteBinaryExpression,                  //    GreaterThan
             WriteBinaryExpression,                  //    GreaterThanOrEqual
-                                                    // ** Invoke
+            WriteInvocationExpression,              //    Invoke
             WriteLambdaExpression,                  //    Lambda
             WriteBinaryExpression,                  //    LeftShift
             WriteBinaryExpression,                  //    LessThan
@@ -72,25 +72,20 @@ namespace Microsoft.Scripting.Ast {
                                                     // ** TypeAs
             WriteTypeBinaryExpression,              //    TypeIs
             WriteActionExpression,                  //    ActionExpression
-            WriteArrayIndexAssignment,              //    ArrayIndexAssignment
+            WriteAssignmentExpression,              //    Assign
             WriteBlock,                             //    Block
-            WriteBoundAssignment,                   //    BoundAssignment
             WriteBreakStatement,                    //    BreakStatement
             WriteIntrinsicExpression,               //    CodeContextExpression
             WriteIntrinsicExpression,               //    GeneratorIntrinsic
             WriteGeneratorLambdaExpression,         //    Generator
             WriteContinueStatement,                 //    ContinueStatement
             WriteDeleteStatement,                   //    DeleteStatement
-            WriteDeleteUnboundExpression,           //    DeleteUnboundExpression
             WriteDoStatement,                       //    DoStatement
             WriteEmptyStatement,                    //    EmptyStatement
-            WriteIntrinsicExpression,               //    EnvironmentExpression
-            WriteExpressionStatement,               //    ExpressionStatement
             WriteVariableExpression,                //    GlobalVariable
             WriteLabeledStatement,                  //    LabeledStatement
             WriteVariableExpression,                //    LocalVariable
             WriteLoopStatement,                     //    LoopStatement
-            WriteMemberAssignment,                  //    MemberAssignment
             WriteMemberExpression,                  //    MemberExpression
             WriteNewArrayExpression,                //    NewArrayExpression
             WriteUnaryExpression,                   //    OnesComplement
@@ -100,9 +95,8 @@ namespace Microsoft.Scripting.Ast {
             WriteVariableExpression,                //    TemporaryVariable
             WriteThrowStatement,                    //    ThrowStatement
             WriteTryStatement,                      //    TryStatement
-            WriteUnboundAssignment,                 //    UnboundAssignment
-            WriteUnboundExpression,                 //    UnboundExpression
             WriteYieldStatement,                    //    YieldStatement
+            WriteExtensionExpression,               //    Extension
 
             // *** END GENERATED CODE ***
 

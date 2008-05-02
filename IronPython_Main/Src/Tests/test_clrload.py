@@ -66,6 +66,7 @@ def test_get_type():
     AssertError(TypeError, clr.GetPythonType, None)
 
 # load iron python test under an alias...
+@skip("multiple_execute")
 def test_ironpythontest_from_alias():
     IPTestAlias = load_iron_python_test(True)
     AreEqual(dir(IPTestAlias).count('IronPythonTest'), 1)
@@ -116,7 +117,7 @@ def test_nonamespaceloadtest():
     a = NoNamespaceLoadTest()
     AreEqual(a.HelloWorld(), 'Hello World')
 
-
+@skip("multiple_execute")
 def test_addreferencetofileandpath_conflict():
     """verify AddReferenceToFileAndPath picks up the path specified, not some arbitrary assembly somewhere in your path already"""
     code1 = """
@@ -156,6 +157,7 @@ public class CollisionTest {
 
 #####################
 # VERIFY clr.AddReferenceToFile behavior...
+@skip("multiple_execute")    
 def test_addreferencetofile_verification():
     tmp = testpath.temporary_dir
     sys.path.append(tmp)
@@ -238,7 +240,8 @@ def compileAndLoad(name, filename, *args):
     sys.path.append(sys.exec_prefix)
     AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
     return clr.LoadAssemblyFromFile(name)
-    
+
+@skip("multiple_execute")    
 def test_classname_same_as_ns():
     sys.path.append(sys.exec_prefix)
     AreEqual(run_csc("/nologo /t:library /out:\"" + sys.exec_prefix + "\"\\c4.dll \"" + get_local_filename('c4.cs') + "\""), 0)
@@ -247,6 +250,7 @@ def test_classname_same_as_ns():
     Assert(not c4 is c4.c4)
     Assert(c4!=c4.c4)
 
+@skip("multiple_execute")
 def test_local_dll():    
     x = compileAndLoad('c3', get_local_filename('c3.cs') )
 
@@ -273,6 +277,7 @@ def test_local_dll():
     def f(): del x.BarNamespace
     AssertError(AttributeError, f)
 
+@skip("multiple_execute")
 def test_namespaceimport():
     tmp = testpath.temporary_dir
     if tmp not in sys.path:
@@ -307,6 +312,7 @@ def test_no_names_provided():
     AssertError(ValueError, clr.AddReferenceByName)
     AssertError(ValueError, clr.AddReferenceByPartialName)
 
+@skip("multiple_execute")
 def test_load_count():
     # verify loading an assembly updates the assembly-loaded count in the repr
     # if a new assembly gets loaded before this that contains System both numbers

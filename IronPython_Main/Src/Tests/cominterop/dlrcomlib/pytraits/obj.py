@@ -12,3 +12,22 @@
 #
 #
 #####################################################################################
+'''
+This test module verifies that properties of COM object are identical to those
+of Python object.
+'''
+#------------------------------------------------------------------------------
+from lib.assert_util import skiptest
+skiptest("silverlight")
+from lib.cominterop_util import *
+
+#------------------------------------------------------------------------------
+#--GLOBALS
+com_obj = getRCWFromProgID("DlrComLibrary.DlrUniversalObj")
+
+def test_sanity_check():
+    Assert("m0" in dir(com_obj))
+    # Assert("m0" in vars(com_obj).keys())
+
+#------------------------------------------------------------------------------
+run_com_test(__name__, __file__)

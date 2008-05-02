@@ -14,13 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using System.Diagnostics;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using System.Text;
+
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -100,7 +98,7 @@ namespace Microsoft.Scripting.Hosting {
         protected virtual IList<string>/*!*/ SourceFileSearchPath {
             get {
 #if SILVERLIGHT
-                return new string[] { "" };
+                return new string[] { "." };
 #else
                 return (System.Environment.GetEnvironmentVariable(PathEnvironmentVariableName) ?? ".").Split(Path.PathSeparator);
 #endif
@@ -112,7 +110,8 @@ namespace Microsoft.Scripting.Hosting {
             try {
                 list = SourceFileSearchPath;
             } catch (Exception e) {
-                throw new InvalidImplementationException("Invalid host implementation: unexpected exeption thrown", e);
+                throw new InvalidImplementationException(
+                    String.Format("Invalid host implementation; unexpected exeption thrown: {0}", e.Message), e);
             }
 
             string[] result = new string[list.Count];
@@ -120,7 +119,7 @@ namespace Microsoft.Scripting.Hosting {
                 try {
                     result[i] = _runtime.Platform.GetFullPath(list[i]);
                 } catch (Exception e) {
-                    throw new InvalidImplementationException("Invalid host implementation: specified path invalid", e);
+                    throw new InvalidImplementationException(String.Format("Invalid host implementation: {0}", e.Message), e);
                 }
             }
 
@@ -142,9 +141,9 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         /// <exception cref="ArgumentNullException">Engine, path or encoding is a <c>null</c> reference.</exception>
         public virtual ScriptSource TryGetSourceFile(ScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
-            Contract.RequiresNotNull(engine, "engine");
-            Contract.RequiresNotNull(path, "path");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(engine, "engine");
+            ContractUtils.RequiresNotNull(path, "path");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
 
             if (PlatformAdaptationLayer.FileExists(path)) {                
                 return engine.CreateScriptSourceFromFile(path, encoding, kind);
@@ -164,7 +163,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="ArgumentException">Name contains invalid characters (see System.IO.Path.GetInvalidFileNameChars).</exception>
         /// <returns>Resolved file path.</returns>
         public virtual void ResolveSourceFileName(string/*!*/ name, out string path, out ScriptEngine engine) {
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(name, "name");
 
             foreach (string directory in GetFullSearchPaths()) {
 

@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 import System
 import clr
 
@@ -102,7 +100,7 @@ class ExceptionInfo(object):
     # format is name, args, (fields, ...), (subclasses, ...)
 exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, None, (
             ExceptionInfo('SystemExit', 'IronPython.Runtime.Exceptions.SystemExitException', None, ('code',), ()),
-            ExceptionInfo('KeyboardInterrupt', 'Microsoft.Scripting.Shell.KeyboardInterruptException', None, (), ()),
+            ExceptionInfo('KeyboardInterrupt', 'Microsoft.Scripting.KeyboardInterruptException', None, (), ()),
             ExceptionInfo('Exception', 'System.Exception', None, (), (
                     ExceptionInfo('GeneratorExit', 'IronPython.Runtime.Exceptions.GeneratorExitException', None, (), ()),
                     ExceptionInfo('StopIteration', 'IronPython.Runtime.Exceptions.StopIterationException', None, (), ()),
@@ -258,7 +256,6 @@ def gen_topython_helper(cw):
     cw.writeline('return new Exception(message);')
     cw.exit_block()
     
-CodeGenerator("ToPython Exception Helper", gen_topython_helper).doit()
         
 def get_clr_name(e):
     return e.replace('Error', '') + 'Exception'
@@ -271,9 +268,6 @@ public static Exception %(name)s(string format, params object[] args) {
 def factory_gen(cw):
     for e in pythonExcs:
         cw.write(FACTORY, name=e, clrname=get_clr_name(e))
-
-
-CodeGenerator("Exception Factories", factory_gen).doit()
 
 CLASS1 = """
 [Serializable]
@@ -303,14 +297,11 @@ def gen_one_exception_maker(e):
 
     return gen_one_exception_specialized
 
-for e in pythonExcs:
-    CodeGenerator(get_clr_name(e), gen_one_exception_maker(e)).doit()
-
 def fix_object(name):
     if name == "object": return "@object"
     return name
 
-def gen_one_exception(cw, exception, parent):
+def gen_one_new_exception(cw, exception, parent):
     if exception.fields:
         exception.BeginSilverlight(cw)
         
@@ -328,7 +319,7 @@ def gen_one_exception(cw, exception, parent):
         cw.exit_block()
         cw.writeline()
 
-        cw.writeline('[PythonSystemType("%s"), PythonHidden, Serializable]' % exception.name)
+        cw.writeline('[PythonSystemType("%s"), PythonHidden, DynamicBaseTypeAttribute, Serializable]' % exception.name)
         if exception.ConcreteParent.fields:
             cw.enter_block('public partial class _%s : _%s' % (exception.name, exception.ConcreteParent.name))
         else:
@@ -393,14 +384,12 @@ def gen_one_exception(cw, exception, parent):
         cw.writeline()
         
     for child in exception.subclasses:
-        gen_one_exception(cw, child, exception)
+        gen_one_new_exception(cw, child, exception)
             
 def newstyle_gen(cw):
     for child in exceptionHierarchy.subclasses:
-        gen_one_exception(cw, child, exceptionHierarchy)
+        gen_one_new_exception(cw, child, exceptionHierarchy)
         
-CodeGenerator("Python New-Style Exceptions", newstyle_gen).doit()
-
 def gen_one_exception_module_entry(cw, exception, parent):
     exception.BeginSilverlight(cw)
 
@@ -436,6 +425,18 @@ def builtin_gen(cw):
     for child in exceptionHierarchy.subclasses:
         gen_one_exception_builtin_entry(cw, child, exceptionHierarchy)
 
-CodeGenerator("builtin exceptions", builtin_gen).doit()
+def main():
+    gens = [
+        ("ToPython Exception Helper", gen_topython_helper),
+        ("Exception Factories", factory_gen),
+        ("Python New-Style Exceptions", newstyle_gen),
+        ("builtin exceptions", builtin_gen),
+    ]
 
+    for e in pythonExcs:
+        gens.append((get_clr_name(e), gen_one_exception_maker(e)))
 
+    return generate(*gens)
+
+if __name__ == "__main__":
+    main()

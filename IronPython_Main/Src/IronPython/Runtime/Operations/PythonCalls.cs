@@ -49,12 +49,17 @@ namespace IronPython.Runtime.Operations {
             return _dictSplatSite.Invoke(DefaultContext.Default, func, args, dict);
         }
 
+        public static object CallWithKeywordArgs(CodeContext context, object func, object[] args, IAttributesCollection dict) {
+            return _dictSplatSite.Invoke(context, func, args, dict);
+        }
+
         internal static DynamicAction MakeSplatAction() {
-            return CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List)));
+            return CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(new ArgumentInfo(ArgumentKind.List)));
         }
 
         internal static DynamicAction MakeDictSplatAction() {
             return CallAction.Make(
+                DefaultContext.DefaultPythonBinder,
                 new CallSignature(
                     new ArgumentInfo(ArgumentKind.List),
                     new ArgumentInfo(ArgumentKind.Dictionary)

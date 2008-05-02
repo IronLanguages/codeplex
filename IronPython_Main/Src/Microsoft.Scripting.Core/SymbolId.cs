@@ -23,8 +23,8 @@ using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     [Serializable]
-    public struct SymbolId : ISerializable, IComparable, IEquatable<SymbolId> {
-        private int _id;
+    public struct SymbolId : ISerializable, IComparable, IComparable<SymbolId>, IEquatable<SymbolId> {
+        private readonly int _id;
 
         public SymbolId(int value) {
             _id = value;
@@ -107,22 +107,21 @@ namespace Microsoft.Scripting {
         #region IComparable Members
 
         public int CompareTo(object obj) {
-            if (!(obj is SymbolId)) return -1;
+            if (!(obj is SymbolId)) {
+                return -1;
+            }
 
-            SymbolId other = (SymbolId)obj;
-            return _id - other._id;
+            return CompareTo((SymbolId)obj);
         }
 
-        #endregion
+        public int CompareTo(SymbolId other) {
+            // Note that we could just compare _id which will result in a faster comparison. However, that will
+            // mean that sorting will depend on the order in which the symbols were interned. This will often
+            // not be expected. Hence, we just compare the symbol strings
 
-        #region Interlocked operations
-
-        public int InterlockedCompareExchangeId(int value, int comparand) {
-            return System.Threading.Interlocked.CompareExchange(ref _id, value, comparand);
-        }
-
-        public void InterlockedExchangeId(int value) {
-            System.Threading.Interlocked.Exchange(ref _id, value);
+            string thisString = SymbolTable.IdToString(this);
+            string otherString = SymbolTable.IdToString(other);
+            return thisString.CompareTo(otherString);
         }
 
         #endregion
@@ -136,14 +135,14 @@ namespace Microsoft.Scripting {
         // the new context.
 
         private SymbolId(SerializationInfo info, StreamingContext context) {
-            Contract.RequiresNotNull(info, "info");
+            ContractUtils.RequiresNotNull(info, "info");
 
             _id = SymbolTable.StringToId(info.GetString("symbolName"))._id;
         }
 
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
         public void GetObjectData(SerializationInfo info, StreamingContext context) {
-            Contract.RequiresNotNull(info, "info");
+            ContractUtils.RequiresNotNull(info, "info");
 
             info.AddValue("symbolName", SymbolTable.IdToString(this));
         }

@@ -27,17 +27,12 @@ using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Types {
     public static class DynamicHelpers {
-        public static PythonType GetPythonTypeFromType(Type type) {
-            Contract.RequiresNotNull(type, "type");
+        public static PythonType/*!*/ GetPythonTypeFromType(Type/*!*/ type) {
+            ContractUtils.RequiresNotNull(type, "type");
 
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "TypeLookup " + type.FullName);
 
-            PythonType ret = PythonType.GetPythonType(type);
-            if (ret != null) return ret;
-
-            ret = ReflectedTypeBuilder.Build(type);
-
-            return PythonType.SetPythonType(type, ret);
+            return PythonType.GetPythonType(type);
         }
 
         public static PythonType GetPythonType(object o) {

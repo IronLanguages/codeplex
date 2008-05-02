@@ -23,8 +23,8 @@ namespace Microsoft.Scripting.Generation {
 
     // TODO: Make internal
     public abstract class DynamicILGen : ILGen {
-        protected DynamicILGen(ILGenerator il)
-            : base(il) {
+        internal DynamicILGen(ILGenerator il)
+            : base(il,null) {
         }
 
         public T CreateDelegate<T>() {
@@ -46,7 +46,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override T CreateDelegate<T>(out MethodInfo mi) {
-            Contract.Requires(typeof(T).IsSubclassOf(typeof(Delegate)), "T");
+            ContractUtils.Requires(typeof(T).IsSubclassOf(typeof(Delegate)), "T");
             mi = _dm;
             return (T)(object)_dm.CreateDelegate(typeof(T), null);
         }
@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override T CreateDelegate<T>(out MethodInfo mi) {
-            Contract.Requires(typeof(T).IsSubclassOf(typeof(Delegate)), "T");
+            ContractUtils.Requires(typeof(T).IsSubclassOf(typeof(Delegate)), "T");
             mi = CreateMethod();
             return (T)(object)Delegate.CreateDelegate(typeof(T), mi);
         }

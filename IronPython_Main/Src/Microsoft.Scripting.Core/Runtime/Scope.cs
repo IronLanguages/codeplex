@@ -52,18 +52,19 @@ namespace Microsoft.Scripting.Runtime {
     /// 
     /// TODO: Thread safety
     /// </summary>
-    public class Scope : IMembersList {
+    public class Scope {
         private ScopeExtension[]/*!*/ _extensions; // resizable
         private readonly Scope _parent;
-
-        // TODO: obsolete
         private IAttributesCollection _dict;
+
+        // TODO: remove
         private ScopeAttributeDictionary _attrs;
         private ContextSensitiveScope _contextScopes;
         private IDictionary<Expression, object> _temps; // can hold ParameterExpression, VariableExpression
         private bool _isVisible;
         private SourceLocation _sourceLocation;
-
+        private CompilerContext _compilerContext;
+        
         /// <summary>
         /// Creates a new top-level scope with a new empty dictionary.  The scope
         /// is marked as being visible.
@@ -93,18 +94,15 @@ namespace Microsoft.Scripting.Runtime {
             _parent = parent;
             _dict = dictionary ?? new SymbolDictionary();
             _isVisible = isVisible;
-            _temps = null;
             _extensions = ScopeExtension.EmptyArray;
         }
-
-        #region TODO
 
         public ScopeExtension GetExtension(ContextId languageContextId) {
             return (languageContextId.Id < _extensions.Length) ? _extensions[languageContextId.Id] : null;
         }
 
         public ScopeExtension/*!*/ SetExtension(ContextId languageContextId, ScopeExtension/*!*/ extension) {
-            Contract.RequiresNotNull(extension, "extension");
+            ContractUtils.RequiresNotNull(extension, "extension");
             
             if (languageContextId.Id >= _extensions.Length) {
                 Array.Resize(ref _extensions, languageContextId.Id + 1);
@@ -113,82 +111,6 @@ namespace Microsoft.Scripting.Runtime {
             ScopeExtension original = Interlocked.CompareExchange(ref _extensions[languageContextId.Id], extension, null);
             return original ?? extension;
         }
-
-        #region TODO: used by Python builtins
-
-
-        /// <summary>
-        /// Event fired when a module changes.
-        /// </summary>
-        public event EventHandler<ModuleChangeEventArgs> ModuleChanged;
-
-        /// <summary>
-        /// Called by the base class to fire the module change event when the
-        /// module has been modified.
-        /// </summary>
-        private void OnModuleChange(ModuleChangeEventArgs e) {
-            EventHandler<ModuleChangeEventArgs> handler = ModuleChanged;
-            if (handler != null) {
-                handler(this, e);
-            }
-        }
-
-        [SpecialName]
-        public object GetCustomMember(CodeContext context, string name) {
-            object value;
-            if (TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out value)) {
-                if (value != Uninitialized.Instance) {
-                    return value;
-                }
-            }
-            return OperationFailed.Value;
-        }
-
-        [SpecialName]
-        public void SetMemberAfter(string name, object value) {
-            OnModuleChange(new ModuleChangeEventArgs(SymbolTable.StringToId(name), ModuleChangeType.Set, value));
-
-            SetName(SymbolTable.StringToId(name), value);
-        }
-
-        [SpecialName]
-        public bool DeleteMember(CodeContext context, string name) {
-            if (TryRemoveName(context.LanguageContext, SymbolTable.StringToId(name))) {
-                OnModuleChange(new ModuleChangeEventArgs(SymbolTable.StringToId(name), ModuleChangeType.Delete));
-
-                return true;
-            }
-
-            return false;
-        }
-
-        #endregion
-
-        #endregion
-
-        #region IMembersList
-
-        public IList<object> GetMemberNames(CodeContext context) {
-            List<object> ret;
-            if (!context.ModuleContext.ShowCls) {
-                ret = new List<object>();
-                foreach (KeyValuePair<object, object> kvp in GetAllItems(context.LanguageContext)) {
-                    if (kvp.Value != Uninitialized.Instance) {
-                        if (kvp.Key is SymbolId) {
-                            ret.Add(SymbolTable.IdToString((SymbolId)kvp.Key));
-                        } else {
-                            ret.Add(kvp.Key);
-                        }
-                    }
-                }
-            } else {
-                ret = new List<object>(GetAllKeys(context.LanguageContext));
-            }
-
-            return ret;
-        }
-
-        #endregion
 
         #region Obsolete (TODO)
 
@@ -221,6 +143,16 @@ namespace Microsoft.Scripting.Runtime {
                 }
             }
         }
+
+        public CompilerContext CompilerContext {
+            get {
+                return _compilerContext;
+            }
+            internal set {
+                _compilerContext = value;
+            }
+        }
+
         
         /// <summary>
         /// Gets the current container for temporary variables. These might need to be nested in a manner
@@ -245,7 +177,7 @@ namespace Microsoft.Scripting.Runtime {
             Debug.Assert(paramVars.Length == paramValues.Length);
 
             Scope scope = CloneForTemporaries();
-            context = new CodeContext(scope, context.LanguageContext, context.ModuleContext);
+            context = new CodeContext(scope, context.LanguageContext);
             
             for (int i = 0; i < paramValues.Length; i++) {
                 scope.TemporaryStorage[paramVars[i]] = paramValues[i];
@@ -731,15 +663,6 @@ namespace Microsoft.Scripting.Runtime {
 
                 _dicts[id][name] = value;
                 _attrs[id].Set(name, attrs);
-            }
-
-            public void SetName(ContextId context, SymbolId name, object value) {
-                int id = context.Id;
-                EnsureDictionary(id);
-
-                if (_attrs != null && id < _attrs.Count) _attrs[id].CheckWritable(name);
-
-                _dicts[id][name] = value;
             }
 
             public void SetObjectName(ContextId context, object name, object value, ScopeMemberAttributes attrs) {

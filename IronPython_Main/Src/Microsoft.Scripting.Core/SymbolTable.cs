@@ -38,7 +38,7 @@ namespace Microsoft.Scripting {
         }
 
         public static SymbolId StringToId(string field) {
-            Contract.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(field, "field");
 
             int res;
             lock (_lockObj) {
@@ -54,7 +54,7 @@ namespace Microsoft.Scripting {
 
                         // Throw if we've exhausted the number of casings.
                         if (unchecked(((uint)res & 0x00FFFFFF) == 0x00FFFFFF)) {
-                            throw new InvalidOperationException(String.Format(Resources.CantAddCasing, field));
+                            throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantAddCasing, field));
                         }
 
                         int invariantRes = res + 0x01000000;
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting {
                         // This is a whole new identifier.
 
                         if (_nextCaseInsensitiveId == int.MaxValue) {
-                            throw new InvalidOperationException(String.Format(Resources.CantAddIdentifier, field));
+                            throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantAddIdentifier, field));
                         }
 
                         // register new id...
@@ -145,7 +145,7 @@ namespace Microsoft.Scripting {
         }
 
         public static bool StringHasId(string symbol) {
-            Contract.RequiresNotNull(symbol, "symbol");
+            ContractUtils.RequiresNotNull(symbol, "symbol");
 
             lock (_lockObj) {
                 return _idDict.ContainsKey(symbol);

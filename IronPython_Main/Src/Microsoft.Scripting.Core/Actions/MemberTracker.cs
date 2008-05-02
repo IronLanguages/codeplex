@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static MemberTracker FromMemberInfo(MemberInfo member, Type extending) {
-            Contract.RequiresNotNull(member, "member");
+            ContractUtils.RequiresNotNull(member, "member");
 
             lock (_trackers) {
                 MemberTracker res;
@@ -116,17 +116,7 @@ namespace Microsoft.Scripting.Actions {
         /// Returns null if it's an error to assign to.  The caller can then call GetErrorForSet to
         /// get the correct error Expression (or null if a default error should be provided).
         /// </summary>
-        public virtual Expression SetValue(ActionBinder binder, Expression value) {
-            return null;
-        }
-
-        /// <summary>
-        /// Gets an expression that performs the specified operation on the object using the specified arguments.
-        /// 
-        /// Returns null if it's an error to perform the specific operation.  The caller can then call 
-        /// GetErrorsForDoOperation to get the correct error Expression (or null if a default error should be provided).
-        /// </summary>
-        public virtual Expression DoOperation(ActionBinder binder, Operators operation, params Expression[] arguments) {
+        public virtual Expression SetValue(ActionBinder binder, Type type, Expression value) {
             return null;
         }
 
@@ -154,23 +144,40 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        #endregion
-
-        #region Internal expression builders
+        /// <summary>
+        /// Returns the error associated with accessing this member via a bound instance.
+        /// 
+        /// A null return value indicates that the default error message should be provided by the caller.
+        /// </summary>
+        public virtual ErrorInfo GetBoundError(ActionBinder binder, Expression instance) {
+            return null;
+        }
 
         /// <summary>
-        /// Internal helper for getting values that have been bound.  Called from BoundMemberTracker.
+        /// Helper for getting values that have been bound.  Called from BoundMemberTracker.  Custom member
+        /// trackers can override this to provide their own behaviors when bound to an instance.
         /// </summary>
-        internal virtual Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal virtual Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
             return GetValue(binder, type);
         }
 
-        internal virtual MemberTracker BindToInstance(Expression instance) {
-            return this;
+        /// <summary>
+        /// Helper for setting values that have been bound.  Called from BoundMemberTracker.  Custom member
+        /// trackers can override this to provide their own behaviors when bound to an instance.
+        /// </summary>
+        protected internal virtual Expression SetBoundValue(ActionBinder binder, Type type, Expression value,Expression instance) {
+            return SetValue(binder, type, instance);
         }
 
-        internal virtual ErrorInfo GetBoundError(ActionBinder binder, Expression instance) {
-            return null;
+        /// <summary>
+        /// Binds the member tracker to the specified instance rturning a new member tracker if binding 
+        /// is possible.  If binding is not possible the existing member tracker will be returned.  For example
+        /// binding to a static field results in returning the original MemberTracker.  Binding to an instance
+        /// field results in a new BoundMemberTracker which will get GetBoundValue/SetBoundValue to pass the
+        /// instance through.
+        /// </summary>
+        public virtual MemberTracker BindToInstance(Expression instance) {
+            return this;
         }
 
         #endregion

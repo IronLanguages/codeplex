@@ -38,8 +38,8 @@ namespace Microsoft.Scripting.Utils {
 #endif
 
         public static StringBuilder FormatSignature(StringBuilder result, MethodBase method) {
-            Contract.RequiresNotNull(result, "result");
-            Contract.RequiresNotNull(method, "method");
+            ContractUtils.RequiresNotNull(result, "result");
+            ContractUtils.RequiresNotNull(method, "method");
 
             MethodInfo methodInfo = method as MethodInfo;
             if (methodInfo != null) {
@@ -127,9 +127,9 @@ namespace Microsoft.Scripting.Utils {
             try {
                 return (T)Activator.CreateInstance(actualType, args);
             } catch (TargetInvocationException e) {
-                throw new InvalidImplementationException(System.String.Format(Resources.InvalidCtorImplementation, actualType), e.InnerException);
+                throw new InvalidImplementationException(ResourceUtils.GetString(ResourceUtils.InvalidCtorImplementation, actualType), e.InnerException);
             } catch (Exception e) {
-                throw new InvalidImplementationException(System.String.Format(Resources.InvalidCtorImplementation, actualType), e);
+                throw new InvalidImplementationException(ResourceUtils.GetString(ResourceUtils.InvalidCtorImplementation, actualType), e);
             }
         }
 
@@ -193,8 +193,8 @@ namespace Microsoft.Scripting.Utils {
         /// Creates an open delegate for the given (dynamic)method.
         /// </summary>
         public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType) {
-            Contract.RequiresNotNull(delegateType, "delegateType");
-            Contract.RequiresNotNull(methodInfo, "methodInfo");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(methodInfo, "methodInfo");
 
             DynamicMethod dm = methodInfo as DynamicMethod;
             if (dm != null) {
@@ -208,8 +208,8 @@ namespace Microsoft.Scripting.Utils {
         /// Creates a closed delegate for the given (dynamic)method.
         /// </summary>
         public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType, object target) {
-            Contract.RequiresNotNull(methodInfo, "methodInfo");
-            Contract.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(methodInfo, "methodInfo");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
             DynamicMethod dm = methodInfo as DynamicMethod;
             if (dm != null) {
@@ -220,10 +220,10 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static void GetDelegateSignature(Type delegateType, out ParameterInfo[] parameterInfos, out ParameterInfo returnInfo) {
-            Contract.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
             MethodInfo invokeMethod = delegateType.GetMethod("Invoke");
-            Contract.Requires(invokeMethod != null, "delegateType", "Invalid delegate type (Invoke method not found).");
+            ContractUtils.Requires(invokeMethod != null, "delegateType", "Invalid delegate type (Invoke method not found).");
 
             parameterInfos = invokeMethod.GetParameters();
             returnInfo = invokeMethod.ReturnParameter;
@@ -250,7 +250,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static bool SignatureEquals(MethodInfo method, params Type[] requiredSignature) {
-            Contract.RequiresNotNull(method, "method");
+            ContractUtils.RequiresNotNull(method, "method");
 
             Type[] actualTypes = ReflectionUtils.GetParameterTypes(method.GetParameters());
             Debug.Assert(actualTypes.Length == requiredSignature.Length - 1);

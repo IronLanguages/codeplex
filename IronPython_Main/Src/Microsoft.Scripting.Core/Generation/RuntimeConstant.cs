@@ -22,7 +22,7 @@ namespace Microsoft.Scripting.Generation {
         private object/*!*/ _value;
 
         internal RuntimeConstant(object/*!*/ value) {
-            Contract.RequiresNotNull(value, "value");
+            ContractUtils.RequiresNotNull(value, "value");
             _value = value;
         }
 

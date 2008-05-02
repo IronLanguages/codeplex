@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 using Microsoft.Scripting.Ast;
@@ -26,20 +27,20 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// This is a helper class for runtime-callable-wrappers of COM instances. We create one instance of this type
     /// for every generic RCW instance.
     /// </summary>
     public abstract class ComObject : IDynamicObject {
-        #region Data Members
-        
-        private readonly object _comObject; // the runtime-callable wrapper
 
-        private static readonly object _ComObjectInfoKey = (object)1; // use an int as the key since hashing an Int32.GetHashCode is cheap
-        private const string comObjectTypeName = "System.__ComObject";
-        private readonly static Type comObjectType = Type.GetType(comObjectTypeName);
+        #region Data Members
+
+        private const string _comObjectTypeName = "System.__ComObject";
+        private readonly object _comObject; // the runtime-callable wrapper
+        private readonly static object _ComObjectInfoKey = (object)1; // use an int as the key since hashing an Int32.GetHashCode is cheap
+        private readonly static Type _comObjectType = Type.GetType(_comObjectTypeName);
         
         #endregion
 
@@ -65,7 +66,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #region Static Members
 
         public static Type ComObjectType {
-            get { return comObjectType; }
+            get { return _comObjectType; }
         }
 
         /// <summary>
@@ -121,7 +122,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         public static bool IsGenericComObjectType(Type type) {
-            return type == comObjectType;
+            return type == _comObjectType;
         }
 
         public static bool IsGenericComObject(object obj) {
@@ -164,6 +165,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 rule.MakeReturn(
                     binder,
                     Ast.Action.GetMember(
+                        binder,
                         action.Name,
                         rule.ReturnType,
                         Ast.Read(comObject))));
@@ -199,6 +201,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 rule.MakeReturn(
                     binder,
                     Ast.Action.SetMember(
+                        binder,
                         action.Name,
                         rule.ReturnType,
                         Ast.Read(comObject),
@@ -238,11 +241,32 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 rule.MakeReturn(
                     binder,
                     Ast.Action.Operator(
+                        binder,
                         action.Operation,
                         rule.ReturnType,
                         ArrayUtils.InsertAt<Expression>((Expression[])ArrayUtils.RemoveFirst(rule.Parameters), 0, Ast.Read(comObject)))));
 
             return Ast.Block(expressions);
+        }
+
+        // The rule test now checks to ensure that the wrapper is of the correct type so that any cast against on the RCW will succeed. 
+        // Note that the test must NOT test the wrapper itself since the wrapper is a surrogate for the RCW instance and would cause a 
+        // memory leak when a wrapped RCW goes out of scope.  So, the test asks the argument (which is an RCW wrapper) to identify its 
+        // RCW’s type.  On the rule creation side, the type is encoded in the test so that when the rule cache is searched the test will 
+        // succeed only if the wrapper’s returned RCW type matches that expected by the test. 
+        public static Expression MakeComObjectTest(Type type, PropertyInfo testProperty, object targetObject, RuleBuilder rule) {
+            Expression t0 = rule.MakeTypeTest(type, 0);
+            Expression testObject = 
+                Ast.SimpleCallHelper(
+                    Ast.Convert(
+                        rule.Parameters[0], 
+                        type), 
+                    testProperty.GetGetMethod());
+            Expression t1 =
+                Ast.Equal(
+                    testObject,
+                    Ast.Constant(targetObject));
+            return Ast.AndAlso(t0, t1);
         }
 
         #endregion

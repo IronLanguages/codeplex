@@ -45,17 +45,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Variables referenced from this lambda.
         /// </summary>
-        private readonly Dictionary<VariableInfo, Slot> _slots = new Dictionary<VariableInfo, Slot>();
-
-        /// <summary>
-        /// Try statements in this lambda (if the lambda is generator)
-        /// </summary>
-        private Dictionary<TryStatement, TryStatementInfo> _tryInfos;
-
-        /// <summary>
-        /// Yield statements in this lambda (if the lambda has yields)
-        /// </summary>
-        private Dictionary<YieldStatement, YieldTarget> _yieldTargets;
+        private readonly Dictionary<Expression, Slot> _referenceSlots = new Dictionary<Expression, Slot>();
 
         /// <summary>
         /// The factory to create the environment (if the lambda has environment)
@@ -75,30 +65,24 @@ namespace Microsoft.Scripting.Ast {
         private bool _hasEnvironment;
 
         /// <summary>
-        /// The count of generator temps required to generate the lambda
-        /// (if the lambda is a generator)
+        /// Slots to access outer scopes. For now this is dictionary, even though list would be better.
+        /// as soon as ScopeId goes away, make this list or something better.
         /// </summary>
-        private int _generatorTemps;
+        private readonly Dictionary<LambdaExpression, Slot> _closureAccess = new Dictionary<LambdaExpression, Slot>();
 
         /// <summary>
-        /// The top targets for the generator dispatch.
-        /// (if the lambda is a generator)
+        /// Slots to access scopes, including local. The closure access slots are closure specific,
+        /// and some variables in local scope may need access slot which is different than that
+        /// for closures
         /// </summary>
-        private IList<YieldTarget> _topTargets;
+        private readonly Dictionary<LambdaExpression, Slot> _scopeAccess = new Dictionary<LambdaExpression, Slot>();
+
+        private StorageAllocator _globalAllocator;
+        private StorageAllocator _localAllocator;
 
         internal LambdaInfo(LambdaExpression lambda, LambdaInfo parent) {
             _lambda = lambda;
             _parent = parent;
-
-            if (lambda != null) {
-                int index = 0;
-                foreach (ParameterExpression p in lambda.Parameters) {
-                    _variables.Add(p, new VariableInfo(p, _lambda, index++));
-                }
-                foreach (VariableExpression v in lambda.Variables) {
-                    _variables.Add(v, new VariableInfo(v, _lambda));
-                }
-            }
         }
 
         internal LambdaExpression Lambda {
@@ -109,8 +93,8 @@ namespace Microsoft.Scripting.Ast {
             get { return _parent; }
         }
 
-        internal Dictionary<VariableInfo, Slot> Slots {
-            get { return _slots; }
+        internal Dictionary<Expression, Slot> ReferenceSlots {
+            get { return _referenceSlots; }
         }
 
         internal Dictionary<Expression, VariableInfo> Variables {
@@ -151,51 +135,20 @@ namespace Microsoft.Scripting.Ast {
             set { _hasEnvironment = value; }
         }
 
-        protected internal int GeneratorTemps {
-            get { return _generatorTemps; }
+        internal Dictionary<LambdaExpression, Slot> ClosureAccess {
+            get { return _closureAccess; }
         }
 
-        internal IList<YieldTarget> TopTargets {
-            get { return _topTargets; }
+        internal Dictionary<LambdaExpression, Slot> ScopeAccess {
+            get { return _scopeAccess; }
         }
 
-        /// <summary>
-        /// Marks the variable/parameter as being referenced in this lambda
-        /// </summary>
-        internal void AddVariableReference(Expression variable) {
-            _slots[GetVariableInfo(variable)] = null;
+        internal StorageAllocator LocalAllocator {
+            get { return _localAllocator; }
         }
 
-        internal void AddGeneratorTemps(int count) {
-            _generatorTemps += count;
-        }
-
-        internal void PopulateGeneratorInfo(Dictionary<TryStatement, TryStatementInfo> tryInfos,
-                                            Dictionary<YieldStatement, YieldTarget> yieldTargets,
-                                            List<YieldTarget> topTargets,
-                                            int temps) {
-            _tryInfos = tryInfos;
-            _yieldTargets = yieldTargets;
-            _topTargets = topTargets;
-            AddGeneratorTemps(temps);
-        }
-
-        internal TryStatementInfo TryGetTsi(TryStatement ts) {
-            TryStatementInfo tsi;
-            if (_tryInfos != null && _tryInfos.TryGetValue(ts, out tsi)) {
-                return tsi;
-            } else {
-                return null;
-            }
-        }
-
-        internal YieldTarget TryGetYieldTarget(YieldStatement ys) {
-            YieldTarget yt;
-            if (_yieldTargets != null && _yieldTargets.TryGetValue(ys, out yt)) {
-                return yt;
-            } else {
-                return null;
-            }
+        internal StorageAllocator GlobalAllocator {
+            get { return _globalAllocator; }
         }
 
         /// <summary>
@@ -216,14 +169,9 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
-        internal void CreateReferenceSlots(LambdaCompiler cg) {
-            foreach (VariableInfo vi in new List<VariableInfo>(_slots.Keys)) {
-                _slots[vi] = vi.CreateSlot(cg, this);
-            }
-        }
-
-        internal Slot GetVariableSlot(Expression variable) {
-            return _slots[GetVariableInfo(variable)];
+        internal void SetAllocators(StorageAllocator global, StorageAllocator local) {
+            _localAllocator = local;
+            _globalAllocator = global;
         }
     }
 }

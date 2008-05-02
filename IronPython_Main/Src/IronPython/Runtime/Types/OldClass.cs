@@ -32,7 +32,7 @@ using IronPython.Runtime.Operations;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     // OldClass represents the type of old-style Python classes (which could not inherit from 
     // built-in Python types). 
@@ -57,7 +57,7 @@ namespace IronPython.Runtime.Types {
  ICustomTypeDescriptor,
 #endif
  ICodeFormattable,
-        ICustomMembers,
+        IMembersList,
         IDynamicObject {
 
         [NonSerialized]
@@ -73,12 +73,14 @@ namespace IronPython.Runtime.Types {
         private int _optimizedInstanceNamesVersion;
         private SymbolId[] _optimizedInstanceNames;
 
+        public static string __doc__ = "classobj(name, bases, dict)";
+
         public static object __new__(CodeContext/*!*/ context, [NotNull]PythonType cls, string name, PythonTuple bases, IAttributesCollection dict) {
             if (cls != TypeCache.OldClass) throw PythonOps.TypeError("{0} is not a subtype of classobj", PythonTypeOps.GetName(cls));
 
             if (!dict.ContainsKey(Symbols.Module)) {
                 object moduleValue;
-                if (context.ModuleContext.Scope.TryGetName(Symbols.Name, out moduleValue)) {
+                if (context.GlobalScope.TryGetName(Symbols.Name, out moduleValue)) {
                     dict[Symbols.Module] = moduleValue;
                 }
             }
@@ -145,7 +147,7 @@ namespace IronPython.Runtime.Types {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
         private void GetObjectData(SerializationInfo info, StreamingContext context) {
-            Contract.RequiresNotNull(info, "info");
+            ContractUtils.RequiresNotNull(info, "info");
 
             info.AddValue("__bases__", _bases);
             info.AddValue("__name__", __name__);
@@ -203,6 +205,10 @@ namespace IronPython.Runtime.Types {
 
             ret = null;
             return false;
+        }
+
+        internal bool TryLookupOneSlot(SymbolId name, out object ret) {
+            return __dict__._storage.TryGetValue(name, out ret);
         }
 
         internal string FullName {
@@ -275,7 +281,7 @@ namespace IronPython.Runtime.Types {
         // OldClass impls IDynamicObject. But May wind up here still if IDynamicObj doesn't provide a rule (such as for list sigs).
         // If our IDynamicObject implementation is complete, we can then remove these Call methods.
         [SpecialName]
-        public object Call(CodeContext context, params object[] args\u00F8) {
+        public object Call(CodeContext context, [NotNull]params object[] args\u00F8) {
             OldInstance inst = new OldInstance(this);
             object value;
             // lookup the slot directly - we don't go through __getattr__
@@ -289,7 +295,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [SpecialName]
-        public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict\u00F8, params object[] args\u00F8) {
+        public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict\u00F8, [NotNull]params object[] args\u00F8) {
             OldInstance inst = new OldInstance(this);
             object meth;
             if (PythonOps.TryGetBoundAttr(inst, Symbols.Init, out meth)) {
@@ -300,41 +306,14 @@ namespace IronPython.Runtime.Types {
             return inst;
         }
         #endregion // calls
-
         
         internal PythonType TypeObject {
             get {
                 if (_type == null) {
-                    _type = OldInstanceTypeBuilder.Build(this);
+                    Interlocked.CompareExchange(ref _type, new PythonType(this), null);
                 }
                 return _type;
             }
-        }
-
-        #region ICustomMembers Members
-
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetBoundMember(context, name, null, out value);
-        }
-
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetBoundMember(context, name, null, out value);
-        }
-
-        public bool TryGetBoundMember(CodeContext context, SymbolId name, object instance, out object value) {
-            if (name == Symbols.Bases) { value = PythonTuple.Make(_bases); return true; }
-            if (name == Symbols.Name) { value = __name__; return true; }
-            if (name == Symbols.Dict) {
-                //!!! user code can modify __del__ property of __dict__ behind our back
-                HasDelAttr = HasSetAttr = true;  // pessimisticlly assume the user is setting __setattr__ in the dict
-                value = __dict__; return true;
-            }
-
-            if (TryLookupSlot(name, out value)) {
-                value = GetOldStyleDescriptor(context, value, instance, this);
-                return true;
-            }
-            return false;
         }
 
         private List<OldClass> ValidateBases(object value) {
@@ -355,34 +334,33 @@ namespace IronPython.Runtime.Types {
             return res;
         }
 
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
-            if (name == Symbols.Bases) {
-                _bases = ValidateBases(value);
-                return;
-            } else if (name == Symbols.Name) {
-                string n = value as string;
-                if (n == null) throw PythonOps.TypeError("TypeError: __name__ must be a string object");
-                __name__ = n;
-                return;
-            } else if (name == Symbols.Dict) {
-                PythonDictionary d = value as PythonDictionary;
-                if (d == null) throw PythonOps.TypeError("__dict__ must be set to dictionary");
-                __dict__ = d;
-                return;
+        internal object GetMember(CodeContext context, SymbolId name) {
+            object value;
+
+            if (!TryGetBoundCustomMember(context, name, out value)) {
+                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'", Name, SymbolTable.IdToString(name));
             }
 
-            __dict__._storage.Add(name, value);
-
-            if (name == Symbols.Unassign) {
-                HasFinalizer = true;
-            } else if (name == Symbols.SetAttr) {
-                HasSetAttr = true;
-            } else if (name == Symbols.DelAttr) {
-                HasDelAttr = true;
-            }
+            return value;
         }
 
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
+        internal bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+            if (name == Symbols.Bases) { value = PythonTuple.Make(_bases); return true; }
+            if (name == Symbols.Name) { value = __name__; return true; }
+            if (name == Symbols.Dict) {
+                //!!! user code can modify __del__ property of __dict__ behind our back
+                HasDelAttr = HasSetAttr = true;  // pessimisticlly assume the user is setting __setattr__ in the dict
+                value = __dict__; return true;
+            }
+
+            if (TryLookupSlot(name, out value)) {
+                value = GetOldStyleDescriptor(context, value, null, this);
+                return true;
+            }
+            return false;
+        }
+
+        internal bool DeleteCustomMember(CodeContext context, SymbolId name) {
             if (!__dict__._storage.Remove(SymbolTable.IdToString(name))) {
                 throw PythonOps.AttributeError("{0} is not a valid attribute", SymbolTable.IdToString(name));
             }
@@ -399,8 +377,6 @@ namespace IronPython.Runtime.Types {
 
             return true;
         }
-
-        #endregion
 
         internal static void RecurseAttrHierarchy(OldClass oc, IDictionary<object, object> attrs) {
             foreach (KeyValuePair<object, object> kvp in oc.__dict__._storage.GetItems()) {
@@ -679,9 +655,9 @@ namespace IronPython.Runtime.Types {
             rule.MakeTest(typeof(OldClass));
             rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetMethod("DeleteCustomMember"),
+                    typeof(PythonOps).GetMethod("OldClassDeleteMember"),
                     Ast.CodeContext(),
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                     Ast.Constant(action.Name)
                 )
             );

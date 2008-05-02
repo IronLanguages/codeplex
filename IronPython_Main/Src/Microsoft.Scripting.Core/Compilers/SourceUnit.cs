@@ -15,16 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.IO;
 using System.Diagnostics;
+
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
-using System.Security.Permissions;
-using System.Threading;
 
 namespace Microsoft.Scripting {
     public sealed class SourceUnit {
@@ -71,7 +67,7 @@ namespace Microsoft.Scripting {
         }
 
         public SourceCodeProperties GetCodeProperties(CompilerOptions/*!*/ options) {
-            Contract.RequiresNotNull(options, "options");
+            ContractUtils.RequiresNotNull(options, "options");
 
             _language.ParseSourceCode(new CompilerContext(this, options, ErrorSink.Null));
             return _codeProperties ?? SourceCodeProperties.None;
@@ -110,8 +106,8 @@ namespace Microsoft.Scripting {
         /// Line numbers starts with 1.
         /// </summary>
         public string/*!*/[]/*!*/ GetCodeLines(int start, int count) {
-            Contract.Requires(start > 0, "start");
-            Contract.Requires(count > 0, "count");
+            ContractUtils.Requires(start > 0, "start");
+            ContractUtils.Requires(count > 0, "count");
 
             List<string> result = new List<string>(count);
 
@@ -178,7 +174,7 @@ namespace Microsoft.Scripting {
             return _path;
         }
 
-        private int BinarySearch<T>(KeyValuePair<int, T>[] array, int line) {
+        private static int BinarySearch<T>(KeyValuePair<int, T>[] array, int line) {
             int match = Array.BinarySearch(array, new KeyValuePair<int, T>(line, default(T)), new KeyComparer<T>());
             if (match < 0) {
                 // If we couldn't find an exact match for this line number, get the nearest
@@ -210,8 +206,8 @@ namespace Microsoft.Scripting {
         }
 
         public LambdaExpression Parse(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
-            Contract.RequiresNotNull(errorSink, "errorSink");
-            Contract.RequiresNotNull(options, "options");
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
+            ContractUtils.RequiresNotNull(options, "options");
 
             // TODO: ParseSourceCode can update CompilerContext.Options
             // TODO: Do we really need a compiler context here?
@@ -232,8 +228,8 @@ namespace Microsoft.Scripting {
         /// Returns <c>null</c> if the parser cannot compile the code due to error(s).
         /// </summary>
         public ScriptCode Compile(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
-            Contract.RequiresNotNull(errorSink, "errorSink");
-            Contract.RequiresNotNull(options, "options");
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
+            ContractUtils.RequiresNotNull(options, "options");
 
             LambdaExpression lambda = Parse(options, errorSink);
 
@@ -252,7 +248,7 @@ namespace Microsoft.Scripting {
         }
 
         public object Execute(Scope/*!*/ scope, ErrorSink/*!*/ errorSink) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
             
             ScriptCode compiledCode = Compile(_language.GetCompilerOptions(scope), errorSink);
 
@@ -277,6 +273,10 @@ namespace Microsoft.Scripting {
         public object Execute(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
             ScriptCode compiledCode = Compile(options, errorSink);
             return compiledCode.Run(compiledCode.MakeOptimizedScope());
+        }
+
+        public int ExecuteProgram() {
+            return _language.ExecuteProgram(this);
         }
         
         #endregion

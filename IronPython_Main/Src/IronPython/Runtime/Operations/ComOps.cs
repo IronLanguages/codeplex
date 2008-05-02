@@ -24,6 +24,7 @@ using System.Runtime.CompilerServices;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Operations {
     public static class ComOps {
@@ -65,20 +66,36 @@ namespace IronPython.Runtime.Operations {
             return (IList<object>)GetMemberNames(context, self);
         }
 
-        public static IList<SymbolId> GetMemberNames(CodeContext context, object self) {
-            if (self is ComObject) {
-                return GetMemberNames_inner(context, (ComObject)self);
+        public static IList<object> GetMemberNames(CodeContext context, object self) {
+            // resolve statically known names from .NET objects...
+            Dictionary<string, string> names = new Dictionary<string, string>();
+            PythonBinder.GetBinder(context).ResolveMemberNames(context, DynamicHelpers.GetPythonType(self), DynamicHelpers.GetPythonType(self), names);
+
+            // then pcik up any names from the COM object...
+            ComObject co = self as ComObject;
+            if (self == null && ComObject.IsGenericComObject(self)) {
+                co = ComObject.ObjectToComObject(self);
             }
 
-            if (ComObject.IsGenericComObject(self)) {
-                return GetMemberNames_inner(context, ComObject.ObjectToComObject(self));
+            if (co != null) {
+                foreach (string o in GetMemberNames_inner(context, co)) {
+                    names[o] = o;
+                }
             }
 
-            return new List<SymbolId>();
+            List<object> res = new List<object>();
+            foreach (string name in names.Keys) {
+                res.Add(name);
+            }
+            return res;
         }
 
-        private static IList<SymbolId> GetMemberNames_inner(CodeContext context, ComObject self) {
-            return self.GetMemberNames(context);
+        private static IList<string> GetMemberNames_inner(CodeContext context, ComObject self) {
+            List<string> res = new List<string>();
+            foreach (SymbolId si in self.GetMemberNames(context)) {
+                res.Add(SymbolTable.IdToString(si));
+            }
+            return res;
         }
     }
 }

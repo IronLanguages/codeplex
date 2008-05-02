@@ -13,11 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
-
-using Microsoft.Scripting.Runtime;
-
 namespace Microsoft.Scripting.Actions {
 
     //
@@ -73,22 +68,15 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public DynamicAction Action {
-            get { return _action; }
+            get {
+                return _action;
+            }
         }
 
-
-#if DEBUG
-        // For debugging, keep track of language so that
-        // invocations can be verified against the correct language
-        private LanguageContext _lc;
-#endif
-
-        [Conditional("DEBUG")]
-        protected void Validate(CodeContext context) {
-#if DEBUG
-            System.Threading.Interlocked.CompareExchange<LanguageContext>(ref _lc, context.LanguageContext, null);
-            Debug.Assert(_lc.GetType() == context.LanguageContext.GetType());
-#endif
+        public ActionBinder Binder {
+            get {
+                return _action.Binder;
+            }
         }
     }
 
@@ -99,12 +87,11 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// RuleSet - keeps history of the dynamic site
         /// </summary>
-        internal RuleSet<T> _rules;
+        private RuleSet<T> _rules;
 
         /// <summary>
         /// The update delegate. Called when the dynamic site experiences cache miss
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         private readonly T _update;
 
         /// <summary>
@@ -127,12 +114,22 @@ namespace Microsoft.Scripting.Actions {
             _target = target;
         }
 
+        internal RuleSet<T> Rules {
+            get { return _rules; }
+        }
+
         public T Target {
             get { return _target; }
         }
 
         public T Update {
             get { return _update; }
+        }
+
+        internal void AddRule(Rule<T> rule) {
+            lock (this) {
+                _rules = _rules.AddRule(rule);
+            }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
@@ -142,82 +139,6 @@ namespace Microsoft.Scripting.Actions {
 
         public CallSite<T> Clone(T update) {
             return new CallSite<T>(Action, update);
-        }
-    }
-
-    /// <summary>
-    /// An optinized dynamic site which caches the value of CodeContext
-    /// and therefore doesn't require it being passed into its Invoke method.
-    /// </summary>
-    public abstract class FastCallSite {
-        private readonly DynamicAction _action;
-        private CodeContext _context;
-
-        protected FastCallSite(CodeContext context, DynamicAction action) {
-            this._context = context;
-            this._action = action;
-        }
-
-        public DynamicAction Action {
-            get { return _action; }
-        }
-
-        public CodeContext Context {
-            get { return _context; }
-            internal set { _context = value; }
-        }
-    }
-
-    /// <summary>
-    /// Dynamic site using cached CodeContext
-    /// </summary>
-    public sealed class FastCallSite<T> : FastCallSite {
-        /// <summary>
-        /// RuleSet - keeps history of the dynamic site
-        /// </summary>
-        internal RuleSet<T> _rules;
-
-        /// <summary>
-        /// The update delegate. Called when the dynamic site experiences cache miss
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        private readonly T _update;
-
-        /// <summary>
-        /// The cache itself - a delegate specialized based on the site history.
-        /// </summary>
-        internal T _target;
-
-        internal FastCallSite(CodeContext context, DynamicAction action)
-            : this(context, action, UpdateDelegates.MakeUpdateDelegate<T>()) {
-        }
-
-        internal FastCallSite(CodeContext context, DynamicAction action, T update)
-            : this(context, action, update, update) {
-        }
-
-        internal FastCallSite(CodeContext context, DynamicAction action, T update, T target)
-            : base(context, action) {
-            _rules = RuleSet<T>.EmptyRules;
-            _update = update;
-            _target = target;
-        }
-
-        public T Target {
-            get { return _target; }
-        }
-
-        public T Update {
-            get { return _update; }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
-        public static FastCallSite<T> Create(CodeContext context, DynamicAction action) {
-            return new FastCallSite<T>(context, action);
-        }
-
-        public FastCallSite<T> Clone(T update) {
-            return new FastCallSite<T>(Context, Action, update);
         }
     }
 }

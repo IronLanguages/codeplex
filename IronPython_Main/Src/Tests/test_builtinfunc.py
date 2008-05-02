@@ -271,16 +271,33 @@ def test_dir():
     local_var = 10
     AreEqual(dir(), ['local_var'])
     
+    def f():
+        local_var = 10
+        AreEqual(dir(*()), ['local_var'])
+    f()
+    
+    def f():
+        local_var = 10
+        AreEqual(dir(**{}), ['local_var'])
+    f()
+
+    def f():
+        local_var = 10
+        AreEqual(dir(*(), **{}), ['local_var'])
+    f()
+
 def test_ord():
     # ord of extensible string
     class foo(str): pass
     
     AreEqual(ord(foo('A')), 65)
     
+@skip("silverlight", "Merlin bug #404247: this test doesn't work when the file is executed from non-Python host (thost)" )
+def test_top_level_dir():
+    Assert("__name__" in top_level_dir)
+    Assert("__builtins__" in top_level_dir)
 
-Assert("__name__" in dir())
-Assert("__builtins__" in dir())
-
+top_level_dir = dir()
 
 x = 10
 y = 20
@@ -311,7 +328,9 @@ def test_len():
 
 def test_int_ctor():
     AreEqual(int('0x10', 16), 16)
+    AreEqual(int('0X10', 16), 16)
     AreEqual(long('0x10', 16), 16L)
+    AreEqual(long('0X10', 16), 16L)
    
 def test_type():
     AreEqual(len(type.__bases__), 1)
@@ -353,6 +372,21 @@ def test_vars():
             return object.__getattribute__(self, name)
 
     AreEqual(vars(foo()), 'abc')
+
+    def f():
+        local_var = 10
+        AreEqual(vars(*()), {'local_var' : 10})
+    f()
+
+    def f():
+        local_var = 10
+        AreEqual(vars(**{}), {'local_var' : 10})
+    f()
+
+    def f():
+        local_var = 10
+        AreEqual(vars(*(), **{}), {'local_var' : 10})
+    f()
 
 def test_compile():
     for x in ['exec', 'eval', 'single']:
@@ -399,10 +433,6 @@ def test_long_int():
   Assert(type(l) == type(i))
   Assert(i == l)
     
-def test_int_ctor():
-    AreEqual(int('0x10', 16), 16)
-    AreEqual(long('0x10', 16), 16L)
-
 def test_round():
     AreEqual(round(number=3.4), 3.0)
     AreEqual(round(number=3.125, ndigits=3), 3.125)

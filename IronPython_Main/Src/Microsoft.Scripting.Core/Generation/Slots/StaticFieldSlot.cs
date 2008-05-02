@@ -28,24 +28,24 @@ namespace Microsoft.Scripting.Generation {
         private readonly FieldInfo _field;
 
         public StaticFieldSlot(FieldInfo field) {
-            Contract.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(field, "field");
 
             this._field = field;
         }
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldGet(_field);
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGetAddr(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldAddress(_field);
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldSet(_field);
         }

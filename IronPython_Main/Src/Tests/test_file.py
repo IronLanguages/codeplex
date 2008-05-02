@@ -615,4 +615,47 @@ def test_repr():
     f.close()
     nt.unlink('repr_does_not_exist')
 
+def test_truncate():
+    import nt
+    
+    # truncate()
+    a = file('abc.txt', 'w')
+    a.write('hello world\n')
+    a.truncate()
+    a.close()
+    
+    a = file('abc.txt', 'r')
+    AreEqual(a.readlines(), ['hello world\n'])
+    a.close()
+    nt.unlink('abc.txt')
+
+    # truncate(#)
+    a = file('abc.txt', 'w')
+    a.write('hello\nworld\n')
+    a.truncate(6)
+    a.close()
+    
+    a = file('abc.txt', 'r')
+    AreEqual(a.readlines(), ['hello\r'])
+    a.close()
+
+    nt.unlink('abc.txt')
+    
+    # truncate(#) invalid args
+    a = file('abc.txt', 'w')
+    AssertError(IOError, a.truncate, -1)
+    AssertError(TypeError, a.truncate, None)
+    a.close()
+    
+    # read-only file
+    a = file('abc.txt', 'r')
+    AssertError(IOError, a.truncate)
+    AssertError(IOError, a.truncate, 0)
+    a.close()
+    
+    nt.unlink('abc.txt')
+    
+    # std-out
+    AssertError(IOError, sys.stdout.truncate)
+
 run_test(__name__)

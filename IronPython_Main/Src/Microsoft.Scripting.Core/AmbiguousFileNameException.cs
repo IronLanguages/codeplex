@@ -44,9 +44,9 @@ namespace Microsoft.Scripting {
         }
 
         public AmbiguousFileNameException(string/*!*/ firstPath, string/*!*/ secondPath, string message, Exception inner)
-            : base(message ?? String.Format(Resources.AmbiguousFileName, firstPath, secondPath), inner) {
-            Contract.RequiresNotNull(firstPath, "firstPath");
-            Contract.RequiresNotNull(secondPath, "secondPath");
+            : base(message ?? ResourceUtils.GetString(ResourceUtils.AmbiguousFileName, firstPath, secondPath), inner) {
+            ContractUtils.RequiresNotNull(firstPath, "firstPath");
+            ContractUtils.RequiresNotNull(secondPath, "secondPath");
 
             _firstPath = firstPath;
             _secondPath = secondPath;

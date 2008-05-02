@@ -21,7 +21,7 @@ using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class UnaryExpression : Expression {
         private readonly Expression _expression;
@@ -43,6 +43,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Action.Operator(
+                ag.Binder,
                 PythonOperatorToAction(_op),
                 type,
                 ag.Transform(_expression)

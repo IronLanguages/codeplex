@@ -23,17 +23,22 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     internal class IDispatchComObjectSetMemberBinderHelper<T> : MemberBinderHelper<T, SetMemberAction> {
-        internal IDispatchComObjectSetMemberBinderHelper(CodeContext context, SetMemberAction action, object[] args)
+        
+        private ComTypeDesc _wrapperType;
+
+        internal IDispatchComObjectSetMemberBinderHelper(CodeContext context, ComTypeDesc wrapperType, SetMemberAction action, object[] args)
             : base(context, action, args) {
+
+            _wrapperType = wrapperType;
         }
 
         internal RuleBuilder<T> MakeNewRule() {
-            // Since the only way to get this rule in the first place is to pass through the statically defined pre-binders,
-            // the test here essentially redundant.  We need one though, so we'll use the basic type test.
-            Rule.MakeTest(typeof(IDispatchComObject));
+
+            Rule.Test = ComObject.MakeComObjectTest(typeof(IDispatchComObject), typeof(IDispatchComObject).GetProperty("ComTypeDesc"), _wrapperType, Rule);
             Rule.Target = MakeSetMemberTarget();
 
             return Rule;
@@ -64,6 +69,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private Expression MakeSetMemberTargetForLanguageExtension() {
+
             // This method is a distillation of the SetMemberBinderHelper.MakeSetMemberRule() method.
 
             // We first look to see if the property to be set is a property on the inferred type.  If so, this
@@ -105,6 +111,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private Expression MakePropertyRule(Type targetType, MemberGroup properties) {
+
             PropertyTracker info = (PropertyTracker)properties[0];
             MethodInfo setter = info.GetSetMethod(true);
             Expression expression = null;
@@ -127,6 +134,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private Expression MakeReturnValue(Expression expression) {
+
             return Ast.Comma(Rule.Parameters[1], expression);
         }
     }

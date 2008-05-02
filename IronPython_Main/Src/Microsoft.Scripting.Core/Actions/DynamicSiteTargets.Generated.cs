@@ -29,22 +29,10 @@ namespace Microsoft.Scripting.Actions {
     public delegate TRet DynamicSiteTarget<T0, TRet>(CallSite site, CodeContext context, T0 arg0);
 
     /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity 1
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet FastDynamicSiteTarget<T0, TRet>(FastCallSite site, T0 arg0);
-
-    /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 2
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public delegate TRet DynamicSiteTarget<T0, T1, TRet>(CallSite site, CodeContext context, T0 arg0, T1 arg1);
-
-    /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity 2
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet FastDynamicSiteTarget<T0, T1, TRet>(FastCallSite site, T0 arg0, T1 arg1);
 
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 3
@@ -53,22 +41,10 @@ namespace Microsoft.Scripting.Actions {
     public delegate TRet DynamicSiteTarget<T0, T1, T2, TRet>(CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2);
 
     /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity 3
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet FastDynamicSiteTarget<T0, T1, T2, TRet>(FastCallSite site, T0 arg0, T1 arg1, T2 arg2);
-
-    /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 4
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, TRet>(CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3);
-
-    /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity 4
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet FastDynamicSiteTarget<T0, T1, T2, T3, TRet>(FastCallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3);
 
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 5
@@ -77,34 +53,16 @@ namespace Microsoft.Scripting.Actions {
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, TRet>(CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
 
     /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity 5
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet FastDynamicSiteTarget<T0, T1, T2, T3, T4, TRet>(FastCallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
-
-    /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 6
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, T5, TRet>(CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
 
     /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity 6
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, TRet>(FastCallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
-
-    /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity variable based on Tuple size
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public delegate TRet BigDynamicSiteTarget<T0, TRet>(CallSite site, CodeContext context, T0 arg0) where T0 : Tuple;
-
-    /// <summary>
-    /// Dynamic site delegate type using cached CodeContext - arity variable based on Tuple size
-    /// </summary>
-    [GeneratedCode("DLR", "2.0")]
-    public delegate TRet BigFastDynamicSiteTarget<T0, TRet>(FastCallSite site, T0 arg0) where T0 : Tuple;
 
 
     // *** END GENERATED CODE ***

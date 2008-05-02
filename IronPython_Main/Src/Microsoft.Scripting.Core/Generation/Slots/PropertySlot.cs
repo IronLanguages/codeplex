@@ -35,9 +35,9 @@ namespace Microsoft.Scripting.Generation {
             this._property = property;
         }
 
-        public override void EmitSet(LambdaCompiler cg, Slot val) {
-            Contract.RequiresNotNull(cg, "cg");
-            Contract.RequiresNotNull(val, "val");
+        public override void EmitSet(ILGen cg, Slot val) {
+            ContractUtils.RequiresNotNull(cg, "cg");
+            ContractUtils.RequiresNotNull(val, "val");
 
             MethodInfo method = _property.GetSetMethod();
             Debug.Assert(method != null, "Cannot set property");
@@ -56,8 +56,8 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(method);
         }
 
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             MethodInfo method = _property.GetGetMethod();
             Debug.Assert(method != null, "Cannot set property");
@@ -73,10 +73,10 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(method);
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGetAddr(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
-            throw new NotImplementedException(Resources.NotImplemented);
+            throw new NotImplementedException(ResourceUtils.GetString(ResourceUtils.NotImplemented));
         }
 
         public override Type Type {

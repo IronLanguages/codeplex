@@ -18,7 +18,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class PrintStatement : Statement {
         private readonly Expression _dest;
@@ -48,21 +48,17 @@ namespace IronPython.Compiler.Ast {
 
             if (_expressions.Length == 0) {
                 if (destination != null) {
-                    return Ast.Statement(
+                    return Ast.Call(
                         Span,
-                        Ast.Call(
-                            AstGenerator.GetHelperMethod("PrintNewlineWithDest"),
-                            Ast.CodeContext(),
-                            destination
-                        )
+                        AstGenerator.GetHelperMethod("PrintNewlineWithDest"),
+                        Ast.CodeContext(),
+                        destination
                     );
                 } else {
-                    return Ast.Statement(
+                    return Ast.Call(
                         Span,
-                        Ast.Call(
-                            AstGenerator.GetHelperMethod("PrintNewline"),
-                            Ast.CodeContext()
-                        )
+                        AstGenerator.GetHelperMethod("PrintNewline"),
+                        Ast.CodeContext()
                     );
                 }
             } else {

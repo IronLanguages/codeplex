@@ -665,10 +665,6 @@ namespace IronPython.Modules {
                 return true;
             }
 
-            bool IValueEquality.ValueNotEquals(object other) {
-                return !((IValueEquality)this).ValueEquals(other);
-            }
-
             #endregion
 
             #region IEnumerable Members

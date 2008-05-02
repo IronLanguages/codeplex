@@ -159,7 +159,7 @@ namespace IronPython.Runtime {
     /// </summary>
     internal sealed class InstanceFinalizer {
         private object _instance;
-        private DynamicSite<object, object> _site = RuntimeHelpers.CreateSimpleCallSite<object, object>();
+        private DynamicSite<object, object> _site = CallSiteFactory.CreateSimpleCallSite<object, object>(DefaultContext.DefaultPythonBinder);
 
         internal InstanceFinalizer(object inst) {
             Debug.Assert(inst != null);
@@ -174,7 +174,7 @@ namespace IronPython.Runtime {
 
             IronPython.Runtime.Types.OldInstance oi = _instance as IronPython.Runtime.Types.OldInstance;
             if (oi != null) {
-                if (oi.TryGetCustomMember(context, Symbols.Unassign, out o)) {
+                if (oi.TryGetBoundCustomMember(context, Symbols.Unassign, out o)) {
                     return _site.Invoke(context, o);
                 }
             } else {

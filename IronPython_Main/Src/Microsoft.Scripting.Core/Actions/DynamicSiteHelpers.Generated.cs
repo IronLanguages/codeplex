@@ -44,22 +44,6 @@ namespace Microsoft.Scripting.Actions {
             return typeof(CallSite<>).MakeGenericType(new Type[] { genType });
         }
 
-        public static Type MakeFastDynamicSiteType(params Type[] types) {
-            Type genType;
-            switch (types.Length) {
-                case 2: genType = typeof(FastDynamicSiteTarget<,>); break;
-                case 3: genType = typeof(FastDynamicSiteTarget<,,>); break;
-                case 4: genType = typeof(FastDynamicSiteTarget<,,,>); break;
-                case 5: genType = typeof(FastDynamicSiteTarget<,,,,>); break;
-                case 6: genType = typeof(FastDynamicSiteTarget<,,,,,>); break;
-                case 7: genType = typeof(FastDynamicSiteTarget<,,,,,,>); break;
-                default: return MakeBigDynamicSite(typeof(FastCallSite<>), typeof(BigFastDynamicSiteTarget<,>), types);
-            }
-
-            genType = genType.MakeGenericType(types);
-            return typeof(FastCallSite<>).MakeGenericType(new Type[] { genType });
-        }
-
         internal static Type MakeDynamicSiteTargetType(Type/*!*/[] types) {
             Type siteType;
 

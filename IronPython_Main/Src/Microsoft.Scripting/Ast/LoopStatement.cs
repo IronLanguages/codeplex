@@ -19,7 +19,7 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static LoopStatement Loop(SourceSpan span, SourceLocation header, Expression test, Expression increment, Expression body, Expression @else) {
-            return Ast.Loop(Ast.Annotations(span, header), null, test, increment, body, @else);
+            return Expression.Loop(Expression.Annotate(span, header), null, test, increment, body, @else);
         }
     }
 

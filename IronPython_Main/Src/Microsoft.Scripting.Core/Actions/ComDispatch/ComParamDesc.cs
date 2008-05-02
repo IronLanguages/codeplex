@@ -117,6 +117,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         private Type GetTypeForVarEnum(VarEnum vt) {
             Type type;
 

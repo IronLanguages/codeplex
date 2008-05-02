@@ -40,6 +40,7 @@ def test_sanity_types():
     AreEqual(str(com_obj.pDate), str(now))        
 
 #Verify properties with propputref act as expected.
+@skip("multiple_execute")
 def test_ref_properties():    
     com_obj.RefProperty = com_obj
     AreEqual(com_obj.RefProperty, com_obj)

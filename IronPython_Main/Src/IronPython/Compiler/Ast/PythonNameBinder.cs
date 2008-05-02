@@ -304,8 +304,10 @@ namespace IronPython.Compiler.Ast {
         // FunctionDefinition
         public override bool Walk(FunctionDefinition node) {
             // Name is defined in the enclosing context
-            node.Variable = DefineName(node.Name);
-
+            if (!node.IsLambda) {
+                node.Variable = DefineName(node.Name);
+            }
+            
             // process the default arg values in the outer context
             foreach (Parameter p in node.Parameters) {
                 if (p.DefaultValue != null) {
@@ -347,7 +349,10 @@ namespace IronPython.Compiler.Ast {
                         case VariableKind.Global:
                             // OK
                             break;
+
                         case VariableKind.Local:
+                        case VariableKind.HiddenLocal:
+                        case VariableKind.GlobalLocal:
                             ReportSyntaxWarning(
                                 String.Format(
                                     System.Globalization.CultureInfo.InvariantCulture,
@@ -357,6 +362,7 @@ namespace IronPython.Compiler.Ast {
                                 node
                             );
                             break;
+                        
                         case VariableKind.Parameter:
                             ReportSyntaxError(
                                 String.Format(

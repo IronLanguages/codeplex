@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Generation {
         public string SnippetsDirectory {
             get { return _snippetsDirectory; }
             set {
-                Contract.Requires(!_optionsFrozen);
+                ContractUtils.Requires(!_optionsFrozen);
                 _snippetsDirectory = value;
             }
         }
@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Generation {
         public string SnippetsFileName {
             get { return _snippetsFileName; }
             set {
-                Contract.Requires(!_optionsFrozen);
+                ContractUtils.Requires(!_optionsFrozen);
                 _snippetsFileName = value;
             }
         }
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Generation {
         public bool SaveSnippets {
             get { return _saveSnippets; }
             set {
-                Contract.Requires(!_optionsFrozen);
+                ContractUtils.Requires(!_optionsFrozen);
                 _saveSnippets = value; 
             }
         }
@@ -184,9 +184,9 @@ namespace Microsoft.Scripting.Generation {
         public DynamicILGen/*!*/ CreateDynamicMethod(string/*!*/ methodName, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes,
             bool isDebuggable) {
 
-            Contract.RequiresNotEmpty(methodName, "methodName");
-            Contract.RequiresNotNull(returnType, "returnType");
-            Contract.RequiresNotNullItems(parameterTypes, "parameterTypes");
+            ContractUtils.RequiresNotEmpty(methodName, "methodName");
+            ContractUtils.RequiresNotNull(returnType, "returnType");
+            ContractUtils.RequiresNotNullItems(parameterTypes, "parameterTypes");
 
             AssemblyGen assembly = GetAssembly(isDebuggable, false);
 

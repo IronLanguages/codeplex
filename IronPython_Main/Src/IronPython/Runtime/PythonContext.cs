@@ -25,8 +25,6 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -41,6 +39,9 @@ using IronPython.Runtime.Types;
 
 using PyAst = IronPython.Compiler.Ast;
 
+// TODO: remove HAPI reference
+using Microsoft.Scripting.Hosting;
+
 namespace IronPython.Runtime {
     public sealed class PythonContext : LanguageContext {
         private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
@@ -50,21 +51,12 @@ namespace IronPython.Runtime {
 #endif
 
         private readonly PythonEngineOptions/*!*/ _engineOptions;
-        private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
-        private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
         private readonly Scope/*!*/ _systemState;
-        private readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
-        private readonly PythonFileManager/*!*/ _fileManager = new PythonFileManager();
-        private readonly Dictionary<object, object> _moduleState = new Dictionary<object, object>();
-        private readonly Dictionary<string, object> _errorHandlers = new Dictionary<string, object>();
-        private readonly List<object> _searchFunctions = new List<object>();
         /// <summary> stored for copy_reg module, used for reduce protocol </summary>
         internal BuiltinFunction NewObject;
         /// <summary> stored for copy_reg module, used for reduce protocol </summary>
         internal BuiltinFunction PythonReconstructor;
-
-        private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
         private string _initialVersionString;
 #if !SILVERLIGHT
         private string _initialExecutable, _initialPrefix = typeof(PythonContext).Assembly.CodeBase;
@@ -73,7 +65,15 @@ namespace IronPython.Runtime {
 #endif
         private Scope _clrModule;
         private Scope _builtins;
-        private ScriptEngine _engine;
+
+        private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
+        private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
+        private readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
+        private readonly PythonFileManager/*!*/ _fileManager = new PythonFileManager();
+        private readonly Dictionary<object, object> _moduleState = new Dictionary<object, object>();
+        private readonly Dictionary<string, object> _errorHandlers = new Dictionary<string, object>();
+        private readonly List<object> _searchFunctions = new List<object>();
+        private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -87,10 +87,10 @@ namespace IronPython.Runtime {
 
             DefaultContext.CreateContexts(this);
 
+            Binder = new PythonBinder(this, DefaultContext.DefaultCLS);
+
             // need to run PythonOps 1st so the type system is spun up...
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(PythonOps).TypeHandle);
-
-            Binder = new PythonBinder(this, DefaultContext.DefaultCLS);
 
             if (DefaultContext.Default.LanguageContext.Binder == null) {
                 // hack to fix the default language context binder, there's an order of 
@@ -287,17 +287,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        public ScriptEngine ScriptEngine {
-            get {
-                return _engine;
-            }
-            // friend: ScriptEngine
-            internal set {
-                Assert.NotNull(value);
-                _engine = value;
-            }
-        }
-        
         /// <summary>
         /// Initializes the sys module on startup.  Called both to load and reload sys
         /// </summary>
@@ -320,7 +309,7 @@ namespace IronPython.Runtime {
         }
 
         public override LambdaExpression ParseSourceCode(CompilerContext context) {
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             PyAst.PythonAst ast;
             SourceCodeProperties properties = SourceCodeProperties.None;
@@ -377,9 +366,9 @@ namespace IronPython.Runtime {
         }
 
         public override StreamReader GetSourceReader(Stream stream, Encoding encoding) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(encoding, "encoding");
-            Contract.Requires(stream.CanSeek && stream.CanRead, "stream", "The stream must support seeking and reading");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
+            ContractUtils.Requires(stream.CanSeek && stream.CanRead, "stream", "The stream must support seeking and reading");
 
             // we choose ASCII by default, if the file has a Unicode pheader though
             // we'll automatically get it as unicode.
@@ -525,7 +514,7 @@ namespace IronPython.Runtime {
             //}
 
             // flow options into the module if they're set
-            PythonCompilerOptions pco = ((PythonCompilerOptions)newPythonContext.CompilerContext.Options);
+            PythonCompilerOptions pco = ((PythonCompilerOptions)newPythonContext.Scope.CompilerContext.Options);
             newPythonContext.TrueDivision |= pco.TrueDivision;
             newPythonContext.AllowWithStatement |= pco.AllowWithStatement;
             newPythonContext.AbsoluteImports |= pco.AbsoluteImports;
@@ -559,9 +548,9 @@ namespace IronPython.Runtime {
         public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options, bool skipFirstLine,
             out ScriptCode compiledCode) {
 
-            Contract.RequiresNotNull(fileName, "fileName");
-            Contract.RequiresNotNull(moduleName, "moduleName");
-            Contract.RequiresNotNull(sourceCode, "sourceCode");
+            ContractUtils.RequiresNotNull(fileName, "fileName");
+            ContractUtils.RequiresNotNull(moduleName, "moduleName");
+            ContractUtils.RequiresNotNull(sourceCode, "sourceCode");
 
             PythonCompilerOptions compilerOptions = GetPythonCompilerOptions();
             compilerOptions.SkipFirstLine = skipFirstLine;
@@ -606,16 +595,16 @@ namespace IronPython.Runtime {
         }
 
         public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IDictionary<string, object> globals, ModuleOptions options) {
-            Contract.RequiresNotNull(moduleName, "moduleName");
-            Contract.RequiresNotNull(globals, "globals");
+            ContractUtils.RequiresNotNull(moduleName, "moduleName");
+            ContractUtils.RequiresNotNull(globals, "globals");
 
             IAttributesCollection globalDict = globals as IAttributesCollection ?? new PythonDictionary(new StringDictionaryStorage(globals));
             return CreateModule(moduleName, fileName, globalDict, options);
         }
 
         public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IAttributesCollection globals, ModuleOptions options) {
-            Contract.RequiresNotNull(moduleName, "moduleName");
-            Contract.RequiresNotNull(globals, "globals");
+            ContractUtils.RequiresNotNull(moduleName, "moduleName");
+            ContractUtils.RequiresNotNull(globals, "globals");
 
             return CreateModule(moduleName, fileName, new Scope(globals), null, options);
         }
@@ -642,7 +631,7 @@ namespace IronPython.Runtime {
         }
 
         internal PythonModule/*!*/ CreatePythonModule(string moduleName, string fileName, Scope/*!*/ scope, ModuleOptions options) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
 
             PythonModule module = new PythonModule(scope);
             module = (PythonModule)scope.SetExtension(ContextId, module);
@@ -679,8 +668,8 @@ namespace IronPython.Runtime {
         }
 
         public void PublishModule(string/*!*/ name, PythonModule/*!*/ module) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(module, "module");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(module, "module");
             SystemStateModules[name] = module.Scope;
         }
 
@@ -718,7 +707,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public override bool TryLookupGlobal(CodeContext context, SymbolId name, out object value) {
             object builtins;
-            if (!context.Scope.ModuleScope.TryGetName(Symbols.Builtins, out builtins)) {
+            if (!context.GlobalScope.TryGetName(Symbols.Builtins, out builtins)) {
                 value = null;
                 return false;
             }
@@ -829,10 +818,6 @@ namespace IronPython.Runtime {
             SetSystemStateValue("path", new List(paths));
         }
         
-        public override TextWriter GetOutputWriter(bool isErrorOutput) {
-            return new OutputWriter(this, isErrorOutput);
-        }
-
         public override void Shutdown() {
             object callable;
 
@@ -883,9 +868,10 @@ namespace IronPython.Runtime {
 
             object pythonEx = PythonExceptions.ToPython(exception);
 
-            string result = FormatStackTraces(exception) + FormatPythonException(pythonEx) + Environment.NewLine;
+            string result = FormatStackTraces(exception) + FormatPythonException(pythonEx);
 
             if (Options.ShowClrExceptions) {
+                result += Environment.NewLine;
                 result += FormatCLSException(exception);
             }
 
@@ -938,7 +924,13 @@ namespace IronPython.Runtime {
                 } else if (pythonException is StringException) {
                     result += pythonException.ToString();
                 } else {
-                    result += GetPythonExceptionClassName(pythonException) + ": " + pythonException.ToString();
+                    result += GetPythonExceptionClassName(pythonException);
+
+                    string excepStr = PythonOps.ToString(pythonException);
+
+                    if (!String.IsNullOrEmpty(excepStr)) {
+                        result += ": " + excepStr;
+                    }
                 }
             }
 
@@ -1040,7 +1032,7 @@ namespace IronPython.Runtime {
             string methodName = frame.GetMethodName();
             int lineNumber = frame.GetFileLineNumber();
 
-            return String.Format("  File {0}, line {1}, in {2}",
+            return String.Format("  File \"{0}\", line {1}, in {2}",
                 frame.GetFileName(),
                 lineNumber == 0 ? "unknown" : lineNumber.ToString(),
                 methodName);
@@ -1075,12 +1067,23 @@ namespace IronPython.Runtime {
             return result;
         }
 
+        /// <summary>
+        /// Gets Python module for the module scope the context holds on to.
+        /// Returns null if there is no PythonModule associated with teh global scope.
+        /// </summary>
+        public static PythonModule GetModule(CodeContext/*!*/ context) {
+            return context.GlobalScope.GetExtension(context.LanguageContext.ContextId) as PythonModule;
+        }
+
+        /// <summary>
+        /// Ensures the module scope is associated with a Python module and returns it.
+        /// </summary>
+        public static PythonModule/*!*/ EnsureModule(CodeContext/*!*/ context) {
+            return GetContext(context).EnsurePythonModule(context.GlobalScope);
+        }
+
         public override ServiceType GetService<ServiceType>(params object[] args) {
-            if (typeof(ServiceType) == typeof(CommandLine)) {
-                return (ServiceType)(object)new PythonCommandLine(this);
-            } else if (typeof(ServiceType) == typeof(OptionsParser)) {
-                return (ServiceType)(object)new PythonOptionsParser(this);
-            } else if (typeof(ServiceType) == typeof(TokenCategorizer)) {
+            if (typeof(ServiceType) == typeof(TokenCategorizer)) {
                 return (ServiceType)(object)new PythonTokenCategorizer();
             }
 
@@ -1223,7 +1226,7 @@ namespace IronPython.Runtime {
                     Scope res = _builtins;
                     if (res == null) {
                         res = _builtins = (Scope)SystemStateModules["__builtin__"];
-                        _builtins.ModuleChanged += new EventHandler<ModuleChangeEventArgs>(BuiltinsChanged);
+                        EnsurePythonModule(res).ModuleChanged += new EventHandler<ModuleChangeEventArgs>(BuiltinsChanged);
                     }
                     return res;
                 }

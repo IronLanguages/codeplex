@@ -29,7 +29,7 @@ namespace ToyScript.Parser {
         private Dictionary<string, MSAst.Expression> _variables = new Dictionary<string, MSAst.Expression>();
 
         public ToyScope(string name, ToyScope parent) {
-            _block = MSAst.Ast.Lambda(name ?? "<toyblock>", typeof(object));
+            _block = MSAst.Expression.Lambda(name ?? "<toyblock>", typeof(object));
             _parent = parent;
         }
 

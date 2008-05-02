@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator
+from generate import generate
 import operator
 
 kwlist = ['and', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'exec', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'not', 'or', 'pass', 'print', 'raise', 'return', 'try', 'while', 'yield']
@@ -186,14 +184,22 @@ class Operator(Symbol):
         gen_one_symbol('Reverse' + self.title_name(), self.rname, '__' + self.rname + '__')
         gen_one_symbol('InPlace' + self.title_name(), self.name, '__i' + self.name + '__')
 
-    def genWeakRefOperatorNames(self, cw):
-        cw.writeline("AddWrapperOperator(Symbols.%s, res);" % (self.symbol_name()))
+    def genWeakRefOperatorNames(self, cw):        
+        cw.writeline('[SlotField] public static PythonTypeSlot __%s__ = new SlotWrapper(Symbols.%s, ProxyType);' % (self.name, self.symbol_name()))
         
         if self.isCompare(): return
 
-        cw.writeline("AddWrapperOperator(Symbols.%s, res);" % (self.reverse_symbol_name()))
-        cw.writeline("AddWrapperOperator(Symbols.%s, res);" % (self.inplace_symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(Symbols.%s, ProxyType);' % (self.name, self.reverse_symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(Symbols.%s, ProxyType);' % (self.name, self.inplace_symbol_name()))
 
+    def genWeakRefCallableProxyOperatorNames(self, cw):        
+        cw.writeline('[SlotField] public static PythonTypeSlot __%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.symbol_name()))
+        
+        if self.isCompare(): return
+
+        cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.reverse_symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.inplace_symbol_name()))
+    
 class Grouping(Symbol):
     def __init__(self, symbol, name, side, titleName=None):
         Symbol.__init__(self, symbol, side+" "+name, titleName)
@@ -305,9 +311,6 @@ def tokenize_generator(cw):
         done[ch] = True
     return ret
 
-
-CodeGenerator("Tokenize Ops", tokenize_generator).doit()
-
 friendlyOverload = {'elif':"ElseIf"}
 def keywordToFriendly(kw):
     if friendlyOverload.has_key(kw):
@@ -342,8 +345,6 @@ def tokenkinds_generator(cw):
     for kw in keyword_list:
         cw.write("Keyword%s = %d," % (keywordToFriendly(kw), i))
         i += 1
-
-CodeGenerator("Token Kinds", tokenkinds_generator).doit()
 
 def tokens_generator(cw):
     uc = unique_checker()
@@ -404,24 +405,22 @@ def tokens_generator(cw):
     for l in dict_init: cw.write(l)
     cw.exit_block()
 
-CodeGenerator("Tokens", tokens_generator).doit()
-
 IBINOP = """
-private static readonly FastDynamicSite<object, object, object> %(name)sSharedSite =
-    FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
+private static readonly DynamicSite<object, object, object> %(name)sSharedSite =
+    DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
 
 public static object %(name)s(object x, object y) {
-    return %(name)sSharedSite.Invoke(x, y);
+    return %(name)sSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
 }"""
 
 BINOP = IBINOP
 
 CMPOP2 = """
-private static readonly FastDynamicSite<object, object, bool> %(name)sBooleanSharedSite =
-    FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
+private static readonly DynamicSite<object, object, bool> %(name)sBooleanSharedSite =
+    DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
 
 public static bool %(name)sRetBool(object x, object y) {
-    return %(name)sBooleanSharedSite.Invoke(x, y);
+    return %(name)sBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
 }"""
 
 CMPOP = BINOP + CMPOP2
@@ -469,15 +468,11 @@ def python_sites_generator(cw):
         if op.symbol in ["<>", "=="]: continue
         op.generate_binop(cw)
 
-CodeGenerator("Python Sites", python_sites_generator).doit()
-
 def gen_SymbolTable_ops_symbols(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
         op.genSymbolTableSymbols(cw)
         
-CodeGenerator("Symbols - Ops Symbols", gen_SymbolTable_ops_symbols).doit()
-
 def gen_OperatorTable(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
@@ -489,21 +484,15 @@ def gen_OperatorTable(cw):
         if not isinstance(op, Operator): continue
         op.genOperatorTable_Reverse(cw)
         
-CodeGenerator("Table of Operators", gen_OperatorTable).doit()
-
 def gen_operatorMapping(cw):
     for op in ops:
         if isinstance(op, Operator): op.genOperatorTable_Mapping(cw)
-
-CodeGenerator("PythonOperator Mapping", gen_operatorMapping).doit()
 
 def gen_OperatorToSymbol(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
         op.genOperatorToSymbol(cw)
         
-CodeGenerator("OperatorToSymbol", gen_OperatorToSymbol).doit()
-
 def weakref_operators(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
@@ -511,12 +500,15 @@ def weakref_operators(cw):
 
 CodeGenerator("WeakRef Operators Initialization", weakref_operators).doit()
 
+def weakrefCallabelProxy_operators(cw):
+    for op in ops:
+        if not isinstance(op, Operator): continue
+        op.genWeakRefCallableProxyOperatorNames(cw)
+
 def oldinstance_operators(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
         op.genOldStyleOp(cw)
-
-CodeGenerator("OldInstance Operators", oldinstance_operators).doit()
 
 def operator_reversal(cw):
     for op in ops:
@@ -525,4 +517,21 @@ def operator_reversal(cw):
         op.genOperatorReversal_Forward(cw)
         op.genOperatorReversal_Reverse(cw)
         
-CodeGenerator("Operator Reversal", operator_reversal).doit()
+def main():
+    return generate(
+        ("Tokenize Ops", tokenize_generator),
+        ("Token Kinds", tokenkinds_generator),
+        ("Tokens", tokens_generator),
+        ("Python Sites", python_sites_generator),
+        ("Symbols - Ops Symbols", gen_SymbolTable_ops_symbols),
+        ("Table of Operators", gen_OperatorTable),
+        ("PythonOperator Mapping", gen_operatorMapping),
+        ("OperatorToSymbol", gen_OperatorToSymbol),
+        ("WeakRef Operators Initialization", weakref_operators),
+        ("OldInstance Operators", oldinstance_operators),
+        ("Operator Reversal", operator_reversal),
+        ("WeakRef Callable Proxy Operators Initialization", weakrefCallabelProxy_operators),
+    )
+
+if __name__ == "__main__":
+    main()

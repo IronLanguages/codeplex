@@ -14,11 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Configuration;
 using System.Diagnostics;
-using System.Reflection;
+
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -52,7 +49,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _languageProviders; 
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _languageProviders = value; 
             }
         }
@@ -62,7 +59,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _hostType; 
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 if (!value.IsSubclassOf(typeof(ScriptHost))) throw new ArgumentException("Invalid type", "value");
                 _hostType = value;
             }
@@ -74,7 +71,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _hostArguments;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _hostArguments = value;
             }
         }
@@ -87,12 +84,12 @@ namespace Microsoft.Scripting.Hosting {
 
 #if !SILVERLIGHT
         public void AssociateWithAppDomain(AppDomain/*!*/ domain) {
-            Contract.RequiresNotNull(domain, "domain");
+            ContractUtils.RequiresNotNull(domain, "domain");
             domain.SetData(AppDomainDataKey, this);
         }
 
         public static ScriptRuntimeSetup GetAppDomainAssociated(AppDomain/*!*/ domain) {
-            Contract.RequiresNotNull(domain, "domain");
+            ContractUtils.RequiresNotNull(domain, "domain");
             return domain.GetData(AppDomainDataKey) as ScriptRuntimeSetup;
         }
 #endif
@@ -105,7 +102,7 @@ namespace Microsoft.Scripting.Hosting {
             if (addWellKnownLanguages) {
                 _languageProviders = new LanguageProviderSetup[] {
 #if SIGNED
-                    new LanguageProviderSetup("IronPython.Runtime.PythonContext", "IronPython, Version=2.0.0.1000, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".py", "py", "python", "ironpython"),
+                    new LanguageProviderSetup("IronPython.Runtime.PythonContext", "IronPython, Version=2.0.0.2000, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".py", "py", "python", "ironpython"),
                     new LanguageProviderSetup("Microsoft.JScript.Runtime.JSContext", "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".jsx", ".js", "managedjscript", "js", "jscript"),
                     new LanguageProviderSetup("Ruby.Runtime.RubyContext", "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".rb", "rb", "ruby", "ironruby"),
                     new LanguageProviderSetup("Microsoft.VisualBasic.Scripting.Runtime.VisualBasicLanguageContext", "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".vbx", "vbx"),

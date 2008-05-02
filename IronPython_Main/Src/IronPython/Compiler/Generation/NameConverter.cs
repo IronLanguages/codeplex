@@ -34,21 +34,12 @@ namespace IronPython.Compiler {
     /// </summary>
     public static class NameConverter {
         public static NameType TryGetName(PythonType dt, MethodInfo mi, out string name) {
-            Debug.Assert(IsValidSubtype(dt, mi),
-                String.Format(
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    "{0}.{1} is not declared on {2}",
-                    mi.DeclaringType.FullName, mi.Name, dt.Name)
-                );
-
             name = mi.Name;
 
             return GetNameFromMethod(dt, mi, NameType.Method, ref name);
         }
 
         public static NameType TryGetName(PythonType dt, FieldInfo fi, out string name) {
-            Debug.Assert(dt.IsSubclassOf(TypeHelpers.GetDeclaringType(fi)));
-
             NameType nt = NameType.PythonField;
             name = fi.Name;
 
@@ -74,17 +65,13 @@ namespace IronPython.Compiler {
         }
 
         public static NameType TryGetName(PythonType dt, EventInfo ei, MethodInfo eventMethod, out string name) {
-            Debug.Assert(IsValidSubtype(dt, ei));
-
             name = ei.Name;
-            NameType res = dt.TypeContext == ContextId.Empty ? NameType.PythonEvent : NameType.Event;
+            NameType res = dt.IsPythonType ? NameType.PythonEvent : NameType.Event;
 
             return GetNameFromMethod(dt, eventMethod, res, ref name);
         }
 
         public static NameType TryGetName(PythonType dt, PropertyInfo pi, MethodInfo prop, out string name) {
-            Debug.Assert(IsValidSubtype(dt, pi));
-
             if (pi.IsDefined(typeof(PythonHiddenAttribute), false)) {
                 name = null;
                 return NameType.None;
@@ -96,8 +83,6 @@ namespace IronPython.Compiler {
         }
 
         public static NameType TryGetName(PythonType dt, ExtensionPropertyInfo pi, MethodInfo prop, out string name) {
-            Debug.Assert(dt.IsSubclassOf(TypeHelpers.GetDeclaringType(pi.DeclaringType)));
-
             name = pi.Name;
 
             return GetNameFromMethod(dt, prop, NameType.Property, ref name);
@@ -202,10 +187,5 @@ namespace IronPython.Compiler {
 
             return res;
         }
-
-        private static bool IsValidSubtype(PythonType dt, MemberInfo mi) {
-            return dt.IsSubclassOf(TypeHelpers.GetDeclaringType(mi)) || mi.DeclaringType.IsInterface;
-        }
-
     }
 }

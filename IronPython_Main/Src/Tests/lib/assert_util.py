@@ -23,7 +23,7 @@ is_cli = sys.platform == 'cli'
 if not is_silverlight:
     import nt
     from file_util import *
-    
+ 
 from type_util import types
 
 is_cli32, is_cli64 = False, False
@@ -305,6 +305,18 @@ def _do_nothing(*args):
         print arg
     pass
 
+def get_num_iterations():
+	default = 1
+	try:
+		num_of_iterations = int (get_environ_variable('NUM_TEST_ITERATIONS'))
+	except:
+		num_of_iterations = default
+		
+	if num_of_iterations < default :
+		num_of_iterations = default		
+	
+	return num_of_iterations
+	
 class disabled:
     def __init__(self, reason):
         self.reason = reason
@@ -328,7 +340,9 @@ class skip:
         return is_interpreted()
     def interactive_test(self):
 	    return is_interactive()
-	    
+    def multiple_execute_test(self):
+		return get_num_iterations() > 1
+    
     def __call__(self, f):
         #skip questionable tests
         if is_silverlight and 'silverlightbug?' in self.platforms:
@@ -338,8 +352,9 @@ class skip:
             msg = '... Decorated with @skip(%s), skipping %s ...' % (
                 self.platforms, f.func_name)
             return _do_nothing(msg)
-
-        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted', 'interactive'
+		
+        
+        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted', 'interactive', 'multiple_execute'        
         for to_skip in platforms:
             platform_test = getattr(self, to_skip + '_test')
             if to_skip in self.platforms and platform_test():
@@ -414,14 +429,16 @@ def print_failures(failures):
                 from IronPythonTest import TestHelpers
                 print 'CLR Exception: ',
                 print TestHelpers.GetContext().FormatException(ex.clsException)
-        
+
+
+		
 def run_test(mod_name, noOutputPlease=False):
     import sys
     module = sys.modules[mod_name]
     stdout = sys.stdout
     stderr = sys.stderr
     failures = []
-
+		
     includedTests = [arg[4:] for arg in sys.argv if arg.startswith('run:test_') and not arg.endswith('.py')]
     for name in dir(module): 
         obj = getattr(module, name)
@@ -429,22 +446,24 @@ def run_test(mod_name, noOutputPlease=False):
             if name.endswith("_clionly") and not is_cli: continue
             if name.startswith("test_"): 
                 if not includedTests or name in includedTests:
-                    if not noOutputPlease and (mod_name == '__main__'): 
-                        print ">>> testing %-40s" % name,
-                    #obj()
-                    #catches the error and exit at the end of each test
-                    try:
-                        try:
-                            obj()
-                        finally:
-                            # restore std-in / std-err incase the test corrupted it                
-                            sys.stdout = stdout
-                            sys.stderr = stderr
-                        print
-                            
-                    except:
-                        failures.append( (name, sys.exc_info()) )
-                        print "FAIL (%s)" % str(sys.exc_info()[0])
+					for i in xrange( get_num_iterations()):
+						if not noOutputPlease and (mod_name == '__main__'): 
+							print ">>> testing %-40s" % name,
+						#obj()
+						#catches the error and exit at the end of each test
+						try:
+							try:
+								obj()
+							finally:
+								# restore std-in / std-err incase the test corrupted it                
+								sys.stdout = stdout
+								sys.stderr = stderr
+							print
+	                            
+						except:
+							failures.append( (name, sys.exc_info()) )
+							print "FAIL (%s)" % str(sys.exc_info()[0])
+					
                 elif not noOutputPlease:
                     print ">>> skipping %-40s" % name
     if failures:

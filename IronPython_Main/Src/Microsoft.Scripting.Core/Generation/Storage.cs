@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Generation {
-    abstract class Storage {
-        public abstract bool RequireAccessSlot { get; }
-        public abstract Slot CreateSlot(Slot instance);
+    internal abstract class Storage {
+        internal abstract bool RequireAccessSlot { get; }
+        internal abstract Slot CreateSlot(Slot instance);
     }
 }

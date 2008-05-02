@@ -26,7 +26,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// MethodTarget represents how a method is bound to the arguments of the call-site
@@ -139,8 +139,6 @@ namespace Microsoft.Scripting.Generation {
         internal Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters) {
             MethodBinderContext context = new MethodBinderContext(_binder._binder, rule);
 
-            Expression check = Ast.True();
-
             Expression[] args = new Expression[_argBuilders.Count];
             for (int i = 0; i < _argBuilders.Count; i++) {
                 args[i] = _argBuilders[i].ToExpression(context, parameters);
@@ -213,26 +211,7 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            if (!ConstantCheck.IsConstant(check, true)) {
-                ret = Ast.Condition(
-                    check,
-                    Ast.ConvertHelper(ret, typeof(object)),
-                    GetNotImplemented()
-                );
-            }
             return ret;
-        }
-
-        private static MethodCallExpression GetNotImplemented() {
-            return Ast.Call(
-                Ast.ReadProperty(
-                    Ast.CodeContext(),
-                    typeof(CodeContext),
-                    "LanguageContext"
-                ),
-                typeof(LanguageContext).GetMethod("GetNotImplemented"),
-                Ast.NewArray(typeof(MethodCandidate[]))
-            );
         }
 
         /// <summary>

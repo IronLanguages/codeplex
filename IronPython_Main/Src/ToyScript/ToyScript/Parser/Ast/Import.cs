@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class Import : Statement {
         private readonly string _name;
@@ -29,15 +29,13 @@ namespace ToyScript.Parser.Ast {
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             MSAst.Expression var = tg.GetOrMakeLocal(_name);
-            return Ast.Statement(
+            return Ast.Assign(
                 Span,
-                Ast.Assign(
-                    var,
-                    Ast.Call(
-                        typeof(ToyHelpers).GetMethod("Import"),
-                        Ast.CodeContext(),
-                        Ast.Constant(_name)
-                    )
+                var,
+                Ast.Call(
+                    typeof(ToyHelpers).GetMethod("Import"),
+                    Ast.CodeContext(),
+                    Ast.Constant(_name)
                 )
             );
         }

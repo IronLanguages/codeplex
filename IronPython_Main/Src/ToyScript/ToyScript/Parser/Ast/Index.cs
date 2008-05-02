@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Runtime;
 
     class Index : Expression {
@@ -41,6 +41,7 @@ namespace ToyScript.Parser.Ast {
                 );
             } else {
                 return Ast.Action.Operator(
+                    tg.Binder,
                     Operators.GetItem,
                     typeof(object),
                     _target.Generate(tg),
@@ -59,6 +60,7 @@ namespace ToyScript.Parser.Ast {
                 );
             } else {
                 return Ast.Action.Operator(
+                    tg.Binder,
                     Operators.SetItem,
                     typeof(object),
                     _target.Generate(tg),

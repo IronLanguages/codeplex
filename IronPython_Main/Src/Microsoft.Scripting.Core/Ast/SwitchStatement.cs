@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Ast {
             get { return Annotations.Get<SourceLocation>(); }
         }
 
-        public LabelTarget Label {
+        new public LabelTarget Label {
             get { return _label; }
         }
     }
@@ -56,22 +56,22 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         public static SwitchStatement Switch(SourceSpan span, SourceLocation header, LabelTarget label, Expression value, params SwitchCase[] cases) {
-            return Switch(Annotations(span, header), label, value, cases);
+            return Switch(Annotate(span, header), label, value, cases);
         }
         public static SwitchStatement Switch(Annotations annotations, LabelTarget label, Expression value, params SwitchCase[] cases) {
-            Contract.RequiresNotNull(value, "value");
-            Contract.Requires(value.Type == typeof(int), "value", "Value must be int");
-            Contract.RequiresNotEmpty(cases, "cases");
-            Contract.RequiresNotNullItems(cases, "cases");
+            ContractUtils.RequiresNotNull(value, "value");
+            ContractUtils.Requires(value.Type == typeof(int), "value", "Value must be int");
+            ContractUtils.RequiresNotEmpty(cases, "cases");
+            ContractUtils.RequiresNotNullItems(cases, "cases");
 
             bool @default = false;
             int max = Int32.MinValue;
             int min = Int32.MaxValue;
             foreach (SwitchCase sc in cases) {
                 if (sc.IsDefault) {
-                    Contract.Requires(@default == false, "cases", "Only one default clause allowed");
+                    ContractUtils.Requires(@default == false, "cases", "Only one default clause allowed");
                     @default = true;
                 } else {
                     int val = sc.Value;
@@ -80,7 +80,7 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            Contract.Requires(UniqueCaseValues(cases, min, max), "cases", "Case values must be unique");
+            ContractUtils.Requires(UniqueCaseValues(cases, min, max), "cases", "Case values must be unique");
 
             return new SwitchStatement(annotations, label, value, CollectionUtils.ToReadOnlyCollection(cases));
         }

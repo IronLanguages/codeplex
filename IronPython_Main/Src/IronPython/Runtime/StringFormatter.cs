@@ -240,8 +240,17 @@ namespace IronPython.Runtime {
         }
 
         private void ReadMinimumFieldWidth() {
-            _opts.FieldWidth = ReadNumberOrStar();
-            if (_opts.FieldWidth == Int32.MaxValue) throw PythonOps.MemoryError("not enough memory for field width");
+            int fieldWidth = ReadNumberOrStar();;
+            if (fieldWidth < 0) {
+                _opts.FieldWidth = fieldWidth * -1;
+                _opts.LeftAdj = true;
+            } else {
+                _opts.FieldWidth = fieldWidth;
+            }
+
+            if (_opts.FieldWidth == Int32.MaxValue) {
+                throw PythonOps.MemoryError("not enough memory for field width");
+            }
         }
 
         private void ReadPrecision() {

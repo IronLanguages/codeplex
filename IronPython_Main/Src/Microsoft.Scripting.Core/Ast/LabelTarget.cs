@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static LabelTarget Label() {
             return new LabelTarget(null);
         }

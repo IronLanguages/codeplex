@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class New : Expression {
         private readonly Expression _target;
@@ -37,6 +37,7 @@ namespace ToyScript.Parser.Ast {
             }
 
             return Ast.Action.Create(
+                tg.Binder,
                 typeof(object),
                 arguments
             );

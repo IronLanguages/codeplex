@@ -24,7 +24,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// BinderHelper for producing rules related to performing conversions.
@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Actions {
 
         public ConvertToBinderHelper(CodeContext context, ConvertToAction action, params object[] args)
             : base(context, action) {
-            Contract.Requires(args.Length == 1, "can only convert single argument");
+            ContractUtils.Requires(args.Length == 1, "can only convert single argument");
 
             _arg = args[0];
         }
@@ -290,13 +290,16 @@ namespace Microsoft.Scripting.Actions {
         /// Checks to see if there's a conversion of System.__ComObject to an interface type
         /// </summary>
         private bool TryComConversion(Type toType, Type knownType) {
-            if (knownType.FullName == "System.__ComObject" && knownType.Assembly == typeof(string).Assembly) {
+#if !SILVERLIGHT // ComObject
+            if (ComDispatch.ComObject.IsGenericComObjectType(knownType)) {
                 if (toType.IsInterface) {
-                    // COM object to interface is always possible
+                    // Converting a COM object to any interface is always considered possible - it will result in 
+                    // a QueryInterface at runtime
                     MakeSimpleConversionTarget(toType);
                     return true;
                 }
             }
+#endif
             return false;
         }
 
@@ -478,7 +481,7 @@ namespace Microsoft.Scripting.Actions {
             
             // ConvertSelfToT -> Nullable<T>
             if (Action.ResultKind == ConversionResultKind.ExplicitCast) {
-                Expression conversion = Ast.Action.ConvertTo(ConvertToAction.Make(valueType, Action.ResultKind), _rule.Parameters[0]);
+                Expression conversion = Ast.Action.ConvertTo(ConvertToAction.Make(Binder, valueType, Action.ResultKind), _rule.Parameters[0]);
                 // if the conversion to T fails we just throw
                 _rule.Target =
                     _rule.MakeReturn(
@@ -490,7 +493,7 @@ namespace Microsoft.Scripting.Actions {
                     );
             } else {
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
-                Expression conversion = Ast.Action.ConvertTo(valueType, Action.ResultKind, _rule.Parameters[0], typeof(object));
+                Expression conversion = Ast.Action.ConvertTo(Binder, valueType, Action.ResultKind, _rule.Parameters[0], typeof(object));
                 VariableExpression tmp = _rule.GetTemporary(typeof(object), "tmp");
                 _rule.Target =
                     Ast.If(
@@ -549,7 +552,15 @@ namespace Microsoft.Scripting.Actions {
         /// Makes a conversion target which converts IEnumerable -> IEnumerator
         /// </summary>
         private bool MakeIEnumerableTarget(Type knownType) {
-            if (typeof(IEnumerable).IsAssignableFrom(knownType)) {
+            bool canConvert = typeof(IEnumerable).IsAssignableFrom(knownType);
+#if !SILVERLIGHT // ComObject
+            if (!canConvert) {
+                // Converting a COM object to any interface is always considered possible - it will result in 
+                // a QueryInterface at runtime
+                canConvert = ComDispatch.ComObject.IsGenericComObjectType(knownType);
+            }
+#endif
+            if (canConvert) {
                 _rule.Target =
                     _rule.MakeReturn(Binder,
                         Ast.Call(

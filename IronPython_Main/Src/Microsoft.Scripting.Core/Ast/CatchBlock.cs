@@ -66,7 +66,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static CatchBlock Catch(Type type, Expression body) {
             return Catch(SourceSpan.None, SourceLocation.None, type, null, body);
         }
@@ -76,9 +76,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static CatchBlock Catch(SourceSpan span, SourceLocation header, Type type, VariableExpression target, Expression body) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.Requires(target == null || TypeUtils.CanAssign(target.Type, type), "target");
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(target == null || TypeUtils.CanAssign(target.Type, type), "target");
+            ContractUtils.RequiresNotNull(body, "body");
             return new CatchBlock(span, header, type, target, body);
         }
     }

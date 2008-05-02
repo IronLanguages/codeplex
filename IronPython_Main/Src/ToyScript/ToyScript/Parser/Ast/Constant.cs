@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class Constant : Expression {
         private readonly object _value;

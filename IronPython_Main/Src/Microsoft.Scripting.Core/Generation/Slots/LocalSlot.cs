@@ -29,29 +29,29 @@ namespace Microsoft.Scripting.Generation {
         private readonly LocalBuilder _localBuilder;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
-        private readonly LambdaCompiler _codeGen;           // LocalSlot's can only be used w/ codegen that created them
+        private readonly ILGen _codeGen;           // LocalSlot's can only be used w/ codegen that created them
 
-        public LocalSlot(LocalBuilder localBuilder, LambdaCompiler cg) {
+        public LocalSlot(LocalBuilder localBuilder, ILGen cg) {
             this._localBuilder = localBuilder;
             _codeGen = cg;
         }
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             Debug.Assert(cg == _codeGen);
 
             cg.Emit(OpCodes.Ldloc, _localBuilder);
         }
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGetAddr(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             Debug.Assert(cg == _codeGen);
 
             cg.Emit(OpCodes.Ldloca, _localBuilder);
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             Debug.Assert(cg == _codeGen);
             cg.Emit(OpCodes.Stloc, _localBuilder);

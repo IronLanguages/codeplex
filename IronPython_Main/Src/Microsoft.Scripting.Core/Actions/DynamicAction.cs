@@ -13,10 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     public enum DynamicActionKind {
@@ -33,40 +30,23 @@ namespace Microsoft.Scripting.Actions {
     }
 
     public abstract class DynamicAction {
+        private readonly ActionBinder _binder;
+
+        internal DynamicAction(ActionBinder binder) {
+            _binder = binder;
+        }
+
+        public ActionBinder Binder {
+            get {
+                return _binder;
+            }
+        }
+
         public abstract DynamicActionKind Kind { get; }
-        
+
         [Confined]
         public override string/*!*/ ToString() {
             return Kind.ToString();
-        }
-
-        public static GetMemberAction GetMember(string name) {
-            return GetMemberAction.Make(name);
-        }
-
-        public static SetMemberAction SetMember(string name) {
-            return SetMemberAction.Make(name);
-        }
-
-        public static DeleteMemberAction DeleteMember(string name) {
-            return DeleteMemberAction.Make(SymbolTable.StringToId(name));
-        }
-
-        public static DoOperationAction DoOperation(Operators op) {
-            return DoOperationAction.Make(op);
-        }
-
-        public static CallAction Call(int argumentCount) {
-            return CallAction.Make(argumentCount);
-        }
-
-        public static CreateInstanceAction CreateInstance(int argumentCount) {
-            return CreateInstanceAction.Make(argumentCount);
-        }
-
-        public static InvokeMemberAction InvokeMember(string name, int argumentCount) {
-            return InvokeMemberAction.Make(SymbolTable.StringToId(name),
-                InvokeMemberActionFlags.None, new CallSignature(argumentCount));
         }
     }
 }

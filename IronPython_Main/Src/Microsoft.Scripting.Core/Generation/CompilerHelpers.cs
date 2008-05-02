@@ -27,7 +27,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public static class CompilerHelpers {
         public static readonly MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
@@ -85,13 +85,6 @@ namespace Microsoft.Scripting.Generation {
             return (pi.Attributes & (ParameterAttributes.Out | ParameterAttributes.In)) == ParameterAttributes.Out;
         }
 
-        private static int GetMandatoryParameterCount(ParameterInfo[] parameters) {
-            Assert.NotNull(parameters);
-            int lastMandatory = parameters.Length - 1;
-            while (lastMandatory >= 0 && !IsMandatoryParameter(parameters[lastMandatory])) lastMandatory--;
-            return (lastMandatory >= 0 && IsParamArray(parameters[lastMandatory])) ? lastMandatory : lastMandatory + 1;
-        }
-
         public static int GetOutAndByRefParameterCount(MethodBase method) {
             int res = 0;
             ParameterInfo[] pis = method.GetParameters();
@@ -125,7 +118,7 @@ namespace Microsoft.Scripting.Generation {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public static object GetMissingValue(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (type.IsByRef) type = type.GetElementType();
             if (type.IsEnum) return Activator.CreateInstance(type);
@@ -203,36 +196,6 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public static bool IsSealed(Type type) {
             return type.IsSealed || type.IsValueType;
-        }
-
-        /// <summary>
-        /// Will create storage allocator which allocates locals on the CLR stack (in the context of the codeGen).
-        /// This doesn't set up allocator for globals. Further initialization needed.
-        /// </summary>
-        /// <param name="outer">Codegen of the lexically enclosing block.</param>
-        /// <param name="codeGen">Compiler object to use to allocate the locals on the CLR stack.</param>
-        /// <returns>New ScopeAllocator</returns>
-        internal static ScopeAllocator CreateLocalStorageAllocator(LambdaCompiler outer, LambdaCompiler codeGen) {
-            LocalStorageAllocator allocator = new LocalStorageAllocator(new LocalSlotFactory(codeGen));
-            return new ScopeAllocator((outer != null && outer.HasAllocator) ? outer.Allocator : null, allocator);
-        }
-
-        /// <summary>
-        /// allocates slots out of a FunctionEnvironment.
-        /// </summary>
-        internal static ScopeAllocator CreateFrameAllocator() {
-            // Globals
-            ScopeAllocator global = new ScopeAllocator(
-                null,
-                new GlobalNamedAllocator()
-            );
-
-            // Locals
-            ScopeAllocator ns = new ScopeAllocator(
-                global,
-                new FrameStorageAllocator()
-            );
-            return ns;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
@@ -377,6 +340,59 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
+        /// Non-public types can have public members that we find when calling type.GetMember(...).  This
+        /// filters out the non-visible members by attempting to resolve them to the correct visible type.
+        /// 
+        /// If no correct visible type can be found then the member is not visible and we won't call it.
+        /// </summary>
+        public static MemberInfo[] FilterNonVisibleMembers(Type type, MemberInfo[] foundMembers) {
+            if (!type.IsVisible && foundMembers.Length > 0) {
+                // need to remove any members that we can't get through other means
+                List<MemberInfo> foundVisible = null;
+                MemberInfo visible;
+                MethodInfo mi;
+                for (int i = 0; i < foundMembers.Length; i++) {
+                    visible = null;
+                    switch (foundMembers[i].MemberType) {
+                        case MemberTypes.Method:
+                            visible = TryGetCallableMethod((MethodInfo)foundMembers[i]);
+                            break;
+                        case MemberTypes.Property:
+                            PropertyInfo pi = (PropertyInfo)foundMembers[i];
+                            mi = pi.GetGetMethod() ?? pi.GetSetMethod();
+                            visible = TryGetCallableMethod(mi);
+                            if (visible != null) {
+                                visible = visible.DeclaringType.GetProperty(pi.Name);
+                            }
+                            break;
+                        case MemberTypes.Event:
+                            EventInfo ei = (EventInfo)foundMembers[i];
+                            mi = ei.GetAddMethod() ?? ei.GetRemoveMethod() ?? ei.GetRaiseMethod();
+                            visible = TryGetCallableMethod(mi);
+                            if (visible != null) {
+                                visible = visible.DeclaringType.GetEvent(ei.Name);
+                            }
+                            break;
+                        // all others can't be exposed out this way
+                    }
+                    if (visible != null) {
+                        if (foundVisible == null) {
+                            foundVisible = new List<MemberInfo>();
+                        }
+                        foundVisible.Add(visible);
+                    }
+                }
+
+                if (foundVisible != null) {
+                    foundMembers = foundVisible.ToArray();
+                } else {
+                    foundMembers = new MemberInfo[0];
+                }
+            }
+            return foundMembers;
+        }
+
+        /// <summary>
         /// Given a MethodInfo which may be declared on a non-public type this attempts to
         /// return a MethodInfo which will dispatch to the original MethodInfo but is declared
         /// on a public type.
@@ -415,6 +431,7 @@ namespace Microsoft.Scripting.Generation {
             }
             return t;
         }
+
 
         public static MethodBase[] GetConstructors(Type t) {
             if (t.IsArray) {
@@ -573,22 +590,22 @@ namespace Microsoft.Scripting.Generation {
             return res.ToArray();
         }
 
-        internal static Type/*!*/[]/*!*/ GetSiteTypes(ActionExpression/*!*/ node) {
-            Type/*!*/[]/*!*/ ret = new Type/*!*/[node.Arguments.Count + 1];
-            for (int i = 0; i < node.Arguments.Count; i++) {
-                ret[i] = node.Arguments[i].Type;
+        internal static Type/*!*/[]/*!*/ GetSiteTypes(IList<Expression>/*!*/ arguments, Type/*!*/ returnType) {
+            Type/*!*/[]/*!*/ ret = new Type/*!*/[arguments.Count + 1];
+            for (int i = 0; i < arguments.Count; i++) {
+                ret[i] = arguments[i].Type;
             }
-            ret[node.Arguments.Count] = node.Type;
+            ret[arguments.Count] = returnType;
             NonNullType.AssertInitialized(ret);
             return ret;
         }
 
         public static Type/*!*/[]/*!*/ GetExpressionTypes(Expression/*!*/[]/*!*/ expressions) {
-            Contract.RequiresNotNull(expressions, "expressions");
+            ContractUtils.RequiresNotNull(expressions, "expressions");
 
             Type[] res = new Type[expressions.Length];
             for (int i = 0; i < res.Length; i++) {
-                Contract.RequiresNotNull(expressions[i], "expressions[i]");
+                ContractUtils.RequiresNotNull(expressions[i], "expressions[i]");
 
                 res[i] = expressions[i].Type;
             }

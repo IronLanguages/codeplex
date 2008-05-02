@@ -66,7 +66,7 @@ namespace IronPython.Modules {
         public static void AddReference(CodeContext/*!*/ context, params object[] references) {
             if (references == null) throw new ArgumentTypeException("Expected string or Assembly, got NoneType");
             if (references.Length == 0) throw new ArgumentException("Expected at least one name, got none");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             foreach (object reference in references) {
                 AddReference(context, reference);
@@ -76,7 +76,7 @@ namespace IronPython.Modules {
         public static void AddReferenceToFile(CodeContext/*!*/ context, params string[] files) {
             if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (files.Length == 0) throw new ArgumentException("Expected at least one name, got none");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string file in files) {
                 AddReferenceToFile(context, file);
@@ -86,7 +86,7 @@ namespace IronPython.Modules {
         public static void AddReferenceByName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string name in names) {
                 AddReferenceByName(context, name);
@@ -130,7 +130,7 @@ namespace IronPython.Modules {
         public static void AddReferenceByPartialName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string name in names) {
                 AddReferenceByPartialName(context, name);
@@ -147,7 +147,7 @@ namespace IronPython.Modules {
         public static Assembly/*!*/ LoadAssemblyFromFile(CodeContext/*!*/ context, string/*!*/ file) {
             if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (file.Length == 0) throw new ArgumentException("assembly name must not be empty string");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             if (file.IndexOf(System.IO.Path.DirectorySeparatorChar) != -1) {
                 throw new ArgumentException("filenames must not contain full paths, first add the path to sys.path");
@@ -177,7 +177,7 @@ namespace IronPython.Modules {
         }
 
         public static object Use(CodeContext/*!*/ context, string/*!*/ name) {
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             if (name == null) {
                 throw new ArgumentTypeException("Use: arg 1 must be a string");
@@ -194,7 +194,7 @@ namespace IronPython.Modules {
         }
 
         public static object/*!*/ Use(CodeContext/*!*/ context, string/*!*/ path, string/*!*/ language) {
-            Contract.RequiresNotNull(context, "context"); 
+            ContractUtils.RequiresNotNull(context, "context"); 
             
             if (path == null) {
                 throw new ArgumentTypeException("Use: arg 1 must be a string");
@@ -212,7 +212,7 @@ namespace IronPython.Modules {
         }
 
         public static CommandDispatcher SetCommandDispatcher(CodeContext/*!*/ context, CommandDispatcher dispatcher) {
-            Contract.RequiresNotNull(context, "context"); 
+            ContractUtils.RequiresNotNull(context, "context"); 
             
             return context.LanguageContext.DomainManager.SetCommandDispatcher(dispatcher);
         }
@@ -292,7 +292,7 @@ namespace IronPython.Modules {
 #if !SILVERLIGHT // files, paths
         private static void AddReferenceByPartialName(CodeContext/*!*/ context, string name) {
             if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             Assembly asm = LoadAssemblyByPartialName(name);
             if (asm == null) {
@@ -364,7 +364,7 @@ namespace IronPython.Modules {
 
         public static void AddReferenceToFileAndPath(CodeContext/*!*/ context, params string[] files) {
             if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string file in files) {
                 AddReferenceToFileAndPath(context, file);

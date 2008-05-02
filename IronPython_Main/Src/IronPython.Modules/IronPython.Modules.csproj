@@ -109,10 +109,10 @@
     <Compile Include="_random.cs" />
     <Compile Include="_sre.cs" />
     <Compile Include="_weakref.cs" />
-    <Compile Include="_weakref.Generated.cs" />
     <Compile Include="..\AssemblyVersion.cs">
       <Link>Properties\AssemblyVersion.cs</Link>
     </Compile>
+    <Compile Include="_weakref.Generated.cs" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

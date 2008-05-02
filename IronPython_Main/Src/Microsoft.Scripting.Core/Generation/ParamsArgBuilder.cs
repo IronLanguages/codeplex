@@ -20,7 +20,7 @@ using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     using Microsoft.Scripting.Utils;
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using System.Collections.Generic;
 
     class ParamsArgBuilder : ArgBuilder {
@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Generation {
         private int _count;
         private Type _elementType;
         public ParamsArgBuilder(int start, int count, Type elementType) {
-            Contract.RequiresNotNull(elementType, "elementType");
+            ContractUtils.RequiresNotNull(elementType, "elementType");
             if (start < 0) throw new ArgumentOutOfRangeException("start");
             if (count < 0) throw new ArgumentOutOfRangeException("count");
 

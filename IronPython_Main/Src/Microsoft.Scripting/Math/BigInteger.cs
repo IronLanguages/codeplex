@@ -104,7 +104,7 @@ namespace Microsoft.Scripting.Math {
         /// (inverse of ToByteArray())
         /// </summary>
         public static BigInteger Create(byte[] v) {
-            Contract.RequiresNotNull(v, "v");
+            ContractUtils.RequiresNotNull(v, "v");
             if (v.Length == 0) return Create(0);
 
             int byteCount = v.Length;
@@ -340,7 +340,7 @@ namespace Microsoft.Scripting.Math {
         [CLSCompliant(false)]
         public BigInteger(int sign, params uint[] data)
         {
-            Contract.RequiresNotNull(data, "data");
+            ContractUtils.RequiresNotNull(data, "data");
             if (sign != -1 && sign != 0 && sign != 1) throw new ArgumentException(MathResources.InvalidArgument, "sign");
             if (GetLength(data) != 0) {
                 if (sign == 0) throw new ArgumentException(MathResources.InvalidArgument, "sign");

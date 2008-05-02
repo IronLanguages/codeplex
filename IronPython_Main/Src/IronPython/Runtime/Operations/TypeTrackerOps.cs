@@ -14,21 +14,23 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonExtensionType(typeof(TypeTracker), typeof(TypeTrackerOps))]
 namespace IronPython.Runtime.Operations {
     public static class TypeTrackerOps {
-        [PropertyMethod]
-        public static IDictionary<object, object> Get__dict__(CodeContext context, TypeTracker self) {
-            return new PythonDictionary(context, ((ICustomMembers)DynamicHelpers.GetPythonTypeFromType(self.Type)).GetCustomMemberDictionary(context));
+        [SpecialName, PropertyMethod]
+        public static IDictionary Get__dict__(CodeContext context, TypeTracker self) {
+            return new DictProxy(DynamicHelpers.GetPythonTypeFromType(self.Type));
         }
     }
 }

@@ -21,7 +21,6 @@ using System.Text;
 using System.Threading;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -99,12 +98,16 @@ namespace IronPython.Runtime.Exceptions {
             #region Public API Surface
 
             public BaseException(PythonType/*!*/ type) {
-                Contract.RequiresNotNull(type, "type");
+                ContractUtils.RequiresNotNull(type, "type");
 
                 _type = type;
             }
 
             public static object __new__(PythonType/*!*/ cls, params object[] args) {
+                return Activator.CreateInstance(cls.UnderlyingSystemType, cls);
+            }
+
+            public static object __new__(PythonType/*!*/ cls, [ParamDictionary] IAttributesCollection kwArgs, params object[] args) {
                 return Activator.CreateInstance(cls.UnderlyingSystemType, cls);
             }
 
@@ -140,14 +143,14 @@ namespace IronPython.Runtime.Exceptions {
             /// <summary>
             /// Returns a tuple of (type, (arg0, ..., argN)) for implementing pickling/copying
             /// </summary>
-            public object/*!*/ __reduce__() {
+            public virtual object/*!*/ __reduce__() {
                 return PythonTuple.MakeTuple(DynamicHelpers.GetPythonType(this), args);
             }
 
             /// <summary>
             /// Returns a tuple of (type, (arg0, ..., argN)) for implementing pickling/copying
             /// </summary>
-            public object/*!*/ __reduce_ex__(int protocol) {
+            public virtual object/*!*/ __reduce_ex__(int protocol) {
                 return __reduce__();
             }
 
@@ -157,6 +160,25 @@ namespace IronPython.Runtime.Exceptions {
             public object this[int index] {
                 get {
                     return ((PythonTuple)args)[index];
+                }
+            }
+
+            /// <summary>
+            /// Gets or sets the dictionary which is used for storing members not declared to have space reserved
+            /// within the exception object.
+            /// </summary>
+            public IAttributesCollection/*!*/ __dict__ {
+                get {
+                    EnsureDict();
+
+                    return _dict;
+                }
+                set {
+                    if (_dict == null) {
+                        throw PythonOps.TypeError("__dict__ must be a dictionary");
+                    }
+
+                    _dict = value;
                 }
             }
 
@@ -387,16 +409,23 @@ namespace IronPython.Runtime.Exceptions {
 
                 if (args != null && args.Length != 0) {
                     msg = args[0];
+                    
                     if (args.Length >= 2) {
-                        PythonTuple locationInfo = PythonTuple.Make(args[1]);
-                        if (locationInfo.__len__() != 4) {
-                            throw PythonOps.IndexError("SyntaxError expected tuple with 4 arguments, got {0}", locationInfo.__len__());
-                        }
+                        // args can be provided either as:
+                        //  (msg, filename, lineno, offset, text, printFileandLineStr)
+                        // or:
+                        //  (msg, (filename, lineno, offset, text, printFileandLineStr))
+                        PythonTuple locationInfo = args[1] as PythonTuple;
+                        if(locationInfo != null) {
+                            if (locationInfo.__len__() != 4) {
+                                throw PythonOps.IndexError("SyntaxError expected tuple with 4 arguments, got {0}", locationInfo.__len__());
+                            }
 
-                        filename = locationInfo[0];
-                        lineno = locationInfo[1];
-                        offset = locationInfo[2];
-                        text = locationInfo[3];
+                            filename = locationInfo[0];
+                            lineno = locationInfo[1];
+                            offset = locationInfo[2];
+                            text = locationInfo[3];
+                        } 
                     }
                 }
             }
@@ -404,6 +433,13 @@ namespace IronPython.Runtime.Exceptions {
 
 
         public partial class _EnvironmentError : BaseException {
+            public override object __reduce__() {
+                if (_filename != null) {
+                    return PythonTuple.MakeTuple(DynamicHelpers.GetPythonType(this), PythonTuple.MakeTuple(ArrayUtils.Append(((PythonTuple)args)._data, _filename)));
+                }
+                return base.__reduce__();
+            }
+
             public override void __init__(params object[] args) {
                 if (args != null) {
                     switch (args.Length) {
@@ -438,7 +474,44 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
+        public partial class _UnicodeTranslateError : BaseException {
+            public override void __init__(params object[] args) {
+                if (args.Length != 4) {
+                    throw PythonOps.TypeError("function takes exactly 4 arguments ({0} given)", args.Length);
+                }
+
+                if (args[0] is string || args[0] is Extensible<string>) {
+                    @object = args[0];
+                } else {
+                    throw PythonOps.TypeError("argument 4 must be unicode, not {0}", DynamicHelpers.GetPythonType(args[0]).Name);
+                }
+
+                start = args[1];
+                end = args[2];
+
+                if (args[3] is string || args[3] is Extensible<string>) {
+                    reason = args[3];
+                } else {
+                    throw PythonOps.TypeError("argument 4 must be str, not {0}", DynamicHelpers.GetPythonType(args[3]).Name);
+                }
+
+                base.__init__(args);
+            }
+        }
+
 #if !SILVERLIGHT
+        public partial class _WindowsError : _EnvironmentError {
+            public override void __init__(params object[] args) {
+                base.__init__(args);
+
+                if (args != null && args.Length >= 2) {
+                    winerror = args[0];
+                }
+
+                errno = 22;
+            }
+        }
+
         public partial class _UnicodeDecodeError : BaseException {
             protected internal override void InitializeFromClr(System.Exception/*!*/ exception) {
                 DecoderFallbackException ex = exception as DecoderFallbackException;
@@ -507,8 +580,10 @@ namespace IronPython.Runtime.Exceptions {
                 pyEx = value;
             } else if (value is PythonTuple) {
                 pyEx = PythonOps.CallWithArgsTuple(type, ArrayUtils.EmptyObjects, value);
-            } else {
+            } else if (value != null) {
                 pyEx = PythonCalls.Call(type, value);
+            } else {
+                pyEx = PythonCalls.Call(type);
             }
 
             if (PythonOps.IsInstance(pyEx, type)) {
@@ -518,7 +593,7 @@ namespace IronPython.Runtime.Exceptions {
                 return ((BaseException)pyEx).GetClrException();
             }
 
-            // user returned arbitrary object from overriden __new__, let it throw...
+            // user returned arbitrary object from overridden __new__, let it throw...
             return new ObjectException(type, pyEx);
         }
         
@@ -593,7 +668,16 @@ namespace IronPython.Runtime.Exceptions {
                 if ((ta = clrException as ThreadAbortException) != null) {
                     // transform TA w/ our reason into a KeyboardInterrupt exception.
                     KeyboardInterruptException reason = ta.ExceptionState as KeyboardInterruptException;
-                    if (reason != null) return ToPython(reason);
+                    if (reason != null) {
+                        ta.Data[typeof(KeyboardInterruptException)] = reason;
+                        return ToPython(reason);
+                    }
+
+                    // check for cleared but saved reason...
+                    reason = ta.Data[typeof(KeyboardInterruptException)] as KeyboardInterruptException;
+                    if (reason != null) {
+                        return ToPython(reason);
+                    }
                 }
 #endif
                 if (res == null) {
@@ -702,37 +786,14 @@ namespace IronPython.Runtime.Exceptions {
         }
 
         internal static PythonType CreateSubType(PythonType baseType, string name, string module, string documentation) {
-            PythonType pt = new PythonType(baseType.UnderlyingSystemType);
-            PythonTypeBuilder builder = PythonTypeBuilder.GetBuilder(pt);
-            
-            // need __new__, __init__, and __doc__
-            builder.SetName(name);
-            PythonTypeSlot pts;
-
-            // CPython actually adds a new copy for each class, we share the instances, although
-            // it shouldn't really matter...
-            baseType.TryLookupSlot(DefaultContext.Default, Symbols.Init, out pts);
-            builder.AddSlot(Symbols.Init, pts);
-            baseType.TryLookupSlot(DefaultContext.Default, Symbols.NewInst, out pts);            
-            builder.AddSlot(Symbols.NewInst, pts);
-            builder.IsSystemType = true;
-            builder.AddBaseType(baseType);
-            builder.SetResolutionOrder(Mro.Calculate(pt, new PythonType[] { baseType }));
-
-            builder.AddSlot(Symbols.Doc, new PythonTypeValueSlot(documentation));
-
-            builder.Finish(true);
-
-            return pt;
+            return new PythonType(baseType, name);
         }
 
         internal static PythonType CreateSubType(PythonType baseType, Type concreteType, string module, string documentation) {
-            PythonType myType = DynamicHelpers.GetPythonTypeFromType(concreteType);            
+            PythonType myType = DynamicHelpers.GetPythonTypeFromType(concreteType);
 
-            PythonTypeBuilder.GetBuilder(myType).AddInitializer(delegate(PythonTypeBuilder builder) {
-                builder.SetResolutionOrder(Mro.Calculate(myType, new PythonType[] { baseType }));
-                builder.SetBases(new PythonType[] { baseType });
-            });
+            myType.ResolutionOrder = Mro.Calculate(myType, new PythonType[] { baseType });
+            myType.BaseTypes = new PythonType[] { baseType };
 
             return myType;
         }

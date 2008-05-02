@@ -19,7 +19,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using System.Collections.Generic;
 
     /// <summary>

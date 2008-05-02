@@ -318,7 +318,7 @@ namespace IronPython.Runtime {
                     Debug.Assert(res);
                 }
 
-                // check and see if it's overriden
+                // check and see if it's overridden
                 if (myType.TryLookupSlot(context, Symbols.GetItem, out dts)) {
                     dts.TryGetValue(context, self, myType, out ret);
 

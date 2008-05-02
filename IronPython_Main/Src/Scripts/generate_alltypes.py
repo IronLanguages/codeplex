@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from generate import CodeGenerator
+from generate import generate
 import operator
 import clr
 from System import *
@@ -255,7 +255,7 @@ def write_binop1_general(func, cw, body, name, ty, **kws):
         
 def write_compare(cw, body, name, ty, **kws):
     def writer(cw, body, name, ty, **kws):
-        write_binop_raw(cw, body, '__cmp__', ty, **kws)
+        write_binop_raw(cw, body, 'Compare', ty, **kws)
         
     write_binop1_general(writer, cw, body, name, ty, **kws)
 
@@ -436,7 +436,11 @@ def gen_all_attr(cw):
     for ty in types[:-2]: #don't generate complex or BigInteger
         gen_attr(cw, ty)
         
+def main():
+    return generate(
+        ("IntOps", gen_all),
+        ("ExtensionTypeAttributes", gen_all_attr)
+    )
 
-CodeGenerator("IntOps", gen_all).doit()
-CodeGenerator("ExtensionTypeAttributes", gen_all_attr).doit()
-
+if __name__ == "__main__":
+    main()

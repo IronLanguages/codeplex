@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -31,7 +32,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// BuiltinFunction represents any standard CLR function exposed to Python.
@@ -45,30 +46,29 @@ namespace IronPython.Runtime.Types {
     [PythonSystemType("builtin_function_or_method")]
     public class BuiltinFunction :
         PythonTypeSlot, IDynamicObject, ICodeFormattable {
-        private string _name;
-        private MethodBase[] _targets;
+        private string/*!*/ _name;
+        private MethodBase/*!*/[]/*!*/ _targets;
+        private Type/*!*/ _declType;
         private FunctionType _funcType;
+        
         private Dictionary<TypeList, BuiltinFunction> _boundGenerics;
-        private int _id;        
-        [MultiRuntimeAware]
-        private static int _curId;
 
         #region Static factories
 
-        internal static BuiltinFunction MakeMethod(string name, MethodBase info, FunctionType ft) {
-            return new BuiltinFunction(name, new MethodBase[] { info }, ft);
+        internal static BuiltinFunction/*!*/ MakeMethod(string name, MethodBase info, Type declaringType, FunctionType ft) {
+            return new BuiltinFunction(name, new MethodBase[] { info }, declaringType, ft);
         }
 
-        internal static BuiltinFunction MakeMethod(string name, MethodBase[] infos, FunctionType ft) {
-            return new BuiltinFunction(name, infos, ft);
+        internal static BuiltinFunction/*!*/ MakeMethod(string name, MethodBase[] infos, Type declaringType, FunctionType ft) {
+            return new BuiltinFunction(name, infos, declaringType, ft);
         }
 
-        internal static BuiltinFunction MakeOrAdd(BuiltinFunction existing, string name, MethodBase mi, FunctionType funcType) {
+        internal static BuiltinFunction/*!*/ MakeOrAdd(BuiltinFunction existing, string name, MethodBase mi, Type declaringType, FunctionType funcType) {
             if (existing != null) {
                 existing.AddMethod(mi);
                 return existing;
             } else {
-                return MakeMethod(name, mi, funcType);
+                return MakeMethod(name, mi, declaringType, funcType);
             }
         }
 
@@ -76,39 +76,15 @@ namespace IronPython.Runtime.Types {
 
         #region Constructors
 
-        internal BuiltinFunction() {
-            _id = Interlocked.Increment(ref _curId);
-        }
-
-        internal BuiltinFunction(string name, FunctionType functionType)
-            : this() {
+        internal BuiltinFunction(string/*!*/ name, MethodBase/*!*/[]/*!*/ originalTargets, Type/*!*/ declaringType, FunctionType functionType) {
             Assert.NotNull(name);
-            
-            _name = name;
-            _funcType = functionType;
-        }
-
-        internal BuiltinFunction(IList<MethodBase> targets) {
-            _targets = ArrayUtils.ToArray(targets);
-        }
-
-        private BuiltinFunction(string name, MethodBase[] originalTargets, FunctionType functionType) : this() {
-            Assert.NotNull(name);
+            Assert.NotNull(declaringType);
             Assert.NotNullItems(originalTargets);
 
             _funcType = functionType;
             _targets = originalTargets;
             _name = name;
-        }
-
-        #endregion
-
-        #region Public API Surface
-
-        public int Id {
-            get {
-                return _id;
-            }
+            _declType = declaringType;
         }
 
         #endregion
@@ -193,7 +169,7 @@ namespace IronPython.Runtime.Types {
             }
 
             // Build a new ReflectedMethod that will contain targets with bound type arguments & cache it.
-            bf = new BuiltinFunction(Name, targets.ToArray(), FunctionType);
+            bf = new BuiltinFunction(Name, targets.ToArray(), DeclaringType, FunctionType);
 
             EnsureBoundGenericDict();
 
@@ -237,13 +213,15 @@ namespace IronPython.Runtime.Types {
 
         internal Type DeclaringType {
             get {
+                //return _declType;
+
                 MethodBase target = Targets[0];
 
                 if ((FunctionType & FunctionType.OpsFunction) == 0) {
                     // normal method 
                     return target.DeclaringType;
                 } else {
-                    Debug.Assert(ExtensionTypeAttribute.IsExtensionType(target.DeclaringType), String.Format("Type {0} is not an Ops Type ({1})", target.DeclaringType, Name));
+                    //Debug.Assert(ExtensionTypeAttribute.IsExtensionType(target.DeclaringType), String.Format("Type {0} is not an Ops Type ({1})", target.DeclaringType, Name));
                     return ExtensionTypeAttribute.GetExtendedTypeFromExtension(target.DeclaringType).UnderlyingSystemType;
                 }
             }
@@ -265,6 +243,12 @@ namespace IronPython.Runtime.Types {
         internal bool IsPythonVisible {
             get {
                 return (_funcType & FunctionType.AlwaysVisible) != 0;
+            }
+        }
+
+        internal override bool IsAlwaysVisible {
+            get {
+                return IsPythonVisible;
             }
         }
 
@@ -297,7 +281,7 @@ namespace IronPython.Runtime.Types {
         internal override bool IsVisible(CodeContext context, PythonType owner) {
             Debug.Assert(context != null);
 
-            if (context.ModuleContext.ShowCls) {
+            if (PythonOps.IsClsVisible(context)) {
                 return true;
             }
 
@@ -368,11 +352,8 @@ namespace IronPython.Runtime.Types {
 
         internal Expression MakeFunctionTest(Expression functionTarget) {
             return Ast.Equal(
-                Ast.ReadProperty(
-                    Ast.Convert(functionTarget, typeof(BuiltinFunction)),
-                    typeof(BuiltinFunction).GetProperty("Id")
-                ),
-                Ast.Constant(Id)
+                functionTarget,
+                Ast.RuntimeConstant(this)
             );
         }
 
@@ -380,7 +361,26 @@ namespace IronPython.Runtime.Types {
 
         #region Public Python APIs
 
-        [PropertyMethod]
+        public int __cmp__(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/  other) {
+            if (other == this) {
+                return 0;
+            }
+
+            int res = String.CompareOrdinal(__name__, other.__name__);
+            if (res != 0) {
+                return res;
+            }
+
+            res = String.CompareOrdinal(Get__module__(context), other.Get__module__(context));
+            if (res != 0) {
+                return res;
+            }
+            
+            long lres = IdDispenser.GetId(this) - IdDispenser.GetId(other);
+            return lres > 0 ? 1 : -1;
+        }
+
+        [SpecialName, PropertyMethod]
         public string Get__module__(CodeContext/*!*/ context) {
             if (Targets.Count > 0) {
                 PythonType declaringType = DynamicHelpers.GetPythonTypeFromType(DeclaringType);
@@ -396,6 +396,7 @@ namespace IronPython.Runtime.Types {
         /// signature with syntax like the following:
         ///    someClass.SomeMethod.Overloads[str, int]("Foo", 123)
         /// </summary>
+        [PythonHidden]
         public virtual BuiltinFunctionOverloadMapper Overloads {
             get {
                 // The mapping is actually provided by a class rather than a dictionary
@@ -403,12 +404,6 @@ namespace IronPython.Runtime.Types {
                 // two type systems are involved.  Creating the mapping object is quite
                 // cheap so we don't cache a copy.
                 return new BuiltinFunctionOverloadMapper(this, null);
-            }
-        }
-
-        public string func_name {
-            get {
-                return Name;
             }
         }
 

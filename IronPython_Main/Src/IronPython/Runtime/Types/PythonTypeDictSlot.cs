@@ -29,10 +29,24 @@ namespace IronPython.Runtime.Types {
     /// </summary>
     [PythonSystemType("getset_descriptor")]
     public sealed class PythonTypeDictSlot : PythonTypeSlot, ICodeFormattable {
-        public PythonTypeDictSlot() {
+        private PythonType/*!*/ _type;
+
+        public PythonTypeDictSlot(PythonType type) {
+            _type = type;
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
+            if (instance == null) {
+                value = new DictProxy(owner);
+                return true;
+            }
+
+            PythonType pt = instance as PythonType;
+            if (pt != null) {
+                value = new DictProxy(pt);
+                return true;
+            }
+
             IPythonObject sdo = instance as IPythonObject;
             if (sdo != null) {
                 IAttributesCollection res = sdo.Dict;
@@ -42,13 +56,8 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            if (instance == null) {
-                value = new DictProxy(owner);
-                return true;
-            }
-
-            value = new DictProxy(instance as PythonType);
-            return true;
+            value = null;
+            return false;
         }
 
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
@@ -81,7 +90,7 @@ namespace IronPython.Runtime.Types {
         #region ICodeFormattable Members
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return String.Format("<attribute '__dict__' of 'type' objects");
+            return String.Format("<attribute '__dict__' of '{0}' objects>", _type.Name);
         }
 
         #endregion

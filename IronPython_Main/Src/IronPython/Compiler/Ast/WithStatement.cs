@@ -16,11 +16,11 @@
 using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Runtime;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class WithStatement : Statement {
         private SourceLocation _header;
@@ -94,6 +94,7 @@ namespace IronPython.Compiler.Ast {
             statements[1] = AstGenerator.MakeAssignment(
                 exit,
                 Ast.Action.GetMember(
+                    ag.Binder,
                     SymbolTable.StringToId("__exit__"),
                     typeof(object),
                     manager
@@ -107,8 +108,10 @@ namespace IronPython.Compiler.Ast {
             statements[2] = AstGenerator.MakeAssignment(
                 value,
                 Ast.Action.Call(
+                    ag.Binder,
                     typeof(object),
                     Ast.Action.GetMember(
+                        ag.Binder,
                         SymbolTable.StringToId("__enter__"),
                         typeof(object),
                         manager
@@ -178,7 +181,7 @@ namespace IronPython.Compiler.Ast {
                         //  if not exit(*sys.exc_info()):
                         //      raise
                         Ast.IfThen(
-                            Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit, exception)),
+                            Ast.Action.Operator(ag.Binder, Operators.Not, typeof(bool), MakeExitCall(ag, exit, exception)),
                             Ast.Rethrow()
                         )
                     )
@@ -188,15 +191,14 @@ namespace IronPython.Compiler.Ast {
                     //      exit(None, None, None)
                     Ast.IfThen(
                         exc,
-                        Ast.Statement(
+                        Ast.Action.Call(
                             _contextManager.Span,
-                            Ast.Action.Call(
-                                typeof(object),
-                                exit,
-                                Ast.Null(),
-                                Ast.Null(),
-                                Ast.Null()
-                            )
+                            ag.Binder,
+                            typeof(object),
+                            exit,
+                            Ast.Null(),
+                            Ast.Null(),
+                            Ast.Null()
                         )
                     )
                 );
@@ -204,14 +206,14 @@ namespace IronPython.Compiler.Ast {
             return Ast.Block(_body.Span, statements);
         }
 
-        private MSAst.Expression MakeExitCall(MSAst.VariableExpression exit, MSAst.Expression exception) {
+        private MSAst.Expression MakeExitCall(AstGenerator ag, MSAst.VariableExpression exit, MSAst.Expression exception) {
             // The 'with' statement's exceptional clause explicitly does not set the thread's current exception information.
             // So while the pseudo code says:
             //    exit(*sys.exc_info())
             // we'll actually do:
             //    exit(*PythonOps.GetExceptionInfoLocal($exception))
             return Ast.Action.Call(
-                CallAction.Make(new CallSignature(MSAst.ArgumentKind.List)),
+                CallAction.Make(ag.Binder, new CallSignature(MSAst.ArgumentKind.List)),
                 typeof(bool),
                 exit,
                 Ast.Call(

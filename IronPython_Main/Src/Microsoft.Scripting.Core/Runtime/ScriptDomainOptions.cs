@@ -23,9 +23,7 @@ namespace Microsoft.Scripting.Runtime {
         private bool _debugMode;
         private bool _privateBinding;
 
-        private bool _traceBackSupport = true;
         private bool _trackPerformance;
-        private bool _optimizeEnvironments = true;
         private bool _frames;
 
         private bool _verbose;
@@ -42,9 +40,8 @@ namespace Microsoft.Scripting.Runtime {
         /// 
         /// 1) Symbols are emitted for debuggable methods (methods associated with SourceUnit).
         /// 2) Debuggable methods are emitted to non-collectable types (this is due to CLR limitations on dynamic method debugging).
-        /// 3) Dynamic stack frames of debuggable methods are recorded at run-time 
-        /// 4) JIT optimization is disabled for all methods
-        /// 5) Languages may disable optimizations based on this value.
+        /// 3) JIT optimization is disabled for all methods
+        /// 4) Languages may disable optimizations based on this value.
         /// 
         /// TODO: host visible, move to ScriptRuntime
         /// </summary>
@@ -63,28 +60,11 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         // TODO: review
-        public bool DynamicStackTraceSupport {
-            get { return _traceBackSupport; }
-            set { _traceBackSupport = value; }
-        }
-
-        // TODO: review
         public bool TrackPerformance {
             get { return _trackPerformance; }
             set { _trackPerformance = value; }
         }
-
-        // TODO: review
-        /// <summary>
-        /// Closures, generators and environments can use the optimized
-        /// generated environments FunctionEnvironment2 .. 32 
-        /// If false, environments are stored in FunctionEnvironmentN only
-        /// </summary>
-        public bool OptimizeEnvironments {
-            get { return _optimizeEnvironments; }
-            set { _optimizeEnvironments = value; }
-        }
-
+        
         // TODO: review
         /// <summary>
         /// Generate functions using custom frames. Allocate the locals on frames.

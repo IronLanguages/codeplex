@@ -29,8 +29,8 @@ namespace Microsoft.Scripting.Generation {
     public class DebugILGen : ILGen {
         private readonly TextWriter _txt;
         
-        public DebugILGen(ILGenerator ilg, TextWriter txt)
-            : base(ilg) {
+        internal DebugILGen(ILGenerator ilg, TypeGen tg, TextWriter txt)
+            : base(ilg, tg) {
             _txt = txt;
         }
 
@@ -355,7 +355,7 @@ namespace Microsoft.Scripting.Generation {
         #endregion
 
         public void WriteLine(string str) {
-            Contract.Requires(str != null);
+            ContractUtils.Requires(str != null);
             WriteImpl(str);
         }
 
@@ -374,18 +374,6 @@ namespace Microsoft.Scripting.Generation {
             _txt.Flush();
         }
 
-        private static int CountNewLines(string str) {
-            Debug.Assert(str != null);
-
-            int lines = 0;
-            for (int i = 0; i < str.Length; i++) {
-                if (str[i] == '\n') {
-                    lines++;
-                }
-            }
-            return lines;
-        }
-
         private void Write(string format, object arg0) {
             Write(String.Format(CultureInfo.CurrentCulture, format, arg0));
         }
@@ -396,14 +384,6 @@ namespace Microsoft.Scripting.Generation {
 
         private void Write(string format, object arg0, object arg1, object arg2) {
             Write(String.Format(CultureInfo.CurrentCulture, format, arg0, arg1, arg2));
-        }
-
-        private void Write(string format, object arg0, object arg1, object arg2, object arg3) {
-            Write(String.Format(CultureInfo.CurrentCulture, format, arg0, arg1, arg2, arg3));
-        }
-
-        private void Write(string format, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            Write(String.Format(CultureInfo.CurrentCulture, format, arg0, arg1, arg2, arg3, arg4));
         }
 
         private static string MakeSignature(MethodBase method) {
@@ -418,7 +398,7 @@ namespace Microsoft.Scripting.Generation {
             return sb.ToString();
         }
 
-        private int GetLabelId(Label label) {
+        private static int GetLabelId(Label label) {
             return label.GetHashCode();
         }
 

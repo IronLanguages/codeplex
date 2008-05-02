@@ -42,7 +42,6 @@ namespace Microsoft.Scripting.Ast {
             }
 
             internal int Handler {
-                get { return _handler; }
                 set { _handler = value; }
             }
 
@@ -75,12 +74,12 @@ namespace Microsoft.Scripting.Ast {
         private YieldLabelBuilder() {
         }
 
-        internal static void BuildYieldTargets(GeneratorLambdaExpression gle, LambdaInfo li) {
+        internal static GeneratorInfo BuildYieldTargets(GeneratorLambdaExpression gle) {
             YieldLabelBuilder ylb = new YieldLabelBuilder();
             ylb.WalkNode(gle.Body);
 
-            // Populate results into the LambdaInfo
-            li.PopulateGeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
+            // Populate results into the GeneratorInfo
+            return new GeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
         }
 
         #region AstWalker method overloads

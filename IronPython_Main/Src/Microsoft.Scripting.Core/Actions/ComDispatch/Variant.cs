@@ -16,11 +16,9 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices;
 using System.CodeDom.Compiler;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 

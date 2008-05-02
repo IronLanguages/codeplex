@@ -35,47 +35,25 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Creates a reference within the environment with the specified name typed to object.
         /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
         public Storage MakeEnvironmentReference(SymbolId name) {
             return MakeEnvironmentReference(name, typeof(object));
         }
 
         /// <summary>
-        /// Gets the type of the environment (must be an IFunctionEnvironment or not be nestable)
-        /// </summary>
-        public abstract Type EnvironmentType { get; }
-
-        /// <summary>
         /// Gets the underlying storage type for the environment, can be any type
         /// </summary>
-        public virtual Type StorageType { get { return EnvironmentType; } }
+        public abstract Type StorageType { get; }
 
         /// <summary>
         /// Creates a reference within the environment of the specified type and name.
         /// </summary>
-        /// <param name="name"></param>
-        /// <param name="type"></param>
-        /// <returns></returns>
-        public abstract Storage MakeEnvironmentReference(SymbolId name, Type type);
-
-        /// <summary>
-        /// Creates a new function environment with the given names.  All values are left in their
-        /// default state (null or zeroed structs)
-        /// 
-        /// Called with the following items on the stack:
-        ///     Storage (as emitted by EmitStorage)
-        ///     Parent environment link (an IFunctionEnvironment)
-        ///     SymbolId[] of names in the environment
-        ///     SymbolId[] of names in the outer environment
-        /// </summary>
-        public abstract void EmitNewEnvironment(LambdaCompiler cg);
+        public abstract Storage MakeEnvironmentReference(SymbolId name, Type variableType);
 
         /// <summary>
         /// Emits the creation of the underlying storage object.
         /// </summary>
         /// <param name="cg"></param>
-        public abstract void EmitStorage(LambdaCompiler cg);
+        public abstract void EmitStorage(ILGen cg);
 
         public abstract void EmitGetStorageFromContext(LambdaCompiler cg);
 

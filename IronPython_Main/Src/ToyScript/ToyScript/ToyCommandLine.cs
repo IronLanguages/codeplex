@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Hosting.Shell;
 
 namespace ToyScript {
-    class ToyCommandLine : CommandLine {
+    public class ToyCommandLine : CommandLine {
         protected override string Logo {
             get {
                 return

@@ -17,13 +17,13 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Generation {    
-    class PropertyEnvironmentReference : Storage {
+namespace Microsoft.Scripting.Generation {
+    internal class PropertyEnvironmentReference : Storage {
         private int _index;
         private Type _tupleType;
         private Type _type;
 
-        public PropertyEnvironmentReference(Type tupleType, int index, Type type) {
+        internal PropertyEnvironmentReference(Type tupleType, int index, Type type) {
             Debug.Assert(tupleType != null);
             Debug.Assert(index < Tuple.GetSize(tupleType));
 
@@ -32,11 +32,11 @@ namespace Microsoft.Scripting.Generation {
             _type = type;
         }
 
-        public override bool RequireAccessSlot {
+        internal override bool RequireAccessSlot {
             get { return true; }
         }
 
-        public override Slot CreateSlot(Slot instance) {            
+        internal override Slot CreateSlot(Slot instance) {            
             Slot slot = instance;
             Type curType = null;
             foreach (PropertyInfo pi in Tuple.GetAccessPath(_tupleType, _index)) {

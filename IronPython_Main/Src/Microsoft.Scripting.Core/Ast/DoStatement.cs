@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _body; }
         }
 
-        public LabelTarget Label {
+        new public LabelTarget Label {
             get { return _label; }
         }
     }

@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="value">The constant value to check for.</param>
         /// <returns>true/false</returns>
         public static bool Check(Expression expression, object value) {
-            Contract.RequiresNotNull(expression, "expression");
+            ContractUtils.RequiresNotNull(expression, "expression");
             return IsConstant(expression, value);
         }
 

@@ -40,7 +40,7 @@ namespace IronPython.Runtime {
         [MultiRuntimeAware]
         private static object DefaultGetItem;   // our cached __getitem__ method
         [MultiRuntimeAware]
-        private static FastDynamicSite<PythonType, object> _fromkeysSite;
+        private static DynamicSite<PythonType, object> _fromkeysSite;
         internal DictionaryStorage _storage;
         
         internal static object MakeDict(PythonType cls) {
@@ -250,6 +250,16 @@ namespace IronPython.Runtime {
             }
         }
 
+        public virtual void __delitem__(params object[] key) {
+            if (key == null) {
+                __delitem__((object)null);
+            } else if (key.Length > 0) {
+                __delitem__(PythonTuple.MakeTuple(key));
+            } else {
+                throw PythonOps.TypeError("__delitem__() takes exactly one argument (0 given)");
+            }
+        }
+
         #endregion
 
         #region IPythonContainer Members
@@ -370,11 +380,11 @@ namespace IronPython.Runtime {
             XRange xr = seq as XRange;
             if (xr != null) {
                 if (!_fromkeysSite.IsInitialized) {
-                    _fromkeysSite.EnsureInitialized(DefaultContext.Default, CallAction.Make(0));
+                    _fromkeysSite.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 0));
                 }
 
                 int n = xr.__len__();
-                object ret = _fromkeysSite.Invoke(cls);
+                object ret = _fromkeysSite.Invoke(DefaultContext.Default, cls);
                 if (ret.GetType() == typeof(PythonDictionary)) {
                     PythonDictionary dr = ret as PythonDictionary;
                     for (int i = 0; i < n; i++) {
@@ -477,10 +487,6 @@ namespace IronPython.Runtime {
                 }
             }
             return true;
-        }
-
-        bool IValueEquality.ValueNotEquals(object other) {
-            return !((IValueEquality)this).ValueEquals(other);
         }
 
         #endregion

@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public int __len__() {
-            return _dt.GetMemberNames(DefaultContext.Default).Count;
+            return _dt.GetMemberNames(DefaultContext.Default).__len__();
         }
 
         public bool __contains__(object value) {

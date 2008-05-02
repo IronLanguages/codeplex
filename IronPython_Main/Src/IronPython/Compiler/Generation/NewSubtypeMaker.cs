@@ -59,13 +59,13 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected override void ImplementPythonObject() {
-            if (NeedsDictionary) {
+            if (NeedsPythonObject && NeedsDictionary) {
                 // override our bases slots implementation w/ one that
                 // can use dicts
                 MethodInfo decl; MethodBuilder impl;
                 ILGen il = DefineMethodOverride(typeof(IPythonObject), "get_Dict", out decl, out impl);
                 il.EmitLoadArg(0);
-                il.EmitFieldGet(_dictField);
+                EmitGetDict(il);
                 il.Emit(OpCodes.Ret);
                 _tg.DefineMethodOverride(impl, decl);
 
@@ -77,7 +77,7 @@ namespace IronPython.Compiler.Generation {
                 il = DefineMethodOverride(typeof(IPythonObject), "ReplaceDict", out decl, out impl);
                 il.EmitLoadArg(0);
                 il.EmitLoadArg(1);
-                il.EmitFieldSet(_dictField);
+                EmitSetDict(il);
                 il.EmitBoolean(true);
                 il.Emit(OpCodes.Ret);
                 _tg.DefineMethodOverride(impl, decl);

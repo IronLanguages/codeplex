@@ -16,14 +16,14 @@
 using System;
 
 namespace Microsoft.Scripting.Generation {
-    sealed class LocalStorageAllocator : StorageAllocator {
+    internal sealed class LocalStorageAllocator : StorageAllocator {
         private SlotFactory _factory;
 
         internal LocalStorageAllocator(SlotFactory factory) {
             _factory = factory;
         }
 
-        public override Storage AllocateStorage(SymbolId name, Type type) {
+        internal override Storage AllocateStorage(SymbolId name, Type type) {
             return new LocalStorage(_factory.CreateSlot(name, type));
         }
     }

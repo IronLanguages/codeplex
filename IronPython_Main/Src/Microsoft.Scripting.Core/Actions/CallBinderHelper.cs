@@ -27,7 +27,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// Creates rules for performing method calls.  Currently supports calling built-in functions, built-in method descriptors (w/o 
@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Actions {
 
         public CallBinderHelper(CodeContext/*!*/ context, TAction/*!*/ action, object[]/*!*/ args)
             : base(context, action) {
-            Contract.RequiresNotEmpty(args, "args");
+            ContractUtils.RequiresNotEmpty(args, "args");
 
             _maxLevel = NarrowingLevel.All;
             _args = RemoveExplicitInstanceArgument(action, args);

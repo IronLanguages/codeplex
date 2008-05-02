@@ -26,7 +26,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     [PythonSystemType("method_descriptor")]
     public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IDynamicObject, ICodeFormattable {
@@ -79,7 +79,6 @@ namespace IronPython.Runtime.Types {
                 // if a conversion exists to the type allow the call.
                 context.LanguageContext.Binder.Convert(self, template.DeclaringType);
             }
-            return;
         }
 
         #endregion
@@ -103,6 +102,12 @@ namespace IronPython.Runtime.Types {
 
         internal override bool IsVisible(CodeContext context, PythonType owner) {
             return _template.IsVisible(context, owner);
+        }
+
+        internal override bool IsAlwaysVisible {
+            get {
+                return _template.IsAlwaysVisible;
+            }
         }
 
         #endregion

@@ -204,7 +204,7 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(SByte x, SByte y) {
+        public static int Compare(SByte x, SByte y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
 
@@ -487,16 +487,16 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(Byte x, Byte y) {
+        public static int Compare(Byte x, Byte y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
         [SpecialName]
-        public static int __cmp__(Byte x, SByte y) {
-            return Int16Ops.__cmp__((Int16)x, (Int16)y);
+        public static int Compare(Byte x, SByte y) {
+            return Int16Ops.Compare((Int16)x, (Int16)y);
         }
         [SpecialName]
-        public static int __cmp__(SByte x, Byte y) {
-            return Int16Ops.__cmp__((Int16)x, (Int16)y);
+        public static int Compare(SByte x, Byte y) {
+            return Int16Ops.Compare((Int16)x, (Int16)y);
         }
 
         // Conversion operators
@@ -691,7 +691,7 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(Int16 x, Int16 y) {
+        public static int Compare(Int16 x, Int16 y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
 
@@ -977,16 +977,16 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(UInt16 x, UInt16 y) {
+        public static int Compare(UInt16 x, UInt16 y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
         [SpecialName]
-        public static int __cmp__(UInt16 x, Int16 y) {
-            return Int32Ops.__cmp__((Int32)x, (Int32)y);
+        public static int Compare(UInt16 x, Int16 y) {
+            return Int32Ops.Compare((Int32)x, (Int32)y);
         }
         [SpecialName]
-        public static int __cmp__(Int16 x, UInt16 y) {
-            return Int32Ops.__cmp__((Int32)x, (Int32)y);
+        public static int Compare(Int16 x, UInt16 y) {
+            return Int32Ops.Compare((Int32)x, (Int32)y);
         }
 
         // Conversion operators
@@ -1127,7 +1127,7 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(Int32 x, Int32 y) {
+        public static int Compare(Int32 x, Int32 y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
 
@@ -1408,16 +1408,16 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(UInt32 x, UInt32 y) {
+        public static int Compare(UInt32 x, UInt32 y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
         [SpecialName]
-        public static int __cmp__(UInt32 x, Int32 y) {
-            return Int64Ops.__cmp__((Int64)x, (Int64)y);
+        public static int Compare(UInt32 x, Int32 y) {
+            return Int64Ops.Compare((Int64)x, (Int64)y);
         }
         [SpecialName]
-        public static int __cmp__(Int32 x, UInt32 y) {
-            return Int64Ops.__cmp__((Int64)x, (Int64)y);
+        public static int Compare(Int32 x, UInt32 y) {
+            return Int64Ops.Compare((Int64)x, (Int64)y);
         }
 
         // Conversion operators
@@ -1613,7 +1613,7 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(Int64 x, Int64 y) {
+        public static int Compare(Int64 x, Int64 y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
 
@@ -1894,16 +1894,16 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(UInt64 x, UInt64 y) {
+        public static int Compare(UInt64 x, UInt64 y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
         [SpecialName]
-        public static int __cmp__(UInt64 x, Int64 y) {
-            return BigIntegerOps.__cmp__((BigInteger)x, (BigInteger)y);
+        public static int Compare(UInt64 x, Int64 y) {
+            return BigIntegerOps.Compare((BigInteger)x, (BigInteger)y);
         }
         [SpecialName]
-        public static int __cmp__(Int64 x, UInt64 y) {
-            return BigIntegerOps.__cmp__((BigInteger)x, (BigInteger)y);
+        public static int Compare(Int64 x, UInt64 y) {
+            return BigIntegerOps.Compare((BigInteger)x, (BigInteger)y);
         }
 
         // Conversion operators
@@ -2052,7 +2052,7 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(Single x, Single y) {
+        public static int Compare(Single x, Single y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
 
@@ -2169,7 +2169,7 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static int __cmp__(Double x, Double y) {
+        public static int Compare(Double x, Double y) {
             return x == y ? 0 : x > y ? 1 : -1;
         }
 

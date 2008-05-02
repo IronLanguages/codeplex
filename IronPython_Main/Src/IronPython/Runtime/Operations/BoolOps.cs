@@ -137,6 +137,10 @@ namespace IronPython.Runtime.Operations {
             return (UInt16)(x ? 1 : 0);
         }
 
+        public static Int32 __int__(Boolean x) {
+            return (Int32)(x ? 1 : 0);
+        }
+
         [SpecialName, ImplicitConversionMethod]
         public static Int32 ConvertToInt32(Boolean x) {
             return (Int32)(x ? 1 : 0);

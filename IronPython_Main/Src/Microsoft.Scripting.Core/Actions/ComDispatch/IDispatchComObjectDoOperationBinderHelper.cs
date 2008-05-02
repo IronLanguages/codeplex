@@ -24,25 +24,30 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     class IDispatchComObjectDoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
-        private RuleBuilder<T> _rule = new RuleBuilder<T>();
 
-        internal IDispatchComObjectDoOperationBinderHelper(CodeContext context, DoOperationAction action)
+        private RuleBuilder<T> _rule = new RuleBuilder<T>();
+        private ComTypeDesc _wrapperType;
+
+        internal IDispatchComObjectDoOperationBinderHelper(CodeContext context, ComTypeDesc wrapperType, DoOperationAction action)
             : base(context, action) {
+
+            _wrapperType = wrapperType;
         }
 
         internal RuleBuilder<T> MakeNewRule() {
-            // Since the only way to get this rule in the first place is to pass through the statically defined pre-binders,
-            // the test here essentially redundant.  We need one though, so we'll use the basic type test.
-            _rule.MakeTest(typeof(IDispatchComObject));
+
+            _rule.Test = ComObject.MakeComObjectTest(typeof(IDispatchComObject), typeof(IDispatchComObject).GetProperty("ComTypeDesc"), _wrapperType, _rule);
             _rule.Target = MakeDoOperationTarget();
 
             return _rule;
         }
 
         private Expression MakeDoOperationTarget() {
+
             switch(Action.Operation){
                 case Operators.GetItem:
                 case Operators.SetItem:
@@ -62,6 +67,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private Expression MakeGetMemberNamesTarget() {
+
             MethodInfo _getMemberNamesMethod = typeof(ComObject).GetMethod("GetMemberNames");
 
             return Ast.Block(
@@ -74,6 +80,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private Expression MakeEqualsOperationTarget() {
+
             MethodInfo _equalsMethod = typeof(ComObject).GetMethod("Equals");
 
             return Ast.Block(
@@ -100,7 +107,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Expression MakeIndexOperationTarget() {
 
             List<Expression> _expressions = new List<Expression>();
-            VariableExpression _dispIndexer = _rule.GetTemporary(typeof(object), "dispCallable");
+            VariableExpression _dispIndexer = _rule.GetTemporary(typeof(DispCallable), "dispCallable");
 
             MethodInfo _indexMethod =
                 Action.Operation == Operators.GetItem ?
@@ -116,6 +123,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     _rule.MakeReturn(
                         Binder,
                         Ast.Action.Call(
+                            Binder,
                             _rule.ReturnType,
                             ArrayUtils.InsertAt<Expression>(
                                 (Expression[])ArrayUtils.RemoveFirst(_rule.Parameters), 
@@ -139,6 +147,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// </summary>
         /// <returns></returns>
         private Expression GetFailureStatement(Type type, string memberName) {
+
             return Binder.MakeMissingMemberError(
                         type,
                         memberName

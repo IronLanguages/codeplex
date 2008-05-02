@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Types {
         private MethodBase[] _ctors;
 
         internal ConstructorFunction(BuiltinFunction realTarget, IList<MethodBase> constructors)
-            : base(GetTargetsValidateFunction(realTarget)) {
+            : base("__new__", ArrayUtils.ToArray(GetTargetsValidateFunction(realTarget)), realTarget.DeclaringType, FunctionType.Function | FunctionType.AlwaysVisible) {
 
             base.Name = realTarget.Name;
             base.FunctionType = realTarget.FunctionType;
@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static IList<MethodBase> GetTargetsValidateFunction(BuiltinFunction realTarget) {
-            Contract.RequiresNotNull(realTarget, "realTarget");
+            ContractUtils.RequiresNotNull(realTarget, "realTarget");
             return realTarget.Targets;
         }
 

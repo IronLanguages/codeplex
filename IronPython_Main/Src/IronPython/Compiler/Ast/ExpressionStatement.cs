@@ -16,7 +16,7 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class ExpressionStatement : Statement {
         private readonly Expression _expression;
@@ -40,7 +40,7 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Statement(_expression.Span, Ast.Void(expression));
+            return Ast.Block(_expression.Span, expression);
         }
 
         public override void Walk(PythonWalker walker) {

@@ -14,8 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
 using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {

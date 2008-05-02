@@ -17,7 +17,7 @@ using System;
 using System.Reflection;
 using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Generation {    
+namespace Microsoft.Scripting.Generation {
     class FunctionEnvironmentSlot : EnvironmentSlot {
         private Type _storageType;
 
@@ -26,11 +26,11 @@ namespace Microsoft.Scripting.Generation {
             _storageType = storageType;
         }
 
-        public override void EmitGetDictionary(LambdaCompiler cg) {
+        public override void EmitGetDictionary(ILGen cg) {
             EmitGet(cg);
             foreach (PropertyInfo pi in Tuple.GetAccessPath(_storageType, 0)) {
                 cg.EmitPropertyGet(pi);
             }
-        }        
+        }
     }
 }

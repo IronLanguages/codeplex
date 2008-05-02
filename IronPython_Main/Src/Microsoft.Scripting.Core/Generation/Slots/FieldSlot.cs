@@ -30,36 +30,36 @@ namespace Microsoft.Scripting.Generation {
         private readonly FieldInfo _field;
 
         public FieldSlot(Slot instance, FieldInfo field) {
-            Contract.RequiresNotNull(instance, "instance");
-            Contract.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(instance, "instance");
+            ContractUtils.RequiresNotNull(field, "field");
 
             this._instance = instance;
             this._field = field;
         }
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             _instance.EmitGet(cg);
             cg.Emit(OpCodes.Ldfld, _field);
         }
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGetAddr(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             _instance.EmitGet(cg);
             cg.EmitFieldAddress(_field);
         }
 
-        public override void EmitSet(LambdaCompiler cg, Slot val) {
-            Contract.RequiresNotNull(cg, "cg");
-            Contract.RequiresNotNull(val, "val");
+        public override void EmitSet(ILGen cg, Slot val) {
+            ContractUtils.RequiresNotNull(cg, "cg");
+            ContractUtils.RequiresNotNull(val, "val");
 
             _instance.EmitGet(cg);
             val.EmitGet(cg);
             cg.Emit(OpCodes.Stfld, _field);
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             Slot val = cg.GetLocalTmp(_field.FieldType);
             val.EmitSet(cg);

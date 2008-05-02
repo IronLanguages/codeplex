@@ -272,4 +272,4 @@ def Error2():
 AssertError(ValueError, Error2)
 
 
-
+AreEqual('%*s' %(-5,'abc'), 'abc  ')

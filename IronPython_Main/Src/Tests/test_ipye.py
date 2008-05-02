@@ -32,9 +32,13 @@ import IronPython
 import IronPythonTest
 
 et = IronPythonTest.EngineTest()
+multipleexecskips = [ "ScenarioXGC"]
 for s in dir(et):
     if s.startswith("Scenario"):
-        exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
+		if s in multipleexecskips:
+			exec '@skip("multiple_execute") \ndef test_Engine_%s(): getattr(et, "%s")()' % (s, s)
+		else :
+			exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
 
 #Rowan Work Item 312902
 @disabled("The ProfileDrivenCompilation feature is removed from DLR")
@@ -80,7 +84,7 @@ def c():
 
 
 #Rowan Work Item 312902
-@skip("silverlight")
+@skip("silverlight", "multiple_execute")
 def test_formatexception():
     try:
         import Microsoft.Scripting
@@ -92,7 +96,7 @@ def test_formatexception():
         exc_string = pe.FormatException(System.Exception("first", 
                                                         System.Exception("second", 
                                                                          System.Exception())))
-        AreEqual(exc_string, 'Traceback (most recent call last):\r\nException: first\r\n')
+        AreEqual(exc_string, 'Traceback (most recent call last):\r\nException: first')
         exc_string = pe.FormatException(c())
         AreEqual(exc_string.count(" File "), 4)
         AreEqual(exc_string.count(" line "), 4)
@@ -122,6 +126,7 @@ def test_formatexception_showclrexceptions():
     
     finally:
         pe.Options.ShowClrExceptions = False
+
 
 @disabled("CodePlex 6710")
 def test_formatexception_exceptiondetail():       

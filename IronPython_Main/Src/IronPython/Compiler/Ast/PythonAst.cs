@@ -23,7 +23,7 @@ using Microsoft.Scripting.Generation;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Utils;
 
     public class PythonAst : ScopeStatement {
@@ -41,7 +41,7 @@ namespace IronPython.Compiler.Ast {
         private Dictionary<SymbolId, PythonVariable> _globals;
 
         public PythonAst(Statement body, bool isModule, PythonLanguageFeatures languageFeatures, bool printExpressions) {
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
 
             _body = body;
             _isModule = isModule;
@@ -98,6 +98,10 @@ namespace IronPython.Compiler.Ast {
             get { return true; }
         }
 
+        protected override bool ExposesLocalVariables {
+            get { return true; }
+        }
+
         internal override void CreateVariables(AstGenerator ag, List<MSAst.Expression> init) {
             if (_globals != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _globals) {
@@ -125,11 +129,11 @@ namespace IronPython.Compiler.Ast {
                     _globals = new Dictionary<SymbolId, PythonVariable>();
                 }
                 if (!_globals.TryGetValue(name, out variable)) {
-                    variable = new PythonVariable(name, VariableKind.Global, this);
+                    variable = new PythonVariable(name, typeof(object), VariableKind.Global, this);
                     _globals[name] = variable;
                 }
             } else {
-                variable = EnsureVariable(name);
+                variable = EnsureUnboundVariable(name);
             }
             return variable;
         }
@@ -138,25 +142,40 @@ namespace IronPython.Compiler.Ast {
             return EnsureVariable(name);
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
-            throw new InvalidOperationException();
-        }
-
         internal MSAst.LambdaExpression TransformToAst(CompilerContext context) {
             // Create the ast generator
             // Use the PrintExpression value for the body (global level code)
-            string name = context.SourceUnit.HasPath ? context.SourceUnit.Path : "<undefined>";
-            AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);
+            PythonCompilerOptions pco = context.Options as PythonCompilerOptions;
+            Debug.Assert(pco != null);
+
+            string name;
+            if (!context.SourceUnit.HasPath || (pco.Module & ModuleOptions.ExecOrEvalCode) != 0) {
+                name = "<module>";
+            } else {
+                name = context.SourceUnit.Path;
+            }
+
+            AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);            
             ag.Block.Global = true;
 
+            ag.Block.Body = Ast.Block(
+                Ast.Assign(ag.LineNumberExpression, Ast.Constant(0)),
+                Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
+                ag.WrapScopeStatements(Transform(ag))
+            );
+            return ag.Block.MakeLambda();
+        }
+
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             List<MSAst.Expression> init = new List<MSAst.Expression>();
             // Create the variables
             CreateVariables(ag, init);
 
-            MSAst.Expression bodyStmt = ag.Transform(_body);            
+            MSAst.Expression bodyStmt = ag.Transform(_body);
             MSAst.Expression docStmt;
 
             string doc = ag.GetDocumentation(_body);
+
             if (_isModule && doc != null) {
                 docStmt = Ast.Assign(
                     _docVariable.Variable,
@@ -166,13 +185,11 @@ namespace IronPython.Compiler.Ast {
                 docStmt = Ast.Empty();
             }
 
-            ag.Block.Body = Ast.Block(
+            return Ast.Block(
                 Ast.Block(init),
                 docStmt,
                 bodyStmt ?? Ast.Empty() //  bodyStmt could be null if we have an error - e.g. a top level break
             );
-
-            return ag.Block.MakeLambda();
         }
 
         public override void Walk(PythonWalker walker) {

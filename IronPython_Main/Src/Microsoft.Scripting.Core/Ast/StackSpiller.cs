@@ -14,17 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-
-using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
 
     /// <summary>
-    /// Ast rewriting to spill the CLR stack into temporary variables
+    /// Expression rewriting to spill the CLR stack into temporary variables
     /// in order to guarantee some properties of code generation, for
     /// example that we always enter try block on empty stack.
     /// </summary>
@@ -79,15 +78,6 @@ namespace Microsoft.Scripting.Ast {
             /// </summary>
             private Stack<VariableExpression> _usedTemps;
 
-            /// <summary>
-            /// Temporary variables
-            /// </summary>
-            private List<VariableExpression> _temps = new List<VariableExpression>();
-
-            internal List<VariableExpression> TemporaryVariables {
-                get { return _temps; }
-            }
-
             internal VariableExpression Temp(Type type) {
                 VariableExpression temp;
                 if (_freeTemps != null) {
@@ -101,7 +91,7 @@ namespace Microsoft.Scripting.Ast {
                     }
                 }
                 // Not on the free-list, create a brand new one. 
-                temp = MakeTemp("$temp$" + _temp++, type);
+                temp = Expression.Temporary(type, "$temp$" + _temp++);
                 return UseTemp(temp);
             }
 
@@ -144,16 +134,130 @@ namespace Microsoft.Scripting.Ast {
             }
 
             [Conditional("DEBUG")]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
             internal void VerifyTemps() {
                 Debug.Assert(_usedTemps == null || _usedTemps.Count == 0);
             }
+        }
 
-            private VariableExpression MakeTemp(string name, Type type) {
-                VariableExpression v = VariableExpression.Temporary(SymbolTable.StringToId(name), type);
-                _temps.Add(v);
-                return v;
+        /// <summary>
+        /// Rewrites child expressions, spilling them into temps if needed. The
+        /// stack starts in the inital state, and after the first subexpression
+        /// is added it is change to non-empty. This behavior can be overriden
+        /// by setting the stack manually between adds.
+        /// 
+        /// When all children have been added, the caller should rewrite the 
+        /// node if Rewrite is true. Then, it should call crFinish with etiher
+        /// the orignal expression or the rewritten expression. Finish will call
+        /// Expression.Comma if necessary and return a new Result.
+        /// </summary>
+        private class ChildRewriter {
+            private readonly StackSpiller _self;
+            private readonly Expression[] _expressions;
+            private int _expressionsCount;
+            private List<Expression> _comma;
+            private RewriteAction _action;
+            private Stack _stack;
+            private bool _done;
+
+            internal ChildRewriter(StackSpiller self, Stack stack, int count) {
+                _self = self;
+                _stack = stack;
+                _expressions = new Expression[count];
+            }
+
+            internal Stack Stack {
+                set { _stack = value; }
+            }
+
+            internal void Add(Expression node) {
+                Debug.Assert(!_done);
+
+                if (node == null) {
+                    _expressions[_expressionsCount++] = null;
+                    return;
+                }
+
+                Result exp = RewriteExpression(_self, node, _stack);
+                _action |= exp.Action;
+                _stack = Stack.NonEmpty;
+
+                // track items in case we need to copy or spill stack
+                _expressions[_expressionsCount++] = exp.Node;
+            }
+
+            internal void Add(IList<Expression> expressions) {
+                for (int i = 0, count = expressions.Count; i < count; i++) {
+                    Add(expressions[i]);
+                }
+            }
+
+            private void EnsureDone() {
+                // done adding arguments, build the comma if necessary
+                if (!_done) {
+                    _done = true;
+
+                    if (_action == RewriteAction.SpillStack) {
+                        Expression[] clone = _expressions;
+                        int count = clone.Length;
+                        List<Expression> comma = new List<Expression>(count + 1);
+                        for (int i = 0; i < count; i++) {
+                            if (clone[i] != null) {
+                                Expression temp;
+                                clone[i] = _self.ToTemp(clone[i], out temp);
+                                comma.Add(temp);
+                            }
+                        }
+                        comma.Capacity = comma.Count + 1;
+                        _comma = comma;
+                    }
+                }
+            }
+
+            internal bool Rewrite {
+                get { return _action != RewriteAction.None; }
+            }
+
+            internal Result Finish(Expression expr) {
+                EnsureDone();
+
+                if (_action == RewriteAction.SpillStack) {
+                    Debug.Assert(_comma.Capacity == _comma.Count + 1);
+                    _comma.Add(expr);
+                    expr = Expression.Comma(new ReadOnlyCollection<Expression>(_comma));
+                }
+
+                return new Result(_action, expr);
+            }
+
+            internal Expression this[int index] {
+                get {
+                    EnsureDone();
+                    return _expressions[index];
+                }
+            }
+            internal ReadOnlyCollection<Expression> this[int first, int last] {
+                get {
+                    EnsureDone();
+                    if (last < 0) {
+                        last += _expressions.Length;
+                    }
+                    int count = last - first + 1;
+                    ContractUtils.RequiresArrayRange(_expressions, first, count, "first", "last");
+
+                    if (count == _expressions.Length) {
+                        Debug.Assert(first == 0);
+                        // if the entire array is requested just return it so we don't make a new array
+                        return new ReadOnlyCollection<Expression>(_expressions);
+                    }
+
+                    Expression[] clone = new Expression[count];
+                    Array.Copy(_expressions, first, clone, 0, count);
+                    return new ReadOnlyCollection<Expression>(clone);
+                }
             }
         }
+
 
         /// <summary>
         /// The source of temporary variables, either BlockTempMaker or RuleTempMaker
@@ -201,23 +305,16 @@ namespace Microsoft.Scripting.Ast {
             VerifyTemps();
 
             if (body.Action != RewriteAction.None) {
-                List<VariableExpression> temps = _tm.TemporaryVariables;
-                ReadOnlyCollection<VariableExpression> vars = lambda.Variables;
-                if (temps.Count > 0) {
-                    VariableExpression[] newVars = new VariableExpression[lambda.Variables.Count + temps.Count];
-                    vars.CopyTo(newVars, 0);
-                    temps.CopyTo(newVars, vars.Count);
-                    vars = new ReadOnlyCollection<VariableExpression>(newVars);
-                }
-
                 // Clone the lambda, replacing the body & variables
                 if (lambda.NodeType == AstNodeType.Lambda) {
                     return new LambdaExpression(lambda.Annotations, AstNodeType.Lambda, lambda.Type, lambda.Name,
-                        lambda.ReturnType, body.Node, lambda.Parameters, vars, lambda.IsGlobal,
+                        lambda.ReturnType, lambda.ScopeFactory, body.Node, lambda.Parameters, lambda.Variables, lambda.IsGlobal,
                         lambda.IsVisible, lambda.EmitLocalDictionary, lambda.ParameterArray);
                 } else {
                     GeneratorLambdaExpression g = (GeneratorLambdaExpression)lambda;
-                    return new GeneratorLambdaExpression(g.Annotations, g.Type, g.Name, g.GeneratorType, g.DelegateType, body.Node, g.Parameters, vars);
+                    return new GeneratorLambdaExpression(
+                        g.Annotations, g.Type, g.Name, g.GeneratorType, g.DelegateType, g.ScopeFactory, body.Node, g.Parameters, g.Variables
+                    );
                 }
             }
 
@@ -233,16 +330,7 @@ namespace Microsoft.Scripting.Ast {
             VerifyTemps();
 
             if (binding.Action != RewriteAction.None) {
-                List<VariableExpression> temps = _tm.TemporaryVariables;
-                VariableExpression[] vars = rule.Variables;
-
-                if (temps.Count > 0) {
-                    VariableExpression[] newVars = new VariableExpression[vars.Length + temps.Count];
-                    vars.CopyTo(newVars, 0);
-                    temps.CopyTo(newVars, vars.Length);
-                    vars = newVars;
-                }
-                rule = new Rule<T>(binding.Node, rule.Validators, rule.Template, rule.Parameters, vars);
+                rule = new Rule<T>(binding.Node, rule.Validators, rule.Template, rule.Parameters);
             }
 
             return rule;
@@ -263,11 +351,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [Conditional("DEBUG")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         private void VerifyTemps() {
             _tm.VerifyTemps();
         }
-
-        #endregion
 
         /// <summary>
         /// Will perform:
@@ -276,23 +363,30 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private VariableExpression ToTemp(Expression expression, out Expression save) {
             VariableExpression temp = Temp(expression.Type);
-            save = Ast.Assign(temp, expression);
+            save = Expression.Assign(temp, expression);
             return temp;
         }
 
-        #region Expressions
+        #endregion
 
+        #region Expressions
 
         /// <summary>
         /// Rewrite the expression
         /// </summary>
-        /// <param name="self">Ast rewriter instance</param>
+        /// <param name="self">Expression rewriter instance</param>
         /// <param name="node">Expression to rewrite</param>
         /// <param name="stack">State of the stack before the expression is emitted.</param>
         /// <returns>Rewritten expression.</returns>
         private static Result RewriteExpression(StackSpiller self, Expression node, Stack stack) {
             if (node == null) {
                 return new Result(RewriteAction.None, null);
+            }
+
+            if (node.IsDynamic) {
+                // dynamic nodes get compiled into sites, and never have an
+                // empty stack because the dynamic site is on the stack
+                stack = Stack.NonEmpty;
             }
 
             AstNodeType ant = node.NodeType;
@@ -320,57 +414,43 @@ namespace Microsoft.Scripting.Ast {
         // ActionExpression
         private static Result RewriteActionExpression(StackSpiller self, Expression expr, Stack stack) {
             ActionExpression node = (ActionExpression)expr;
-            Expression[] clone, comma;
 
             // Stack is never empty when dynamic site arguments are being
             // executed because the dynamic site "this" is on the stack.
-            RewriteAction action = RewriteExpressions(self, node.Arguments, Stack.NonEmpty, out clone, out comma);
+            ChildRewriter cr = new ChildRewriter(self, Stack.NonEmpty, node.Arguments.Count);
+            cr.Add(node.Arguments);
 
-            if (action != RewriteAction.None) {
-                expr = Ast.Action.ActionExpression(node.Action, clone, node.Type);
-
-                if (action == RewriteAction.SpillStack) {
-                    comma[comma.Length - 1] = expr;
-                    expr = Ast.Comma(comma);
-                }
-            }
-            return new Result(action, expr);
+            return cr.Finish(cr.Rewrite ? Expression.Action.ActionExpression(node.Action as DoOperationAction, cr[0, -1], node.Type) : expr);
         }
 
-        // ArrayIndexAssignment
-        private static Result RewriteArrayIndexAssignment(StackSpiller self, Expression expr, Stack stack) {
-            ArrayIndexAssignment node = (ArrayIndexAssignment)expr;
+        // array index assignment
+        private static Result RewriteArrayIndexAssignment(StackSpiller self, AssignmentExpression node, Stack stack) {
+            BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
+
+            ChildRewriter cr = new ChildRewriter(self, stack, 3);
+
+            // args are evaluated in a different order in the dynamic case
+            // TODO: can we unify the order of argument evaluation
+            if (node.IsDynamic) {
+                cr.Add(arrayIndex.Left);
+                cr.Add(arrayIndex.Right);
+                cr.Add(node.Value);
+                return cr.Finish(cr.Rewrite ? Expression.AssignArrayIndex(node.Annotations, cr[0], cr[1], cr[2], node.Type, node.BindingInfo as DoOperationAction) : node);                    
+            }
+
             // Value is evaluated first, on a stack in current state
-            Result value = RewriteExpression(self, node.Value, stack);
+            cr.Add(node.Value);
 
             // Array is evaluated second, but value is saved into a temp
             // so the stack is still in the original state.
-            Result array = RewriteExpression(self, node.Array, stack);
+            cr.Stack = stack;
+            cr.Add(arrayIndex.Left);
 
             // Index is emitted into definitely a non-empty stack
-            Result index = RewriteExpression(self, node.Index, Stack.NonEmpty);
+            cr.Add(arrayIndex.Right);
 
-            // Did any of them change?
-            RewriteAction action = value.Action | array.Action | index.Action;
-            if (action == RewriteAction.SpillStack) {
-                Expression saveValue, saveArray, saveIndex;
-                Expression tempValue, tempArray, tempIndex;
-
-                tempValue = self.ToTemp(value.Node, out saveValue);
-                tempArray = self.ToTemp(array.Node, out saveArray);
-                tempIndex = self.ToTemp(index.Node, out saveIndex);
-
-                expr = Ast.Comma(
-                    saveValue,
-                    saveArray,
-                    saveIndex,
-                    Ast.AssignArrayIndex(tempArray, tempIndex, tempValue)
-                );
-            } else if (action == RewriteAction.Copy) {
-                expr = Ast.AssignArrayIndex(array.Node, index.Node, value.Node);
-            }
-
-            return new Result(action, expr);
+            // 1 = array, 2 = index, 0 = value
+            return cr.Finish(cr.Rewrite ? Expression.AssignArrayIndex(cr[1], cr[2], cr[0]) : node);
         }
 
         // BinaryExpression: AndAlso, OrElse
@@ -383,7 +463,7 @@ namespace Microsoft.Scripting.Ast {
 
             RewriteAction action = left.Action | right.Action;
             if (action != RewriteAction.None) {
-                expr = new BinaryExpression(node.NodeType, left.Node, right.Node, node.Type, node.Method);
+                expr = new BinaryExpression(node.NodeType, node.Annotations, left.Node, right.Node, node.Type, node.Method, node.BindingInfo);
             }
             return new Result(action, expr);
         }
@@ -391,39 +471,42 @@ namespace Microsoft.Scripting.Ast {
         // BinaryExpression
         private static Result RewriteBinaryExpression(StackSpiller self, Expression expr, Stack stack) {
             BinaryExpression node = (BinaryExpression)expr;
+
+            ChildRewriter cr = new ChildRewriter(self, stack, 2);
             // Left expression executes on the stack as left by parent
-            Result left = RewriteExpression(self, node.Left, stack);
+            cr.Add(node.Left);
             // Right expression always has non-empty stack (left is on it)
-            Result right = RewriteExpression(self, node.Right, Stack.NonEmpty);
+            cr.Add(node.Right);
 
-            RewriteAction action = left.Action | right.Action;
-            if (action == RewriteAction.SpillStack) {
-                Expression saveLeft, saveRight;
-                Expression tempLeft, tempRight;
-
-                tempLeft = self.ToTemp(left.Node, out saveLeft);
-                tempRight = self.ToTemp(right.Node, out saveRight);
-
-                expr = Ast.Comma(
-                    saveLeft,
-                    saveRight,
-                    new BinaryExpression(node.NodeType, tempLeft, tempRight, node.Type, node.Method)
-                );
-            } else if (action == RewriteAction.Copy) {
-                expr = new BinaryExpression(node.NodeType, left.Node, right.Node, node.Type, node.Method);
-            }
-            return new Result(action, expr);
+            return cr.Finish(cr.Rewrite ? new BinaryExpression(node.NodeType, node.Annotations, cr[0], cr[1], node.Type, node.Method, node.BindingInfo) : expr);
         }
 
-        // BoundAssignment
-        private static Result RewriteBoundAssignment(StackSpiller self, Expression expr, Stack stack) {
-            BoundAssignment node = (BoundAssignment)expr;
+        // variable assignment
+        private static Result RewriteVariableAssignment(StackSpiller self, AssignmentExpression node, Stack stack) {
             // Expression is evaluated on a stack in current state
             Result value = RewriteExpression(self, node.Value, stack);
             if (value.Action != RewriteAction.None) {
-                expr = Ast.Assign(node.Variable, value.Node);
+                node = Expression.Assign(node.Expression, value.Node);
             }
-            return new Result(value.Action, expr);
+            return new Result(value.Action, node);
+        }
+
+        // AssignmentExpression
+        private static Result RewriteAssignmentExpression(StackSpiller self, Expression expr, Stack stack) {
+            AssignmentExpression node = (AssignmentExpression)expr;
+            switch (node.Expression.NodeType) {
+                case AstNodeType.ArrayIndex:
+                    return RewriteArrayIndexAssignment(self, node, stack);
+                case AstNodeType.MemberExpression:
+                    return RewriteMemberAssignment(self, node, stack);
+                case AstNodeType.Parameter:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.TemporaryVariable:
+                    return RewriteVariableAssignment(self, node, stack);
+                default:
+                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
+            }
         }
 
         // VariableExpression
@@ -469,7 +552,7 @@ namespace Microsoft.Scripting.Ast {
 
             RewriteAction action = test.Action | ifTrue.Action | ifFalse.Action;
             if (action != RewriteAction.None) {
-                expr = Ast.Condition(test.Node, ifTrue.Node, ifFalse.Node);
+                expr = Expression.Condition(test.Node, ifTrue.Node, ifFalse.Node);
             }
 
             return new Result(action, expr);
@@ -481,56 +564,37 @@ namespace Microsoft.Scripting.Ast {
             return new Result(RewriteAction.None, expr);
         }
 
-        // DeleteUnboundExpression
-        private static Result RewriteDeleteUnboundExpression(StackSpiller self, Expression expr, Stack stack) {
-            // No action necessary, regardless of stack
-            return new Result(RewriteAction.None, expr);
-        }
-
         // IntrinsicExpression
         private static Result RewriteIntrinsicExpression(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary, regardless of stack
             return new Result(RewriteAction.None, expr);
         }
 
-        // MemberAssignment
-        private static Result RewriteMemberAssignment(StackSpiller self, Expression expr, Stack stack) {
-            MemberAssignment node = (MemberAssignment)expr;
+        // member assignment
+        private static Result RewriteMemberAssignment(StackSpiller self, AssignmentExpression node, Stack stack) {
+            MemberExpression lvalue = (MemberExpression)node.Expression;
 
-            Result expression = new Result(RewriteAction.None, null);
-            if (node.Expression != null) {
-                // If there's an instance, it executes on the stack in current state
-                // and rest is executed on non-empty stack.
-                // Otherwise the stack is left unchaged.
-                expression = RewriteExpression(self, node.Expression, stack);
-                stack = Stack.NonEmpty;
+            ChildRewriter cr = new ChildRewriter(self, stack, 2);
+
+            // If there's an instance, it executes on the stack in current state
+            // and rest is executed on non-empty stack.
+            // Otherwise the stack is left unchaged.
+            cr.Add(lvalue.Expression);
+
+            cr.Add(node.Value);
+
+            if (cr.Rewrite) {
+                return cr.Finish(
+                    new AssignmentExpression(
+                        node.Annotations,
+                        new MemberExpression(lvalue.Member, cr[0], lvalue.Type, lvalue.BindingInfo as MemberAction),
+                        cr[1],
+                        node.Type,
+                        node.BindingInfo as SetMemberAction
+                    )
+                );
             }
-            
-            Result value = RewriteExpression(self, node.Value, stack);
-
-            RewriteAction action = expression.Action | value.Action;
-
-            if (action == RewriteAction.Copy) {
-                expr = new MemberAssignment(node.Member, expression.Node, value.Node);
-            } else if (action == RewriteAction.SpillStack) {
-
-                if (expression.Node != null) {
-                    Expression saveExpression, saveValue;
-                    Expression tempExpression, tempValue;
-                    tempExpression = self.ToTemp(expression.Node, out saveExpression);
-                    tempValue = self.ToTemp(value.Node, out saveValue);
-
-                    expr = Ast.Comma(
-                        saveExpression,
-                        saveValue,
-                        new MemberAssignment(node.Member, tempExpression, tempValue)
-                    );
-                } else {
-                    // Expression is null, value gets an empty stack
-                    expr = new MemberAssignment(node.Member, expression.Node, value.Node);
-                }
-            }
-            return new Result(action, expr);
+            return new Result(RewriteAction.None, node);
         }
 
         // MemberExpression
@@ -540,7 +604,7 @@ namespace Microsoft.Scripting.Ast {
             // Expression is emitted on top of the stack in current state
             Result expression = RewriteExpression(self, node.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = new MemberExpression(node.Member, expression.Node, node.Type);
+                expr = new MemberExpression(node.Member, expression.Node, node.Type, node.BindingInfo as GetMemberAction);
             }
             return new Result(expression.Action, expr);
         }
@@ -550,79 +614,20 @@ namespace Microsoft.Scripting.Ast {
         private static Result RewriteMethodCallExpression(StackSpiller self, Expression expr, Stack stack) {
             MethodCallExpression node = (MethodCallExpression)expr;
 
-            Expression instance = null;
-            ReadOnlyCollection<Expression> args = node.Arguments;
-            Expression[] clone = null;
-            Expression[] comma = null;
-            RewriteAction action = RewriteAction.None;
+            ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count + 1);
+            
+            // For instance methods, the instance executes on the
+            // stack as is, but stays on the stack, making it non-empty.
+            cr.Add(node.Instance);
 
-            if (node.Instance != null) {
-                // For instance methods, the instance executes on the
-                // stack as is, but stays on the stack, making it non-empty.
-                Result rinstance = RewriteExpression(self, node.Instance, stack);
-                instance = rinstance.Node;
-                action = rinstance.Action;
-                stack = Stack.NonEmpty;
-            }
+            cr.Add(node.Arguments);
 
-            if (args != null) {
-                int ci = 0; // comma array fill index
-
-                for (int i = 0; i < args.Count; i++) {
-                    Expression arg = args[i];
-                    Result rarg = RewriteExpression(self, arg, stack);
-                    action |= rarg.Action;
-
-                    // After the first argument, stack is definitely non-empty
-                    stack = Stack.NonEmpty;
-
-                    if (clone == null && rarg.Action != RewriteAction.None) {
-                        clone = Clone(args, i);
-                    }
-
-                    if (clone != null) {
-                        clone[i] = rarg.Node;
-                    }
-
-                    if (comma == null && rarg.Action == RewriteAction.SpillStack) {
-                        if (instance != null) {
-                            comma = new Expression[args.Count + 2]; // + instance + the call
-                            instance = self.ToTemp(instance, out comma[ci++]);
-                        } else {
-                            comma = new Expression[args.Count + 1];
-                        }
-
-                        for (int j = 0; j < i; j++) {
-                            clone[j] = self.ToTemp(clone[j], out comma[ci++]);
-                        }
-                    }
-
-                    if (comma != null) {
-                        clone[i] = self.ToTemp(clone[i], out comma[ci++]);
-                    }
-                }
-            }
-
-            if (action != RewriteAction.None) {
-                if (clone != null) {
-                    // okay to wrap because the array won't be mutated
-                    args = new ReadOnlyCollection<Expression>(clone);
-                }
-                expr = Ast.Call(instance, node.Method, args);
-
-                if (comma != null) {
-                    comma[comma.Length - 1] = expr;
-                    expr = Ast.Comma(comma);
-                }
-            }
-
-            return new Result(action, expr);
+             return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo as InvokeMemberAction, node.Method, cr[0], cr[1, -1]) : expr);
         }
 
         // NewArrayExpression
         private static Result RewriteNewArrayExpression(StackSpiller self, Expression expr, Stack stack) {
             NewArrayExpression node = (NewArrayExpression)expr;
-            Expression[] clone, comma;
 
             if (node.NodeType == AstNodeType.NewArrayExpression) {
                 // In a case of array construction with element initialization
@@ -634,38 +639,36 @@ namespace Microsoft.Scripting.Ast {
                 // before emitting bounds expressions.
             }
 
-            RewriteAction action = RewriteExpressions(self, node.Expressions, stack, out clone, out comma);
+            ChildRewriter cr = new ChildRewriter(self, stack, node.Expressions.Count);
+            cr.Add(node.Expressions);
 
-            if (action != RewriteAction.None) {
-                expr = Ast.NewArray(node.Type, clone);
+            return cr.Finish(cr.Rewrite ? Expression.NewArray(node.Type, cr[0, -1]) : expr);
+        }
 
-                if (action == RewriteAction.SpillStack) {
-                    comma[comma.Length - 1] = expr;
-                    expr = Ast.Comma(comma);
-                }
-            }
-            return new Result(action, expr);
+        // InvocationExpression
+        private static Result RewriteInvocationExpression(StackSpiller self, Expression expr, Stack stack) {
+            InvocationExpression node = (InvocationExpression)expr;
+
+            // first argument starts on stack as provided
+            ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count + 1);
+            cr.Add(node.Expression);
+
+            // rest of arguments have non-empty stack (delegate instance on the stack)
+            cr.Add(node.Arguments);
+
+            return cr.Finish(cr.Rewrite ? new InvocationExpression(node.Annotations, cr[0], node.Type, node.BindingInfo as CallAction,  cr[1, -1]) : expr);
         }
 
         // NewExpression
         private static Result RewriteNewExpression(StackSpiller self, Expression expr, Stack stack) {
             NewExpression node = (NewExpression)expr;
-            Expression[] clone, comma;
 
-            // The first expression starts on a stack as provided by
-            // parent, rest are definitely non-emtpy (which RewriteExpressions
-            // guarantees.
-            RewriteAction action = RewriteExpressions(self, node.Arguments, stack, out clone, out comma);
+            // The first expression starts on a stack as provided by parent,
+            // rest are definitely non-emtpy (which ChildRewriter guarantees)
+            ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count);
+            cr.Add(node.Arguments);
 
-            if (action != RewriteAction.None) {
-                expr = Ast.New(node.Constructor, clone);
-
-                if (action == RewriteAction.SpillStack) {
-                    comma[comma.Length - 1] = expr;
-                    expr = Ast.Comma(comma);
-                }
-            }
-            return new Result(action, expr);
+            return cr.Finish(cr.Rewrite ? new NewExpression(node.Type, node.Constructor, cr[0, -1], node.BindingInfo as CreateInstanceAction) : expr);
         }
 
         // TypeBinaryExpression
@@ -674,7 +677,7 @@ namespace Microsoft.Scripting.Ast {
             // The expression is emitted on top of current stack
             Result expression = RewriteExpression(self, node.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = Ast.TypeIs(expression.Node, node.TypeOperand);
+                expr = Expression.TypeIs(expression.Node, node.TypeOperand);
             }
             return new Result(expression.Action, expr);
         }
@@ -686,27 +689,9 @@ namespace Microsoft.Scripting.Ast {
             // Operand is emitted on top of the stack as is
             Result expression = RewriteExpression(self, node.Operand, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = new UnaryExpression(node.NodeType, expression.Node, node.Type);
+                expr = new UnaryExpression(node.NodeType, node.Annotations, expression.Node, node.Type, node.BindingInfo);
             }
             return new Result(expression.Action, expr);
-        }
-
-        // UnboundAssignment
-        private static Result RewriteUnboundAssignment(StackSpiller self, Expression expr, Stack stack) {
-            UnboundAssignment node = (UnboundAssignment)expr;
-
-            // Value is emitted on the stack in current state
-            Result expression = RewriteExpression(self, node.Value, stack);
-            if (expression.Action != RewriteAction.None) {
-                expr = Ast.Assign(node.Name, expression.Node);
-            }
-            return new Result(expression.Action, expr);
-        }
-
-        // UnboundExpression
-        private static Result RewriteUnboundExpression(StackSpiller self, Expression expr, Stack stack) {
-            // No action necessary
-            return new Result(RewriteAction.None, expr);
         }
 
         #endregion
@@ -757,8 +742,14 @@ namespace Microsoft.Scripting.Ast {
 
         // DeleteStatement
         private static Result RewriteDeleteStatement(StackSpiller self, Expression expr, Stack stack) {
-            // No action necessary
-            return new Result(RewriteAction.None, expr);
+            DeleteStatement node = (DeleteStatement)expr;
+
+            // Operand is emitted on top of the stack as is
+            Result expression = RewriteExpression(self, node.Variable, stack);
+            if (expression.Action != RewriteAction.None) {
+                expr = new DeleteStatement(node.Annotations, expression.Node, node.Type, node.BindingInfo as DeleteMemberAction);
+            }
+            return new Result(expression.Action, expr);
         }
 
         // DoStatement
@@ -791,26 +782,13 @@ namespace Microsoft.Scripting.Ast {
             return new Result(RewriteAction.None, expr);
         }
 
-        // ExpressionStatement
-        private static Result RewriteExpressionStatement(StackSpiller self, Expression expr, Stack stack) {
-            ExpressionStatement node = (ExpressionStatement)expr;
-
-            // Expression executes on the stack in the current state
-            Result expression = RewriteExpressionFreeTemps(self, node.Expression, stack);
-
-            if (expression.Action != RewriteAction.None) {
-                expr = Ast.Statement(node.Annotations, expression.Node);
-            }
-            return new Result(expression.Action, expr);
-        }
-
         // LabeledStatement
         private static Result RewriteLabeledStatement(StackSpiller self, Expression expr, Stack stack) {
             LabeledStatement node = (LabeledStatement)expr;
 
             Result expression = RewriteExpression(self, node.Statement, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = Ast.Labeled(node.Annotations, node.Label, expression.Node);
+                expr = Expression.Labeled(node.Annotations, node.Label, expression.Node);
             }
             return new Result(expression.Action, expr);
         }
@@ -835,7 +813,7 @@ namespace Microsoft.Scripting.Ast {
             }
             
             if (action != RewriteAction.None) {
-                expr = Ast.Loop(node.Annotations, node.Label, test.Node, incr.Node, body.Node, @else.Node);
+                expr = Expression.Loop(node.Annotations, node.Label, test.Node, incr.Node, body.Node, @else.Node);
             }
             return new Result(action, expr);
         }
@@ -856,7 +834,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             if (action != RewriteAction.None) {
-                expr = Ast.Return(node.Annotations, expression.Node);
+                expr = Expression.Return(node.Annotations, expression.Node);
             }
             return new Result(action, expr);
         }
@@ -865,13 +843,11 @@ namespace Microsoft.Scripting.Ast {
         private static Result RewriteScopeStatement(StackSpiller self, Expression expr, Stack stack) {
             ScopeStatement node = (ScopeStatement)expr;
 
-            Result scope = RewriteExpressionFreeTemps(self, node.Scope, stack);
             Result body = RewriteExpression(self, node.Body, stack);
 
-            RewriteAction action = scope.Action | body.Action;
-
+            RewriteAction action = body.Action;
             if (action != RewriteAction.None) {
-                expr = Ast.Scope(node.Annotations, scope.Node, body.Node);
+                expr = Expression.Scope(node.Annotations, node.Factory, body.Node);
             }
             return new Result(action, expr);
         }
@@ -924,7 +900,7 @@ namespace Microsoft.Scripting.Ast {
 
             Result value = RewriteExpressionFreeTemps(self, node.Value, stack);
             if (value.Action != RewriteAction.None) {
-                expr = Ast.Throw(node.Annotations, value.Node);
+                expr = Expression.Throw(node.Annotations, value.Node);
             }
             return new Result(value.Action, expr);
         }
@@ -949,7 +925,7 @@ namespace Microsoft.Scripting.Ast {
                     action |= rbody.Action;
 
                     if (rbody.Action != RewriteAction.None) {
-                        handler = Ast.Catch(handler.Span, handler.Header, handler.Test, handler.Variable, rbody.Node);
+                        handler = Expression.Catch(handler.Span, handler.Header, handler.Test, handler.Variable, rbody.Node);
 
                         if (clone == null) {
                             clone = Clone(handlers, i);
@@ -1003,14 +979,22 @@ namespace Microsoft.Scripting.Ast {
                 //   yield $t
                 Expression saveArg, tempArg;
                 tempArg = self.ToTemp(expression.Node, out saveArg);
-                expr = Ast.Block(
+                expr = Expression.Block(
                     saveArg,
-                    Ast.Yield(node.Annotations, tempArg)
+                    Expression.Yield(node.Annotations, tempArg)
                 );
             } else if (action == RewriteAction.Copy) {
-                expr = Ast.Yield(new SourceSpan(node.Start, node.End), expression.Node);
+                expr = Expression.Yield(new SourceSpan(node.Start, node.End), expression.Node);
             }
             return new Result(action, expr);
+        }
+
+        private static Result RewriteExtensionExpression(StackSpiller self, Expression expr, Stack stack) {
+            Expression node = Expression.ReduceToKnown(expr);
+
+            Result result = RewriteExpression(self, node, stack);
+
+            return new Result(result.Action | RewriteAction.Copy, result.Node);            
         }
 
         #endregion
@@ -1031,56 +1015,6 @@ namespace Microsoft.Scripting.Ast {
                 clone[j] = roc[j];
             }
             return clone;
-        }
-
-        /// <summary>
-        /// Rewrites all rexpressions in the collecation. If any of them changes,
-        /// will allocate the cloned array and an array of initialization expressions
-        /// for the resulting comma.
-        /// </summary>
-        /// <returns>rewrite mode</returns>
-        private static RewriteAction RewriteExpressions(StackSpiller self, ReadOnlyCollection<Expression>/*!*/ expressions, Stack stack, out Expression[] clone, out Expression[] comma) {
-            Debug.Assert(expressions != null);
-
-            clone = comma = null;
-
-            for (int i = 0, count = expressions.Count; i < count; i++) {
-                Expression arg = expressions[i];
-
-                // Rewrite the expression. The first expression has stack
-                // as parent guarantees it, others will set to non-empty.
-                Result exp = RewriteExpression(self, arg, stack);
-                stack = Stack.NonEmpty;
-
-                // Create the cloned array if we're rewriting
-                if (clone == null && exp.Action != RewriteAction.None) {
-                    clone = Clone(expressions, i);
-                }
-
-                if (clone != null) {
-                    clone[i] = exp.Node;
-                }
-
-                // Create the comma array if we're spilling
-                if (comma == null && exp.Action == RewriteAction.SpillStack) {
-                    comma = new Expression[count + 1];
-                    for (int j = 0; j < i; j++) {
-                        clone[j] = self.ToTemp(clone[j], out comma[j]);
-                    }
-                }
-
-                if (comma != null) {
-                    clone[i] = self.ToTemp(clone[i], out comma[i]);
-                }
-            }
-
-            if (clone == null) {
-                return RewriteAction.None;
-            } else if (comma == null) {
-                return RewriteAction.Copy;
-            } else {
-                return RewriteAction.SpillStack;
-            }
         }
 
         #endregion

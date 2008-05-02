@@ -258,7 +258,7 @@ namespace IronPython.Modules {
         private static PythonTuple FindModuleBuiltinOrPath(CodeContext/*!*/ context, string name, List path) {
             if (name.Equals("sys")) return BuiltinModuleTuple(name);
             if (name.Equals("clr")) {
-                context.ModuleContext.ShowCls = true;
+                PythonContext.EnsureModule(context).ShowCls = true;
                 return BuiltinModuleTuple(name);
             }
             Type ty;

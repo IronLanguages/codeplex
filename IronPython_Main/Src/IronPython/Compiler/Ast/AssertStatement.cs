@@ -21,7 +21,7 @@ using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Runtime;
 
     public class AssertStatement : Statement {

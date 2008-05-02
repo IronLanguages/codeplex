@@ -271,8 +271,8 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public void CopyTo(KeyValuePair<object, object>[]/*!*/ array, int arrayIndex) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.RequiresArrayRange(array, arrayIndex, Count, "araryIndex", "Count");
+            ContractUtils.RequiresNotNull(array, "array");
+            ContractUtils.RequiresArrayRange(array, arrayIndex, Count, "araryIndex", "Count");
 
             foreach (KeyValuePair<object, object> kvp in ((IEnumerable<KeyValuePair<object, object>>)this)) {
                 array[arrayIndex++] = kvp;

@@ -19,7 +19,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     using System;
     using Microsoft.Scripting.Generation;
     using Microsoft.Scripting.Runtime;
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class ComTypeLibInfo : IDynamicObject  {
         private readonly ComTypeLibDesc _typeLibDesc;

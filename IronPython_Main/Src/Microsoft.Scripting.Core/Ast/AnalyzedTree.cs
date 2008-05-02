@@ -18,7 +18,7 @@ using System.Diagnostics;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// This class includes all information that ClosureBinder extracted
+    /// This class includes all information that LambdaBinder extracted
     /// from the tree, and which is used for code generation.
     /// </summary>
     class AnalyzedTree {
@@ -34,9 +34,15 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly Dictionary<LambdaExpression, LambdaInfo> _infos;
 
-        internal AnalyzedTree(List<LambdaInfo> lambdas, Dictionary<LambdaExpression, LambdaInfo> infos) {
+        /// <summary>
+        /// The dictionary of all generators and their infos in the tree.
+        /// </summary>
+        private readonly Dictionary<GeneratorLambdaExpression, GeneratorInfo> _generators;
+
+        internal AnalyzedTree(List<LambdaInfo> lambdas, Dictionary<LambdaExpression, LambdaInfo> infos, Dictionary<GeneratorLambdaExpression, GeneratorInfo> generators) {
             _lambdas = lambdas;
             _infos = infos;
+            _generators = generators;
         }
 
         internal List<LambdaInfo> Lambdas {
@@ -48,6 +54,11 @@ namespace Microsoft.Scripting.Ast {
         internal LambdaInfo GetLambdaInfo(LambdaExpression lambda) {
             Debug.Assert(_infos != null && _infos.ContainsKey(lambda));
             return _infos[lambda];
+        }
+
+        internal GeneratorInfo GetGeneratorInfo(GeneratorLambdaExpression lambda) {
+            Debug.Assert(_generators != null && _generators.ContainsKey(lambda));
+            return _generators[lambda];
         }
     }
 
@@ -63,8 +74,8 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly LambdaInfo _top;
 
-        internal AnalyzedRule(LambdaInfo top, List<LambdaInfo> lambdas, Dictionary<LambdaExpression, LambdaInfo> infos)
-            : base(lambdas, infos) {
+        internal AnalyzedRule(LambdaInfo top, List<LambdaInfo> lambdas, Dictionary<LambdaExpression, LambdaInfo> infos, Dictionary<GeneratorLambdaExpression, GeneratorInfo> generators)
+            : base(lambdas, infos, generators) {
             _top = top;
         }
 

@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -29,6 +30,7 @@ namespace Microsoft.Scripting.Ast {
         private SourceSpan _span;
         private string _name;
         private Type _returnType;
+        private MethodInfo _scopeFactory;
         private List<VariableExpression> _locals;
         private List<ParameterExpression> _params;
         private ParameterExpression _paramsArray;
@@ -65,7 +67,7 @@ namespace Microsoft.Scripting.Ast {
                 return _name;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _name = value;
             }
         }
@@ -78,8 +80,22 @@ namespace Microsoft.Scripting.Ast {
                 return _returnType;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _returnType = value;
+            }
+        }
+
+        /// <summary>
+        /// Factory method used for local scope instantiation.
+        /// If null the default factory <see cref="Microsoft.Scripting.Runtime.RuntimeHelpers.CreateLocalScope{TTuple}"/> is used.
+        /// The factory must have the same signature as <see cref="Microsoft.Scripting.Runtime.RuntimeHelpers.CreateLocalScope{TTuple}"/>.
+        /// </summary>
+        public MethodInfo ScopeFactory {
+            get {
+                return _scopeFactory;
+            }
+            set {
+                _scopeFactory = value;
             }
         }
 
@@ -124,7 +140,7 @@ namespace Microsoft.Scripting.Ast {
                 return _body;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _body = value;
             }
         }
@@ -175,8 +191,8 @@ namespace Microsoft.Scripting.Ast {
         /// Parameters collection.
         /// </summary>
         public ParameterExpression CreateParameter(SymbolId name, Type type) {
-            Contract.RequiresNotNull(type, "type");
-            return Save(Ast.Parameter(type, SymbolTable.IdToString(name)));
+            ContractUtils.RequiresNotNull(type, "type");
+            return Save(Expression.Parameter(type, SymbolTable.IdToString(name)));
         }
 
         /// <summary>
@@ -187,8 +203,8 @@ namespace Microsoft.Scripting.Ast {
         /// Parameters collection.
         /// </summary>
         public ParameterExpression CreateParameter(string name, Type type) {
-            Contract.RequiresNotNull(type, "type");
-            return Save(Ast.Parameter(type, name));
+            ContractUtils.RequiresNotNull(type, "type");
+            return Save(Expression.Parameter(type, name));
         }
 
         /// <summary>
@@ -199,43 +215,48 @@ namespace Microsoft.Scripting.Ast {
         /// the order of parameters explicitly by maniuplating the parameter list)
         /// </summary>
         public ParameterExpression CreataParamsArray(SymbolId name, Type type) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.Requires(type.IsArray, "type");
-            Contract.Requires(type.GetArrayRank() == 1, "type");
-            Contract.Requires(_paramsArray == null, "type", "Already have parameter array");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type.IsArray, "type");
+            ContractUtils.Requires(type.GetArrayRank() == 1, "type");
+            ContractUtils.Requires(_paramsArray == null, "type", "Already have parameter array");
 
-            return Save(_paramsArray = Ast.Parameter(type, SymbolTable.IdToString(name)));
+            return Save(_paramsArray = Expression.Parameter(type, SymbolTable.IdToString(name)));
         }
 
         /// <summary>
         /// Creates a global variable with specified name and type.
+        /// TODO: remove
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public VariableExpression CreateGlobalVariable(SymbolId name, Type type) {
-            return Save(VariableExpression.Global(name, type));
+            return Expression.Global(type, SymbolTable.IdToString(name));
         }
 
         /// <summary>
         /// Creates a local variable with specified name and type.
         /// </summary>
         public VariableExpression CreateLocalVariable(SymbolId name, Type type) {
-            return Save(VariableExpression.Local(name, type));
+            return Save(Expression.Local(type, SymbolTable.IdToString(name)));
         }
 
         /// <summary>
         /// Creates a temporary variable with specified name and type.
+        /// TODO: remove
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public VariableExpression CreateTemporaryVariable(SymbolId name, Type type) {
-            return Save(VariableExpression.Temporary(name, type));
+            return Expression.Temporary(type, SymbolTable.IdToString(name));
         }
 
         /// <summary>
         /// Adds the temporary variable to the list of variables maintained
         /// by the builder. This is useful in cases where the variable is
         /// created outside of the builder.
+        /// TODO: remove
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public void AddTemp(VariableExpression temp) {
-            Contract.RequiresNotNull(temp, "temp");
-            Save(temp);
+            ContractUtils.RequiresNotNull(temp, "temp");
         }
 
         /// <summary>
@@ -246,8 +267,11 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>New LambdaExpression instance.</returns>
         public LambdaExpression MakeLambda(Type lambdaType) {
             Validate();
-            LambdaExpression lambda = Ast.Lambda(_span, lambdaType, _name, _returnType, _body, ToArray(_params), ToArray(_locals),
-                                            _global, _visible, _dictionary, _paramsArray != null);
+            LambdaExpression lambda = Expression.Lambda(
+                _span, lambdaType, _name, _returnType, _scopeFactory, 
+                _body, ToArray(_params), ToArray(_locals),
+                _global, _visible, _dictionary, _paramsArray != null
+            );
 
             // The builder is now completed
             _completed = true;
@@ -261,10 +285,13 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         /// <returns>New LambdaExpression instance.</returns>
         public LambdaExpression MakeLambda() {
-            Contract.Requires(_paramsArray == null, "Paramarray lambdas require explicit delegate type");
+            ContractUtils.Requires(_paramsArray == null, "Paramarray lambdas require explicit delegate type");
             Validate();
-            LambdaExpression lambda = Ast.Lambda(_span, _name, _returnType, _body, ToArray(_params), ToArray(_locals),
-                                            _global, _visible, _dictionary);
+            LambdaExpression lambda = Expression.Lambda(
+                _span, _name, _returnType, _scopeFactory,
+                _body, ToArray(_params), ToArray(_locals),
+                _global, _visible, _dictionary
+            );
 
             // The builder is now completed
             _completed = true;
@@ -279,11 +306,14 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         /// <returns>New LambdaExpression instance.</returns>
         public LambdaExpression MakeGenerator(Type lambdaType, Type generator, Type next) {
-            Contract.RequiresNotNull(generator, "generator");
-            Contract.RequiresNotNull(next, "next");
+            ContractUtils.RequiresNotNull(generator, "generator");
+            ContractUtils.RequiresNotNull(next, "next");
 
             Validate();
-            LambdaExpression lambda = Ast.Generator(_span, lambdaType, _name, generator, next, _body, ToArray(_params), ToArray(_locals));
+            LambdaExpression lambda = Expression.Generator(
+                _span, lambdaType, _name, generator, next, _scopeFactory, 
+                _body, ToArray(_params), ToArray(_locals)
+            );
 
             // The builder is now completed
             _completed = true;
@@ -341,7 +371,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         /// <summary>
         /// Creates new instnace of the LambdaBuilder with specified name and a return type.
         /// </summary>

@@ -18,15 +18,19 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class NewExpression : Expression {
-        private readonly ConstructorInfo/*!*/ _constructor;
+        private readonly ConstructorInfo _constructor;
         private readonly ReadOnlyCollection<Expression>/*!*/ _arguments;
 
-        internal NewExpression(Type/*!*/ type, ConstructorInfo/*!*/ constructor, ReadOnlyCollection<Expression>/*!*/ arguments)
-            : base(AstNodeType.New, type) {
+        internal NewExpression(Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression>/*!*/ arguments, CreateInstanceAction bindingInfo)
+            : base(Annotations.Empty, AstNodeType.New, type, bindingInfo) {
+            if (IsBound) {
+                RequiresBoundItems(arguments, "arguments");
+            }
             _constructor = constructor;
             _arguments = arguments;
         }
@@ -43,42 +47,52 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         public static NewExpression New(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {
             return New(constructor, (IList<Expression>)arguments);
         }
 
         public static NewExpression New(ConstructorInfo/*!*/ constructor, IList<Expression/*!*/>/*!*/ arguments) {
-            Contract.RequiresNotNull(constructor, "constructor");
-            Contract.RequiresNotNullItems(arguments, "arguments");
-            Contract.Requires(!constructor.DeclaringType.ContainsGenericParameters, "constructor", "Cannot instantiate an open generic type");
+            ContractUtils.RequiresNotNull(constructor, "constructor");
+            ContractUtils.RequiresNotNullItems(arguments, "arguments");
+            ContractUtils.Requires(!constructor.DeclaringType.ContainsGenericParameters, "constructor", "Cannot instantiate an open generic type");
 
             ParameterInfo[] parameters = constructor.GetParameters();
             ValidateCallArguments(parameters, arguments);
 
-            return new NewExpression(constructor.DeclaringType, constructor, CollectionUtils.ToReadOnlyCollection(arguments));
+            return new NewExpression(constructor.DeclaringType, constructor, CollectionUtils.ToReadOnlyCollection(arguments), null);
         }
 
         public static NewExpression New(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             ReadOnlyCollection<Expression> noArgs = CollectionUtils.ToReadOnlyCollection<Expression>(new Expression[0]);
 
             if (type.IsValueType) {
-                return new NewExpression(type, null, noArgs);
+                return new NewExpression(type, null, noArgs, null);
             } else {
                 ConstructorInfo ci = type.GetConstructor(Type.EmptyTypes);
-                Contract.Requires(ci != null, "type", "type must have a parameterless constructor");
-                return new NewExpression(type, ci, noArgs);
+                ContractUtils.Requires(ci != null, "type", "type must have a parameterless constructor");
+                return new NewExpression(type, ci, noArgs, null);
             }
         }
 
+        public static NewExpression New(Type result, CreateInstanceAction bindingInfo, params Expression/*!*/[]/*!*/ arguments) {
+            return New(result, bindingInfo, (IList<Expression>)arguments);
+        }
+
+        public static NewExpression New(Type result, CreateInstanceAction bindingInfo, IList<Expression/*!*/>/*!*/ arguments) {
+            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
+            ContractUtils.RequiresNotNullItems(arguments, "arguments");
+            return new NewExpression(result, null, CollectionUtils.ToReadOnlyCollection(arguments), bindingInfo);
+        }
+
         public static NewExpression SimpleNewHelper(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {
-            Contract.RequiresNotNull(constructor, "constructor");
-            Contract.RequiresNotNullItems(arguments, "arguments");
+            ContractUtils.RequiresNotNull(constructor, "constructor");
+            ContractUtils.RequiresNotNullItems(arguments, "arguments");
 
             ParameterInfo[] parameters = constructor.GetParameters();
-            Contract.Requires(arguments.Length == parameters.Length, "arguments", "Incorrect number of arguments");
+            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", "Incorrect number of arguments");
 
             return New(constructor, ArgumentConvertHelper(arguments, parameters));
         }

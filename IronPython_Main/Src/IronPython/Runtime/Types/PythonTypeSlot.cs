@@ -21,6 +21,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
+using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -58,20 +59,45 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         /// <returns>true if the value was deleted, false if it can't be deleted</returns>
         internal virtual bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {            
-            object dummy;
-            return PythonTypeOps.TryInvokeBinaryOperator(context,
-                this,
-                instance ?? owner,
-                Symbols.DeleteDescriptor,
-                out dummy);
+            return false;
         }
 
         internal virtual bool IsVisible(CodeContext context, PythonType owner) {
             return true;
         }
 
+        internal virtual bool IsAlwaysVisible {
+            get {
+                return true;
+            }
+        }
+
         internal virtual bool IsSetDescriptor(CodeContext context, PythonType owner) {
             return false;
+        }
+
+        public object __get__(CodeContext/*!*/ context, object instance, [Optional]object typeContext) {
+            PythonType dt = typeContext as PythonType;
+
+            object res;
+            if (TryGetValue(context, instance, dt, out res))
+                return res;
+
+            throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, Symbols.GetDescriptor);
+        }
+
+#if FALSE
+        public void __set__(CodeContext/*!*/ context, object instance, object value) {
+            if (!TrySetValue(context, instance, DynamicHelpers.GetPythonType(instance), value)) {
+                throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetPythonType(instance).Name, Symbols.SetDescriptor);
+            }
+        }
+#endif
+
+        public void __delete__(CodeContext/*!*/ context, object instance) {
+            if (!TryDeleteValue(context, instance, DynamicHelpers.GetPythonType(instance))) {
+                throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetPythonType(instance).Name, Symbols.DeleteDescriptor);
+            }
         }
     }
 }

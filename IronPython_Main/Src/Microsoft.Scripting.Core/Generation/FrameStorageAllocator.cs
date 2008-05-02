@@ -19,21 +19,21 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
-    class FrameStorageAllocator : StorageAllocator {
+    internal class FrameStorageAllocator : StorageAllocator {
         private class FrameStorage : Storage {
             private readonly SymbolId _name;
             private readonly Type _type;
 
-            public FrameStorage(SymbolId name, Type type) {
+            internal FrameStorage(SymbolId name, Type type) {
                 _name = name;
                 _type = type;
             }
 
-            public override bool RequireAccessSlot {
+            internal override bool RequireAccessSlot {
                 get { return true; }
             }
 
-            public override Slot CreateSlot(Slot instance) {
+            internal override Slot CreateSlot(Slot instance) {
                 Debug.Assert(instance != null && typeof(CodeContext).IsAssignableFrom(instance.Type));
                 Slot slot = new LocalNamedFrameSlot(instance, _name);
                 if (_type != slot.Type) {
@@ -43,11 +43,11 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override Storage AllocateStorage(SymbolId name, Type type) {
+        internal override Storage AllocateStorage(SymbolId name, Type type) {
             return new FrameStorage(name, type);
         }
 
-        public override Slot GetAccessSlot(LambdaCompiler cg, LambdaExpression lambda) {
+        internal override Slot GetAccessSlot(LambdaCompiler cg) {
             return cg.ContextSlot;
         }
     }

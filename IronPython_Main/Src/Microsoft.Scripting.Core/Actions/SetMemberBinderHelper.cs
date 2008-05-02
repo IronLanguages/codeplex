@@ -24,7 +24,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public sealed class SetMemberBinderHelper<T> :
         MemberBinderHelper<T, SetMemberAction> {
@@ -88,6 +88,9 @@ namespace Microsoft.Scripting.Actions {
                     case TrackerTypes.Event: AddToBody(Binder.MakeEventValidation(Rule, members).MakeErrorForRule(Rule, Binder)); break;
                     case TrackerTypes.Field: MakeFieldRule(type, members); break;
                     case TrackerTypes.Property: MakePropertyRule(type, members); break;
+                    case TrackerTypes.Custom:                        
+                        MakeGenericBody(type, members[0]);
+                        break;
                     case TrackerTypes.All:
                         // no match
                         if (MakeOperatorSetMemberBody(type, "SetMemberAfter")) {
@@ -101,6 +104,22 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 AddToBody(Rule.MakeError(error));
             }
+        }
+
+        private void MakeGenericBody(Type type, MemberTracker tracker) {
+            if (!_isStatic) {
+                tracker = tracker.BindToInstance(Instance);
+            }
+
+            Expression val = tracker.SetValue(Binder, type, Rule.Parameters[1]);
+            Expression newBody;
+            if (val != null) {
+                newBody = Rule.MakeReturn(Binder, val);
+            } else {
+                newBody = tracker.GetError(Binder).MakeErrorForRule(Rule, Binder);
+            }
+
+            AddToBody(newBody);
         }
 
         private void MakePropertyRule(Type targetType, MemberGroup properties) {

@@ -476,9 +476,25 @@ def test_undefined(function, *args):
     try:
         function(*args)
     except NameError, n:
-        Assert("'undefined'" in str(n))
+        Assert("'undefined'" in str(n), "%s: expected undefined variable exception, but different NameError caught: %s" % (function.func_name, n))
     else:
-        Fail("undefined not caught")
+        Fail("%s: expected undefined variable exception, but no exception caught" % function.func_name)
+
+def test_unassigned(function, *args):
+    try:
+        function(*args)
+    except UnboundLocalError, n:
+        pass
+    else:
+        Fail("%s: expected unassigned variable exception, but no exception caught" % function.func_name)
+
+def test_attribute_error(function, *args):
+    try:
+        function(*args)
+    except AttributeError:
+        pass
+    else:
+        Fail("%s: expected AttributeError, but no exception caught" % function.func_name)
 
 # straightforward undefined local
 def test_simple_1():
@@ -771,6 +787,72 @@ def test_params_3(a):
 
 test_undefined(test_params_3, 1)
 
+def test_default_params():
+    if get_false():
+        x = 1
+
+    def f(a = x):
+        locals()
+
+test_unassigned(test_default_params)
+
+def test_class_bases():
+    if get_false():
+        x = dict
+
+    class C(x):
+        locals()
+
+test_unassigned(test_class_bases)
+
+def test_conditional_member_def():
+    class C(object):
+        if get_false():
+            x = 1
+    
+    C().x
+
+test_attribute_error(test_conditional_member_def)
+
+def test_member_access_on_undefined():
+    undefined.member = 1
+    locals()
+  
+test_undefined(test_member_access_on_undefined)
+
+def test_item_access_on_undefined():
+    undefined[1] = 1
+    locals()
+  
+test_undefined(test_item_access_on_undefined)
+
+def test_item_access_on_undefined_in_tuple():
+    (undefined[1],x) = 1,2
+    locals()
+  
+test_undefined(test_item_access_on_undefined_in_tuple)
+
+def test_item_access_on_undefined_in_list():
+    [undefined[1],x] = 1,2
+    locals()
+  
+test_undefined(test_item_access_on_undefined_in_list)
+
+def test_item_index_undefined():
+    dict()[undefined] = 1
+    locals()
+  
+test_undefined(test_item_index_undefined)
+
+def test_nested_scope_variable_access():
+    def g():
+		def f():
+			x = undefined
+		return f
+    g()()
+    undefined = 1
+  
+test_undefined(test_nested_scope_variable_access)
 
 #####################################################################################
 

@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly LabelTarget _label;
 
         internal DoStatementBuilder(SourceSpan statementSpan, SourceLocation location, LabelTarget label, Expression body) {
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
 
             _body = body;
             _doLocation = location;
@@ -32,21 +32,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public DoStatement While(Expression condition) {
-            Contract.RequiresNotNull(condition, "condition");
-            Contract.Requires(condition.Type == typeof(bool), "condition", "Condition must be boolean");
+            ContractUtils.RequiresNotNull(condition, "condition");
+            ContractUtils.Requires(condition.Type == typeof(bool), "condition", "Condition must be boolean");
 
-            return new DoStatement(Ast.Annotations(_statementSpan, _doLocation), _label, condition, _body);
+            return new DoStatement(Expression.Annotate(_statementSpan, _doLocation), _label, condition, _body);
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static DoStatementBuilder Do(params Expression[] body) {
-            Contract.RequiresNotNullItems(body, "body");
+            ContractUtils.RequiresNotNullItems(body, "body");
             return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, null, Block(body));
         }
 
         public static DoStatementBuilder Do(LabelTarget label, params Expression[] body) {
-            Contract.RequiresNotNullItems(body, "body");
+            ContractUtils.RequiresNotNullItems(body, "body");
             return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, label, Block(body));
         }
 

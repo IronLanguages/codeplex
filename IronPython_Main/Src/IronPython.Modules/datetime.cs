@@ -374,16 +374,6 @@ namespace IronPython.Modules {
                 _dateTime = value.Date; // no hour, minute, second
             }
 
-            public static date __new__(CodeContext context, PythonType cls, int year, int month, int day) {
-                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(date))) {
-                    return new date(year, month, day);
-                } else {
-                    date date = cls.CreateInstance(context, year, month, day) as date;
-                    if (date == null) throw PythonOps.TypeError("{0} is not a subclass of datetime.date", cls);
-                    return date;
-                }
-            }
-
             // other constructors, all class methods
             public static object today() {
                 return new date(DateTime.Today);
@@ -452,7 +442,7 @@ namespace IronPython.Modules {
             }
 
             public static object __getnewargs__(CodeContext context, int year, int month, int day) {
-                return PythonTuple.MakeTuple(date.__new__(context, DynamicHelpers.GetPythonTypeFromType(typeof(date)), year, month, day));
+                return PythonTuple.MakeTuple(new date(year, month, day));
             }
 
             public object replace() {

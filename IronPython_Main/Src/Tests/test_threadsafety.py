@@ -21,7 +21,7 @@ skiptest("interpreted") #Too slow
 from System import *
 from System.Threading import *
 
-    
+@skip("multiple_execute")    
 def test_all():
 
     class MyOC:
@@ -146,9 +146,9 @@ def test_all():
         
         global prevValues
         for x in prevValues.keys():
-            print 'checking ', x
+            #print 'checking ', x
             AreEqual(hasattr(oc, x), True)
-            print getattr(oc,x), prevValues[x]
+            #print getattr(oc,x), prevValues[x]
             AreEqual(getattr(oc, x), prevValues[x])
         for x in dir(oc):
             if not prevValues.has_key(x):

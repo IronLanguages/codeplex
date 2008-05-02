@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Calls {
         private int _lineNo;
         private FunctionAttributes _flags;      // future division, generator
         #endregion
-        private static readonly DynamicSite<PythonFunction, object> _callSite = RuntimeHelpers.CreateSimpleCallSite<PythonFunction, object>();
+        private static readonly DynamicSite<PythonFunction, object> _callSite = CallSiteFactory.CreateSimpleCallSite<PythonFunction, object>(DefaultContext.DefaultPythonBinder);
 
         internal FunctionCode(Delegate target) {
             _target = target;            
@@ -209,11 +209,11 @@ namespace IronPython.Runtime.Calls {
             _flags = flags;
         }
 
-        internal object Call(CodeContext context, Scope scope, bool tryEvaluate) {
+        internal object Call(Scope/*!*/ scope, bool tryEvaluate) {
             if (_code != null) {
-                return _code.Run(scope, context.ModuleContext, tryEvaluate);
+                return _code.Run(scope, tryEvaluate);
             } else if (_func != null) {
-                return _callSite.Invoke(context, _func);
+                return _callSite.Invoke(DefaultContext.Default, _func);
             }
 
             throw PythonOps.TypeError("bad code");

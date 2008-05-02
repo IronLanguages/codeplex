@@ -27,16 +27,6 @@ else:
     TryLoadExcelInteropAssembly()
     from Microsoft.Office.Interop import Excel
 
-
-def CreateApplication():
-    if preferComDispatch:
-        import clr
-        import System
-        typelib = clr.LoadTypeLibrary(System.Guid("00020813-0000-0000-C000-000000000046"))
-        return typelib.Excel.Application()
-    else:
-        return Excel.ApplicationClass()
-
 #------------------------------------------------------------------------------
 #--HELPERS
 selection_counter = 0
@@ -65,7 +55,7 @@ def test_excel():
     ex = None
     
     try: 
-        ex = CreateApplication() 
+        ex = CreateExcelApplication() 
         ex.DisplayAlerts = False
         AreEqual(ex.DisplayAlerts, False)
         #ex.Visible = True
@@ -108,7 +98,7 @@ def test_excel_typelibsupport():
     ex = None
 
     try: 
-        ex = CreateApplication() 
+        ex = CreateExcelApplication() 
 
         typelib = clr.LoadTypeLibrary(ex)
         AreEqual(typelib.Name, 'Excel')
@@ -175,7 +165,7 @@ def test_excelevents():
     import gc
     ex = None
     try: 
-        ex = CreateApplication() 
+        ex = CreateExcelApplication() 
         ex.DisplayAlerts = False 
         #ex.Visible = True
                 
@@ -207,7 +197,7 @@ def test_cp148579():
 
 def test_cp14539():
     try: 
-        ex = CreateApplication() 
+        ex = CreateExcelApplication() 
         for i in xrange(3):
             AreEqual(ex.Visible, False)
             ex.Visible = True

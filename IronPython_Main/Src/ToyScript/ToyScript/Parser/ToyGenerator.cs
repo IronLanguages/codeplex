@@ -13,32 +13,42 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
-using ToyScript.Runtime;
 using ToyScript.Parser.Ast;
+using Microsoft.Scripting.Actions;
 
 namespace ToyScript.Parser {
     class ToyGenerator {
+        private readonly ToyLanguageContext _tlc;
         private ToyScope _scope;
 
-        private ToyGenerator(string name) {
+        private ToyGenerator(ToyLanguageContext tlc, string name) {
+            _tlc = tlc;
             PushNewScope(name);
         }
 
-        public ToyScope Scope {
+        internal ToyLanguageContext Tlc {
+            get { return _tlc; }
+        }
+
+        internal ActionBinder Binder {
+            get {
+                return _tlc.Binder;
+            }
+        }
+
+        internal ToyScope Scope {
             get {
                 return _scope;
             }
         }
 
-        public ToyScope PushNewScope(string name) {
+        internal ToyScope PushNewScope(string name) {
             return _scope = new ToyScope(name, _scope);
         }
 
-        public void PopScope() {
+        internal void PopScope() {
             _scope = _scope.Parent;
         }
 
@@ -54,8 +64,8 @@ namespace ToyScript.Parser {
             return _scope.TopScope.GetOrMakeLocal(name);
         }
 
-        internal static MSAst.LambdaExpression Generate(Statement statement, string name) {
-            ToyGenerator tg = new ToyGenerator(name);
+        internal static MSAst.LambdaExpression Generate(ToyLanguageContext tlc, Statement statement, string name) {
+            ToyGenerator tg = new ToyGenerator(tlc, name);
 
             MSAst.Expression body = statement.Generate(tg);
 

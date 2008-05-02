@@ -81,12 +81,12 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PropertyMethod]
+        [SpecialName, PropertyMethod]
         public static double Getreal(Complex64 self) {
             return self.Real;
         }
 
-        [PropertyMethod]
+        [SpecialName, PropertyMethod]
         public static double Getimag(Complex64 self) {
             return self.Imag;
         }
@@ -98,7 +98,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
-        public static Complex64 Power(Complex64 x, Complex64 y) {
+        public static Complex64 op_Power(Complex64 x, Complex64 y) {
             if (x.IsZero && (y.Real < 0.0 || y.Imag != 0.0))
                 throw PythonOps.ZeroDivisionError("0.0 to a negative or complex power");
             return x.Power(y);

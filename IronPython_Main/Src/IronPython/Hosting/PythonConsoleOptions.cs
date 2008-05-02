@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Hosting.Shell;
 
 namespace IronPython.Hosting {
     [CLSCompliant(true)]

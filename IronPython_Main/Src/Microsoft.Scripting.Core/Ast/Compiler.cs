@@ -49,8 +49,7 @@ namespace Microsoft.Scripting.Ast {
             // Emit the lambda body if it hasn't been emitted yet
             if (!_compilers.TryGetValue(lambda, out impl)) {
                 impl = LambdaCompiler.CreateLambdaCompiler(outer, lambda, closure);
-                impl.InitializeCompilerAndLambda(this, lambda);
-                impl.EmitFunctionImplementation(GetLambdaInfo(lambda));
+                impl.EmitBody();
                 impl.Finish();
 
                 _compilers.Add(lambda, impl);
@@ -66,6 +65,15 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         internal LambdaInfo GetLambdaInfo(LambdaExpression lambda) {
             return _at.GetLambdaInfo(lambda);
+        }
+
+        /// <summary>
+        /// Finds the GeneratorInfo for the given lambda in the
+        /// AnalyzedTree. The lambda must be there since the _at
+        /// came out of the analysis of the ast being compiled.
+        /// </summary>
+        internal GeneratorInfo GetGeneratorInfo(GeneratorLambdaExpression lambda) {
+            return _at.GetGeneratorInfo(lambda);
         }
     }
 }

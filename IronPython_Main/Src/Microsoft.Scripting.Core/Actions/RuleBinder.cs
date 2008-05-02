@@ -25,7 +25,6 @@ namespace Microsoft.Scripting.Actions {
     /// Rule binder resolves variables in the rule and nested lambdas.
     /// </summary>
     class RuleBinder : VariableBinder {
-        private readonly LambdaInfo _top = new LambdaInfo(null, null);
         private readonly Type _result;
 
         /// <summary>
@@ -34,18 +33,16 @@ namespace Microsoft.Scripting.Actions {
         internal static AnalyzedRule Bind(Rule rule, Type result, int paramStartIndex) {
             RuleBinder rb = new RuleBinder(result);
 
-            // Add parameters/variables defined in the rule
-            foreach (ParameterExpression p in rule.Parameters) {
-                rb._top.Variables.Add(p, new VariableInfo(p, null, paramStartIndex++));
-            }
-            foreach (VariableExpression v in rule.Variables) {
-                rb._top.Variables.Add(v, new VariableInfo(v, null));
-            }
+            // Add a virtual LambdaInfo to represent the rule
+            // TODO: remove when Rule is an Expression<T> 
+            LambdaInfo top = new LambdaInfo(null, null);
+            rb.Stack.Push(top);
+            rb.DefineParameters(top, rule.Parameters, paramStartIndex);
 
             rb.WalkNode(rule.Binding);
             rb.BindTheScopes();
 
-            return new AnalyzedRule(rb._top, rb.Lambdas, rb.Infos);
+            return new AnalyzedRule(top, rb.Lambdas, rb.Infos, rb.Generators);
         }
 
         private RuleBinder(Type result) {
@@ -67,17 +64,5 @@ namespace Microsoft.Scripting.Actions {
             }
             return true;
         }
-
-        protected override void Reference(Expression variable) {
-            Debug.Assert(variable != null);
-            if (Stack == null || Stack.Count == 0) {
-                // Top level reference inside the rule.
-                _top.AddVariableReference(variable);
-            } else {
-                // Call base class for reference within a lambda.
-                base.Reference(variable);
-            }
-        }
-
     }
 }

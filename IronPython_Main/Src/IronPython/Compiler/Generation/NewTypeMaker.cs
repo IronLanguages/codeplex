@@ -69,12 +69,15 @@ namespace IronPython.Compiler.Generation {
         protected IEnumerable<Type> _interfaceTypes;
         protected PythonTuple _baseClasses;
 
-        private bool _hasBaseTypeField;
         private int _site;
 
-        private Dictionary<string, VTableEntry> _vtable = new Dictionary<string, VTableEntry>();
+        private static readonly Dictionary<Type, Dictionary<string, List<MethodInfo>>> _overriddenMethods = new Dictionary<Type, Dictionary<string, List<MethodInfo>>>();
+        internal static readonly Dictionary<PropertyInfo, PropertyOverrideInfo> _overriddenProperties = new Dictionary<PropertyInfo, PropertyOverrideInfo>();
 
-        internal static readonly Dictionary<Type, Dictionary<string, List<MethodInfo>>> _overriddenMethods = new Dictionary<Type, Dictionary<string, List<MethodInfo>>>();
+        public class PropertyOverrideInfo {
+            public List<MethodInfo> Getters;
+            public List<MethodInfo> Setters;
+        }
 
         public static Type GetNewType(string typeName, PythonTuple bases, IAttributesCollection dict) {
             if (bases == null) bases = PythonTuple.MakeTuple();
@@ -125,7 +128,6 @@ namespace IronPython.Compiler.Generation {
                     if (dict.TryGetValue(id, out dummy)) continue;
 
                     if (id == Symbols.Dict) {
-                        dict[id] = new PythonTypeDictSlot();
                         continue;
                     } else if (id == Symbols.WeakRef) {
                         continue;
@@ -135,7 +137,7 @@ namespace IronPython.Compiler.Generation {
                 }
             }
 
-            DynamicSiteHelpers.InitializeFields(DefaultContext.Default, ret, true);
+            DynamicSiteHelpers.InitializeFields(ret, true);
 
             return ret;
         }
@@ -408,8 +410,6 @@ namespace IronPython.Compiler.Generation {
                 DoInterfaceType(interfaceType, doneTypes, specialNames);
             }
 
-            InitializeVTableStrings();
-
             // Hashtable slots = collectSlots(dict, tg);
             // if (slots != null) tg.createAttrMethods(slots);
 
@@ -421,7 +421,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected virtual void ImplementPythonObject() {
-            ImplementSuperDynamicObject();
+            ImplementIPythonObject();
 
             ImplementDynamicObject();
 
@@ -434,30 +434,46 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void GetOrDefineDict() {
-            _dictField = _baseType.GetField("_dict");
-            if (_dictField == null) {
-                _dictField = _tg.DefineField("__dict__", typeof(IAttributesCollection), FieldAttributes.Public);
+            if (NeedsDictionary) {
+                _dictField = _tg.DefineField("__dict__", typeof(IAttributesCollection), FieldAttributes.Private);
             }
         }
 
         private void GetOrDefineClass() {
-            _typeField = _baseType.GetField("__class__");
-            if (_typeField == null) {
-                _typeField = _tg.DefineField("__class__", typeof(PythonType), FieldAttributes.Public);
+            if (!typeof(IPythonObject).IsAssignableFrom(_baseType)) {
+                _typeField = _tg.DefineField("__class__", typeof(PythonType), FieldAttributes.Private);
+            }
+        }
+
+        protected void EmitGetDict(ILGen gen) {
+            if (_dictField != null) {
+                gen.EmitFieldGet(_dictField);
             } else {
-                Debug.Assert(_typeField.FieldType == typeof(PythonType));
-                _hasBaseTypeField = true;
+                gen.EmitPropertyGet(typeof(IPythonObject).GetProperty("Dict"));
+            }
+        }
+
+        protected void EmitSetDict(ILGen gen) {
+            if (_dictField != null) {
+                gen.EmitFieldSet(_dictField);
+            } else {
+                gen.EmitCall(typeof(IPythonObject).GetMethod("ReplaceDict"));
+                gen.Emit(OpCodes.Pop); // pop bool result
             }
         }
 
         protected virtual ParameterInfo[] GetOverrideCtorSignature(ParameterInfo[] original) {
+            if (typeof(IPythonObject).IsAssignableFrom(_baseType)) {
+                return original;
+            }
+
             ParameterInfo[] argTypes = new ParameterInfo[original.Length + 1];
             if (original.Length == 0 || original[0].ParameterType != typeof(CodeContext)) {
-                argTypes[0] = new ParameterInfoWrapper(_typeField.FieldType, "cls");
+                argTypes[0] = new ParameterInfoWrapper(typeof(PythonType), "cls");
                 Array.Copy(original, 0, argTypes, 1, argTypes.Length - 1);
             } else {
                 argTypes[0] = original[0];
-                argTypes[1] = new ParameterInfoWrapper(_typeField.FieldType, "cls");
+                argTypes[1] = new ParameterInfoWrapper(typeof(PythonType), "cls");
                 Array.Copy(original, 1, argTypes, 2, argTypes.Length - 2);
             }
 
@@ -490,10 +506,12 @@ namespace IronPython.Compiler.Generation {
 #endif
         }
 
+
         private void AddBaseMethods(Type finishedType, Dictionary<string, List<string>> specialNames) {
-            // "Adds" base methods to super type (should really add to the derived type)
-            // this makes super(...).xyz to work - otherwise we'd return a function that
-            // did a virtual call resulting in a stack overflow.
+            // "Adds" base methods to super type - this makes super(...).xyz to work - otherwise 
+            // we'd return a function that did a virtual call resulting in a stack overflow.
+            // The addition is to a seperate cache that NewTypeMaker maintains.  TypeInfo consults this
+            // cache when doing member lookup and includes these members in the returned members.
             PythonType rt = DynamicHelpers.GetPythonTypeFromType(_baseType);
 
             foreach (MethodInfo mi in finishedType.GetMethods()) {
@@ -502,31 +520,109 @@ namespace IronPython.Compiler.Generation {
                 string methodName = mi.Name;
                 if (methodName.StartsWith(BaseMethodPrefix)) {
                     foreach (string newName in GetBaseName(mi, specialNames)) {
-                        PythonTypeBuilder dtb = PythonTypeBuilder.GetBuilder(rt);
-                        PythonTypeSlot dts;
-                        if (rt.TryLookupSlot(DefaultContext.Default, SymbolTable.StringToId(newName), out dts)) {
-                            BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
-                            if (bmd != null) {
-                                bmd.Template.AddMethod(mi);
+                        if (mi.IsSpecialName && (newName.StartsWith("get_") || newName.StartsWith("set_"))) {
+                            // if it's a property we want to override it
+                            string propName = newName.Substring(4);
 
-                                lock (_overriddenMethods) {
-                                    Dictionary<string, List<MethodInfo>> overrideInfo;
-                                    if (!_overriddenMethods.TryGetValue(bmd.DeclaringType, out overrideInfo)) {
-                                        _overriddenMethods[bmd.DeclaringType] = overrideInfo = new Dictionary<string, List<MethodInfo>>();
+                            MemberInfo[] defaults = _baseType.GetDefaultMembers();
+                            if (defaults.Length > 0) {
+                                // if it's an indexer then we want to override get_Item/set_Item methods
+                                // which map to __getitem__ and __setitem__ as normal Python methods.
+                                foreach (MemberInfo method in defaults) {
+                                    if (method.Name == propName) {
+                                        StoreOverriddenMethod(mi, newName);
+                                        break;
                                     }
-
-                                    List<MethodInfo> methods;
-                                    if (!overrideInfo.TryGetValue(newName, out methods)) {
-                                        overrideInfo[newName] = methods = new List<MethodInfo>();
-                                    }
-
-                                    methods.Add(mi);
                                 }
                             }
+
+                            StoreOverriddenProperty(mi, newName);
+                        } else {
+                            // not a property, just store the overridden method.
+                            StoreOverriddenMethod(mi, newName);
                         }
                     }
                 }
             }
+        }        
+
+        private void StoreOverriddenProperty(MethodInfo mi, string newName) {
+            string propName = newName.Substring(4); // get_ or set_
+            foreach (PropertyInfo pi in _baseType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                if (pi.Name == propName) {
+                    if (newName.StartsWith("get_")) {
+                        PropertyOverrideInfo poi;
+                        if (!_overriddenProperties.TryGetValue(pi, out poi)) {
+                            _overriddenProperties[pi] = poi = new PropertyOverrideInfo();
+                        }
+
+                        if (poi.Getters == null) {
+                            poi.Getters = new List<MethodInfo>();
+                        }
+
+                        poi.Getters.Add(mi);
+                    } else if (newName.StartsWith("set_")) {
+                        PropertyOverrideInfo poi;
+                        if (!_overriddenProperties.TryGetValue(pi, out poi)) {
+                            _overriddenProperties[pi] = poi = new PropertyOverrideInfo();
+                        }
+
+                        if (poi.Setters == null) {
+                            poi.Setters = new List<MethodInfo>();
+                        }
+
+                        poi.Setters.Add(mi);
+                    }
+                }
+            }
+        }
+
+        private void StoreOverriddenMethod(MethodInfo mi, string newName) {
+            MemberInfo[] members = _baseType.GetMember(newName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+            Debug.Assert(members.Length > 0, String.Format("{0} from {1}", newName, _baseType.Name));
+            Type declType = members[0].DeclaringType;
+
+            string pythonName = newName;
+            switch (newName) {
+                case "get_Item": pythonName = "__getitem__"; break;
+                case "set_Item": pythonName = "__setitem__"; break;
+            }
+
+            // back-patch any existing functions so that cached rules will work
+            // when called again...
+            foreach (BuiltinFunction bf in PythonTypeOps._functions.Values) {
+                if (bf.Name == pythonName && bf.DeclaringType == declType) {
+                    bf.AddMethod(mi);
+                    break;
+                }
+            }
+
+            lock (_overriddenMethods) {
+                Dictionary<string, List<MethodInfo>> overrideInfo;
+                if (!_overriddenMethods.TryGetValue(declType, out overrideInfo)) {
+                    _overriddenMethods[declType] = overrideInfo = new Dictionary<string, List<MethodInfo>>();
+                }
+
+                List<MethodInfo> methods;
+                if (!overrideInfo.TryGetValue(newName, out methods)) {
+                    overrideInfo[newName] = methods = new List<MethodInfo>();
+                }
+
+                methods.Add(mi);
+            }
+        }
+
+        internal static IList<MethodInfo> GetOverriddenMethods(Type type, string name) {
+            lock (_overriddenMethods) {
+                Dictionary<string, List<MethodInfo>> methods;
+                if (_overriddenMethods.TryGetValue(type, out methods)) {
+                    List<MethodInfo> methodList;
+                    if (methods.TryGetValue(name, out methodList)) {
+                        return methodList;
+                    }
+                }
+            }
+            return new MethodInfo[0];
         }
 
         private void DoInterfaceType(Type interfaceType, Dictionary<Type, bool> doneTypes, Dictionary<string, List<string>> specialNames) {
@@ -539,8 +635,14 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        private ConstructorBuilder OverrideConstructor(ConstructorInfo parentConstructor) {
+        private void OverrideConstructor(ConstructorInfo parentConstructor) {
             ParameterInfo[] pis = parentConstructor.GetParameters();
+            if (pis.Length == 0 && typeof(IPythonObject).IsAssignableFrom(_baseType)) {
+                // default ctor on a base type, don't override this one, it assumes
+                // the PythonType is some default value and we'll always be unique.
+                return;
+            }
+
             ParameterInfo[] overrideParams = GetOverrideCtorSignature(pis);
 
             Type[] argTypes = new Type[overrideParams.Length];
@@ -566,19 +668,31 @@ namespace IronPython.Compiler.Generation {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
                             typeof(ParamDictionaryAttribute).GetConstructor(Type.EmptyTypes), ArrayUtils.EmptyObjects));
                     }
+
+                    if ((pis[origIndex].Attributes & ParameterAttributes.HasDefault) != 0) {
+                        pb.SetConstant(pis[origIndex].DefaultValue);
+                    } 
                 }
             }
 
             ILGen il = CreateILGen(cb.GetILGenerator());
 
-            // <typeField> = <arg0>
-            il.EmitLoadArg(0);
-            if (pis.Length == 0 || pis[0].ParameterType != typeof(CodeContext)) {
-                il.EmitLoadArg(1);
-            } else {
-                il.EmitLoadArg(2);
+            // this.__class__ = <arg?>
+            //  can occur 2 ways:
+            //      1. If we have our own _typeField then we set it
+            //      2. If we're a subclass of IPythonObject (e.g. one of our exception classes) then we'll flow it to the
+            //             base type constructor which will set it.
+            if (!typeof(IPythonObject).IsAssignableFrom(_baseType)) {
+                il.EmitLoadArg(0);
+                // base class could have CodeContext parameter in which case our type is the 2nd parameter.
+                if (pis.Length == 0 || pis[0].ParameterType != typeof(CodeContext)) {
+                    il.EmitLoadArg(1);
+                } else {
+                    il.EmitLoadArg(2);
+                }
+            
+                il.EmitFieldSet(_typeField);
             }
-            il.EmitFieldSet(_typeField);
 
             // initialize all slots to Uninitialized.instance
             if (_slots != null) {
@@ -592,7 +706,6 @@ namespace IronPython.Compiler.Generation {
             }
 
             CallBaseConstructor(parentConstructor, pis, overrideParams, il);
-            return cb;
         }
 
         /// <summary>
@@ -636,19 +749,6 @@ namespace IronPython.Compiler.Generation {
             }
             il.Emit(OpCodes.Call, parentConstructor);
             il.Emit(OpCodes.Ret);
-        }
-
-        private void InitializeVTableStrings() {
-            string[] names = new string[_vtable.Count];
-            foreach (VTableEntry slot in _vtable.Values) {
-                names[slot.index] = slot.name;
-            }
-
-            FieldBuilder namesField = _tg.DefineField(VtableNamesField, typeof(string[]), FieldAttributes.Public | FieldAttributes.Static);
-
-            ILGen il = GetCCtor();
-            il.EmitArray(names);
-            il.EmitFieldSet(namesField);
         }
 
         private ILGen _cctor;
@@ -713,13 +813,26 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
+        protected bool NeedsPythonObject {
+            get {
+                Type curType = _baseType;
+                while (curType != null) {
+                    if (_baseType.IsDefined(typeof(DynamicBaseTypeAttribute), true)) {
+                        return false;
+                    }
+                    curType = curType.BaseType;
+                }
+                return true;
+            }
+        }
+
         private void ImplementDynamicObject() {
             ImplementInterface(typeof(IDynamicObject));
             MethodInfo decl;
             MethodBuilder impl;
             ILGen il;
 
-            il = DefineMethodOverride(typeof(IDynamicObject), "GetRule", out decl, out impl);
+            il = DefineMethodOverride(MethodAttributes.Private, typeof(IDynamicObject), "GetRule", out decl, out impl);
             MethodInfo mi = typeof(UserTypeOps).GetMethod("GetRuleHelper");
             GenericTypeParameterBuilder[] types = impl.DefineGenericParameters("T");
 
@@ -731,75 +844,75 @@ namespace IronPython.Compiler.Generation {
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, decl);
 
-            il = DefineMethodOverride(typeof(IDynamicObject), "get_LanguageContext", out decl, out impl);
+            il = DefineMethodOverride(MethodAttributes.Private, typeof(IDynamicObject), "get_LanguageContext", out decl, out impl);
             il.EmitCall(typeof(PythonOps), "GetLanguageContext");
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, decl);
         }
 
-        private void ImplementSuperDynamicObject() {
-            ILGen il;
-            MethodInfo decl;
-            MethodBuilder impl;
+        private void ImplementIPythonObject() {
+            if (NeedsPythonObject) {
+                ILGen il;
+                MethodInfo decl;
+                MethodBuilder impl;
 
-            ImplementInterface(typeof(IPythonObject));
+                ImplementInterface(typeof(IPythonObject));
 
-            MethodAttributes attrs = (MethodAttributes)0;
-            if (_slots != null) attrs = MethodAttributes.Virtual;
+                MethodAttributes attrs = MethodAttributes.Private;
+                if (_slots != null) attrs = MethodAttributes.Virtual;
 
-            il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_Dict", out decl, out impl);
-            if (NeedsDictionary) {
+                il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_Dict", out decl, out impl);
+                if (NeedsDictionary) {
+                    il.EmitLoadArg(0);
+                    EmitGetDict(il);
+                } else {
+                    il.EmitNull();
+                }
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
+
+                il = DefineMethodOverride(attrs, typeof(IPythonObject), "ReplaceDict", out decl, out impl);
+                if (NeedsDictionary) {
+                    il.EmitLoadArg(0);
+                    il.EmitLoadArg(1);
+                    EmitSetDict(il);
+                    il.EmitBoolean(true);
+                } else {
+                    il.EmitBoolean(false);
+                }
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
+
+                il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_HasDictionary", out decl, out impl);
+                il.EmitBoolean(NeedsDictionary);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
+
+                il = DefineMethodOverride(attrs, typeof(IPythonObject), "SetDict", out decl, out impl);
+                if (NeedsDictionary) {
+                    il.EmitLoadArg(0);
+                    il.EmitFieldAddress(_dictField);
+                    il.EmitLoadArg(1);
+                    il.EmitCall(typeof(UserTypeOps), "SetDictHelper");
+                } else {
+                    il.EmitNull();
+                }
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
+
+                il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_PythonType", out decl, out impl);
                 il.EmitLoadArg(0);
-                il.EmitFieldGet(_dictField);
-            } else {
-                il.EmitNull();
-            }
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
+                il.EmitFieldGet(_typeField);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
 
-            il = DefineMethodOverride(attrs, typeof(IPythonObject), "ReplaceDict", out decl, out impl);
-            if (NeedsDictionary) {
+                il = DefineMethodOverride(attrs, typeof(IPythonObject), "SetPythonType", out decl, out impl);
                 il.EmitLoadArg(0);
                 il.EmitLoadArg(1);
-                il.EmitFieldSet(_dictField);
-                il.EmitBoolean(true);
-            } else {
-                il.EmitBoolean(false);
+                il.EmitFieldSet(_typeField);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
             }
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
-
-            il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_HasDictionary", out decl, out impl);
-            il.EmitBoolean(NeedsDictionary);
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
-
-            il = DefineMethodOverride(attrs, typeof(IPythonObject), "SetDict", out decl, out impl);
-            if (NeedsDictionary) {
-                il.EmitLoadArg(0);
-                il.EmitFieldAddress(_dictField);
-                il.EmitLoadArg(1);
-                il.EmitCall(typeof(UserTypeOps), "SetDictHelper");
-            } else {
-                il.EmitNull();
-            }
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
-
-            if (_hasBaseTypeField) return;
-
-            il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_PythonType", out decl, out impl);
-            il.EmitLoadArg(0);
-            il.EmitFieldGet(_typeField);
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
-
-            il = DefineMethodOverride(attrs, typeof(IPythonObject), "SetPythonType", out decl, out impl);
-            il.EmitLoadArg(0);
-            il.EmitLoadArg(1);
-            il.EmitFieldSet(_typeField);
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
         }
 
         /// <summary>
@@ -810,13 +923,13 @@ namespace IronPython.Compiler.Generation {
         /// </summary>
         /// <param name="intf"></param>
         /// <param name="fExplicit"></param>
-        private void DefineHelperInterface(Type intf, bool fExplicit) {
+        private void DefineHelperInterface(Type intf) {
             ImplementInterface(intf);
             MethodInfo[] mis = intf.GetMethods();
 
             foreach (MethodInfo mi in mis) {
                 MethodBuilder impl;
-                ILGen il = fExplicit ? DefineExplicitInterfaceImplementation(mi, out impl) : DefineMethodOverride(mi, out impl);
+                ILGen il = DefineExplicitInterfaceImplementation(mi, out impl);
                 ParameterInfo[] pis = mi.GetParameters();
 
                 MethodInfo helperMethod = typeof(UserTypeOps).GetMethod(mi.Name + "Helper");
@@ -842,7 +955,7 @@ namespace IronPython.Compiler.Generation {
 
         private void ImplementPythonEquals() {
             if (this._baseType.GetInterface("IValueEquality", false) == null) {
-                DefineHelperInterface(typeof(IValueEquality), false);
+                DefineHelperInterface(typeof(IValueEquality));
             }
         }
 
@@ -897,7 +1010,7 @@ namespace IronPython.Compiler.Generation {
             MethodBuilder impl;
             ILGen il;
 
-            il = DefineMethodOverride(typeof(IWeakReferenceable), "SetWeakRef", out decl, out impl);
+            il = DefineMethodOverride(MethodAttributes.Private, typeof(IWeakReferenceable), "SetWeakRef", out decl, out impl);
             if (!isWeakRefAble) {
                 il.EmitBoolean(false);
             } else {
@@ -909,14 +1022,14 @@ namespace IronPython.Compiler.Generation {
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, decl);
 
-            il = DefineMethodOverride(typeof(IWeakReferenceable), "SetFinalizer", out decl, out impl);
+            il = DefineMethodOverride(MethodAttributes.Private, typeof(IWeakReferenceable), "SetFinalizer", out decl, out impl);
             il.EmitLoadArg(0);
             il.EmitLoadArg(1);
             il.EmitFieldSet(_weakrefField);
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, decl);
 
-            il = DefineMethodOverride(typeof(IWeakReferenceable), "GetWeakRef", out decl, out impl);
+            il = DefineMethodOverride(MethodAttributes.Private, typeof(IWeakReferenceable), "GetWeakRef", out decl, out impl);
             il.EmitLoadArg(0);
             il.EmitFieldGet(_weakrefField);
             il.Emit(OpCodes.Ret);
@@ -1011,7 +1124,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void OverrideSpecialName(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
-            if (mi == null || !mi.IsVirtual || mi.IsFinal) {
+            if (!mi.IsVirtual || mi.IsFinal) {
                 if (mi.IsFamily) {
                     // need to be able to call into protected getter/setter methods from derived types,
                     // even if these methods aren't virtual and we are in partial trust.
@@ -1032,28 +1145,24 @@ namespace IronPython.Compiler.Generation {
             foreach (PropertyInfo pi in pis) {
                 if (pi.GetIndexParameters().Length > 0) {
                     if (mi == pi.GetGetMethod(true)) {
-                        names.Add("__getitem__");
-                        CreateVTableMethodOverride(mi, GetOrMakeVTableEntry("__getitem__"));
+                        CreateVTableMethodOverride(mi, "__getitem__");
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                         return;
                     } else if (mi == pi.GetSetMethod(true)) {
-                        names.Add("__setitem__");
-                        CreateVTableMethodOverride(mi, GetOrMakeVTableEntry("__setitem__"));
+                        CreateVTableMethodOverride(mi, "__setitem__");
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                         return;
                     }
                 } else if (mi == pi.GetGetMethod(true)) {
                     if (mi.Name != "get_PythonType") {
-                        names.Add("__getitem__");
                         if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
-                        CreateVTableGetterOverride(mi, GetOrMakeVTableEntry(name));
+                        CreateVTableGetterOverride(mi, name);
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                     }
                     return;
                 } else if (mi == pi.GetSetMethod(true)) {
-                    names.Add("__setitem__");
                     if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
-                    CreateVTableSetterOverride(mi, GetOrMakeVTableEntry(name));
+                    CreateVTableSetterOverride(mi, name);
                     if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                     return;
                 }
@@ -1063,11 +1172,11 @@ namespace IronPython.Compiler.Generation {
             foreach (EventInfo ei in eis) {
                 if (ei.GetAddMethod() == mi) {
                     if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
-                    CreateVTableEventOverride(mi, GetOrMakeVTableEntry(mi.Name));
+                    CreateVTableEventOverride(mi, mi.Name);
                     return;
                 } else if (ei.GetRemoveMethod() == mi) {
                     if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
-                    CreateVTableEventOverride(mi, GetOrMakeVTableEntry(mi.Name));
+                    CreateVTableEventOverride(mi, mi.Name);
                     return;
                 }
             }
@@ -1118,24 +1227,14 @@ namespace IronPython.Compiler.Generation {
 
             List<string> names = new List<string>();
             names.Add(mi.Name);
-            if (name != mi.Name) names.Add(name);
             specialNames[mi.Name] = names;
 
-            CreateVTableMethodOverride(mi, GetOrMakeVTableEntry(name));
+            CreateVTableMethodOverride(mi, name);
             if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
         }
 
-        private VTableEntry GetOrMakeVTableEntry(string name) {
-            VTableEntry ret;
-            if (_vtable.TryGetValue(name, out ret)) return ret;
-
-            ret = new VTableEntry(name, _vtable.Count);
-            _vtable[name] = ret;
-            return ret;
-        }
-
         /// <summary>
-        /// Emits code to check if the class has overriden this specific
+        /// Emits code to check if the class has overridden this specific
         /// function.  For example:
         /// 
         /// MyDerivedType.SomeVirtualFunction = ...
@@ -1145,14 +1244,14 @@ namespace IronPython.Compiler.Generation {
         ///     def SomeVirtualFunction(self, ...):
         /// 
         /// </summary>
-        internal LocalBuilder EmitBaseClassCallCheckForProperties(ILGen il, MethodInfo baseMethod, VTableEntry methField) {
+        internal LocalBuilder EmitBaseClassCallCheckForProperties(ILGen il, MethodInfo baseMethod, string name) {
             Label instanceCall = il.DefineLabel();
             LocalBuilder callTarget = il.DeclareLocal(typeof(object));
 
             il.EmitLoadArg(0);
             il.EmitFieldGet(_typeField);
             il.EmitLoadArg(0);
-            EmitSymbolId(il, methField.name);
+            EmitSymbolId(il, name);
             il.Emit(OpCodes.Ldloca, callTarget);
             il.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedValueHelper");
 
@@ -1165,14 +1264,14 @@ namespace IronPython.Compiler.Generation {
             return callTarget;
         }
 
-        private void CreateVTableGetterOverride(MethodInfo mi, VTableEntry methField) {
+        private void CreateVTableGetterOverride(MethodInfo mi, string name) {
             MethodBuilder impl;
             ILGen il = DefineMethodOverride(mi, out impl);
-            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, methField);
+            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, name);
 
             il.Emit(OpCodes.Ldloc, callTarget);
             il.EmitLoadArg(0);
-            EmitSymbolId(il, methField.name);
+            EmitSymbolId(il, name);
             il.EmitCall(typeof(UserTypeOps), "GetPropertyHelper");
 
             if (!il.TryEmitImplicitCast(typeof(object), mi.ReturnType)) {
@@ -1213,27 +1312,27 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        private void CreateVTableSetterOverride(MethodInfo mi, VTableEntry methField) {
+        private void CreateVTableSetterOverride(MethodInfo mi, string name) {
             MethodBuilder impl;
             ILGen il = DefineMethodOverride(mi, out impl);
-            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, methField);
+            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, name);
 
             il.Emit(OpCodes.Ldloc, callTarget);     // property
             il.EmitLoadArg(0);                      // instance
             il.EmitLoadArg(1);
             il.EmitBoxing(mi.GetParameters()[0].ParameterType);    // newValue
-            EmitSymbolId(il, methField.name);    // name
+            EmitSymbolId(il, name);    // name
             il.EmitCall(typeof(UserTypeOps), "SetPropertyHelper");
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, mi);
         }
 
-        private void CreateVTableEventOverride(MethodInfo mi, VTableEntry methField) {
+        private void CreateVTableEventOverride(MethodInfo mi, string name) {
             // override the add/remove method  
             MethodBuilder impl;
             ILGen il = DefineMethodOverride(mi, out impl);
 
-            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, methField);
+            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, name);
 
             il.Emit(OpCodes.Ldloc, callTarget);
             il.EmitLoadArg(0);
@@ -1241,13 +1340,13 @@ namespace IronPython.Compiler.Generation {
             il.EmitFieldGet(_typeField);
             il.EmitLoadArg(1);
             il.EmitBoxing(mi.GetParameters()[0].ParameterType);
-            EmitSymbolId(il, methField.name);
+            EmitSymbolId(il, name);
             il.EmitCall(typeof(UserTypeOps), "AddRemoveEventHelper");
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, mi);
         }
 
-        private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
+        private void CreateVTableMethodOverride(MethodInfo mi, string name) {
             ParameterInfo[] parameters = mi.GetParameters();
             MethodBuilder impl;
             ILGen il;
@@ -1268,9 +1367,16 @@ namespace IronPython.Compiler.Generation {
 
             // emit call to helper to do lookup
             il.EmitLoadArg(0);
-            il.EmitFieldGet(_typeField);
+
+            if (typeof(IPythonObject).IsAssignableFrom(_baseType)) {
+                Debug.Assert(_typeField == null);
+                il.EmitPropertyGet(typeof(IPythonObject).GetProperty("PythonType"));
+            } else {
+                il.EmitFieldGet(_typeField);
+            }
+
             il.EmitLoadArg(0);
-            EmitSymbolId(il, methField.name);
+            EmitSymbolId(il, name);
             il.Emit(OpCodes.Ldloca, callTarget);
             il.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedMethodHelper");
 
@@ -1298,7 +1404,7 @@ namespace IronPython.Compiler.Generation {
             }
             MethodBuilder method = _tg.DefineMethod(
                 BaseMethodPrefix + mi.Name,
-                MethodAttributes.Public | MethodAttributes.HideBySig,
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
                 mi.ReturnType, types
             );
 
@@ -1379,6 +1485,11 @@ namespace IronPython.Compiler.Generation {
 
         protected ILGen DefineMethodOverride(MethodAttributes extra, MethodInfo decl, out MethodBuilder impl) {
             MethodAttributes finalAttrs = (decl.Attributes & ~MethodAttributesToEraseInOveride) | extra;
+            if ((extra & MethodAttributes.MemberAccessMask) != 0) {
+                // remove existing member access, add new member access
+                finalAttrs &= ~MethodAttributes.MemberAccessMask;
+                finalAttrs |= extra;
+            }
             Type[] signature = ReflectionUtils.GetParameterTypes(decl.GetParameters());
             impl = _tg.DefineMethod(decl.Name, finalAttrs, decl.ReturnType, signature);
             return CreateILGen(impl.GetILGenerator());
@@ -1519,16 +1630,6 @@ namespace IronPython.Compiler.Generation {
                 il.EmitBoxing(parameter.ParameterType);
                 return null;
             }
-        }
-    }
-
-    class VTableEntry {
-        public readonly string name;
-        public readonly int index;
-
-        public VTableEntry(string name, int index) {
-            this.name = name;
-            this.index = index;
         }
     }
 }

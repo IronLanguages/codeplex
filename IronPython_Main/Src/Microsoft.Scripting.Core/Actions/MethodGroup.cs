@@ -90,7 +90,7 @@ namespace Microsoft.Scripting.Actions {
             return base.GetValue(binder, type);
         }
 
-        internal override MemberTracker BindToInstance(Expression instance) {
+        public override MemberTracker BindToInstance(Expression instance) {
             if (ContainsInstance) {
                 return new BoundMemberTracker(this, instance);
             }
@@ -98,7 +98,7 @@ namespace Microsoft.Scripting.Actions {
             return this;
         }
 
-        internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
             return binder.ReturnMemberTracker(type, BindToInstance(instance));
         }
 

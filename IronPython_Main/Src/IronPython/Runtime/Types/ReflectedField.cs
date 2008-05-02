@@ -121,7 +121,13 @@ namespace IronPython.Runtime.Types {
         }
 
         internal override bool IsVisible(CodeContext context, PythonType owner) {
-            return _nameType == NameType.PythonField || context.ModuleContext.ShowCls;
+            return _nameType == NameType.PythonField || PythonOps.IsClsVisible(context);
+        }
+
+        internal override bool IsAlwaysVisible {
+            get {
+                return _nameType == NameType.PythonField;
+            }
         }
 
         #endregion

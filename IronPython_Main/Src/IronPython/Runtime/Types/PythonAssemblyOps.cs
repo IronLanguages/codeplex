@@ -51,14 +51,12 @@ namespace IronPython.Runtime.Types {
         }
 
         [SpecialName]
-        public static IList<SymbolId> GetMemberNames(CodeContext/*!*/ context, Assembly self) {
-            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(context, self);
+        public static List GetMemberNames(CodeContext/*!*/ context, Assembly self) {
+            List ret = DynamicHelpers.GetPythonTypeFromType(typeof(Assembly)).GetMemberNames(context);
 
-            ICollection<object> res = reflectedAssembly.Keys;
-            List<SymbolId> ret = new List<SymbolId>();
-            foreach (object o in res) {
+            foreach (object o in GetReflectedAssembly(context, self).Keys) {
                 if (o is string) {
-                    ret.Add(SymbolTable.StringToId((string)o));
+                    ret.AddNoLock((string)o);
                 }
             }
 

@@ -53,6 +53,11 @@ namespace Microsoft.Scripting.Actions {
             actionRuleCache.AddRule<T>(args, rule);
         }
 
+        internal void RemoveRule<T>(DynamicAction action, Type[] args, Rule<T> rule) {
+            ActionRuleCache actionRuleCache = FindActionRuleCache(action);
+            actionRuleCache.RemoveRule<T>(args, rule);
+        }
+
         /// <summary>
         /// All the cached rules for a given Action (per LanguageBinder)
         /// </summary>
@@ -73,6 +78,10 @@ namespace Microsoft.Scripting.Actions {
 
             internal void AddRule<T>(Type[] args, Rule<T> newRule) {
                 GetOrMakeTree<T>().AddRule(args, newRule);
+            }
+
+            internal void RemoveRule<T>(Type[] args, Rule<T> rule) {
+                GetOrMakeTree<T>().RemoveRule(args, rule);
             }
         }
     }

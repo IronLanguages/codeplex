@@ -94,13 +94,14 @@ def test_readonly_writeonly_derivation():
     Flag.Check(100)
     AssertErrorWithMessage(AttributeError, "Number", lambda: x.Number)
     
-    AreEqual(x.get_Number(), 21)   # back door? 362877
-    x.set_Number(101)
+    AreEqual(ReadOnlyBase.Number.GetValue(x), 21) 
+    x.Number = 101
     Flag.Check(101)
-    AreEqual(x.get_Number(), 21)
+    AreEqual(ReadOnlyBase.Number.GetValue(x), 21) 
     
     # repeat ReadOnlyDerived?
 
+@skip("multiple_execute") 
 def test_basic():
     print 
     for t in [
@@ -117,7 +118,7 @@ def test_basic():
         
         Assert(x.InstanceSimpleStructProperty.Flag == 0)
         x.InstanceSimpleStructProperty = b
-        Assert(b != x.InstanceSimpleStructProperty)  # implication of issue 362916
+        Assert(b == x.InstanceSimpleStructProperty)  
         AreEqual(b.Flag, x.InstanceSimpleStructProperty.Flag)
         
         AreEqual(x.InstanceSimpleClassProperty, None)
@@ -251,12 +252,14 @@ def test_from_derived_type():
     AreEqual(a, x.InstanceInt32Property)
 
     Assert('StaticSimpleStructProperty' not in t.__dict__)
-    p = t.__dict__['InstanceSimpleStructProperty']
+    Assert('InstanceSimpleStructProperty' not in t.__dict__)
+    p = t.__bases__[0].__dict__['InstanceSimpleStructProperty']
     p.SetValue(x, b)
     AreEqual(b.Flag, p.GetValue(x).Flag)
     
     Assert('StaticSimpleClassProperty' not in t.__dict__)
-    p = t.__dict__['InstanceSimpleClassProperty']
+    Assert('InstanceSimpleClassProperty' not in t.__dict__)
+    p = t.__bases__[0].__dict__['InstanceSimpleClassProperty']
     p.__set__(x, c)
     AreEqual(c, p.__get__(x))
 

@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 class TypeData(object):
     """
@@ -105,8 +103,11 @@ def gen_typecache(cw):
         cw.exit_block()
         cw.write("")
 
+def main():
+    return generate(
+        ("TypeCache Storage", gen_typecache_storage),
+        ("TypeCache Entries", gen_typecache),
+    )
 
-# do it!
-CodeGenerator("TypeCache Storage", gen_typecache_storage).doit()
-
-CodeGenerator("TypeCache Entries", gen_typecache).doit()
+if __name__ == "__main__":
+    main()

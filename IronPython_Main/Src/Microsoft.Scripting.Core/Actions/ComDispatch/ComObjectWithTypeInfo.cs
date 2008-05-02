@@ -23,6 +23,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
@@ -38,10 +39,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// possible. ComObjectWithTypeInfo tries to provide similar functionality. However, it can try even
     /// harder.
     /// </summary>
-    class ComObjectWithTypeInfo : GenericComObject {
+    public class ComObjectWithTypeInfo : GenericComObject {
+
         private Type _comType;
         private List<SymbolId> _comTypeMemberNames;
-        private static Dictionary<Guid, Type> ComTypeCache = new Dictionary<Guid, Type>();
+        private static SynchronizedDictionary<Guid, Type> _comTypeCache = new SynchronizedDictionary<Guid, Type>();
 
         private ComObjectWithTypeInfo(object rcw, Type comInterface)
             : base(rcw) {
@@ -60,6 +62,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         public override string ToString() {
             return String.Format("{0} ({1})", Obj.ToString(), _comType.Name);
+        }
+
+        public Type ComType {
+            get { return _comType; }
         }
 
         public override int GetHashCode() {
@@ -99,12 +105,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             RemoveDuplicates(_comTypeMemberNames);
         }
 
-        private void RemoveDuplicates(List<SymbolId> list) {
+        private static void RemoveDuplicates(List<SymbolId> list) {
             list.Sort();
             for (int i = list.Count - 2; i >= 0; --i) {
                 if (list[i] == list[i + 1]) {
-                    list.RemoveAt(i);
-                    ++i;
+                    list.RemoveAt(i + 1);
                 }
             }
         }
@@ -113,6 +118,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             foreach (MemberInfo member in type.GetMembers()) {
                 _comTypeMemberNames.Add(SymbolTable.StringToId(member.Name));
             }
+
+            // An interface does not contain methods declared by its parent interfaces. Hence, we
+            // need to walk them ourselves
+            Debug.Assert(type.IsInterface);
 
             foreach (Type typeInterface in type.GetInterfaces()) {
                 InitializeMemberNames(typeInterface);
@@ -126,7 +135,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         public override RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
                 case DynamicActionKind.DoOperation:
-                    return (new ComObjectWithTypeInfoDoOperationBinderHelper<T>(context, (DoOperationAction)action)).MakeNewRule();
+                    return (new ComObjectWithTypeInfoDoOperationBinderHelper<T>(context, _comType, (DoOperationAction)action)).MakeNewRule();
 
                 case DynamicActionKind.GetMember:
                     return (new ComObjectWithTypeInfoGetMemberBinderHelper<T>(context, _comType, (GetMemberAction)action, args)).MakeNewRule();
@@ -215,12 +224,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             // We ensure this by publishing all COM types whenever an assembly is loaded.
             PublishComTypes(interfaceType.Assembly);
 
-            Debug.Assert(ComTypeCache.ContainsKey(typeInfoGuid));
-            if (!ComTypeCache.ContainsKey(typeInfoGuid)) {
+            Debug.Assert(_comTypeCache.ContainsKey(typeInfoGuid));
+            if (!_comTypeCache.ContainsKey(typeInfoGuid)) {
                 throw new COMException("TypeLib " + interfaceType.Assembly + " does not contain COM interface + " + typeInfoGuid);
             }
 
-            return ComTypeCache[typeInfoGuid];
+            return _comTypeCache[typeInfoGuid];
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
@@ -235,7 +244,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             Type interfaceType = null;
 
-            if (ComTypeCache.TryGetValue(typeInfoGuid, out interfaceType)) {
+            if (_comTypeCache.TryGetValue(typeInfoGuid, out interfaceType)) {
                 return interfaceType;
             }
 
@@ -254,11 +263,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     Assembly interopAssembly = Assembly.Load(asmName);
                     PublishComTypes(interopAssembly);
 
-                    Debug.Assert(ComTypeCache.ContainsKey(typeInfoGuid));
-                    if (!ComTypeCache.ContainsKey(typeInfoGuid)) {
+                    Debug.Assert(_comTypeCache.ContainsKey(typeInfoGuid));
+                    if (!_comTypeCache.ContainsKey(typeInfoGuid)) {
                         throw new COMException("TypeLib " + asmName + " does not contain COM interface + " + typeInfoGuid);
                     }
-                    return ComTypeCache[typeInfoGuid];
+                    return _comTypeCache[typeInfoGuid];
                 } catch (FileNotFoundException) { }
             }
 
@@ -266,24 +275,35 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return ConvertTypeLibToAssembly(typeInfoPtr, typeInfoGuid);
         }
 
-        private static void PublishComTypes(Assembly interopAssembly) {
-            foreach (Type t in interopAssembly.GetTypes()) {
-                if (t.IsImport && t.IsInterface) {
-                    Type existing;
-                    if (ComTypeCache.TryGetValue(t.GUID, out existing)) {
-                        if (!existing.IsDefined(typeof(CoClassAttribute), false)) {
-                            // prefer the type w/ CoClassAttribute on it.  Example:
-                            //    MS.Office.Interop.Excel.Worksheet 
-                            //          vs
-                            //    MS.Office.Interop.Excel._Worksheet
-                            //  Worksheet defines all the interfaces that the type supports and has CoClassAttribute.
-                            //  _Worksheet is just the interface for the worksheet.
-                            //
-                            // They both have the same GUID though.
-                            ComTypeCache[t.GUID] = t;
+        /// <summary>
+        /// When an (interop) assembly is loaded, we scan it to discover the GUIDs of COM interfaces so that we can
+        /// associate the type definition with COM objects with that GUID.
+        /// Since scanning all loaded assemblies can be expensive, in the future, we might consider a more explicit 
+        /// user action to trigger scanning of COM types.
+        /// </summary>
+        internal static void PublishComTypes(Assembly interopAssembly) {
+            Dictionary<Guid, Type> rawComTypeCache = _comTypeCache.UnderlyingDictionary;
+
+            lock (rawComTypeCache) { // We lock over the entire operation so that we can publish a consistent view
+
+                foreach (Type type in AssemblyTypeNames.LoadTypesFromAssembly(interopAssembly, false)) {
+                    if (type.IsImport && type.IsInterface) {
+                        Type existing;
+                        if (rawComTypeCache.TryGetValue(type.GUID, out existing)) {
+                            if (!existing.IsDefined(typeof(CoClassAttribute), false)) {
+                                // prefer the type w/ CoClassAttribute on it.  Example:
+                                //    MS.Office.Interop.Excel.Worksheet 
+                                //          vs
+                                //    MS.Office.Interop.Excel._Worksheet
+                                //  Worksheet defines all the interfaces that the type supports and has CoClassAttribute.
+                                //  _Worksheet is just the interface for the worksheet.
+                                //
+                                // They both have the same GUID though.
+                                rawComTypeCache[type.GUID] = type;
+                            }
+                        } else {
+                            rawComTypeCache[type.GUID] = type;
                         }
-                    } else {
-                        ComTypeCache[t.GUID] = t;
                     }
                 }
             }

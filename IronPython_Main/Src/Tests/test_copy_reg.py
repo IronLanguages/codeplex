@@ -66,6 +66,7 @@ def test__newobj__():
            "The method __newobj__ did not return an object")
 
 
+@skip("multiple_execute")
 def test_add_extension():
     global obj
     obj = object()
@@ -94,7 +95,7 @@ def test_add_extension():
     # the code is already in use for key 
     AssertError(ValueError,copy_reg.add_extension,_random,obj,100009)
 
-
+@skip("multiple_execute")
 def test_remove_extension():
 	#delete extension
 	copy_reg.remove_extension(_random,obj,100)

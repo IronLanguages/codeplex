@@ -22,7 +22,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using System.Diagnostics;
     using System.Collections.Generic;
 
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Generation {
                 _tmp = context.GetTemporary(_elementType, "outParam");
             }
 
-            // Ideally we'd pass in Ast.ReadField(parameters[Index], "Value") but due to
+            // Ideally we'd pass in Expression.ReadField(parameters[Index], "Value") but due to
             // a bug in partial trust we can't access the generic field.
 
             // arg is boxType ? &_tmp : throw new ArgumentTypeException()

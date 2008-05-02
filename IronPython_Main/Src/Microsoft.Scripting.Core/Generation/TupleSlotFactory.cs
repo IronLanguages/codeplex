@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Generation {
         private List<Slot> _slots = new List<Slot>();
         private List<SymbolId> _names = new List<SymbolId>();
         private Type _dictType, _tupleType;
-        private Dictionary<LambdaCompiler, List<Slot>> _concreteSlots;
+        private Dictionary<ILGen, List<Slot>> _concreteSlots;
 
         public TupleSlotFactory(Type dictType) {
             _dictType = dictType;
@@ -43,30 +43,28 @@ namespace Microsoft.Scripting.Generation {
 
             // tmpLocal = ((tupleDictType)codeContext.Scope.GlobalScope.GetDictionary(context)).Tuple
             cg.EmitCodeContext();
-            cg.EmitPropertyGet(typeof(CodeContext), "Scope");
-            cg.EmitPropertyGet(typeof(Scope), "ModuleScope");
-            cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(TupleType));
+            cg.IL.EmitCall(typeof(RuntimeHelpers).GetMethod("GetGlobalTuple").MakeGenericMethod(TupleType));
 
-            Slot tmpLocal = cg.GetLocalTmp(TupleType);
-            tmpLocal.EmitSet(cg);
+            Slot tmpLocal = cg.IL.GetLocalTmp(TupleType);
+            tmpLocal.EmitSet(cg.IL);
 
             return tmpLocal;
         }
 
         public override void PrepareForEmit(LambdaCompiler cg) {
-            if (_concreteSlots == null) _concreteSlots = new Dictionary<LambdaCompiler, List<Slot>>();
-            if (_concreteSlots.ContainsKey(cg)) return;
+            if (_concreteSlots == null) _concreteSlots = new Dictionary<ILGen, List<Slot>>();
+            if (_concreteSlots.ContainsKey(cg.IL)) return;
 
             Slot tmpLocal = PrepareSlotForEmit(cg);
 
             List<Slot> concreteSlots = new List<Slot>(_slots.Count);
-            for (int i = 0; i < _slots.Count; i++ ) {
+            for (int i = 0; i < _slots.Count; i++) {
                 concreteSlots.Add(CreateConcreteSlot(tmpLocal, i));
             }
-            _concreteSlots[cg] = concreteSlots;
+            _concreteSlots[cg.IL] = concreteSlots;
         }
 
-        public Slot GetConcreteSlot(LambdaCompiler cg, int data) {
+        public Slot GetConcreteSlot(ILGen cg, int data) {
             return _concreteSlots[cg][data];
         }
 
@@ -81,7 +79,7 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal Slot CreateConcreteSlot(Slot instance, int index) {
+        internal static Slot CreateConcreteSlot(Slot instance, int index) {
             Slot res = instance;
             foreach (PropertyInfo pi in Tuple.GetAccessPath(instance.Type, index)) {
                 res = new PropertySlot(res, pi);

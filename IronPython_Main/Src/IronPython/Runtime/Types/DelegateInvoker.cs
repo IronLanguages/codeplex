@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
             if (!_site.IsInitialized) {
-                _site.EnsureInitialized(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+                _site.EnsureInitialized(CallAction.Make(PythonContext.GetContext(context).Binder, new CallSignature(new ArgumentInfo(ArgumentKind.List))));
             }
 
             return _site.Invoke(context, _invoker, args);

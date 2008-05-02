@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="typeReal">the actual type of the slot.  </param>
         /// <param name="builtinWrapper">the value to be stored as a global</param>
-        public ModuleGlobalSlot(Type typeReal,Slot builtinWrapper) {
+        public ModuleGlobalSlot(Type typeReal, Slot builtinWrapper) {
             Debug.Assert(builtinWrapper.Type == typeof(ModuleGlobalWrapper));
             if (builtinWrapper.Type != typeof(ModuleGlobalWrapper)) throw new ArgumentException("builtinWrapper " + builtinWrapper.GetType().FullName);
 
@@ -42,25 +42,24 @@ namespace Microsoft.Scripting.Generation {
         }
 
         // Unbox to the real type if needed.
-        private void Unbox(LambdaCompiler cg)
-        {
+        private void Unbox(ILGen cg) {
             if (_typeReal.IsValueType) {
-                cg.IL.EmitUnbox(_typeReal);
+                cg.EmitUnbox(_typeReal);
             }
         }
 
         // Box if needed.
-        private void Box(LambdaCompiler cg) {
+        private void Box(ILGen cg) {
             if (_typeReal.IsValueType) {
                 cg.EmitBoxing(_typeReal);
             }
         }
 
         // Emit code to push the value on the stack. Push on the stack as the real type (not as a boxed object). 
-        public override void EmitGet(LambdaCompiler cg) {
+        public override void EmitGet(ILGen cg) {
             _wrapper.EmitGet(cg);
             cg.EmitPropertyGet(typeof(ModuleGlobalWrapper), "CurrentValue");
-            
+
             Unbox(cg);
         }
 
@@ -69,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
         /// Requires that the target value has already been pushed on the slot, and has type=_realType.        
         /// </summary>
         /// <param name="cg">compiler object</param>
-        public override void EmitSet(LambdaCompiler cg) {
+        public override void EmitSet(ILGen cg) {
             // Caller is responsible for type-matching. The underlying storage here is always System.Object,
             // so box if needed.
             Box(cg);
@@ -90,10 +89,10 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="cg">compiler object</param>
         /// <param name="val">value to set this slot to</param>
-        public override void EmitSet(LambdaCompiler cg, Slot val) {
+        public override void EmitSet(ILGen cg, Slot val) {
             _wrapper.EmitGet(cg);
             val.EmitGet(cg);
-            
+
             Box(cg);
             cg.EmitPropertySet(typeof(ModuleGlobalWrapper), "CurrentValue");
         }
@@ -102,8 +101,7 @@ namespace Microsoft.Scripting.Generation {
         /// Override this to ensure proper boxing. 
         /// </summary>
         /// <param name="cg">compiler object</param>
-        public override void EmitSetUninitialized(LambdaCompiler cg)
-        {
+        public override void EmitSetUninitialized(ILGen cg) {
             if (_typeReal.IsValueType) {
                 Debug.Assert(false);
                 throw new InvalidOperationException("Can't set a value-type to Uninitialized");
@@ -116,7 +114,7 @@ namespace Microsoft.Scripting.Generation {
         /// This is used by optimized module generator for TryGet dict.
         /// </summary>
         /// <param name="cg">compiler object</param>
-        public void EmitGetRawFromObject(LambdaCompiler cg) {
+        public void EmitGetRawFromObject(ILGen cg) {
             _wrapper.EmitGet(cg);
             cg.EmitPropertyGet(typeof(ModuleGlobalWrapper), "RawValue");
 
@@ -128,7 +126,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="cg">compiler object</param>
         /// <param name="val">value to set to. Assumes that the slot is of type object</param>
-        public void EmitSetRawFromObject(LambdaCompiler cg, Slot val) {
+        public void EmitSetRawFromObject(ILGen cg, Slot val) {
             _wrapper.EmitGet(cg);
             val.EmitGet(cg);
             cg.EmitPropertySet(typeof(ModuleGlobalWrapper), "CurrentValue");
@@ -141,15 +139,15 @@ namespace Microsoft.Scripting.Generation {
         ///    public static void InitializeModuleField(CodeContext context, SymbolId name, ref ModuleGlobalWrapper wrapper) {
         /// </summary>
         /// <param name="cg">compiler object</param>
-        public void EmitWrapperAddr(LambdaCompiler cg) {
+        public void EmitWrapperAddr(ILGen cg) {
             _wrapper.EmitGetAddr(cg);
         }
 
-        public void EmitWrapper(LambdaCompiler cg) {
+        public void EmitWrapper(ILGen cg) {
             _wrapper.EmitGet(cg);
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
+        public override void EmitGetAddr(ILGen cg) {
             throw new NotSupportedException("Can't get address of module global.");
         }
 

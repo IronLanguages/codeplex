@@ -28,35 +28,28 @@ namespace IronPython.Runtime.Types {
     /// Represents a ReflectedProperty created for an extension method.  Logically the property is an
     /// instance property but the method implementing it is static.
     /// </summary>
-    public class ReflectedExtensionProperty : ReflectedProperty {
+    public class ReflectedExtensionProperty : ReflectedGetterSetter {
         private MethodInfo _deleter;
         private ExtensionPropertyInfo _extInfo;
 
         public ReflectedExtensionProperty(ExtensionPropertyInfo info, NameType nt)
-            : this(info, info.Getter, info.Setter, nt) {
-        }
-
-        public ReflectedExtensionProperty(ExtensionPropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
-            : base(null, getter, setter, nt) {
-            Debug.Assert(Getter == null || Getter.IsStatic);
-            Debug.Assert(Setter == null || Setter.IsStatic);
-
+            : base(new MethodInfo[] { info.Getter }, new MethodInfo[] { info.Setter }, nt) {
             _extInfo = info;
             _deleter = info.Deleter;
         }
 
-
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-            if (Getter == null || instance == null) {
+            if (Getter.Length == 0 || instance == null) {
                 value = null;
                 return false;
             }
 
-            return base.TryGetValue(context, instance, owner, out value);
+            value = CallGetter(context, instance, Utils.ArrayUtils.EmptyObjects);
+            return true;
         }
 
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
-            if (Setter == null || instance == null) return false;
+            if (Setter.Length == 0 || instance == null) return false;
 
             return CallSetter(context, instance, Utils.ArrayUtils.EmptyObjects, value);
         }
@@ -84,11 +77,11 @@ namespace IronPython.Runtime.Types {
 
         public override string Name {
             get {
-                return base.Name ?? _extInfo.Name;
+                return _extInfo.Name;
             }
         }
 
-        public new string __doc__ {
+        public string __doc__ {
             get {
                 return DocBuilder.DocOneInfo(ExtInfo);
             }

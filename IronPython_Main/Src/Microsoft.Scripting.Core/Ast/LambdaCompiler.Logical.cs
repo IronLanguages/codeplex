@@ -22,6 +22,11 @@ namespace Microsoft.Scripting.Ast {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         private void EmitBranchTrue(Expression node, Label label) {
+            if (node.IsDynamic) {
+                EmitExpressionBranchTrue(node, label);
+                return;
+            }
+
             switch (node.NodeType) {
                 case AstNodeType.AndAlso:
                     EmitBranchTrueAndAlso((BinaryExpression)node, label);
@@ -46,6 +51,11 @@ namespace Microsoft.Scripting.Ast {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         internal void EmitBranchFalse(Expression node, Label label) {
+            if (node.IsDynamic) {
+                EmitExpressionBranchFalse(node, label);
+                return;
+            }
+
             switch (node.NodeType) {
                 case AstNodeType.AndAlso:
                     EmitBranchFalseAndAlso((BinaryExpression)node, label);
@@ -74,8 +84,8 @@ namespace Microsoft.Scripting.Ast {
             if (node.Method != null) {
                 EmitExpression(node.Left);
                 EmitExpression(node.Right);
-                EmitCall(node.Method);
-                Emit(OpCodes.Brtrue, label);
+                _ilg.EmitCall(node.Method);
+                _ilg.Emit(OpCodes.Brtrue, label);
             } else if (ConstantCheck.IsConstant(node.Left, null)) {
                 if (TypeUtils.IsNullableType(node.Right.Type)) {
                     EmitNullableHasValue(node.Right);
@@ -83,7 +93,7 @@ namespace Microsoft.Scripting.Ast {
                     Debug.Assert(!node.Right.Type.IsValueType);
                     EmitExpression(node.Right);
                 }
-                Emit(OpCodes.Brfalse, label);
+                _ilg.Emit(OpCodes.Brfalse, label);
             } else if (ConstantCheck.IsConstant(node.Right, null)) {
                 if (TypeUtils.IsNullableType(node.Left.Type)) {
                     EmitNullableHasValue(node.Left);
@@ -91,11 +101,11 @@ namespace Microsoft.Scripting.Ast {
                     Debug.Assert(!node.Left.Type.IsValueType);
                     EmitExpression(node.Left);
                 }
-                Emit(OpCodes.Brfalse, label);
+                _ilg.Emit(OpCodes.Brfalse, label);
             } else {
                 EmitExpression(node.Left);
                 EmitExpression(node.Right);
-                Emit(OpCodes.Beq, label);
+                _ilg.Emit(OpCodes.Beq, label);
             }
         }
 
@@ -105,8 +115,8 @@ namespace Microsoft.Scripting.Ast {
             if (node.Method != null) {
                 EmitExpression(node.Left);
                 EmitExpression(node.Right);
-                EmitCall(node.Method);
-                Emit(OpCodes.Brfalse, label);
+                _ilg.EmitCall(node.Method);
+                _ilg.Emit(OpCodes.Brfalse, label);
             } else if (ConstantCheck.IsConstant(node.Left, null)) {
                 if (TypeUtils.IsNullableType(node.Right.Type)) {
                     EmitNullableHasValue(node.Right);
@@ -114,7 +124,7 @@ namespace Microsoft.Scripting.Ast {
                     Debug.Assert(!node.Right.Type.IsValueType);
                     EmitExpression(node.Right);
                 }
-                Emit(OpCodes.Brtrue, label);
+                _ilg.Emit(OpCodes.Brtrue, label);
             } else if (ConstantCheck.IsConstant(node.Right, null)) {
                 if (TypeUtils.IsNullableType(node.Left.Type)) {
                     EmitNullableHasValue(node.Left);
@@ -122,12 +132,12 @@ namespace Microsoft.Scripting.Ast {
                     Debug.Assert(!node.Left.Type.IsValueType);
                     EmitExpression(node.Left);
                 }
-                Emit(OpCodes.Brtrue, label);
+                _ilg.Emit(OpCodes.Brtrue, label);
             } else {
                 EmitExpression(node.Left);
                 EmitExpression(node.Right);
-                Emit(OpCodes.Ceq);
-                Emit(OpCodes.Brfalse, label);
+                _ilg.Emit(OpCodes.Ceq);
+                _ilg.Emit(OpCodes.Brfalse, label);
             }
         }
 
@@ -139,10 +149,10 @@ namespace Microsoft.Scripting.Ast {
             // if (left) then 
             //   if (right) branch label
             // endif
-            Label endif = DefineLabel();
+            Label endif = _ilg.DefineLabel();
             EmitBranchFalse(node.Left, endif);
             EmitBranchTrue(node.Right, label);
-            MarkLabel(endif);
+            _ilg.MarkLabel(endif);
         }
 
         private void EmitBranchTrueOrElse(BinaryExpression node, Label label) {
@@ -160,14 +170,14 @@ namespace Microsoft.Scripting.Ast {
             // if NOT (left AND right) branch label
 
             if (ConstantCheck.IsConstant(node.Left, false)) {
-                Emit(OpCodes.Br, label);
+                _ilg.Emit(OpCodes.Br, label);
             } else {
                 if (!ConstantCheck.IsConstant(node.Left, true)) {
                     EmitBranchFalse(node.Left, label);
                 }
 
                 if (ConstantCheck.IsConstant(node.Right, false)) {
-                    Emit(OpCodes.Br, label);
+                    _ilg.Emit(OpCodes.Br, label);
                 } else if (!ConstantCheck.IsConstant(node.Right, true)) {
                     EmitBranchFalse(node.Right, label);
                 }
@@ -188,10 +198,10 @@ namespace Microsoft.Scripting.Ast {
                     //   if (NOT right) branch label
                     // endif
 
-                    Label endif = DefineLabel();
+                    Label endif = _ilg.DefineLabel();
                     EmitBranchTrue(node.Left, endif);
                     EmitBranchFalse(node.Right, label);
-                    MarkLabel(endif);
+                    _ilg.MarkLabel(endif);
                 }
             }
         }
@@ -212,7 +222,7 @@ namespace Microsoft.Scripting.Ast {
         private void EmitExpressionBranchTrue(Expression node, Label label) {
             Debug.Assert(node.Type == typeof(bool));
             EmitExpression(node);
-            Emit(OpCodes.Brtrue, label);
+            _ilg.Emit(OpCodes.Brtrue, label);
         }
 
         /// <summary>
@@ -222,13 +232,13 @@ namespace Microsoft.Scripting.Ast {
         private void EmitExpressionBranchFalse(Expression node, Label label) {
             Debug.Assert(node.Type == typeof(bool));
             EmitExpression(node);
-            Emit(OpCodes.Brfalse, label);
+            _ilg.Emit(OpCodes.Brfalse, label);
         }
 
         private void EmitNullableHasValue(Expression node) {
             Debug.Assert(TypeUtils.IsNullableType(node.Type));
             EmitAddress(node, node.Type);
-            EmitPropertyGet(node.Type, "HasValue");
+            _ilg.EmitPropertyGet(node.Type, "HasValue");
         }
     }
 }

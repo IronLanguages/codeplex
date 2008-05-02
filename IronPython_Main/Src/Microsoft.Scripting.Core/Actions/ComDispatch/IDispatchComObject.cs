@@ -19,17 +19,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
-using Microsoft.Scripting.Ast;
+
+using Microsoft.Scripting.Runtime;
+
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Globalization;
-    using Microsoft.Scripting.Runtime;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// An object that implements IDispatch
@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// multicast delegate that will be invoked when the event is raised.
     /// 4. ComEventSink implements IReflect interface which is exposed as
     /// custom IDispatch to COM consumers. This allows us to intercept calls
-    /// to IDispatch.Invoke and apply  custom logic - in particular we will
+    /// to IDispatch.Invoke and apply custom logic - in particular we will
     /// just find and invoke the multicast delegate corresponding to the invoked
     /// dispid.
     ///  </summary>
@@ -101,7 +101,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     public class IDispatchComObject : GenericComObject {
 
         private readonly ComDispatch.IDispatchObject _dispatchObject;
-
         private ComDispatch.ComTypeDesc _comTypeDesc;
         private static Dictionary<Guid, ComDispatch.ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid,ComTypeDesc>();
 
@@ -121,18 +120,31 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return String.Format("{0} ({1})", Obj.ToString(), typeName);
         }
 
-        static int GetIDsOfNames(ComDispatch.IDispatch dispatch, SymbolId name, out int dispId) {
+        public ComDispatch.ComTypeDesc ComTypeDesc {
+            get {
+                
+                EnsureScanDefinedFunctions();
+             
+                return _comTypeDesc;
+            }
+        }
+
+        private static int GetIDsOfNames(ComDispatch.IDispatch dispatch, string name, out int dispId) {
             int[] dispIds = new int[1];
             Guid emtpyRiid = Guid.Empty;
             int hresult = dispatch.TryGetIDsOfNames(
                 ref emtpyRiid,
-                new string[] { name.ToString() },
+                new string[] { name },
                 1,
                 0,
                 dispIds);
 
             dispId = dispIds[0];
             return hresult;
+        }
+
+        private static int GetIDsOfNames(ComDispatch.IDispatch dispatch, SymbolId name, out int dispId) {
+            return GetIDsOfNames(dispatch, SymbolTable.IdToString(name), out dispId);
         }
 
         static int Invoke(ComDispatch.IDispatch dispatch, int memberDispId, out object result) {
@@ -171,15 +183,29 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         #region ICustomMembers-like members
 
-        public bool TryGetGetItem(out object value) {
+        public bool TryGetGetItem(out DispCallable value) {
 
             EnsureScanDefinedFunctions();
 
             ComMethodDesc methodDesc = _comTypeDesc.GetItem;
 
+            // The following attempts to get a method corresponding to "[PROPERTYGET, DISPID(0)] HRESULT Item(...)".
+            // However, without type information, we really don't know whether or not we have a property getter.
+            // All we can do is verify that the found dispId is DISPID_VALUE.  So, if we find a dispId of DISPID_VALUE,
+            // we happily package it up as a property getter; otherwise, it's a no go...
             if (methodDesc == null) {
-                value = null;
-                return false;
+                int dispId;
+                string name = "Item";
+                int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
+                if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
+                    value = null;
+                    return false;
+                } else if (hresult != ComHresults.S_OK) {
+                    throw new MissingMemberException(string.Format("Could not get DispId for {0} (error:0x{1:X})", name, hresult));
+                }
+
+                methodDesc = new ComDispatch.ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYGET);
+                _comTypeDesc.GetItem = methodDesc;
             }
 
             value = new DispPropertyGet(_dispatchObject, methodDesc);
@@ -187,15 +213,32 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return true;
         }
 
-        public bool TryGetSetItem(out object value) {
+        public bool TryGetSetItem(out DispCallable value) {
 
             EnsureScanDefinedFunctions();
             
             ComMethodDesc methodDesc = _comTypeDesc.SetItem;
 
+            // The following attempts to get a method corresponding to "[PROPERTYPUT, DISPID(0)] HRESULT Item(...)".
+            // However, without type information, we really don't know whether or not we have a property setter.
+            // All we can do is verify that the found dispId is DISPID_VALUE.  So, if we find a dispId of DISPID_VALUE,
+            // we happily package it up as a property setter; otherwise, it's a no go...
             if (methodDesc == null) {
-                value = null;
-                return false;
+                int dispId;
+                string name = "Item";
+                int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
+                if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
+                    value = null;
+                    return false;
+                } else if (hresult != ComHresults.S_OK) {
+                    throw new MissingMemberException(string.Format("Could not get DispId for {0} (error:0x{1:X})", name, hresult));
+                } else if (dispId != ComDispIds.DISPID_VALUE) {
+                    value = null;
+                    return false;
+                }
+
+                methodDesc = new ComDispatch.ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT);
+                _comTypeDesc.SetItem = methodDesc;
             }
 
             value = new DispPropertyPut(_dispatchObject, methodDesc);
@@ -331,15 +374,18 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #region IDynamicObject
 
         public override RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+
+            EnsureScanDefinedFunctions();
+
             switch (action.Kind) {
                 case DynamicActionKind.DoOperation:
-                    return new IDispatchComObjectDoOperationBinderHelper<T>(context, (DoOperationAction)action).MakeNewRule();
+                    return new IDispatchComObjectDoOperationBinderHelper<T>(context, _comTypeDesc, (DoOperationAction)action).MakeNewRule();
 
                 case DynamicActionKind.GetMember:
-                    return new IDispatchComObjectGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeNewRule();
+                    return new IDispatchComObjectGetMemberBinderHelper<T>(context, _comTypeDesc, (GetMemberAction)action, args).MakeNewRule();
 
                 case DynamicActionKind.SetMember:
-                    return new IDispatchComObjectSetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                    return new IDispatchComObjectSetMemberBinderHelper<T>(context, _comTypeDesc, (SetMemberAction)action, args).MakeNewRule();
             }
 
             return base.GetRule<T>(action, context, args);
@@ -348,7 +394,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #endregion
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        internal static void GetFuncDescForDescIndex(ITypeInfo typeInfo, int funcIndex, out ComTypes.FUNCDESC funcDesc, out IntPtr funcDescHandle) {
+        internal static void GetFuncDescForDescIndex(ComTypes.ITypeInfo typeInfo, int funcIndex, out ComTypes.FUNCDESC funcDesc, out IntPtr funcDescHandle) {
             IntPtr pFuncDesc = IntPtr.Zero;
             typeInfo.GetFuncDesc(funcIndex, out pFuncDesc);
 
@@ -487,7 +533,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 try {
                     provideClassInfo.GetClassInfo(out typeInfoPtr);
                     if (typeInfoPtr != IntPtr.Zero) {
-                        return Marshal.GetObjectForIUnknown(typeInfoPtr) as ITypeInfo;
+                        return Marshal.GetObjectForIUnknown(typeInfoPtr) as ComTypes.ITypeInfo;
                     }
                 } finally {
                     if (typeInfoPtr != IntPtr.Zero) {
@@ -543,6 +589,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             ComMethodDesc getItem = null;
             ComMethodDesc setItem = null;
             funcs = new Dictionary<SymbolId, ComDispatch.ComMethodDesc>(typeAttr.cFuncs);
+            Queue<ComTypes.FUNCDESC> writeOnlyCandidates = new Queue<ComTypes.FUNCDESC>();
+            List<int> usedDispIds = new List<int>();
 
             for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
                 IntPtr funcDescHandleToRelease = IntPtr.Zero;
@@ -556,18 +604,26 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                         continue;
                     }
 
-                    ComDispatch.ComMethodDesc methodDesc;
-                    SymbolId name;
-
-                    // we do not need to store any info for property_put's as well - we will wait
-                    // for corresponding property_get to come along.
+                    // since we need to store only on function description per dispId, we might
+                    // not need to store any info for a property_put as it typically shares its
+                    // dispId with a property_get - as such, we will wait for a corresponding 
+                    // property_get to come along.  But if it's a write only property, we'll 
+                    // have to capture it later...
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
                         (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
+                        // exception to the rule: for the special dispId == 0, we need to store
+                        // the method descriptor for the Do(SetItem) action. 
                         if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
                             setItem = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                         }
+                        writeOnlyCandidates.Enqueue(funcDesc);
                         continue;
                     }
+
+                    ComDispatch.ComMethodDesc methodDesc;
+                    SymbolId name;
+
+                    usedDispIds.Add(funcDesc.memid);
 
                     if (funcDesc.memid == ComDispIds.DISPID_NEWENUM) {
                         methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
@@ -580,6 +636,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     name = SymbolTable.StringToId(methodDesc.Name);
                     funcs.Add(name, methodDesc);
 
+                    // for the special dispId == 0, we need to store the method descriptor 
+                    // for the Do(GetItem) action. 
                     if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
                         getItem = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                     }
@@ -587,6 +645,16 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     if (funcDescHandleToRelease != IntPtr.Zero) {
                         typeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
                     }
+                }
+            }
+
+            while (writeOnlyCandidates.Count > 0) {
+                ComTypes.FUNCDESC funcDesc = writeOnlyCandidates.Dequeue();
+
+                if (!usedDispIds.Contains(funcDesc.memid)) {
+                    ComDispatch.ComMethodDesc methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
+                    funcs.Add(SymbolTable.StringToId(methodDesc.Name), methodDesc);
+                    usedDispIds.Add(funcDesc.memid);
                 }
             }
 

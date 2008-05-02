@@ -454,36 +454,6 @@ function maxrecursion-helper
 	}
 }
 
-function notraceback-helper
-{
-	set-alias dlrexe $args[0]
-	$dlrexe = $args[0]
-
-	hello-helper $dlrexe "-X:NoTraceback"
-	
-	$host.ui.write($dlrexe)
-	$host.ui.write(" ")
-	$host.ui.write("-X:NoTraceback")
-	$host.ui.write(" ")
-	$host.ui.write($args[1..$args.Length])
-	$host.ui.write(" ")
-	$host.ui.writeline($global:TRACEBACK)
-	
-	$stuff = dlrexe "-X:NoTraceback" $args[1..$args.Length] $global:TRACEBACK
-	if ($stuff -ne "No traceback") {show-failure "Failed: '$stuff'"; }
-	
-	$host.ui.write($dlrexe)
-	$host.ui.write(" ")
-	$host.ui.write("-D")
-	$host.ui.write(" ")
-	$host.ui.write($args[1..$args.Length])
-	$host.ui.write(" ")
-	$host.ui.writeline($global:TRACEBACK)
-	
-	$stuff = dlrexe -D $args[1..$args.Length] $global:TRACEBACK
-	if ($stuff -eq "No traceback") {show-failure "Failed: '$stuff'"; }	
-}
-
 function showclrexceptions-helper
 {
 	set-alias dlrexe $args[0]
@@ -588,12 +558,6 @@ function test-dlrmodes($dlrexe)
 	mta-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
-	## -X:NoTraceback
-	echo ""
-	echo "Testing -X:NoTraceback ..."
-	notraceback-helper $dlrexe
-	
-	#------------------------------------------------------------------------------
 	## -X:ShowClrExceptions
 	echo ""
 	echo "Testing -X:ShowClrExceptions ..."
@@ -657,13 +621,13 @@ function test-relatedpy($pyexe)
 	echo ""
 	echo "-X:AssembliesDir and -X:SaveAssemblies are already well tested together."
 	
-	#-X:ExceptionDetail, -X:NoTraceback, -X:ShowClrExceptions
+	#-X:ExceptionDetail, -X:ShowClrExceptions
 	echo ""
-	echo "Testing -X:ExceptionDetail, -X:NoTraceback, -X:ShowClrExceptions ..."
-	hello-helper $pyexe "-X:ExceptionDetail" "-X:NoTraceback" "-X:ShowClrExceptions"
-	exceptiondetail-helper $pyexe "-X:ShowClrExceptions" "-X:NoTraceback"
+	echo "Testing -X:ExceptionDetail, -X:ShowClrExceptions ..."
+	hello-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
+	exceptiondetail-helper $pyexe "-X:ShowClrExceptions"
 	notraceback-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
-	showclrexceptions-helper $pyexe "-X:ExceptionDetail" "-X:NoTraceback"
+	showclrexceptions-helper $pyexe "-X:ExceptionDetail"
 	
 	#-X:Interpret, -O, -OO
 	echo ""
@@ -671,7 +635,7 @@ function test-relatedpy($pyexe)
 	hello-helper $pyexe "-X:Interpret" -O -OO
 	
 	echo "Testing compatible IronPython modes together ..."
-	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:TupleBasedOptimizedScopes" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:StaticMethods" "-X:TabCompletion"
+	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:TupleBasedOptimizedScopes" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:StaticMethods" "-X:TabCompletion"
 }
 	
 ###############################################################################

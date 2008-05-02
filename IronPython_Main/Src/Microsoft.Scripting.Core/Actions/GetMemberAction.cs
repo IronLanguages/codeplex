@@ -14,8 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Utils;
+
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     [Flags]
@@ -37,24 +38,25 @@ namespace Microsoft.Scripting.Actions {
     public class GetMemberAction : MemberAction, IEquatable<GetMemberAction> {
         GetMemberBindingFlags _flags;
 
-        public static GetMemberAction Make(string name) {
-            return Make(SymbolTable.StringToId(name), GetMemberBindingFlags.Bound);
+        public static GetMemberAction Make(ActionBinder binder, string name) {
+            return Make(binder, SymbolTable.StringToId(name), GetMemberBindingFlags.Bound);
         }
 
-        public static GetMemberAction Make(SymbolId name) {
-            return Make(name, GetMemberBindingFlags.Bound);
+        public static GetMemberAction Make(ActionBinder binder, SymbolId name) {
+            return Make(binder, name, GetMemberBindingFlags.Bound);
         }
 
-        public static GetMemberAction Make(string name, GetMemberBindingFlags bindingFlags) {
-            return Make(SymbolTable.StringToId(name), bindingFlags);
+        public static GetMemberAction Make(ActionBinder binder, string name, GetMemberBindingFlags bindingFlags) {
+            return Make(binder, SymbolTable.StringToId(name), bindingFlags);
         }
 
-        public static GetMemberAction Make(SymbolId name, GetMemberBindingFlags bindingFlags) {
-            return new GetMemberAction(name, bindingFlags);
+        public static GetMemberAction Make(ActionBinder binder, SymbolId name, GetMemberBindingFlags bindingFlags) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new GetMemberAction(binder, name, bindingFlags);
         }
 
-        private GetMemberAction(SymbolId name, GetMemberBindingFlags bindingFlags)
-            : base(name) {
+        private GetMemberAction(ActionBinder binder, SymbolId name, GetMemberBindingFlags bindingFlags)
+            : base(binder, name) {
             _flags = bindingFlags;
         }
 

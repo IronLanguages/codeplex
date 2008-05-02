@@ -47,9 +47,5 @@ namespace Microsoft.Scripting.Ast {
         private AbstractValue AbstractEvaluate(VariableExpression node) {
             return _context.Lookup(node);
         }
-
-        private AbstractValue AbstractEvaluate(ConstantExpression node) {
-            return AbstractValue.Constant(node.Value, node);
-        }
     }
 }

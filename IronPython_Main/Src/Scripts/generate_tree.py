@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-import generate
+from generate import generate
 
 class Expression:
     def __init__(self, kind, type, enabled):
@@ -47,7 +47,7 @@ expressions = [
     Expression("ExclusiveOr",                   "BinaryExpression",                     True),
     Expression("GreaterThan",                   "BinaryExpression",                     True),
     Expression("GreaterThanOrEqual",            "BinaryExpression",                     True),
-    Expression("Invoke",                        "",                                     False),
+    Expression("Invoke",                        "InvocationExpression",                 True),
     Expression("Lambda",                        "LambdaExpression",                     True),
     Expression("LeftShift",                     "BinaryExpression",                     True),
     Expression("LessThan",                      "BinaryExpression",                     True),
@@ -80,25 +80,20 @@ expressions = [
     # DLR Added values
 
     Expression("ActionExpression",              "ActionExpression",                     True),
-    Expression("ArrayIndexAssignment",          "ArrayIndexAssignment",                 True),
+    Expression("Assign",                        "AssignmentExpression",                 True),
     Expression("Block",                         "Block",                                True),
-    Expression("BoundAssignment",               "BoundAssignment",                      True),
     Expression("BreakStatement",                "BreakStatement",                       True),
     Expression("CodeContextExpression",         "IntrinsicExpression",                  True),
     Expression("GeneratorIntrinsic",            "IntrinsicExpression",                  True),
     Expression("Generator",                     "GeneratorLambdaExpression",            True),
     Expression("ContinueStatement",             "ContinueStatement",                    True),
     Expression("DeleteStatement",               "DeleteStatement",                      True),
-    Expression("DeleteUnboundExpression",       "DeleteUnboundExpression",              True),
     Expression("DoStatement",                   "DoStatement",                          True),
     Expression("EmptyStatement",                "EmptyStatement",                       True),
-    Expression("EnvironmentExpression",         "IntrinsicExpression",                  True),
-    Expression("ExpressionStatement",           "ExpressionStatement",                  True),
     Expression("GlobalVariable",                "VariableExpression",                   True),
     Expression("LabeledStatement",              "LabeledStatement",                     True),
     Expression("LocalVariable",                 "VariableExpression",                   True),
     Expression("LoopStatement",                 "LoopStatement",                        True),
-    Expression("MemberAssignment",              "MemberAssignment",                     True),
     Expression("MemberExpression",              "MemberExpression",                     True),
     Expression("NewArrayExpression",            "NewArrayExpression",                   True),
     Expression("OnesComplement",                "UnaryExpression",                      True),
@@ -108,9 +103,8 @@ expressions = [
     Expression("TemporaryVariable",             "VariableExpression",                   True),
     Expression("ThrowStatement",                "ThrowStatement",                       True),
     Expression("TryStatement",                  "TryStatement",                         True),
-    Expression("UnboundAssignment",             "UnboundAssignment",                    True),
-    Expression("UnboundExpression",             "UnboundExpression",                    True),
     Expression("YieldStatement",                "YieldStatement",                       True),
+    Expression("Extension",                     "ExtensionExpression",                  True),
 ]
 
 def get_unique_types():
@@ -122,6 +116,8 @@ def gen_scripting_walker(cw):
             "IfStatementTest",
             "SwitchCase"
         ]
+    
+    nodes.remove("ExtensionExpression")
 
     space = 0
     for node in nodes:
@@ -184,8 +180,14 @@ def gen_ast_writer(cw):
 
         cw.write(text + (40 - len(text)) * " " + comment)
 
-generate.CodeGenerator("Expression Tree Node Types", gen_tree_nodes).doit()
-generate.CodeGenerator("DLR AST Walker", gen_scripting_walker).doit()
-generate.CodeGenerator("Ast Rewriter", gen_ast_rewriter).doit()
-generate.CodeGenerator("Ast Interpreter", gen_ast_interpreter).doit()
-generate.CodeGenerator("Ast Writer", gen_ast_writer).doit()
+def main():
+    return generate(
+        ("Expression Tree Node Types", gen_tree_nodes),
+        ("DLR AST Walker", gen_scripting_walker),
+        ("Ast Rewriter", gen_ast_rewriter),
+        ("Ast Interpreter", gen_ast_interpreter),
+        ("Ast Writer", gen_ast_writer),
+    )
+
+if __name__ == "__main__":
+    main()

@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Utils {
 
         public sealed override int Read(byte[]/*!*/ buffer, int offset, int count) {
             if (!CanRead) throw new InvalidOperationException();
-            Contract.RequiresArrayRange(buffer, offset, count, "offset", "count");
+            ContractUtils.RequiresArrayRange(buffer, offset, count, "offset", "count");
 
             char[] charBuffer = new char[count];
             int realCount = Reader.Read(charBuffer, 0, count);
@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public sealed override void Write(byte[]/*!*/ buffer, int offset, int count) {
-            Contract.RequiresArrayRange(buffer, offset, count, "offset", "count");
+            ContractUtils.RequiresArrayRange(buffer, offset, count, "offset", "count");
             char[] charBuffer = Encoding.GetChars(buffer, offset, count);
             Writer.Write(charBuffer, 0, charBuffer.Length);
             if (!_buffered) Writer.Flush();
@@ -112,8 +112,8 @@ namespace Microsoft.Scripting.Utils {
 
         public TextStream(TextReader/*!*/ reader, Encoding/*!*/ encoding)
             : base(true) {
-            Contract.RequiresNotNull(reader, "reader");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(reader, "reader");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
 
             _reader = reader;
             _encoding = encoding;
@@ -125,8 +125,8 @@ namespace Microsoft.Scripting.Utils {
 
         public TextStream(TextWriter/*!*/ writer, Encoding/*!*/ encoding, bool buffered)
             : base(buffered) {
-            Contract.RequiresNotNull(writer, "writer");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(writer, "writer");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
 
             _writer = writer;
             _encoding = encoding;

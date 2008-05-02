@@ -15,16 +15,20 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+
 using Microsoft.Scripting.Runtime;
+
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
     /// <summary>
     /// We have no additional information about this COM object.
     /// </summary>
     public class GenericComObject : ComObject {
+
         internal GenericComObject(object rcw) : base(rcw) { }
+
         public override string ToString() {
             return Obj.ToString();
         }

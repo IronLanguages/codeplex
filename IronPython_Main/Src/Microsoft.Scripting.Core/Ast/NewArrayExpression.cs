@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         /// <summary>
         /// Creates a new array expression of the specified type from the provided initializers.
         /// </summary>
@@ -53,14 +53,14 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArray(Type type, IList<Expression> initializers) {
-            Contract.RequiresNotNull(initializers, "initializers");
-            Contract.RequiresNotNull(type, "type");
-            Contract.Requires(type.IsArray, "type", "Not an array type");
-            Contract.RequiresNotNullItems(initializers, "initializers");
+            ContractUtils.RequiresNotNull(initializers, "initializers");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type.IsArray, "type", "Not an array type");
+            ContractUtils.RequiresNotNullItems(initializers, "initializers");
 
             Type element = type.GetElementType();
             foreach (Expression expression in initializers) {
-                Contract.Requires(TypeUtils.CanAssign(element, expression.Type), "initializers");
+                ContractUtils.Requires(TypeUtils.CanAssign(element, expression.Type), "initializers");
             }
 
             return new NewArrayExpression(AstNodeType.NewArrayExpression, type, CollectionUtils.ToReadOnlyCollection(initializers));
@@ -71,24 +71,24 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static NewArrayExpression NewArrayBounds(Type type, IList<Expression> bounds) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.Requires(type.IsArray, "type", "Not an array type");
-            Contract.Requires(bounds.Count > 0, "bounds", "Bounds count cannot be less than 1");
-            Contract.Requires(type.GetArrayRank() == bounds.Count, "bounds", "Bounds count must match the rank");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type.IsArray, "type", "Not an array type");
+            ContractUtils.Requires(bounds.Count > 0, "bounds", "Bounds count cannot be less than 1");
+            ContractUtils.Requires(type.GetArrayRank() == bounds.Count, "bounds", "Bounds count must match the rank");
 
             ReadOnlyCollection<Expression> boundsList = CollectionUtils.ToReadOnlyCollection(bounds);
             for (int i = 0, n = boundsList.Count; i < n; i++) {
                 Expression e = boundsList[i];
-                Contract.RequiresNotNull(e, "bounds");
-                Contract.Requires(TypeUtils.CanAssign(typeof(int), e.Type), "bounds", "Bounds must be ints.");
+                ContractUtils.RequiresNotNull(e, "bounds");
+                ContractUtils.Requires(TypeUtils.CanAssign(typeof(int), e.Type), "bounds", "Bounds must be ints.");
             }
             return new NewArrayExpression(AstNodeType.NewArrayBounds, type, CollectionUtils.ToReadOnlyCollection(bounds));
         }
         
         public static NewArrayExpression NewArrayHelper(Type type, IList<Expression> initializers) {
-            Contract.RequiresNotNullItems(initializers, "initializers");
-            Contract.RequiresNotNull(type, "type");
-            Contract.Requires(type.IsArray, "type", "Not an array type");
+            ContractUtils.RequiresNotNullItems(initializers, "initializers");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type.IsArray, "type", "Not an array type");
 
             Type element = type.GetElementType();
             Expression[] clone = null;
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Ast {
                             clone[j] = initializers[j];
                         }
                     }
-                    initializer = Ast.Convert(initializer, element);
+                    initializer = Expression.Convert(initializer, element);
                 }
                 if (clone != null) {
                     clone[i] = initializer;

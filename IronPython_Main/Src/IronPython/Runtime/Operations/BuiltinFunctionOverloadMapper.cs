@@ -52,24 +52,26 @@ namespace IronPython.Runtime.Operations {
             // reflected method with all the candidate targets. A caller can then index this
             // reflected method if necessary in order to provide generic type arguments and
             // fully disambiguate the target.
-            BuiltinFunction rm = new BuiltinFunction(_function.Name, _function.FunctionType);
 
             // Search for targets with the right number of arguments.
-            FindMatchingTargets(sig, targets, rm);
+            MethodBase[] newTargets = FindMatchingTargets(sig, targets);
 
-            if (rm.Targets == null)
+            if (targets == null)
                 throw RuntimeHelpers.SimpleTypeError(String.Format("No match found for the method signature {0}", sig));    // TODO: Sig to usable display
 
+            BuiltinFunction bf = new BuiltinFunction(_function.Name, newTargets, Function.DeclaringType, _function.FunctionType);
+
             if (_instance != null) {
-                return new BoundBuiltinFunction(rm, _instance);
+                return new BoundBuiltinFunction(bf, _instance);
             } else {
-                return GetTargetFunction(rm);
+                return GetTargetFunction(bf);
             }
         }
 
-        private void FindMatchingTargets(Type[] sig, IList<MethodBase> targets, BuiltinFunction rm) {
+        private MethodBase[] FindMatchingTargets(Type[] sig, IList<MethodBase> targets) {
             int args = sig.Length;
 
+            List<MethodBase> res = new List<MethodBase>();
             foreach (MethodBase mb in targets) {
                 ParameterInfo[] pis = mb.GetParameters();
                 if (pis.Length != args)
@@ -86,8 +88,9 @@ namespace IronPython.Runtime.Operations {
                     continue;
 
                 // Okay, we have a match, add it to the list.
-                rm.AddMethod(mb);
+                res.Add(mb);
             }
+            return res.ToArray();
         }
 
         public BuiltinFunction Function {
@@ -117,7 +120,7 @@ namespace IronPython.Runtime.Operations {
                 string key = DocBuilder.CreateAutoDoc(mb);
                 overloadList[key] = Function;
             }
-            return overloadList.ToString();
+            return overloadList.__repr__(context);
         }
     }
 

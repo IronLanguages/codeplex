@@ -14,18 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
-using System.Diagnostics;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
-using System.Security.Permissions;
-using Microsoft.Scripting.Runtime;
-using System.Threading;
 using System.Runtime.Remoting;
+using System.Security.Permissions;
+
+using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -99,7 +92,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns <c>null</c> if the parser cannot compile the code due to errors.
         /// </remarks>
         public CompiledCode Compile(ErrorListener/*!*/ errorListener) {
-            Contract.RequiresNotNull(errorListener, "errorListener");
+            ContractUtils.RequiresNotNull(errorListener, "errorListener");
 
             return CompileInternal(null, errorListener);
         }
@@ -109,7 +102,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns <c>null</c> if the parser cannot compile the code due to error(s).
         /// </remarks>
         public CompiledCode Compile(CompilerOptions/*!*/ compilerOptions) {
-            Contract.RequiresNotNull(compilerOptions, "compilerOptions");
+            ContractUtils.RequiresNotNull(compilerOptions, "compilerOptions");
 
             return CompileInternal(compilerOptions, null);
         }
@@ -119,8 +112,8 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns <c>null</c> if the parser cannot compile the code due to error(s).
         /// </remarks>
         public CompiledCode Compile(CompilerOptions/*!*/ compilerOptions, ErrorListener/*!*/ errorListener) {
-            Contract.RequiresNotNull(errorListener, "errorListener");
-            Contract.RequiresNotNull(compilerOptions, "compilerOptions");
+            ContractUtils.RequiresNotNull(errorListener, "errorListener");
+            ContractUtils.RequiresNotNull(compilerOptions, "compilerOptions");
 
             return CompileInternal(compilerOptions, errorListener);
         }
@@ -151,7 +144,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         /// <exception cref="SyntaxErrorException">Code cannot be compiled.</exception>
         public object Execute(ScriptScope/*!*/ scope) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
 
             return _unit.Execute(scope.Scope, ErrorSink.Default);
         }

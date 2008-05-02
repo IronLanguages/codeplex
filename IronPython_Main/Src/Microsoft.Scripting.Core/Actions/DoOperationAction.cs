@@ -14,20 +14,24 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Generation;
+
 using Microsoft.Contracts;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
     public class DoOperationAction : DynamicAction {
         private readonly Operators _operation;
 
-        public static DoOperationAction Make(Operators operation) {
-            return new DoOperationAction(operation);
+        public static DoOperationAction Make(ActionBinder binder, Operators operation) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new DoOperationAction(binder, operation);
         }
 
-        private DoOperationAction(Operators operation) {
+        private DoOperationAction(ActionBinder binder, Operators operation)
+            : base(binder) {
             _operation = operation;
         }
 

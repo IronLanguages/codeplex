@@ -13,21 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-using ToyScript.Parser;
-using ToyScript.Parser.Ast;
-using ToyScript.Runtime;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Shell;
-using Microsoft.Scripting.Helpers;
 using Microsoft.Scripting.Runtime;
+
+using MSAst = Microsoft.Scripting.Ast;
+
+using ToyScript.Parser;
+using ToyScript.Runtime;
 
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {
@@ -41,26 +34,16 @@ namespace ToyScript {
             switch (context.SourceUnit.Kind) {
                 case SourceCodeKind.InteractiveCode:
                     context.SourceUnit.CodeProperties = SourceCodeProperties.None;
-                    return ToyGenerator.Generate(tp.ParseInteractiveStatement(), context.SourceUnit.Path);
+                    return ToyGenerator.Generate(this, tp.ParseInteractiveStatement(), context.SourceUnit.Path);
 
                 default:
                     context.SourceUnit.CodeProperties = SourceCodeProperties.None;
-                    return ToyGenerator.Generate(tp.ParseFile(), context.SourceUnit.Path);
+                    return ToyGenerator.Generate(this, tp.ParseFile(), context.SourceUnit.Path);
             }
         }
 
         public override string DisplayName {
             get { return "ToyScript"; }
-        }
-
-        public override ServiceType GetService<ServiceType>(params object[] args) {
-            if (typeof(ServiceType) == typeof(OptionsParser)) {
-                return (ServiceType)(object)new DefaultOptionsParser(this);
-            } else if (typeof(ServiceType) == typeof(CommandLine)) {
-                return (ServiceType)(object)new ToyCommandLine();
-            }
-
-            return base.GetService<ServiceType>(args);
         }
     }
 }

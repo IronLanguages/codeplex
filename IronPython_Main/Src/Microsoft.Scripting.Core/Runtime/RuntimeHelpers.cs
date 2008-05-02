@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Runtime {
         public static readonly object False = false;
 
         /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
-        private static readonly Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
+        private static readonly SimplePublisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new SimplePublisher<DelegateSignatureInfo, DelegateInfo>();
         private static Dictionary<Type, List<Type>> _extensionTypes = new Dictionary<Type, List<Type>>();
 
         private static object[] MakeCache() {
@@ -210,7 +210,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         public static object LookupGlobalName(CodeContext context, SymbolId name) {
             // TODO: could we get rid of new context creation:
-            CodeContext moduleScopedContext = new CodeContext(context.Scope.ModuleScope, context.LanguageContext, context.ModuleContext);
+            CodeContext moduleScopedContext = new CodeContext(context.GlobalScope, context.LanguageContext);
             return context.LanguageContext.LookupName(moduleScopedContext, name);
         }
 
@@ -219,7 +219,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         public static void SetGlobalName(CodeContext context, SymbolId name, object value) {
             // TODO: could we get rid of new context creation:
-            CodeContext moduleScopedContext = new CodeContext(context.Scope.ModuleScope, context.LanguageContext, context.ModuleContext);
+            CodeContext moduleScopedContext = new CodeContext(context.GlobalScope, context.LanguageContext);
             context.LanguageContext.SetName(moduleScopedContext, name, value);
         }
 
@@ -228,7 +228,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         public static void RemoveGlobalName(CodeContext context, SymbolId name) {
             // TODO: could we get rid of new context creation:
-            CodeContext moduleScopedContext = new CodeContext(context.Scope.ModuleScope, context.LanguageContext, context.ModuleContext);
+            CodeContext moduleScopedContext = new CodeContext(context.GlobalScope, context.LanguageContext);
             context.LanguageContext.RemoveName(moduleScopedContext, name);
         }
 
@@ -239,36 +239,32 @@ namespace Microsoft.Scripting.Runtime {
             wrapper = new ModuleGlobalWrapper(context, mgc, name);
         }
 
-        public static TTuple GetTupleDictionaryData<TTuple>(Scope scope) where TTuple : Tuple {
-            return ((TupleDictionary<TTuple>)scope.Dict).TupleData;
+        // emitted by TupleModuleGenerator:
+        public static TTuple/*!*/ GetGlobalTuple<TTuple>(CodeContext/*!*/ context) where TTuple : Tuple {
+            return ((TupleDictionary<TTuple>)context.GlobalScope.Dict).TupleData;
         }
+
+        public static CodeContext/*!*/ GetStorageParent(CodeContext/*!*/ context) {
+            CodeContext result = context.GetStorageParent();
+            Debug.Assert(result != null);
+            return result;
+        }
+
+        public static TTuple/*!*/ GetScopeStorage<TTuple>(CodeContext/*!*/ context) where TTuple : Tuple {
+            TTuple result = context.GetStorage<TTuple>();
+            Debug.Assert(result != null);
+            return result;
+        }
+
+        public static CodeContext/*!*/ CreateLocalScope<TTuple>(TTuple/*!*/ storage, SymbolId[]/*!*/ names, CodeContext/*!*/ parent, bool isVisible) where TTuple : Tuple {
+            return CreateNestedCodeContext(new FunctionEnvironmentDictionary<TTuple>(storage, names), parent, isVisible);
+        }
+
 
         // The locals dictionary must be first so that we have the benefit of an emtpy stack when we emit the value
         // in the ScopeExpression
         public static CodeContext CreateNestedCodeContext(IAttributesCollection locals, CodeContext context, bool visible) {
-            return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext, context.ModuleContext, context);
-        }
-
-        // TODO: hack for Ruby, will be improved later
-        public static CodeContext CreateCodeContext(CodeContext parent) {
-            return new CodeContext(parent);
-        }
-
-        public static IAttributesCollection GetLocalDictionary(CodeContext context) {
-            return context.Scope.Dict;
-        }
-
-        /// <summary>
-        /// Initializes all but the 1st member of a environement tuple to Uninitialized.Instance
-        /// 
-        /// Called from generated code for environment initialization.
-        /// </summary>
-        public static void UninitializeEnvironmentTuple(Tuple tuple, int capacity) {
-            Debug.Assert(tuple != null);
-
-            for (int i = 1; i < capacity; i++) {
-                tuple.SetValue(i, Uninitialized.Instance);
-            }
+            return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext, context);
         }
 
         public static ArgumentTypeException BadArgumentsForOperation(Operators op, params object[] args) {
@@ -301,7 +297,7 @@ namespace Microsoft.Scripting.Runtime {
                 // we may have missed a dynamic catch, and our host is looking
                 // for the exception...
                 frames = ExceptionHelpers.AssociateDynamicStackFrames(e);
-                ExceptionHelpers.ClearDynamicStackFrames();
+                ExceptionHelpers.DynamicStackFrames = null;
             }
 
             if (frames == null) {
@@ -362,7 +358,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         /// <returns>The delegate or a <c>null</c> reference if the object is not callable.</returns>
         public static Delegate GetDelegate(object callableObject, Type delegateType) {
-            Contract.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
             Delegate result = callableObject as Delegate;
             if (result != null) {
@@ -502,7 +498,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <param name="eventInfo"></param>
         /// <returns></returns>
         public static Type GetEventHandlerType(EventInfo eventInfo) {
-            Contract.RequiresNotNull(eventInfo, "eventInfo");
+            ContractUtils.RequiresNotNull(eventInfo, "eventInfo");
             return eventInfo.EventHandlerType;
         }
 

@@ -17,14 +17,14 @@
 
 using System;
 using System.Collections.Generic;
-
-using ComTypes = System.Runtime.InteropServices.ComTypes;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
 using System.Runtime.InteropServices.ComTypes;
 
+using ComTypes = System.Runtime.InteropServices.ComTypes;
+
 namespace Microsoft.Scripting.Actions.ComDispatch {
+
     public class ComTypeDesc : ComTypeLibMemberDesc {
+
         private string _typeName;
         private string _documentation;
         private Guid _guid;
@@ -32,8 +32,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Dictionary<SymbolId, ComEventDesc> _events;
         private ComMethodDesc _getItem;
         private ComMethodDesc _setItem;
-        readonly ComTypeLibDesc _typeLibDesc;
-
+        private readonly ComTypeLibDesc _typeLibDesc;
         private static readonly Dictionary<SymbolId, ComEventDesc> _EmptyEventsDict = new Dictionary<SymbolId, ComEventDesc>();
 
         protected ComTypeDesc(ITypeInfo typeInfo, ComType memberType, ComTypeLibDesc typeLibDesc) : base(memberType) {

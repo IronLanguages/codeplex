@@ -20,7 +20,7 @@ using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class MemberExpression : Expression {
         private readonly Expression _target;
@@ -45,6 +45,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Action.GetMember(
+                ag.Binder,
                 _name,
                 type,
                 ag.Transform(_target)
@@ -53,15 +54,15 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op == Operators.None) {
-                return Ast.Statement(
-                    span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None,
-                    Ast.Void(
-                        Ast.Action.SetMember(
-                            _name,
-                            typeof(object),
-                            ag.Transform(_target),
-                            right
-                        )
+                SourceSpan sspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
+                return Ast.Block(
+                    span,
+                    Ast.Action.SetMember(
+                        ag.Binder,
+                        _name,
+                        typeof(object),
+                        ag.Transform(_target),
+                        right
                     )
                 );
             } else {
@@ -70,13 +71,15 @@ namespace IronPython.Compiler.Ast {
                     new SourceSpan(Span.Start, span.End),
                     Ast.Assign(temp, ag.Transform(_target)),
                     Ast.Action.SetMember(
+                        ag.Binder,
                         _name,
                         typeof(object),
                         temp,
                         Ast.Action.Operator(
+                            ag.Binder,
                             op,
                             typeof(object),
-                            Ast.Action.GetMember(_name, typeof(object), temp),
+                            Ast.Action.GetMember(ag.Binder, _name, typeof(object), temp),
                             right
                         )
                     )
@@ -85,12 +88,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return Ast.Statement(
+            return Ast.Action.DeleteMember(
                 Span,
-                Ast.Action.DeleteMember(
-                    _name,
-                    ag.Transform(_target)
-                )
+                ag.Binder,
+                _name,
+                ag.Transform(_target)
             );
         }
 

@@ -74,7 +74,7 @@ namespace Microsoft.Scripting {
         }
 
         public ErrorCounter(ErrorSink/*!*/ sink) {
-            Contract.RequiresNotNull(sink, "sink");
+            ContractUtils.RequiresNotNull(sink, "sink");
             _sink = sink;
         }
         

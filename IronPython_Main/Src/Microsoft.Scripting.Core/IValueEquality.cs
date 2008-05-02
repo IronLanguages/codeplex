@@ -36,12 +36,5 @@ namespace Microsoft.Scripting {
         /// <param name="other">The object to compare the current object against.</param>
         /// <returns>Returns true if the objects are equal, false if they are not.</returns>        
         bool ValueEquals(object other);
-
-        /// <summary>
-        /// Determines if two values are not equal
-        /// </summary>
-        /// <param name="other">The object to compare the current object against.</param>
-        /// <returns>Returns true if the objects are not equal, false if they are.</returns>
-        bool ValueNotEquals(object other);
     }
 }

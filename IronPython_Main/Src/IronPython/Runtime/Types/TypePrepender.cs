@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
@@ -35,13 +34,13 @@ namespace IronPython.Runtime.Types {
             }
 
             public BuiltinFunction Ctor;
-            public FastDynamicSite<BuiltinFunction, PythonType, object[], object> Site;
+            public DynamicSite<BuiltinFunction, PythonType, object[], object> Site;
 
             internal void EnsureSite() {
                 if (!Site.IsInitialized) {
                     Site.EnsureInitialized(
-                        DefaultContext.Default,
                         CallAction.Make(
+                            DefaultContext.DefaultPythonBinder,
                             new CallSignature(
                                 new ArgumentInfo(ArgumentKind.Simple),
                                 new ArgumentInfo(ArgumentKind.List)
@@ -63,12 +62,12 @@ namespace IronPython.Runtime.Types {
             // which will do the unsplat for us.
 
             _state.EnsureSite();
-            return _state.Site.Invoke(_state.Ctor, _type, args);
+            return _state.Site.Invoke(DefaultContext.Default, _state.Ctor, _type, args);
         }
 
         [SpecialName]
         public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
-            return PythonCalls.CallWithKeywordArgs(_state.Ctor, ArrayUtils.Insert((object)_type, args), dict);
+            return PythonCalls.CallWithKeywordArgs(context, _state.Ctor, ArrayUtils.Insert((object)_type, args), dict);
         }
     }
 }

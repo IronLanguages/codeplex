@@ -32,7 +32,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     // These operations get linked into all new-style classes. 
     public static class UserTypeOps {
@@ -71,12 +71,12 @@ namespace IronPython.Runtime.Operations {
 
         public static void AddRemoveEventHelper(object method, object instance, PythonType dt, object eventValue, SymbolId name) {
             object callable = method;
-            
+
             PythonTypeSlot dts = method as PythonTypeSlot;
-            if(dts != null) {
+            if (dts != null) {
                 if (!dts.TryGetValue(DefaultContext.Default, instance, dt, out callable))
                     throw PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
-            } 
+            }
 
             if (!PythonOps.IsCallable(callable)) {
                 throw PythonOps.TypeError("Expected callable value for {0}, but found {1}", name.ToString(),
@@ -101,8 +101,8 @@ namespace IronPython.Runtime.Operations {
         #region Conversion support
 
         private static RuleBuilder<T> MakeConvertRule<T>(CodeContext context, ConvertToAction convertToAction, object[] args) {
-            Contract.Requires(args.Length == 1, "args", "args must contain 1 argument for conversion");
-            Contract.Requires(args[0] is IPythonObject, "args[0]", "must be IPythonObject");
+            ContractUtils.Requires(args.Length == 1, "args", "args must contain 1 argument for conversion");
+            ContractUtils.Requires(args[0] is IPythonObject, "args[0]", "must be IPythonObject");
 
             Type toType = convertToAction.ToType;
             RuleBuilder<T> res = null;
@@ -129,7 +129,7 @@ namespace IronPython.Runtime.Operations {
             } else if (toType == typeof(IEnumerator)) {
                 res = MakeConvertToIEnumerator<T>(context, args);
             }
-            
+
             if (res == null) {
                 // make the basic rule w/ but we'll add our test for the dynamic type
                 res = new PythonConvertToBinderHelper<T>(context, convertToAction, args).MakeRule() ??
@@ -143,14 +143,14 @@ namespace IronPython.Runtime.Operations {
             PythonType pt = ((IPythonObject)args[0]).PythonType;
             PythonTypeSlot pts;
             RuleBuilder<T> rule = null;
-            if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {                
+            if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {
                 rule = MakeIterRule<T>(context, "CreatePythonEnumerable");
-            } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {                
+            } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {
                 rule = MakeIterRule<T>(context, "CreateItemEnumerable");
             }
             return rule;
         }
-        
+
         private static RuleBuilder<T> MakeConvertToIEnumerator<T>(CodeContext context, object[] args) {
             PythonType pt = ((IPythonObject)args[0]).PythonType;
             PythonTypeSlot pts;
@@ -189,7 +189,7 @@ namespace IronPython.Runtime.Operations {
                             PythonBinderHelper.MakeTryGetTypeMember<T>(rule, pts, tmp),
                             rule.MakeReturn(
                                 context.LanguageContext.Binder,
-                                PythonBinderHelper.GetConvertByLengthBody(tmp)
+                                PythonBinderHelper.GetConvertByLengthBody(context, tmp)
                             )
                         ),
                         PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule)
@@ -204,13 +204,14 @@ namespace IronPython.Runtime.Operations {
             PythonType pt = ((IPythonObject)self).PythonType;
             PythonTypeSlot pts;
 
-            if (pt.TryResolveSlot(context, symbolId, out pts) && !IsBuiltinConversion(context, pts, symbolId, pt)) {                
+            if (pt.TryResolveSlot(context, symbolId, out pts) && !IsBuiltinConversion(context, pts, symbolId, pt)) {
                 RuleBuilder<T> rule = new RuleBuilder<T>();
                 VariableExpression tmp = rule.GetTemporary(typeof(object), "func");
 
                 Expression callExpr = Ast.Call(
                     PythonOps.GetConversionHelper(returner, convertToAction.ResultKind),
                     Ast.Action.Call(
+                        PythonContext.GetContext(context).Binder,
                         typeof(object),
                         Ast.Read(tmp)
                     )
@@ -224,10 +225,10 @@ namespace IronPython.Runtime.Operations {
                     // to actually return the underlying value.  If an extensible just keeps 
                     // returning more instances  of it's self a stack overflow occurs - both 
                     // behaviors match CPython.
-                    callExpr = AddExtensibleSelfCheck<T>(self, toType, rule, tmp, callExpr);
+                    callExpr = AddExtensibleSelfCheck<T>(context, self, toType, rule, tmp, callExpr);
                 }
 
-                rule.Target = 
+                rule.Target =
                     Ast.Block(
                         Ast.If(
                             PythonBinderHelper.MakeTryGetTypeMember<T>(rule, pts, tmp),
@@ -255,17 +256,17 @@ namespace IronPython.Runtime.Operations {
                 }
                 tmpType = tmpType.BaseType;
             } while (tmpType != null);
-            
+
             PythonType ptBase = DynamicHelpers.GetPythonTypeFromType(baseType);
             PythonTypeSlot baseSlot;
-            if(ptBase.TryResolveSlot(context, name, out baseSlot) && pts == baseSlot) {
+            if (ptBase.TryResolveSlot(context, name, out baseSlot) && pts == baseSlot) {
                 return true;
             }
 
             return false;
         }
 
-        private static Expression AddExtensibleSelfCheck<T>(object self, Type toType, RuleBuilder<T> rule, VariableExpression tmp, Expression callExpr) {
+        private static Expression AddExtensibleSelfCheck<T>(CodeContext context, object self, Type toType, RuleBuilder<T> rule, VariableExpression tmp, Expression callExpr) {
             callExpr = Ast.Comma(
                 Ast.Assign(tmp, callExpr),
                 Ast.Condition(
@@ -275,6 +276,7 @@ namespace IronPython.Runtime.Operations {
                         self.GetType().GetProperty("Value")
                     ),
                     Ast.Action.ConvertTo(
+                        PythonContext.GetContext(context).Binder,
                         toType,
                         ConversionResultKind.ExplicitCast,
                         Ast.Read(tmp)
@@ -287,7 +289,7 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         private static RuleBuilder<T> MakeCallRule<T>(CodeContext context, CallAction callAction, object[] args) {
-            RuleBuilder<T> rule = new RuleBuilder<T>();            
+            RuleBuilder<T> rule = new RuleBuilder<T>();
 
             IPythonObject sdo = (IPythonObject)args[0];
 
@@ -341,185 +343,133 @@ namespace IronPython.Runtime.Operations {
         private static RuleBuilder<T> MakeGetMemberRule<T>(CodeContext context, GetMemberAction action, object[] args) {
             PythonTypeSlot dts;
             IPythonObject sdo = (IPythonObject)args[0];
+
+            if (TryGetGetAttribute(context, sdo, out dts)) {
+                return MakeGetAttributeRule<T>(context, sdo, action, dts);
+            }
+
             RuleBuilder<T> rule = new RuleBuilder<T>();
             VariableExpression tmp = rule.GetTemporary(typeof(object), "lookupRes");
 
-            if (TryGetGetAttribute(context, sdo, out dts)) {
-                Debug.Assert(sdo.PythonType.HasGetAttribute);
+            // fast path for accessing public properties from a derived type.
+            PythonBinderHelper.MakeTest(rule, sdo.PythonType);
 
-                MakeGetAttributeRule<T>(context, action, rule, tmp);
-            } else if (!(args[0] is ICustomMembers)) {
-                // fast path for accessing public properties from a derived type.
-                PythonBinderHelper.MakeTest(rule, sdo.PythonType);
-
-                Type userType = args[0].GetType();
-                PropertyInfo pi = userType.GetProperty(SymbolTable.IdToString(action.Name));
-                if (pi != null) {
-                    MethodInfo getter = pi.GetGetMethod();
-                    if (getter != null && getter.IsPublic) {
-                        rule.Target =
-                            rule.MakeReturn(
-                                context.LanguageContext.Binder, 
-                                Ast.Call(
-                                    Ast.ConvertHelper(rule.Parameters[0], getter.DeclaringType),
-                                    getter
-                                )
-                            );
-                        return rule;
-                    }
+            Type userType = args[0].GetType();
+            PropertyInfo pi = userType.GetProperty(SymbolTable.IdToString(action.Name));
+            if (pi != null) {
+                MethodInfo getter = pi.GetGetMethod();
+                if (getter != null && getter.IsPublic) {
+                    rule.Target =
+                        rule.MakeReturn(
+                            context.LanguageContext.Binder,
+                            Ast.Call(
+                                Ast.ConvertHelper(rule.Parameters[0], getter.DeclaringType),
+                                getter
+                            )
+                        );
+                    return rule;
                 }
-
-                // otherwise look the object according to Python rules:
-                //  1. 1st search the MRO of the type, and if it's there, and it's a get/set descriptor,
-                //      return that value.
-                //  2. Look in the instance dictionary.  If it's there return that value, otherwise return
-                //      a value found during the MRO search.  If no value was found during the MRO search then
-                //      raise an exception.      
-                //  3. fall back to __getattr__ if defined.
-                //
-                // Ultimately we cache the result of the MRO search based upon the type version.  If we have
-                // a get/set descriptor we'll only ever use that directly.  Otherwise if we have a get descriptor
-                // we'll first check the dictionary and then invoke the get descriptor.  If we have no descriptor
-                // at all we'll just check the dictionary.  If both lookups fail we'll raise an exception.
-
-                int slotLocation = -1;
-                IList<PythonType> mro = sdo.PythonType.ResolutionOrder;
-                for (int i = 0; i < mro.Count; i++) {
-                    if (mro[i].TryLookupSlot(context, action.Name, out dts)) {
-                        slotLocation = i;
-                        break;
-                    }
-                }
-
-                Expression body = Ast.Empty();
-                PythonTypeSlot getattr;
-
-                bool isOldStyle = false;
-                foreach (PythonType dt in sdo.PythonType.ResolutionOrder) {
-                    if (dt.IsOldClass) {
-                        isOldStyle = true;
-                        break;
-                    }
-                }
-
-                if (!isOldStyle || dts is ReflectedSlotProperty) {
-                    if (sdo.HasDictionary && (dts == null || !dts.IsSetDescriptor(context, sdo.PythonType))) {
-                        body = MakeDictionaryAccess<T>(context, action, rule, tmp);
-                    }
-
-                    if (dts != null) {
-                        body = MakeSlotAccess<T>(context, rule, dts, body, tmp, userType);
-                    }
-                } else {
-                    body = MakeOldStyleAccess(context, rule, action.Name, sdo, body, tmp);
-                }
-
-                // fall back to __getattr__ if it's defined.
-                if (sdo.PythonType.TryResolveSlot(context, Symbols.GetBoundAttr, out getattr)) {
-                    body = MakeGetAttrRule<T>(context, action, rule, body, tmp, getattr);
-                }
-
-                // raise an error if nothing else succeeds (TODO: need to reconcile error handling).
-                if (action.IsNoThrow) {
-                    body = Ast.Block(body, ReturnOperationFailed<T>(context, rule));
-                } else {
-                    body = MakeTypeError<T>(context, sdo.PythonType, action, rule, body);
-                }
-
-                rule.Target = body;
-            } else {
-                // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
-                // we'll need to call the base GetRule instead and merge that with our normal lookup
-                // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
-                PythonBinderHelper.MakeTest(rule, sdo.PythonType);
-
-                rule.Target = MakeCustomMembersGetBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule);
             }
+
+            // otherwise look the object according to Python rules:
+            //  1. 1st search the MRO of the type, and if it's there, and it's a get/set descriptor,
+            //      return that value.
+            //  2. Look in the instance dictionary.  If it's there return that value, otherwise return
+            //      a value found during the MRO search.  If no value was found during the MRO search then
+            //      raise an exception.      
+            //  3. fall back to __getattr__ if defined.
+            //
+            // Ultimately we cache the result of the MRO search based upon the type version.  If we have
+            // a get/set descriptor we'll only ever use that directly.  Otherwise if we have a get descriptor
+            // we'll first check the dictionary and then invoke the get descriptor.  If we have no descriptor
+            // at all we'll just check the dictionary.  If both lookups fail we'll raise an exception.
+
+            sdo.PythonType.TryResolveSlot(context, action.Name, out dts);
+
+            Expression body = Ast.Empty();
+            PythonTypeSlot getattr;
+
+            bool isOldStyle = false;
+            foreach (PythonType dt in sdo.PythonType.ResolutionOrder) {
+                if (dt.IsOldClass) {
+                    isOldStyle = true;
+                    break;
+                }
+            }
+
+            if (!isOldStyle || dts is ReflectedSlotProperty) {
+                if (sdo.HasDictionary && (dts == null || !dts.IsSetDescriptor(context, sdo.PythonType))) {
+                    body = MakeDictionaryAccess<T>(context, action, rule, tmp);
+                }
+
+                if (dts != null) {
+                    body = MakeSlotAccess<T>(context, rule, dts, body, tmp, userType);
+                }
+            } else {
+                body = MakeOldStyleAccess(context, rule, action.Name, sdo, body, tmp);
+            }
+
+            // fall back to __getattr__ if it's defined.
+            if (sdo.PythonType.TryResolveSlot(context, Symbols.GetBoundAttr, out getattr)) {
+                body = MakeGetAttrRule<T>(context, action, rule, body, tmp, getattr);
+
+                if (action.IsNoThrow) {
+                    body = Ast.Try(body).Catch(typeof(MissingMemberException), ReturnOperationFailed<T>(context, rule));
+                }
+            }
+
+            // raise an error if nothing else succeeds (TODO: need to reconcile error handling).
+            if (action.IsNoThrow) {
+                body = Ast.Block(body, ReturnOperationFailed<T>(context, rule));
+            } else {
+                body = MakeTypeError<T>(context, sdo.PythonType, action, rule, body);
+            }
+
+            rule.Target = body;
+
 
             return rule;
         }
 
-        private static void MakeGetAttributeRule<T>(CodeContext context, GetMemberAction action, RuleBuilder<T> rule, VariableExpression tmp) {
-                // type defines read it and call it (we read it so that we can
-                // share this rule amongst multiple types - this trades off a little
-                // perf for the __getattribute__ case while reducing the number of
-                // unique rules we generate).
-                rule.Test = Ast.AndAlso(
-                    Ast.TypeIs(rule.Parameters[0], typeof(IPythonObject)),
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("TypeHasGetAttribute"),
-                        Ast.ReadProperty(
-                            Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                            typeof(IPythonObject).GetProperty("PythonType")
-                        )                            
-                    )
+
+        /// <summary>
+        /// Makes a rule which calls a user-defined __getattribute__ function and falls back to __getattr__ if that
+        /// raises an AttributeError.
+        /// 
+        /// slot is the __getattribute__ method to be called.
+        /// </summary>
+        private static RuleBuilder<T> MakeGetAttributeRule<T>(CodeContext context, IPythonObject obj, GetMemberAction action, PythonTypeSlot slot) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
+
+            VariableExpression slotTmp = rule.GetTemporary(typeof(object), "slotTmp");
+
+            // generate the code to call __getattribute__
+            Expression getAttribute = MakeGetAttrRule<T>(context, action, rule, Ast.Empty(), slotTmp, slot);
+
+            PythonTypeSlot getattr;
+            if (obj.PythonType.TryResolveSlot(context, Symbols.GetBoundAttr, out getattr)) {
+                // if the type also defines __getattr__ we need to fallback to that when __getattribute__ fails.                
+                getAttribute =
+                    Ast.Try(
+                        getAttribute
+                    ).Catch(
+                        typeof(MissingMemberException),
+                        MakeGetAttrRule<T>(context, action, rule, Ast.Empty(), slotTmp, getattr)
+                    );
+            }
+
+            if (action.IsNoThrow) {
+                getAttribute = Ast.Try(
+                    getAttribute
+                ).Catch(
+                    typeof(MissingMemberException),
+                    ReturnOperationFailed<T>(context, rule)
                 );
+            }
 
-                VariableExpression slotTmp = rule.GetTemporary(typeof(PythonTypeSlot), "slotTmp");
-                Expression body = Ast.If(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("TryResolveTypeSlot"),
-                                Ast.CodeContext(),
-                                Ast.Convert(
-                                    Ast.ReadProperty(
-                                        Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                                        typeof(IPythonObject).GetProperty("PythonType")
-                                    ),
-                                    typeof(PythonType)
-                                ),
-                                Ast.Constant(Symbols.GetAttribute),
-                                Ast.Read(slotTmp)
-                            ),
-                            MakeGetAttrRule<T>(context, action, rule, Ast.Empty(), tmp, Ast.Read(slotTmp))
-                        );
-
-                rule.Target = body;
-        }
-
-        internal static Expression MakeCustomMembersGetBody<T>(CodeContext context, GetMemberAction action, string typeName, RuleBuilder<T> rule) {
-            VariableExpression tmp = rule.GetTemporary(typeof(object), "custmemres");
-
-            return Ast.IfThenElse(
-                Ast.Call(
-                    Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
-                    typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember"),
-                    Ast.CodeContext(),
-                    Ast.Constant(action.Name),
-                    Ast.Read(tmp)
-                ),
-                rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp)),
-                MakeMissingAttributeError<T>(context, action, typeName, rule)
-            );
-        }
-
-        internal static Expression MakeCustomMembersSetBody<T>(CodeContext context, SetMemberAction action, string typeName, RuleBuilder<T> rule) {
-            VariableExpression tmp = rule.GetTemporary(typeof(object), "custmemres");
-
-            return rule.MakeReturn(context.LanguageContext.Binder, 
-                Ast.Comma(
-                    Ast.Call(
-                        Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
-                        typeof(ICustomMembers).GetMethod("SetCustomMember"),
-                        Ast.CodeContext(),
-                        Ast.Constant(action.Name),
-                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
-                    ),
-                    rule.Parameters[1]
-                )
-            );                                           
-        }
-
-        internal static Expression MakeCustomMembersDeleteBody<T>(CodeContext context, DeleteMemberAction action, string typeName, RuleBuilder<T> rule) {
-            VariableExpression tmp = rule.GetTemporary(typeof(object), "custmemres");
-
-            return rule.MakeReturn(context.LanguageContext.Binder,
-                Ast.Call(
-                    Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
-                    typeof(ICustomMembers).GetMethod("DeleteCustomMember"),
-                    Ast.CodeContext(),
-                    Ast.Constant(action.Name)
-                )
-            );
+            PythonBinderHelper.MakeTest(rule, obj.PythonType);
+            rule.Target = getAttribute;
+            return rule;
         }
 
         private static Expression MakeMissingAttributeError<T>(CodeContext context, GetMemberAction action, string typeName, RuleBuilder<T> rule) {
@@ -539,7 +489,7 @@ namespace IronPython.Runtime.Operations {
                 )
             );
         }
-        
+
         /// <summary>
         /// Checks to see if this type has __getattribute__ that overrides all other attribute lookup.
         /// 
@@ -551,43 +501,46 @@ namespace IronPython.Runtime.Operations {
         private static bool TryGetGetAttribute(CodeContext context, IPythonObject sdo, out PythonTypeSlot dts) {
             if (sdo.PythonType.TryResolveSlot(context, Symbols.GetAttribute, out dts)) {
                 BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
+
                 if (bmd == null || bmd.DeclaringType != typeof(object) ||
                     bmd.Template.Targets.Count != 1 ||
                     bmd.Template.Targets[0].DeclaringType != typeof(ObjectOps) ||
                     bmd.Template.Targets[0].Name != "__getattribute__") {
-
-                    PythonTypeGetAttributeSlot gas = dts as PythonTypeGetAttributeSlot;
-                    if (gas != null) {
-                        // inherited __getattribute__ slots won't provide their value so
-                        // we need to get the one that's actually going to provide a value.
-                        SymbolId symbol = Symbols.GetAttribute;
-                        dts = GetNonInheritedSlot(context, sdo, gas, symbol);
-                    }
-
                     return dts != null;
-                }                
+                }
             }
             return false;
         }
 
-        private static PythonTypeSlot GetNonInheritedSlot(CodeContext context, IPythonObject sdo, PythonTypeGetAttributeSlot gas, SymbolId symbol) {
-            PythonTypeSlot dts = gas;
-            if (gas.Inherited) {
-                for (int i = 1; i < sdo.PythonType.ResolutionOrder.Count; i++) {
-                    if (sdo.PythonType.ResolutionOrder[i] != TypeCache.Object &&
-                        sdo.PythonType.ResolutionOrder[i].TryLookupSlot(context, symbol, out dts)) {
-                        gas = dts as PythonTypeGetAttributeSlot;
-                        if (gas == null || !gas.Inherited) break;
-
-                        dts = null;
-                    }
+        public static bool TryGetMixedNewStyleOldStyleSlot(CodeContext context, object instance, SymbolId name, out object value) {
+            IPythonObject sdo = instance as IPythonObject;
+            if (sdo != null) {
+                IAttributesCollection iac = sdo.Dict;
+                if (iac != null && iac.TryGetValue(name, out value)) {
+                    return true;
                 }
             }
-            return dts;
-        }
 
-        public static bool TryGetMixedNewStyleOldStyleSlot(CodeContext context, object instance, SymbolId name, out object value) {
-            return OldInstanceTypeBuilder.TryGetMemberCustomizer(context, instance, name, out value);
+            PythonType dt = DynamicHelpers.GetPythonType(instance);
+
+            foreach (PythonType type in dt.ResolutionOrder) {
+                PythonTypeSlot dts;
+                if (type != TypeCache.Object && type.OldClass != null) {
+                    // we're an old class, check the old-class way
+                    OldClass oc = type.OldClass;
+
+                    if (oc.TryGetBoundCustomMember(context, name, out value)) {
+                        value = oc.GetOldStyleDescriptor(context, value, instance, oc);
+                        return true;
+                    }
+                } else if (type.TryLookupSlot(context, name, out dts)) {
+                    // we're a dynamic type, check the dynamic type way
+                    return dts.TryGetValue(context, instance, dt, out value);
+                }
+            }
+
+            value = null;
+            return false;
         }
 
         /// <summary>
@@ -645,15 +598,12 @@ namespace IronPython.Runtime.Operations {
         private static Expression MakeGetAttrCall<T>(CodeContext context, GetMemberAction action, RuleBuilder<T> rule, VariableExpression tmp) {
             Expression ret = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Action.Call(
+                    PythonContext.GetContext(context).Binder,
                     typeof(object),
                     Ast.ReadDefined(tmp),
                     Ast.Constant(SymbolTable.IdToString(action.Name))
                 )
             );
-
-            if (action.IsNoThrow) {
-                ret = Ast.Try(ret).Catch(typeof(MissingMemberException), ReturnOperationFailed<T>(context, rule));
-            }
 
             return ret;
         }
@@ -672,35 +622,26 @@ namespace IronPython.Runtime.Operations {
                         Ast.Constant(action.Name)
                     )
                 )
-                
+
             );
         }
 
-        private static Expression MakeSlotSet<T>(CodeContext context, RuleBuilder<T> rule, PythonTypeSlot dts, Type userType) {
-            ReflectedProperty rp = dts as ReflectedProperty;
+        private static Expression MakeSlotSet<T>(CodeContext context, RuleBuilder<T> rule, PythonTypeSlot dts, Type userType, Type setType) {
+            ReflectedGetterSetter rp = dts as ReflectedGetterSetter;
             if (rp != null) {
                 // direct dispatch to the property...                
-                MethodInfo setter = rp.Setter;
-                if (!setter.IsPublic || !setter.DeclaringType.IsVisible) {
-                    // find the public wrapper method corresponding to this setter
-                    // TODO: the ReflectedProperty should hold on to this method, instead of hardcoding the lookup
-                    setter = userType.GetMethod(NewTypeMaker.BaseMethodPrefix + setter.Name, ReflectionUtils.GetParameterTypes(setter.GetParameters()));
-                    Debug.Assert(setter != null);
-                }
-
-                IList<Expression> args = rule.Parameters;
-                if (setter.IsStatic && !(rp is ReflectedExtensionProperty)) {
-                    args = new Expression[] { rule.Parameters[1] };
-                }
+                MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, rp.Name, rp.Setter);
+                BindingTarget bt = mb.MakeBindingTarget(CallTypes.ImplicitInstance, new Type[] { userType, setType });
+                Expression call = bt.MakeExpression(rule, rule.Parameters);
 
                 return
                     rule.MakeReturn(
                         context.LanguageContext.Binder,
                         Ast.Comma(
-                            context.LanguageContext.Binder.MakeCallExpression(setter, args),
+                            call,
                             rule.Parameters[1]
                         )
-                    );
+                    );                
             }
 
             ReflectedField rf = dts as ReflectedField;
@@ -717,7 +658,7 @@ namespace IronPython.Runtime.Operations {
                 );
             }
 
-            return 
+            return
                 Ast.If(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTrySetValue"),
@@ -735,7 +676,7 @@ namespace IronPython.Runtime.Operations {
                         ),
                         Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                     ),
-                    rule.MakeReturn(context.LanguageContext.Binder, rule.Parameters[1])                
+                    rule.MakeReturn(context.LanguageContext.Binder, rule.Parameters[1])
                 );
         }
 
@@ -763,7 +704,7 @@ namespace IronPython.Runtime.Operations {
 
         private static Expression MakeSlotAccess<T>(CodeContext context, RuleBuilder<T> rule, PythonTypeSlot dts, Expression body, VariableExpression tmp, Type userType) {
             ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
-            if (rsp != null) {                
+            if (rsp != null) {
                 // we need to fall back to __getattr__ if the value is not defined, so call it and check the result.
                 return Ast.If(
                     Ast.NotEqual(
@@ -781,30 +722,27 @@ namespace IronPython.Runtime.Operations {
                         Ast.Read(tmp)
                     )
                 );
-                
-            } 
-            
-            ReflectedProperty rp = dts as ReflectedProperty;
-            if (rp != null) {
-                // direct dispatch to the property...                
-                MethodInfo getter = rp.Getter;
-                if (!getter.IsPublic || !getter.DeclaringType.IsVisible) {
-                    // find the public wrapper method corresponding to this getter
-                    // TODO: the ReflectedProperty should hold on to this method, instead of hardcoding the lookup
-                    getter = userType.GetMethod(NewTypeMaker.BaseMethodPrefix + getter.Name, ReflectionUtils.GetParameterTypes(getter.GetParameters()));
-                    Debug.Assert(getter != null);
-                }
 
-                IList<Expression> args = rule.Parameters;
-                if (getter.IsStatic && !(rp is ReflectedExtensionProperty)) {
-                    args = new Expression[0];
+            }
+
+            ReflectedGetterSetter rp = dts as ReflectedGetterSetter;
+            if (rp != null && rp.Getter.Length > 0) {
+                // direct dispatch to the property...                
+                MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, rp.Name, rp.Getter);
+                Expression call;
+                if (rp.Getter[0].IsStatic && !rp.Getter[0].IsDefined(typeof(PropertyMethodAttribute), false)) {
+                    BindingTarget bt = mb.MakeBindingTarget(CallTypes.ImplicitInstance, new Type[0]);
+                    call = bt.MakeExpression(rule, new Expression[0]);
+                } else {
+                    BindingTarget bt = mb.MakeBindingTarget(CallTypes.ImplicitInstance, new Type[] { userType });
+                    call = bt.MakeExpression(rule, rule.Parameters);
                 }
 
                 return Ast.Block(
                     body,
                     rule.MakeReturn(
                         context.LanguageContext.Binder,
-                        context.LanguageContext.Binder.MakeCallExpression(getter, args)
+                        call
                     )
                 );
             }
@@ -875,71 +813,58 @@ namespace IronPython.Runtime.Operations {
             IPythonObject sdo = args[0] as IPythonObject;
             RuleBuilder<T> rule = new RuleBuilder<T>();
 
-            if (!(args[0] is ICustomMembers)) {
-                string templateType = null;
-                try {
-                    // call __setattr__ if it exists
-                    PythonTypeSlot dts;
-                    if (sdo.PythonType.TryResolveSlot(context, Symbols.SetAttr, out dts) && !IsStandardObjectMethod(dts)) {
-                        // skip the fake __setattr__ on mixed new-style/old-style types
-                        PythonTypeGetAttributeSlot gas = dts as PythonTypeGetAttributeSlot;
-                        if (gas != null) {
-                            dts = GetNonInheritedSlot(context, sdo, gas, Symbols.SetAttr);
-                        }
-                        if (dts != null) {
-                            MakeSetAttrTarget<T>(context, action, sdo, rule, dts);
-                            templateType = "__setattr__";
-                            return rule;
-                        }
-                    }
-
-                    // then see if we have a set descriptor
-                    sdo.PythonType.TryResolveSlot(context, action.Name, out dts);
-                    ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
-                    if (rsp != null) {
-                        MakeSlotsSetTarget<T>(context, rule, rsp);
+            string templateType = null;
+            try {
+                // call __setattr__ if it exists
+                PythonTypeSlot dts;
+                if (sdo.PythonType.TryResolveSlot(context, Symbols.SetAttr, out dts) && !IsStandardObjectMethod(dts)) {
+                    // skip the fake __setattr__ on mixed new-style/old-style types
+                    if (dts != null) {
+                        MakeSetAttrTarget<T>(context, action, sdo, rule, dts);
+                        templateType = "__setattr__";
                         return rule;
-                    }
-
-                    if (dts != null && dts.IsSetDescriptor(context, sdo.PythonType)) {
-                        rule.Target = MakeSlotSet<T>(context, rule, dts, args[0].GetType());
-                        return rule;
-                    }
-
-                    // see if we can do a standard .NET binding...
-                    RuleBuilder<T> baseRule = new SetMemberBinderHelper<T>(context, action, args).MakeNewRule();
-                    if (!baseRule.IsError) {
-                        baseRule.AddTest(PythonBinderHelper.MakeTypeTest(baseRule, sdo.PythonType, baseRule.Parameters[0], false));
-                        return baseRule;
-                    }
-
-                    // finally if we have a dictionary set the value there.
-                    if (sdo.HasDictionary) {
-                        MakeDictionarySetTarget<T>(context, action, rule);
-                        templateType = "dictionary";
-                        return rule;
-                    }
-
-                    // otherwise it's an error
-                    rule.Target = MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule);
-                    return rule;
-                } finally {
-                    // make the test for the rule depending on if we support templating or not.
-                    if (templateType == null) {
-                        PythonBinderHelper.MakeTest(rule, sdo.PythonType);
-                    } else {
-                        MakeTemplatedSetMemberTest(context, action, sdo.PythonType, rule, templateType);
                     }
                 }
-            } else {
-                // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
-                // we'll need to call the base GetRule instead and merge that with our normal lookup
-                // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
-                PythonBinderHelper.MakeTest(rule, sdo.PythonType);
 
-                rule.Target = MakeCustomMembersSetBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule);
+                // then see if we have a set descriptor
+                sdo.PythonType.TryResolveSlot(context, action.Name, out dts);
+                ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
+                if (rsp != null) {
+                    MakeSlotsSetTarget<T>(context, rule, rsp);
+                    return rule;
+                }
+
+                if (dts != null && dts.IsSetDescriptor(context, sdo.PythonType)) {
+                    rule.Target = MakeSlotSet<T>(context, rule, dts, args[0].GetType(), CompilerHelpers.GetType(args[1]));
+                    return rule;
+                }
+
+                // see if we can do a standard .NET binding...
+                RuleBuilder<T> baseRule = new SetMemberBinderHelper<T>(context, action, args).MakeNewRule();
+                if (!baseRule.IsError) {
+                    baseRule.AddTest(PythonBinderHelper.MakeTypeTest(baseRule, sdo.PythonType, baseRule.Parameters[0], false));
+                    return baseRule;
+                }
+
+                // finally if we have a dictionary set the value there.
+                if (sdo.HasDictionary) {
+                    MakeDictionarySetTarget<T>(context, action, rule);
+                    templateType = "dictionary";
+                    return rule;
+                }
+
+                // otherwise it's an error
+                rule.Target = MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule);
                 return rule;
+            } finally {
+                // make the test for the rule depending on if we support templating or not.
+                if (templateType == null) {
+                    PythonBinderHelper.MakeTest(rule, sdo.PythonType);
+                } else {
+                    MakeTemplatedSetMemberTest(context, action, sdo.PythonType, rule, templateType);
+                }
             }
+
         }
 
         private static RuleBuilder<T> MakeDeleteMemberRule<T>(CodeContext context, DeleteMemberAction action, object[] args) {
@@ -947,59 +872,51 @@ namespace IronPython.Runtime.Operations {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, sdo.PythonType);
 
-            if (!(args[0] is ICustomMembers)) {
-                if (action.Name == Symbols.Class) {
-                    rule.Target = 
-                        rule.MakeError(
-                            Ast.New(
-                                typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
-                                Ast.Constant("can't delete __class__ attribute")
-                            )
-                        );
-                    return rule;
-                }
-
-                // call __delattr__ if it exists
-                PythonTypeSlot dts;
-                if (sdo.PythonType.TryResolveSlot(context, Symbols.DelAttr, out dts) && !IsStandardObjectMethod(dts)) {
-                    MakeDeleteAttrTarget<T>(context, action, sdo, rule, dts);
-                    return rule;
-                }
-
-                // then see if we have a delete descriptor
-                sdo.PythonType.TryResolveSlot(context, action.Name, out dts);
-                ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
-                if (rsp != null) {
-                    MakeSlotsDeleteTarget<T>(context, rule, rsp);
-                    return rule;
-                }
-
-                // finally if we have a dictionary set the value there.
-                if (sdo.HasDictionary) {
-                    Expression body = MakeDictionaryDeleteTarget<T>(context, action, rule);
-                    if (dts != null) {
-                        body = Ast.Block(MakeSlotDelete<T>(context, rule, dts), body);
-                    }
-
-                    rule.Target = body;
-                    return rule;
-                }
-
-                if (dts != null) {
-                    rule.Target = MakeSlotDelete<T>(context, rule, dts);
-                    return rule;
-                }
-
-                // otherwise it's an error
-                rule.Target = MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule);
-                return rule;
-            } else {
-                // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
-                // we'll need to call the base GetRule instead and merge that with our normal lookup
-                // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
-                rule.Target = MakeCustomMembersDeleteBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule);
+            if (action.Name == Symbols.Class) {
+                rule.Target =
+                    rule.MakeError(
+                        Ast.New(
+                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            Ast.Constant("can't delete __class__ attribute")
+                        )
+                    );
                 return rule;
             }
+
+            // call __delattr__ if it exists
+            PythonTypeSlot dts;
+            if (sdo.PythonType.TryResolveSlot(context, Symbols.DelAttr, out dts) && !IsStandardObjectMethod(dts)) {
+                MakeDeleteAttrTarget<T>(context, action, sdo, rule, dts);
+                return rule;
+            }
+
+            // then see if we have a delete descriptor
+            sdo.PythonType.TryResolveSlot(context, action.Name, out dts);
+            ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
+            if (rsp != null) {
+                MakeSlotsDeleteTarget<T>(context, rule, rsp);
+                return rule;
+            }
+
+            // finally if we have a dictionary set the value there.
+            if (sdo.HasDictionary) {
+                Expression body = MakeDictionaryDeleteTarget<T>(context, action, rule);
+                if (dts != null) {
+                    body = Ast.Block(MakeSlotDelete<T>(context, rule, dts), body);
+                }
+
+                rule.Target = body;
+                return rule;
+            }
+
+            if (dts != null) {
+                rule.Target = MakeSlotDelete<T>(context, rule, dts);
+                return rule;
+            }
+
+            // otherwise it's an error
+            rule.Target = MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule);
+            return rule;
         }
 
         private static void MakeSlotsSetTarget<T>(CodeContext context, RuleBuilder<T> rule, ReflectedSlotProperty rsp) {
@@ -1026,7 +943,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static Expression MakeDictionaryDeleteTarget<T>(CodeContext context, DeleteMemberAction action, RuleBuilder<T> rule) {
-            return 
+            return
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Call(
@@ -1053,7 +970,7 @@ namespace IronPython.Runtime.Operations {
         private static void MakeSetAttrTarget<T>(CodeContext context, SetMemberAction action, IPythonObject sdo, RuleBuilder<T> rule, PythonTypeSlot dts) {
             VariableExpression tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __setattr__
-            rule.Target = 
+            rule.Target =
                 Ast.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetValue"),
@@ -1066,6 +983,7 @@ namespace IronPython.Runtime.Operations {
                     rule.MakeReturn(
                         context.LanguageContext.Binder,
                         Ast.Action.Call(
+                            PythonContext.GetContext(context).Binder,
                             typeof(object),
                             Ast.Read(tmp),
                             rule.AddTemplatedConstant(typeof(string), SymbolTable.IdToString(action.Name)),
@@ -1092,6 +1010,7 @@ namespace IronPython.Runtime.Operations {
                     rule.MakeReturn(
                         context.LanguageContext.Binder,
                         Ast.Action.Call(
+                            PythonContext.GetContext(context).Binder,
                             typeof(object),
                             Ast.Read(tmp),
                             Ast.Constant(SymbolTable.IdToString(action.Name))
@@ -1107,15 +1026,13 @@ namespace IronPython.Runtime.Operations {
             return bmd.Template.Targets[0].DeclaringType == typeof(ObjectOps);
         }
 
-        private static void MakeTemplatedSetMemberTest<T>(CodeContext context, SetMemberAction action, PythonType targetType, RuleBuilder<T> rule, string templateType) {            
-            bool altVersion = targetType.Version == PythonType.DynamicVersion;
-            string vername = altVersion ? "GetAlternateTypeVersion" : "GetTypeVersion";
-            int version = altVersion ? targetType.AlternateVersion : targetType.Version;
+        private static void MakeTemplatedSetMemberTest<T>(CodeContext context, SetMemberAction action, PythonType targetType, RuleBuilder<T> rule, string templateType) {
+            int version = targetType.Version;
             rule.Test = Ast.AndAlso(
                 RuleBuilder.MakeTypeTestExpression(targetType.UnderlyingSystemType, rule.Parameters[0]),
                 Ast.Equal(
                     Ast.Call(
-                        typeof(PythonOps).GetMethod(vername),
+                        typeof(PythonOps).GetMethod("GetTypeVersion"),
                         Ast.ReadProperty(
                                 Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
                                 typeof(IPythonObject).GetProperty("PythonType")
@@ -1125,36 +1042,34 @@ namespace IronPython.Runtime.Operations {
                 )
             );
 
-            RuleBuilderCache<T>.ParameterizeSetMember(targetType.UnderlyingSystemType, altVersion, context, rule, templateType);
+            RuleBuilderCache<T>.ParameterizeSetMember(targetType.UnderlyingSystemType, context, rule, templateType);
         }
 
         private static class RuleBuilderCache<T> {
             private static readonly Dictionary<SetMemberKey, RuleBuilder<T>> SetMemberBuilders = new Dictionary<SetMemberKey, RuleBuilder<T>>();
 
             private struct SetMemberKey {
-                public SetMemberKey(Type type, bool version, string templateType) {
+                public SetMemberKey(Type type, string templateType) {
                     Type = type;
-                    VersionOrAltVersion = version;
                     TemplateType = templateType;
                 }
 
                 public Type Type;
-                public bool VersionOrAltVersion;
                 public string TemplateType;
             }
 
-            public static void ParameterizeSetMember(Type type, bool versionOrAltVersion, CodeContext context, RuleBuilder<T> rule, string templateType) {
+            public static void ParameterizeSetMember(Type type, CodeContext context, RuleBuilder<T> rule, string templateType) {
                 RuleBuilder<T> builder;
 
                 lock (SetMemberBuilders) {
-                    SetMemberKey key = new SetMemberKey(type, versionOrAltVersion, templateType);
+                    SetMemberKey key = new SetMemberKey(type, templateType);
                     if (!SetMemberBuilders.TryGetValue(key, out builder)) {
                         SetMemberBuilders[key] = rule;
                         return;
                     }
                 }
 
-                builder.CopyTemplateToRule(rule);                
+                builder.CopyTemplateToRule(rule);
             }
         }
 
@@ -1175,7 +1090,7 @@ namespace IronPython.Runtime.Operations {
             }
             return null;
         }
-        
+
         public static object SetDictionaryValue(IPythonObject self, SymbolId name, object value) {
             IAttributesCollection dict = GetDictionary(self);
 
@@ -1212,7 +1127,7 @@ namespace IronPython.Runtime.Operations {
 
         public static bool TryGetNonInheritedMethodHelper(PythonType dt, object instance, SymbolId name, out object callTarget) {
             // search MRO for other user-types in the chain that are overriding the method
-            foreach(PythonType type in dt.ResolutionOrder) {
+            foreach (PythonType type in dt.ResolutionOrder) {
                 if (type.IsSystemType) break;           // hit the .NET types, we're done
 
                 if (LookupValue(type, instance, name, out callTarget)) {
@@ -1245,7 +1160,7 @@ namespace IronPython.Runtime.Operations {
         public static bool TryGetNonInheritedValueHelper(PythonType dt, object instance, SymbolId name, out object callTarget) {
             PythonTypeSlot dts;
             // search MRO for other user-types in the chain that are overriding the method
-           foreach(PythonType type in dt.ResolutionOrder) {
+            foreach (PythonType type in dt.ResolutionOrder) {
                 if (type.IsSystemType) break;           // hit the .NET types, we're done
 
                 if (type.TryLookupSlot(DefaultContext.Default, name, out dts)) {
@@ -1253,7 +1168,7 @@ namespace IronPython.Runtime.Operations {
                     return true;
                 }
             }
-            
+
             // check instance
             IPythonObject isdo = instance as IPythonObject;
             IAttributesCollection iac;
@@ -1298,7 +1213,7 @@ namespace IronPython.Runtime.Operations {
 
         public static bool ValueNotEqualsHelper(object self, object other) {
             object res;
-            if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, self, other, Symbols.OperatorNotEquals, out res) && 
+            if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, self, other, Symbols.OperatorNotEquals, out res) &&
                 res != PythonOps.NotImplemented &&
                 res != null &&
                 res.GetType() == typeof(bool))
