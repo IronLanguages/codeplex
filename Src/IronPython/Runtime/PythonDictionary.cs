@@ -16,19 +16,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
 
@@ -36,7 +32,6 @@ namespace IronPython.Runtime {
     public class PythonDictionary : IDictionary<object, object>, IValueEquality,
         IDictionary, ICodeFormattable, IAttributesCollection
     {
-        internal static readonly IEqualityComparer<object> Comparer = new PythonObjectComparer();
         [MultiRuntimeAware]
         private static object DefaultGetItem;   // our cached __getitem__ method
         [MultiRuntimeAware]
@@ -76,6 +71,10 @@ namespace IronPython.Runtime {
 
         internal static PythonDictionary MakeSymbolDictionary() {
             return new PythonDictionary(new SymbolIdDictionaryStorage());
+        }
+
+        internal static PythonDictionary MakeSymbolDictionary(int count) {
+            return new PythonDictionary(new SymbolIdDictionaryStorage(count));
         }
 
         public void __init__(CodeContext/*!*/ context, object o, [ParamDictionary] IAttributesCollection kwArgs) {
@@ -353,21 +352,49 @@ namespace IronPython.Runtime {
         }
 
         private static object fromkeysAny(PythonType cls, object o, object value) {
-            object ret = MakeDict(cls);
-            if (ret.GetType() == typeof(PythonDictionary)) {
-                PythonDictionary dr = ret as PythonDictionary;
+            PythonDictionary pyDict;
+            object dict;
+
+            if (cls == TypeCache.Dict) {
+                string str;
+                ICollection ic = o as ICollection;
+
+                // creating our own dict, try and get the ideal size and add w/o locks
+                if (ic != null) {
+                    pyDict = new PythonDictionary(new CommonDictionaryStorage(ic.Count));
+                } else if ((str = o as string) != null) {
+                    pyDict = PythonDictionary.MakeSymbolDictionary(str.Length);
+                } else {
+                    pyDict = new PythonDictionary();
+                }
+
                 IEnumerator i = PythonOps.GetEnumerator(o);
                 while (i.MoveNext()) {
-                    dr[i.Current] = value;
+                    pyDict._storage.AddNoLock(i.Current, value);
+                }
+
+                return pyDict;
+            } else {
+                // call the user type constructor
+                dict = MakeDict(cls);
+                pyDict = dict as PythonDictionary;
+            }
+
+            if (pyDict != null) {
+                // then store all the keys with their associated value
+                IEnumerator i = PythonOps.GetEnumerator(o);
+                while (i.MoveNext()) {
+                    pyDict[i.Current] = value;
                 }
             } else {
-                // slow path - user defined dictionary.
+                // slow path, cls.__new__ returned a user defined dictionary instead of a PythonDictionary.
                 IEnumerator i = PythonOps.GetEnumerator(o);
                 while (i.MoveNext()) {
-                    PythonOps.SetIndex(ret, i.Current, value);
+                    PythonOps.SetIndex(dict, i.Current, value);
                 }
             }
-            return ret;
+
+            return dict;
         }
 
         [PythonClassMethod]
@@ -380,7 +407,7 @@ namespace IronPython.Runtime {
             XRange xr = seq as XRange;
             if (xr != null) {
                 if (!_fromkeysSite.IsInitialized) {
-                    _fromkeysSite.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 0));
+                    _fromkeysSite.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 0));
                 }
 
                 int n = xr.__len__();
@@ -415,7 +442,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public object __eq__(object other) {
             if (!(other is PythonDictionary || other is IDictionary<object, object>))
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
         }
@@ -423,7 +450,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public object __ne__(object other) {
             object res = __eq__(other);
-            if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
+            if (res != NotImplementedType.Value) return PythonOps.Not(res);
 
             return res;
         }
@@ -436,7 +463,7 @@ namespace IronPython.Runtime {
                 object len, iteritems;
                 if (!PythonOps.TryGetBoundAttr(context, other, Symbols.Length, out len) ||
                     !PythonOps.TryGetBoundAttr(context, other, SymbolTable.StringToId("iteritems"), out iteritems)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 // user-defined dictionary...
@@ -505,7 +532,7 @@ namespace IronPython.Runtime {
             return __contains__(key);
         }
 
-        class DictEnumerator : IDictionaryEnumerator {
+        internal class DictEnumerator : IDictionaryEnumerator {
             private IEnumerator<KeyValuePair<object, object>> _enumerator;
             private bool _moved;
 

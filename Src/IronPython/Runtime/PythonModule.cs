@@ -14,27 +14,23 @@
  * ***************************************************************************/
 
 using System;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace IronPython.Runtime {
     [Flags]
     public enum ModuleOptions {
         None = 0,
-        PublishModule = 1,
-        TrueDivision = 2,        
-        ShowClsMethods = 4,
-        Optimized = 8,
-        Initialize = 16,
-        WithStatement = 32,
-        AbsoluteImports = 64,
-        NoBuiltins = 128,
-        ModuleBuiltins = 256,
-        ExecOrEvalCode = 512,
+        TrueDivision    = 0x0001,        
+        ShowClsMethods  = 0x0002,
+        Optimized       = 0x0004,
+        Initialize      = 0x0008,
+        WithStatement   = 0x0010,
+        AbsoluteImports = 0x0020,
+        NoBuiltins      = 0x0040,
+        ModuleBuiltins  = 0x0080,
+        ExecOrEvalCode  = 0x0100,
+        SkipFirstLine   = 0x0200,
     }
 
     public class PythonModule : ScopeExtension {
@@ -111,18 +107,10 @@ namespace IronPython.Runtime {
             _trueDivision = false;
         }
 
-        internal void SetName(object value) {
-            Scope.SetName(Symbols.Name, value); // TODO: set in Python specific dict
-        }
-
         internal object GetName() {
             object result;
             Scope.TryLookupName(Symbols.Name, out result);
             return result;
-        }
-
-        internal void SetFile(object value) {
-            Scope.SetName(Symbols.File, value); // TODO: set in Python specific dict
         }
 
         internal object GetFile() {

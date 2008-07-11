@@ -14,11 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-
+using System.Scripting;
 using ToyScript.Runtime;
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
     using Ast = MSAst.Expression;
@@ -39,7 +37,7 @@ namespace ToyScript.Parser.Ast {
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             // Push a new Scope for evaluating the functions body in
-            ToyScope scope = tg.PushNewScope(_name);
+            ToyScope scope = tg.PushNewScope(_name, MSAst.Annotations.Empty);
 
             List<MSAst.Expression> names = new List<MSAst.Expression>();
             foreach (string parameter in _parameters) {
@@ -57,7 +55,7 @@ namespace ToyScript.Parser.Ast {
                 Ast.Call(
                     typeof(ToyFunction).GetMethod("Create"),
                     Ast.Constant(_name),
-                    Ast.NewArray(typeof(string[]), names),
+                    Ast.NewArrayInit(typeof(string), names),
                     lambda
                 )
             );

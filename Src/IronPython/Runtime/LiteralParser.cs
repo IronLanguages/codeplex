@@ -14,15 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
-
-using IronPython.Runtime;
-using IronPython.Compiler;
+using System.Text;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Math; 
 
 namespace IronPython.Runtime {
     /// <summary>

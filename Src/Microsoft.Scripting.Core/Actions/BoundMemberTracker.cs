@@ -13,15 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Runtime.CompilerServices;
-using System.Reflection;
+using System.Linq.Expressions;
 
-using Microsoft.Scripting.Ast;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     public class BoundMemberTracker : MemberTracker {
         private Expression _instance;
         private MemberTracker _tracker;
@@ -67,16 +61,16 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
-            return _tracker.GetBoundValue(binder, type, _instance);
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
+            return _tracker.GetBoundValue(context, binder, type, _instance);
         }
 
         public override ErrorInfo GetError(ActionBinder binder) {
             return _tracker.GetBoundError(binder, _instance);
         }
 
-        public override Expression SetValue(ActionBinder binder, Type type, Expression value) {
-            return _tracker.SetBoundValue(binder, type, value, _instance);
+        public override Expression SetValue(Expression context, ActionBinder binder, Type type, Expression value) {
+            return _tracker.SetBoundValue(context, binder, type, value, _instance);
         }
     }
 }

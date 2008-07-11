@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -54,7 +54,7 @@ def TestCommandLine(args, expected_output, expected_exitcode = 0):
     cmdline = "ipy " + ' '.join(args)
     
     print ''
-    print cmdline
+    print '    ', cmdline
     
     Assert(exitcode == expected_exitcode, "'" + cmdline + "' generated unexpected exit code " + str(exitcode))
     if (expected_output != None):
@@ -125,40 +125,40 @@ def test_exit():
 ############################################################
 # Test the -c (command as string) option.
 
-# regexp for the output of PrintUsage
-usageRegex = "Usage.*"
-
-TestCommandLine(("-c", "print 'foo'"), "foo\n")
-TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo"), 1)
-TestCommandLine(("-c", "import sys; sys.exit(123)"), "", 123)
-TestCommandLine(("-c", "import sys; print sys.argv", "foo", "bar", "baz"), "['-c', 'foo', 'bar', 'baz']\n")
-TestCommandLine(("-c",), "Argument expected for the -c option.\n", -1)
+def test_c():
+    TestCommandLine(("-c", "print 'foo'"), "foo\n")
+    TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo"), 1)
+    TestCommandLine(("-c", "import sys; sys.exit(123)"), "", 123)
+    TestCommandLine(("-c", "import sys; print sys.argv", "foo", "bar", "baz"), "['-c', 'foo', 'bar', 'baz']\n")
+    TestCommandLine(("-c",), "Argument expected for the -c option.\n", -1)
 
 ############################################################
 # Test the -S (suppress site initialization) option.
 
-# Create a local site.py that sets some global context. Do this in a temporary directory to avoid accidently
-# overwriting a real site.py or creating confusion. Use the IRONPYTHONPATH environment variable to point
-# IronPython at this version of site.py.
-f = file(tmpdir + "\\site.py", "w")
-f.write("import sys\nsys.foo = 123\n")
-f.close()
-Environment.SetEnvironmentVariable("IRONPYTHONPATH", tmpdir)
+def test_S():
+    # Create a local site.py that sets some global context. Do this in a temporary directory to avoid accidently
+    # overwriting a real site.py or creating confusion. Use the IRONPYTHONPATH environment variable to point
+    # IronPython at this version of site.py.
+    f = file(tmpdir + "\\site.py", "w")
+    f.write("import sys\nsys.foo = 123\n")
+    f.close()
+    Environment.SetEnvironmentVariable("IRONPYTHONPATH", tmpdir)
+    
+    # Verify that the file gets loaded by default.
+    TestCommandLine(("-c", "import sys; print sys.foo"), "123\n")
+    
+    # CP778 - verify 'site' does not show up in dir()
+    TestCommandLine(("-c", "print 'site' in dir()"), "False\n")
+    
+    # Verify that Lib remains in sys.path.
+    TestCommandLine(("-S", "-c", "import sys; print str(sys.exec_prefix + '\\lib').lower() in [x.lower() for x in sys.path]"), "True\n")
+    
+    # Now check that we can suppress this with -S.
+    TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
 
-# Verify that the file gets loaded by default.
-TestCommandLine(("-c", "import sys; print sys.foo"), "123\n")
-
-# CP778 - verify 'site' does not show up in dir()
-TestCommandLine(("-c", "print 'site' in dir()"), "False\n")
-
-# Verify that Lib remains in sys.path.
-TestCommandLine(("-S", "-c", "import sys; print str(sys.exec_prefix + '\\lib').lower() in [x.lower() for x in sys.path]"), "True\n")
-
-# Now check that we can suppress this with -S.
-TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
-
-# Test the -V (print version and exit) option.
-TestCommandLine(("-V",), ("regexp", "IronPython ([0-9.]+)(.*) on .NET ([0-9.]+)\n"))
+def test_V():
+    # Test the -V (print version and exit) option.
+    TestCommandLine(("-V",), ("regexp", "IronPython ([0-9.]+)(.*) on .NET ([0-9.]+)\n"))
 
 ############################################################
 # Test the -OO (suppress doc string optimization) option.
@@ -170,48 +170,49 @@ def test_OO():
 ############################################################
 # Test the -t and -tt (warnings/errors on inconsistent tab usage) options.
 
-# Write a script containing inconsistent use fo tabs.
-tmpscript = tmpdir + "\\tabs.py"
-f = file(tmpscript, "w")
-f.write("if (1):\n\tpass\n        pass\nprint 'OK'\n")
-f.close()
+def test_t():
+    # Write a script containing inconsistent use fo tabs.
+    tmpscript = tmpdir + "\\tabs.py"
+    f = file(tmpscript, "w")
+    f.write("if (1):\n\tpass\n        pass\nprint 'OK'\n")
+    f.close()
+    
+    TestCommandLine((tmpscript, ), "OK\n")
+    msg = "inconsistent use of tabs and spaces in indentation"
+    TestCommandLine(("-t", tmpscript), ("lastline", "SyntaxWarning: %s (%s, line %d)"  % (msg, tmpscript, 3)), 1)
+    TestCommandLine(("-tt", tmpscript), ("lastline", "TabError: " + msg + "\n"), 1)
 
-TestCommandLine((tmpscript, ), "OK\n")
-msg = "inconsistent use of tabs and spaces in indentation"
-TestCommandLine(("-t", tmpscript), ("lastline", "SyntaxWarning: %s (%s, line %d)"  % (msg, tmpscript, 3)), 1)
-TestCommandLine(("-tt", tmpscript), ("lastline", "TabError: " + msg + "\n"), 1)
-
-
-# Test the -E (suppress use of environment variables) option.
-
-# Re-use the generated site.py from above and verify that we can stop it being picked up from IRONPYTHONPATH
-# using -E.
-TestCommandLine(("-E", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
-
-# Create an override startup script that exits right away
-tmpscript = tmpdir + "\\startupdie.py"
-f = file(tmpscript, "w")
-f.write("from System import Environment\nprint 'Boo!'\nEnvironment.Exit(27)\n")
-f.close()
-Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", tmpscript)
-TestCommandLine((), None, 27)
-
-tmpscript2 = tmpdir + "\\something.py"
-f = file(tmpscript2, "w")
-f.write("print 2+2\n")
-f.close()
-TestCommandLine(('-E', tmpscript2), "4\n")
-
-tmpscript3 = tmpdir + "\\startupdie.py"
-f = file(tmpscript3, "w")
-f.write("import sys\nprint 'Boo!'\nsys.exit(42)\n")
-f.close()
-Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", tmpscript3)
-TestCommandLine((), None, 42)
-
-Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", "")
-nt.unlink(tmpscript)
-nt.unlink(tmpscript2)
+def test_E():
+    # Test the -E (suppress use of environment variables) option.
+    
+    # Re-use the generated site.py from above and verify that we can stop it being picked up from IRONPYTHONPATH
+    # using -E.
+    TestCommandLine(("-E", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
+    
+    # Create an override startup script that exits right away
+    tmpscript = tmpdir + "\\startupdie.py"
+    f = file(tmpscript, "w")
+    f.write("from System import Environment\nprint 'Boo!'\nEnvironment.Exit(27)\n")
+    f.close()
+    Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", tmpscript)
+    TestCommandLine((), None, 27)
+    
+    tmpscript2 = tmpdir + "\\something.py"
+    f = file(tmpscript2, "w")
+    f.write("print 2+2\n")
+    f.close()
+    TestCommandLine(('-E', tmpscript2), "4\n")
+    
+    tmpscript3 = tmpdir + "\\startupdie.py"
+    f = file(tmpscript3, "w")
+    f.write("import sys\nprint 'Boo!'\nsys.exit(42)\n")
+    f.close()
+    Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", tmpscript3)
+    TestCommandLine((), None, 42)
+    
+    Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", "")
+    nt.unlink(tmpscript)
+    nt.unlink(tmpscript2)
 
 # Test -W (set warning filters) option.
 def test_W():
@@ -221,68 +222,108 @@ def test_W():
     TestCommandLine(("-W",), "Argument expected for the -W option.\n", -1)
 
 # Test -?
+# regexp for the output of PrintUsage    
+# usageRegex = "Usage.*"
 # TestCommandLine(("-?",), ("regexp", usageRegex))
 
 # Test -X:FastEval
-TestCommandLine(("-X:Interpret", "-c", "2+2"), "")
-TestCommandLine(("-X:Interpret", "-c", "eval('2+2')"), "")
-TestCommandLine(("-X:Interpret", "-c", "x = 3; eval('x+2')"), "")
+def test_X_Interpret():
+    TestCommandLine(("-X:Interpret", "-c", "2+2"), "")
+    TestCommandLine(("-X:Interpret", "-c", "eval('2+2')"), "")
+    TestCommandLine(("-X:Interpret", "-c", "x = 3; eval('x+2')"), "")
 
 # Test -X:TrackPerformance
-TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "")
+def test_X_TrackPerformance():
+    TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "")
 
 # Test -X:Frames
-TestCommandLine(("-X:Frames", "-c", "2+2"), "")
+def test_X_Frames():
+    TestCommandLine(("-X:Frames", "-c", "2+2"), "")
 
-# Test -u (Unbuffered stdout & stderr): only test this can be passed in 
-TestCommandLine(('-u', '-c', 'print 2+2'), "4\n")
+# Test -u (Unbuffered stdout & stderr): only test this can be passed in
+def test_u():
+    TestCommandLine(('-u', '-c', 'print 2+2'), "4\n")
 
 # Test -X:MaxRecursion
-TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
-TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
-TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
+def test_X_MaxRecursion():
+    TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
+    TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
+    TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
 
-# Test -X:ILDebug
-ildir = IO.Path.Combine(IO.Path.GetTempPath(), "__DLRIL")
-print "IL directory is " + ildir
-
-if IO.Directory.Exists(ildir):
+# Test -X:DumpIL
+def test_DumpIL():
+    ildir = IO.Path.Combine(IO.Path.GetTempPath(), "__DLRIL")
+    print "IL directory is " + ildir
+    
+    if IO.Directory.Exists(ildir):
+        IO.Directory.Delete(ildir, True)
+    
+    TestCommandLine(("-X:DumpIL", "-c", "def f(): pass"), None)
+    
+    Assert(IO.Directory.Exists(ildir))
+    Assert(len([fName for fName in nt.listdir(ildir) if re.match('.*\.il', fName)]) > 0)
     IO.Directory.Delete(ildir, True)
 
-TestCommandLine(("-X:ILDebug", "-c", "def f(): pass"), None)
-
-Assert(IO.Directory.Exists(ildir))
-Assert(len([fName for fName in nt.listdir(ildir) if re.match('.*\.il', fName)]) > 0)
-IO.Directory.Delete(ildir, True)
-
 # Test -x (ignore first line)
-tmpxoptscript = tmpdir + '\\xopt.py'
-f = file(tmpxoptscript, "w")
-f.write("first line is garbage\nprint 	2+2\n")
-f.close()
-TestCommandLine(('-x', tmpxoptscript), "4\n")
-nt.unlink(tmpxoptscript)
+def test_x():
+    tmpxoptscript = tmpdir + '\\xopt.py'
+    f = file(tmpxoptscript, "w")
+    f.write("first line is garbage\nprint 2+2\n")
+    f.close()
+    TestCommandLine(('-x', tmpxoptscript), "4\n")
+    nt.unlink(tmpxoptscript)
 
-# Test invocation of a nonexistent file
-try:
-    nt.unlink("nonexistent.py")
-except OSError:
-    pass
-TestCommandLine(("nonexistent.py",), "File nonexistent.py does not exist.\n", 1)
+def test_nonexistent_file():
+    # Test invocation of a nonexistent file
+    try:
+        nt.unlink("nonexistent.py")
+    except OSError:
+        pass
+    TestCommandLine(("nonexistent.py",), "File nonexistent.py does not exist.\n", 1)
+
+# Test -X:MTA
+def test_MTA():
+    TestCommandLine(("-X:MTA", "-c", "print 'OK'"), "OK\n")
+    TestInteractive("-X:MTA")
 
 # Test -Q
 def test_Q():
+    TestCommandLine(("-Q", "warn", "-c", "print 3/2.0"), "1.5\n")
+    TestCommandLine(("-Q", "warn", "-c", "print 3j/2.0"), "1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), "warning: DeprecationWarning: classic float division\n1.5\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3L/2.0"), "warning: DeprecationWarning: classic float division\n1.5\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3.0/2L"), "warning: DeprecationWarning: classic float division\n1.5\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2.0"), "warning: DeprecationWarning: classic complex division\n1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2"), "warning: DeprecationWarning: classic complex division\n1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2L"), "warning: DeprecationWarning: classic complex division\n1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3.0/2j"), "warning: DeprecationWarning: classic complex division\n-1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2j"), "warning: DeprecationWarning: classic complex division\n-1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3L/2j"), "warning: DeprecationWarning: classic complex division\n-1.5j\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3/2L"), "warning: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3/2L"), "warning: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3L/2"), "warning: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3L/2"), "warning: DeprecationWarning: classic long division\n1\n")
+
     TestCommandLine(("-Qnew", "-c", "print 3/2"), "1.5\n")
     TestCommandLine(("-Qold", "-c", "print 3/2"), "1\n")
-    TestCommandLine(("-Qwarn", "-c", "print 3/2"), "1\n")
-    TestCommandLine(("-Qwarnall", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
     TestCommandLine(("-Q", "new", "-c", "print 3/2"), "1.5\n")
     TestCommandLine(("-Q", "old", "-c", "print 3/2"), "1\n")
-    TestCommandLine(("-Q", "warn", "-c", "print 3/2"), "1\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Q", "warn", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
 
 def test_doc():
     TestCommandLine(("", "-c", "print __doc__"), "None\n", 0)
+    
+def test_cp11922():
+    TestCommandLine(("-c", "assert False"), '''Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+AssertionError''',
+                    1)
+
+def test_cp798():
+    TestCommandLine(("", "-c", "dir();print '_' in dir()"), "False\n", 0)
 
 run_test(__name__)
 

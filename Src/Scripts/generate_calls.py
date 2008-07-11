@@ -74,11 +74,15 @@ def gen_args_paramscall(nparams):
     return args
 
 
-
 def call_targets(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("public delegate object CallTarget%d(%s);" %
                  (nparams, make_params(nparams)))
+
+def generator_targets(cw):
+    for nparams in range(MAX_ARGS+1):
+        cw.write("public delegate IEnumerator GeneratorTarget%d(%s);" %
+                 (nparams, make_params(nparams, "PythonGenerator generator")))
 
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"
@@ -213,11 +217,17 @@ def gen_python_switch(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("case %d: return typeof(CallTarget%d);" % (nparams, nparams))
 
+def gen_python_generator_switch(cw):
+   for nparams in range(MAX_ARGS+1):
+        cw.write("case %d: return typeof(GeneratorTarget%d);" % (nparams, nparams))
+
 def main():
     return generate(
         ("Python Call Targets", call_targets),
+        ("Python Generator Targets", generator_targets),
         ("Python Call Operations", gen_python_methods),
         ("Python Call Target Switch", gen_python_switch),
+        ("Python Generator Target Switch", gen_python_generator_switch),
     )
 
 if __name__ == "__main__":

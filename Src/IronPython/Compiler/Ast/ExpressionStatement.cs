@@ -13,10 +13,11 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ExpressionStatement : Statement {
         private readonly Expression _expression;
@@ -40,7 +41,7 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Block(_expression.Span, expression);
+            return AstUtils.Block(_expression.Span, expression);
         }
 
         public override void Walk(PythonWalker walker) {
@@ -59,6 +60,12 @@ namespace IronPython.Compiler.Ast {
                     return ce.Value as string;
                 }
                 return null;
+            }
+        }
+
+        internal override bool CanThrow {
+            get {
+                return _expression.CanThrow;
             }
         }
     }

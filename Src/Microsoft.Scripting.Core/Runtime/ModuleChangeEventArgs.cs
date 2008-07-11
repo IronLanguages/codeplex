@@ -13,11 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Event args for when a ScriptScope has had its contents changed.  
     /// </summary>

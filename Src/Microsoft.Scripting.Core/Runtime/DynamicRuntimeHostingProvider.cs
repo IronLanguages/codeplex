@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.IO;
 using System.Text;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// DLR requires any Hosting API provider to implement this class and provide its instance upon Runtime initialization.
     /// DLR calls on it to perform basic host/system dependent operations.
@@ -38,11 +37,12 @@ namespace Microsoft.Scripting.Runtime {
         /// <returns>Null, if the source file doesn't exist.</returns>
         public abstract SourceUnit TryGetSourceFileUnit(LanguageContext/*!*/ langauge, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind);
 
+        // TODO: fix when this moves up:
+        //<exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
         /// <summary>
         /// Resolves the given name to a source unit.
         /// </summary>
         /// <exception cref="FileNotFoundException">No file matches the specified name.</exception>
-        /// <exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
         /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
         /// <exception cref="ArgumentException">Name is not valid.</exception>
         public abstract SourceUnit/*!*/ ResolveSourceFileUnit(string/*!*/ name);

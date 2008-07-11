@@ -13,17 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using System.Runtime.CompilerServices;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// Represents a logical member of a type.  The member could either be real concrete member on a type or
     /// an extension member.
@@ -38,7 +34,40 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
         public static readonly MemberTracker[] EmptyTrackers = new MemberTracker[0];
 
-        private static readonly Dictionary<MemberInfo, MemberTracker> _trackers = new Dictionary<MemberInfo, MemberTracker>();
+        private static readonly Dictionary<MemberKey, MemberTracker> _trackers = new Dictionary<MemberKey, MemberTracker>();
+
+        /// <summary>
+        /// We ensure we only produce one MemberTracker for each member which logically lives on the declaring type.  So 
+        /// for example if you get a member from a derived class which is declared on the base class it should be the same 
+        /// as getting the member from the base class.  That’s easy enough until you get into extension members – here there
+        /// might be one extension member which is being applied to multiple types.  Therefore we need to take into account the 
+        /// extension type when ensuring that we only have 1 MemberTracker ever created.
+        /// </summary>
+        class MemberKey {
+            private readonly MemberInfo/*!*/ Member;
+            private readonly Type Extending;
+
+            public MemberKey(MemberInfo/*!*/ member, Type extending) {
+                Member = member;
+                Extending = extending;
+            }
+
+            public override int GetHashCode() {
+                int res = Member.GetHashCode();
+                if (Extending != null) {
+                    res ^= Extending.GetHashCode();
+                }
+                return res;
+            }
+
+            public override bool Equals(object obj) {
+                MemberKey other = obj as MemberKey ;
+                if (other == null) return false;
+
+                return other.Member == Member &&
+                    other.Extending == Extending;
+            }
+        }
 
         internal MemberTracker() {
         }
@@ -73,7 +102,8 @@ namespace Microsoft.Scripting.Actions {
 
             lock (_trackers) {
                 MemberTracker res;
-                if (_trackers.TryGetValue(member, out res)) return res;
+                MemberKey key = new MemberKey(member, extending);
+                if (_trackers.TryGetValue(key, out res)) return res;
 
                 switch (member.MemberType) {
                     case MemberTypes.Constructor: res = new ConstructorTracker((ConstructorInfo)member); break;
@@ -93,7 +123,7 @@ namespace Microsoft.Scripting.Actions {
                     default: throw new InvalidOperationException("unknown type: " + member.MemberType);
                 }
 
-                _trackers[member] = res;
+                _trackers[key] = res;
                 return res;
             }
         }
@@ -106,7 +136,7 @@ namespace Microsoft.Scripting.Actions {
         /// Returns null if it's an error to get the value.  The caller can then call GetErrorForGet to get 
         /// the correct error Expression (or null if they should provide a default).
         /// </summary>
-        public virtual Expression GetValue(ActionBinder binder, Type type) {
+        public virtual Expression GetValue(Expression context, ActionBinder binder, Type type) {
             return binder.ReturnMemberTracker(type, this);
         }
 
@@ -116,7 +146,7 @@ namespace Microsoft.Scripting.Actions {
         /// Returns null if it's an error to assign to.  The caller can then call GetErrorForSet to
         /// get the correct error Expression (or null if a default error should be provided).
         /// </summary>
-        public virtual Expression SetValue(ActionBinder binder, Type type, Expression value) {
+        public virtual Expression SetValue(Expression context, ActionBinder binder, Type type, Expression value) {
             return null;
         }
 
@@ -127,7 +157,7 @@ namespace Microsoft.Scripting.Actions {
         /// GetErrorsForDoCall to get the correct error Expression (or null if a default error should be provided).
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")] // TODO: fix
-        public virtual Expression Call(ActionBinder binder, params Expression[] arguments) {
+        internal virtual Expression Call(Expression context, ActionBinder binder, params Expression[] arguments) {
             return null;
         }
 
@@ -157,16 +187,16 @@ namespace Microsoft.Scripting.Actions {
         /// Helper for getting values that have been bound.  Called from BoundMemberTracker.  Custom member
         /// trackers can override this to provide their own behaviors when bound to an instance.
         /// </summary>
-        protected internal virtual Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
-            return GetValue(binder, type);
+        protected internal virtual Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
+            return GetValue(context, binder, type);
         }
 
         /// <summary>
         /// Helper for setting values that have been bound.  Called from BoundMemberTracker.  Custom member
         /// trackers can override this to provide their own behaviors when bound to an instance.
         /// </summary>
-        protected internal virtual Expression SetBoundValue(ActionBinder binder, Type type, Expression value,Expression instance) {
-            return SetValue(binder, type, instance);
+        protected internal virtual Expression SetBoundValue(Expression context, ActionBinder binder, Type type, Expression value,Expression instance) {
+            return SetValue(context, binder, type, instance);
         }
 
         /// <summary>

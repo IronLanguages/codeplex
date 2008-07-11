@@ -14,16 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
-
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
+using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     public static class DynamicHelpers {

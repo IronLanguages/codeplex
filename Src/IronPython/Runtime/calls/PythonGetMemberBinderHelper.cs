@@ -14,34 +14,32 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
-
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
-    class PythonGetMemberBinderHelper<T> : GetMemberBinderHelper<T> {
+    class PythonGetMemberBinderHelper<T> : GetMemberBinderHelper<T> where T : class {
 
-        public PythonGetMemberBinderHelper(CodeContext context, GetMemberAction action, object []args)
+        public PythonGetMemberBinderHelper(CodeContext context, OldGetMemberAction action, object []args)
             : base(context, action, args) {
         }
 
         public RuleBuilder<T> MakeRule() {
             Type type = CompilerHelpers.GetType(Arguments[0]);
             // we extend None & our standard built-in python types.
-            if (type == typeof(None) || PythonTypeCustomizer.IsPythonType(type)) {
+            if (type == typeof(None) || PythonBinder.IsPythonType(type)) {
                 // look up in the PythonType so that we can 
                 // get our custom method names (e.g. string.startswith)            
                 PythonType argType = DynamicHelpers.GetPythonTypeFromType(type);
@@ -116,17 +114,17 @@ namespace IronPython.Runtime.Calls {
                             clsOnly, 
                             Ast.IfThenElse(
                                 Ast.Call(
-                                    typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
-                                    Ast.CodeContext(),
+                                    TypeInfo._PythonOps.SlotTryGetBoundValue,
+                                    Rule.Context,
                                     Ast.Convert(
                                         Ast.WeakConstant(slot),
                                         typeof(PythonTypeSlot)
                                     ),
                                     Ast.ConvertHelper(arg, typeof(object)),
                                     Ast.ConvertHelper(Ast.RuntimeConstant(parent), typeof(PythonType)),
-                                    Ast.Read(tmp)
+                                    tmp
                                 ),
-                                Rule.MakeReturn(Binder, Ast.Read(tmp)),
+                                Rule.MakeReturn(Binder, tmp),
                                 MakeError(parent)
                             )
                         )
@@ -192,7 +190,7 @@ namespace IronPython.Runtime.Calls {
                         Ast.IfThenElse(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("IsClsVisible"),
-                                Ast.CodeContext()
+                                Rule.Context
                             ),
                             body,
                             MakeError(argType)
@@ -204,12 +202,12 @@ namespace IronPython.Runtime.Calls {
 
         private Expression MakeError(PythonType argType) {
             if (Action.IsNoThrow) {
-                return Rule.MakeReturn(Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
+                return Rule.MakeReturn(Binder, Ast.Field(null, typeof(OperationFailed).GetField("Value")));
             } else {
                 return Rule.MakeError(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                        Ast.Constant(PythonTypeOps.GetName(argType), typeof(string)),
+                        Ast.Constant(argType.Name, typeof(string)),
                         Ast.Constant(Action.Name)
                     )
                 );
@@ -218,7 +216,7 @@ namespace IronPython.Runtime.Calls {
 
         private bool TryMakePropertyGet(MethodInfo getter, Expression arg, out Expression body) {
             if (getter != null && CompilerHelpers.CanOptimizeMethod(getter)) {
-                Expression call = Binder.MakeCallExpression(getter, arg);
+                Expression call = Binder.MakeCallExpression(Rule.Context, getter, arg);
                 if (call != null) {
                     body = Rule.MakeReturn(Binder, call);
                     return true;

@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
 
     /// <summary>
     /// Provides a factory to create TextReader's over one source of textual content.

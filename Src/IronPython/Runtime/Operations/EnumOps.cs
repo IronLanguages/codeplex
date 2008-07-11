@@ -14,17 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
 
-using Ops = IronPython.Runtime.Operations.PythonOps;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-
-[assembly: PythonExtensionType(typeof(Enum), typeof(EnumOps))]
 namespace IronPython.Runtime.Operations {
     public static class EnumOps {        
         [SpecialName]

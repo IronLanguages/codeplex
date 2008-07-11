@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-
-using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Math; 
 
 namespace IronPythonTest {
     public static class System_Scripting_Math {

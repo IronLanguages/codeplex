@@ -22,11 +22,6 @@ from lib.cominterop_util import *
 import clr
 from System import Type, Activator
 
-if not file_exists(scriptpw_path):
-    from sys import exit
-    print "Cannot test scriptpw.dll when it doesn't exist."
-    exit(0)
-
 if not file_exists_in_path("tlbimp.exe"):
     from sys import exit
     print "tlbimp.exe is not in the path!"
@@ -128,4 +123,7 @@ def test__2_unregistered_nopia():
 
 
 #------------------------------------------------------------------------------
-run_com_test(__name__, __file__)
+if not file_exists(scriptpw_path):
+    print "Cannot test scriptpw.dll when it doesn't exist."
+else:
+    run_com_test(__name__, __file__)

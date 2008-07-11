@@ -15,14 +15,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using Microsoft.Scripting;
 using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -84,7 +84,7 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        public override bool TryGetValue(Microsoft.Scripting.SymbolId key, out object value) {
+        public override bool TryGetValue(SymbolId key, out object value) {
             if (base.TryGetValue(key, out value)) {
                 if (value == Uninitialized.Instance) {
                     value = null;

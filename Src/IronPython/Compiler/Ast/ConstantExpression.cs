@@ -14,14 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ConstantExpression : Expression {
         private readonly object _value;
@@ -35,10 +36,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            if (_value == PythonOps.Ellipsis) {
-                return Ast.ReadField(
+            if (_value == Ellipsis.Value) {
+                return Ast.Property(
                     null,
-                    typeof(PythonOps).GetField("Ellipsis")
+                    typeof(PythonOps).GetProperty("Ellipsis")
                 );
             }
 
@@ -59,6 +60,12 @@ namespace IronPython.Compiler.Ast {
         public override string NodeName {
             get {
                 return "literal";
+            }
+        }
+
+        internal override bool CanThrow {
+            get {
+                return false;
             }
         }
     }

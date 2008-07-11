@@ -13,13 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// The delegate representing the DLR Main function
     /// </summary>
-    internal delegate object DlrMainCallTarget(CodeContext context);
+    public delegate object DlrMainCallTarget(Scope/*!*/ scope, LanguageContext/*!*/ context);
 
     /// <summary>
     /// VB Doesn't allow params array parameters so for languages implemented in VB

@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// marks a field, class, or struct as being safe to have statics which can be accessed
     /// from multiple runtimes.

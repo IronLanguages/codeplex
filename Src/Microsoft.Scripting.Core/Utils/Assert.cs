@@ -15,19 +15,17 @@
 
 #define DEBUG
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-using System.Collections;
+using System.Diagnostics;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
 
     public static class Assert {
 
         public static Exception Unreachable {
             get {
                 Debug.Assert(false, "Unreachable");
-                return new InvalidOperationException("Code suposed to be unreachable");
+                return new InvalidOperationException("Code supposed to be unreachable");
             }
         }
 
@@ -71,7 +69,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [Conditional("DEBUG")]
-        public static void IsTrue(Function<bool> predicate) {
+        public static void IsTrue(Func<bool> predicate) {
             ContractUtils.RequiresNotNull(predicate, "predicate");
             Debug.Assert(predicate());
         }

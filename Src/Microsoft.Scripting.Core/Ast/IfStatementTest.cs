@@ -13,37 +13,17 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
 
-    // TODO: Remove???
     public sealed class IfStatementTest {
-        private readonly SourceLocation _start;
-        private readonly SourceLocation _header;
-        private readonly SourceLocation _end;
-
         private readonly Expression /*!*/ _test;
         private readonly Expression /*!*/ _body;
 
-        internal IfStatementTest(SourceLocation start, SourceLocation end, SourceLocation header, Expression /*!*/ test, Expression /*!*/ body) {
+        internal IfStatementTest(Expression /*!*/ test, Expression /*!*/ body) {
             _test = test;
             _body = body;
-            _header = header;
-            _start = start;
-            _end = end;
-        }
-
-        internal SourceLocation Start {
-            get { return _start; }
-        }
-
-        internal SourceLocation Header {
-            get { return _header; }
-        }
-
-        internal SourceLocation End {
-            get { return _end; }
         }
 
         public Expression Test {
@@ -57,20 +37,12 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Expression {
         public static IfStatementTest IfCondition(Expression test, Expression body) {
-            return IfCondition(SourceSpan.None, SourceLocation.None, test, body);
-        }
-
-        public static IfStatementTest IfCondition(SourceSpan span, SourceLocation header, Expression test, Expression body) {
             ContractUtils.RequiresNotNull(test, "test");
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
 
-            return new IfStatementTest(span.Start, span.End, header, test, body);
+            return new IfStatementTest(test, body);
         }
 
-        public static IfStatementTest[] IfConditions(params IfStatementTest[] tests) {
-            ContractUtils.RequiresNotNullItems(tests, "tests");
-            return tests;
-        }
     }
 }

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -45,8 +45,8 @@ def SetArgDictInit(a, b, param, kw):
     argDictInit = {}
     argDictInit['a'] = a
     argDictInit['b'] = b
-    argDictInit['param'] = param 
-    argDictInit['kw'] = kw	
+    argDictInit['param'] = param
+    argDictInit['kw'] = kw
 
 #############################################################
 # Test methods & classes
@@ -100,14 +100,14 @@ class OldStyleClass:
 
 #### kw args on new
 
-class NewAll(object): 
+class NewAll(object):
     def __new__(cls, *param, **kw):
-        SetArgDict(cls, None, param, kw)	
+        SetArgDict(cls, None, param, kw)
         return object.__new__(cls)
 
 class NewKw(object):
     def __new__(cls, **kw):
-        SetArgDict(cls, None, None, kw)	
+        SetArgDict(cls, None, None, kw)
         return object.__new__(cls)
 
 class NewKwAndExtraParam(object):
@@ -143,7 +143,7 @@ class NewInitKwAndExtraParam(object):
         SetArgDict(cls, a, None, kw)
         return object.__new__(cls, a, kw)
     def __init__(cls, a, **kw):
-        SetArgDictInit(cls, a, None, kw)	
+        SetArgDictInit(cls, a, None, kw)
 
 class NewInitKwAndExtraParamAndParams(object):
     def __new__(cls, a, *param, **kw):
@@ -176,7 +176,7 @@ def testFunc_pw_kw_cases():
     testFunc_pw_kw('abc')
     CheckArgDict('abc', None, (), {})
     testFunc_pw_kw('abc', 'cde')
-    CheckArgDict('abc', None, ('cde',), {}) 
+    CheckArgDict('abc', None, ('cde',), {})
 
 def testFunc_kw_cases():
     testFunc_kw('abc', b='def', c='cde')
@@ -206,7 +206,7 @@ def testFunc_pw_kw_2_cases():
     testFunc_pw_kw_2('abc', 'hgi', 'jkl', 'pqr')
     CheckArgDict('abc', 'hgi', ('jkl', 'pqr'), {})
     testFunc_pw_kw_2('abc', 'cde')
-    CheckArgDict('abc', 'cde', (), {}) 
+    CheckArgDict('abc', 'cde', (), {})
 
 def testFunc_kw_2_cases():
     testFunc_kw_2('abc', b='def', c='cde')
@@ -239,7 +239,7 @@ def testFunc_subcls_pw_kw_cases(o):
     o.testFunc_pw_kw()
     CheckArgDict(o, None, (), {})
     o.testFunc_pw_kw('cde')
-    CheckArgDict(o, None, ('cde',), {}) 
+    CheckArgDict(o, None, ('cde',), {})
 
 def testFunc_subcls_kw_cases(o):
     o.testFunc_kw(b='def', c='cde')
@@ -254,7 +254,7 @@ def testFunc_subcls_kw_cases(o):
     CheckArgDict(o, None, None, {})
 
 def testFunc_subcls_pw_kw_2_cases(o):
-    o.testFunc_pw_kw_2(b='def', c='cde')	
+    o.testFunc_pw_kw_2(b='def', c='cde')
     CheckArgDict(o, 'def', (), {'c': 'cde'})
     o.testFunc_pw_kw_2('def', c='cde')
     CheckArgDict(o, 'def', (), {'c': 'cde'})
@@ -269,7 +269,7 @@ def testFunc_subcls_pw_kw_2_cases(o):
     o.testFunc_pw_kw_2('hgi', 'jkl', 'pqr')
     CheckArgDict(o, 'hgi', ('jkl', 'pqr'), {})
     o.testFunc_pw_kw_2('cde')
-    CheckArgDict(o, 'cde', (), {}) 
+    CheckArgDict(o, 'cde', (), {})
 
 def testFunc_subcls_kw_2_cases(o):
     o.testFunc_kw_2(b='def', c='cde')
@@ -625,7 +625,7 @@ AssertError(TypeError, negTestFunc_tooManyArgs2)
 
 AssertError(TypeError,negTestFunc_missingArg)
 
-AssertError(TypeError, NewSetCls)	
+AssertError(TypeError, NewSetCls)
 AssertError(TypeError, NewNotEnoughArgs)
 AssertError(TypeError, NewNotEnoughArgs2)
 
@@ -754,7 +754,7 @@ def test_sequence_as_stararg():
     AreEqual(f(1, *(2,3)), (1, (2,3)))
     AreEqual(f(1, *("23")), (1, ("2","3")))
     
-    def f(*arg, **kw): return arg, kw    
+    def f(*arg, **kw): return arg, kw
     AreEqual(f(1, x=2, *[3,4]), ((1,3,4), {'x':2}))
     AreEqual(f(1, x=2, *(3,4)), ((1,3,4), {'x':2}))
     AreEqual(f(x=2, *[3,4]), ((3,4), {'x':2}))

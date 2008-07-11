@@ -14,15 +14,12 @@
  * ***************************************************************************/
 
 using System;
-
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
+using System.Scripting;
+using System.Scripting.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class TupleExpression : SequenceExpression {
         private bool _expandable;
@@ -43,16 +40,16 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             if (_expandable) {
-                return Ast.NewArray(
-                    typeof(object[]),
+                return Ast.NewArrayInit(
+                    typeof(object),
                     ag.TransformAndConvert(Items, typeof(object))
                 );
             }
 
             return Ast.Call(
                 AstGenerator.GetHelperMethod("MakeTuple"),
-                Ast.NewArray(
-                    typeof(object[]),
+                Ast.NewArrayInit(
+                    typeof(object),
                     ag.TransformAndConvert(Items, typeof(object))
                 )
             );

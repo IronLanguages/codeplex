@@ -15,20 +15,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Scripting;
 using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.Scripting.Ast;
-using System.Diagnostics;
-using Microsoft.Scripting;
-
-using System.Globalization;
-
-using Microsoft.Scripting.Math;
-
 
 namespace ToyScript.Parser {
     class ToyTokenizer {
-        private string _text;
+        private readonly SourceUnit _source;
+        private readonly string _text;
         private int _index;
 
         private int _line = 1;
@@ -83,8 +76,9 @@ namespace ToyScript.Parser {
             }
         }
 
-        public ToyTokenizer(string text) {
-            _text = text;
+        public ToyTokenizer(SourceUnit source) {
+            _source = source;
+            _text = source.GetCode();
         }
 
         public bool EndOfFile {
@@ -94,7 +88,7 @@ namespace ToyScript.Parser {
         }
 
         public SourceLocation Location {
-            get { return new SourceLocation(_index, _line, _column); }
+            get { return _source.MakeLocation(_index, _line, _column); }
         }
 
         private static bool IsNumberPart(char ch) {

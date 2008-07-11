@@ -13,18 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using System.Diagnostics;
+namespace System.Scripting.Actions {
 
     /// <summary>
     /// Represents a logical Property as a member of a Type.  This Property can either be a real 
@@ -61,7 +55,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Public expression builders
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
             if (!IsStatic || GetIndexParameters().Length > 0) {
                 // need to bind to a value or parameters to get the value.
                 return binder.ReturnMemberTracker(type, this);
@@ -74,11 +68,11 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (getter.IsPublic && getter.DeclaringType.IsPublic) {
-                return binder.MakeCallExpression(getter);
+                return binder.MakeCallExpression(context, getter);
             }
 
             // private binding is just a call to the getter method...
-            return MemberTracker.FromMemberInfo(getter).Call(binder);
+            return MemberTracker.FromMemberInfo(getter).Call(context, binder);
         }
 
         public override ErrorInfo GetError(ActionBinder binder) {
@@ -99,7 +93,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Internal expression builders
 
-        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
             if (instance != null && IsStatic) {
                 return null;
             }
@@ -116,11 +110,11 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (getter.IsPublic && getter.DeclaringType.IsPublic) {                
-                return binder.MakeCallExpression(getter, instance);;
+                return binder.MakeCallExpression(context, getter, instance);
             }
 
             // private binding is just a call to the getter method...
-            return MemberTracker.FromMemberInfo(getter).Call(binder, instance);
+            return MemberTracker.FromMemberInfo(getter).Call(context, binder, instance);
         }
 
         public override ErrorInfo GetBoundError(ActionBinder binder, Expression instance) {

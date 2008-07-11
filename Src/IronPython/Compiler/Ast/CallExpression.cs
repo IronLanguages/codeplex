@@ -14,16 +14,13 @@
  * ***************************************************************************/
 
 using System;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using MSAst = Microsoft.Scripting.Ast;
-
+using System.Scripting.Actions;
 using IronPython.Runtime;
-using IronPython.Runtime.Operations;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class CallExpression : Expression {
         private readonly Expression _target;
@@ -75,17 +72,18 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.Expression[] values = new MSAst.Expression[_args.Length + 1];
+            MSAst.Expression[] values = new MSAst.Expression[_args.Length + 2];
             ArgumentInfo[] kinds = new ArgumentInfo[_args.Length];
 
-            values[0] = ag.Transform(_target);
+            values[0] = Ast.CodeContext();
+            values[1] = ag.Transform(_target);
 
             for (int i = 0; i < _args.Length; i++) {
-                kinds[i] = _args[i].Transform(ag, out values[i + 1]);
+                kinds[i] = _args[i].Transform(ag, out values[i + 2]);
             }
 
-            return Ast.Action.Call(
-                CallAction.Make(ag.Binder, new CallSignature(kinds)),
+            return AstUtils.Call(
+                OldCallAction.Make(ag.Binder, new CallSignature(kinds)),
                 type,
                 values
             );

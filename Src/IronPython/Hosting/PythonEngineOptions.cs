@@ -14,11 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
 using System.Collections.Generic;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Utils;
+using Microsoft.Scripting;
 
 namespace IronPython {
 

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -773,7 +773,7 @@ def test_params_2(undefined):
     AreEqual(x, 1)
     del undefined
     y = x
-    AreEqual(y, 1)    
+    AreEqual(y, 1)
     x = undefined
 
 test_undefined(test_params_2, 1)
@@ -846,9 +846,9 @@ test_undefined(test_item_index_undefined)
 
 def test_nested_scope_variable_access():
     def g():
-		def f():
-			x = undefined
-		return f
+        def f():
+            x = undefined
+        return f
     g()()
     undefined = 1
   
@@ -917,7 +917,7 @@ except NameError: pass
 ## delete builtin func
 import __builtin__
 
-try: 
+try:
     del pow
     AssertUnreachable("should have thrown")
 except NameError: pass
@@ -927,13 +927,13 @@ if not is_interpreted():
         del __builtin__.pow
         AssertError(NameError, lambda: pow)
         AssertError(AttributeError, lambda: __builtin__.pow)
-    finally: 
+    finally:
         reload(__builtin__)
         # make sure we still have access to __builtin__'s after reloading
         # AreEqual(pow(2,2), 4) # bug 359890
         dir('abc')
 
-## Overriding __builtin__ method inconsistent with -X:TupleBasedOptimizedScopes flag
+## Overriding __builtin__ method inconsistent with -X:LightweightScopes flag
 import __builtin__
 __builtin__.help = 10
 AssertErrorWithPartialMessage(TypeError, "is not callable", lambda: help(dir))

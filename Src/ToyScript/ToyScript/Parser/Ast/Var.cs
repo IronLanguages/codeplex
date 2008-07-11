@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     class Var : Statement {
         private readonly string _name;
@@ -33,16 +33,16 @@ namespace ToyScript.Parser.Ast {
             MSAst.Expression var = tg.GetOrMakeLocal(_name);
 
             if (_value != null) {
-                return Ast.Assign(
-                    Span,
-                    var,
-                    Ast.ConvertHelper(
+                return AstUtils.Assign(
+                    var, 
+                    MSAst.Expression.ConvertHelper(
                         _value.Generate(tg),
                         var.Type
-                    )
+                    ), 
+                    Span
                 );
             } else {
-                return Ast.Empty(Span);
+                return AstUtils.Empty(Span);
             }
         }
     }

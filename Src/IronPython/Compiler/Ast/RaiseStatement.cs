@@ -13,13 +13,11 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class RaiseStatement : Statement {
         private readonly Expression _type, _value, _traceback;
@@ -43,14 +41,15 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            return Ast.Throw(
-                Span,
-                Ast.Call(AstGenerator.GetHelperMethod("MakeException"),
+            return AstUtils.Throw(
+                Ast.Call(
+                    AstGenerator.GetHelperMethod("MakeException"),
                     Ast.CodeContext(),
                     ag.TransformOrConstantNull(_type, typeof(object)),
                     ag.TransformOrConstantNull(_value, typeof(object)),
                     ag.TransformOrConstantNull(_traceback, typeof(object))
-                )
+                ), 
+                Span
             );
         }
 

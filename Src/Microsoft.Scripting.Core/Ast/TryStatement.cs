@@ -15,11 +15,12 @@
 
 using System.Collections.ObjectModel;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class TryStatement : Expression {
         private readonly Expression _body;
         private readonly ReadOnlyCollection<CatchBlock> _handlers;
         private readonly Expression _finally;
+        private readonly Expression _fault;
 
         /// <summary>
         /// Called by <see cref="TryStatementBuilder"/>.
@@ -30,15 +31,12 @@ namespace Microsoft.Scripting.Ast {
         /// The elseSuite runs if no exception is thrown.
         /// The finallySuite runs regardless of how control exits the body.
         /// </summary>
-        internal TryStatement(Annotations annotations, Expression body, ReadOnlyCollection<CatchBlock> handlers, Expression @finally)
-            : base(annotations, AstNodeType.TryStatement, typeof(void)) {
+        internal TryStatement(Annotations annotations, Expression body, ReadOnlyCollection<CatchBlock> handlers, Expression @finally, Expression fault)
+            : base(annotations, ExpressionType.TryStatement, typeof(void)) {
             _body = body;
             _handlers = handlers;
             _finally = @finally;
-        }
-
-        internal SourceLocation Header {
-            get { return Annotations.Get<SourceLocation>(); }
+            _fault = fault;
         }
 
         public Expression Body {
@@ -53,8 +51,8 @@ namespace Microsoft.Scripting.Ast {
             get { return _finally; }
         }
 
-        internal int GetGeneratorTempCount() {
-            return _finally != null ? 1 : 0;
+        public Expression FaultStatement {
+            get { return _fault; }
         }
     }
 }

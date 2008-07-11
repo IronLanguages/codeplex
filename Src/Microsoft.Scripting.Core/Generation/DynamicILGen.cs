@@ -13,18 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
 
     // TODO: Make internal
     public abstract class DynamicILGen : ILGen {
         internal DynamicILGen(ILGenerator il)
-            : base(il,null) {
+            : base(il, null) {
         }
 
         public T CreateDelegate<T>() {

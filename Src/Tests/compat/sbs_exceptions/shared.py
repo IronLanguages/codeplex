@@ -366,4 +366,6 @@ class test_exceptions(object):
                             printwith('same', retval)
                     except: 
                         printwith("same", sys.exc_type)
+                    if isinstance(retval, generator_type):
+                        retval.close()
                     printwith('same', d['log'])

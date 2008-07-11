@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -32,7 +32,7 @@ def test_proxy_dir():
     # not throw.
     for cls in [NonCallableClass, CallableClass]:
         def run_test():
-            a = cls()        
+            a = cls()
             b = _weakref.proxy(a)
             
             AreEqual(dir(a), dir(b))
@@ -40,7 +40,7 @@ def test_proxy_dir():
             #Merlin 366014
             keep_alive(a)
             
-            del(a)               
+            del(a)
             
             return b
             
@@ -50,12 +50,12 @@ def test_proxy_dir():
             #This will fail if original object has not been garbage collected.
             AreEqual(dir(prxy), [])
 
-def test_special_methods():    
+def test_special_methods():
     for cls in [NonCallableClass, CallableClass]:
         # calling repr should give us weakproxy's repr,
         # calling __repr__ should give us the underlying objects
         # repr
-        a = cls()    
+        a = cls()
         b = _weakref.proxy(a)
         
         Assert(repr(b).startswith('<weakproxy at'))
@@ -72,14 +72,14 @@ def test_special_methods():
     b = _weakref.proxy(a)
     AreEqual(str(b), 'abc')
 
-    keep_alive(a)    
+    keep_alive(a)
 
 
 def test_type_call():
     def get_dead_weakref():
         class C: pass
         
-        a = C()        
+        a = C()
         x = _weakref.proxy(a)
         del(a)
         return x
@@ -95,11 +95,11 @@ def test_type_call():
     
         
     # kwarg call
-    class C: 
+    class C:
         def __add__(self, other):
             return "abc" + other
         
-    a = C()        
+    a = C()
     x = _weakref.proxy(a)
     
     if is_cli:      # cli accepts kw-args everywhere
@@ -142,14 +142,13 @@ def test_cp14632():
         x = _weakref.proxy(a)
         y = _weakref.proxy(a)
         AreEqual(x, y)
-        AreEqual(x, a) #Just to keep 'a' alive up to this point.
-        del a
-        while dir(x)!=[]:
-            gc.collect()
-        
+        keep_alive(a) #Just to keep 'a' alive up to this point.
+
         return x, y
         
     x, y = helper_func()
+    gc.collect()
+    
     #CodePlex 14632
     #Assert(not x==3)
     AssertError(ReferenceError, lambda: x==y)

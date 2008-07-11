@@ -15,10 +15,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-
-using IronPython.Runtime;
-using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>

@@ -16,18 +16,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Actions;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
@@ -125,7 +121,7 @@ namespace IronPython.Modules {
             #region IEnumerator Members
 
             object IEnumerator.Current {
-                get { return _cur; }
+                get { return RuntimeHelpers.Int32ToObject(_cur); }
             }
 
             bool IEnumerator.MoveNext() {
@@ -198,7 +194,7 @@ namespace IronPython.Modules {
             private bool _fFinished = false;
             private object _key;
             private DynamicSite<object, object, object> _callSite;
-            private DynamicSite<object, object, bool> _eqSite = DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Equals));
+            private DynamicSite<object, object, bool> _eqSite = DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Equals));
 
             public groupby(object iterable) {
                 InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));
@@ -300,7 +296,7 @@ namespace IronPython.Modules {
 
                 this._function = function;
                 if (function != null) {
-                    _callSite = DynamicSite<object, object[], object>.Create(CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
+                    _callSite = DynamicSite<object, object[], object>.Create(OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
                 }
 
                 this._iterables = new IEnumerator[iterables.Length];
@@ -319,7 +315,7 @@ namespace IronPython.Modules {
                     }
                     if (_function == null) {
                         return new PythonTuple(false, args);
-                    } else {
+                    } else {                        
                         return _callSite.Invoke(DefaultContext.Default, _function, args);
                     }
                 }
@@ -393,11 +389,10 @@ namespace IronPython.Modules {
         [PythonSystemType]
         public class izip : IEnumerator {
             private readonly IEnumerator[]/*!*/ _iters;
-            private readonly object[]/*!*/ _currentValues;
+            private PythonTuple _current;
 
             public izip(params object[] iterables) {
                 _iters = new IEnumerator[iterables.Length];
-                _currentValues = new object[iterables.Length];
 
                 for (int i = 0; i < iterables.Length; i++) {
                     _iters[i] = PythonOps.GetEnumerator(iterables[i]);
@@ -408,20 +403,22 @@ namespace IronPython.Modules {
 
             object IEnumerator.Current {
                 get {
-                    return PythonOps.MakeTuple((object[])_currentValues.Clone());
+                    return _current;
                 }
             }
 
             bool IEnumerator.MoveNext() {
                 if (_iters.Length == 0) return false;
 
+                object[] current = new object[_iters.Length];
                 for (int i = 0; i < _iters.Length; i++) {
                     if (!MoveNextHelper(_iters[i])) return false;
 
                     // values need to be extraced and saved as we move incase
                     // the user passed the same iterable multiple times.
-                    _currentValues[i] = _iters[i].Current;
+                    current[i] = _iters[i].Current;
                 }
+                _current = new PythonTuple(false, current);
                 return true;
             }
 
@@ -515,7 +512,7 @@ namespace IronPython.Modules {
         [PythonSystemType]
         public class starmap : IterBase {
             private DynamicSite<object, object[], object> _callSite =
-                DynamicSite<object, object[], object>.Create(CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
+                DynamicSite<object, object[], object>.Create(OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
 
             public starmap(CodeContext context, object function, object iterable) {
                 InnerEnumerator = Yielder(context, function, PythonOps.GetEnumerator(iterable));

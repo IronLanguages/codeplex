@@ -13,18 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.IO;
 using System.Diagnostics;
-using System.Threading;
-
-using Microsoft.Scripting.Generation;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Provides cached global variable for modules to enable optimized access to
     /// module globals.  Both the module global value and the cached value can be held
@@ -41,10 +33,10 @@ namespace Microsoft.Scripting.Runtime {
         private SymbolId _name;
         private CodeContext _context;
 
-        internal ModuleGlobalWrapper(CodeContext context, ModuleGlobalCache global, SymbolId name) {
+        public ModuleGlobalWrapper(CodeContext context, SymbolId name) {
             _value = Uninitialized.Instance;
-            _context = context; 
-            _global = global;
+            _context = context;
+            _global = context.LanguageContext.GetModuleCache(name);
             _name = name;
         }
 

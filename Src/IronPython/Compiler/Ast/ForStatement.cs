@@ -14,12 +14,13 @@
  * ***************************************************************************/
 
 using System.Collections;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ForStatement : Statement {
         private SourceLocation _header;
@@ -96,13 +97,13 @@ namespace IronPython.Compiler.Ast {
                                                     Statement else_, SourceSpan span, SourceLocation header,
                                                     MSAst.LabelTarget loopLabel) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
-            MSAst.AssignmentExpression init = Ast.Assign(
-                list.Span, 
-                enumerator,
+            MSAst.AssignmentExpression init = AstUtils.Assign(
+                enumerator, 
                 Ast.Call(
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
                     ag.TransformAsObject(list)
-                )
+                ), 
+                list.Span
             );
 
             // while enumerator.MoveNext():
@@ -110,38 +111,61 @@ namespace IronPython.Compiler.Ast {
             //    body
             // else:
             //    else
-            MSAst.LoopStatement ls = Ast.Loop(
-                new SourceSpan(left.Start, span.End),
-                left.End,
-                loopLabel,
+            MSAst.LoopStatement ls = AstUtils.Loop(
                 Ast.Call(
-                    Ast.Read(enumerator),
+                    enumerator,
                     typeof(IEnumerator).GetMethod("MoveNext")
-                ),
-                null,
+                ), 
+                null, 
                 Ast.Block(
                     left.TransformSet(
                         ag,
                         SourceSpan.None,
                         Ast.Call(
-                            Ast.Read(enumerator),
+                            enumerator,
                             typeof(IEnumerator).GetProperty("Current").GetGetMethod()
                         ),
                         Operators.None
                     ),
                     body,
-                    Ast.Block(
+                    AstUtils.Block(
                         SourceSpan.None,
                         Ast.Assign(ag.LineNumberExpression, Ast.Constant(list.Start.Line))
                     )
-                ),
-                ag.Transform(else_)
+                ), 
+                ag.Transform(else_), 
+                loopLabel, 
+                left.End, 
+                new SourceSpan(left.Start, span.End)
             );
 
             return Ast.Block(
                 init,
                 ls
             );
+        }
+
+        internal override bool CanThrow {
+            get {
+                if (_left.CanThrow) {
+                    return true;
+                }
+
+                if (_list.CanThrow) {
+                    return true;
+                }
+
+                // most constants (int, float, long, etc...) will throw here
+                ConstantExpression ce = _list as ConstantExpression;
+                if (ce != null) {
+                    if (ce.Value is string) {
+                        return false;
+                    }
+                    return true;
+                }
+
+                return false;
+            }
         }
     }
 }

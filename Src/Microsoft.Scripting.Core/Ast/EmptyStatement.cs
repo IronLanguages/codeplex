@@ -13,21 +13,21 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class EmptyStatement : Expression {
 
         internal EmptyStatement(Annotations annotations)
-            : base(annotations, AstNodeType.EmptyStatement, typeof(void)) {
+            : base(annotations, ExpressionType.EmptyStatement, typeof(void)) {
         }
     }
 
     public partial class Expression {
         public static EmptyStatement Empty() {
-            return Empty(SourceSpan.None);
+            return Empty(Annotations.Empty);
         }
 
-        public static EmptyStatement Empty(SourceSpan span) {
-            return new EmptyStatement(Annotate(span));
+        public static EmptyStatement Empty(Annotations annotations) {
+            return new EmptyStatement(annotations);
         }
     }
 }

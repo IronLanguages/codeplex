@@ -14,20 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections;
 using System.Collections.Generic;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using Microsoft.Scripting;
-
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     [PythonSystemType("xrange")]
-    public class XRange : ISequence, IEnumerable, IEnumerable<int>, ICodeFormattable {
+    public sealed class XRange : ISequence, ICollection, IEnumerable, IEnumerable<int>, ICodeFormattable {
         private int _start, _stop, _step, _length;
 
         public XRange(int stop) : this(0, stop, 1) { }
@@ -73,11 +68,7 @@ namespace IronPython.Runtime {
             return (int)temp;
         }
 
-        public bool __contains__(object value) {
-            throw new NotImplementedException();
-        }
-
-        public virtual object this[int index] {
+        public object this[int index] {
             get {
                 if (index < 0) index += _length;
 
@@ -89,21 +80,13 @@ namespace IronPython.Runtime {
             }
         }
 
-        public virtual object this[object index] {
+        public object this[object index] {
             get {
                 return this[Converter.ConvertToIndex(index)];
             }
         }
 
-        public object AddSequence(object other) {
-            throw PythonOps.TypeErrorForBadInstance("unsupported operand type(s) for +: 'xrange' and {0}", other);
-        }
-
-        public object MultiplySequence(object count) {
-            throw PythonOps.TypeError("unsupported operand type(s) for *: 'xrange' and 'int'");
-        }
-
-        public virtual object __getslice__(int start, int stop) {
+        public object __getslice__(int start, int stop) {
             throw PythonOps.TypeError("sequence index must be integer");
         }
 
@@ -115,11 +98,11 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        public object __reversed__() {
+        public IEnumerator __reversed__() {
             return new XRangeIterator(new XRange(_stop - _step, _start - _step, -_step));
         }
 
-        public IEnumerator GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator() {
             return new XRangeIterator(this);
         }
 
@@ -196,6 +179,28 @@ namespace IronPython.Runtime {
             } else {
                 return string.Format("xrange({0}, {1}, {2})", _start, _stop, _step);
             }
+        }
+
+        #endregion
+
+        #region ICollection Members
+
+        void ICollection.CopyTo(Array array, int index) {
+            foreach (object o in this) {
+                array.SetValue(o, index++);
+            }
+        }
+
+        int ICollection.Count {
+            get { return _length; }
+        }
+
+        bool ICollection.IsSynchronized {
+            get { return false; }
+        }
+
+        object ICollection.SyncRoot {
+            get { return null; }
         }
 
         #endregion

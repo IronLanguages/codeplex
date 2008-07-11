@@ -14,18 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Exceptions;
-
-using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
+using System.Text;
+using System.Text.RegularExpressions;
+using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
@@ -157,7 +155,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            return new List(matches);
+            return List.FromArrayNoCopy(matches);
         }
 
         public static object finditer(object pattern, object @string) {
@@ -238,7 +236,7 @@ namespace IronPython.Modules {
             internal RE_Pattern(object pattern, int flags, bool compiled) {
                 _pre = PreParseRegex(ValidatePattern(pattern));
                 try {
-                    RegexOptions opts = FlagsToOption(flags);
+                    RegexOptions opts = FlagsToOption(flags) | _pre.Options;
 #if SILVERLIGHT
                     this._re = new Regex(_pre.Pattern, opts);
 #else
@@ -867,7 +865,7 @@ namespace IronPython.Modules {
 
                                     // remove the (?P=
                                     pattern = pattern.Remove(nameIndex - 2, 4);
-                                    pattern = pattern.Insert(nameIndex - 2, "\\\\k<");
+                                    pattern = pattern.Insert(nameIndex - 2, "\\k<");
                                     int tmpIndex = nameIndex;
                                     while (tmpIndex < pattern.Length && pattern[tmpIndex] != ')')
                                         tmpIndex++;
@@ -884,7 +882,16 @@ namespace IronPython.Modules {
                             case 'L': res.Options &= ~(RegexOptions.CultureInvariant); break;
                             case 'm': res.Options |= RegexOptions.Multiline; break;
                             case 's': res.Options |= RegexOptions.Singleline; break;
-                            case 'u': break;
+                            case 'u':
+                                // specify unicode; not relevant and not valid under .NET as we're always unicode
+                                // -- so the option needs to be removed
+                                if (pattern[nameIndex - 1] == '?' && nameIndex < (pattern.Length - 1) && pattern[nameIndex + 1] == ')') {
+                                    pattern = pattern.Remove(nameIndex-2, 4);
+                                    nameIndex -= 3;
+                                } else {
+                                    pattern = pattern.Remove(nameIndex--, 1);
+                                }
+                                break;
                             case 'x': res.Options |= RegexOptions.IgnorePatternWhitespace; break;
                             case ':': break; // non-capturing
                             case '=': break; // look ahead assertion
@@ -913,7 +920,8 @@ namespace IronPython.Modules {
                 nameIndex = pattern.IndexOf('\\', cur);
 
                 if (nameIndex == -1 || nameIndex == pattern.Length - 1) break;
-                char curChar = pattern[++nameIndex];
+                cur = ++nameIndex;
+                char curChar = pattern[cur];
                 switch (curChar) {
                     case 'x':
                     case 'u':
@@ -921,6 +929,7 @@ namespace IronPython.Modules {
                     case 'b':
                     case 'e':
                     case 'f':
+                    case 'k':
                     case 'n':
                     case 'r':
                     case 't':
@@ -935,11 +944,8 @@ namespace IronPython.Modules {
                     case 'd':
                     case 'D':
                     case 'Z':
-                        // known escape sequences, leave escaped.
-                        break;
                     case '\\':
-                        // escaping a \\
-                        cur += 2;
+                        // known escape sequences, leave escaped.
                         break;
                     default:
                         System.Globalization.UnicodeCategory charClass = Char.GetUnicodeCategory(curChar);
@@ -954,6 +960,7 @@ namespace IronPython.Modules {
                             case System.Globalization.UnicodeCategory.OtherNumber:
                             case System.Globalization.UnicodeCategory.ConnectorPunctuation:
                                 pattern = pattern.Remove(nameIndex - 1, 1);
+                                cur--;
                                 break;
                             case System.Globalization.UnicodeCategory.DecimalDigitNumber:
                                 //  actually don't want to unescape '\1', '\2' etc. which are references to groups
@@ -961,7 +968,9 @@ namespace IronPython.Modules {
                         }
                         break;
                 }
-                cur++;
+                if (++cur >= pattern.Length) {
+                    break;
+                }
             }
 
             res.Pattern = pattern;

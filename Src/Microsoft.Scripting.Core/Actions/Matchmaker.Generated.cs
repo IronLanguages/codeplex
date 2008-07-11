@@ -13,60 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.CodeDom.Compiler;
-using System.Reflection;
 
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// This class is used to look for matching rules in the caches
     /// by executing individual rules against the site whose fallback
     /// code delegates here.
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
-    public class Matchmaker {
-        private bool _match = true;
-
-        internal bool Match {
-            get { return _match; }
-        }
-
-        internal void Reset() {
-            _match = true;
-        }
-
-        internal object CreateMatchMakingSite(object/*!*/ site, Type/*!*/ tt) {
-            Delegate mismatch = GetMismatchDelegate(tt);
-            ReflectedCaller clone = ReflectedCaller.Create(site.GetType().GetMethod("Clone"));
-            return clone.Invoke(site, mismatch);
-        }
-
-        private Delegate GetMismatchDelegate(Type tt) {
-            MethodInfo matchMaker;
-            if (DynamicSiteHelpers.IsBigTarget(tt)) {
-                matchMaker = MakeMismatchBigTarget(tt, "MismatchBig");
-            } else {
-                matchMaker = MakeMismatchTarget(tt, "Mismatch");
-            }
-
-            return Delegate.CreateDelegate(tt, this, matchMaker);
-        }
-
-        private static MethodInfo MakeMismatchTarget(Type tt, string name) {
-            Type[] args = tt.GetGenericArguments();
-            MethodInfo gmethod = typeof(Matchmaker).GetMethod(name + (args.Length - 1));
-            return gmethod.MakeGenericMethod(args);
-        }
-
-        private static MethodInfo MakeMismatchBigTarget(Type tt, string name) {
-            Type[] args = tt.GetGenericArguments();
-            MethodInfo gmethod = typeof(Matchmaker).GetMethod(name);
-            return gmethod.MakeGenericMethod(args);
-        }
-
+    public partial class Matchmaker {
         #region Generated Matchmaker
 
         // *** BEGIN GENERATED CODE ***
@@ -76,41 +32,125 @@ namespace Microsoft.Scripting.Actions {
         // Mismatch routines for dynamic sites
         //
 
-        // Mismatch detection, arity 1
-        public static TRet Mismatch1<T0, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0) {
-            mm._match = false;
+        // Mismatch detection - arity 0
+        public static TRet Mismatch0<TRet>(Matchmaker mm, CallSite site) {
+            mm.Match = false;
             return default(TRet);
         }
-        // Mismatch detection, arity 2
-        public static TRet Mismatch2<T0, T1, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0, T1 arg1) {
-            mm._match = false;
+
+        // Mismatch detection - arity 1
+        public static TRet Mismatch1<T0, TRet>(Matchmaker mm, CallSite site, T0 arg0) {
+            mm.Match = false;
             return default(TRet);
         }
-        // Mismatch detection, arity 3
-        public static TRet Mismatch3<T0, T1, T2, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2) {
-            mm._match = false;
+
+        // Mismatch detection - arity 2
+        public static TRet Mismatch2<T0, T1, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1) {
+            mm.Match = false;
             return default(TRet);
         }
-        // Mismatch detection, arity 4
-        public static TRet Mismatch4<T0, T1, T2, T3, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-            mm._match = false;
+
+        // Mismatch detection - arity 3
+        public static TRet Mismatch3<T0, T1, T2, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2) {
+            mm.Match = false;
             return default(TRet);
         }
-        // Mismatch detection, arity 5
-        public static TRet Mismatch5<T0, T1, T2, T3, T4, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
-            mm._match = false;
+
+        // Mismatch detection - arity 4
+        public static TRet Mismatch4<T0, T1, T2, T3, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
+            mm.Match = false;
             return default(TRet);
         }
-        // Mismatch detection, arity 6
-        public static TRet Mismatch6<T0, T1, T2, T3, T4, T5, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
-            mm._match = false;
+
+        // Mismatch detection - arity 5
+        public static TRet Mismatch5<T0, T1, T2, T3, T4, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
+            mm.Match = false;
             return default(TRet);
         }
-        // Mismatch detection, big
-        public static TRet MismatchBig<T0, TRet>(Matchmaker mm, CallSite site, CodeContext context, T0 arg0) where T0 : Tuple {
-            mm._match = false;
+
+        // Mismatch detection - arity 6
+        public static TRet Mismatch6<T0, T1, T2, T3, T4, T5, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
+            mm.Match = false;
             return default(TRet);
         }
+
+        // Mismatch detection - arity 7
+        public static TRet Mismatch7<T0, T1, T2, T3, T4, T5, T6, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
+            mm.Match = false;
+            return default(TRet);
+        }
+
+        // Mismatch detection - arity 8
+        public static TRet Mismatch8<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
+            mm.Match = false;
+            return default(TRet);
+        }
+
+        // Mismatch detection - arity 9
+        public static TRet Mismatch9<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
+            mm.Match = false;
+            return default(TRet);
+        }
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+        #region Generated Void Matchmaker
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: gen_void_matchmaker from: generate_dynsites.py
+
+        //
+        // Mismatch routines for dynamic sites with void return type
+        //
+
+        // Mismatch detection - arity 1
+        public static void MismatchVoid1<T0>(Matchmaker mm, CallSite site, T0 arg0) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 2
+        public static void MismatchVoid2<T0, T1>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 3
+        public static void MismatchVoid3<T0, T1, T2>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 4
+        public static void MismatchVoid4<T0, T1, T2, T3>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 5
+        public static void MismatchVoid5<T0, T1, T2, T3, T4>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 6
+        public static void MismatchVoid6<T0, T1, T2, T3, T4, T5>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 7
+        public static void MismatchVoid7<T0, T1, T2, T3, T4, T5, T6>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 8
+        public static void MismatchVoid8<T0, T1, T2, T3, T4, T5, T6, T7>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
+            mm.Match = false;
+        }
+
+        // Mismatch detection - arity 9
+        public static void MismatchVoid9<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
+            mm.Match = false;
+        }
+
 
         // *** END GENERATED CODE ***
 

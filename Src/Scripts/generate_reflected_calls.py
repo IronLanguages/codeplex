@@ -202,10 +202,10 @@ def gen_action_helpers(cw):
         
 def gen_invoke_helper(cw, i):
     cw.enter_block('sealed class InvokeHelper<%s> : ReflectedCaller' % (', '.join(get_invoke_type_names(i))))
-    cw.write('private Function<%s> _target;' % (', '.join(get_invoke_type_names(i))))
+    cw.write('private Func<%s> _target;' % (', '.join(get_invoke_type_names(i))))
     cw.write('')
     cw.enter_block('public InvokeHelper(MethodInfo target)')
-    cw.write('_target = (Function<%s>)Delegate.CreateDelegate(typeof(Function<%s>), target);' % ((', '.join(get_invoke_type_names(i)), )*2))
+    cw.write('_target = (Func<%s>)Delegate.CreateDelegate(typeof(Func<%s>), target);' % ((', '.join(get_invoke_type_names(i)), )*2))
     cw.exit_block()
 
     cw.write('')

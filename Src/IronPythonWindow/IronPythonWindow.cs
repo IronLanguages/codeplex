@@ -12,15 +12,20 @@
  *
  *
  * ***************************************************************************/
+
 using System;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using IronPython.Hosting;
+using System.Text;
 using System.Windows.Forms;
-using Microsoft.Scripting.Hosting.Shell;
+using IronPython.Hosting;
 using IronPython.Runtime;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Hosting.Shell;
 
 internal sealed class PythonWindowsConsoleHost : ConsoleHost {
+
+    internal PythonWindowsConsoleHost() {
+        InitializeOptionsParser();
+    }
 
     protected override ScriptEngine/*!*/ CreateEngine() {
         return Runtime.GetEngine(typeof(PythonContext));
@@ -31,9 +36,19 @@ internal sealed class PythonWindowsConsoleHost : ConsoleHost {
     }
 
     protected override OptionsParser/*!*/ CreateOptionsParser() {
-        return new PythonOptionsParser();
+        return new PythonOptionsParser(this.Options);
     }
-    
+
+    protected override string/*!*/ GetHelp() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.AppendLine(PythonCommandLine.GetLogoDisplay());
+        PrintLanguageHelp(sb);
+        sb.AppendLine();
+
+        return sb.ToString();
+    }
+
     [STAThread]
     static int Main(string[] args) {
         if (args.Length == 0) {

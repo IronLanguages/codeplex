@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -87,12 +87,12 @@ def test_reflected_property():
         AreEqual(str(ArrayList.__dict__['Count']), '<property# Count on %s>' % ArrayList.__name__)
     
         def tryDelReflectedProp():
-    	    del ArrayList.Count
+            del ArrayList.Count
 
         AssertError(AttributeError, tryDelReflectedProp)
 
     
-@skip("win32")    
+@skip("win32")
 def test_reflected_extension_property_ops():
     '''
     Test to hit IronPython.RunTime.Operations.ReflectedExtensionPropertyOps

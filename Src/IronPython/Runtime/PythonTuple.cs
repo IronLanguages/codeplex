@@ -16,17 +16,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Math;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting.Math; 
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
@@ -93,9 +90,7 @@ namespace IronPython.Runtime {
             } else if (o is List) {
                 return ((List)o).GetObjectArray();
             } else if ((arr = o as object[])!=null) {
-                object []res = new object[arr.Length];
-                Array.Copy(arr, res, arr.Length);
-                return res;
+                return ArrayOps.CopyArray(arr, arr.Length);
             } else {
                 PerfTrack.NoteEvent(PerfTrack.Categories.OverAllocate, "TupleOA: " + DynamicHelpers.GetPythonType(o).Name);
 
@@ -143,19 +138,13 @@ namespace IronPython.Runtime {
         /// Return a copy of this tuple's data array.
         /// </summary>
         internal object[] ToArray() {
-            object[] copy = new object[_data.Length];
-            Array.Copy(_data, copy, _data.Length);
-            return copy;
+            return ArrayOps.CopyArray(_data, _data.Length);
         }
 
         #region ISequence Members
 
         public virtual int __len__() {
             return _data.Length;
-        }
-
-        public virtual bool __contains__(object value) {
-            return ArrayOps.__contains__(_data, _data.Length, value);
         }
 
         public virtual object this[int index] {
@@ -324,7 +313,13 @@ namespace IronPython.Runtime {
         }
 
         bool ICollection<object>.Contains(object item) {
-            return this.__contains__(item);
+            for (int i = 0; i < _data.Length; i++) {
+                if (PythonOps.EqualRetBool(_data[i], item)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
@@ -356,7 +351,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator >(PythonTuple self, object other) {
             PythonTuple t = other as PythonTuple;
-            if (t == null) return PythonOps.NotImplemented;
+            if (t == null) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) > 0);
         }
@@ -364,7 +359,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator <(PythonTuple self, object other) {
             PythonTuple t = other as PythonTuple;
-            if (t == null) return PythonOps.NotImplemented;
+            if (t == null) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) < 0);
         }
@@ -372,7 +367,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator >=(PythonTuple self, object other) {
             PythonTuple t = other as PythonTuple;
-            if (t == null) return PythonOps.NotImplemented;
+            if (t == null) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) >= 0);
         }
@@ -380,14 +375,13 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator <=(PythonTuple self, object other) {
             PythonTuple t = other as PythonTuple;
-            if (t == null) return PythonOps.NotImplemented;
+            if (t == null) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) <= 0);
         }
 
         #endregion
 
-        [PythonHidden]
         public override bool Equals(object obj) {
             PythonTuple other = obj as PythonTuple;
             if (other == null) return false;
@@ -406,24 +400,22 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        [PythonHidden]
         public override int GetHashCode() {
             int hash1 = 6551;
             int hash2 = hash1;
 
             for (int i = 0; i < _data.Length; i += 2) {
-                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ ((_data[i] == null) ? 0 : _data[i].GetHashCode());
+                hash1 = ((hash1 << 27) + ((hash2 + 1) << 1) + (hash1 >> 5)) ^ ((_data[i] == null) ? 0 : _data[i].GetHashCode());
 
                 if (i == _data.Length - 1) {
                     break;
                 }
-                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ ((_data[i + 1] == null) ? 0 : _data[i + 1].GetHashCode());
+                hash2 = ((hash2 << 5) + ((hash1 - 1) >> 1) + (hash2 >> 27)) ^ ((_data[i + 1] == null) ? 0 : _data[i + 1].GetHashCode());
             }
 
             return hash1 + (hash2 * 1566083941);
         }
 
-        [PythonHidden]
         public override string ToString() {
             return __repr__(DefaultContext.Default);
         }
@@ -435,15 +427,16 @@ namespace IronPython.Runtime {
             int hash2 = hash1;
 
             for (int i = 0; i < _data.Length; i += 2) {
-                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ PythonOps.Hash(_data[i]);
+                hash1 = ((hash1 << 27) + ((hash2 + 1) << 1) + (hash1 >> 5)) ^ PythonOps.Hash(_data[i]);
 
                 if (i == _data.Length - 1) {
                     break;
                 }
-                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ PythonOps.Hash(_data[i + 1]);
+                hash2 = ((hash2 << 5) + ((hash1 - 1) >> 1) + (hash2 >> 27)) ^ PythonOps.Hash(_data[i + 1]);
             }
 
             return hash1 + (hash2 * 1566083941);
+
         }
 
         bool IValueEquality.ValueEquals(object other) {

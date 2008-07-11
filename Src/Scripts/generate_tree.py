@@ -31,17 +31,17 @@ expressions = [
     #
 
     Expression("Add",                           "BinaryExpression",                     True),
-    Expression("AddChecked",                    "",                                     False),
+    Expression("AddChecked",                    "BinaryExpression",                     True),
     Expression("And",                           "BinaryExpression",                     True),
     Expression("AndAlso",                       "BinaryExpression",                     True),
-    Expression("ArrayLength",                   "",                                     False),
+    Expression("ArrayLength",                   "UnaryExpression",                      True),
     Expression("ArrayIndex",                    "BinaryExpression",                     True),
     Expression("Call",                          "MethodCallExpression",                 True),
-    Expression("Coalesce",                      "",                                     False),
+    Expression("Coalesce",                      "BinaryExpression",                     True),
     Expression("Conditional",                   "ConditionalExpression",                True),
     Expression("Constant",                      "ConstantExpression",                   True),
     Expression("Convert",                       "UnaryExpression",                      True),
-    Expression("ConvertChecked",                "",                                     False),
+    Expression("ConvertChecked",                "UnaryExpression",                      True),
     Expression("Divide",                        "BinaryExpression",                     True),
     Expression("Equal",                         "BinaryExpression",                     True),
     Expression("ExclusiveOr",                   "BinaryExpression",                     True),
@@ -52,29 +52,29 @@ expressions = [
     Expression("LeftShift",                     "BinaryExpression",                     True),
     Expression("LessThan",                      "BinaryExpression",                     True),
     Expression("LessThanOrEqual",               "BinaryExpression",                     True),
-    Expression("ListInit",                      "",                                     False),
-    Expression("MemberAccess",                  "",                                     False),
-    Expression("MemberInit",                    "",                                     False),
+    Expression("ListInit",                      "ListInitExpression",                   True),
+    Expression("MemberAccess",                  "MemberExpression",                     True),
+    Expression("MemberInit",                    "MemberInitExpression",                 True),
     Expression("Modulo",                        "BinaryExpression",                     True),
     Expression("Multiply",                      "BinaryExpression",                     True),
-    Expression("MultiplyChecked",               "",                                     False),
+    Expression("MultiplyChecked",               "BinaryExpression",                     True),
     Expression("Negate",                        "UnaryExpression",                      True),
-    Expression("UnaryPlus",                     "",                                     False),
-    Expression("NegateChecked",                 "",                                     False),
+    Expression("UnaryPlus",                     "UnaryExpression",                      True),
+    Expression("NegateChecked",                 "UnaryExpression",                      True),
     Expression("New",                           "NewExpression",                        True),
-    Expression("NewArrayInit",                  "",                                     False),
+    Expression("NewArrayInit",                  "NewArrayExpression",                   True),
     Expression("NewArrayBounds",                "NewArrayExpression",                   True),
     Expression("Not",                           "UnaryExpression",                      True),
     Expression("NotEqual",                      "BinaryExpression",                     True),
     Expression("Or",                            "BinaryExpression",                     True),
     Expression("OrElse",                        "BinaryExpression",                     True),
     Expression("Parameter",                     "ParameterExpression",                  True),
-    Expression("Power",                         "",                                     False),
-    Expression("Quote",                         "",                                     False),
+    Expression("Power",                         "BinaryExpression",                     True),
+    Expression("Quote",                         "UnaryExpression",                      True),
     Expression("RightShift",                    "BinaryExpression",                     True),
     Expression("Subtract",                      "BinaryExpression",                     True),
-    Expression("SubtractChecked",               "",                                     False),
-    Expression("TypeAs",                        "",                                     False),
+    Expression("SubtractChecked",               "BinaryExpression",                     True),
+    Expression("TypeAs",                        "UnaryExpression",                      True),
     Expression("TypeIs",                        "TypeBinaryExpression",                 True),
 
     # DLR Added values
@@ -83,27 +83,23 @@ expressions = [
     Expression("Assign",                        "AssignmentExpression",                 True),
     Expression("Block",                         "Block",                                True),
     Expression("BreakStatement",                "BreakStatement",                       True),
-    Expression("CodeContextExpression",         "IntrinsicExpression",                  True),
-    Expression("GeneratorIntrinsic",            "IntrinsicExpression",                  True),
-    Expression("Generator",                     "GeneratorLambdaExpression",            True),
+    Expression("Generator",                     "LambdaExpression",                     True),
     Expression("ContinueStatement",             "ContinueStatement",                    True),
-    Expression("DeleteStatement",               "DeleteStatement",                      True),
+    Expression("Delete",                        "DeleteExpression",                     True),
     Expression("DoStatement",                   "DoStatement",                          True),
     Expression("EmptyStatement",                "EmptyStatement",                       True),
-    Expression("GlobalVariable",                "VariableExpression",                   True),
     Expression("LabeledStatement",              "LabeledStatement",                     True),
-    Expression("LocalVariable",                 "VariableExpression",                   True),
+    Expression("LocalScope",                    "LocalScopeExpression",                 True),
     Expression("LoopStatement",                 "LoopStatement",                        True),
-    Expression("MemberExpression",              "MemberExpression",                     True),
-    Expression("NewArrayExpression",            "NewArrayExpression",                   True),
     Expression("OnesComplement",                "UnaryExpression",                      True),
     Expression("ReturnStatement",               "ReturnStatement",                      True),
-    Expression("ScopeStatement",                "ScopeStatement",                       True),
+    Expression("Scope",                         "ScopeExpression",                      True),
     Expression("SwitchStatement",               "SwitchStatement",                      True),
-    Expression("TemporaryVariable",             "VariableExpression",                   True),
     Expression("ThrowStatement",                "ThrowStatement",                       True),
     Expression("TryStatement",                  "TryStatement",                         True),
+    Expression("Variable",                      "VariableExpression",                   True),
     Expression("YieldStatement",                "YieldStatement",                       True),
+    Expression("IndexedProperty",               "IndexedPropertyExpression",            True),
     Expression("Extension",                     "ExtensionExpression",                  True),
 ]
 
@@ -123,9 +119,38 @@ def gen_scripting_walker(cw):
     for node in nodes:
         if space: cw.write("")
         cw.write("// %s" % node)
-        cw.write("protected internal virtual bool Walk(%s node) { return true; }" % node)
-        cw.write("protected internal virtual void PostWalk(%s node) { }" % node)
+        cw.write("protected virtual bool Walk(%s node) { return true; }" % node)
+        cw.write("protected virtual void PostWalk(%s node) { }" % node)
         space = 1
+
+default_visit = """// %(type)s
+private static Expression DefaultVisit%(type)s(ExpressionTreeVisitor visitor, Expression node) {
+    return visitor.Visit((%(type)s)node);
+}"""
+
+def gen_visitor_methods(cw):
+    nodes = get_unique_types()
+    nodes.remove("ExtensionExpression")
+    
+    space = 0
+    for node in nodes:
+        if space: cw.write("")
+        cw.write(default_visit, type = node)
+        space = 1
+
+def gen_visitor_delegates(cw):
+    for node in expressions:
+        method = "DefaultVisit"
+
+        if node.enabled:
+            text = method + node.type + ","
+            comment = "//    " + node.kind
+        else:
+            text = ""
+            comment = "// ** " + node.kind
+
+        cw.write(text + (60 - len(text)) * " " + comment)
+        
 
 def gen_tree_nodes(cw):
     for node in expressions:
@@ -134,8 +159,7 @@ def gen_tree_nodes(cw):
             text = "//    " + text
         cw.write(text + ",")
 
-
-def gen_ast_rewriter(cw):
+def gen_stackspiller_delegates(cw):
     for node in expressions:
         method = "Rewrite"
 
@@ -152,13 +176,15 @@ def gen_ast_rewriter(cw):
 
         cw.write(text + (60 - len(text)) * " " + comment)
 
-def gen_ast_interpreter(cw):
+def gen_compiler_interpreter(cw, name):
     for node in expressions:
-        method = "Interpret"
+        method = name
 
         # special case AndAlso and OrElse
-        if node.kind == "AndAlso" or node.kind == "OrElse":
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce"]:
             method += node.kind
+        elif node.kind in ["Convert", "ConvertChecked"]:
+            method += "Convert"
 
         if node.enabled:
             text = method + node.type + ","
@@ -169,10 +195,16 @@ def gen_ast_interpreter(cw):
 
         cw.write(text + (60 - len(text)) * " " + comment)
 
-def gen_ast_writer(cw):
+def gen_compiler(cw):
+    gen_compiler_interpreter(cw, "Emit")
+
+def gen_interpreter(cw):
+    gen_compiler_interpreter(cw, "Interpret")
+
+def gen_ast_dispatch(cw, name):
     for node in expressions:
         if node.enabled:
-            text = "Write" + node.type + ","
+            text = name + node.type + ","
             comment = "//    " + node.kind
         else:
             text = ""
@@ -180,13 +212,17 @@ def gen_ast_writer(cw):
 
         cw.write(text + (40 - len(text)) * " " + comment)
 
+def gen_ast_writer(cw):
+    gen_ast_dispatch(cw, "Write")
+
 def main():
     return generate(
         ("Expression Tree Node Types", gen_tree_nodes),
-        ("DLR AST Walker", gen_scripting_walker),
-        ("Ast Rewriter", gen_ast_rewriter),
-        ("Ast Interpreter", gen_ast_interpreter),
-        ("Ast Writer", gen_ast_writer),
+        ("ExpressionVisitor Delegates", gen_visitor_delegates),
+        ('ExpressionVisitor Methods', gen_visitor_methods),
+        ("StackSpiller Delegates", gen_stackspiller_delegates),
+        ("Ast Interpreter", gen_interpreter),
+        ("Expression Compiler", gen_compiler),
     )
 
 if __name__ == "__main__":

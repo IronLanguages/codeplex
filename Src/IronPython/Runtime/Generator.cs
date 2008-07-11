@@ -16,68 +16,61 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;   
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
+using System.Diagnostics;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonSystemType("generator")]
-    public sealed class PythonGenerator : Generator, IEnumerable, IEnumerable<object>, ICodeFormattable {
-        private NextTarget _next;
+    public sealed class PythonGenerator : IEnumerator, IEnumerator<object>, IEnumerable, IEnumerable<object>, ICodeFormattable {
+        /// <summary>
+        /// The instance of the DLR generator.
+        /// </summary>
+        private IEnumerator/*!*/ _next;
 
         /// <summary>
-        /// True if the generator has finished (is "closed"), else false.
-        /// Python language spec mandates that calling Next on a closed generator gracefully throws a StopIterationException.
-        /// This can never be reset.
+        /// Current
         /// </summary>
-        private bool _closed;
+        private object _current;
 
         /// <summary>
-        /// Initially false, and set to True after the generator body is executed (through MoveNext(), Send, Throw, Close, etc)
-        /// This is never reset and remains true even after the generated is closed.
+        /// Code context
         /// </summary>
-        private bool _started;
+        private readonly CodeContext _context;
+
+        /// <summary> Flags capturing various state for the generator </summary>
+        private GeneratorFlags _flags;
 
         /// <summary>
-        /// True iff the thread is currently inside the generator (ie, invoking the _next delegate).
-        /// This can be used to enforce that a generator does not call back into itself. 
-        /// Pep255 says that a generator should throw a ValueError if called reentrantly.
+        /// Fields set by Throw() to communicate an exception to the yield point.
+        /// These are plumbed through the generator to become parameters to Raise(...) invoked 
+        /// at the yield suspenion point in the generator.
         /// </summary>
-        private bool _active;
-
+        private object[] _excInfo;
         /// <summary>
-        /// Delegate to generator body. 
+        /// Value sent by generator.send().
+        /// Since send() could send an exception, we need to keep this different from throwable's value.
         /// </summary>
-        /// <param name="generator">instance data for the generator. This contains the current state for the generator's state machine</param>
-        /// <param name="ret">next item to be yielded from the generator</param>
-        /// <returns>true if ret is valid, false if generator is at end. This provides a way for the delegate 
-        /// to signal termination without having to incur the perf hit of throwing a StopIterationException.
-        /// Null is a valid yield value</returns>
-        /// <exception cref="StopIterationException">Python generators can gracefully abort by throwing a 
-        /// StopIteration exception.</exception>
-        public delegate bool NextTarget(PythonGenerator generator, out object ret);
-
-
-        // Fields set by Throw() to communicate an exception to the yield point.
-        // These are plumbed through the generator to become parameters to Raise(...) invoked 
-        // at the yield suspenion point in the generator.
-        private object _throwable;
-        private object _value;
-        private object _traceback;
-
-        // Value sent by generator.send().
-        // Since send() could send an exception, we need to keep this different from throwable's value.
         private object _sendValue;
 
-        public PythonGenerator(CodeContext context, NextTarget next)
-            : base(context) {
-            _next = next;
+        private static object _notStarted = new object();
+
+        public PythonGenerator(CodeContext context) {
+            _context = context;
+            _current = _notStarted;
+        }
+
+        private CodeContext Context {
+            get {
+                return _context;
+            }
+        }
+
+        internal IEnumerator Next {
+            set {
+                _next = value;
+            }
         }
 
         // Silverlight doesn't allow finalizers in user code.
@@ -86,8 +79,7 @@ namespace IronPython.Runtime {
         ~PythonGenerator() {
             try {
                 // This may run the users generator.
-                this.close();
-
+                close();
             } catch (Exception e) {
                 // An unhandled exceptions on the finalizer could tear down the process, so catch it.
 
@@ -110,64 +102,94 @@ namespace IronPython.Runtime {
         }
 #endif // !SILVERLIGHT
 
-        protected override bool MoveNext() {
-            _started = true;
-            bool ret = false;
-            object next = null;
+        bool IEnumerator.MoveNext() {
+            try {
+                object res = MoveNextWorker();
+                if (res != OperationFailed.Value) {
+                    return true;
+                }
 
-            // Python's language policy on generators is that attempting to access after it's closed (returned)
-            // just continues to throw StopIteration exceptions.
-            if (_closed) {
+                return false;
+            } catch (StopIterationException) {
                 return false;
             }
+        }
 
-            bool lastActive = _active;
-            // Generators can not be called re-entrantly.
-            if (_active) {
-                // A generato could catch this exception and continue executing, so this does
-                // not necessarily close the generator.
-                throw PythonOps.ValueError("generator already executing");
+        private object MoveNextWorker() {
+            // Python's language policy on generators is that attempting to access after it's closed (returned)
+            // just continues to throw StopIteration exceptions.
+            if (Closed) {
+                throw new StopIterationException();
             }
-            _active = true;
 
-            Exception save = PythonOps.SaveCurrentException();
+            // Generators can not be called re-entrantly.
+            CheckSetActive();
+
+            // We need to save/restore the exception info if the generator
+            // includes exception handling blocks.
+            Exception save = SaveCurrentException();
+
+            bool ret = false;
+            object next = OperationFailed.Value;
             try {
-                try {
-                    // This calls into the delegate that has the real body of the generator.
-                    // The generator body here may:
-                    // 1. return an item: _next() returns true and 'next' is set to the next item in the enumeration.
-                    // 2. Exit normally: _next returns false.
-                    // 3. Exit with a StopIteration exception: for-loops and other enumeration consumers will 
-                    //    catch this and terminate the loop without propogating the exception.
-                    // 4. Exit via some other unhandled exception: This will close the generator, but the exception still propogates.
-                    //    _next does not return, so ret is left assigned to false (closed), which we detect in the finally.
-                    ret = _next(this, out next);
-                } catch (StopIterationException) {
-                    ret = false;
+                // This calls into the delegate that has the real body of the generator.
+                // The generator body here may:
+                // 1. return an item: _next() returns true and 'next' is set to the next item in the enumeration.
+                // 2. Exit normally: _next returns false.
+                // 3. Exit with a StopIteration exception: for-loops and other enumeration consumers will 
+                //    catch this and terminate the loop without propogating the exception.
+                // 4. Exit via some other unhandled exception: This will close the generator, but the exception still propogates.
+                //    _next does not return, so ret is left assigned to false (closed), which we detect in the finally.
+                if (ret = _next.MoveNext()) {
+                    next = _next.Current;
+                } else {
+                    next = OperationFailed.Value;
                 }
             } finally {
                 // A generator restores the sys.exc_info() status after each yield point.
-                PythonOps.RestoreCurrentException(save);
-                _active = lastActive;
+                RestoreCurrentException(save);
+                Active = false;
 
                 // If _next() returned false, or did not return (thus leavintg ret assigned to its initial value of false), then 
                 // the body of the generator has exited and the generator is now closed.
                 if (!ret) {
-                    next = null;
-                    _closed = true;
-                    // if we're closed the finalizer won't do anything, so suppress it.
-                    GC.SuppressFinalize(this);
+                    Close();
                 }
             }
-            this.Current = next;
-            return ret;
+                        
+            _current = next;
+            return next;
+        }
+
+        private void RestoreCurrentException(Exception save) {
+            if (CanSetSysExcInfo) {
+                PythonOps.RestoreCurrentException(save);
+            }
+        }
+
+        private Exception SaveCurrentException() {
+            if (CanSetSysExcInfo) {
+                return PythonOps.SaveCurrentException();
+            }
+            return null;
+        }
+
+        private void CheckSetActive() {
+            if (Active) {
+                // A generator could catch this exception and continue executing, so this does
+                // not necessarily close the generator.
+                throw PythonOps.ValueError("generator already executing");
+            }
+            Active = true;
         }
 
         public object next() {
-            if (!MoveNext()) {
-                throw PythonOps.StopIteration();
+            object res = MoveNextWorker();
+            if (res == OperationFailed.Value) {
+                throw new StopIterationException();
             }
-            return Current;
+
+            return res;
         }
 
         /// <summary>
@@ -191,7 +213,7 @@ namespace IronPython.Runtime {
         /// 
         /// If the generator catches the exception and yields another value, that is the return value of g.throw().
         /// </summary>
-        public object @throw(object type, object value, object traceback) {            
+        public object @throw(object type, object value, object traceback) {
             // The Pep342 explicitly says "The type argument must not be None". 
             // According to CPython 2.5's implementation, a null type argument should:
             // - throw a TypeError exception (just as Raise(None) would) *outside* of the generator's body
@@ -205,22 +227,20 @@ namespace IronPython.Runtime {
             // Set fields which will then be used by CheckThrowable.
             // We create the actual exception from inside the generator so that if the exception's __init__ 
             // throws, the traceback matches that which we get from CPython2.5.
-            _throwable = type;
-            _value = value;
-            _traceback = traceback;
+            _excInfo = new object[] { type, value, traceback };
             Debug.Assert(_sendValue == null);
 
             // Pep explicitly says that Throw on a closed generator throws the exception, 
             // and not a StopIteration exception. (This is different than Next()).
-            if (_closed) {
+            if (Closed) {
                 // this will throw the exception that we just set the fields for.
                 CheckThrowable();
             }
 
-            if (!MoveNext()) {
+            if (!((IEnumerator)this).MoveNext()) {
                 throw PythonOps.StopIteration();
             }
-            return Current;
+            return _current;
         }
 
         /// <summary>
@@ -228,12 +248,12 @@ namespace IronPython.Runtime {
         /// the result of yield when used as an expression.
         /// </summary>
         public object send(object value) {
-            Debug.Assert(_throwable == null);
+            Debug.Assert(_excInfo == null);
 
             // CPython2.5's behavior is that Send(non-null) on unstaretd generator should:
             // - throw a TypeError exception
             // - not change generator state. So leave as unstarted, and allow future calls to succeed.
-            if (value != null && !_started) {
+            if (value != null && _current == _notStarted) {
                 throw PythonOps.TypeErrorForIllegalSend();
             }
 
@@ -248,13 +268,13 @@ namespace IronPython.Runtime {
             // This is nop if the generator is already closed.
 
             // Optimization to avoid throwing + catching an exception if we're already closed.
-            if (_closed) {
+            if (Closed) {
                 return;
             }
 
             // This function body is the psuedo code straight from Pep 342.
             try {
-                this.@throw(new GeneratorExitException());
+                @throw(new GeneratorExitException());
 
                 // Generator should not have exited normally. 
                 throw new RuntimeException("generator ignored GeneratorExit");
@@ -294,34 +314,78 @@ namespace IronPython.Runtime {
         internal object CheckThrowableAndReturnSendValue() {
             // Since this method is called from the generator body's execution, the generator must be running 
             // and not closed.
-            Debug.Assert(!_closed);
+            Debug.Assert(!Closed);
+            
             if (_sendValue != null) {
                 // Can't Send() and Throw() at the same time.
-                Debug.Assert(_throwable == null);
+                Debug.Assert(_excInfo == null);
 
-                object sendValueBackup = _sendValue;
-                _sendValue = null;
-                return sendValueBackup;
+                return SwapValues();
             }
-            CheckThrowable();
-            return null;
+            return CheckThrowable();
+        }
+
+        private object SwapValues() {
+            object sendValueBackup = _sendValue;
+            _sendValue = null;
+            return sendValueBackup;
         }
 
         /// <summary>
         /// Called to throw an exception set by Throw().
         /// </summary>
-        private void CheckThrowable() {
-            if (this._throwable != null) {
-                object throwableBackup = _throwable;
-
-                // Clear it so that any future Next()/MoveNext() call doesn't pick up the exception again.
-                _throwable = null;
-
-                // This may invoke user code such as __init__, thus MakeException may throw. 
-                // Since this is invoked from the generator's body, the generator can catch this exception. 
-                Exception e = PythonOps.MakeException(Context, throwableBackup, _value, _traceback);
-                throw e;
+        private object CheckThrowable() {
+            if (_excInfo != null) {
+                ThrowThrowable();
             }
+            return null;
+        }
+
+        private void ThrowThrowable() {
+            object[] throwableBackup = _excInfo;
+
+            // Clear it so that any future Next()/MoveNext() call doesn't pick up the exception again.
+            _excInfo = null;
+
+            // This may invoke user code such as __init__, thus MakeException may throw. 
+            // Since this is invoked from the generator's body, the generator can catch this exception. 
+            throw PythonOps.MakeException(Context, throwableBackup[0], throwableBackup[1], throwableBackup[2]);
+        }
+
+        private void Close() {
+            Closed = true;
+            // if we're closed the finalizer won't do anything, so suppress it.
+            GC.SuppressFinalize(this);
+        }
+
+        private bool Closed {
+            get {
+                return (_flags & GeneratorFlags.Closed) != 0;
+            }
+            set {
+                if (value) _flags |= GeneratorFlags.Closed;
+                else _flags &= ~GeneratorFlags.Closed;
+            }
+        }
+
+        private bool Active {
+            get {
+                return (_flags & GeneratorFlags.Active) != 0;
+            }
+            set {
+                if (value) _flags |= GeneratorFlags.Active;
+                else _flags &= ~GeneratorFlags.Active;
+            }
+        }
+
+        internal bool CanSetSysExcInfo {
+            get {
+                return (_flags & GeneratorFlags.CanSetSysExcInfo) != 0;
+            }
+            set {
+                if (value) _flags |= GeneratorFlags.CanSetSysExcInfo;
+                else _flags &= ~GeneratorFlags.CanSetSysExcInfo;
+            }            
         }
 
         #endregion
@@ -330,6 +394,61 @@ namespace IronPython.Runtime {
 
         public string __repr__(CodeContext context) {
             return string.Format("<generator object at {0}>", PythonOps.HexId(this));
+        }
+
+        #endregion
+
+        [Flags]
+        private enum GeneratorFlags {
+            None,
+            /// <summary>
+            /// True if the generator has finished (is "closed"), else false.
+            /// Python language spec mandates that calling Next on a closed generator gracefully throws a StopIterationException.
+            /// This can never be reset.
+            /// </summary>
+            Closed = 0x01,
+            /// <summary>
+            /// True iff the thread is currently inside the generator (ie, invoking the _next delegate).
+            /// This can be used to enforce that a generator does not call back into itself. 
+            /// Pep255 says that a generator should throw a ValueError if called reentrantly.
+            /// </summary>
+            Active = 0x02,
+            /// <summary>
+            /// True if the generator can set sys exc info and therefore needs exception save/restore.
+            /// </summary>
+            CanSetSysExcInfo = 0x04
+        }
+
+
+        #region IEnumerator Members
+
+        object IEnumerator.Current {
+            get { return _current; }
+        }
+
+        void IEnumerator.Reset() {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region IEnumerator<object> Members
+
+        object IEnumerator<object>.Current {
+            get { return _current; }
+        }
+
+        #endregion
+
+        #region IDisposable Members
+
+        void IDisposable.Dispose() {
+            // nothing needed to dispose
+            IDisposable dn = _next as IDisposable;
+            if (dn != null) {
+                dn.Dispose();
+            }
+            GC.SuppressFinalize(this);
         }
 
         #endregion

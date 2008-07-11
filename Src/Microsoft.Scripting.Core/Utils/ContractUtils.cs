@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Collections;
+using System.Collections.Generic;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public static class ContractUtils {
 
         public static void Requires(bool precondition) {
@@ -95,6 +93,20 @@ namespace Microsoft.Scripting.Utils {
         /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Offset or count are out of range.</exception>
         public static void RequiresArrayRange<T>(IList<T> array, int offset, int count, string offsetName, string countName) {
+            Assert.NotEmpty(offsetName);
+            Assert.NotEmpty(countName);
+            Assert.NotNull(array);
+
+            if (count < 0) throw new ArgumentOutOfRangeException(countName);
+            if (offset < 0 || array.Count - offset < count) throw new ArgumentOutOfRangeException(offsetName);
+        }
+
+        /// <summary>
+        /// Requires the range [offset, offset + count] to be a subset of [0, array.Count].
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Offset or count are out of range.</exception>
+        public static void RequiresListRange(IList array, int offset, int count, string offsetName, string countName) {
             Assert.NotEmpty(offsetName);
             Assert.NotEmpty(countName);
             Assert.NotNull(array);

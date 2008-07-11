@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Reflection;
-using System.Diagnostics;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     /// <summary>
     /// Member expression (statically typed) which represents 
     /// property or field access, both static and instance.
@@ -37,13 +37,25 @@ namespace Microsoft.Scripting.Ast {
             get { return _expression; }
         }
 
-        internal MemberExpression(MemberInfo member, Expression expression, Type type, MemberAction bindingInfo)
-            : base(Annotations.Empty, AstNodeType.MemberExpression, type, bindingInfo) {
+        internal MemberExpression(Annotations annotations, MemberInfo member, Expression expression, Type type, CallSiteBinder bindingInfo)
+            : base(annotations, ExpressionType.MemberAccess, type, bindingInfo) {
             if (IsBound) {
                 RequiresBound(expression, "expression");
             }
             _member = member;
             _expression = expression;
+        }
+
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            if (_expression != null) {
+                _expression.BuildString(builder);
+            } else {
+                builder.Append(_member.DeclaringType.Name);
+            }
+            builder.Append(".");
+            builder.Append(_member.Name);
         }
     }
 
@@ -51,6 +63,9 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
+
+        //TODO: thse two checks should be unified with checks that are done inside
+        //Field and Property factories when CanRead/CanWrite are implemented
         internal static void CheckField(FieldInfo info, Expression instance, Expression rightValue) {
             ContractUtils.RequiresNotNull(info, "field");
             ContractUtils.Requires((instance == null) == info.IsStatic, "expression",
@@ -61,76 +76,236 @@ namespace Microsoft.Scripting.Ast {
 
         internal static void CheckProperty(PropertyInfo info, Expression instance, Expression rightValue) {
             ContractUtils.RequiresNotNull(info, "property");
-            MethodInfo mi = (rightValue != null) ? info.GetSetMethod() : info.GetGetMethod();
-            ContractUtils.Requires(mi != null, "Property is not readable");
-            ContractUtils.Requires((instance == null) == mi.IsStatic, "expression",
+            if (rightValue == null) {
+                CheckPropertyGet(info.GetGetMethod(true), instance);
+            } else {
+                CheckPropertySet(info.GetSetMethod(true), instance, rightValue);
+            }
+        }
+
+        internal static void CheckPropertyGet(MethodInfo getMethod, Expression instance) {
+            ContractUtils.Requires(getMethod != null, "Property is not readable");
+            ContractUtils.Requires((instance == null) == getMethod.IsStatic, "expression",
                 "Static property requires null expression, non-static property requires non-null expression.");
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
-            ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.PropertyType, rightValue.Type), "value", "Incorrect value type for the property");
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(getMethod.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
         }
 
-        internal static FieldInfo GetFieldChecked(Type type, string field, Expression instance, Expression rightValue) {
-            ContractUtils.RequiresNotNull(type, "type");
+        internal static void CheckPropertySet(MethodInfo setMethod, Expression instance, Expression rightValue) {
+            ContractUtils.Requires(setMethod != null, "Property is not writeable");
+            ContractUtils.Requires((instance == null) == setMethod.IsStatic, "expression",
+                "Static property requires null expression, non-static property requires non-null expression.");
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(setMethod.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
+
+            ParameterInfo[] parameters = setMethod.GetParameters();
+            ContractUtils.Requires(parameters.Length > 0, "setMethod", "set method must have at least one parameter");
+            Type valueType = parameters[parameters.Length - 1].ParameterType;
+            ContractUtils.Requires(TypeUtils.CanAssign(valueType, rightValue.Type), "value", "Incorrect value type for the property");
+        }
+
+
+        #region Field
+
+        //CONFORMING
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
+        public static MemberExpression Field(Expression expression, FieldInfo field) {
+            return Field(expression, field, Annotations.Empty);
+        }
+
+        //CONFORMING
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
+        public static MemberExpression Field(Expression expression, FieldInfo field, Annotations annotations) {
             ContractUtils.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(annotations, "annotations");
 
-            FieldInfo fi = type.GetField(field);
-            ContractUtils.Requires(fi != null, "field", "Type doesn't have the specified field");
-            CheckField(fi, instance, rightValue);
-            return fi;
+            if (!field.IsStatic) {
+                if (expression == null) {
+                    ContractUtils.RequiresNotNull(expression, "expression");
+                }
+                if (!TypeUtils.AreReferenceAssignable(field.DeclaringType, expression.Type)) {
+                    throw Error.FieldNotDefinedForType(field, expression.Type);
+                }
+            }
+            return new MemberExpression(annotations, field, expression, field.FieldType, null);
         }
 
-        internal static PropertyInfo GetPropertyChecked(Type type, string property, Expression instance, Expression rightValue) {
+        //CONFORMING
+        public static MemberExpression Field(Expression expression, string fieldName) {
+            return Field(expression, fieldName, Annotations.Empty);
+        }
+
+        //CONFORMING
+        public static MemberExpression Field(Expression expression, string fieldName, Annotations annotations) {
+            ContractUtils.RequiresNotNull(expression, "expression");
+            ContractUtils.RequiresNotNull(annotations, "annotations");
+
+            // bind to public names first
+            FieldInfo fi = expression.Type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (fi == null) {
+                fi = expression.Type.GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            }
+            if (fi == null) {
+                throw Error.FieldNotDefinedForType(fieldName, expression.Type);
+            }
+            return Expression.Field(expression, fi, annotations);
+        }
+
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
+        public static MemberExpression Field(Expression expression, Type type, string fieldName) {
             ContractUtils.RequiresNotNull(type, "type");
+
+            // bind to public names first
+            FieldInfo fi = type.GetField(fieldName, BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (fi == null) {
+                fi = type.GetField(fieldName, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            }
+
+            if (fi == null) {
+                throw Error.FieldNotDefinedForType(fieldName, type);
+            }
+            return Expression.Field(expression, fi);
+        }
+        #endregion
+
+        #region Property
+
+        //CONFORMING
+        public static MemberExpression Property(Expression expression, string propertyName) {
+            ContractUtils.RequiresNotNull(expression, "expression");
+            // bind to public names first
+            PropertyInfo pi = expression.Type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (pi == null) {
+                pi = expression.Type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            }
+            if (pi == null) {
+                throw Error.PropertyNotDefinedForType(propertyName, expression.Type);
+            }
+            return Property(expression, pi);
+        }
+
+        public static MemberExpression Property(Expression expression, Type type, string propertyName) {
+            ContractUtils.RequiresNotNull(type, "type");
+            // bind to public names first
+            PropertyInfo pi = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (pi == null) {
+                pi = type.GetProperty(propertyName, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            }
+            if (pi == null) {
+                throw Error.PropertyNotDefinedForType(propertyName, type);
+            }
+            return Property(expression, pi);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
+        public static MemberExpression Property(Expression expression, PropertyInfo property) {
+            return Property(expression, property, Annotations.Empty);
+        }
+
+        //CONFORMING
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
+        public static MemberExpression Property(Expression expression, PropertyInfo property, Annotations annotations) {
             ContractUtils.RequiresNotNull(property, "property");
 
-            PropertyInfo pi = type.GetProperty(property);
-            ContractUtils.Requires(pi != null, "property", "Type doesn't have the specified property");
-            CheckProperty(pi, instance, rightValue);
-            return pi;
+            //TODO: this condition is too strict if we only need to assign to the property
+            if (!property.CanRead) {
+                throw Error.PropertyDoesNotHaveGetter(property);
+            }
+            bool isStatic = (property.GetGetMethod(true).IsStatic);
+
+            if (!isStatic) {
+                ContractUtils.RequiresNotNull(expression, "expression");
+                if (!TypeUtils.AreReferenceAssignable(property.DeclaringType, expression.Type)) {
+                    throw Error.PropertyNotDefinedForType(property, expression.Type);
+                }
+            }
+            return new MemberExpression(annotations, property, expression, property.PropertyType, null);
+        }
+        //CONFORMING
+        public static MemberExpression Property(Expression expression, MethodInfo propertyAccessor) {
+            ContractUtils.RequiresNotNull(propertyAccessor, "propertyAccessor");
+            ValidateMethodInfo(propertyAccessor);
+            return Property(expression, GetProperty(propertyAccessor));
         }
 
-        public static MemberExpression ReadField(Expression expression, Type type, string field) {
-            return ReadField(expression, GetFieldChecked(type, field, expression, null));
+        //CONFORMING
+        private static PropertyInfo GetProperty(MethodInfo mi) {
+            Type type = mi.DeclaringType;
+            BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic;
+            flags |= (mi.IsStatic) ? BindingFlags.Static : BindingFlags.Instance;
+            PropertyInfo[] props = type.GetProperties(flags);
+            foreach (PropertyInfo pi in props) {
+                if (pi.CanRead && CheckMethod(mi, pi.GetGetMethod(true))) {
+                    return pi;
+                }
+                if (pi.CanWrite && CheckMethod(mi, pi.GetSetMethod(true))) {
+                    return pi;
+                }
+            }
+            throw Error.MethodNotPropertyAccessor(mi.DeclaringType, mi.Name);
         }
 
-        /// <summary>
-        /// Creates MemberExpression representing field access, instance or static.
-        /// For static field, expression must be null and FieldInfo.IsStatic == true
-        /// For instance field, expression must be non-null and FieldInfo.IsStatic == false.
-        /// </summary>
-        /// <param name="expression">Expression that evaluates to the instance for the field access.</param>
-        /// <param name="field">Field represented by this Member expression.</param>
-        /// <returns>New instance of Member expression</returns>
-        public static MemberExpression ReadField(Expression expression, FieldInfo field) {
-            CheckField(field, expression, null);
-            return new MemberExpression(field, expression, field.FieldType, null);
+        //CONFORMING
+        private static bool CheckMethod(MethodInfo method, MethodInfo propertyMethod) {
+            if (method == propertyMethod) {
+                return true;
+            }
+            // If the type is an interface then the handle for the method got by the compiler will not be the 
+            // same as that returned by reflection.
+            // Check for this condition and try and get the method from reflection.
+            Type type = method.DeclaringType;
+            if (type.IsInterface && method.Name == propertyMethod.Name && type.GetMethod(method.Name) == propertyMethod) {
+                return true;
+            }
+            return false;
         }
 
-        public static MemberExpression ReadProperty(Expression expression, Type type, string property) {
-            return ReadProperty(expression, GetPropertyChecked(type, property, expression, null));
+        #endregion
+
+        //CONFORMING
+        public static MemberExpression PropertyOrField(Expression expression, string propertyOrFieldName) {
+            ContractUtils.RequiresNotNull(expression, "expression");
+            // bind to public names first
+            PropertyInfo pi = expression.Type.GetProperty(propertyOrFieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (pi != null)
+                return Property(expression, pi);
+            FieldInfo fi = expression.Type.GetField(propertyOrFieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (fi != null)
+                return Field(expression, fi);
+            pi = expression.Type.GetProperty(propertyOrFieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (pi != null)
+                return Property(expression, pi);
+            fi = expression.Type.GetField(propertyOrFieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
+            if (fi != null)
+                return Field(expression, fi);
+
+            throw Error.NotAMemberOfType(propertyOrFieldName, expression.Type);
         }
 
-        /// <summary>
-        /// Creates MemberExpression representing property access, instance or static.
-        /// For static properties, expression must be null and property.IsStatic == true.
-        /// For instance properties, expression must be non-null and property.IsStatic == false.
-        /// </summary>
-        /// <param name="expression">Expression that evaluates to the instance for instance property access.</param>
-        /// <param name="property">PropertyInfo of the property to access</param>
-        /// <returns>New instance of the MemberExpression.</returns>
-        public static MemberExpression ReadProperty(Expression expression, PropertyInfo property) {
-            CheckProperty(property, expression, null);
-            return new MemberExpression(property, expression, property.PropertyType, null);
+        //CONFORMING
+        public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member) {
+            ContractUtils.RequiresNotNull(member, "member");
+
+            FieldInfo fi = member as FieldInfo;
+            if (fi != null) {
+                return Expression.Field(expression, fi);
+            }
+            PropertyInfo pi = member as PropertyInfo;
+            if (pi != null) {
+                return Expression.Property(expression, pi);
+            }
+            throw Error.MemberNotFieldOrProperty(member);
         }
+
 
         /// <summary>
         /// A dynamic or unbound get member
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static MemberExpression GetMember(Expression expression, Type result, GetMemberAction bindingInfo) {
+        public static MemberExpression GetMember(Expression expression, Type result, CallSiteBinder bindingInfo) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            return new MemberExpression(null, expression, result, bindingInfo);
+            return new MemberExpression(Annotations.Empty, null, expression, result, bindingInfo);
         }
+
     }
 }

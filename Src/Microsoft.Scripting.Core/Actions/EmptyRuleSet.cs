@@ -13,15 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting.Actions {
-    internal class EmptyRuleSet<T> : RuleSet<T> {
-        public static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);
-        public static readonly RuleSet<T> FixedInstance = new EmptyRuleSet<T>(false);
+namespace System.Scripting.Actions {
+    internal sealed class EmptyRuleSet<T> : RuleSet<T> where T : class {
+        internal static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);
+        internal static readonly RuleSet<T> FixedInstance = new EmptyRuleSet<T>(false);
 
         private bool _supportAdding;
 
@@ -29,21 +24,12 @@ namespace Microsoft.Scripting.Actions {
             this._supportAdding = supportAdding;
         }
 
-        public override RuleSet<T> AddRule(Rule<T> newRule) {
-            if (_supportAdding) return newRule.MonomorphicRuleSet;
-            else return this;
-        }
-
-        public override IList<Rule<T>> GetRules() {
-            return null;
-        }
-
-        public override bool HasMonomorphicTarget(T target) {
-            return false;
-        }
-
-        protected override T MakeTarget() {
-            throw new InvalidOperationException("Cannot create target for an empty rule set");
+        internal override RuleSet<T> AddRule(Rule<T> newRule) {
+            if (_supportAdding) {
+                return newRule.RuleSet;
+            } else {
+                return this;
+            }
         }
     }
 }

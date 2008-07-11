@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -41,7 +41,7 @@ def test_append_self():
     Assert(fo.read() == repr(a))
     fo.close()
 
-if is_cli or is_silverlight: 
+if is_cli or is_silverlight:
     import clr
     x = [1,2,3]
     y = []
@@ -154,9 +154,9 @@ def test_equal():
     
     class MyOldEquality(object):
         def __eq__(self, other):
-            return 'def'            
+            return 'def'
             
-    AreEqual([] == MyEquality(), 'abc')        
+    AreEqual([] == MyEquality(), 'abc')
     AreEqual([] == MyOldEquality(), 'def')
     
     AreEqual([2,3] == (2,3), False)
@@ -205,13 +205,13 @@ AreEqual(hitCount, 3)       # should have only checked existing items
 def test_pass_pythonlist_to_clr():
     ##
     ## test passing pythonlist to clr where IList or ArrayList is requested
-    ## also borrow this place to test passing python dict to clr where 
+    ## also borrow this place to test passing python dict to clr where
     ##      IDictionary or Hashtable is requested
     ##
     
     def contains_all_1s(x):
         '''check the return value are 11111 or similar'''
-        if type(x) == tuple: 
+        if type(x) == tuple:
             x = x[0]
         s = str(x)
         AreEqual(s.count("1"), len(s))
@@ -236,9 +236,9 @@ def test_pass_pythonlist_to_clr():
             
     load_iron_python_test()
     import System
-    import IronPythonTest 
+    import IronPythonTest
         
-    # test ListWrapperForIList 
+    # test ListWrapperForIList
     pl = range(40)
     cl = System.Collections.Generic.List[int]()
     for x in pl: cl.Add(x)
@@ -248,7 +248,7 @@ def test_pass_pythonlist_to_clr():
             
     do_something(IronPythonTest.UsePythonListAsList, pl, cl, check_content)
         
-    # test DictWrapperForIDict 
+    # test DictWrapperForIDict
     pl = {"redmond" : 10, "seattle" : 20}
     cl = System.Collections.Generic.Dictionary[str, int]()
     for x, y in pl.iteritems(): cl.Add(x, y)
@@ -259,7 +259,7 @@ def test_pass_pythonlist_to_clr():
     cll.sort(lambda x, y: cmp(x.Key, y.Key))
 
     def check_content():
-        for x, y in zip(cll, pll): 
+        for x, y in zip(cll, pll):
             AreEqual(x.Key, y[0])
             AreEqual(x.Value, y[1])
       
@@ -289,7 +289,7 @@ def test_inplace_addition():
                    
     for left_operand, right_operand, result in test_cases:
     
-        #(No access to copy.deepcopy in IP) 
+        #(No access to copy.deepcopy in IP)
         #  Create new list to verify no side effects to the RHS list
         orig_right = [x for x in right_operand]
             
@@ -354,7 +354,7 @@ def test_getslice():
     """overriding __len__ doesn't get called when doing __getslice__"""
     class l(list):
         def __len__(self):
-            raise Exception()            
+            raise Exception()
 
     x = l()
     AreEqual(x.__getslice__(-1, -200), [])

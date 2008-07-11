@@ -18,10 +18,7 @@
 using System;
 using System.Collections;
 using System.ComponentModel;
-using System.Reflection;
-using System.Text;
 using System.Runtime.InteropServices;
-
 
 namespace IronPythonTest {
     /// <summary>

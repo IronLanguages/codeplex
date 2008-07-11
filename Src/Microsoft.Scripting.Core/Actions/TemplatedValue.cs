@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     interface ITemplatedValue {
         int Index { get; }
         object CopyWithNewValue(object value);

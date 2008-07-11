@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -32,15 +32,15 @@ import clr
 if is_peverify_run:
     clr.AddReference("Microsoft.Scripting.Core")
     clr.AddReference("Microsoft.Scripting")
-    from Microsoft.Scripting.Runtime import ScriptDomainManager
+    from System.Scripting.Runtime import ScriptDomainManager
     from System.IO import Path
 
-    tempMauiDir = Path.GetTempPath()    
+    tempMauiDir = Path.GetTempPath()
     
     print "Copying Maui.Core.dll to %s for peverify..." % (tempMauiDir)
     if not File.Exists(tempMauiDir + '\\Maui.Core.dll'):
         File.Copy(testpath.rowan_root + '\\Languages\\IronPython\\External\\Maui\\Maui.Core.dll',
-                  tempMauiDir + '\\Maui.Core.dll')    
+                  tempMauiDir + '\\Maui.Core.dll')
 
 #Cleanup the last run
 for t_name in ['ip_session.log', 'ip_session_stderr.log']:
@@ -104,7 +104,7 @@ proc = Process()
 proc.StartInfo.FileName = sys.executable
 proc.StartInfo.WorkingDirectory = testpath.rowan_root + '\\Languages\\IronPython\\Tests'
 proc.StartInfo.Arguments = '-X:TabCompletion -X:AutoIndent -X:ColorfulConsole'
-proc.StartInfo.UseShellExecute = True	
+proc.StartInfo.UseShellExecute = True
 proc.StartInfo.WindowStyle = ProcessWindowStyle.Normal
 proc.StartInfo.CreateNoWindow = False
 started = proc.Start()
@@ -155,18 +155,18 @@ def test_string_exception():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     #stdout should be empty
-    AreEqual(removePrompts(getTestOutput()[0]), 
+    AreEqual(removePrompts(getTestOutput()[0]),
              [])
-    #stderr should contain the exception             
-    errlines = getTestOutput()[1]       
+    #stderr should contain the exception
+    errlines = getTestOutput()[1]
     for i in xrange(len(errlines)):
-        Assert(errlines[i].startswith(expected[i]), str(errlines) + " != " + str(expected))         
+        Assert(errlines[i].startswith(expected[i]), str(errlines) + " != " + str(expected))
     
 
 @disabled("CodePlex Work Item 10928")
 def test_unique_prefix_completion():
     '''
-    Ensure that an attribute with a prefix unique to the dictionary is 
+    Ensure that an attribute with a prefix unique to the dictionary is
     properly completed.
     '''
     #setup
@@ -181,8 +181,8 @@ def test_unique_prefix_completion():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
-    AreEqual(removePrompts(getTestOutput()[1]), 
-             [])  
+    AreEqual(removePrompts(getTestOutput()[1]),
+             [])
 
 @disabled("CodePlex Work Item 10928")
 def test_nonunique_prefix_completion():
@@ -201,8 +201,8 @@ def test_nonunique_prefix_completion():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
-    AreEqual(removePrompts(getTestOutput()[1]), 
-             [])  
+    AreEqual(removePrompts(getTestOutput()[1]),
+             [])
 
 def test_member_completion():
     '''
@@ -283,7 +283,7 @@ def test_cursor_keys():
     testRegex += 'up'
     superConsole.SendKeys("print 'down'{ENTER}")
     testRegex += 'down'
-    superConsole.SendKeys("{UP}{UP}{ENTER}") 
+    superConsole.SendKeys("{UP}{UP}{ENTER}")
     testRegex += 'up'
     superConsole.SendKeys("{DOWN}{ENTER}")
     testRegex += 'down'
@@ -328,7 +328,7 @@ def test_control_character_rendering():
     # check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
     superConsole.SendKeys('def foo{(}{)}:{ENTER}try:{ENTER}while True:{ENTER}pass{ENTER}')
     superConsole.SendKeys('{BACKSPACE}{BACKSPACE}except KeyboardInterrupt:{ENTER}print "caught"{ENTER}{BACKSPACE}{ENTER}')
-    superConsole.SendKeys('print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')    
+    superConsole.SendKeys('print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')
     sleep(2)
     superConsole.SendKeys('^(c)')
     testRegex += 'caughtafter'
@@ -336,10 +336,10 @@ def test_control_character_rendering():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
-    #stderr should contain the exceptions       
+    #stderr should contain the exceptions
     errlines = getTestOutput()[1]
-    Assert("KeyboardInterrupt" + newline in errlines, 
-           "KeyboardInterrupt not found in:" + str(errlines))  
+    Assert("KeyboardInterrupt" + newline in errlines,
+           "KeyboardInterrupt not found in:" + str(errlines))
     #for i in xrange(len(errlines)):
     #    Assert(errlines[i].startswith(errors[i]), str(errlines) + " != " + str(errors))
 
@@ -364,7 +364,7 @@ def test_noeffect_keys():
     '''
     #setup
     superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
-    testRegex = ""	
+    testRegex = ""
     
     superConsole.SendKeys('{BACKSPACE}{DELETE}{HOME}{LEFT}print "start"{ENTER}')
     testRegex += 'start'
@@ -379,7 +379,7 @@ def test_tab_completion_caseinsensitive():
     '''
     #setup
     superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
-    testRegex = ""	
+    testRegex = ""
     
     superConsole.SendKeys('import System{ENTER}')
     superConsole.SendKeys('print System.r{TAB}{ENTER}')
@@ -395,7 +395,7 @@ def test_history():
     '''
     #setup
     superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
-    testRegex = ""	
+    testRegex = ""
     
     superConsole.SendKeys('print "first"{ENTER}')
     testRegex += 'first'

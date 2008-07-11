@@ -14,13 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
-using System.Text;
 using System.Runtime.CompilerServices;
-
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [PythonSystemType("buffer")]
@@ -104,6 +100,17 @@ namespace IronPython.Runtime {
             return GetSelectedRange().ToString();
         }
 
+        public override bool Equals(object obj) {
+            PythonBuffer b = obj as PythonBuffer;
+            if (b == null) return false;
+
+            return this == b;
+        }
+
+        public override int GetHashCode() {
+            return _object.GetHashCode() ^ _offset ^ (_size << 16 | (_size >> 16));
+        }
+
         private object GetSlice() {
             object end = null;
             if (_size >= 0) {
@@ -162,22 +169,11 @@ namespace IronPython.Runtime {
             return !(a == b);
         }
 
-        public override bool Equals(object obj) {
-            PythonBuffer b = obj as PythonBuffer;
-            if (b == null) return false;
-
-            return this == b;
-        }
-
-        public override int GetHashCode() {
-            return _object.GetHashCode() ^ _offset ^ (_size<<16 | (_size>>16));
-        }
-
         public int __len__() {
             return _size;
         }
 
-        public int Size {
+        internal int Size {
             get {
                 return _size;
             }

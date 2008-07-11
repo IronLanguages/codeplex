@@ -13,10 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
+using System.Scripting;
 
 namespace IronPython.Compiler.Ast {
     public class RelativeModuleName : ModuleName {

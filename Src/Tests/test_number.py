@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -47,9 +47,9 @@ if sys.platform != "win32":
     from IronPythonTest import *
     from IronPythonTest import IntegerTest as it
     
-#----------------------------------------------------------------------------------  
+#----------------------------------------------------------------------------------
 @skip("win32")
-def test_clr():    
+def test_clr():
     Assert(Single.IsInfinity(Single.PositiveInfinity))
     Assert(not Single.IsInfinity(1.0))
     
@@ -166,7 +166,7 @@ def test_clr():
             type_test(a, b)
             type_test(b, a)
     
-#----------------------------------------------------------------------------------    
+#----------------------------------------------------------------------------------
 @skip("win32")
 def test_conversions():
     
@@ -307,7 +307,7 @@ def test_conversions():
     
     AreEqual(int(Single.Parse("3.14159")), 3)
     
-#----------------------------------------------------------------------------------  
+#----------------------------------------------------------------------------------
 @skip("interpreted") #Too slow
 def test_operators():
     def operator_add(a, b) :
@@ -423,7 +423,7 @@ def test_operators():
     test_it_all(nums)
     
     
-#----------------------------------------------------------------------------------  
+#----------------------------------------------------------------------------------
 def scenarios_helper(templates, cmps, gbls, lcls):
     values = [3.5, 4.5, 4, 0, -200L, 12345678901234567890]
     for l in values:
@@ -433,7 +433,7 @@ def scenarios_helper(templates, cmps, gbls, lcls):
                     easy = t % (l, c, r)
                     # need to compare the real values the classes hold,
                     # not the values we expect them to hold, incase truncation
-                    # has occured                    
+                    # has occured
                     easy = easy.replace(')', ').value')
                     inst = t % (l, c, r)
                     #print inst, eval(easy), eval(inst)
@@ -441,9 +441,9 @@ def scenarios_helper(templates, cmps, gbls, lcls):
                     
     
 templates1 = [ "C(%s) %s C(%s)", "C2(%s) %s C2(%s)",
-               "C(%s) %s D(%s)", "D(%s) %s C(%s)", 
-               "C2(%s) %s D(%s)", "D(%s) %s C2(%s)", 
-               "C(%s) %s D2(%s)", "D2(%s) %s C(%s)", 
+               "C(%s) %s D(%s)", "D(%s) %s C(%s)",
+               "C2(%s) %s D(%s)", "D(%s) %s C2(%s)",
+               "C(%s) %s D2(%s)", "D2(%s) %s C(%s)",
                "C2(%s) %s D2(%s)", "D2(%s) %s C2(%s)"]
 templates2 = [x for x in templates1 if x.startswith('C')]
 
@@ -478,7 +478,7 @@ def test_oldclass_c():
     class D2(D): pass
     scenarios_helper(templates2, ["<"], globals(), locals())
     
-def test_usertype_cd():    
+def test_usertype_cd():
     # UserType: both C and D define __lt__
     class C(object):
         def __init__(self, value):
@@ -508,7 +508,7 @@ def test_usertype_c():
     class D2(D): pass
     scenarios_helper(templates2, ["<"], globals(), locals())
 
-def test_mixed_cd():    
+def test_mixed_cd():
     # Mixed: both C and D define __lt__
     class C:
         def __init__(self, value):
@@ -525,7 +525,7 @@ def test_mixed_cd():
     class D2(D): pass
     scenarios_helper(templates1, ["<", ">"], globals(), locals())
 
-def test_mixed_all_cmpop():    
+def test_mixed_all_cmpop():
     # Mixed, with all cmpop
     class C(object):
         def __init__(self, value):
@@ -556,21 +556,21 @@ def test_mixed_all_cmpop():
     
     # verify two instances of class compare differently
     
-    Assert( (cmp(C(3), C(3)) == 0) == False)        
-    Assert( (cmp(D(3), D(3)) == 0) == False)        
-    Assert( (cmp(C2(3), C2(3)) == 0) == False)        
-    Assert( (cmp(D2(3), D2(3)) == 0) == False)        
+    Assert( (cmp(C(3), C(3)) == 0) == False)
+    Assert( (cmp(D(3), D(3)) == 0) == False)
+    Assert( (cmp(C2(3), C2(3)) == 0) == False)
+    Assert( (cmp(D2(3), D2(3)) == 0) == False)
           
-    Assert( (cmp(D(5), C(5)) == 0) == False)        
-    Assert( (cmp(C(3), C(5)) == -1) == True)        
-    Assert( (cmp(D2(5), C(3)) == 1) == True)        
-    Assert( (cmp(D(5), C2(8)) == -1) == True)  
+    Assert( (cmp(D(5), C(5)) == 0) == False)
+    Assert( (cmp(C(3), C(5)) == -1) == True)
+    Assert( (cmp(D2(5), C(3)) == 1) == True)
+    Assert( (cmp(D(5), C2(8)) == -1) == True)
     
-def test_old_cmp():    
+def test_old_cmp():
     # define __cmp__; do not move this before those above cmp testing
     class C:
         def __init__(self, value):
-            self.value = value    
+            self.value = value
         def __cmp__(self, other):
             if self.value < other: return -1
             elif self.value > other: return 1
@@ -578,7 +578,7 @@ def test_old_cmp():
     
     class D:
         def __init__(self, value):
-            self.value = value    
+            self.value = value
         def __cmp__(self, other):
             if self.value < other: return -1
             elif self.value > other: return 1
@@ -590,16 +590,16 @@ def test_old_cmp():
     
     scenarios_helper(templates1, ["<", ">", ">=", "<="], globals(), locals())
     
-    Assert( (cmp(C(3), C(3)) == 0) == True)        
-    Assert( (cmp(C2(3), D(3)) == 0) == True)        
-    Assert( (cmp(C(3.0), D2(4.6)) > 0) == False)        
-    Assert( (cmp(D(3), C(4.9)) < 0) == True)        
-    Assert( (cmp(D2(3), D2(1234567890)) > 0) == False)        
+    Assert( (cmp(C(3), C(3)) == 0) == True)
+    Assert( (cmp(C2(3), D(3)) == 0) == True)
+    Assert( (cmp(C(3.0), D2(4.6)) > 0) == False)
+    Assert( (cmp(D(3), C(4.9)) < 0) == True)
+    Assert( (cmp(D2(3), D2(1234567890)) > 0) == False)
 
-def test_new_cmp():    
+def test_new_cmp():
     class C(object):
         def __init__(self, value):
-            self.value = value    
+            self.value = value
         def __cmp__(self, other):
             if self.value < other: return -1
             elif self.value > other: return 1
@@ -607,7 +607,7 @@ def test_new_cmp():
     
     class D(object):
         def __init__(self, value):
-            self.value = value    
+            self.value = value
         def __cmp__(self, other):
             if self.value < other: return -1
             elif self.value > other: return 1
@@ -617,15 +617,15 @@ def test_new_cmp():
     class D2(D): pass
     scenarios_helper(templates1, ["<", ">", ">=", "<="], globals(), locals())
     
-    Assert( (cmp(C(3), C(3)) == 0) == True)        
-    Assert( (cmp(C2(3.4), D(3.4)) == 0) == True)        
-    Assert( (cmp(C(3.3), D2(4.9232)) > 0) == False)        
-    Assert( (cmp(D(3L), C(4000000000)) < 0) == True)        
-    Assert( (cmp(D2(3), D2(4.9)) < 0) == True)        
+    Assert( (cmp(C(3), C(3)) == 0) == True)
+    Assert( (cmp(C2(3.4), D(3.4)) == 0) == True)
+    Assert( (cmp(C(3.3), D2(4.9232)) > 0) == False)
+    Assert( (cmp(D(3L), C(4000000000)) < 0) == True)
+    Assert( (cmp(D2(3), D2(4.9)) < 0) == True)
     
-#----------------------------------------------------------------------------------  
+#----------------------------------------------------------------------------------
 @skip("win32")
-def test_comparisions(): 
+def test_comparisions():
     
     def comparisons_helper(typeObj):
         class Callback:
@@ -675,10 +675,10 @@ def test_comparisions():
         def __lt__(self, other):
             return self.value < other.value
         def __gt__(self, other):
-            return self.value > other.value     
-    class C2(C): pass        
+            return self.value > other.value
+    class C2(C): pass
     D = ComparisonTest
-    D2 = ComparisonTest2  
+    D2 = ComparisonTest2
     scenarios_helper(templates1, ["<", ">"], globals(), locals())
     
     class C(object):
@@ -687,14 +687,14 @@ def test_comparisions():
         def __lt__(self, other):
             return self.value < other.value
         def __gt__(self, other):
-            return self.value > other.value     
-    class C2(C): pass     
+            return self.value > other.value
+    class C2(C): pass
     
     
     ComparisonTest.report = None
-    Assert( (cmp(ComparisonTest(5), ComparisonTest(5)) == 0) == False)        
-    Assert( (cmp(ComparisonTest(5), ComparisonTest(8)) == -1) == True)        
-    Assert( (cmp(ComparisonTest2(50), ComparisonTest(8)) == 1) == True)        
+    Assert( (cmp(ComparisonTest(5), ComparisonTest(5)) == 0) == False)
+    Assert( (cmp(ComparisonTest(5), ComparisonTest(8)) == -1) == True)
+    Assert( (cmp(ComparisonTest2(50), ComparisonTest(8)) == 1) == True)
     
     
     Assert( (None < None) == False)
@@ -726,8 +726,8 @@ def test_comparisions():
         check(x())
     
     
-    ignore = '''    
-    ############ Let us get some strange ones ############ 
+    ignore = '''
+    ############ Let us get some strange ones ############
     # both C and D claims bigger
     class C:
         def __lt__(self, other):
@@ -755,7 +755,7 @@ def test_comparisions():
     Assert( (D() > C()) == False )
     '''
     
-#----------------------------------------------------------------------------------  
+#----------------------------------------------------------------------------------
 @skip("win32")
 def test_ipt_integertest():
 
@@ -2247,12 +2247,27 @@ def test_float_special_methods():
     
     AreEqual(float.__le__(2.0, 3.0), True)
     AreEqual(float.__le__(3.0, 2.0), False)
-    AreEqual(float.__le__(2.0, 2.0), True)    
+    AreEqual(float.__le__(2.0, 2.0), True)
     
     AreEqual(float.__eq__(2.0, 3.0), False)
     AreEqual(float.__eq__(3.0, 3.0), True)
     
     AreEqual(float.__ne__(2.0, 3.0), True)
     AreEqual(float.__ne__(3.0, 3.0), False)
+
+def test_hex_and_octal():
+    for num, num_repr in [
+                            (long(0x20), '32L'),
+                            (long(0X20), '32L'), #Capital X
+                            (int(0x20), '32'),
+                            (float(-0x20), '-32.0'),
+                            (long(010), '8L'),
+                            (int(-010), '-8'),
+                            (float(00010), '8.0'),
+                         ]:                 
+        AreEqual(repr(num), num_repr)
+    
+    for num in [ "0xx2", "09", "0P32", "0G" ]:
+        AssertError(SyntaxError, lambda: eval(num))
     
 run_test(__name__)

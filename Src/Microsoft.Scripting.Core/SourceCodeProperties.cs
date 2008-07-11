@@ -13,11 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1717:OnlyFlagsEnumsShouldHavePluralNames")] // TODO: fix
     public enum SourceCodeProperties {
         None,

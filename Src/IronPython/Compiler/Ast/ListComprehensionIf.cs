@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
-using IronPython.Runtime.Operations;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ListComprehensionIf : ListComprehensionIterator {
         private readonly Expression _test;
@@ -31,15 +31,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, MSAst.Expression body) {
-            return Ast.If(
-                Ast.IfConditions(
-                    Ast.IfCondition(
-                        Span, Span.End,
-                        ag.TransformAndDynamicConvert(_test, typeof(bool)),
-                        body
-                    )
-                ),
-                null
+            return AstUtils.Block(
+                Span,
+                Ast.If(
+                    ag.TransformAndDynamicConvert(_test, typeof(bool)),
+                    body
+                )
             );
         }
 

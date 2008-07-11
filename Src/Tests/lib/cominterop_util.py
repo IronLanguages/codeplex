@@ -627,7 +627,11 @@ def genPeverifyInteropAsm(file):
     }
     
     dlrcomlib_list = [  "dlrcomserver", "paramsinretval", "method", "obj", "prop",  ]
-    for mod_name in dlrcomlib_list: module_dll_dict[mod_name] = [ testpath.rowan_root + "\\Test\\DlrComLibrary\\Debug\\DlrComLibrary.dll" ]
+    if is_cli32:
+        temp_name = testpath.rowan_root + "\\Test\\DlrComLibrary\\Debug\\DlrComLibrary.dll" 
+    else:
+        temp_name = testpath.rowan_root + "\\Test\\DlrComLibrary\\x64\\Release\\DlrComLibrary.dll" 
+    for mod_name in dlrcomlib_list: module_dll_dict[mod_name] = [ temp_name ]
     
     
     if not file_exists_in_path("tlbimp.exe"):

@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class LoopStatement : Expression {
         private readonly Expression _test;
         private readonly Expression _increment;
@@ -27,16 +27,12 @@ namespace Microsoft.Scripting.Ast {
         /// Null test means infinite loop.
         /// </summary>
         internal LoopStatement(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression /*!*/ body, Expression @else)
-            : base(annotations, AstNodeType.LoopStatement, typeof(void)) {
+            : base(annotations, ExpressionType.LoopStatement, typeof(void)) {
             _test = test;
             _increment = increment;
             _body = body;
             _else = @else;
             _label = label;
-        }
-
-        internal SourceLocation Header {
-            get { return Annotations.Get<SourceLocation>(); }
         }
 
         public Expression Test {
@@ -65,51 +61,11 @@ namespace Microsoft.Scripting.Ast {
     /// TODO: review which of these overloads we actually need
     /// </summary>
     public partial class Expression {
-        public static LoopStatement While(Expression test, Expression body, Expression @else) {
-            return Loop(SourceSpan.None, SourceLocation.None, null, test, null, body, @else);
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label) {
+            return Loop(test, increment, body, @else, label, Annotations.Empty);
         }
 
-        public static LoopStatement While(LabelTarget label, Expression test, Expression body, Expression @else) {
-            return Loop(SourceSpan.None, SourceLocation.None, label, test, null, body, @else);
-        }
-
-        public static LoopStatement While(SourceSpan span, SourceLocation header, Expression test, Expression body, Expression @else) {
-            return Loop(span, header, null, test, null, body, @else);
-        }
-
-        public static LoopStatement While(SourceSpan span, SourceLocation header, LabelTarget label, Expression test, Expression body, Expression @else) {
-            return Loop(span, header, label, test, null, body, @else);
-        }
-
-        public static LoopStatement Infinite(Expression body) {
-            return Loop(SourceSpan.None, SourceLocation.None, null, null, null, body, null);
-        }
-
-        public static LoopStatement Infinite(LabelTarget label, Expression body) {
-            return Loop(SourceSpan.None, SourceLocation.None, label, null, null, body, null);
-        }
-
-        public static LoopStatement Infinite(params Expression[] body) {
-            return Loop(SourceSpan.None, SourceLocation.None, null, null, null, Block(body), null);
-        }
-
-        public static LoopStatement Infinite(LabelTarget label, params Expression[] body) {
-            return Loop(SourceSpan.None, SourceLocation.None, label, null, null, Block(body), null);
-        }
-
-        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else) {
-            return Loop(SourceSpan.None, SourceLocation.None, null, test, increment, body, @else);
-        }
-
-        public static LoopStatement Loop(LabelTarget label, Expression test, Expression increment, Expression body, Expression @else) {
-            return Loop(SourceSpan.None, SourceLocation.None, label, test, increment, body, @else);
-        }
-
-        public static LoopStatement Loop(SourceSpan span, SourceLocation header, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else) {
-            return Loop(Annotate(span, header), label, test, increment, body, @else);
-        }
- 
-        public static LoopStatement Loop(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else) {
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label, Annotations annotations) {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.Requires(test == null || test.Type == typeof(bool), "test");
             return new LoopStatement(annotations, label, test, increment, body, @else);

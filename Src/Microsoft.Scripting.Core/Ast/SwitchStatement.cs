@@ -13,22 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class SwitchStatement : Expression {
         private readonly Expression _testValue;
         private readonly ReadOnlyCollection<SwitchCase> _cases;
         private readonly LabelTarget _label;
 
         internal SwitchStatement(Annotations annotations, LabelTarget label, Expression/*!*/ testValue, ReadOnlyCollection<SwitchCase>/*!*/ cases)
-            : base(annotations, AstNodeType.SwitchStatement, typeof(void)) {
+            : base(annotations, ExpressionType.SwitchStatement, typeof(void)) {
             Assert.NotNullItems(cases);
 
             _label = label;
@@ -44,10 +43,6 @@ namespace Microsoft.Scripting.Ast {
             get { return _cases; }
         }
 
-        internal SourceLocation Header {
-            get { return Annotations.Get<SourceLocation>(); }
-        }
-
         new public LabelTarget Label {
             get { return _label; }
         }
@@ -57,9 +52,6 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        public static SwitchStatement Switch(SourceSpan span, SourceLocation header, LabelTarget label, Expression value, params SwitchCase[] cases) {
-            return Switch(Annotate(span, header), label, value, cases);
-        }
         public static SwitchStatement Switch(Annotations annotations, LabelTarget label, Expression value, params SwitchCase[] cases) {
             ContractUtils.RequiresNotNull(value, "value");
             ContractUtils.Requires(value.Type == typeof(int), "value", "Value must be int");

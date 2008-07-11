@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     public sealed class Uninitialized {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public readonly static Uninitialized Instance = new Uninitialized();

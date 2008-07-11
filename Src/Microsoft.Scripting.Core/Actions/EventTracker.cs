@@ -13,17 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     public class EventTracker : MemberTracker {
         private EventInfo _event;
 
@@ -59,7 +54,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
             return binder.ReturnMemberTracker(type, new BoundMemberTracker(this, instance));
         }
 

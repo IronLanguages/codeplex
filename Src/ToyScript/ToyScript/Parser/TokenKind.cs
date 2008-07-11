@@ -13,16 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Ast;
-using System.Diagnostics;
-using Microsoft.Scripting;
-
-using Microsoft.Scripting.Math;
-
-
 namespace ToyScript.Parser {
 
     enum TokenKind {

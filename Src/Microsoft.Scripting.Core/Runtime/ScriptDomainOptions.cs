@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System.Scripting.Generation;
+using System.Reflection;
 
-using Microsoft.Scripting.Generation;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     [Serializable]
     public sealed class ScriptDomainOptions {
+
         private bool _debugMode;
         private bool _privateBinding;
 
@@ -27,11 +27,8 @@ namespace Microsoft.Scripting.Runtime {
         private bool _frames;
 
         private bool _verbose;
-        private bool _showTrees;
-        private bool _dumpTrees;
-        private bool _showRules;
         private bool _cachePointersInApartment;
-        private bool _tupleBasedOptimizedScopes;
+        private bool _lightweightScopes;
         private bool _preferComDispatchOverTypeInfo;
 
         /// <summary>
@@ -75,39 +72,17 @@ namespace Microsoft.Scripting.Runtime {
             set { _frames = value; }
         }
 
+        /// <summary>
+        /// Generate optimized scopes that can be garbage collected
+        /// (globals are stored in an array instead of static fields on a
+        /// generated type)
+        /// </summary>
+        public bool LightweightScopes {
+            get { return _lightweightScopes; }
+            set { _lightweightScopes = value; }
+        }
+
         #region Internal Debugging Options
-
-        /// <summary>
-        /// Print generated Abstract Syntax Trees to the console
-        /// </summary>
-        public bool ShowTrees {
-            get { return _showTrees; }
-            set { _showTrees = value; }
-        }
-
-        /// <summary>
-        /// Write out generated Abstract Syntax Trees as files in the current directory
-        /// </summary>
-        public bool DumpTrees {
-            get { return _dumpTrees; }
-            set { _dumpTrees = value; }
-        }
-
-        /// <summary>
-        /// Print generated action dispatch rules to the console
-        /// </summary>
-        public bool ShowRules {
-            get { return _showRules; }
-            set { _showRules = value; }
-        }
-
-        /// <summary>
-        /// Use a tuple for optimized scope storage (experimental).
-        /// </summary>
-        public bool TupleBasedOptimizedScopes {
-            get { return _tupleBasedOptimizedScopes; }
-            set { _tupleBasedOptimizedScopes = value; }
-        }
 
         /// <summary>
         /// An RCW object represents a COM object which could potentially be in another apartment. So access

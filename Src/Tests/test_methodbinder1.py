@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -31,20 +31,20 @@ mycomplex1              = mycomplex(3)
 funcs = '''
 M100   M201   M202   M203   M204   M205   M301   M302   M303   M304
 M310   M311   M312   M313   M320   M321   M400   M401   M402   M403
-M404   M410   M411   M450   M451   
-M500   M510   M600   M610   M611   M620   M630   
-M650   M651   M652   M653   
-M680   M700   M701   
-M710   M715  
+M404   M410   M411   M450   M451
+M500   M510   M600   M610   M611   M620   M630
+M650   M651   M652   M653
+M680   M700   M701
+M710   M715
 '''.split()
 
 args  = '''
 NoArg  Int32  Double BigInt Bool   String SByte  Int16  Int64  Single
 Byte   UInt16 UInt32 UInt64 Char   Decml  Object I      C1     C2
-S1     A      C6     E1     E2     
-ArrInt32  ArrI   ParamArrInt32  ParamArrI       ParamArrS   Int32ParamArrInt32  IParamArrI  
+S1     A      C6     E1     E2
+ArrInt32  ArrI   ParamArrInt32  ParamArrI       ParamArrS   Int32ParamArrInt32  IParamArrI
 IListInt  Array  IEnumerableInt IEnumeratorInt
-NullableInt RefInt32  OutInt32 
+NullableInt RefInt32  OutInt32
 DefValInt32 Int32DefValInt32
 '''.split()
 
@@ -58,9 +58,9 @@ def _get_funcs(args): return [arg2func[x] for x in args.split()]
 def _self_defined_method(name): return len(name) == 4 and name[0] == "M"
 
 def _my_call(func, arg):
-    if isinstance(arg, tuple): 
+    if isinstance(arg, tuple):
         l = len(arg)
-        # by purpose 
+        # by purpose
         if l == 0: func()
         elif l == 1: func(arg[0])
         elif l == 2: func(arg[0], arg[1])
@@ -100,9 +100,9 @@ def test_this_matrix():
 
 
     funcnames =     "M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400".split()
-    matrix = (   
+    matrix = (
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 (        "SByteMax", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (         "ByteMax", True,  True,  True,  True,  True,  TypeE, OverF, True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (        "Int16Max", True,  True,  True,  True,  True,  TypeE, OverF, True,  True,  True,  OverF, True,  True,  True,  TypeE, True,  True,  ),
@@ -115,7 +115,7 @@ def test_this_matrix():
 (       "SingleMax", OverF, OverF, True,  TypeE, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
 (        "floatMax", OverF, OverF, True,  True, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 (        "SByteMin", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 (         "ByteMin", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (        "Int16Min", True,  True,  True,  True,  True,  TypeE, OverF, True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
@@ -124,11 +124,11 @@ def test_this_matrix():
 (       "UInt32Min", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (        "Int64Min", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 (       "UInt64Min", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(      "decimalMin", OverF, OverF, True , True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, True , True,  ), 
+(      "decimalMin", OverF, OverF, True , True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, True , True,  ),
 (       "SingleMin", OverF, OverF, True,  TypeE, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
 (        "floatMin", OverF, OverF, True,  True, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 (    "SBytePlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (     "BytePlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (    "Int16PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
@@ -143,7 +143,7 @@ def test_this_matrix():
 (    "floatPlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (          myfloat1, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 (   "SByteMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 (   "Int16MinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 (     "intMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
@@ -155,47 +155,48 @@ def test_this_matrix():
 (          myfloat2, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 ##################################################   pass in bool   #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 (              True, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (             False, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 ##################################################  pass in BigInt #########################################################
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 (               10L, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (              -10L, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
-( 1234567890123456L, OverF, OverF, True , True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),        
+( 1234567890123456L, OverF, OverF, True , True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),
 (           mylong1, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (           mylong2, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 ##################################################  pass in Complex #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
 (            (3+0j), TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
 (            (3+1j), TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
 (        mycomplex1, TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  )
     )
 
     
-    if is_silverlight==False:       
+    if is_silverlight==False:
+        InvariantCulture = System.Globalization.CultureInfo.InvariantCulture
         matrix = list(matrix)
         ##################################################  pass in char    #########################################################
         ####                                     M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-        ####                                     int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+        ####                                     int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
         matrix.append((System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  True, True,  ))
         
         ##################################################  pass in float   #########################################################
         ####    single/double becomes Int32, but this does not apply to other primitive types
-        ####                                         int    int?  double  bigint bool   str    sbyte i16   i64   single byte   ui16   ui32   ui64   char   decm   obj 
-        matrix.append((System.Single.Parse("8.01"), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  True,  True,  True,  True,  TypeE, True,  True,  ))
-        matrix.append((System.Double.Parse("10.2"), True,  True, True,  True,  True,  TypeE, True, True, True, True,  True,  True,  True,  True,  TypeE, True,  True,  ))
-        matrix.append((System.Single.Parse("-8.1"), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ))
-        matrix.append((System.Double.Parse("-1.8"), True,  True, True,  True,  True,  TypeE, True, True, True, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ))
+        ####                                         int    int?  double  bigint bool   str    sbyte i16   i64   single byte   ui16   ui32   ui64   char   decm   obj
+        matrix.append((System.Single.Parse("8.01", InvariantCulture), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  True,  True,  True,  True,  TypeE, True,  True,  ))
+        matrix.append((System.Double.Parse("10.2", InvariantCulture), True,  True, True,  True,  True,  TypeE, True, True, True, True,  True,  True,  True,  True,  TypeE, True,  True,  ))
+        matrix.append((System.Single.Parse("-8.1", InvariantCulture), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ))
+        matrix.append((System.Double.Parse("-1.8", InvariantCulture), True,  True, True,  True,  True,  TypeE, True, True, True, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ))
         matrix = tuple(matrix)
     
-    for scenario in matrix: 
-        if isinstance(scenario[0], str):    
+    for scenario in matrix:
+        if isinstance(scenario[0], str):
             value = clr_numbers[scenario[0]]
             if print_the_matrix: print '(%18s,' % ('"'+ scenario[0] +'"'),
-        else:                               
+        else:
             value = scenario[0]
             if print_the_matrix: print '(%18s,' % value ,
         
@@ -227,13 +228,13 @@ def test_this_matrix():
                     left = Flag.Value ; Flag.Value = -99           # reset
 
                     right = int(funcname[1:])
-                    if left != right: 
+                    if left != right:
                         Fail("left %s != right %s when func %s on arg %s (%s)\n%s" % (left, right, funcname, scenario[0], type(value), func.__doc__))
 
-    # these funcs should behavior same as M201(Int32)  
+    # these funcs should behavior same as M201(Int32)
     # should have NullableInt too ?
-    for funcname in _get_funcs('RefInt32   ParamArrInt32   Int32ParamArrInt32'): 
-        for scenario in matrix: 
+    for funcname in _get_funcs('RefInt32   ParamArrInt32   Int32ParamArrInt32'):
+        for scenario in matrix:
             if isinstance(scenario[0], str): value = clr_numbers[scenario[0]]
             else: value = scenario[0]
 
@@ -242,15 +243,15 @@ def test_this_matrix():
                 func(value)
                 left = Flag.Value
                 right = int(funcname[1:])
-                if left != right: 
+                if left != right:
                     Fail("left %s != right %s when func %s on arg %s" % (left, right, funcname, scenario[0]))
-                Flag.Value = -99           # reset 
-            else: 
+                Flag.Value = -99           # reset
+            else:
                 try:   func(value)
                 except scenario[1]: pass   # 1 is M201
                 else:  Fail("expect %s, but got none when func %s on arg %s" % (scenario[1], funcname, scenario[0]))
 
-def test_char_string_asked():    
+def test_char_string_asked():
     # char asked
     _helper(target.M320, ['a', System.Char.MaxValue, System.Char.MinValue, 'abc'[2]], 320, ['abc', ('a  b')], TypeError)
     # string asked
@@ -263,7 +264,7 @@ def test_pass_extensible_types():
     _helper(target.M205, [mystr1, mystr2, ], 205, [], TypeError)  # String
     _helper(target.M320, [mystr1, ], 320, [mystr2, ], TypeError)  # Char
 
-# check the bool conversion result    
+# check the bool conversion result
 def test_bool_asked():
     for arg in ['a', 3, object(), True]:
         target.M204(arg)
@@ -274,16 +275,16 @@ def test_bool_asked():
         for arg in [0, System.Byte.Parse('0'), System.UInt64.Parse('0'), 0.0, 0L, False, None, tuple(), list()]:
             target.M204(arg)
             Assert(not Flag.BValue, "argument is %s" % (arg,))
-            Flag.BValue = True    
+            Flag.BValue = True
 
 def test_user_defined_conversion():
-    class CP1: 
+    class CP1:
         def __int__(self): return 100
     
-    class CP2(object): 
+    class CP2(object):
         def __int__(self): return 99
     
-    class CP3: pass        
+    class CP3: pass
     cp1, cp2, cp3 = CP1(), CP2(), CP3()
 
     ### 1. not work for Nullable<Int32> required (?)
@@ -295,14 +296,14 @@ def test_user_defined_conversion():
     
     for fn in dir(target):
     ###                                                     bool  obj
-        if _self_defined_method(fn) and fn not in (works + 'M204  M400 '): 
+        if _self_defined_method(fn) and fn not in (works + 'M204  M400 '):
             _helper(getattr(target, fn), [], 0, [cp1, cp2, cp3, ], TypeError)
 
 def test_pass_in_derived_python_types():
     class CP1(I): pass
     class CP2(C1): pass
     class CP3(C2): pass
-    class CP4(C6, I): pass    
+    class CP4(C6, I): pass
     cp1, cp2, cp3, cp4 = CP1(), CP2(), CP3(), CP4()
 
     # I asked
@@ -331,7 +332,7 @@ def test_collections():
     tupleInt = ((10, 20), )
     listInt  = ([10, 20], )
     tupleBool = ((True, False, True, True, False), )
-    tupleLong1, tupleLong2  = ((10L, 20L), ), ((System.Int64.MaxValue, System.Int32.MaxValue * 2),)    
+    tupleLong1, tupleLong2  = ((10L, 20L), ), ((System.Int64.MaxValue, System.Int32.MaxValue * 2),)
     arrayByte = array_byte((10, 20))
     arrayObj = array_object(['str', 10])
     
@@ -361,7 +362,7 @@ def test_collections():
     
     arrayI1 = System.Array[I]( (C1(), C2()) )
     arrayI2 = System.Array[I]( () )
-    arrayObj3 = System.Array[object]( (C1(), C2()) )  
+    arrayObj3 = System.Array[object]( (C1(), C2()) )
     tupleI = ((C1(), C2()),)
     listI =  ([C1(), C2()],)
     _helper(target.M510, [arrayI1, arrayI2, tupleI, ], 510, [arrayObj3, listI, ], TypeError)     # I[]
@@ -369,7 +370,7 @@ def test_collections():
 
 def test_no_arg_asked():
     # no args asked
-    _helper(target.M100, [()], 100, [2, None, (2, None)], TypeError)    
+    _helper(target.M100, [()], 100, [2, None, (2, None)], TypeError)
 
 def test_enum():
     # E1 asked
@@ -378,7 +379,7 @@ def test_enum():
     if is_silverlight==False:
         _helper(target.M451, [E2.A, ], 451, [10, E1.A, System.UInt16.Parse("3")], TypeError)
 
-def _repeat_with_one_arg(goodStr, getArg):    
+def _repeat_with_one_arg(goodStr, getArg):
     passSet = _get_funcs(goodStr)
     skipSet = []
 
@@ -389,25 +390,25 @@ def _repeat_with_one_arg(goodStr, getArg):
         getattr(target, fn)(arg)
         left = Flag.Value
         right = int(fn[1:])
-        if left != right: 
+        if left != right:
             Fail("left %s != right %s when func %s on arg %s" % (left, right, fn, arg))
     
     for fn in dir(target):
         if _self_defined_method(fn) and (fn not in passSet) and (fn not in skipSet):
-            arg = getArg()            
+            arg = getArg()
             try:   getattr(target, fn)(arg)
             except TypeError : pass
             else:  Fail("expect TypeError, but got none when func %s on arg %s" % (fn, arg))
 
 def test_pass_in_none():
     _repeat_with_one_arg('''
-BigInt Bool String Object I C1 C2 A C6 
-ArrInt32 ArrI ParamArrInt32 ParamArrI ParamArrS IParamArrI 
+BigInt Bool String Object I C1 C2 A C6
+ArrInt32 ArrI ParamArrInt32 ParamArrI ParamArrS IParamArrI
 IListInt Array IEnumerableInt IEnumeratorInt NullableInt
 ''', lambda : None)
 
 def test_pass_in_clrReference():
-    import clr        
+    import clr
     _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int]())
     _repeat_with_one_arg('Object', lambda : clr.Reference[object](None))
     _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int](10))
@@ -424,7 +425,7 @@ def test_pass_in_nothing():
         getattr(target, fn)()
         left = Flag.Value
         right = int(fn[1:])
-        if left != right: 
+        if left != right:
             Fail("left %s != right %s when func %s on arg Nothing" % (left, right, fn))
     
     for fn in dir(target):
@@ -474,7 +475,7 @@ def test_other_concern():
     AreEqual(target.M222(), 0)
     AreEqual(Flag.Value, 222)
     
-    # what does means when passing in None 
+    # what does means when passing in None
     target.M300(None)
     AreEqual(Flag.Value, 300); Flag.Value = 99
     AreEqual(Flag.BValue, True)
@@ -508,9 +509,9 @@ def test_other_concern():
         for l in ( {1:'a'}, [1,2], (1,2) ):
             AssertError(TypeError, fn, l)
             
-    # delegate 
+    # delegate
     def f(x): return x * x
-    AssertError(TypeError, target.M700, f) 
+    AssertError(TypeError, target.M700, f)
 
     from IronPythonTest import IntIntDelegate
     for x in (lambda x: x, lambda x: x*2, f):
@@ -537,20 +538,20 @@ def test_other_concern():
     def f3(): return clr.Reference[S1](S1())
     def f4(): return clr.Reference[C1](C2()) # C2 inherits C1
 
-    for (f, a, b, c, d) in [ 
-        ('M850', False, False, True, False), 
-        ('M851', False, False, False, True), 
-        ('M852', False, False, True, False), 
-        ('M853', False, False, False, True), 
+    for (f, a, b, c, d) in [
+        ('M850', False, False, True, False),
+        ('M851', False, False, False, True),
+        ('M852', False, False, True, False),
+        ('M853', False, False, False, True),
     ]:
         expect = (f in 'M850 M852') and S1 or C1
         func = getattr(target, f)
         
-        for i in range(4): 
+        for i in range(4):
             ref = (f1, f2, f3, f4)[i]()
             if (a,b,c,d)[i]:
                 func(ref); AreEqual(type(ref.Value), expect)
-            else: 
+            else:
                 AssertError(TypeError, func, ref)
 
     # call 854
@@ -584,7 +585,7 @@ def test_other_concern():
     x = target.M860(300, 200)
     AreEqual(x, (100, 500))
     
-    # GOtherConcern<T>            
+    # GOtherConcern<T>
     target = GOtherConcern[int]()
     for x in [100, 200L, 4.56, myint1]:
         target.M100(x)
@@ -596,15 +597,15 @@ def test_other_concern():
     AssertError(OverflowError, target.M100, 12345678901234)
     
 def test_iterator_sequence():
-    class C: 
+    class C:
         def __init__(self):  self.x = 0
         def __iter__(self):  return self
-        def next(self): 
-            if self.x < 10: 
+        def next(self):
+            if self.x < 10:
                 y = self.x
                 self.x += 1
                 return y
-            else: 
+            else:
                 self.x = 0
                 raise StopIteration
         def __len__(self): return 10
@@ -613,7 +614,7 @@ def test_iterator_sequence():
     c = C()
     list1 = [1, 2, 3]
     tuple1 = [4, 5, 6, 7]
-    str1 = "890123"    
+    str1 = "890123"
     all = (list1, tuple1, str1, c)
     
     target = COtherConcern()
@@ -621,10 +622,10 @@ def test_iterator_sequence():
     for x in all:
         # IEnumerable / IEnumerator
         target.M620(x)
-        AreEqual(Flag.Value, len(x)); Flag.Value = 0        
+        AreEqual(Flag.Value, len(x)); Flag.Value = 0
         
         target.M621(x)
-        AreEqual(Flag.Value, len(x))        
+        AreEqual(Flag.Value, len(x))
 
         # IEnumerable<char> / IEnumerator<char>
         target.M630(x)
@@ -639,10 +640,10 @@ def test_iterator_sequence():
     # IList / IList<char> / IList<int>
     for x in (list1, tuple1):
         target.M622(x)
-        AreEqual(Flag.Value, len(x))                
+        AreEqual(Flag.Value, len(x))
 
         target.M632(x)
-        AreEqual(Flag.Value, len(x))                
+        AreEqual(Flag.Value, len(x))
 
         target.M642(x)
         AreEqual(Flag.Value, len(x))
@@ -654,10 +655,9 @@ def test_iterator_sequence():
        
 def test_explicit_inheritance():
     target = CInheritMany1()
-    Assert(not hasattr(target, "M"))
-    try: target.M()
-    except AttributeError: pass
-    else: Fail("Expected AttributeError, got none")
+    Assert(hasattr(target, "M"))
+    target.M()
+    AreEqual(Flag.Value, 100)
     I1.M(target); AreEqual(Flag.Value, 100); Flag.Value = 0
     
     target = CInheritMany2()
@@ -689,10 +689,8 @@ def test_explicit_inheritance():
     AssertError(TypeError, I3[object].M, target)
 
     target = CInheritMany7[int]()
-    Assert(not hasattr(target, "M"))
-    try: target.M()
-    except AttributeError: pass
-    else: Fail("Expected AttributeError, got none")
+    Assert(hasattr(target, "M"))
+    target.M(); AreEqual(Flag.Value, 700)
     I3[int].M(target); AreEqual(Flag.Value, 700)
     
     target = CInheritMany8()
@@ -728,7 +726,7 @@ def test_nullable_property_long():
     nt.LProperty = 2L
     AreEqual(nt.LProperty, 2L)
     nt.LProperty = None
-    AreEqual(nt.LProperty, None)    
+    AreEqual(nt.LProperty, None)
 
 def test_nullable_property_bool():
     from IronPythonTest import NullableTest
@@ -748,7 +746,7 @@ def test_nullable_property_enum():
     nt.EProperty = NullableTest.NullableEnums.NE1
     AreEqual(nt.EProperty, NullableTest.NullableEnums.NE1)
     nt.EProperty = None
-    AreEqual(nt.EProperty, None)    
+    AreEqual(nt.EProperty, None)
 
 def test_nullable_parameter():
     from IronPythonTest import NullableTest
@@ -818,7 +816,7 @@ def test_interface_only_access():
     AreEqual(pc.FireEvent(pc.GetEventArgs()), pc)
     AreEqual(fired, True)
     # remove event
-    pc.MyEvent -= fired    
+    pc.MyEvent -= fired
     
 print '>>>> methods in reference type'
 target = CNoOverloads()

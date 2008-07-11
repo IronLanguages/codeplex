@@ -14,21 +14,19 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Compiler.Generation;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("exceptions", typeof(IronPython.Runtime.Exceptions.PythonExceptions))]
 namespace IronPython.Runtime.Exceptions {
@@ -88,7 +86,7 @@ namespace IronPython.Runtime.Exceptions {
         /// from this and have their own .NET class.
         /// </summary>
         [PythonSystemType("BaseException"), DynamicBaseTypeAttribute, Serializable]
-        public class BaseException : ICodeFormattable, IPythonObject, IDynamicObject, IEnumerable {
+        public class BaseException : ICodeFormattable, IPythonObject, IOldDynamicObject {
             private PythonType/*!*/ _type;          // the actual Python type of the Exception object
             private object _message = String.Empty; // the message object, cached at __init__ time, not updated on args assignment
             private PythonTuple _args;              // the tuple of args provided at creation time
@@ -163,6 +161,10 @@ namespace IronPython.Runtime.Exceptions {
                 }
             }
 
+            public PythonTuple/*!*/ __getslice__(int start, int stop) {
+                return PythonTuple.MakeTuple(ArrayOps.GetSlice(((PythonTuple)args)._data, start, stop));
+            }
+
             /// <summary>
             /// Gets or sets the dictionary which is used for storing members not declared to have space reserved
             /// within the exception object.
@@ -186,8 +188,8 @@ namespace IronPython.Runtime.Exceptions {
             /// Gets the CLR exception associated w/ this Python exception.  Not visible
             /// until a .NET namespace is imported.
             /// </summary>
-            [PythonHidden]
             public System.Exception/*!*/ clsException {
+                [PythonHidden]
                 get {
                     return GetClrException();
                 }
@@ -313,16 +315,6 @@ namespace IronPython.Runtime.Exceptions {
 
             #endregion
 
-            #region IEnumerable Members
-
-            IEnumerator IEnumerable.GetEnumerator() {
-                foreach (object o in ((PythonTuple)args)) {
-                    yield return o;
-                }
-            }
-
-            #endregion
-
             #region Internal .NET Exception production
 
             /// <summary>
@@ -369,13 +361,9 @@ namespace IronPython.Runtime.Exceptions {
 
             #endregion            
         
-            #region IDynamicObject Members
+            #region IOldDynamicObject Members
 
-            LanguageContext IDynamicObject.LanguageContext {
-                get { return DefaultContext.Default.LanguageContext; }
-            }
-
-            Microsoft.Scripting.Actions.RuleBuilder<T> IDynamicObject.GetRule<T>(Microsoft.Scripting.Actions.DynamicAction action, CodeContext context, object[] args) {
+            RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
                 return UserTypeOps.GetRuleHelper<T>(action, context, args);
             }
 
@@ -459,14 +447,8 @@ namespace IronPython.Runtime.Exceptions {
                             args = ArrayUtils.RemoveLast(args);
                             break;
                         default:
-                            throw Microsoft.Scripting.Runtime.RuntimeHelpers.TypeErrorForIncorrectArgumentCount("EnvironmentError",
-                                0,           // min arg cnt
-                                3,           // max arg cnt
-                                0,           // dflt count
-                                args.Length, // provide count    
-                                false,       // has args list
-                                false        // has dictionary
-                                );
+                            // do nothing special for four or more args
+                            break;
                     }
                 }
 

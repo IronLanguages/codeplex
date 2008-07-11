@@ -13,13 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     public class ReflectedPropertyTracker : PropertyTracker {
         private PropertyInfo _propInfo;
 

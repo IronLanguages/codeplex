@@ -13,21 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 using System.Runtime.Serialization;
+using System.Scripting.Actions;
+using System.Scripting.Utils;
+using System.Threading;
 
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-
-namespace Microsoft.Scripting.Runtime {
-
-    public delegate void CommandDispatcher(Delegate command);
+namespace System.Scripting.Runtime {
 
     [Serializable]
     public class InvalidImplementationException : Exception {
@@ -68,10 +64,7 @@ namespace Microsoft.Scripting.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")] // TODO: fix
     public sealed class ScriptDomainManager {
         private readonly DynamicRuntimeHostingProvider/*!*/ _hostingProvider;
-        private readonly InvariantContext/*!*/ _invariantContext;
         private readonly SharedIO/*!*/ _sharedIO;
-
-        private CommandDispatcher _commandDispatcher; // can be null
 
         // TODO: ReaderWriterLock (Silverlight?)
         private readonly object _languageRegistrationLock = new object();
@@ -92,7 +85,6 @@ namespace Microsoft.Scripting.Runtime {
 
         public SharedIO/*!*/ SharedIO { get { return _sharedIO; } }
         public DynamicRuntimeHostingProvider/*!*/ Host { get { return _hostingProvider; } }
-        public LanguageContext/*!*/ InvariantContext { get { return _invariantContext; } }
         private ScopeAttributesWrapper _scopeWrapper;
         private Scope/*!*/ _globals;
         
@@ -104,7 +96,6 @@ namespace Microsoft.Scripting.Runtime {
             _hostingProvider = hostingProvider;
 
             _sharedIO = new SharedIO();
-            _invariantContext = new InvariantContext(this);
 
             // create the initial default scope
             _scopeWrapper = new ScopeAttributesWrapper(this);
@@ -155,9 +146,9 @@ namespace Microsoft.Scripting.Runtime {
             /// <summary>
             /// Must not be called under a lock as it can potentially call a user code.
             /// </summary>
-            /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
+            /// <exception cref="MissingTypeException">languageId</exception>
             /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-            public LanguageContext/*!*/ LoadLanguageContext(ScriptDomainManager manager) {
+            public LanguageContext/*!*/ LoadLanguageContext() {
                 if (_context == null) {
                     
                     if (_type == null) {
@@ -168,14 +159,11 @@ namespace Microsoft.Scripting.Runtime {
                         }
                     }
 
-                    lock (manager._languageRegistrationLock) {
-                        manager._languageTypes[_type.AssemblyQualifiedName] = this;
+                    lock (_domainManager._languageRegistrationLock) {
+                        _domainManager._languageTypes[_type.AssemblyQualifiedName] = this;
                     }
 
-                    // needn't to be locked, we can create multiple LPs:
-                    LanguageContext context = ReflectionUtils.CreateInstance<LanguageContext>(_type, manager);
-                    Thread.MemoryBarrier();
-                    _context = context;
+                    Interlocked.CompareExchange(ref _context, ReflectionUtils.CreateInstance<LanguageContext>(_type, _domainManager), null);
                 }
                 return _context;
             }
@@ -232,9 +220,9 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="type"/></exception>
         /// <exception cref="ArgumentException"><paramref name="type"/></exception>
-        /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
+        /// <exception cref="MissingTypeException">languageId</exception>
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        internal LanguageContext/*!*/ GetLanguageContext(Type/*!*/ type) {
+        public LanguageContext/*!*/ GetLanguageContext(Type/*!*/ type) {
             ContractUtils.RequiresNotNull(type, "type");
             if (!type.IsSubclassOf(typeof(LanguageContext))) throw new ArgumentException("Invalid type - should be subclass of LanguageContext"); // TODO
 
@@ -248,7 +236,7 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             if (desc != null) {
-                return desc.LoadLanguageContext(this);
+                return desc.LoadLanguageContext();
             }
 
             // not found, not registered:
@@ -302,7 +290,7 @@ namespace Microsoft.Scripting.Runtime {
                 result = _languageIds.TryGetValue(languageId, out desc);
             }
 
-            languageContext = result ? desc.LoadLanguageContext(this) : null;
+            languageContext = result ? desc.LoadLanguageContext() : null;
 
             return result;
         }
@@ -331,7 +319,7 @@ namespace Microsoft.Scripting.Runtime {
             return id.StartsWith(".");
         }
 
-        /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
+        /// <exception cref="MissingTypeException">languageId</exception>
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
         public LanguageContext[] GetLanguageContexts(bool usedOnly) {
             List<LanguageContext> results = new List<LanguageContext>(_languageIds.Count);
@@ -350,7 +338,7 @@ namespace Microsoft.Scripting.Runtime {
 
             if (!usedOnly) {
                 foreach (LanguageRegistration desc in to_be_loaded) {
-                    results.Add(desc.LoadLanguageContext(this));
+                    results.Add(desc.LoadLanguageContext());
                 }
             }
 
@@ -392,7 +380,9 @@ namespace Microsoft.Scripting.Runtime {
 
             return _scopeWrapper.LoadAssembly(assembly);
         }
-        
+
+        // TODO: fix when this moves up:
+        // <exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
         /// <summary>
         /// Uses the hosts search path and semantics to resolve the provided name to a SourceUnit.
         /// 
@@ -403,7 +393,6 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         /// <param name="name">an opaque parameter which has meaning to the host.  Typically a filename without an extension.</param>
         /// <exception cref="FileNotFoundException">No file matches the specified name.</exception>
-        /// <exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
         /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
         /// <exception cref="ArgumentException">Name is not valid.</exception>
         public object UseModule(string/*!*/ name) {
@@ -450,37 +439,11 @@ namespace Microsoft.Scripting.Runtime {
             return ExecuteSourceUnit(source);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public Scope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ source) {
+        private static Scope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ source) {
             ScriptCode compiledCode = source.Compile();
-            Scope scope = compiledCode.MakeOptimizedScope();
+            Scope scope = compiledCode.CreateScope();
             compiledCode.Run(scope);
             return scope;
-        }
-
-        #endregion
-
-        #region Command Dispatching
-
-        // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
-        // to cause code to be executed on a separate thread.
-        // It will be called with a null argument to indicate that the console session should be terminated.
-        // Can be null.
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
-        public CommandDispatcher GetCommandDispatcher() {
-            return _commandDispatcher;
-        }
-
-        public CommandDispatcher SetCommandDispatcher(CommandDispatcher dispatcher) {
-            return Interlocked.Exchange(ref _commandDispatcher, dispatcher);
-        }
-
-        public void DispatchCommand(Delegate command) {
-            CommandDispatcher dispatcher = _commandDispatcher;
-            if (dispatcher != null) {
-                dispatcher(command);
-            }
         }
 
         #endregion
@@ -506,7 +469,7 @@ namespace Microsoft.Scripting.Runtime {
 
         #endregion
 
-        internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
+        public string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
             List<string> res = new List<string>();
             lock (_languageRegistrationLock) {
                 foreach (KeyValuePair<string, LanguageRegistration> kvp in _languageIds) {
@@ -520,7 +483,7 @@ namespace Microsoft.Scripting.Runtime {
             return res.ToArray();
         }
 
-        internal string[] GetRegisteredFileExtensions(LanguageContext context) {
+        public string[] GetRegisteredFileExtensions(LanguageContext context) {
             // TODO: separate hashtable for extensions (see CodeDOM config)
             List<string> res = new List<string>();
             lock (_languageRegistrationLock) {
@@ -561,8 +524,12 @@ namespace Microsoft.Scripting.Runtime {
                 }
             }
 
-            public bool LoadAssembly(Assembly asm) {
+            public bool LoadAssembly(Assembly asm) {                
                 return _tracker.LoadAssembly(asm);
+            }
+
+            public List<Assembly> GetLoadedAssemblies() {
+                return _tracker._packageAssemblies;
             }
 
             #region IAttributesCollection Members
@@ -679,6 +646,10 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             #endregion
+        }
+
+        public Assembly[] GetLoadedAssemblyList() {
+            return _scopeWrapper.GetLoadedAssemblies().ToArray();
         }
     }
 }

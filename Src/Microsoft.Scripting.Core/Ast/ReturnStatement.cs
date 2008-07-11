@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class ReturnStatement : Expression {
         private readonly Expression _expr;
 
         internal ReturnStatement(Annotations annotations, Expression expression)
-            : base(annotations, AstNodeType.ReturnStatement, typeof(void)) {
+            : base(annotations, ExpressionType.ReturnStatement, typeof(void)) {
             _expr = expression;
         }
 
@@ -31,19 +31,15 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        public static ReturnStatement Return() {
-            return Return(SourceSpan.None, null);
+         public static ReturnStatement Return() {
+            return Return(null);
         }
 
         public static ReturnStatement Return(Expression expression) {
-            return Return(SourceSpan.None, expression);
+             return Return(expression, Annotations.Empty);
         }
 
-        public static ReturnStatement Return(SourceSpan span, Expression expression) {
-            return Return(Annotate(span), expression);
-        }
-
-        public static ReturnStatement Return(Annotations annotations, Expression expression) {
+        public static ReturnStatement Return(Expression expression, Annotations annotations) {
             return new ReturnStatement(annotations, expression);
         }
     }

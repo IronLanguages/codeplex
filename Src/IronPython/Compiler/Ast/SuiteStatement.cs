@@ -13,15 +13,13 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using Ast = System.Linq.Expressions.Expression;
 
-    public class SuiteStatement : Statement {
+    public sealed class SuiteStatement : Statement {
         private readonly Statement[] _statements;
 
         public SuiteStatement(Statement[] statements) {
@@ -63,6 +61,13 @@ namespace IronPython.Compiler.Ast {
                     return _statements[0].Documentation;
                 }
                 return null;
+            }
+        }
+
+        internal override bool CanThrow {
+            get {
+                // statements in the suite can throw, but the suite doesn't throw its self.
+                return false;
             }
         }
     }

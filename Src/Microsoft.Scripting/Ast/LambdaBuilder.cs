@@ -1,0 +1,689 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Public License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Public License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Scripting;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+
+namespace Microsoft.Scripting.Ast {
+    /// <summary>
+    /// The builder for creating the LambdaExpression node.
+    /// 
+    /// Since the nodes require that parameters and variables are created
+    /// before hand and then passed to the factories creating LambdaExpression
+    /// this builder keeps track of the different pieces and at the end creates
+    /// the LambdaExpression.
+    /// 
+    /// TODO: This has some functionality related to CodeContext that should be
+    /// removed, in favor of languages handling their own local scopes
+    /// </summary>
+    public class LambdaBuilder {
+        private readonly List<VariableExpression> _locals = new List<VariableExpression>();
+        private List<ParameterExpression> _params = new List<ParameterExpression>();
+        private readonly List<Expression> _visibleLocals = new List<Expression>();
+        private readonly List<Expression> _visibleParams = new List<Expression>();
+        private Annotations _annotations;
+        private string _name;
+        private Type _returnType;
+        private ParameterExpression _paramsArray;
+        private Expression _body;
+        private bool _dictionary;
+        private bool _global;
+        private bool _visible = true;
+        private bool _doNotAddContext;
+        private bool _completed;
+
+        internal LambdaBuilder(Annotations annotations, string name, Type returnType) {
+            _annotations = annotations;
+            _name = name;
+            _returnType = returnType;
+        }
+
+        /// <summary>
+        /// Annotations for the lambda being built
+        /// </summary>
+        public Annotations Annotations {
+            get {
+                return _annotations;
+            }
+            set {
+                _annotations = value;
+            }
+        }
+
+        /// <summary>
+        /// The name of the lambda.
+        /// Currently anonymous/unnamed lambdas are not allowed.
+        /// </summary>
+        public string Name {
+            get {
+                return _name;
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _name = value;
+            }
+        }
+
+        /// <summary>
+        /// Return type of the lambda being created.
+        /// </summary>
+        public Type ReturnType {
+            get {
+                return _returnType;
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _returnType = value;
+            }
+        }
+
+        /// <summary>
+        /// List of lambda's local variables for direct manipulation.
+        /// </summary>
+        public List<VariableExpression> Locals {
+            get {
+                return _locals;
+            }
+        }
+
+        /// <summary>
+        /// List of lambda's parameters for direct manipulation
+        /// </summary>
+        public List<ParameterExpression> Parameters {
+            get {
+                return _params;
+            }
+        }
+
+        /// <summary>
+        /// The params array argument, if any.
+        /// </summary>
+        public ParameterExpression ParamsArray {
+            get {
+                return _paramsArray;
+            }
+        }
+
+        /// <summary>
+        /// The body of the lambda. This must be non-null.
+        /// </summary>
+        public Expression Body {
+            get {
+                return _body;
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _body = value;
+            }
+        }
+
+        /// <summary>
+        /// The generated lambda should have dictionary of locals
+        /// instead of allocating them directly on the CLR stack.
+        /// </summary>
+        public bool Dictionary {
+            get {
+                return _dictionary;
+            }
+            set {
+                _dictionary = value;
+            }
+        }
+
+        /// <summary>
+        /// The resulting lambda should be marked as global.
+        /// TODO: remove !!!
+        /// </summary>
+        public bool Global {
+            get {
+                return _global;
+            }
+            set {
+                _global = value;
+            }
+        }
+
+        /// <summary>
+        /// The scope is visible (default). Invisible if false.
+        /// </summary>
+        public bool Visible {
+            get {
+                return _visible;
+            }
+            set {
+                _visible = value;
+            }
+        }
+
+        /// <summary>
+        /// Prevents builder from inserting context scope.
+        /// Default is false (will insert if needed).
+        /// </summary>
+        public bool DoNotAddContext {
+            get {
+                return _doNotAddContext;
+            }
+            set {
+                _doNotAddContext = value;
+            }
+        }
+
+
+        /// <summary>
+        /// Creates a parameter on the lambda with a given name and type.
+        /// 
+        /// Parameters maintain the order in which they are created,
+        /// however custom ordering is possible via direct access to
+        /// Parameters collection.
+        /// </summary>
+        public ParameterExpression CreateParameter(string name, Type type) {
+            ContractUtils.RequiresNotNull(type, "type");            
+            ParameterExpression result = Expression.Parameter(type, name);
+            _params.Add(result);
+            _visibleParams.Add(result);
+            return result;
+        }
+
+        /// <summary>
+        /// adds existing parameter to the lambda.
+        /// 
+        /// Parameters maintain the order in which they are created,
+        /// however custom ordering is possible via direct access to
+        /// Parameters collection.
+        /// </summary>
+        public void AddParameters(params ParameterExpression[] parameters) {
+            _params.AddRange(parameters);
+            _visibleParams.AddRange(parameters);
+        }
+
+        /// <summary>
+        /// Creates a hidden parameter on the lambda with a given name and type.
+        /// 
+        /// Parameters maintain the order in which they are created,
+        /// however custom ordering is possible via direct access to
+        /// Parameters collection.
+        /// </summary>
+        public ParameterExpression CreateHiddenParameter(string name, Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ParameterExpression result = Expression.Parameter(type, name);
+            _params.Add(result);
+            return result;
+        }
+
+        /// <summary>
+        /// Creates a params array argument on the labmda.
+        /// 
+        /// The params array argument is added to the signature immediately. Before the lambda is
+        /// created, the builder validates that it is still the last (since the caller can modify
+        /// the order of parameters explicitly by maniuplating the parameter list)
+        /// </summary>
+        public ParameterExpression CreateParamsArray(string name, Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type.IsArray, "type");
+            ContractUtils.Requires(type.GetArrayRank() == 1, "type");
+            ContractUtils.Requires(_paramsArray == null, "type", "Already have parameter array");
+
+            return _paramsArray = CreateParameter(name, type);
+        }
+
+        /// <summary>
+        /// Creates a global variable with specified name and type.
+        /// TODO: remove
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        public Expression CreateGlobalVariable(string name, Type type) {
+            return Expression.Global(type, name);
+        }
+
+        /// <summary>
+        /// Creates a local variable with specified name and type.
+        /// </summary>
+        public Expression CreateLocalVariable(string name, Type type) {
+            if (_global) {
+                // special treatment of lambdas marked as global
+                return Expression.Global(type, name, true);
+            }
+
+            VariableExpression result = Expression.Variable(type, name);
+            _locals.Add(result);
+            _visibleLocals.Add(result);
+            return result;
+        }
+
+        /// <summary>
+        /// Creates a temporary variable with specified name and type.
+        /// </summary>
+        public VariableExpression CreateTemporaryVariable(string name, Type type) {
+            VariableExpression result = Expression.Variable(type, name);
+            _locals.Add(result);
+            return result;
+        }
+
+        /// <summary>
+        /// Creates a temporary variable with specified name and type.
+        /// </summary>
+        public VariableExpression Temporary(Type type, string name) {
+            return CreateTemporaryVariable(name, type);
+        }
+
+        /// <summary>
+        /// Adds the temporary variable to the list of variables maintained
+        /// by the builder. This is useful in cases where the variable is
+        /// created outside of the builder.
+        /// </summary>
+        public void AddTemp(VariableExpression temp) {
+            ContractUtils.RequiresNotNull(temp, "temp");
+            _locals.Add(temp);
+        }
+
+        /// <summary>
+        /// Creates the LambdaExpression from the builder.
+        /// After this operation, the builder can no longer be used to create other instances.
+        /// </summary>
+        /// <param name="lambdaType">Desired type of the lambda. </param>
+        /// <returns>New LambdaExpression instance.</returns>
+        public LambdaExpression MakeLambda(Type lambdaType) {
+            Validate();
+            EnsureSignature(lambdaType);
+
+            LambdaExpression lambda = Expression.Lambda(
+                lambdaType,
+                MakeBody(),
+                _name,
+                _annotations,
+                _params
+            );
+
+            // The builder is now completed
+            _completed = true;
+
+            return lambda;
+        }
+
+        /// <summary>
+        /// Creates the LambdaExpression from the builder.
+        /// After this operation, the builder can no longer be used to create other instances.
+        /// </summary>
+        /// <returns>New LambdaExpression instance.</returns>
+        public LambdaExpression MakeLambda() {
+            ContractUtils.Requires(_paramsArray == null, "Paramarray lambdas require explicit delegate type");
+            Validate();
+
+            LambdaExpression lambda = Expression.Lambda(
+                GetLambdaType(_returnType, _params),
+                MakeBody(), 
+                _name,
+                _annotations, 
+                _params
+            );
+
+            // The builder is now completed
+            _completed = true;
+
+            return lambda;
+        }
+
+
+        /// <summary>
+        /// Creates the generator LambdaExpression from the builder.
+        /// After this operation, the builder can no longer be used to create other instances.
+        /// </summary>
+        /// <returns>New LambdaExpression instance.</returns>
+        public LambdaExpression MakeGenerator(Type lambdaType) {
+            Validate();
+            EnsureSignature(lambdaType);
+            
+            LambdaExpression lambda = Expression.Generator(
+                lambdaType, 
+                _name, 
+                MakeBody(), 
+                _annotations, 
+                _params
+            );
+
+            // The builder is now completed
+            _completed = true;
+
+            return lambda;
+        }
+
+        /// <summary>
+        /// Fixes up lambda body and parameters to match the signature of the given delegate if needed.
+        /// </summary>
+        /// <param name="delegateType"></param>
+        private void EnsureSignature(Type delegateType) {
+            System.Diagnostics.Debug.Assert(_params != null, "must have parameter list here");
+
+            //paramMapping is the dictionary where we record how we want to map parameters
+            //the key is the parameter, the value is the expression it should be redirected to
+            //so far the parameter can only be redirected to itself (means no change needed) or to
+            //a synthetic variable that is added to the lambda when the original parameter has no direct
+            //parameter backing in the delegate signature
+            // Example:
+            //      delegate siganture      del(x, params y[])
+            //      lambda signature        lambda(a, b, param n[])
+            //          
+            //  for the situation above the mapping will be  <a, x>, <b, V1>, <n, V2>
+            //  where V1 and V2 are synthetic variables and initialized as follows -  V1 = y[0] , V2 = {y[1], y[2],... y[n]}
+            Dictionary<ParameterExpression, Expression> paramMapping = new Dictionary<ParameterExpression, Expression>();
+            ParameterInfo[] delegateParams = delegateType.GetMethod("Invoke").GetParameters();
+
+            bool delegateHasParamarray = delegateParams.Length > 0 && delegateParams[delegateParams.Length - 1].IsDefined(typeof(ParamArrayAttribute), false);
+            bool lambdaHasParamarray = this.ParamsArray != null;
+
+            if (lambdaHasParamarray && !delegateHasParamarray) {
+                throw new ArgumentException("paramarray lambdas must have paramarray delegate type");
+            }
+
+            int copy = delegateHasParamarray ? delegateParams.Length - 1 : delegateParams.Length;
+            int unwrap = _params.Count - copy;
+            if (lambdaHasParamarray) unwrap--;
+
+            // Lambda must have at least as many parameters as the delegate, not counting the paramarray
+            if (unwrap < 0) {
+                throw new ArgumentException("lambda does not have enough parameters");
+            }
+
+            List<ParameterExpression> newParams = new List<ParameterExpression>(delegateParams.Length);
+            List<VariableExpression> backingVars = new List<VariableExpression>();
+            List<Expression> preambuleExpressions = new List<Expression>();
+
+            for (int i = 0; i < copy; i++) {
+                // map to a converted variable
+                if (_params[i].Type != delegateParams[i].ParameterType) {
+                    ParameterExpression newParameter = Expression.Parameter(delegateParams[i].ParameterType, delegateParams[i].Name);
+                    ParameterExpression mappedParameter = _params[i];
+                    VariableExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+
+                    newParams.Add(newParameter);
+                    backingVars.Add(backingVariable);
+                    paramMapping.Add(mappedParameter, backingVariable);
+                    preambuleExpressions.Add(
+                        Expression.Assign(
+                            backingVariable,
+                            Expression.Convert(
+                                newParameter,
+                                mappedParameter.Type
+                            )
+                        )
+                    );
+                } else {
+                    //use the same parameter expression
+                    newParams.Add(_params[i]);
+                    paramMapping.Add(_params[i], _params[i]);
+                }
+            }
+
+            if (delegateHasParamarray) {
+                ParameterInfo delegateParamarrayPi = delegateParams[delegateParams.Length - 1];
+                ParameterExpression delegateParamarray = Expression.Parameter(delegateParamarrayPi.ParameterType, delegateParamarrayPi.Name);
+
+                newParams.Add(delegateParamarray);
+
+                //unwarap delegate paramarray into variables and map parameters to the variables
+                for (int i = 0; i < unwrap; i++) {
+                    ParameterExpression mappedParameter = _params[copy + i];
+                    VariableExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+
+                    backingVars.Add(backingVariable);
+                    paramMapping.Add(mappedParameter, backingVariable);
+                    preambuleExpressions.Add(
+                        Expression.Assign(
+                            backingVariable,
+                            Expression.ConvertHelper(
+                                Expression.ArrayIndex(
+                                    delegateParamarray,
+                                    Expression.Constant(i)
+                                ),
+                                mappedParameter.Type
+                             )
+                        )
+                    );
+                }
+
+                //lambda's paramarray should get elements from the delegate paramarray after skipping those that we unwrapped.
+                if (lambdaHasParamarray) {
+                    ParameterExpression mappedParameter = _paramsArray;
+                    VariableExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+
+                    backingVars.Add(backingVariable);
+                    paramMapping.Add(mappedParameter, backingVariable);
+
+                    // Call the helper
+                    MethodInfo shifter = typeof(RuntimeOps).GetMethod("ShiftParamsArray");
+                    shifter = shifter.MakeGenericMethod(delegateParamarrayPi.ParameterType.GetElementType());
+
+                    preambuleExpressions.Add(
+                        Expression.Assign(
+                            backingVariable,
+                            Expression.ConvertHelper(
+                                Expression.Call(
+                                    shifter,
+                                    delegateParamarray,
+                                    Expression.Constant(unwrap)
+                                ),
+                                mappedParameter.Type
+                            )
+                        )
+                    );
+                }
+            }
+
+            //shortcircuit if no rewrite is needed.
+            if (delegateHasParamarray == false && backingVars.Count == 0) {
+                return;
+            }
+
+            LambdaParameterRewriter rewriter = new LambdaParameterRewriter(paramMapping);
+            Expression newBody = rewriter.VisitNode(_body);
+
+            preambuleExpressions.Add(newBody);
+            _body = Expression.Comma(preambuleExpressions);
+
+            _paramsArray = null;
+            _locals.AddRange(backingVars);
+            _params = newParams;
+
+            _visibleParams.Clear();
+            _visibleParams.AddRange(paramMapping.Values);
+        }
+
+
+        /// <summary>
+        /// Validates that the builder has enough information to create the lambda.
+        /// </summary>
+        private void Validate() {
+            if (_completed) {
+                throw new InvalidOperationException("The builder is closed");
+            }
+            if (_returnType == null) {
+                throw new InvalidOperationException("Return type is missing");
+            }
+            if (_name == null) {
+                throw new InvalidOperationException("Name is missing");
+            }
+            if (_body == null) {
+                throw new InvalidOperationException("Body is missing");
+            }
+
+            if (_paramsArray != null &&
+                (_params.Count == 0 || _params[_params.Count -1] != _paramsArray)) {
+                throw new InvalidOperationException("The params array parameter is not last in the parameter list");
+            }
+        }
+
+
+        private Expression MakeBody() {
+            Expression body = _body;
+
+            // wrap a CodeContext scope if needed
+            if (!_global && !DoNotAddContext) {
+                List<Expression> vars = new List<Expression>(_visibleParams);
+                vars.AddRange(_visibleLocals);
+
+                bool emitDictionary = _dictionary || ScriptDomainManager.Options.Frames;
+                Expression localScope = emitDictionary ? Expression.AllVariables(vars) : Expression.LiftedVariables(vars);
+
+                body = Expression.CodeContextScope(
+                    body,
+                    Expression.Call(
+                        typeof(RuntimeOps).GetMethod("CreateNestedCodeContext"),
+                        localScope,
+                        Expression.CodeContext(),
+                        Expression.Constant(_visible)
+                    )
+                );
+            }
+
+            // wrap a scope if needed
+            if (_locals != null && _locals.Count > 0) {
+                body = Expression.Scope(body, _name, _locals.ToArray());
+            }
+            return body;
+        }
+
+        private static Type GetLambdaType(Type returnType, IList<ParameterExpression> parameterList) {
+            ContractUtils.RequiresNotNull(returnType, "returnType");
+
+            bool action = returnType == typeof(void);
+            int paramCount = parameterList == null ? 0 : parameterList.Count;
+
+            Type[] typeArgs = new Type[paramCount + (action ? 0 : 1)];
+            for (int i = 0; i < paramCount; i++) {
+                ContractUtils.RequiresNotNull(parameterList[i], "parameter");
+                typeArgs[i] = parameterList[i].Type;
+            }
+
+            Type delegateType;
+            if (action)
+                delegateType = Expression.GetActionType(typeArgs);
+            else {
+                typeArgs[paramCount] = returnType;
+                delegateType = Expression.GetFuncType(typeArgs);
+            }
+            return delegateType;
+        }
+
+
+        private static T[] ToArray<T>(List<T> list) {
+            return list != null ? list.ToArray() : new T[0];
+        }
+
+        internal static void ValidateContextFactory(MethodInfo factory, string paramName) {
+            ContractUtils.RequiresNotNull(factory, "factory");
+            ContractUtils.Requires(
+                IsValidScopeFactory(factory),
+                paramName,
+                "Factory must have signature compatible with: CodeContext Factory(ILocalVariables, CodeContext, bool)"
+            );
+        }
+
+        internal static bool IsValidScopeFactory(MethodInfo factory) {
+            ParameterInfo[] ps = factory.GetParameters();
+            return !factory.IsGenericMethod &&
+                (typeof(CodeContext).IsAssignableFrom(factory.ReturnType)) &&
+                (ps.Length == 3) &&
+                (ps[0].ParameterType == typeof(ILocalVariables)) &&
+                (ps[1].ParameterType == typeof(CodeContext)) &&
+                (ps[2].ParameterType == typeof(bool));
+        }
+
+        #region OBSOLETE API
+
+        public ParameterExpression CreateParameter(/*REMOVE*/SymbolId name, Type type) {
+            return CreateParameter(SymbolTable.IdToString(name), type);
+        }
+
+        public ParameterExpression CreataParamsArray(/*REMOVE*/SymbolId name, Type type) {
+            return CreateParamsArray(SymbolTable.IdToString(name), type);
+        }
+
+        public Expression CreateGlobalVariable(/*REMOVE*/SymbolId name, Type type) {
+            return CreateGlobalVariable(SymbolTable.IdToString(name), type);
+        }
+
+        public Expression CreateLocalVariable(/*REMOVE*/SymbolId name, Type type) {
+            return CreateLocalVariable(SymbolTable.IdToString(name), type);
+        }
+
+        public VariableExpression CreateTemporaryVariable(/*REMOVE*/SymbolId name, Type type) {
+            return CreateTemporaryVariable(SymbolTable.IdToString(name), type);
+        }
+
+        #endregion
+    }
+
+    public static partial class Utils {
+        /// <summary>
+        /// Creates new instance of the LambdaBuilder with specified name, return type and a source span.
+        /// </summary>
+        /// <param name="returnType">Return type of the lambda being built.</param>
+        /// <param name="name">Name of the lambda being built.</param>
+        /// <param name="span">SourceSpan for the lambda being built.</param>
+        /// <returns>New instance of the </returns>
+        public static LambdaBuilder Lambda(Type returnType, string name, SourceSpan span) {
+            return Lambda(returnType, name, Expression.Annotate(span));
+        }
+
+        /// <summary>
+        /// Creates new instnace of the LambdaBuilder with specified name and a return type.
+        /// </summary>
+        /// <param name="returnType">Return type of the lambda being built.</param>
+        /// <param name="name">Name for the lambda being built.</param>
+        /// <returns>new LambdaBuilder instance</returns>
+        public static LambdaBuilder Lambda(Type returnType, string name) {
+            return Lambda(returnType, name, Annotations.Empty);
+        }
+
+        public static LambdaBuilder Lambda(Type returnType, string name, Annotations annotations) {
+            return new LambdaBuilder(annotations, name, returnType);
+        }
+    }
+}
+
+namespace Microsoft.Scripting.Runtime {
+    public static partial class RuntimeOps {
+        public static CodeContext CreateNestedCodeContext(ILocalVariables locals, CodeContext context, bool visible) {
+            if (locals.Count == 0 && context.Scope.IsVisible == visible) {
+                // performance: just reuse old context if this scope has no variables.
+                return context;
+            }
+
+            return new CodeContext(new Scope(context.Scope, new LocalsDictionary(locals), visible), context.LanguageContext, context);
+        }
+
+        /// <summary>
+        /// Used by prologue code that is injected in lambdas to ensure that delegate signature matches what 
+        /// lambda body expects. Such code typically unwraps subset of the params array manually, 
+        /// but then passes the rest in bulk if lambda body also expects params array.
+        /// 
+        /// This calls ArrayUtils.ShiftLeft, but performs additional checks that
+        /// ArrayUtils.ShiftLeft assumes.
+        /// </summary>
+        public static T[] ShiftParamsArray<T>(T[] array, int count) {
+            if (array != null && array.Length > count) {
+                return ArrayUtils.ShiftLeft(array, count);
+            } else {
+                return new T[0];
+            }
+        }
+    }
+}

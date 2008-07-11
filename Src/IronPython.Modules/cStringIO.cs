@@ -84,9 +84,13 @@ namespace IronPython.Modules {
             return ret;
         }
 
-        public string ReadLine() {
+        public string ReadLine(int size) {
+            if (size < 0) {
+                size = Int32.MaxValue;
+            }
             int i = _position;
-            while (i < _length) {
+            int count = 0;
+            while (i < _length && count < size) {
                 char c = _data[i];
                 if (c == '\n' || c == '\r') {
                     i++;
@@ -100,6 +104,7 @@ namespace IronPython.Modules {
                     return res;
                 }
                 i++;
+                count++;
             }
 
             if (i > _position) {
@@ -168,8 +173,8 @@ namespace IronPython.Modules {
     }
 
     public static class PythonStringIO {
-        public static PythonType InputType = DynamicHelpers.GetPythonType(typeof(StringI));
-        public static PythonType OutputType = DynamicHelpers.GetPythonType(typeof(StringO));
+        public static PythonType InputType = DynamicHelpers.GetPythonTypeFromType(typeof(StringI));
+        public static PythonType OutputType = DynamicHelpers.GetPythonTypeFromType(typeof(StringO));
 
         public class StringI : IEnumerable<string>, IEnumerable {
             private StringStream _sr;
@@ -220,12 +225,17 @@ namespace IronPython.Modules {
 
             public string read(int s) {
                 ThrowIfClosed();
-                return _sr.Read(s);
+                return (s < 0) ? _sr.ReadToEnd() : _sr.Read(s);
             }
 
             public string readline() {
                 ThrowIfClosed();
-                return _sr.ReadLine();
+                return _sr.ReadLine(-1);
+            }
+
+            public string readline(int size) {
+                ThrowIfClosed();
+                return _sr.ReadLine(size);
             }
 
             public List readlines() {
@@ -368,13 +378,19 @@ namespace IronPython.Modules {
             public string read(int i) {
                 ThrowIfClosed();
                 FixStreams();
-                return _sr.Read(i);
+                return (i < 0) ? _sr.ReadToEnd() : _sr.Read(i);
             }
 
             public string readline() {
                 ThrowIfClosed();
                 FixStreams();
-                return _sr.ReadLine();
+                return _sr.ReadLine(-1);
+            }
+
+            public string readline(int size) {
+                ThrowIfClosed();
+                FixStreams();
+                return _sr.ReadLine(size);
             }
 
             public List readlines() {

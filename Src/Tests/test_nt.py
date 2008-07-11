@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -32,8 +32,7 @@ def test_mkdir():
     nt.rmdir('dir_create_test')
     AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
 
-@disabled("CodePlex Work Item 1216")
-def test_mkdir_negative():    
+def test_mkdir_negative():
     nt.mkdir("dir_create_test")
     try:
         nt.mkdir("dir_create_test")
@@ -54,7 +53,7 @@ def test_stat():
     AssertError(nt.error, nt.stat, 'doesnotexist.txt')
         
     #lstat
-    AssertError(nt.error, nt.lstat, 'doesnotexist.txt')    
+    AssertError(nt.error, nt.lstat, 'doesnotexist.txt')
  
     
 # getcwdu test
@@ -78,7 +77,7 @@ def test_getpid():
            "The processPID in one process should be same")
  
  
-# environ test      
+# environ test
 def test_environ():
     non_exist_key      = "_NOT_EXIST_"
     iron_python_string = "Iron_pythoN"
@@ -98,14 +97,14 @@ def test_environ():
         import System
         AreEqual(System.Environment.GetEnvironmentVariable(non_exist_key), iron_python_string)
     
-    # update again    
+    # update again
     swapped = iron_python_string.swapcase()
     nt.environ[non_exist_key] = swapped
     AreEqual(nt.environ[non_exist_key], swapped)
     if is_cli:
         AreEqual(System.Environment.GetEnvironmentVariable(non_exist_key), swapped)
         
-    # remove 
+    # remove
     del nt.environ[non_exist_key]
     if is_cli :
         AreEqual(System.Environment.GetEnvironmentVariable(non_exist_key), None)
@@ -135,56 +134,55 @@ def test_chdir():
 
 # fdopen tests
 def test_fdopen():
-    # fd = 0 
+    # fd = 0
     # IronPython does not implement the nt.dup function
     if not is_cli:
         result = None
         result = nt.fdopen(nt.dup(0),"r",1024)
-        Assert(result!=None,"1,The file object was not returned correctly") 
+        Assert(result!=None,"1,The file object was not returned correctly")
         
         result = None
         result = nt.fdopen(nt.dup(0),"w",2048)
-        Assert(result!=None,"2,The file object was not returned correctly") 
+        Assert(result!=None,"2,The file object was not returned correctly")
         
         result = None
         result = nt.fdopen(nt.dup(0),"a",512)
-        Assert(result!=None,"3,The file object was not returned correctly") 
+        Assert(result!=None,"3,The file object was not returned correctly")
         
         # fd = 1
         result = None
         result = nt.fdopen(nt.dup(1),"a",1024)
-        Assert(result!=None,"4,The file object was not returned correctly") 
+        Assert(result!=None,"4,The file object was not returned correctly")
         
         result = None
         result = nt.fdopen(nt.dup(1),"r",2048)
-        Assert(result!=None,"5,The file object was not returned correctly") 
+        Assert(result!=None,"5,The file object was not returned correctly")
         
         result = None
         result = nt.fdopen(nt.dup(1),"w",512)
-        Assert(result!=None,"6,The file object was not returned correctly") 
+        Assert(result!=None,"6,The file object was not returned correctly")
         
         # fd = 2
         result = None
         result = nt.fdopen(nt.dup(2),"r",1024)
-        Assert(result!=None,"7,The file object was not returned correctly") 
+        Assert(result!=None,"7,The file object was not returned correctly")
         
         result = None
         result = nt.fdopen(nt.dup(2),"a",2048)
-        Assert(result!=None,"8,The file object was not returned correctly") 
+        Assert(result!=None,"8,The file object was not returned correctly")
         
         result = None
         result = nt.fdopen(nt.dup(2),"w",512)
-        Assert(result!=None,"9,The file object was not returned correctly") 
+        Assert(result!=None,"9,The file object was not returned correctly")
     
         result.close()
          
-    # The file descriptor is not valid  
+    # The file descriptor is not valid
     AssertError(OSError,nt.fdopen,3)
     AssertError(OSError,nt.fdopen,-1)
     AssertError(OSError,nt.fdopen,3, "w")
     AssertError(OSError,nt.fdopen,3, "w", 1024)
     
-        
     # The file mode does not exist
     #CodePlex Work Item #8617
     # AssertError(ValueError,nt.fdopen,0,"p")
@@ -208,16 +206,20 @@ def test_fdopen():
 def test_fstat():
     #CodePlex Work Item #8618
     #result = nt.fstat(1)
-    #Assert(result!=0,"0,The file stat object was not returned correctly") 
+    #Assert(result!=0,"0,The file stat object was not returned correctly")
     
     result = None
     tmpfile = "tmpfile1.tmp"
     f = open(tmpfile, "w")
     result = nt.fstat(f.fileno())
-    Assert(result!=None,"0,The file stat object was not returned correctly") 
+    Assert(result!=None,"0,The file stat object was not returned correctly")
     f.close()
     nt.unlink(tmpfile)
-   
+    
+    # stdxx file descriptor
+    AreEqual(10, len(nt.fstat(0)))
+    AreEqual(10, len(nt.fstat(1)))
+    AreEqual(10, len(nt.fstat(2)))
     
     # invalid file descriptor
     AssertError(OSError,nt.fstat,3)
@@ -262,6 +264,10 @@ def test_popen():
     # once w/ default mode
     AssertError(ValueError, nt.popen, "ping 127.0.0.1", "a")
 
+    # popen uses cmd.exe to run stuff -- at least sometimes
+    dir_pipe = nt.popen('dir')
+    dir_pipe.read()
+    dir_pipe.close()
 
     # once w/ no mode
     stdin, stdout = nt.popen2('sort')
@@ -347,7 +353,7 @@ def test_popen():
     nt.unlink('tmpfile.tmp')
 
  
-# utime tests   
+# utime tests
 def test_utime():
     f = file('temp_file_does_not_exist.txt', 'w')
     f.close()
@@ -359,10 +365,7 @@ def test_utime():
     AreEqual(x[8], y[8])
     nt.unlink('temp_file_does_not_exist.txt')
     
-@disabled("CodePlex Work Item 13953")
 def test_tempnam_broken_prefixes():
-    '''
-    '''
     for prefix in ["pre", None]:
         AreEqual(type(nt.tempnam("", prefix)), str)
 
@@ -387,16 +390,16 @@ def test_tempnam():
     temp_dir = joe[:last_dir+1]
     Assert(directory_exists(temp_dir))
     Assert(not file_exists(joe))
-    # The next line is not guaranteed to be true in some scenarios. 
+    # The next line is not guaranteed to be true in some scenarios.
     #AreEqual(nt.stat(temp_dir.strip("\\")), nt.stat(get_temp_dir()))
     
     #few random prefixes
-    prefix_names = ["", "a", "1", "_", ".", "sillyprefix", 
-                    "                                ", 
+    prefix_names = ["", "a", "1", "_", ".", "sillyprefix",
+                    "                                ",
                     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                     ]
     #test a few directory names that shouldn't really work
-    dir_names = ["b", "2", "_", ".", "anotherprefix", 
+    dir_names = ["b", "2", "_", ".", "anotherprefix",
                  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                  None]
     
@@ -429,10 +432,10 @@ def test_tmpnam():
         Assert(str.find(colon)!=-1,
                "1,the returned path is invalid")
         Assert(str.find(separator)!=-1,
-               "2,the returned path is invalid")       
+               "2,the returned path is invalid")
 
 
-# times test        
+# times test
 def test_times():
     '''
     '''
@@ -446,7 +449,7 @@ def test_times():
     #AreEqual(zero3, 0)
     
 
-# putenv tests    
+# putenv tests
 def test_putenv():
     '''
     '''
@@ -470,7 +473,7 @@ def test_unsetenv():
     #simple sanity check
     if is_cli:
         nt.putenv("ipy_test_env_var", "xyz")
-        nt.unsetenv("ipy_test_env_var_unset") 
+        nt.unsetenv("ipy_test_env_var_unset")
         Assert(not nt.environ.has_key("ipy_test_env_var_unset"))
      
 
@@ -488,7 +491,7 @@ def test_remove():
     
     # the path is a type other than string
     AssertError(TypeError, nt.remove, 1)
-    AssertError(TypeError, nt.remove, True) 
+    AssertError(TypeError, nt.remove, True)
     AssertError(TypeError, nt.remove, None)
   
 # rename tests
@@ -530,7 +533,7 @@ def test_rename():
     AssertError(OSError, nt.rename,str_old,dst)
 
 
-# spawnle tests    
+# spawnle tests
 def test_spawnle():
     '''
     '''
@@ -539,7 +542,7 @@ def test_spawnle():
     if is_cli == False:
         return
     
-    ping_cmd = nt.environ["windir"] + "\system32\ping" 
+    ping_cmd = nt.environ["windir"] + "\system32\ping"
     
     #simple sanity check
     nt.spawnle(nt.P_WAIT, ping_cmd , "ping", "/?", {})
@@ -560,11 +563,11 @@ def test_spawnl():
         return
     
     #sanity check
-    #CPython nt has no spawnl function 
-    pint_cmd = ping_cmd = nt.environ["windir"] + "\system32\ping.exe" 
-    nt.spawnl(nt.P_WAIT, ping_cmd , "ping","127.0.0.1")   
-    nt.spawnl(nt.P_WAIT, ping_cmd , "ping","/?")     
-    nt.spawnl(nt.P_WAIT, ping_cmd , "ping")     
+    #CPython nt has no spawnl function
+    pint_cmd = ping_cmd = nt.environ["windir"] + "\system32\ping.exe"
+    nt.spawnl(nt.P_WAIT, ping_cmd , "ping","127.0.0.1")
+    nt.spawnl(nt.P_WAIT, ping_cmd , "ping","/?")
+    nt.spawnl(nt.P_WAIT, ping_cmd , "ping")
     
     # negative case
     cmd = pint_cmd+"oo"
@@ -574,17 +577,17 @@ def test_spawnl():
 # spawnve tests
 def test_spawnv():
     #sanity check
-    ping_cmd = nt.environ["windir"] + "\system32\ping" 
-    nt.spawnv(nt.P_WAIT, ping_cmd , ["ping"])  
-    nt.spawnv(nt.P_WAIT, ping_cmd , ["ping","127.0.0.1"])  
+    ping_cmd = nt.environ["windir"] + "\system32\ping"
+    nt.spawnv(nt.P_WAIT, ping_cmd , ["ping"])
+    nt.spawnv(nt.P_WAIT, ping_cmd , ["ping","127.0.0.1"])
     nt.spawnv(nt.P_WAIT, ping_cmd, ["ping", "-n", "5", "-w", "5000", "127.0.0.1"])
     
         
-# spawnve tests    
+# spawnve tests
 def test_spawnve():
     '''
     '''
-    ping_cmd = nt.environ["windir"] + "\system32\ping" 
+    ping_cmd = nt.environ["windir"] + "\system32\ping"
     
     #simple sanity checks
     nt.spawnve(nt.P_WAIT, ping_cmd, ["ping", "/?"], {})
@@ -597,10 +600,10 @@ def test_spawnve():
     AssertError(TypeError, nt.spawnve, nt.P_WAIT, ping_cmd , ["ping", "/?"], {"abc": 1})
     
     
-# tmpfile tests    
+# tmpfile tests
 #for some strange reason this fails on some Vista machines with an OSError related
 #to permissions problems
-@skip("win32")  
+@skip("win32")
 def test_tmpfile():
     '''
     '''
@@ -610,14 +613,14 @@ def test_tmpfile():
     joe.close()
 
 
-# waitpid tests    
+# waitpid tests
 def test_waitpid():
     '''
     '''
-    #sanity check    
-    #the usage of spawnle is a bug in this case that should be fixed in IP, 
+    #sanity check
+    #the usage of spawnle is a bug in this case that should be fixed in IP,
     #but since this test is for waitpid it's basically OK
-    #ping_cmd = nt.environ["windir"] + "\system32\ping" 
+    #ping_cmd = nt.environ["windir"] + "\system32\ping"
     #pid = nt.spawnle(nt.P_NOWAIT, ping_cmd ,  "-n", "5", "-w", "1000", "127.0.0.1", {})
     #new_pid, exit_stat = nt.waitpid(pid, 0)
     
@@ -650,7 +653,7 @@ def test_stat_result():
     AssertError(TypeError,nt.stat_result,statResult)
     
     # BUG 8755,the length of the sequence is more than 10
-    # statResult = ["a","b","c","y","r","a","a","b","d","r","fu"]
+    # statResult = ["a","b","c","y","r","a","a","b","d","r","f"]
     # AssertError(TypeError,nt.stat_result,statResult)
 
 
@@ -665,7 +668,7 @@ def test_urandom():
     AreEqual(n,result)
 
 
-# write/read tests    
+# write/read tests
 def test_write():
     # write the file
     tempfilename = "temp.txt"
@@ -674,7 +677,7 @@ def test_write():
     file.close()
     
     # read from the file
-    file =   open(tempfilename,"r") 
+    file =   open(tempfilename,"r")
     str = nt.read(file.fileno(),100)
     AreEqual(str,"Hello,here is the value of test string")
     file.close()
@@ -691,20 +694,20 @@ def test_write():
     #file.close()
     #nt.unlink(tempfilename)
 
-# open test   
+# open test
 def test_open():
     # BUG 8784
     # sanity test
     #tempfilename = "temp.txt"
-    #fd = nt.open(tempfilename,256,1)    
-    pass     
+    #fd = nt.open(tempfilename,256,1)
+    pass
 
 def test_system_minimal():
-    if sys.platform=="win32":
-        Assert(hasattr(nt, "system"))
-    else:
-        print "CodePlex Work Item 2982"
-        Assert(not hasattr(nt, "system"), "Please modify test_system_minimal now that nt.system has been implemented")
+    #if sys.platform=="win32":
+    Assert(hasattr(nt, "system"))
+    #else:
+    #    print "CodePlex Work Item 2982"
+    #    Assert(not hasattr(nt, "system"), "Please modify test_system_minimal now that nt.system has been implemented")
 
 # flags test
 def test_flags():
@@ -723,9 +726,28 @@ def test_flags():
     AreEqual(nt.O_WRONLY,1)
     AreEqual(nt.O_RDONLY,0)
     AreEqual(nt.O_RDWR,2)
-    AreEqual(nt.O_BINARY,32768) 
-    AreEqual(nt.O_TEXT,16384) 
-              
+    AreEqual(nt.O_BINARY,32768)
+    AreEqual(nt.O_TEXT,16384)
+
+def test_access():
+    f = file('new_file_name', 'w')
+    f.close()
+    
+    AreEqual(nt.access('new_file_name', nt.F_OK), True)
+    AreEqual(nt.access('does_not_exist.py', nt.F_OK), False)
+
+    nt.chmod('new_file_name', 0x100) # S_IREAD
+    AreEqual(nt.access('new_file_name', nt.W_OK), False)
+    nt.chmod('new_file_name', 0x80)  # S_IWRITE
+        
+    nt.unlink('new_file_name')
+    
+    nt.mkdir('new_dir_name')
+    AreEqual(nt.access('new_dir_name', nt.R_OK), True)
+    nt.rmdir('new_dir_name')
+    
+    AssertError(TypeError, nt.access, None, 1)
+    
 try:
     run_test(__name__)
 finally:

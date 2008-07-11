@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -24,7 +24,7 @@ if sys.platform!="win32":
         clr.AddReferenceByPartialName("System.Drawing")
     
 
-@skip("win32 silverlight")        
+@skip("win32 silverlight")
 def test_sys_drawing():
     from System.Drawing import Point, Size, PointF, SizeF, Rectangle, RectangleF
     x = Point()
@@ -129,7 +129,7 @@ def test_sys_drawing():
     Assert(not DaysInt.Mon == None)
     Assert(DaysInt.Mon != None)
 
-@skip("win32 silverlight")        
+@skip("win32 silverlight")
 def test_cp3982():
     from System.Drawing import Color
     test_funcs = [  lambda x: x,
@@ -144,7 +144,7 @@ def test_cp3982():
                     lambda x: [x, x],
                     lambda x: (x, x),
                     lambda x: [(x), [x, x]],
-                    lambda x: ([x, x], (x)), 
+                    lambda x: ([x, x], (x)),
                    ]
 
     for test_func in test_funcs:
@@ -157,7 +157,7 @@ def test_cp3982():
     Assert( [Color.Green, Color.Red]  != (Color.Green, Color.Red))
     Assert( [Color.Green, Color.Red]  != [Color.Green, Color.Black])
 
-#------------------------------------------------------------------------------    
+#------------------------------------------------------------------------------
 import operator
 
 def test_operator_module():
@@ -196,7 +196,7 @@ def test_operator_module():
     b = c.func
     AreEqual(a, b)
     
-    # __setitem__    
+    # __setitem__
     x = {}
     operator.__setitem__(x, 'abc', 'def')
     AreEqual(x, {'abc':'def'})
@@ -230,10 +230,10 @@ def test_eq_ne_overloads():
     AreEqual((CustomEqual() == 1), 7)
 
     for base_type in [
-                        dict, list, tuple, 
+                        dict, list, tuple,
                         float, long, int, complex,
                         str, unicode,
-                        object, 
+                        object,
                       ]:
 
         class F(base_type):
@@ -278,7 +278,7 @@ def test_num_binary_ops():
         ('%', mod, False),
         ('//', floordiv, False),
         ('**', pow, True)
-        ]   
+        ]
     
     for a in l:
         for b in l:
@@ -311,33 +311,33 @@ def test_num_binary_ops():
 
 #------------------------------------------------------------------------------
 def test_unary_ops():
-    if is_cli or is_silverlight: 
+    if is_cli or is_silverlight:
         unary = UnaryClass(9)
         AreEqual(-(unary.value), (-unary).value)
         AreEqual(~(unary.value), (~unary).value)
     
-    # testing customized unary op 
+    # testing customized unary op
     class C1:
         def __pos__(self):
             return -10
         def __neg__(self):
             return 10
-        def __invert__(self): 
+        def __invert__(self):
             return 20
-        def __abs__(self): 
-            return 30        
+        def __abs__(self):
+            return 30
     
-    class C2(object): 
+    class C2(object):
         def __pos__(self):
             return -10
         def __neg__(self):
             return 10
-        def __invert__(self): 
+        def __invert__(self):
             return 20
-        def __abs__(self): 
-            return 30        
+        def __abs__(self):
+            return 30
     
-    for x in C1(), C2(): 
+    for x in C1(), C2():
         AreEqual(+x, -10)
         AreEqual(-x, 10)
         AreEqual(~x, 20)
@@ -453,7 +453,7 @@ def test_sanity():
     AreEqual(operator.__div__(4L, 2L), 2L)
     AreEqual(operator.__div__(-4L, 2L), -2L)
     
-    #__floordiv__ 
+    #__floordiv__
     AreEqual(operator.__floordiv__(0, 1), 0)
     AreEqual(operator.__floordiv__(4, 2), 2)
     AreEqual(operator.__floordiv__(-1, 2), -1)
@@ -519,13 +519,12 @@ def test_sanity():
     AreEqual(operator.__rshift__(-1L, 1), -1L)
     
     #__not__
-    #CodePlex Work Item 5085
-    #AreEqual(operator.__not__(0), 1)
-    #AreEqual(operator.__not__(1), 0)
-    #AreEqual(operator.__not__(-1), 0)
-    #AreEqual(operator.__not__(0L), 1)
-    #AreEqual(operator.__not__(1L), 0)
-    #AreEqual(operator.__not__(-1L), 0)
+    AreEqual(operator.__not__(0), 1)
+    AreEqual(operator.__not__(1), 0)
+    AreEqual(operator.__not__(-1), 0)
+    AreEqual(operator.__not__(0L), 1)
+    AreEqual(operator.__not__(1L), 0)
+    AreEqual(operator.__not__(-1L), 0)
     
     #__and__
     AreEqual(operator.__and__(0, 0), 0)
@@ -567,10 +566,10 @@ def test_sanity():
     #__setitem__
     #CodePlex Work Item 5085
     #AssertError(TypeError, operator.__setitem__, "abc", 2, "d")
-    #t_list = [1,2,3]
-    #operator.__setitem__(t_list, 2, 4)
-    #AreEqual(t_list, [1,2,4])
-    #AssertError(IndexError, operator.__setitem__, [1,2,3], 4, 9)
+    t_list = [1,2,3]
+    operator.__setitem__(t_list, 2, 4)
+    AreEqual(t_list, [1,2,4])
+    AssertError(IndexError, operator.__setitem__, [1,2,3], 4, 9)
     
     #__delitem__
     #UNIMPLEMENTED

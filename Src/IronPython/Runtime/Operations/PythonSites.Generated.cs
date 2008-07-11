@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Operations {
     public class PythonSites {
@@ -28,156 +27,156 @@ namespace IronPython.Runtime.Operations {
 
 
         private static readonly DynamicSite<object, object, object> AddSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Add));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Add));
 
         public static object Add(object x, object y) {
             return AddSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> SubtractSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Subtract));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Subtract));
 
         public static object Subtract(object x, object y) {
             return SubtractSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> PowerSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Power));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Power));
 
         public static object Power(object x, object y) {
             return PowerSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> MultiplySharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Multiply));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Multiply));
 
         public static object Multiply(object x, object y) {
             return MultiplySharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> FloorDivideSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.FloorDivide));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.FloorDivide));
 
         public static object FloorDivide(object x, object y) {
             return FloorDivideSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> DivideSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Divide));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Divide));
 
         public static object Divide(object x, object y) {
             return DivideSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> TrueDivideSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.TrueDivide));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.TrueDivide));
 
         public static object TrueDivide(object x, object y) {
             return TrueDivideSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> ModSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Mod));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Mod));
 
         public static object Mod(object x, object y) {
             return ModSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> LeftShiftSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LeftShift));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LeftShift));
 
         public static object LeftShift(object x, object y) {
             return LeftShiftSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> RightShiftSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.RightShift));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.RightShift));
 
         public static object RightShift(object x, object y) {
             return RightShiftSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> BitwiseAndSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.BitwiseAnd));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.BitwiseAnd));
 
         public static object BitwiseAnd(object x, object y) {
             return BitwiseAndSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> BitwiseOrSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.BitwiseOr));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.BitwiseOr));
 
         public static object BitwiseOr(object x, object y) {
             return BitwiseOrSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> ExclusiveOrSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.ExclusiveOr));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.ExclusiveOr));
 
         public static object ExclusiveOr(object x, object y) {
             return ExclusiveOrSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> LessThanSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThan));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThan));
 
         public static object LessThan(object x, object y) {
             return LessThanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
         private static readonly DynamicSite<object, object, bool> LessThanBooleanSharedSite =
-            DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThan));
+            DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThan));
 
         public static bool LessThanRetBool(object x, object y) {
             return LessThanBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> GreaterThanSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThan));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThan));
 
         public static object GreaterThan(object x, object y) {
             return GreaterThanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
         private static readonly DynamicSite<object, object, bool> GreaterThanBooleanSharedSite =
-            DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThan));
+            DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThan));
 
         public static bool GreaterThanRetBool(object x, object y) {
             return GreaterThanBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> LessThanOrEqualSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThanOrEqual));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThanOrEqual));
 
         public static object LessThanOrEqual(object x, object y) {
             return LessThanOrEqualSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
         private static readonly DynamicSite<object, object, bool> LessThanOrEqualBooleanSharedSite =
-            DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThanOrEqual));
+            DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.LessThanOrEqual));
 
         public static bool LessThanOrEqualRetBool(object x, object y) {
             return LessThanOrEqualBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> GreaterThanOrEqualSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThanOrEqual));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThanOrEqual));
 
         public static object GreaterThanOrEqual(object x, object y) {
             return GreaterThanOrEqualSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
         private static readonly DynamicSite<object, object, bool> GreaterThanOrEqualBooleanSharedSite =
-            DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThanOrEqual));
+            DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.GreaterThanOrEqual));
 
         public static bool GreaterThanOrEqualRetBool(object x, object y) {
             return GreaterThanOrEqualBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
 
         private static readonly DynamicSite<object, object, object> NotEqualsSharedSite =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.NotEquals));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.NotEquals));
 
         public static object NotEquals(object x, object y) {
             return NotEqualsSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
         }
         private static readonly DynamicSite<object, object, bool> NotEqualsBooleanSharedSite =
-            DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.NotEquals));
+            DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.NotEquals));
 
         public static bool NotEqualsRetBool(object x, object y) {
             return NotEqualsBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);

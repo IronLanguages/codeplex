@@ -13,15 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Simple thread-safe SymbolDictionary used for storing collections of members.
     /// 
@@ -235,8 +233,14 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public void CopyTo(KeyValuePair<object, object>[]/*!*/ array, int arrayIndex) {
-            // TODO:
-            throw new NotImplementedException();
+            ContractUtils.RequiresNotNull(array, "array");
+
+            lock (this) {
+                ContractUtils.RequiresArrayRange(array, arrayIndex, Count, "arrayIndex", "array");
+                foreach (KeyValuePair<object, object> o in ((IEnumerable<KeyValuePair<object, object>>)this)) {
+                    array[arrayIndex++] = o;
+                }
+            }
         }
 
         public int Count {
@@ -466,8 +470,15 @@ namespace Microsoft.Scripting.Runtime {
 
         #endregion
 
-        public void CopyTo(Array/*!*/ array, int index) {
-            throw new NotImplementedException("The method or operation is not implemented.");
+        public void CopyTo(Array array, int index) {
+            ContractUtils.RequiresNotNull(array, "array");
+
+            lock (this) {
+                ContractUtils.RequiresListRange(array, index, Count, "index", "array");
+                foreach (object o in this) {
+                    array.SetValue(o, index++);
+                }
+            }
         }
 
         public bool IsSynchronized {

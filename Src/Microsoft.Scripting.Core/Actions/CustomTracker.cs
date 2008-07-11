@@ -13,13 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// A custom member tracker which enables languages to plug in arbitrary
     /// members into the lookup process.

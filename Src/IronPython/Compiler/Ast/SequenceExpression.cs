@@ -14,13 +14,14 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Operations;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using IronPython.Runtime.Operations;
+    using Ast = System.Linq.Expressions.Expression;
 
     public abstract class SequenceExpression : Expression {
         private readonly Expression[] _items;
@@ -61,7 +62,7 @@ namespace IronPython.Compiler.Ast {
             SourceSpan totalSpan = SourceSpan.None;
             if (emitIndividualSets) {
                 rightSpan = span;
-                leftSpan = Microsoft.Scripting.SourceSpan.None;
+                leftSpan = SourceSpan.None;
                 totalSpan = (Span.Start.IsValid && span.IsValid) ?
                     new SourceSpan(Span.Start, span.End) :
                     SourceSpan.None;
@@ -125,14 +126,14 @@ namespace IronPython.Compiler.Ast {
                 sets.Add(set);
             }
             // 9. add the sets as their own block so they cna be marked as a single span, if necessary.
-            statements.Add(Ast.Block(leftSpan, sets.ToArray()));
+            statements.Add(AstUtils.Block(leftSpan, sets.ToArray()));
 
             // 10. Free the temps
             ag.FreeTemp(array_temp);
             ag.FreeTemp(right_temp);
 
             // 11. Return the suite statement (block)
-            return Ast.Block(totalSpan, statements.ToArray());
+            return AstUtils.Block(totalSpan, statements.ToArray());
         }
 
         private static bool IsComplexAssignment(Expression expr) {
@@ -144,7 +145,18 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _items[i].TransformDelete(ag);
             }
-            return Ast.Block(Span, statements);
+            return AstUtils.Block(Span, statements);
+        }
+
+        internal override bool CanThrow {
+            get {
+                foreach (Expression e in _items) {
+                    if (e.CanThrow) {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
     }
 }

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -17,11 +17,11 @@ from lib.assert_util import *
 skiptest("win32")
 skiptest("silverlight")  #no time.clock or GetTotalMemory
 
-from System import Environment  
+from System import Environment
 import clr
 skipMemoryCheck = clr.GetCurrentRuntime().GlobalOptions.EmitsUncollectableCode
 
-print skipMemoryCheck 
+print skipMemoryCheck
 
 from time import clock
 
@@ -44,7 +44,7 @@ t_list = [
         "(a,b) = (0, 1)",
         "2+"*10 + "2",
     
-        "import sys",  
+        "import sys",
         
         "from time import clock",
     
@@ -87,11 +87,11 @@ t_list = [
 for code in t_list:
     baseMem = evalTest(10)
     usedMax = max(10000, 4*baseMem)
-    if not skipMemoryCheck: 
+    if not skipMemoryCheck:
         for repetitions in [100, 500]:
             usedMem = evalTest(repetitions)
             Assert(usedMem < usedMax, "Allocated %i (max %i, base %i) running %s %d times" % (usedMem, usedMax, baseMem, code, repetitions))
-    else:  
+    else:
         # not to measure the memory usage, but still try to peverify the code at the end
         evalTest(2)
     

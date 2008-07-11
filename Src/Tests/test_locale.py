@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -24,7 +24,7 @@ def test_getdefaultlocale():
     result2 = _locale._getdefaultlocale()
     AreEqual(result1,result2)
     
-#localeconv 
+#localeconv
 def test_localeconv():
     result = _locale.localeconv()
     Assert(result != None, "The method does not return the correct value")
@@ -62,7 +62,7 @@ def collate(str1,str2,result):
     elif result>0:
         Assert(_locale.strcoll(str1,str2)>0, "expected that collating \" %r \" and \" %r \" result should greater than zero" % (str1, str2))
     elif result<0:
-        Assert(_locale.strcoll(str1,str2)<0, "expected that collating \" %r \" and \" %r \" result should less than zero" % (str1, str2))    
+        Assert(_locale.strcoll(str1,str2)<0, "expected that collating \" %r \" and \" %r \" result should less than zero" % (str1, str2))
 
 def validcollate():
     # str1 equal str2
@@ -88,13 +88,13 @@ def validcollate():
     str2 = "123 this is a test"
     collate(str1,str2,result)
       
-    str2 = "@^@%^#& this is a test"    
+    str2 = "@^@%^#& this is a test"
     str2 = "#^@%^#& this is a test"
     collate(str1,str2,result)
      
     # str1 is less than  str2
     result = -1
-    str1 = "this is a test"    
+    str1 = "this is a test"
     str2 = "This Is a Test"
     collate(str1,str2,result)
         
@@ -106,13 +106,13 @@ def validcollate():
     str2 = "@#$This is a test"
     collate(str1,str2,result)
     
-    # an argument is int    
+    # an argument is int
     str2 = 3
     AssertError(TypeError,_locale.strcoll,str1,str2)
     str2 = -1
     AssertError(TypeError,_locale.strcoll,str1,str2)
     
-    # an argument is Random type    
+    # an argument is Random type
     str2 = _random.Random()
     AssertError(TypeError,_locale.strcoll,str1,str2)
          
@@ -124,14 +124,14 @@ def test_strcoll():
     validcollate()
 
 #CodePlex Work Item #9218
-@skip("cli silverlight")   
+@skip("cli silverlight")
 def test_setlocale():
     c_list = [ _locale.LC_ALL,
                _locale.LC_COLLATE,
                _locale.LC_CTYPE,
                _locale.LC_MONETARY,
                _locale.LC_NUMERIC,
-               _locale.LC_TIME, 
+               _locale.LC_TIME,
                ]
     
     for c in c_list:
@@ -145,11 +145,11 @@ def test_setlocale():
         resultLocale = None
         _locale.setlocale(c,"fr-fr")
         resultLocale = _locale.setlocale(c)
-        AreEqual(resultLocale,"French_France.1252")        
+        AreEqual(resultLocale,"French_France.1252")
     
 def test_setlocale_negative():
     #the locale is empty string
-    c= _locale.LC_ALL 
+    c= _locale.LC_ALL
     locale =''
     _locale.setlocale(c,locale)
     
@@ -176,4 +176,4 @@ def test_Locale_category():
     AreEqual(5,_locale.LC_TIME)
     AreEqual(127,_locale.CHAR_MAX)
         
-run_test(__name__)     
+run_test(__name__)

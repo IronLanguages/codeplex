@@ -13,39 +13,46 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Contracts;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
-    public class DeleteMemberAction : MemberAction, IEquatable<DeleteMemberAction> {
-        private DeleteMemberAction(ActionBinder binder, SymbolId name)
-            : base(binder, name) {
+namespace System.Scripting.Actions {
+    public abstract class DeleteMemberAction : StandardAction {
+        private readonly string _name;
+        private readonly bool _caseInsensitive;
+
+        protected DeleteMemberAction(string name, bool caseInsensitive)
+            : base(StandardActionKind.DeleteMember) {
+            ContractUtils.RequiresNotNull(name, "name");
+
+            _name = name;
+            _caseInsensitive = caseInsensitive;
         }
 
-        public static DeleteMemberAction Make(ActionBinder binder, string name) {
-            return Make(binder, SymbolTable.StringToId(name));
+        public string Name {
+            get {
+                return _name;
+            }
         }
 
-        public static DeleteMemberAction Make(ActionBinder binder, SymbolId name) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return new DeleteMemberAction(binder, name);
+        public bool CaseInsensitive {
+            get {
+                return _caseInsensitive;
+            }
+        }        
+
+        public sealed override MetaObject Bind(MetaObject[] args) {
+            ContractUtils.RequiresNotNullItems(args, "args");
+            ContractUtils.Requires(args.Length > 0);
+            return args[0].DeleteMember(this, args);
         }
 
-        public override DynamicActionKind Kind {
-            get { return DynamicActionKind.DeleteMember; }
+        public override int GetHashCode() {
+            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0); ;
         }
 
-        #region IEquatable<DeleteMemberAction> Members
-
-        [StateIndependent]
-        public bool Equals(DeleteMemberAction other) {
-            if (other == null) return false;
-
-            return base.Equals(other);
+        public override bool Equals(object obj) {
+            DeleteMemberAction dma = obj as DeleteMemberAction;
+            return dma != null && dma._name == _name && dma._caseInsensitive == _caseInsensitive;
         }
-
-        #endregion
-
     }
 }

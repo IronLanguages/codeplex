@@ -13,20 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Text;
-using System.Reflection;
 using System.Collections.Generic;
-using System.Threading;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-
+using System.Reflection;
+using System.Scripting.Utils;
+using System.Text;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("builtin_function_or_method")]

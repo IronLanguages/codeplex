@@ -13,11 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
+using System.Diagnostics;
+using System.Scripting;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -25,9 +23,17 @@ namespace IronPython.Runtime {
     /// 
     /// Defined as a class instead of an interface for performance reasons.  Also not
     /// using IDictionary* for keeping a simple interface.
+    /// 
+    /// Full locking is defined as being on the DictionaryStorage object it's self,
+    /// not an internal member.  This enables subclasses to provide their own locking
+    /// aruond large operations and call lock free functions.
     /// </summary>
-    public abstract class DictionaryStorage  {
+    internal abstract class DictionaryStorage  {
         public abstract void Add(object key, object value);
+
+        public virtual void AddNoLock(object key, object value) {
+            Add(key, value);
+        }
 
         public virtual void Add(SymbolId key, object value) {
             Add(SymbolTable.IdToString(key), value);
@@ -55,6 +61,17 @@ namespace IronPython.Runtime {
                 storage.Add(kvp.Key, kvp.Value);
             }
             return storage;
+        }
+        
+        /// <summary>
+        /// Adds items from this dictionary into the other dictionary
+        /// </summary>
+        public virtual void CopyTo(DictionaryStorage/*!*/ into) {
+            Debug.Assert(into != null);
+
+            foreach (KeyValuePair<object, object> kvp in GetItems()) {
+                into.Add(kvp.Key, kvp.Value);
+            }
         }
     }
 

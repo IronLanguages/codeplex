@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -28,13 +28,33 @@ try:
 except ImportError: pass
 else:  Fail("should already thrown")
 
+
+@skip("silverlight")
+def test_cp7766():
+    if __name__=="__main__":
+        AreEqual(type(__builtins__), type(sys))
+    else:
+        AreEqual(type(__builtins__), dict)
+        
+    try:
+        _t_test = testpath.public_testdir + "\\cp7766.py"
+        write_to_file(_t_test, "temp = __builtins__")
+    
+        import cp7766
+        AreEqual(type(cp7766.temp), dict)
+        Assert(cp7766.temp != __builtins__)
+        
+    finally:
+        import nt
+        nt.unlink(_t_test)
+
 # generate test files on the fly
 if not is_silverlight:
     _testdir    = 'ImportTestDir'
     _f_init     = path_combine(testpath.public_testdir, _testdir, '__init__.py')
     _f_error    = path_combine(testpath.public_testdir, _testdir, 'Error.py')
-    _f_gen      = path_combine(testpath.public_testdir, _testdir, 'Gen.py') 
-    _f_module   = path_combine(testpath.public_testdir, _testdir, 'Module.py') 
+    _f_gen      = path_combine(testpath.public_testdir, _testdir, 'Gen.py')
+    _f_module   = path_combine(testpath.public_testdir, _testdir, 'Module.py')
 
     write_to_file(_f_init)
     write_to_file(_f_error, 'raise AssertionError()')
@@ -67,15 +87,15 @@ import sys
 result = reload(sys)
 Assert(not sys.modules.__contains__("Error"))
 
-try:   
+try:
     import ImportTestDir.Error
 except AssertionError: pass
 except ImportError:
-    if is_silverlight: 
+    if is_silverlight:
         pass
     else:
         Fail("Should have thrown AssertionError from Error.py")
-else:  
+else:
     Fail("Should have thrown AssertionError from Error.py")
 
 Assert(not sys.modules.__contains__("Error"))
@@ -84,7 +104,7 @@ if not is_silverlight:
     from ImportTestDir import Module
 
     filename = Module.__file__.lower()
-    Assert(filename.endswith("module.py") or filename.endswith("module.pyc"))    
+    Assert(filename.endswith("module.py") or filename.endswith("module.pyc"))
     AreEqual(Module.__name__.lower(), "importtestdir.module")
     AreEqual(Module.value, unique_line)
 
@@ -96,7 +116,7 @@ if not is_silverlight:
     , i, j)
 
     for x in range(ord('a'), ord('j')+1):
-        Assert(chr(x) in dir()) 
+        Assert(chr(x) in dir())
 
     # testing double import of generators with yield inside try
 
@@ -213,10 +233,10 @@ def compileAndRef(name, filename, *args):
 @skip("silverlight", "multiple_execute", "win32")
 def test_c1cs():
     """verify re-loading an assembly causes the new type to show up"""
-    if not has_csc(): 
+    if not has_csc():
         return
     
-    c1cs = get_local_filename('c1.cs')    
+    c1cs = get_local_filename('c1.cs')
     outp = sys.exec_prefix
     
     compileAndRef('c1', c1cs, '/d:BAR1')
@@ -237,16 +257,16 @@ def test_c1cs():
 
 @skip("silverlight", "multiple_execute", "win32")
 def test_c2cs():
-    """verify generic types & non-generic types mixed in the same namespace can 
+    """verify generic types & non-generic types mixed in the same namespace can
     successfully be used"""
-    if not has_csc(): 
+    if not has_csc():
         return
     
-    c2cs = get_local_filename('c2.cs')    
+    c2cs = get_local_filename('c2.cs')
     outp = sys.exec_prefix
 
     # first let's load Foo<T>
-    compileAndRef('c2_a', c2cs, '/d:TEST1')    
+    compileAndRef('c2_a', c2cs, '/d:TEST1')
     import ImportTestNS
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
@@ -260,14 +280,14 @@ def test_c2cs():
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
 
-    # Lets load Foo<T,Y,Z>    
+    # Lets load Foo<T,Y,Z>
     compileAndRef('c2_c', c2cs, '/d:TEST3')
     x = ImportTestNS.Foo[int,int,int]()
     AreEqual(x.Test(), 'Foo<T,Y,Z>')
     
     # make sure Foo<T> and Foo<T,Y> are still available
     x = ImportTestNS.Foo[int,int]()
-    AreEqual(x.Test(), 'Foo<T,Y>')    
+    AreEqual(x.Test(), 'Foo<T,Y>')
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
     
@@ -289,7 +309,7 @@ def test_c2cs():
     x = ImportTestNS.Foo[int,int,int]()
     AreEqual(x.Test(), 'Foo<T,Y,Z>')
     x = ImportTestNS.Foo[int,int]()
-    AreEqual(x.Test(), 'Foo<T,Y>')    
+    AreEqual(x.Test(), 'Foo<T,Y>')
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
     
@@ -302,11 +322,11 @@ def test_c2cs():
     x = ImportTestNS.Foo[int,int,int]()
     AreEqual(x.Test(), 'Foo<T,Y,Z>')
     x = ImportTestNS.Foo[int,int]()
-    AreEqual(x.Test(), 'Foo<T,Y>')    
+    AreEqual(x.Test(), 'Foo<T,Y>')
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
     
-    # finally, let's now replace one of the 
+    # finally, let's now replace one of the
     # generic overloads...
     compileAndRef('c2_f', c2cs, '/d:TEST6')
     x = ImportTestNS.Foo[int]()
@@ -718,6 +738,29 @@ def test_relative_imports():
         AreEqual(sys.foo, 'subpkgy')
                 
         del sys.foo
+        
+        _d_test     = 'OutterDir'
+        _subdir     = 'RelTest'
+        _f_o_init   = path_combine(testpath.public_testdir, _d_test, '__init__.py')
+        _f_temp     = path_combine(testpath.public_testdir, _d_test, 'temp.py')
+        _f_sub_init = path_combine(testpath.public_testdir, _d_test, _subdir, '__init__.py')
+        
+        write_to_file(_f_o_init, "from temp import foo1")
+        
+         
+        write_to_file(_f_temp, '''
+class foo1:
+    def bar(self):
+        return "foobar"
+
+'''     )
+        
+        write_to_file(_f_sub_init, '''
+from ..temp import foo1
+'''     )
+
+        from OutterDir import RelTest
+        AreEqual(RelTest.foo1().bar(), 'foobar')
     finally:
         sys.modules = mod_backup
         nt.unlink(_f_init)
@@ -761,7 +804,7 @@ sys.test4 = __import__("y", {}, {'__name__' : 'the_dir2.x.y'}).a
         AreEqual(sys.test1, 2)
         AreEqual(sys.test2, 1)
         AreEqual(sys.test2, 1)
-        AreEqual(sys.test2, 1)               
+        AreEqual(sys.test2, 1)
     finally:
         sys.modules = backup
         import nt

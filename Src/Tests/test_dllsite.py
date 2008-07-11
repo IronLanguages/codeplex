@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -41,7 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace foo%s {   
+namespace foo%s {
     public class Foo {
         public static int BAR = %d;
         
@@ -119,7 +119,7 @@ def createAssembly(file_id, namespace_id, bar_num, default_filename="foo"):
     #create the C# file
     file_name = Directory.GetCurrentDirectory() + "\\" + default_filename + str(file_id) + ".cs"
     file = open(file_name, "w")
-    print >> file, cs_ipy % (str(namespace_id), 
+    print >> file, cs_ipy % (str(namespace_id),
                               bar_num)
     file.close()
     
@@ -140,7 +140,7 @@ def uniqueDLLNames():
     temp = ""
     for i in xrange(0, 15):
         temp = temp + "aaaaaaaaaa"
-    createAssembly("", "BIGFILENAME", 1, default_filename=temp)   
+    createAssembly("", "BIGFILENAME", 1, default_filename=temp)
     
     
 def textFiles():
@@ -166,7 +166,7 @@ def exeOnly():
     #create an EXE C# file
     file_name = Directory.GetCurrentDirectory() + "\\fooEXEONLY.cs"
     file = open(file_name, "w")
-    print >> file, cs_ipy % ("EXEONLY", 
+    print >> file, cs_ipy % ("EXEONLY",
                               100)
     file.close()
     
@@ -186,9 +186,9 @@ def dllVsExe():
     #create an EXE C# file
     file_name = Directory.GetCurrentDirectory() + "\\fooEXE.cs"
     file = open(file_name, "w")
-    print >> file, cs_ipy % ("DLLEXE", 
+    print >> file, cs_ipy % ("DLLEXE",
                               0)
-    file.close()    
+    file.close()
     #create the exe
     compileExe(file_name)
     
@@ -204,11 +204,11 @@ def okAssemblies(num):
 def dupAssemblies(num):
     '''
     Creates assemplies which are basically
-    duplicates of each other except that foo.FOO.BAR has 
+    duplicates of each other except that foo.FOO.BAR has
     unique values. IP
     '''
-    for i in xrange(num): createAssembly("DUP" + str(i), 
-                                          "", 
+    for i in xrange(num): createAssembly("DUP" + str(i),
+                                          "",
                                           i)
     
     
@@ -284,7 +284,7 @@ def setUp():
     '''
     Sets up the DLLs directory.
     '''
-    #if it exists, we cannot continue because we will 
+    #if it exists, we cannot continue because we will
     #not have the correct permissions to move/remove the
     #DLLs directory
     if Directory.Exists(DLLS_DIR):
@@ -336,7 +336,7 @@ def setUp():
 
 def main():
     '''
-    Runs the test by spawning off another IP process which 
+    Runs the test by spawning off another IP process which
     utilizes the newly created DLLs directory.
     '''
     try:

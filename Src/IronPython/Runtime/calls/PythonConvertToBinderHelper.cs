@@ -16,25 +16,28 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
-    class PythonConvertToBinderHelper<T> : BinderHelper<T, ConvertToAction> {
+    class PythonConvertToBinderHelper<T> : BinderHelper<T, OldConvertToAction> where T : class {
         private object _argument;
 
-        public PythonConvertToBinderHelper(CodeContext/*!*/ context, ConvertToAction/*!*/ action, object[]/*!*/ args)
+        public PythonConvertToBinderHelper(CodeContext/*!*/ context, OldConvertToAction/*!*/ action, object[]/*!*/ args)
             : base(context, action) {
             ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.RequiresNotNull(action, "action");
@@ -119,7 +122,7 @@ namespace IronPython.Runtime.Calls {
                 if (extstr != null) {
                     strVal = extstr.Value;
                     strExpr = 
-                        Ast.ReadProperty(
+                        Ast.Property(
                             Ast.ConvertHelper(
                                 strExpr,
                                 typeof(Extensible<string>)
@@ -132,7 +135,7 @@ namespace IronPython.Runtime.Calls {
             if (strVal != null) {
                 rule.MakeTest(CompilerHelpers.GetType(_argument));
 
-                Expression getLen = Ast.ReadProperty(
+                Expression getLen = Ast.Property(
                     Ast.ConvertHelper(
                         strExpr,
                         typeof(string)
@@ -157,7 +160,7 @@ namespace IronPython.Runtime.Calls {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("TypeError"),
                                 Ast.Constant("expected string of length 1 when converting to char, got '{0}'"),
-                                Ast.NewArray(typeof(object[]), rule.Parameters[0])
+                                Ast.NewArrayInit(typeof(object), rule.Parameters[0])
                             )                        
                         );
                 }
@@ -181,7 +184,7 @@ namespace IronPython.Runtime.Calls {
             } else if (_argument is ICollection) {
                 // collections are true if not empty
                 MakeNonZeroPropertyRule(rule, typeof(ICollection), "Count");
-            } else if (_argument is IStrongBox) {
+            } else if (_argument is System.Runtime.CompilerServices.IStrongBox) {
                 // Explictly block conversion of References to bool
                 MakeStrongBoxRule(rule);
             } else if (fromType.IsEnum) {
@@ -194,11 +197,11 @@ namespace IronPython.Runtime.Calls {
                 MakeBigIntegerRule(rule, rule.Parameters[0]);
             } else if (typeof(Extensible<BigInteger>).IsAssignableFrom(fromType)) {
                 MakeBigIntegerRule(rule,
-                    Ast.ReadProperty(Ast.ConvertHelper(rule.Parameters[0], fromType), fromType.GetProperty("Value"))
+                    Ast.Property(Ast.ConvertHelper(rule.Parameters[0], fromType), fromType.GetProperty("Value"))
                 );
             } else if (typeof(Extensible<Complex64>).IsAssignableFrom(fromType)) {
                 MakeComplexRule(rule,
-                    Ast.ReadProperty(Ast.ConvertHelper(rule.Parameters[0], fromType), fromType.GetProperty("Value"))
+                    Ast.Property(Ast.ConvertHelper(rule.Parameters[0], fromType), fromType.GetProperty("Value"))
                 );
             } else {
                 // check for ICollection<T>
@@ -213,6 +216,38 @@ namespace IronPython.Runtime.Calls {
             }
 
             rule.MakeTest(fromType);
+            // TODO: We could just do this and eleminate all the above checks via the appropriate ops methods
+            // look for __nonzero__
+            if (rule.Target == null) {
+                MemberGroup mg = Binder.GetMember(Action, fromType, "__nonzero__");
+                if (mg.Count > 0) {
+                    MethodBinder mb = MethodBinder.MakeBinder(Binder, "__nonzero__", GetTargets(mg));
+                    BindingTarget bt = mb.MakeBindingTarget(CallTypes.ImplicitInstance, new Type[] { fromType });
+                    if (bt.Success) {
+                        rule.Target = rule.MakeReturn(Binder, bt.MakeExpression(rule, rule.Parameters));
+                    }
+                }                
+            }
+
+            // look for __len__
+            if (rule.Target == null) {
+                MemberGroup mg = Binder.GetMember(Action, fromType, "__len__");
+                if (mg.Count > 0) {
+                    MethodBinder mb = MethodBinder.MakeBinder(Binder, "__nonzero__", GetTargets(mg));
+                    BindingTarget bt = mb.MakeBindingTarget(CallTypes.ImplicitInstance, new Type[] { fromType });
+                    if (bt.Success) {
+                        rule.Target = rule.MakeReturn(
+                            Binder, 
+                            Ast.NotEqual(
+                                bt.MakeExpression(rule, rule.Parameters),
+                                Ast.Constant(0)
+                            )
+                        );
+                    }
+                }
+            }
+
+            // fall back to DLR conversions or Python's default.
             if (rule.Target == null) {
                 // anything non-null that doesn't fall under one of the
                 // above rules is true
@@ -226,13 +261,23 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
+        private static List<MethodBase> GetTargets(MemberGroup mg) {
+            List<MethodBase> targets = new List<MethodBase>();
+            foreach (MemberTracker mt in mg) {
+                if (mt.MemberType == TrackerTypes.Method) {
+                    targets.Add(((MethodTracker)mt).Method);
+                }
+            }
+            return targets;
+        }
+
         private void MakeBigIntegerRule(RuleBuilder<T> rule, Expression bigInt) {
             rule.Target = 
                 rule.MakeReturn(
                     Binder,
                     Ast.Call(
                         typeof(BigInteger).GetMethod("op_Inequality", new Type[] { typeof(BigInteger), typeof(BigInteger) }),
-                        Ast.ReadField(null, typeof(BigInteger).GetField("Zero")),
+                        Ast.Field(null, typeof(BigInteger).GetField("Zero")),
                         Ast.ConvertHelper(bigInt, typeof(BigInteger))
                     )
                 );
@@ -296,7 +341,7 @@ namespace IronPython.Runtime.Calls {
             rule.Target = rule.MakeReturn(
                 Binder,
                 Ast.NotEqual(
-                    Ast.ReadProperty(
+                    Ast.Property(
                         Ast.ConvertHelper(
                             rule.Parameters[0],
                             collectionType

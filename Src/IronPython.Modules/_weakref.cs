@@ -16,19 +16,19 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
 using IronPython.Compiler.Generation;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT // finalizers not supported
 
@@ -218,12 +218,12 @@ namespace IronPython.Modules {
             private static bool RefEquals(CodeContext context, object x, object y) {
                 object ret;
                 if (PythonTypeOps.TryInvokeBinaryOperator(context, x, y, Symbols.OperatorEquals, out ret) &&
-                    ret != PythonOps.NotImplemented) {
+                    ret != NotImplementedType.Value) {
                     return (bool)ret;
                 }
 
                 if (PythonTypeOps.TryInvokeBinaryOperator(context, y, x, Symbols.OperatorEquals, out ret) &&
-                    ret != PythonOps.NotImplemented) {
+                    ret != NotImplementedType.Value) {
                     return (bool)ret;
                 }
 
@@ -474,7 +474,7 @@ namespace IronPython.Modules {
             private weakcallableproxy(CodeContext context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
                 _target = new WeakHandle(target, false);
-                _site = DynamicSite<object, object[], object>.Create(CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
+                _site = DynamicSite<object, object[], object>.Create(OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
             }
 
             #endregion

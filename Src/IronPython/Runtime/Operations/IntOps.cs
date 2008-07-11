@@ -14,22 +14,21 @@
  * ***************************************************************************/
 
 using System;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
+using System.Globalization;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+
 
 namespace IronPython.Runtime.Operations {
 
     public static partial class Int32Ops {
         private static readonly DynamicSite<object, object> _intSite =
-            new DynamicSite<object, object>(ConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(int)));
+            new DynamicSite<object, object>(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(int)));
 
         private static object FastNew(object o) {
             Extensible<BigInteger> el;
@@ -207,7 +206,7 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static object Power(int x, double power, double qmod) {
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [SpecialName]
@@ -307,7 +306,7 @@ namespace IronPython.Runtime.Operations {
 
         [return: MaybeNotImplemented]
         public static object __divmod__(int x, object y) {
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
 
@@ -367,7 +366,11 @@ namespace IronPython.Runtime.Operations {
             if (Converter.TryConvertToInt32(o, out val)) {
                 return PythonTuple.MakeTuple(x, val);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
+        }
+
+        public static string/*!*/ __repr__(int self) {
+            return self.ToString(CultureInfo.InvariantCulture);
         }
     }
 }

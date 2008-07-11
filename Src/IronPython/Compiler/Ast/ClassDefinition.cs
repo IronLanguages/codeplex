@@ -13,18 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-
+using System.Scripting;
+using System.Scripting.Utils;
 using IronPython.Runtime;
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Utils;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ClassDefinition : ScopeStatement {
         private SourceLocation _header;
@@ -107,12 +104,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            MSAst.Expression bases = Ast.NewArray(
-                typeof(object[]),
+            MSAst.Expression bases = Ast.NewArrayInit(
+                typeof(object),
                 ag.TransformAndConvert(_bases, typeof(object))
             );
 
-            AstGenerator body = new AstGenerator(ag, SourceSpan.None, SymbolTable.IdToString(_name), false, false);
+            AstGenerator body = new AstGenerator(ag, MSAst.Expression.Annotate(SourceSpan.None), SymbolTable.IdToString(_name), false, false);
 
             List<MSAst.Expression> init = new List<MSAst.Expression>();
             CreateVariables(body, init);
@@ -157,7 +154,7 @@ namespace IronPython.Compiler.Ast {
                 lambda
             );
 
-            return Ast.Assign(new SourceSpan(Start, Header), _variable.Variable, classDef);
+            return AstUtils.Assign(_variable.Variable, classDef, new SourceSpan(Start, Header));
         }
 
         public override void Walk(PythonWalker walker) {

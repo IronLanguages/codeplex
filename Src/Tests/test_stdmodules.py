@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -38,19 +38,33 @@ def test_cp8678():
     expected = ([0, 1], [2, 3])
     actual = []
     
-    for i, j in izip(x, x): 
+    for i, j in izip(x, x):
         actual.append([i, j])
 
     AreEqual(len(expected), len(actual))
     for i in xrange(len(expected)):
         AreEqual(expected[i], actual[i])
 
-@skip("win32", "multiple_execute") #No _socket    
+@skip("win32", "multiple_execute") #No _socket
 def test_cp10825():
     import urllib
-    temp_url = urllib.urlopen("http://www.microsoft.com")
+    from time import sleep
+    
+    #Give it five chances to connect
+    temp_url = None
+    
+    for i in xrange(5):
+        try:
+            temp_url = urllib.urlopen("http://www.microsoft.com")
+            break
+        except Exception, e:
+            print ".",
+            sleep(5)
+            continue
+    if temp_url==None: raise e
+    
     try:
-        AreEqual(temp_url.url, "http://www.microsoft.com/en/us/default.aspx")
+        Assert(temp_url.url.startswith("http://www.microsoft.com/"))
     finally:
         temp_url.close()
 
@@ -76,20 +90,20 @@ def test_cp12907():
     
     f_name = "fake_stdout.txt"
     test_list = [
-                    ("print 1", 
+                    ("print 1",
                         "single", ["1\n"]),
-                    ("print 1", 
+                    ("print 1",
                         "exec", ["1\n"]),
-                    ("1", 
+                    ("1",
                         "single", ["1\n"]),
-                    ("1", 
+                    ("1",
                         "exec", []),
                     #CodePlex 12907
-                    ("def f(n):\n    return n*n\nprint f(3)", 
+                    ("def f(n):\n    return n*n\nprint f(3)",
                         "exec", ["9\n"]),
-                    ("if 1:\n    print 1\n", 
+                    ("if 1:\n    print 1\n",
                         "single", ["1\n"]),
-                    ("if 1:\n    print 1\n", 
+                    ("if 1:\n    print 1\n",
                         "exec", ["1\n"]),
                 ]
                 
@@ -127,5 +141,5 @@ def test_cp12907():
         AssertError(SyntaxError, compile, test_case, "", kind, 0x200, 1)
 
 
-##MAIN#########################################################################    
+##MAIN#########################################################################
 run_test(__name__)

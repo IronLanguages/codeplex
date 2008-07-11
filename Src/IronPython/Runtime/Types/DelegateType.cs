@@ -13,32 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using System.Diagnostics;
-using System.Reflection.Emit;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Runtime;
 
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using IronPython.Compiler.Generation;
-using IronPython.Compiler;
-
-[assembly: PythonExtensionType(typeof(Delegate), typeof(DelegateOps))]
 namespace IronPython.Runtime.Types {
     public static class DelegateOps {
         [StaticExtensionMethod]
-        public static object __new__(PythonType type, object function) {
-            if (type == null) throw PythonOps.TypeError("expected type for 1st param, got {0}", PythonTypeOps.GetName(type));
+        public static object __new__(CodeContext context, PythonType type, object function) {
+            if (type == null) throw PythonOps.TypeError("expected type for 1st param, got {0}", type.Name);
 
-            return RuntimeHelpers.GetDelegate(function, type.UnderlyingSystemType);
+            return BinderOps.GetDelegate(context, function, type.UnderlyingSystemType);
         }
     }    
 }

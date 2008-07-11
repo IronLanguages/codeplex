@@ -13,13 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     class ExtraKeyEnumerator : CheckedDictionaryEnumerator {
         private CustomSymbolDictionary _idDict;
         private int _curIndex = -1;

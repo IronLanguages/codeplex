@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
+using System.Text;
 using IronPython.Hosting;
-using Microsoft.Scripting.Hosting.Shell;
 using IronPython.Runtime;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Hosting.Shell;
 
 internal sealed class PythonConsoleHost : ConsoleHost {
 
@@ -31,7 +31,24 @@ internal sealed class PythonConsoleHost : ConsoleHost {
     }
 
     protected override OptionsParser/*!*/ CreateOptionsParser() {
-        return new PythonOptionsParser();
+        return new PythonOptionsParser(this.Options);
+    }
+
+    protected override string/*!*/ GetHelp() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.AppendLine(PythonCommandLine.GetLogoDisplay());
+        PrintLanguageHelp(sb);
+        sb.AppendLine();
+
+        return sb.ToString();
+    }
+
+    protected override void ParseHostOptions(string/*!*/[]/*!*/ args) {
+        // Python doesn't want any of the DLR base options.
+        foreach (string s in args) {
+            Options.IgnoredArgs.Add(s);
+        }
     }
 
     [STAThread]

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -25,8 +25,8 @@ from System import Environment
 from sys import exec_prefix
 
 extraArgs = ""
-if "-X:TupleBasedOptimizedScopes" in Environment.GetCommandLineArgs():
-    extraArgs += " -X:TupleBasedOptimizedScopes"
+if "-X:LightweightScopes" in Environment.GetCommandLineArgs():
+    extraArgs += " -X:LightweightScopes"
 
 def test_strings():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
@@ -59,12 +59,31 @@ def test_exceptions():
     
     # parameterless exception
     response = ipi.ExecuteLine("raise Exception", True)
-    Assert(response.find("Traceback (most recent call last):") > -1)
-    Assert(response.find('  File "<stdin>", line 1, in <module>') > -1)
-    Assert(response.find("Exception") > -1)
-    Assert(response.find("Exception: ") == -1)
+    AreEqual(response,
+             '''Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+Exception'''.replace("\n", "\r\r\n") + "\r")
+
+    ipi.End()
+    
+def test_exceptions_nested():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+
+    ipi.ExecutePartialLine("def a(): return b()")
+    ipi.ExecuteLine("")
+    ipi.ExecutePartialLine("def b(): return 1/0")
+    ipi.ExecuteLine("")
+    response = ipi.ExecuteLine("a()", True)
+    response = response.replace("\r\r\n", "\n").strip()
+    Assert(response.startswith('''Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "<stdin>", line 1, in a
+  File "<stdin>", line 1, in b
+ZeroDivisionError:'''), response)
             
     ipi.End()
+
 
 ###############################################################################
 # Test "ipy.exe -i script.py"
@@ -109,7 +128,7 @@ def test_interactive_mode():
 # Test sys.exitfunc
 
 def test_sys_exitfunc():
-    from Microsoft.Scripting.Runtime import ScriptDomainManager
+    from System.Scripting.Runtime import ScriptDomainManager
         
     inputScript = testpath.test_inputs_dir + "\\exitFuncRuns.py"
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
@@ -121,7 +140,7 @@ def test_sys_exitfunc():
     args = extraArgs
     
     if ScriptDomainManager.Options.DebugMode:
-        args = "-D " + args	
+        args = "-D " + args
 
     inputScript = testpath.test_inputs_dir + "\\exitFuncRaises.py"
     ipi = IronPythonInstance(executable, exec_prefix, args + " \"" + inputScript + "\"")
@@ -130,7 +149,7 @@ def test_sys_exitfunc():
     AreEqual(output2.find('Error in sys.exitfunc:') > -1, True)
     
     AreEqual(output2.find('exitFuncRaises.py", line 19, in foo') > -1, True)
-		
+        
     ipi.End()
 
 #############################################################################
@@ -146,13 +165,13 @@ def test_indentation():
     ipi.End()
 
 #############################################################################
-# verify we dump exception details 
+# verify we dump exception details
 
 def test_dump_exception():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -X:ExceptionDetail")
     AreEqual(ipi.Start(), True)
     response = ipi.ExecuteLine("raise 'goodbye'", True)
-    AreEqual(response.count("Microsoft.Scripting") >= 1, True)
+    AreEqual(response.count("System.Scripting") >= 1, True)
     ipi.End()
 
 #############################################################################
@@ -185,10 +204,10 @@ def test_incomplate_syntax_backslash():
     AreEqual(ipi.Start(), True)
        
     for i in xrange(4):
-        for j in xrange(i): 
+        for j in xrange(i):
             ipi.ExecutePartialLine("\\")
         ipi.ExecutePartialLine("1 + \\")
-        for j in xrange(i): 
+        for j in xrange(i):
             ipi.ExecutePartialLine("\\")
         response = ipi.ExecuteLine("2", True)
         Assert("3" in response)
@@ -391,7 +410,7 @@ def test_indentation_interactive():
 # test /mta w/ no other args
 
 def test_mta():
-    ipi = IronPythonInstance(executable, exec_prefix, '/mta')
+    ipi = IronPythonInstance(executable, exec_prefix, '-X:MTA')
     AreEqual(ipi.Start(), True)
     ipi.ExecutePartialLine("class C:pass")
     response = ipi.ExecuteLine("")
@@ -439,17 +458,25 @@ def test_globals8961():
     AreEqual(ipi.Start(), True)
     
     response = ipi.ExecuteLine("print globals().keys()")
-    AreEqual(response, "['__builtins__', '__name__', '__doc__']")
+    res = set(eval(response))
+    AreEqual(res, set(['__builtins__', '__name__', '__doc__']))
     
     ipi.ExecuteLine("a = None")
     response = ipi.ExecuteLine("print globals().keys()")
-    AreEqual(response, "['__builtins__', '__name__', '__doc__', 'a']")
+    res = set(eval(response))
+    AreEqual(res, set(['__builtins__', '__name__', '__doc__', 'a']))
     response = ipi.ExecuteLine("print globals().values()")
-    AreEqual(response, "[<module '__builtin__' (built-in), '__main__', None, None]")
+    l = eval(response.replace("<module '__builtin__' (built-in)", '"builtin"'))
+    res = set(l)
+    AreEqual(len(l), 4)
+    AreEqual(res, set(['builtin', '__main__', None]))
     
     ipi.ExecuteLine("b = None")
     response = ipi.ExecuteLine("print globals().values()")
-    AreEqual(response, "[<module '__builtin__' (built-in), '__main__', None, None, None]")
+    l = eval(response.replace("<module '__builtin__' (built-in)", '"builtin"'))
+    res = set(l)
+    AreEqual(len(l), 5)
+    AreEqual(res, set(['builtin', '__main__', None]))
     
 
 def test_console_input_output():
@@ -482,11 +509,11 @@ def f(): raise AssertionError, 'hello'
 import thread, time
 thread.start_new_thread(f, tuple())
 time.sleep(2)
-''')   
+''')
     
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " " + inputScript)
     (result, output, output2, exitCode) = ipi.StartAndRunToCompletion()
-    AreEqual(exitCode, 0)    
+    AreEqual(exitCode, 0)
     Assert("AssertionError: hello" in output)
     Assert("IronPython." not in output)     # '.' is necessary here
     ipi.End()
@@ -558,7 +585,7 @@ def test_ipy_dash_m():
         AreEqual(exit, 0)   # should have returned 0
         output = output.replace('\r\n', '\n')
         lines = output.split('\n')
-        AreEqual(lines[0], 'hello') 
+        AreEqual(lines[0], 'hello')
         AreEqual(eval(lines[1]), [filename])
         
         # we receive any arguments in sys.argv
@@ -568,7 +595,7 @@ def test_ipy_dash_m():
         AreEqual(exit, 0)   # should have returned 0
         output = output.replace('\r\n', '\n')
         lines = output.split('\n')
-        AreEqual(lines[0], 'hello') 
+        AreEqual(lines[0], 'hello')
         AreEqual(eval(lines[1]), [filename, 'foo', 'bar'])
 
         f = file(filename, 'w')
@@ -598,17 +625,17 @@ def test_ipy_dash_m():
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 1)   # should have returned 0
-        Assert("ImportError: No module named libxyz" in err, 
+        Assert("ImportError: No module named libxyz" in err,
                "stderr is:" + str(err))
               
     finally:
         nt.unlink(filename)
         
-@disabled("CodePlex Work Item 10925")        
+@disabled("CodePlex Work Item 10925")
 def test_ipy_dash_m_negative():
     # builtin modules should not work
     for modname in [ "sys", "datetime" ]:
-        ipi = IronPythonInstance(executable, exec_prefix, 
+        ipi = IronPythonInstance(executable, exec_prefix,
                                  extraArgs + " -m " + modname)
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(exit, 1)
@@ -620,8 +647,8 @@ def test_ipy_dash_m_negative():
     res, output, err, exit = ipi.StartAndRunToCompletion()
     AreEqual(res, True) # run should have worked
     AreEqual(exit, 1)   # should have returned 0
-    Assert("SyntaxError: invalid syntax" in err, 
-           "stderr is:" + str(err))        
+    Assert("SyntaxError: invalid syntax" in err,
+           "stderr is:" + str(err))
     
 def test_ipy_dash_c():
     """verify ipy -c cmd doesn't print expression statements"""
@@ -659,6 +686,31 @@ def test_future_with():
     AreEqual(response, "3.14")
     ipi.End()
 
+#############################################################################
+# Merlin 148481
+def test_ipy_dash():
+    #Verify that typing a - in the arguments starts an interactive session
+    ipi = IronPythonInstance(executable, exec_prefix, "-")
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("42")
+    AreEqual(response, "42")
+    ipi.End()
+
+#############################################################################
+def test_mta():
+    ipi = IronPythonInstance(executable, exec_prefix, '-X:MTA')
+    AreEqual(ipi.Start(), True)
+    ipi.ExecuteLine("import System")
+    response = ipi.ExecuteLine("str(System.Threading.Thread.CurrentThread.ApartmentState)")
+    AreEqual(response, "'MTA'")
+    
+    ipi.ExecutePartialLine("class C:pass")
+    response = ipi.ExecuteLine("")
+    AreEqual(response, "")
+    
+    response = ipi.ExecuteLine("str(System.Threading.Thread.CurrentThread.ApartmentState)")
+    AreEqual(response, "'MTA'")
+    ipi.End()
 
 #------------------------------------------------------------------------------
 run_test(__name__)

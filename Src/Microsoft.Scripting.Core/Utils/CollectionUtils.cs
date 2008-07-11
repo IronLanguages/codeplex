@@ -13,13 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public static class CollectionUtils {
 
         public static void AddRange<T>(ICollection<T> collection, IEnumerable<T> items) {
@@ -151,17 +150,50 @@ namespace Microsoft.Scripting.Utils {
             ReadOnlyCollection<T> readOnlyCollection;
             ICollection<T> collection;
             if (enumerable == null) {
-                // TODO: Linq returns empty collection singleton
-                return null;
+                return DefaultReadOnlyCollection<T>.Empty;
             } else if ((readOnlyCollection = enumerable as ReadOnlyCollection<T>) != null) {
                 return readOnlyCollection;
             } else if ((collection = enumerable as ICollection<T>) != null) {
-                T[] array = new T[collection.Count];
+                int count = collection.Count;
+                if (count == 0) {
+                    return DefaultReadOnlyCollection<T>.Empty;
+                }
+                T[] array = new T[count];
                 collection.CopyTo(array, 0);
                 return new ReadOnlyCollection<T>(array);
             } else {
-                return new ReadOnlyCollection<T>(new List<T>(enumerable));
+                // ToArray trims the excess space and speeds up access
+                return new ReadOnlyCollection<T>(new List<T>(enumerable).ToArray());
             }
         }
+
+        internal static int GetHashCode<T>(IEnumerable<T> list) {
+            int h = 6551;
+            foreach (T t in list) {
+                h ^= (h << 5) ^ t.GetHashCode();
+            }
+            return h;
+        }
+
+        internal static bool Equal<T>(ICollection<T> first, ICollection<T> second) {
+            if (first.Count != second.Count) {
+                return false;
+            }
+            IEnumerator<T> f = first.GetEnumerator();
+            IEnumerator<T> s = second.GetEnumerator();
+            while (f.MoveNext()) {
+                s.MoveNext();
+
+                if (!object.Equals(f.Current, s.Current)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    internal static class DefaultReadOnlyCollection<T> {
+        internal static ReadOnlyCollection<T> Empty = new ReadOnlyCollection<T>(new T[0]);
     }
 }

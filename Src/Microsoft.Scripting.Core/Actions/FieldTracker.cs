@@ -13,19 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+namespace System.Scripting.Actions {
     using System.Diagnostics;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class FieldTracker : MemberTracker {
         private readonly FieldInfo _field;
@@ -90,7 +86,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Public expression builders
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
             if (Field.IsLiteral) {
                 return Ast.Constant(Field.GetValue(null));
             }
@@ -105,11 +101,11 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (IsPublic && DeclaringType.IsPublic) {
-                return Ast.ReadField(null, Field);
+                return Ast.Field(null, Field);
             }
 
             return Ast.Call(
-                Ast.ConvertHelper(Ast.RuntimeConstant(Field), typeof(FieldInfo)),
+                Ast.ConvertHelper(Ast.Constant(Field), typeof(FieldInfo)),
                 typeof(FieldInfo).GetMethod("GetValue"),
                 Ast.Null()
             );
@@ -127,24 +123,16 @@ namespace Microsoft.Scripting.Actions {
 
         #region Internal expression builders
 
-        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
-            if (DeclaringType.IsGenericType && DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
-                // work around a CLR bug where we can't access generic fields from dynamic methods.
-                return Ast.Call(
-                    typeof(BinderOps).GetMethod("GetBox").MakeGenericMethod(DeclaringType.GetGenericArguments()),
-                    Ast.ConvertHelper(instance, DeclaringType)
-                );
-            }
-
+        protected internal override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
             if (IsPublic && DeclaringType.IsPublic) {
-                return Ast.ReadField(
+                return Ast.Field(
                     Ast.Convert(instance, Field.DeclaringType),
                     Field
                 );
             }
 
             return Ast.Call(
-                Ast.ConvertHelper(Ast.RuntimeConstant(Field), typeof(FieldInfo)),
+                Ast.ConvertHelper(Ast.Constant(Field), typeof(FieldInfo)),
                 typeof(FieldInfo).GetMethod("GetValue"),
                 Ast.ConvertHelper(instance, typeof(object))
             );

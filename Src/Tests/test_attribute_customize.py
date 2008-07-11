@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -33,7 +33,7 @@ def test_getattr_alone():
     
     def __init__(self): self.x = 10
     def plus_100(self, name):
-        if self.__class__ == C2: 
+        if self.__class__ == C2:
             pass
     
     for C in [C1, C2]:
@@ -54,7 +54,7 @@ def test_getattr_alone():
         C.__getattr__ = throw_assertion_error
         AssertError(AssertionError, access_z)
         
-        C.__getattr__ = lambda self, name: self.x + 200  # access attribute inside 
+        C.__getattr__ = lambda self, name: self.x + 200  # access attribute inside
         AreEqual([c.x, c.y, c.z], [10, 20, 210])
         
         del C.__getattr__
@@ -72,7 +72,7 @@ def test_setattr_alone():
         self.__dict__[name] = value + 10
         
     def add_20_via_object(self, name, value):
-        if self.__class__ == C2: 
+        if self.__class__ == C2:
             object.__setattr__(self, name, value + 20)
         if self.__class__ == C1:
             self.__dict__[name] = value + 20
@@ -82,7 +82,7 @@ def test_setattr_alone():
         
         c = C()
         c.x = 0
-        C.__setattr__ = simply_record        
+        C.__setattr__ = simply_record
         flag = 0
         c.set_something()
         AreEqual(flag, "x 10")
@@ -111,14 +111,14 @@ def test_setattr_alone():
         c.z = 40
         AreEqual([c.z, C.z], [40, 30])
 
-def test_delattr_only(): 
+def test_delattr_only():
     C1, C2 = new_classes()
     # low pri
 
 
 @disabled("bug 365168")
 def test_negative1():
-    class C: 
+    class C:
         def __setattr__(self, name, value):
             object.__setattr__(self, name, value)
 
@@ -126,11 +126,11 @@ def test_negative1():
     except TypeError: pass
     else: Fail("should have thrown: can't apply this __setattr__ to instance object")
     
-    class C: 
+    class C:
         def __getattr__(self, name):
             object.__getattribute__(self, name)
     
-    AssertErrorWithMessage(AttributeError, "'instance' object has no attribute 'x'", lambda: C().x) 
+    AssertErrorWithMessage(AttributeError, "'instance' object has no attribute 'x'", lambda: C().x)
 
 def test_bad_signatures():
     C1, C2 = new_classes()
@@ -158,13 +158,13 @@ def test_bad_signatures():
         AssertError(TypeError, lambda: c.x)
 
 def test_getattribute_only():
-    class C: 
-        def __getattribute__(self, name): 
+    class C:
+        def __getattribute__(self, name):
             return 10
     c = C()
     AssertError(AttributeError, lambda: c.x)   # __getattribute__ only works for new-style
     
-    class C(object): 
+    class C(object):
         def set_y(self): self.y = 30
             
     c = C()
@@ -176,8 +176,8 @@ def test_getattribute_only():
     
     c.x = 20
     
-    def plus_100(self, name):  
-        try: 
+    def plus_100(self, name):
+        try:
             return object.__getattribute__(self, name) + 100
         except AttributeError:
             return 200
@@ -202,7 +202,7 @@ def test_getattribute_only():
 def test_getattr_and_getattribute_together():
     class C(object): pass
 
-    c = C()    
+    c = C()
     C.__getattr__ = lambda *args: 20
     
     C.__getattribute__ = lambda *args: 30
@@ -262,7 +262,7 @@ def test_subclassing():
 
 @disabled("bug 369042")
 def test_delete_getattribute():
-    class B(object): 
+    class B(object):
         def __getattribute__(self, name): pass
     class D(B): pass
     

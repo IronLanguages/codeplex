@@ -13,13 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class Block : Expression {
         private readonly ReadOnlyCollection<Expression> /*!*/ _expressions;
 
@@ -28,56 +27,58 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal Block(Annotations annotations, ReadOnlyCollection<Expression> /*!*/ expressions, Type /*!*/ type)
-            : base(annotations, AstNodeType.Block, type) {
+            : base(annotations, ExpressionType.Block, type) {
             _expressions = expressions;
         }
     }
 
     public partial class Expression {
-        public static Expression Block(List<Expression> expressions) {
-            ContractUtils.RequiresNotNullItems(expressions, "expressions");
 
-            if (expressions.Count == 1) {
-                return expressions[0];
-            } else {
-                return Block(expressions.ToArray());
-            }
+        /// <summary>
+        /// Creates a list of expressions whose value is void.
+        /// </summary>
+        public static Block Block(IEnumerable<Expression> expressions) {
+            return Block(Annotations.Empty, expressions);
         }
 
         public static Block Block(params Expression[] expressions) {
-            return Block(SourceSpan.None, expressions);
+            return Block(Annotations.Empty, expressions);
         }
 
-        public static Block Block(SourceSpan span, params Expression[] expressions) {
-            ContractUtils.RequiresNotNullItems(expressions, "expressions");
-            return new Block(Annotate(span), CollectionUtils.ToReadOnlyCollection(expressions), typeof(void));
+        public static Block Block(Annotations annotations, params Expression[] expressions) {
+            return Block(annotations, (IEnumerable<Expression>)expressions);
         }
 
+        public static Block Block(Annotations annotations, IEnumerable<Expression> expressions) {
+            ReadOnlyCollection<Expression> expressionList = CollectionUtils.ToReadOnlyCollection(expressions);
+            ContractUtils.RequiresNotNullItems(expressionList, "expressions");
 
+            return new Block(annotations, expressionList, typeof(void));
+        }
 
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
-        public static Block Comma(IList<Expression> expressions) {
+        public static Block Comma(IEnumerable<Expression> expressions) {
             return Comma(Annotations.Empty, expressions);
         }
 
-        /// <summary>
-        /// Creates a list of expressions whose value is the value of the last expression.
-        /// </summary>
         public static Block Comma(params Expression[] expressions) {
-            return Comma((IList<Expression>)expressions);
+            return Comma(Annotations.Empty, (IEnumerable<Expression>)expressions);
         }
 
-        public static Block Comma(SourceSpan span, params Expression[] expressions) {
-            return Comma(Annotate(span), (IList<Expression>)expressions);
+        public static Block Comma(Annotations annotations, params Expression[] expressions) {
+            return Comma(annotations, (IEnumerable<Expression>)expressions);
         }
 
-        public static Block Comma(Annotations annotations, IList<Expression> expressions) {
-            ContractUtils.RequiresNotEmpty(expressions, "expressions");
-            ContractUtils.RequiresNotNullItems(expressions, "expressions");
+        public static Block Comma(Annotations annotations, IEnumerable<Expression> expressions) {
+            ReadOnlyCollection<Expression> expressionList = CollectionUtils.ToReadOnlyCollection(expressions);
 
-            return new Block(annotations, CollectionUtils.ToReadOnlyCollection(expressions), expressions[expressions.Count - 1].Type);
+            ContractUtils.RequiresNotEmpty(expressionList, "expressions");
+            ContractUtils.RequiresNotNullItems(expressionList, "expressions");
+
+            //TODO: there could be some optimizations for blocks containing single nodes.
+            return new Block(annotations, expressionList, expressionList[expressionList.Count - 1].Type);
         }
     }
 }

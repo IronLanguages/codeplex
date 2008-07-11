@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -21,7 +21,7 @@ skiptest("interpreted") #Too slow
 from System import *
 from System.Threading import *
 
-@skip("multiple_execute")    
+@skip("multiple_execute")
 def test_all():
 
     class MyOC:
@@ -58,10 +58,10 @@ def test_all():
     
     identityTable = [chr(x) for x in range(256)]
     transTable = ''
-    for x in identityTable: 
-        if ord(x) >= ord('0') and ord(x) <= ord('9'): 
+    for x in identityTable:
+        if ord(x) >= ord('0') and ord(x) <= ord('9'):
             transTable = transTable + chr(ord('A') + ord(x) - ord('0'))
-        else: 
+        else:
             transTable = transTable + x
     
     # base test infrastructure, reader thread, writer thread, and test
@@ -85,10 +85,10 @@ def test_all():
         def __call__(self, *args):
             try:
                 try:
-                    go.WaitOne()  
+                    go.WaitOne()
                     for i in xrange(loopCnt): self.writer(i, self.index)
                 except Exception, e:
-                    print 'Test failed (writer through exception)', e          
+                    print 'Test failed (writer through exception)', e
                     AssertUnreachable()
             finally:
                 global writerAlive
@@ -110,7 +110,7 @@ def test_all():
             for wr in writerWorker:
                 th = Thread(ThreadStart(writer(wr, index)))
                 th.IsBackground = True
-                th.Start()        
+                th.Start()
                 b.append(th)
                 index = index + 1
         else:
@@ -124,7 +124,7 @@ def test_all():
         for th in b: th.Join()
     
     # individual test cases, setup reader/writer workers
-    # and then call run test    
+    # and then call run test
     
     
     # OldClass test cases
@@ -250,7 +250,7 @@ def test_all():
         
         listOfLists1 = []
         listOfLists2 = []
-        for x in range(200): 
+        for x in range(200):
             listOfLists1.append([])
             listOfLists2.append([])
         for x in listOfLists1:
@@ -260,7 +260,7 @@ def test_all():
     
     def List_Sorter(i, writerIndex):
         global listOfLists1, listOfLists2
-        if writerIndex == 1: listOfLists1.sort()    
+        if writerIndex == 1: listOfLists1.sort()
         else: listOfLists2.sort()
     
     def Init_List(loopCnt):
@@ -293,7 +293,7 @@ def test_all():
         global myUserType
         myUserType = DerivedUserType
         
-    def Init_UserType(loopCnt):    
+    def Init_UserType(loopCnt):
         global oc, outsideFuncEnvValue, prevValues
         prevValues = {}
         
@@ -313,7 +313,7 @@ def test_all():
         # we keep deriving a new type from a new combination of base types - always
         # object and an ever-growing list of old-style classes.  Thread 0 is responsible
         # for pushing a new base type in.  This causes all the creation threads to hit
-        # contention and wait for a type to be published.        
+        # contention and wait for a type to be published.
         type('foo', baseTypes, {})
         
         if writerIndex == 0:
@@ -322,43 +322,43 @@ def test_all():
     
     
     
-    testCases = [ # initialization, reader, writer, test loopCnt, post-condition.  
-                  #    Multiple writes can be provided w/ a tuple   
+    testCases = [ # initialization, reader, writer, test loopCnt, post-condition.
+                  #    Multiple writes can be provided w/ a tuple
                   
                   # new type maker tests
                   (Init_NewTypeMaker, Nop, (CreateType, CreateType, CreateType, CreateType, CreateType, CreateType), 100),
                   
                   # user type tests
                   (Init_UserType, Reader_ExtraKeys, (Writer_ExtraKeys,Writer_ExtraKeys), 100000),
-                  (Init_UserType, Reader_CheckOneKey, Writer_Generic_BatchDelete, 10000), 
-                  (Init_UserType, Reader_CheckOneKey, Writer_Generic, 10000), 
-                  (Init_UserType, Reader_CheckOneKey, Writer_Generic_Delete, 10000), 
-                  (Init_UserType, Reader_Dir, Writer_Generic_BatchDelete, 10000),             
+                  (Init_UserType, Reader_CheckOneKey, Writer_Generic_BatchDelete, 10000),
+                  (Init_UserType, Reader_CheckOneKey, Writer_Generic, 10000),
+                  (Init_UserType, Reader_CheckOneKey, Writer_Generic_Delete, 10000),
+                  (Init_UserType, Reader_Dir, Writer_Generic_BatchDelete, 10000),
                   (Init_UserType, Reader_VerifyAllPresent, Writer_Generic, 10000),
                   (Init_UserType, Reader_Dir, Writer_Generic_Delete, 10000),
-                  (Init_UserType, Reader_HasAttr, Writer_Generic, 10000),             
+                  (Init_UserType, Reader_HasAttr, Writer_Generic, 10000),
                   (Init_UserType_Bases, UserType_Read_BasesAndMro, UserType_Write_Bases, 10000),
                   
                   # list tests
                   
                   (Init_List_Sort, Nop, (List_Sorter, List_Sorter), 1000),
-                  (Init_List, List_Reader, (List_Index_Writer, List_Slice_Set), 100000),           
-                  (Init_List, List_Reader, (List_Index_Writer, List_Clear), 100000),           
-                  (Init_List, List_Reader, (List_Writer), 10000, PostCondition_List(10000)),           
-                  (Init_List, List_Reader, (List_Index_Writer, List_Writer_Extend), 10000, PostCondition_List(10000*10)),           
-                  (Init_List, List_Reader, (List_Writer, List_Index_Writer), 10000, PostCondition_List(10000)),           
-                  (Init_List, Nop, (List_Writer_Extend, List_Writer_Extend), 10000, PostCondition_List(10000*2*10)),           
-                  (Init_List, Nop, (List_Writer, List_Writer, List_Writer), 10000, PostCondition_List(10000*3)),           
+                  (Init_List, List_Reader, (List_Index_Writer, List_Slice_Set), 100000),
+                  (Init_List, List_Reader, (List_Index_Writer, List_Clear), 100000),
+                  (Init_List, List_Reader, (List_Writer), 10000, PostCondition_List(10000)),
+                  (Init_List, List_Reader, (List_Index_Writer, List_Writer_Extend), 10000, PostCondition_List(10000*10)),
+                  (Init_List, List_Reader, (List_Writer, List_Index_Writer), 10000, PostCondition_List(10000)),
+                  (Init_List, Nop, (List_Writer_Extend, List_Writer_Extend), 10000, PostCondition_List(10000*2*10)),
+                  (Init_List, Nop, (List_Writer, List_Writer, List_Writer), 10000, PostCondition_List(10000*3)),
                   
                   # old-style class tests
                   (Init_OldClass, Reader_ExtraKeys, (Writer_ExtraKeys,Writer_ExtraKeys), 100000),
-                  (Init_OldClass, Reader_CheckOneKey, Writer_Generic_BatchDelete, 10000), 
-                  (Init_OldClass, Reader_CheckOneKey, Writer_Generic, 10000), 
-                  (Init_OldClass, Reader_CheckOneKey, Writer_Generic_Delete, 10000), 
-                  (Init_OldClass, Reader_Dir, Writer_Generic_BatchDelete, 10000),             
+                  (Init_OldClass, Reader_CheckOneKey, Writer_Generic_BatchDelete, 10000),
+                  (Init_OldClass, Reader_CheckOneKey, Writer_Generic, 10000),
+                  (Init_OldClass, Reader_CheckOneKey, Writer_Generic_Delete, 10000),
+                  (Init_OldClass, Reader_Dir, Writer_Generic_BatchDelete, 10000),
                   (Init_OldClass, Reader_VerifyAllPresent, Writer_Generic, 10000),
                   (Init_OldClass, Reader_Dir, Writer_Generic_Delete, 10000),
-                  (Init_OldClass, Reader_HasAttr, Writer_Generic, 10000),             
+                  (Init_OldClass, Reader_HasAttr, Writer_Generic, 10000),
                 ]
     
     def doOneTest(test):

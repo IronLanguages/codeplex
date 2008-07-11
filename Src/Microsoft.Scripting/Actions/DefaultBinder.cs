@@ -1,0 +1,320 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Public License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Public License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
+
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+
+namespace Microsoft.Scripting.Actions {
+    using Ast = System.Linq.Expressions.Expression;
+
+    /// <summary>
+    /// Provides binding semantics for a language.  This include conversions as well as support
+    /// for producing rules for actions.  These optimized rules are used for calling methods, 
+    /// performing operators, and getting members using the ActionBinder's conversion semantics.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
+    public abstract partial class DefaultBinder : ActionBinder {
+        protected DefaultBinder(ScriptDomainManager manager) : base(manager) {
+        }
+
+        /// <summary>
+        /// Produces a rule for the specified Action for the given arguments.
+        /// 
+        /// The default implementation can produce rules for standard .NET types.  Languages should
+        /// override this and provide any custom behavior they need and fallback to the default
+        /// implementation if no custom behavior is required.
+        /// </summary>
+        /// <typeparam name="T">The type of the DynamicSite the rule is being produced for.</typeparam>
+        /// <param name="action">The Action that is being performed.</param>
+        /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
+        /// <returns></returns>
+        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction/*!*/ action, object[]/*!*/ args) {
+            ContractUtils.RequiresNotNull(action, "action");
+            ContractUtils.RequiresNotNull(args, "args");
+
+            object[] extracted;
+            CodeContext callerContext = ExtractCodeContext(args, out extracted);
+
+            ContractUtils.RequiresNotNull(callerContext, "callerContext");
+
+            switch (action.Kind) {
+                case DynamicActionKind.Call:
+                    return new CallBinderHelper<T, OldCallAction>(callerContext, (OldCallAction)action, extracted).MakeRule();
+                case DynamicActionKind.GetMember:
+                    return new GetMemberBinderHelper<T>(callerContext, (OldGetMemberAction)action, extracted).MakeNewRule();
+                case DynamicActionKind.SetMember:
+                    return new SetMemberBinderHelper<T>(callerContext, (OldSetMemberAction)action, extracted).MakeNewRule();
+                case DynamicActionKind.CreateInstance:
+                    return new CreateInstanceBinderHelper<T>(callerContext, (OldCreateInstanceAction)action, extracted).MakeRule();
+                case DynamicActionKind.DoOperation:
+                    return new DoOperationBinderHelper<T>(callerContext, (OldDoOperationAction)action, extracted).MakeRule();
+                case DynamicActionKind.DeleteMember:
+                    return new DeleteMemberBinderHelper<T>(callerContext, (OldDeleteMemberAction)action, extracted).MakeRule();
+                case DynamicActionKind.InvokeMember:
+                    return new InvokeMemberBinderHelper<T>(callerContext, (OldInvokeMemberAction)action, extracted).MakeRule();
+                case DynamicActionKind.ConvertTo:
+                    return new ConvertToBinderHelper<T>(callerContext, (OldConvertToAction)action, extracted).MakeRule();
+                default:
+                    throw new NotImplementedException(action.ToString());
+            }
+        }
+        
+        protected static CodeContext ExtractCodeContext(object[] args, out object[] extracted) {
+            CodeContext cc;
+            if (args.Length > 0 && (cc = args[0] as CodeContext) != null) {
+                extracted = ArrayUtils.ShiftLeft(args, 1);
+            } else {
+                cc = null;
+                extracted = args;
+            }
+            return cc;
+        }
+
+        public virtual ErrorInfo MakeInvalidParametersError(BindingTarget target) {
+            switch (target.Result) {
+                case BindingResult.CallFailure: return MakeCallFailureError(target);
+                case BindingResult.AmbigiousMatch: return MakeAmbigiousCallError(target);
+                case BindingResult.IncorrectArgumentCount: return MakeIncorrectArgumentCountError(target);
+                default: throw new InvalidOperationException();
+            }
+        }
+
+        private static ErrorInfo MakeIncorrectArgumentCountError(BindingTarget target) {
+            int minArgs = Int32.MaxValue;
+            int maxArgs = Int32.MinValue;
+            foreach (int argCnt in target.ExpectedArgumentCount) {
+                minArgs = System.Math.Min(minArgs, argCnt);
+                maxArgs = System.Math.Max(maxArgs, argCnt);
+            }
+
+            return ErrorInfo.FromException(
+                Ast.Call(
+                    typeof(BinderOps).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] {
+                                typeof(string), typeof(int), typeof(int) , typeof(int), typeof(int), typeof(bool), typeof(bool)
+                            }),
+                    Ast.Constant(target.Name, typeof(string)),  // name
+                    Ast.Constant(minArgs),                      // min formal normal arg cnt
+                    Ast.Constant(maxArgs),                      // max formal normal arg cnt
+                    Ast.Constant(0),                            // default cnt
+                    Ast.Constant(target.ActualArgumentCount),   // args provided
+                    Ast.Constant(false),                        // hasArgList
+                    Ast.Constant(false)                         // kwargs provided
+                )
+            );
+        }
+
+        private ErrorInfo MakeAmbigiousCallError(BindingTarget target) {
+            StringBuilder sb = new StringBuilder("Multiple targets could match: ");
+            string outerComma = "";
+            foreach (MethodTarget mt in target.AmbigiousMatches) {
+                Type[] types = mt.GetParameterTypes();
+                string innerComma = "";
+
+                sb.Append(outerComma);
+                sb.Append(target.Name);
+                sb.Append('(');
+                foreach (Type t in types) {
+                    sb.Append(innerComma);
+                    sb.Append(GetTypeName(t));
+                    innerComma = ", ";
+                }
+
+                sb.Append(')');
+                outerComma = ", ";
+            }
+
+            return ErrorInfo.FromException(
+                Ast.Call(
+                    typeof(BinderOps).GetMethod("SimpleTypeError"),
+                    Ast.Constant(sb.ToString(), typeof(string))
+                )
+            );
+        }
+
+        private ErrorInfo MakeCallFailureError(BindingTarget target) {
+            foreach (CallFailure cf in target.CallFailures) {
+                switch (cf.Reason) {
+                    case CallFailureReason.ConversionFailure:
+                        foreach (ConversionResult cr in cf.ConversionResults) {
+                            if (cr.Failed) {
+                                return ErrorInfo.FromException(
+                                    Ast.Call(
+                                        typeof(BinderOps).GetMethod("SimpleTypeError"),
+                                        Ast.Constant(String.Format("expected {0}, got {1}", GetTypeName(cr.To), GetTypeName(cr.From)))
+                                    )
+                                );
+                            }
+                        }
+                        break;
+                    case CallFailureReason.DuplicateKeyword:
+                        return ErrorInfo.FromException(
+                                Ast.Call(
+                                    typeof(BinderOps).GetMethod("TypeErrorForDuplicateKeywordArgument"),
+                                    Ast.Constant(target.Name, typeof(string)),
+                                    Ast.Constant(SymbolTable.IdToString(cf.KeywordArguments[0]), typeof(string))    // TODO: Report all bad arguments?
+                            )
+                        );
+                    case CallFailureReason.UnassignableKeyword:
+                        return ErrorInfo.FromException(
+                                Ast.Call(
+                                    typeof(BinderOps).GetMethod("TypeErrorForExtraKeywordArgument"),
+                                    Ast.Constant(target.Name, typeof(string)),
+                                    Ast.Constant(SymbolTable.IdToString(cf.KeywordArguments[0]), typeof(string))    // TODO: Report all bad arguments?
+                            )
+                        );
+                    default: throw new InvalidOperationException();
+                }
+            }
+            throw new InvalidOperationException();
+        }
+
+        /// <summary>
+        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
+        /// doing this for the time being until we get a more robust error return mechanism.
+        /// </summary>
+        public virtual ErrorInfo MakeUndeletableMemberError(Type type, string name) {
+            return MakeReadOnlyMemberError(type, name);
+        }
+
+        /// <summary>
+        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
+        /// doing this for the time being until we get a more robust error return mechanism.
+        /// </summary>
+        public virtual ErrorInfo MakeReadOnlyMemberError(Type type, string name) {
+            return ErrorInfo.FromException(
+                Expression.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Expression.Constant(name)
+                )
+            );
+        }
+
+        public virtual ErrorInfo MakeEventValidation(MemberGroup/*!*/ members, Expression eventObject, Expression/*!*/ value, Expression/*!*/ codeContext) {
+            EventTracker ev = (EventTracker)members[0];
+
+            // handles in place addition of events - this validates the user did the right thing.
+            return ErrorInfo.FromValueNoError(
+                Expression.Call(
+                    typeof(BinderOps).GetMethod("SetEvent"),
+                    Expression.Constant(ev),
+                    value
+                )
+            );
+        }
+
+        /// <summary>
+        /// Checks to see if the language allows keyword arguments to be bound to instance fields or
+        /// properties and turned into sets.  By default this is only allowed on contructors.
+        /// </summary>
+        protected internal virtual bool AllowKeywordArgumentSetting(MethodBase method) {
+            return CompilerHelpers.IsConstructor(method);
+        }
+
+        public static Expression/*!*/ MakeError(ErrorInfo/*!*/ error) {
+            switch (error.Kind) {
+                case ErrorInfoKind.Error:
+                    // error meta objecT?
+                    return error.Expression;
+                case ErrorInfoKind.Exception:
+                    return Expression.Throw(error.Expression);
+                case ErrorInfoKind.Success:
+                    return error.Expression;
+                default:
+                    throw new InvalidOperationException();
+            }
+        }
+
+        public static MetaObject/*!*/ MakeError(ErrorInfo/*!*/ error, Restrictions/*!*/ restrictions) {
+            return new MetaObject(MakeError(error), restrictions);
+        }
+
+        protected TrackerTypes GetMemberType(MemberGroup/*!*/ members, out Expression error) {
+            error = null;
+            TrackerTypes memberType = TrackerTypes.All;
+            for (int i = 0; i < members.Count; i++) {
+                MemberTracker mi = members[i];
+                if (mi.MemberType != memberType) {
+                    if (memberType != TrackerTypes.All) {
+                        error = MakeAmbigiousMatchError(members);
+                        return TrackerTypes.All;
+                    }
+                    memberType = mi.MemberType;
+                }
+            }
+            return memberType;
+        }
+
+        private static Expression MakeAmbigiousMatchError(MemberGroup members) {
+            StringBuilder sb = new StringBuilder();
+            foreach (MethodTracker mi in members) {
+                if (sb.Length != 0) sb.Append(", ");
+                sb.Append(mi.MemberType);
+                sb.Append(" : ");
+                sb.Append(mi.ToString());
+            }
+
+            return Ast.New(
+                typeof(AmbiguousMatchException).GetConstructor(new Type[] { typeof(string) }),
+                Ast.Constant(sb.ToString())
+            );
+        }
+
+        internal MethodInfo GetMethod(Type type, string name) {
+            // declaring type takes precedence
+            MethodInfo mi = type.GetMethod(name);
+            if (mi != null) {
+                return mi;
+            }
+
+            // then search extension types.
+            Type curType = type;
+            do {
+                IList<Type> extTypes = GetExtensionTypes(curType);
+                foreach (Type t in extTypes) {
+                    MethodInfo next = t.GetMethod(name);
+                    if (next != null) {
+                        if (mi != null) {
+                            throw new AmbiguousMatchException(String.Format("Found multiple members for {0} on type {1}", name, curType));
+                        }
+
+                        mi = next;
+                    }
+                }
+
+                if (mi != null) {
+                    return mi;
+                }
+
+                curType = curType.BaseType;
+            } while (curType != null);
+
+            return null;
+        }
+    }
+}
+

@@ -13,16 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Runtime.CompilerServices;
+using System.Scripting;
 
 using IronPython.Runtime;
-using Microsoft.Scripting;
 
 [assembly: PythonModule("errno", typeof(IronPython.Modules.PythonErrorNumber))]
 namespace IronPython.Modules {
     public static class PythonErrorNumber {
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             PythonDictionary errorcode = new PythonDictionary();
 

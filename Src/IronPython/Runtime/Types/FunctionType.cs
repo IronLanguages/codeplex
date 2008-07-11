@@ -12,9 +12,8 @@
  *
  *
  * ***************************************************************************/
+
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -32,10 +31,6 @@ namespace Microsoft.Scripting {
         FunctionMethodMask = 0x0003,
         /// <summary>True is the function/method should be visible from pure-Python code</summary>
         AlwaysVisible = 0x0004,
-        /// <summary>we should skip the type check for the this pointer (due to base type, or an InstanceOps method).</summary>
-        SkipThisCheck = 0x0008,
-        /// <summary>True if this is a function/method declared on an Ops type (StringOps, IntOps, etc...)</summary>
-        OpsFunction = 0x0010,
         /// <summary>True if this is a __r*__ method for a CLS overloaded operator method</summary>
         ReversedOperator = 0x0020,
         /// <summary>

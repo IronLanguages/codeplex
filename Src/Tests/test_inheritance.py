@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -14,6 +14,11 @@
 #####################################################################################
 
 from lib.assert_util import *
+
+# Disabled due to Silverlight buffer overrun bug
+# Silverlight bug #403321 in TFS, DLR tracking bug 414787
+# skiptest('silverlightbug?') - bug fixed
+
 from lib.type_util import *
 
 import sys
@@ -87,7 +92,7 @@ def test_cli_new_inheritance():
         AreEqual(i.Height, 1)
         AreEqual(i.Size.width,  1)
         AreEqual(i.Size.height,  1)
-        if hasattr(i, 'ReturnHeight'): 
+        if hasattr(i, 'ReturnHeight'):
             AreEqual(i.ReturnHeight(),  1)
             AreEqual(i.ReturnWidth(),  1)
             AreEqual(i.ReturnSize().width,  1)
@@ -100,7 +105,7 @@ def test_cli_new_inheritance():
         AreEqual(i.Height,  5)
         AreEqual(i.Size.width,  2)
         AreEqual(i.Size.height,  3)
-        if hasattr(i, 'ReturnHeight'): 
+        if hasattr(i, 'ReturnHeight'):
             AreEqual(i.ReturnHeight(),  5)
             AreEqual(i.ReturnWidth(),  3)
             AreEqual(i.ReturnSize().width,  2)
@@ -115,13 +120,13 @@ def test_cli_new_inheritance():
         AreEqual(i.Size.width,  4)
         AreEqual(i.Size.height,  5)
         
-        if not hasattr(i, 'ReturnHeight'): 
+        if not hasattr(i, 'ReturnHeight'):
             # BUGBUG: We need to enable this for the inherited case.  Currently ReflectedTypeBUilder
             # is replacing the derived size w/ the base size.
             AreEqual(i.size.width, 3)
             AreEqual(i.size.height, 4)
         
-        if hasattr(i, 'ReturnHeight'): 
+        if hasattr(i, 'ReturnHeight'):
             AreEqual(i.ReturnHeight(),  9)
             AreEqual(i.ReturnWidth(),  7)
             AreEqual(i.ReturnSize().width,  4)
@@ -187,12 +192,12 @@ def test_override_hierarchy():
         
     AreEqual(D11().VirtualMethod(1), 10)
 
-@skip("win32", "silverlight") # remoting not supported in Silverlight     
+@skip("win32", "silverlight") # remoting not supported in Silverlight
 def test_mbr_inheritance():
     class InheritFromMarshalByRefObject(System.MarshalByRefObject):
         pass
     
-@skip("win32")    
+@skip("win32")
 def test_static_ctor_inheritance():
     class StaticConstructorInherit(BaseClassStaticConstructor):
         pass
@@ -201,7 +206,7 @@ def test_static_ctor_inheritance():
         
     Assert(sci.Value == 10)
 
-@skip("win32")    
+@skip("win32")
 def test_cli_overriding():
     class PythonDerived(Overriding):
         def TemplateMethod(self):
@@ -254,7 +259,7 @@ def test_cli_overriding():
         
     AreEqual(o.BigTopMethod(), "BaseBigTemplate - and Top")
 #########################################################
-@skip("win32")    
+@skip("win32")
 def test_more_inheritance():
     class CTest(Inherited):
         def TopMethod(self):
@@ -263,7 +268,7 @@ def test_more_inheritance():
     o = CTest()
     
 #########################################################
-@skip("win32")    
+@skip("win32")
 def test_interface_inheritance():
     class C(ITestIt1, ITestIt2):
         def Method(self, x=None):
@@ -283,7 +288,7 @@ def test_interface_inheritance():
         
     class SingleInherit(ITestIt1): pass
 
-@skip("win32")    
+@skip("win32")
 def test_more_interface_inheritance():
     import System
     class Point(System.IFormattable):
@@ -440,7 +445,7 @@ if is_cli or is_silverlight:
         Assert('InsertRange' in dir(PythonDerivedFromCLR()))
         Assert(hasattr(PythonDerivedFromCLR, 'Capacity'))
         Assert(hasattr(PythonDerivedFromCLR(), 'InsertRange'))
-        # 
+        #
 
 
 ##############################################################
@@ -448,7 +453,7 @@ if is_cli or is_silverlight:
 class Flag:  pass
 f = Flag()
 
-@skip("win32")    
+@skip("win32")
 def test_subclass_into_cli():
     ##
     ## Subclassing once as python class, use it; and pass into CLI again
@@ -530,7 +535,7 @@ def test_subclass_into_cli():
     AreEqual(f.v, 0)
     AreEqual(p.helperF, -3 * 2)
 
-@skip("win32")    
+@skip("win32")
 def test_subclass_twice():
     ##
     ## Subclassing twice
@@ -541,7 +546,7 @@ def test_subclass_twice():
     class PythonClass(CliAbstractClass): pass
     class PythonClass2(PythonClass): pass
 
-@skip("win32")    
+@skip("win32")
 def test_negative_cli():
         ##
         ## Negative cases: struct, enum, delegate
@@ -561,7 +566,7 @@ def test_negative_cli():
             Fail("should thrown")
         except TypeError:    pass
     
-@skip("win32")    
+@skip("win32")
 def test_all_virtuals():
         ##
         ## All Virtual stuff can be overriden? and run
@@ -726,7 +731,7 @@ def test_new_init():
     AssertError(TypeError, BadFoo)
         
         
-    ########################################################       
+    ########################################################
     # now run the __new__ tests.  Overriding __new__ should
     # allow us to change the parameters that can be passed
     # to create the function
@@ -734,7 +739,7 @@ def test_new_init():
         
     class Foo(CtorTest):
         def __new__(cls, a, b, c):
-                ret = CtorTest.__new__(CtorTest, a, b, c)            
+                ret = CtorTest.__new__(CtorTest, a, b, c)
                 return ret
         
     a = Foo(2,3,4)
@@ -748,7 +753,7 @@ def test_new_init():
         
     class Foo(CtorTest):
         def __new__(cls, *args):
-                ret = CtorTest.__new__(CtorTest, *args)            
+                ret = CtorTest.__new__(CtorTest, *args)
                 return ret
         
     
@@ -772,7 +777,7 @@ def test_new_init_combo():
         
     class Foo(CtorTest):
         def __new__(cls, *args):
-            ret = CtorTest.__new__(CtorTest, *args)            
+            ret = CtorTest.__new__(CtorTest, *args)
             return ret
         def __init__(self, *args):  pass
               
@@ -794,9 +799,9 @@ def test_new_init_combo():
         
     class Foo(CtorTest):
         def __new__(cls, *args):
-            ret = CtorTest.__new__(Foo, *args)            
+            ret = CtorTest.__new__(Foo, *args)
             return ret
-        def __init__(self): 
+        def __init__(self):
             super(CtorTest, self).__init__(self)
         
     #ok, we have a compatbile init...
@@ -812,9 +817,9 @@ def test_new_init_combo():
         
     class Foo(CtorTest):
         def __new__(cls, *args):
-            ret = CtorTest.__new__(Foo, *args)            
+            ret = CtorTest.__new__(Foo, *args)
             return ret
-        def __init__(self, x): 
+        def __init__(self, x):
             super(CtorTest, self).__init__(self, x)
         
         
@@ -891,7 +896,7 @@ def test_conversions():
         AreEqual(used.Use_UInt64(), System.UInt64.MaxValue)
         AreEqual(used.Use_UInt16(), System.UInt16.MaxValue)
         #See Merlin Work Item 294586 for details on why this isn't supported
-        if not (is_silverlight and is_interpreted()):  
+        if not (is_silverlight and is_interpreted()):
             AreEqual(used.Use_Type(), System.Type.GetType("System.Int32"))
         AreEqual(used.Use_RtEnum(), RtEnum.A)
         AreEqual(used.Use_RtDelegate().Invoke(30), 30 * 2)
@@ -899,7 +904,7 @@ def test_conversions():
         AreEqual(used.Use_RtClass().F, 1)
         AreEqual(reduce(add, used.Use_IEnumerator()),  60)
     
-@skip("win32")    
+@skip("win32")
 def test_inherit_returntypes():
         #############################################
         ## inherited all, but with correct return types
@@ -924,7 +929,7 @@ def test_inherit_returntypes():
             def M_UInt32(self): return System.UInt32.MinValue
             def M_UInt64(self): return System.UInt64.MinValue
             def M_UInt16(self): return System.UInt16.MinValue
-            def M_Type(self): 
+            def M_Type(self):
                 #See Merlin Work Item 294586 for details on this
                 if is_silverlight and is_interpreted():
                     return System.Int64
@@ -953,7 +958,7 @@ def test_inherit_returntypes():
         AreEqual(used.Use_UInt16(), System.UInt16.MinValue)
 
         #See Merlin Work Item 294586 for details on why this isn't supported
-        if not (is_silverlight and is_interpreted()):  
+        if not (is_silverlight and is_interpreted()):
             AreEqual(used.Use_Type(), System.Type.GetType("System.Int64"))
         AreEqual(used.Use_RtEnum(), RtEnum.B)
         AreEqual(used.Use_RtDelegate().Invoke(100), 100)
@@ -962,7 +967,7 @@ def test_inherit_returntypes():
         AreEqual(list(used.Use_IEnumerator()), [1, 2, 3, 4, 5])
         AreEqual(reduce(add, used.Use_IEnumerable()), 66)
     
-if is_silverlight or is_cli:    
+if is_silverlight or is_cli:
     ## return a class whose derived methods returns the same specified object
     def create_class(retObj):
         class NewC(CReturnTypes):
@@ -991,7 +996,7 @@ if is_silverlight or is_cli:
             
     def test_inherited_returntypes_odd_returns():
         #############################################
-        ## inherited all, but returns with a python old class, or new class, 
+        ## inherited all, but returns with a python old class, or new class,
         ##                    or with explicit ops
         
     
@@ -1007,7 +1012,7 @@ if is_silverlight or is_cli:
         AreEqual(used.Use_Boolean(), False)
         AreEqual(used.Use_IEnumerator(), None)
         
-        for f in [used.Use_Char, used.Use_Int32, used.Use_Int64, 
+        for f in [used.Use_Char, used.Use_Int32, used.Use_Int64,
             used.Use_Double, used.Use_Single, used.Use_Byte, used.Use_SByte, used.Use_RtEnum,
             used.Use_Int16, used.Use_UInt32, used.Use_UInt64, used.Use_UInt16, used.Use_RtStruct, ]:
             AssertError(TypeError, f)
@@ -1023,16 +1028,16 @@ if is_silverlight or is_cli:
             AreEqual(used.Use_void(), None)
             AreEqual(used.Use_Boolean(), True)
             
-            for f in [used.Use_Char, used.Use_Int32, used.Use_String, used.Use_Int64, 
-                used.Use_Double, used.Use_Single, used.Use_Byte, used.Use_SByte, 
-                used.Use_Int16, used.Use_UInt32, used.Use_UInt64, used.Use_UInt16, used.Use_Type, 
+            for f in [used.Use_Char, used.Use_Int32, used.Use_String, used.Use_Int64,
+                used.Use_Double, used.Use_Single, used.Use_Byte, used.Use_SByte,
+                used.Use_Int16, used.Use_UInt32, used.Use_UInt64, used.Use_UInt16, used.Use_Type,
                 used.Use_RtEnum, used.Use_RtStruct, used.Use_RtClass, used.Use_IEnumerator,
                 #used.Use_RtDelegate,
                 ]:
                 AssertError(TypeError, f)
             
         check_behavior(python_old_class())
-        check_behavior(python_new_class())  
+        check_behavior(python_new_class())
 
     def test_extensible_int():
         ## extensible int
@@ -1069,7 +1074,7 @@ if is_silverlight or is_cli:
         class python_old_class:
             def __int__(self): return 100
             def __float__(self): return 12345.6
-        class python_new_class(object):    
+        class python_new_class(object):
             def __int__(self): return 100
             def __float__(self): return 12345.6
             
@@ -1080,7 +1085,7 @@ if is_silverlight or is_cli:
             AreEqual(used.Use_void(), None)
             AreEqual(used.Use_Boolean(), True)
             AreEqual(used.Use_Int32(), System.Int32.Parse("100"))
-            AreEqual(used.Use_Double(), System.Double.Parse("12345.6"))
+            AreEqual(used.Use_Double(), System.Double.Parse("12345.6", System.Globalization.CultureInfo.InvariantCulture))
         
             for f in [used.Use_Int16, used.Use_UInt32, used.Use_UInt64, used.Use_UInt16, used.Use_Single,
                       used.Use_Byte, used.Use_SByte, used.Use_Int64, used.Use_Char, used.Use_String,
@@ -1107,7 +1112,7 @@ if is_silverlight or is_cli:
         AreEqual(used.Use_void(), None)
         AreEqual(flag, 60)
         
-        ## Char 
+        ## Char
         DReturnTypes.M_Char = lambda self: ord('z')
         AssertError(TypeError, used.Use_Char)
         
@@ -1141,7 +1146,7 @@ if is_silverlight or is_cli:
         AssertError(OverflowError, used.Use_Int32)
         
         ## RtClass
-        class MyRtClass(RtClass): 
+        class MyRtClass(RtClass):
             def __init__(self, value):
                 super(MyRtClass, self).__init__(value)
             
@@ -1169,11 +1174,12 @@ if is_silverlight or is_cli:
         AreEqual(reduce(add, used.Use_IEnumerable()), 45)
         
         ## RtDelegate
-        def func2(arg1, arg2): return arg1 * arg2 
+        def func2(arg1, arg2): return arg1 * arg2
         
         DReturnTypes.M_RtDelegate = lambda self : func2
-        AssertError(TypeError, used.Use_RtDelegate)
-    
+        delegate = used.Use_RtDelegate()
+        AssertError(TypeError, delegate, 1)
+
     def test_redefine_non_virtual():
         #############################################
         ## Redefine non-virtual method:
@@ -1183,7 +1189,7 @@ if is_silverlight or is_cli:
         used = UseCReturnTypes(DReturnTypes())
         AreEqual(used.Use_NonVirtual(), 100)
         
-        class DReturnTypes(CReturnTypes): 
+        class DReturnTypes(CReturnTypes):
             def M_NonVirtual(self): return 200
         
         used = UseCReturnTypes(DReturnTypes())
@@ -1196,7 +1202,7 @@ if is_silverlight or is_cli:
         def test_returntype(basetype, usetype):
             class derived(basetype): pass
             
-            used = usetype(derived()) 
+            used = usetype(derived())
         
             for f in [ used.Use_void,used.Use_Char,used.Use_Int32,used.Use_String,used.Use_Int64,used.Use_Double,used.Use_Boolean,
                 used.Use_Single,used.Use_Byte,used.Use_SByte,used.Use_Int16,used.Use_UInt32,used.Use_UInt64,used.Use_UInt16,
@@ -1222,7 +1228,7 @@ if is_silverlight or is_cli:
                 def M_Type(self):
                     #See Merlin Work Item 294586 for details on this
                     if is_silverlight and is_interpreted():
-                        return System.Int64 
+                        return System.Int64
                     return System.Type.GetType("System.Int64")
                 def M_RtEnum(self): return RtEnum.B
                 def M_RtDelegate(self): return lambda arg: arg * 5
@@ -1248,7 +1254,7 @@ if is_silverlight or is_cli:
             AreEqual(used.Use_UInt64(), System.UInt64.MinValue)
             AreEqual(used.Use_UInt16(), System.UInt16.MinValue)
             #See Merlin Work Item 294586 for details on why this isn't supported
-            if not (is_silverlight and is_interpreted()):  
+            if not (is_silverlight and is_interpreted()):
                 AreEqual(used.Use_Type(), System.Type.GetType("System.Int64"))
             AreEqual(used.Use_RtEnum(), RtEnum.B)
             AreEqual(used.Use_RtDelegate().Invoke(100), 100 * 5)
@@ -1271,7 +1277,7 @@ if is_silverlight or is_cli:
                 exec 'def M%d(self):\n    self.funcCalled = True\n    return super(type(self), self).M%d()' % (x, x)
         
         a = BigVirtualDerived()
-        for x in range(50): 
+        for x in range(50):
             # call from Python
             AreEqual(a.funcCalled, False)
             AreEqual(x, getattr(a, 'M'+str(x))())
@@ -1284,12 +1290,12 @@ if is_silverlight or is_cli:
     
 def test_super_inheritance():
     # descriptor for super should return derived class, not a new instance of super
-    class foo(super): 
+    class foo(super):
         def __init__(self, *args):
             return super(foo, self).__init__(*args)
     
     
-    class bar(object): pass    
+    class bar(object): pass
     
     # when lookup comes from super's class it should
     # be from it's type, not from the super base type
@@ -1300,7 +1306,7 @@ def test_super_inheritance():
     x = foo(bar)
     AreEqual(type(x.__get__(bar, foo) ), foo)   # once by calling descriptor directly
     
-def test_super_new_init():    
+def test_super_new_init():
     x = super.__new__(super)
     AreEqual(x.__thisclass__, None)
     AreEqual(x.__self__, None)
@@ -1362,7 +1368,7 @@ def test_super_proxy():
         def f(self):
             return "B.f"
     
-    class C(B):    
+    class C(B):
         def f(self):
             return super(C, self).f() + "->C.f"
             
@@ -1372,4 +1378,13 @@ def test_super_proxy():
     p = Proxy(obj)
     AreEqual(C.f(p), 'B.f->C.f')
     
+def test_super_tostring():
+    class C(object):        
+        def __new__(cls):
+            x = super(cls, C)
+            Assert("<super" in str(x))
+            return x.__new__(cls)
+
+    c = C()    
+	
 run_test(__name__)

@@ -13,16 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class ThrowStatement : Expression {
         private readonly Expression _val;
 
         internal ThrowStatement(Annotations annotations, Expression value)
-            : base(annotations, AstNodeType.ThrowStatement, typeof(void)) {
+            : base(annotations, ExpressionType.ThrowStatement, typeof(void)) {
             _val = value;
         }
 
@@ -41,22 +39,14 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Expression {
         public static ThrowStatement Rethrow() {
-            return Throw(SourceSpan.None, null);
-        }
-
-        public static ThrowStatement Rethrow(SourceSpan span) {
-            return Throw(span, null);
+            return Throw(null);
         }
 
         public static ThrowStatement Throw(Expression value) {
-            return Throw(SourceSpan.None, value);
+            return Throw(value, Annotations.Empty);
         }
 
-        public static ThrowStatement Throw(SourceSpan span, Expression value) {
-            return Throw(Annotate(span), value);
-        }
-
-        public static ThrowStatement Throw(Annotations annotations, Expression value) {
+        public static ThrowStatement Throw(Expression value, Annotations annotations) {
             if (value != null) {
                 ContractUtils.Requires(TypeUtils.CanAssign(typeof(Exception), value.Type));
             }

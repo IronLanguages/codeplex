@@ -16,23 +16,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.IO;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython;
-using IronPython.Compiler;
+using System.IO;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
 using IronPython.Hosting;
 using IronPython.Runtime;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
+using Microsoft.Scripting.Hosting;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -241,8 +235,8 @@ namespace IronPythonTest {
         public void ScenarioEvaluateInPublishedEngineModule() {
             PythonContext pc = DefaultContext.DefaultPythonContext;
 
-            PythonModule publishedModule = pc.CreateModule("published_context_test");
-            PythonModule otherModule = pc.CreateModule("published_context_test");
+            PythonModule publishedModule = pc.CreateModule();
+            PythonModule otherModule = pc.CreateModule();
             pc.PublishModule("published_context_test", publishedModule);
 
             pc.CreateSnippet("x = 0", SourceCodeKind.Statements).Execute(otherModule.Scope);
@@ -428,38 +422,6 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
             //IntIntDelegate d = pe.CreateLambda<IntIntDelegate>("customSymbol + arg", customModule);
             //AreEqual(d(1), CustomDictionary.customSymbolValue + 1);
         }
-
-        static long GetTotalMemory() {
-            // Critical objects can take upto 3 GCs to be collected
-            for (int i = 0; i < 3; i++) {
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-            }
-            return GC.GetTotalMemory(true);
-        }
-
-#if !SILVERLIGHT
-        public void ScenarioXGC() {
-            long initialMemory = GetTotalMemory();
-
-            // Create multiple scopes:
-            for (int i = 0; i < 10000; i++) {
-                ScriptScope scope = _pe.CreateScope();
-                scope.SetVariable("x", "Hello");
-                _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\simpleCommand.py").Execute(scope);
-                AreEqual(_pe.CreateScriptSourceFromString("x").Execute<int>(scope), 1);
-            }
-
-            long finalMemory = GetTotalMemory();
-            long memoryUsed = finalMemory - initialMemory;
-            const long memoryThreshold = 100000;
-
-            if (!_env.GlobalOptions.EmitsUncollectableCode) {
-                if (memoryUsed > memoryThreshold)
-                    throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));
-            }
-        }
-#endif
 
         // Evaluate
         public void ScenarioEvaluate() {

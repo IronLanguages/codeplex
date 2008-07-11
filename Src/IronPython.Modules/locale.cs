@@ -14,25 +14,24 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
-using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
     public static class PythonLocale {
         private static readonly object _localeKey = new object();
-        
+
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             EnsureLocaleInitialized(context);
         }

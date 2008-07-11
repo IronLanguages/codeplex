@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using Ast = System.Linq.Expressions.Expression;
 
     class Index : Expression {
         private readonly Expression _target;
@@ -40,13 +40,7 @@ namespace ToyScript.Parser.Ast {
                     Ast.ConvertHelper(_index.Generate(tg), typeof(object))
                 );
             } else {
-                return Ast.Action.Operator(
-                    tg.Binder,
-                    Operators.GetItem,
-                    typeof(object),
-                    _target.Generate(tg),
-                    _index.Generate(tg)
-                );
+                return tg.Operator(Operators.GetItem, _target.Generate(tg), _index.Generate(tg));
             }
         }
 
@@ -59,10 +53,7 @@ namespace ToyScript.Parser.Ast {
                     Ast.ConvertHelper(right, typeof(object))
                 );
             } else {
-                return Ast.Action.Operator(
-                    tg.Binder,
-                    Operators.SetItem,
-                    typeof(object),
+                return tg.SetItem(
                     _target.Generate(tg),
                     _index.Generate(tg),
                     right

@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
+using IronPython.Runtime.Operations;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using IronPython.Runtime.Operations;
 
     public class DelStatement : Statement {
         private readonly Expression[] _expressions;
@@ -39,7 +39,7 @@ namespace IronPython.Compiler.Ast {
                     throw PythonOps.SyntaxError(string.Format("can't delete {0}", _expressions[i].NodeName), ag.Context.SourceUnit, _expressions[i].Span, 1);
                 }
             }
-            return Ast.Block(
+            return AstUtils.Block(
                 Span,
                 statements
             );
@@ -54,6 +54,18 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                foreach (Expression e in _expressions) {
+                    if (e.CanThrow) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
         }
     }
 }

@@ -13,42 +13,36 @@
  *
  * ***************************************************************************/
 
+#if !SILVERLIGHT // System.NET
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Exceptions;
-
-
-#if !SILVERLIGHT // System.NET
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Net.Security;
-using System.IO;
+using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-
+using Microsoft.Scripting.Math;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
-    public static class PythonSocket {
+    public static partial class PythonSocket {
         private static readonly object _defaultTimeoutKey = new object();
         private static readonly object _defaultBufsizeKey = new object();
         private const int DefaultBufferSize = 8192;
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             if (!context.HasModuleState(_defaultTimeoutKey)) {
                 context.SetModuleState(_defaultTimeoutKey, null);
@@ -101,14 +95,16 @@ namespace IronPython.Modules {
             /// In particular, this allows the select module to convert file numbers (as returned by
             /// fileno()) and convert them to Socket objects so that it can do something useful with them.
             /// </summary>
-            private static readonly Dictionary<IntPtr, List<Socket>> handleToSocket = new Dictionary<IntPtr, List<Socket>>();
+            private static readonly Dictionary<IntPtr, WeakReference> _handleToSocket = new Dictionary<IntPtr, WeakReference>();
 
             private const int DefaultAddressFamily = (int)AddressFamily.InterNetwork;
             private const int DefaultSocketType = (int)System.Net.Sockets.SocketType.Stream;
             private const int DefaultProtocolType = (int)ProtocolType.Unspecified;
 
             internal Socket _socket;
-            private WeakRefTracker weakRefTracker = null;
+            internal string _hostName;
+            private WeakRefTracker _weakRefTracker = null;
+            private int _referenceCount = 1;
 
             #endregion
 
@@ -138,6 +134,10 @@ namespace IronPython.Modules {
                     throw MakeException(e);
                 }
                 Initialize(context, newSocket);
+            }
+
+            ~socket() {
+                close(true, true);
             }
 
             [Documentation("accept() -> (conn, address)\n\n"
@@ -172,7 +172,7 @@ namespace IronPython.Modules {
                 + "and 5000."
                 )]
             public void bind(PythonTuple address) {
-                IPEndPoint localEP = TupleToEndPoint(address, _socket.AddressFamily);
+                IPEndPoint localEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
                 try {
                     _socket.Bind(localEP);
                 } catch (Exception e) {
@@ -182,23 +182,30 @@ namespace IronPython.Modules {
 
             [Documentation("close() -> None\n\nClose the socket. It cannot be used after being closed.")]
             public void close() {
-                RemoveHandleSocketMapping(this);
-                try {
-                    _socket.Close();
-                } catch (Exception e) {
-                    throw MakeException(e);
-                }
+                close(false, false);
             }
 
-            internal static void RemoveHandleSocketMapping(socket socket) {
-                lock (handleToSocket) {
-                    List<Socket> sockets;
-                    if (handleToSocket.TryGetValue((IntPtr)socket._socket.Handle, out sockets)) {
-                        if (sockets.Contains(socket._socket)) {
-                            sockets.Remove(socket._socket);
+            internal void close(bool finalizing, bool removeAll) {
+                if (finalizing || removeAll || System.Threading.Interlocked.Decrement(ref _referenceCount) == 0) {
+                    lock (_handleToSocket) {
+                        WeakReference weakref;
+                        if (_handleToSocket.TryGetValue(_socket.Handle, out weakref)) {
+                            Socket target = (weakref.Target as Socket);
+                            if (target == _socket || target == null) {
+                                _handleToSocket.Remove(_socket.Handle);
+                            }
                         }
-                        if (sockets.Count == 0) {
-                            handleToSocket.Remove(socket._socket.Handle);
+                    }
+                    _referenceCount = 0;
+                    if (!finalizing) {
+                        GC.SuppressFinalize(this);
+                    }
+
+                    try {
+                        _socket.Close();
+                    } catch (Exception e) {
+                        if (!finalizing) {
+                            throw MakeException(e);
                         }
                     }
                 }
@@ -216,7 +223,7 @@ namespace IronPython.Modules {
                 + "indefinitely until a connection is made or an error occurs."
                 )]
             public void connect(PythonTuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily);
+                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
                 try {
                     _socket.Connect(remoteEP);
                 } catch (Exception e) {
@@ -237,7 +244,7 @@ namespace IronPython.Modules {
                 + "block indefinitely until a connection is made or an error occurs."
                 )]
             public int connect_ex(PythonTuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily);
+                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
                 try {
                     _socket.Connect(remoteEP);
                 } catch (SocketException e) {
@@ -335,7 +342,7 @@ namespace IronPython.Modules {
                 + "Return a regular file object corresponding to the socket.  The mode\n"
                 + "and bufsize arguments are as for the built-in open() function.")]
             public PythonFile makefile(CodeContext/*!*/ context, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
-                AddHandleMapping(this); // dup our handle
+                System.Threading.Interlocked.Increment(ref _referenceCount); // dup our handle
                 return new _fileobject(context, this, mode, bufSize);
             }
 
@@ -455,7 +462,7 @@ namespace IronPython.Modules {
                 )]
             public int sendto(string data, int flags, PythonTuple address) {
                 byte[] buffer = StringOps.ToByteArray(data);
-                EndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily);
+                EndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
                 try {
                     return _socket.SendTo(buffer, (SocketFlags)flags, remoteEP);
                 } catch (Exception e) {
@@ -591,14 +598,22 @@ namespace IronPython.Modules {
                 }
             }
 
+            public int family {
+                get { return (int)_socket.AddressFamily; }
+            }
+
+            public int type {
+                get { return (int)_socket.SocketType; }
+            }
+
+            public int proto {
+                get { return (int)_socket.ProtocolType; }
+            }
+
             public override string ToString() {
                 try {
-                    return "<socket object, fd=" + fileno().ToString()
-                        + ", family=" + ((int)_socket.AddressFamily).ToString()
-                        + ", type=" + ((int)_socket.SocketType).ToString()
-                        + ", protocol=" + ((int)_socket.ProtocolType).ToString()
-                        + ">"
-                    ;
+                    return String.Format("<socket object, fd={0}, family={1}, type={2}, protocol={3}>", 
+                        fileno(), family, type, proto);
                 } catch {
                     return "<socket object, fd=?, family=?, type=, protocol=>";
                 }
@@ -611,12 +626,10 @@ namespace IronPython.Modules {
             /// networking primitives. User code should not normally need to call this function.
             /// </summary>
             internal static Socket HandleToSocket(Int64 handle) {
-                List<Socket> sockets;
-                lock (handleToSocket) {
-                    if (handleToSocket.TryGetValue((IntPtr)handle, out sockets)) {
-                        if (sockets.Count > 0) {
-                            return sockets[0];
-                        }
+                WeakReference weakref;
+                lock (_handleToSocket) {
+                    if (_handleToSocket.TryGetValue((IntPtr)handle, out weakref)) {
+                        return (weakref.Target as Socket);
                     }
                 }
                 return null;
@@ -627,16 +640,16 @@ namespace IronPython.Modules {
             #region IWeakReferenceable Implementation
 
             WeakRefTracker IWeakReferenceable.GetWeakRef() {
-                return weakRefTracker;
+                return _weakRefTracker;
             }
 
             bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
-                weakRefTracker = value;
+                _weakRefTracker = value;
                 return true;
             }
 
             void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
-                weakRefTracker = value;
+                _weakRefTracker = value;
             }
 
             #endregion
@@ -662,22 +675,13 @@ namespace IronPython.Modules {
                 } else {
                     settimeout((double)defaultTimeout / MillisecondsPerSecond);
                 }
-                AddHandleMapping(this);
-            }
-
-            private static void AddHandleMapping(socket socket) {
-                lock (handleToSocket) {
-                    if (!handleToSocket.ContainsKey(socket._socket.Handle)) {
-                        handleToSocket[socket._socket.Handle] = new List<Socket>(1);
-                    }
-                    if (!handleToSocket[socket._socket.Handle].Contains(socket._socket)) {
-                        handleToSocket[socket._socket.Handle].Add(socket._socket);
-                    }
+                _hostName = null;
+                lock (_handleToSocket) {
+                    _handleToSocket[socket.Handle] = new WeakReference(socket);
                 }
             }
 
             #endregion
-
         }
 
         #endregion
@@ -1314,7 +1318,7 @@ namespace IronPython.Modules {
         /// Return a standard socket exception (socket.error) whose message and error code come from a SocketException
         /// This will eventually be enhanced to generate the correct error type (error, herror, gaierror) based on the error code.
         /// </summary>
-        private static Exception MakeException(Exception exception) {
+        internal static Exception MakeException(Exception exception) {
             // !!! this shouldn't just blindly set the type to error (see summary)
             if (exception is SocketException) {
                 SocketException se = (SocketException)exception;
@@ -1490,12 +1494,11 @@ namespace IronPython.Modules {
         ///  - address[0] is not a string
         ///  - address[1] is not an int
         /// </summary>
-        private static IPEndPoint TupleToEndPoint(PythonTuple address, AddressFamily family) {
+        private static IPEndPoint TupleToEndPoint(PythonTuple address, AddressFamily family, out string host) {
             if (address.__len__() != 2 && address.__len__() != 4) {
                 throw PythonOps.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
             }
 
-            string host;
             try {
                 host = Converter.ConvertToString(address[0]);
             } catch (ArgumentTypeException) {
@@ -1556,15 +1559,18 @@ namespace IronPython.Modules {
         }
 
         class PythonUserSocketStream : Stream {
-            private object _userSocket;
+            private readonly object _userSocket;
             private List<string> _data = new List<string>();
-            private int _dataSize, _bufSize;
+            private int _dataSize;
+            private readonly int _bufSize;
+            private readonly bool _close;
             private static readonly DynamicSite<object, object, object> _sendAllSite = CallSiteFactory.CreateSimpleCallSite<object, object, object>(DefaultContext.DefaultPythonBinder);
             private static readonly DynamicSite<object, object, string> _recvSite = CallSiteFactory.CreateSimpleCallSite<object, object, string>(DefaultContext.DefaultPythonBinder);
 
-            public PythonUserSocketStream(object userSocket, int bufferSize) {
+            public PythonUserSocketStream(object userSocket, int bufferSize, bool close) {
                 _userSocket = userSocket;
                 _bufSize = bufferSize;
+                _close = close;
             }
 
             public override bool CanRead {
@@ -1636,7 +1642,7 @@ namespace IronPython.Modules {
             protected override void Dispose(bool disposing) {
                 socket sock = _userSocket as socket;
                 if (sock != null) {
-                    socket.RemoveHandleSocketMapping(sock);
+                    sock.close(false, _close);
                 }
             }
         }
@@ -1644,31 +1650,44 @@ namespace IronPython.Modules {
         [PythonSystemType]
         public class _fileobject : PythonFile {
             public new const string name = "<socket>";
+            private readonly socket _socket = null;
+            private readonly bool _close;
 
             public _fileobject(CodeContext/*!*/ context, socket socket)
-                : this(context, socket, "rb", -1) {
+                : this(context, socket, "rb", -1, false) {
             }
 
             public _fileobject(CodeContext/*!*/ context, socket socket, string mode)
-                : this(context, socket, mode, -1) {
+                : this(context, socket, mode, -1, false) {
             }
 
             public _fileobject(CodeContext/*!*/ context, socket socket, string mode, int bufsize)
+                : this(context, socket, mode, bufsize, false) {
+            }
+
+            public _fileobject(CodeContext/*!*/ context, socket socket, string mode, int bufsize, bool close)
                 : base(PythonContext.GetContext(context)) {
-                base.__init__(new NetworkStream(socket._socket), System.Text.Encoding.Default, mode);                
+                _socket = socket;
+                _close = close;
+                base.__init__(new NetworkStream(socket._socket), System.Text.Encoding.Default, mode);
             }
 
             public _fileobject(CodeContext/*!*/ context, object socket)
-                : this(context, socket, "rb", -1) {
+                : this(context, socket, "rb", -1, false) {
             }
 
             public _fileobject(CodeContext/*!*/ context, object socket, string mode)
-                : this(context, socket, mode, -1) {
+                : this(context, socket, mode, -1, false) {
             }
 
             public _fileobject(CodeContext/*!*/ context, object socket, string mode, int bufsize)
+                : this(context, socket, mode, bufsize, false) {
+            }
+
+            public _fileobject(CodeContext/*!*/ context, object socket, string mode, int bufsize, bool close)
                 : base(PythonContext.GetContext(context)) {
-                base.__init__(new PythonUserSocketStream(socket, GetBufferSize(context, bufsize)), System.Text.Encoding.Default, mode);
+                base.__init__(new PythonUserSocketStream(socket, GetBufferSize(context, bufsize), close), System.Text.Encoding.Default, mode);
+                _close = close;
             }
 
             public void __init__(params object[] args) {
@@ -1679,14 +1698,21 @@ namespace IronPython.Modules {
                 return size;
             }
 
-            [SpecialName, PropertyMethod]
+            [SpecialName, PropertyMethod, StaticExtensionMethod]
             public static object Getdefault_bufsize(CodeContext/*!*/ context) {
                 return PythonContext.GetContext(context).GetModuleState(_defaultBufsizeKey);
             }
 
-            [SpecialName, PropertyMethod]
+            [SpecialName, PropertyMethod, StaticExtensionMethod]
             public static void Setdefault_bufsize(CodeContext/*!*/ context, object value) {
                 PythonContext.GetContext(context).SetModuleState(_defaultBufsizeKey, value);
+            }
+
+            protected override void Dispose(bool disposing) {
+                base.Dispose(disposing);
+                if (_socket != null) {
+                    _socket.close(false, _close);
+                }
             }
         }
         #endregion

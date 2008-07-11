@@ -14,21 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections;
-using System.Diagnostics;
-using System.Globalization;
-using System.Threading;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Math;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
 
@@ -78,7 +67,7 @@ namespace IronPython.Runtime.Operations {
         [return: MaybeNotImplemented]
         public static object DivMod(double x, double y) {
             object div = FloorDivide(x, y);
-            if (div == PythonOps.NotImplemented) return div;
+            if (div == NotImplementedType.Value) return div;
             return PythonTuple.MakeTuple(div, Mod(x, y));
         }
 
@@ -159,43 +148,72 @@ namespace IronPython.Runtime.Operations {
             return x.ToString(format, provider);
         }
 
-        public static int __hash__(double x) {
-            return (int)x;
-        }
-
-        public static string __str__(float x) {
-            // Python does not natively support System.Single. However, we try to provide
-            // formatting consistent with System.Double.
-            StringFormatter sf = new StringFormatter("%.6g", x);
-            sf._TrailingZeroAfterWholeFloat = true;
-            return sf.Format();
+        public static int __hash__(double d) {
+            // Python allows equality between floats, ints, and big ints.
+            if ((d % 1) == 0) {
+                // This double represents an integer number, so it must hash like an integer number.
+                if (Int32.MinValue <= d && d <= Int32.MaxValue) {
+                    return ((int)d).GetHashCode();
+                }
+                // Big integer
+                BigInteger b = BigInteger.Create(d);
+                return BigIntegerOps.__hash__(b);
+            }
+            return d.GetHashCode();
         }
 
         #endregion
 
         [SpecialName]
         public static bool LessThan(double x, double y) {
-            return Compare(x, y) < 0;
+            if (Double.IsInfinity(x) && Double.IsNaN(y)) {
+                return false;
+            } else if (Double.IsNaN(x) && Double.IsInfinity(y)) {
+                return false;
+            }
+
+            return x < y;
         }
         [SpecialName]
         public static bool LessThanOrEqual(double x, double y) {
-            return Compare(x, y) <= 0;
+            if (x == y) {
+                return x != Double.NaN;
+            }
+
+            return x < y;
         }
+
         [SpecialName]
         public static bool GreaterThan(double x, double y) {
-            return Compare(x, y) > 0;
+            if (Double.IsInfinity(x) && Double.IsNaN(y)) {
+                return false;
+            } else if (Double.IsNaN(x) && Double.IsInfinity(y)) {
+                return false;
+            }
+
+            return x > y;
         }
+
         [SpecialName]
         public static bool GreaterThanOrEqual(double x, double y) {
-            return Compare(x, y) >= 0;
+            if (x == y) {
+                return x != Double.NaN;
+            }
+
+            return x > y;
         }
+
         [SpecialName]
         public static bool Equals(double x, double y) {
-            return Compare(x, y) == 0;
+            if (x == y) {
+                return x != Double.NaN;
+            }
+            return x == y;
         }
+
         [SpecialName]
         public static bool NotEquals(double x, double y) {
-            return Compare(x, y) != 0;
+            return !Equals(x, y);
         }
 
         [SpecialName]
@@ -304,10 +322,62 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static bool NotEquals(Double x, int y) {
             return x != y;
-        }       
+        }
+
+        public static string __repr__(double self) {
+            return DoubleOps.__str__(self);
+        }
+
+        public static BigInteger/*!*/ __long__(double self) {
+            return BigInteger.Create(self);
+        }
+
+        public static double __float__(double self) {
+            return self;
+        }
     }
 
     public partial class SingleOps {
+        [SpecialName]
+        public static bool LessThan(float x, float y) {
+            return x < y;
+        }
+        [SpecialName]
+        public static bool LessThanOrEqual(float x, float y) {
+            if (x == y) {
+                return x != Single.NaN;
+            }
+
+            return x < y;
+        }
+
+        [SpecialName]
+        public static bool GreaterThan(float x, float y) {
+            return x > y;
+        }
+
+        [SpecialName]
+        public static bool GreaterThanOrEqual(float x, float y) {
+            if (x == y) {
+                return x != Single.NaN;
+            }
+
+            return x > y;
+        }
+
+        [SpecialName]
+        public static bool Equals(float x, float y) {
+            if (x == y) {
+                return x != Single.NaN;
+            }
+            return x == y;
+        }
+
+        [SpecialName]
+        public static bool NotEquals(float x, float y) {
+            return !Equals(x, y);
+        }
+
         [SpecialName]
         public static float Mod(float x, float y) {
             return (float)DoubleOps.Mod(x, y);
@@ -319,7 +389,15 @@ namespace IronPython.Runtime.Operations {
         }
         
         public static string __str__(float x) {
-            return DoubleOps.__str__(x);
+            // Python does not natively support System.Single. However, we try to provide
+            // formatting consistent with System.Double.
+            StringFormatter sf = new StringFormatter("%.6g", x);
+            sf._TrailingZeroAfterWholeFloat = true;
+            return sf.Format();
+        }
+
+        public static string __repr__(float self) {
+            return __str__(self);
         }
     }
 }

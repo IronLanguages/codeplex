@@ -13,13 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 [assembly: ExtensionType(typeof(IronPythonTest.ExtendedClass), typeof(IronPythonTest.ExtensionClass))]
 namespace IronPythonTest {

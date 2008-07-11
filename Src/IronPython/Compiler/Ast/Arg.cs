@@ -13,14 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
-
+using System.Scripting;
+using System.Scripting.Actions;
 using IronPython.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     public class Arg : Node {

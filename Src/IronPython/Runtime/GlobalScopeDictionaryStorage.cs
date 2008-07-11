@@ -13,13 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     internal class GlobalScopeDictionaryStorage : ScopeDictionaryStorage {

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -75,7 +75,7 @@ def test_multidim_array():
 
 @skip('win32')
 def test_array():
-    # verify that slicing an array returns an array of the proper type               
+    # verify that slicing an array returns an array of the proper type
     from System import Array
     data = Array[int]( (2,3,4,5,6) )
     
@@ -204,18 +204,18 @@ def test_indexable_list():
 
 @skip('win32')
 def test_generic_function():
-	# all should succeed at indexing
-	x = GenMeth.StaticMeth[int, int]
-	x = GenMeth.StaticMeth[int]
-	x = GenMeth.StaticMeth[(int, int)]
-	x = GenMeth.StaticMeth[(int,)]
+    # all should succeed at indexing
+    x = GenMeth.StaticMeth[int, int]
+    x = GenMeth.StaticMeth[int]
+    x = GenMeth.StaticMeth[(int, int)]
+    x = GenMeth.StaticMeth[(int,)]
 
 def test_getorsetitem_override():
     class old_base: pass
 
-    for base in [object, list, dict, int, str, tuple, float, long, complex, old_base]:        
+    for base in [object, list, dict, int, str, tuple, float, long, complex, old_base]:
         class foo(base):
-            def __getitem__(self, index): 
+            def __getitem__(self, index):
                 return index
             def __setitem__(self, index, value):
                 self.res = (index, value)
@@ -239,11 +239,11 @@ def test_getorsetitem_override():
         a[(5,)] = "D"; AreEqual(a.res, ((5,), "D"))
         a[6,] = "E"; AreEqual(a.res, ((6,), "E"))
 
-def test_getorsetitem_super():        
+def test_getorsetitem_super():
     tests = [  # base type, constructor arg, result of index 0
-       (list,(1,2,3,4,5), 1), 
-        (dict,{0:2, 3:4, 5:6, 7:8}, 2), 
-        (str,'abcde', 'a'), 
+       (list,(1,2,3,4,5), 1),
+        (dict,{0:2, 3:4, 5:6, 7:8}, 2),
+        (str,'abcde', 'a'),
         (tuple, (1,2,3,4,5), 1),]
         
     for testInfo in tests:
@@ -292,8 +292,8 @@ def test_getorsetitem_super():
         
 def test_getorsetitem_slice():
     tests = [  # base type, constructor arg, result of index 0
-       (list,(1,2,3,4,5), 1, lambda x: [x]), 
-        (str,'abcde', 'a', lambda x: x), 
+       (list,(1,2,3,4,5), 1, lambda x: [x]),
+        (str,'abcde', 'a', lambda x: x),
         (tuple, (1,2,3,4,5), 1, lambda x: (x,)),]
     
     for testInfo in tests:
@@ -374,12 +374,12 @@ def test_assignment_order():
   c=Q()
   def f():
     c[0]=1 # do a side effect to log execution order of f()
-    return 'x' 
-  # Now execute the interesting statement. This has side-effects in c.log to log execution order.  
+    return 'x'
+  # Now execute the interesting statement. This has side-effects in c.log to log execution order.
   c[5]=c[2]=f()
   # now check that order is as expected
   # - assignments should occur from left to right
-  # - rhs expression is evalled first, and should only be executed once, 
+  # - rhs expression is evalled first, and should only be executed once,
   AreEqual(c.log, "(idx=0, val=1)(idx=5, val=x)(idx=2, val=x)")
 
 def test_custom_indexer():
@@ -389,13 +389,13 @@ def test_custom_indexer():
         def __index__(self):
             return self.index
     
-    for sliceable in [x(range(5)) for x in (list, tuple)]:        
+    for sliceable in [x(range(5)) for x in (list, tuple)]:
         AreEqual(sliceable[cust_index(0L)], 0)
         AreEqual(sliceable[cust_index(0)], 0)
         AreEqual(list(sliceable[cust_index(0L) : cust_index(3L)]), [0, 1, 2])
         AreEqual(list(sliceable[cust_index(0) : cust_index(3)]), [0, 1, 2])
     
-    # dictionary indexing shouldn't be affected    
+    # dictionary indexing shouldn't be affected
     x = cust_index(42)
     d = {x:3}
     AreEqual(d[x], 3)
@@ -406,4 +406,14 @@ def test_custom_indexer():
         from System.Collections.Generic import List
         List[int]
     
+@skip('win32')
+def test_csharp_enumeration():
+    a = CSharpEnumerable()
+    for method in ('GetEnumerableOfInt', 'GetEnumerableOfObject', 'GetEnumerable',
+            'GetEnumeratorOfInt', 'GetEnumeratorOfObject', 'GetEnumerator'):
+        sum = 0
+        for i in getattr(a, method)():
+            sum = sum + i
+        AreEqual(sum, 6)
+
 run_test(__name__)

@@ -13,20 +13,24 @@
  *
  * ***************************************************************************/
 
+#if SILVERLIGHT
+extern alias systemcore;
+using TimeZoneInfo = systemcore::System.TimeZoneInfo;
+#endif
+
 using System;
-using System.Threading;
-using System.Globalization;
-using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
+using System.Threading;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
@@ -43,6 +47,8 @@ namespace IronPython.Modules {
         private const int MaxIndex = 9;
 
         private const int minYear = 1900;   // minimum year for python dates (CLS dates are bigger)
+        private const double epochDifference = 62135568000.0; // Difference between CLS epoch and UNIX epoch
+        private const double ticksPerSecond = (double)TimeSpan.TicksPerSecond;
 
         public static readonly int altzone;
         public static readonly int daylight;
@@ -55,13 +61,16 @@ namespace IronPython.Modules {
         private static Stopwatch sw;
 #endif
 
+        public const string __doc__ = "This module provides various functions to manipulate time values.";
+
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             // we depend on locale, it needs to be initialized
             PythonLocale.EnsureLocaleInitialized(context);
         }
 
         static PythonTime() {
-            
+
             // altzone, timezone are offsets from UTC in seconds, so they always fit in the
             // -13*3600 to 13*3600 range and are safe to cast to ints
 #if !SILVERLIGHT
@@ -74,13 +83,21 @@ namespace IronPython.Modules {
             if (daylight != 0) {
                 timezone += (int)dayTime.Delta.TotalSeconds;
             }
-            
+
 #else
             daylight = TimeZoneInfo.Local.SupportsDaylightSavingTime ? 1 : 0;
             tzname = PythonTuple.MakeTuple(TimeZoneInfo.Local.StandardName, TimeZoneInfo.Local.DaylightName);
             timezone = (int)-TimeZoneInfo.Local.BaseUtcOffset.TotalSeconds;
             altzone = (int)-TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalSeconds;
 #endif
+        }
+
+        internal static long TimestampToTicks(double seconds) {
+            return (long)((seconds + epochDifference) * ticksPerSecond);
+        }
+
+        internal static double TicksToTimestamp(long ticks) {
+            return (ticks / ticksPerSecond) - epochDifference;
         }
 
         public static string asctime() {
@@ -122,7 +139,7 @@ namespace IronPython.Modules {
         }
 
         public static double time() {
-            return DateTime.Now.Ticks / 1.0e7;
+            return TicksToTimestamp(DateTime.Now.Ticks);
         }
 
         public static PythonTuple localtime() {
@@ -132,9 +149,8 @@ namespace IronPython.Modules {
         public static PythonTuple localtime(object seconds) {
             if (seconds == null) return localtime();
 
-            long intSeconds = GetDateTimeFromObject(seconds);
-
-            DateTime dt = new DateTime(intSeconds * TimeSpan.TicksPerSecond, DateTimeKind.Local);
+            long ticks = TimestampToTicks(GetTimestampFromObject(seconds));
+            DateTime dt = new DateTime(ticks, DateTimeKind.Local);
             return GetDateTimeTuple(dt, dt.IsDaylightSavingTime());
         }
 
@@ -145,13 +161,12 @@ namespace IronPython.Modules {
         public static PythonTuple gmtime(object seconds) {
             if (seconds == null) return gmtime();
 
-            long intSeconds = GetDateTimeFromObject(seconds);
-
-            return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond).ToUniversalTime(), false);
+            long ticks = TimestampToTicks(GetTimestampFromObject(seconds));
+            return GetDateTimeTuple(new DateTime(ticks).ToUniversalTime(), false);
         }
 
         public static double mktime(PythonTuple localTime) {
-            return GetDateTimeFromTuple(localTime).Ticks / 1.0e7;
+            return TicksToTimestamp(GetDateTimeFromTuple(localTime).Ticks);
         }
 
         public static string strftime(CodeContext/*!*/ context, string format) {
@@ -250,13 +265,13 @@ namespace IronPython.Modules {
                 // week of year  (sunday first day, 0-53), all days before Sunday are 0
                 res = res.Replace("%U", (((dt.DayOfYear + 6 - weekOneSunday) / 7)).ToString());
                 // week number of year (monday first day, 0-53), all days before Monday are 0
-                res = res.Replace("%W", (((dt.DayOfYear + 6 - dayOffset) / 7)).ToString());                
+                res = res.Replace("%W", (((dt.DayOfYear + 6 - dayOffset) / 7)).ToString());
                 res = res.Replace("%w", ((int)dt.DayOfWeek).ToString());
             }
             return res.ToString();
         }
 
-        private static long GetDateTimeFromObject(object seconds) {
+        private static double GetTimestampFromObject(object seconds) {
             int intSeconds;
             if (Converter.TryConvertToInt32(seconds, out intSeconds)) {
                 return intSeconds;
@@ -265,7 +280,7 @@ namespace IronPython.Modules {
             double dblVal;
             if (Converter.TryConvertToDouble(seconds, out dblVal)) {
                 if (dblVal > Int64.MaxValue || dblVal < Int64.MinValue) throw PythonOps.ValueError("unreasonable date/time");
-                return (long)dblVal;
+                return dblVal;
             }
 
             throw PythonOps.TypeError("expected int, got {0}", DynamicHelpers.GetPythonType(seconds));
@@ -445,8 +460,16 @@ namespace IronPython.Modules {
                 ints[i] = Converter.ConvertToInt32(t[i]);
             }
 
-            if (ints[YearIndex] < DateTime.MinValue.Year || ints[YearIndex] <= minYear) throw PythonOps.ValueError("year is too low");
-            if (ints[YearIndex] > DateTime.MaxValue.Year) throw PythonOps.ValueError("year is too high");
+            int year = ints[YearIndex];
+            if (accept2dyear && (year >= 0 && year <= 99)) {
+                if (year > 68) {
+                    year += 1900;
+                } else {
+                    year += 2000;
+                }
+            }
+            if (year < DateTime.MinValue.Year || year <= minYear) throw PythonOps.ValueError("year is too low");
+            if (year > DateTime.MaxValue.Year) throw PythonOps.ValueError("year is too high");
             if (ints[WeekdayIndex] < 0 || ints[WeekdayIndex] >= 7) throw PythonOps.ValueError("day of week is outside of 0-6 range");
             return ints;
         }

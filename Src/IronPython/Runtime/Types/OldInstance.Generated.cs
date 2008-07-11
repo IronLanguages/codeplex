@@ -13,15 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
-
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     public partial class OldInstance {
@@ -33,13 +26,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator +([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorAdd);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseAdd);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -56,13 +49,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator -([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorSubtract);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseSubtract);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -80,13 +73,13 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static object Power([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorPower);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReversePower);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -104,13 +97,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator *([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorMultiply);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseMultiply);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -128,13 +121,13 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static object FloorDivide([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorFloorDivide);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseFloorDivide);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -152,13 +145,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator /([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorDivide);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseDivide);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -176,13 +169,13 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static object TrueDivide([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorTrueDivide);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseTrueDivide);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -200,13 +193,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator %([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorMod);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseMod);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -224,13 +217,13 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static object LeftShift([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorLeftShift);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseLeftShift);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -249,13 +242,13 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static object RightShift([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorRightShift);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseRightShift);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -273,13 +266,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator &([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorBitwiseAnd);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseBitwiseAnd);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -296,13 +289,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator |([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorBitwiseOr);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseBitwiseOr);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -319,13 +312,13 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public static object operator ^([NotNull]OldInstance self, object other) {
             object res = InvokeOne(self, other, Symbols.OperatorExclusiveOr);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance otherOc = other as OldInstance;
             if (otherOc != null) {
                 return InvokeOne(other, self, Symbols.OperatorReverseExclusiveOr);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]

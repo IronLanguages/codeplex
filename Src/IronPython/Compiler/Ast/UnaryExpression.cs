@@ -15,13 +15,12 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class UnaryExpression : Expression {
         private readonly Expression _expression;
@@ -42,10 +41,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.Action.Operator(
+            return AstUtils.Operator(
                 ag.Binder,
                 PythonOperatorToAction(_op),
                 type,
+                Ast.CodeContext(),
                 ag.Transform(_expression)
             );
         }

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -368,8 +368,8 @@ lstate(16)
 lstate(32)
 lstate(64)
 lstate(122)
-lstate(123) 
-lstate(124)
+#lstate(123) # CLR bug, can't handle 127 arguments in DynamicMethod
+#lstate(124)
 #lstate(125) # CLR bug, can't handle 127 arguments in DynamicMethod
 lstate(128)
 if sys.platform != "win32":
@@ -381,9 +381,9 @@ if sys.platform != "win32":
 
 
 #
-# Test that calling on a closed generator throws a StopIteration exception and does not 
+# Test that calling on a closed generator throws a StopIteration exception and does not
 # do any further execution of the generator. (See codeplex workitem 1402)
-# 
+#
 #
 
 
@@ -424,7 +424,7 @@ Assert(l == [1,0])
 AssertError(StopIteration, g.next)
 Assert(l == [1,0]) # verify that we didn't execute any more statements
 
-# repeat enumeration in a comprehension. 
+# repeat enumeration in a comprehension.
 # This tests that StopIteration is properly caught and gracefully terminates the generator.
 l=[0,0]
 AreEqual([x for x in f(l)], ['c'])
@@ -468,16 +468,16 @@ AreEqual(l,[1,1])
 def f():
   try:
     i = me.next() # error: reentrant call! Should throw ValueError, which we can catch.
-  except ValueError: 
+  except ValueError:
     yield 7
   yield 10
   # try again, should still throw
-  me.send(None) 
+  me.send(None)
   Assert(False) # unreachable!
 
 me = f()
 AreEqual(me.next(), 7)
-# Generator should still be alive 
+# Generator should still be alive
 AreEqual(me.next(), 10)
 AssertError(ValueError, me.next)
 # since the last call went unhandled, the generator is now closed.

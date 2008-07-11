@@ -13,17 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Ast;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+namespace System.Scripting.Actions {
+    using Ast = System.Linq.Expressions.Expression;
 
     public class MethodTracker : MemberTracker {
         private readonly MethodInfo _method;
@@ -84,24 +80,24 @@ namespace Microsoft.Scripting.Actions {
             return new BoundMemberTracker(this, instance);
         }
 
-        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
             return binder.ReturnMemberTracker(type, BindToInstance(instance));
         }
 
-        public override Microsoft.Scripting.Ast.Expression Call(ActionBinder binder, params Expression[] arguments) {
+        internal override System.Linq.Expressions.Expression Call(Expression context, ActionBinder binder, params Expression[] arguments) {
             if (Method.IsPublic && Method.DeclaringType.IsVisible) {
                 // TODO: Need to use MethodBinder in here to make this right.
-                return binder.MakeCallExpression(Method, arguments);
+                return binder.MakeCallExpression(context, Method, arguments);
             }
 
             //methodInfo.Invoke(obj, object[] params)
             if (Method.IsStatic) {
                 return Ast.Convert(
                     Ast.Call(
-                        Ast.RuntimeConstant(Method),
+                        Ast.Constant(Method),
                         typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
                         Ast.Null(),
-                        Ast.NewArrayHelper(typeof(object[]), arguments)),
+                        Ast.NewArrayHelper(typeof(object), arguments)),
                     Method.ReturnType);
             } 
 
@@ -109,10 +105,10 @@ namespace Microsoft.Scripting.Actions {
 
             return Ast.Convert(
                 Ast.Call(
-                    Ast.RuntimeConstant(Method),
+                    Ast.Constant(Method),
                     typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
                     arguments[0],
-                    Ast.NewArrayHelper(typeof(object[]), ArrayUtils.RemoveFirst(arguments))),
+                    Ast.NewArrayHelper(typeof(object), ArrayUtils.RemoveFirst(arguments))),
                 Method.ReturnType);                       
         }
     }

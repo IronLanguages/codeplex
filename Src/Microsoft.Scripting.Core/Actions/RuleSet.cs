@@ -13,44 +13,22 @@
  *
  * ***************************************************************************/
 
-using System.Collections.Generic;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
 
     /// <summary>
     /// A RuleSet is a collection of rules to apply to the objects at a DynamicSite.  Each Rule also
     /// includes a target that is to be called if the rules' conditions are met.
     /// RuleSets are all immutable.
     /// </summary>
-    internal abstract class RuleSet<T> {
-        private T _target;
+    internal abstract class RuleSet<T> where T : class {
+        internal abstract RuleSet<T> AddRule(Rule<T> newRule);
 
-        public static RuleSet<T> EmptyRules {
-            get {
-                return EmptyRuleSet<T>.Instance;
-            }
+        internal virtual Rule<T>[] GetRules() {
+            return null;
         }
 
-        public abstract RuleSet<T> AddRule(Rule<T> newRule);
-        public abstract IList<Rule<T>> GetRules();
-        public abstract bool HasMonomorphicTarget(T target);       
-
-        protected abstract T MakeTarget();
-
-        public T GetOrMakeTarget() {
-            if (_target == null) {
-                _target = MakeTarget();
-            }
-            return _target;
-        }
-
-        public T RawTarget {
-            get {
-                return _target;
-            }
-            set {
-                _target = value;
-            }
+        internal virtual T GetTarget() {
+            throw new InvalidOperationException("Empty rule set doesn't have target");
         }
     }
 }

@@ -124,7 +124,7 @@ cor_mapper = {
                 com_obj.genCorSynchronizationLock : SynchronizationLockException,
                 com_obj.genCorSystem : SystemException,
                 com_obj.genCorTarget : TargetException,
-                com_obj.genCorTargetInvocation : TypeError, #Merlin 380303. Should be TargetInvocationException
+                com_obj.genCorTargetInvocation : TargetInvocationException,
                 com_obj.genCorTargetParamCount : TargetParameterCountException,
                 com_obj.genCorThreadAborted : ThreadAbortException,
                 com_obj.genCorThreadInterrupted : ThreadInterruptedException,

@@ -14,18 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Reflection;
 using System.Collections;
-using System.Text;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
@@ -194,7 +190,7 @@ namespace IronPython.Runtime {
         public static PythonTuple Reduce(PythonDictionary items, PythonType type) {
             object[] keys = new object[items.keys().__len__()];
             ((IList)items.keys()).CopyTo(keys, 0);
-            return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(new List(keys)), null);
+            return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(List.FromArrayNoCopy(keys)), null);
         }
     }
 

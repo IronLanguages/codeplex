@@ -13,24 +13,31 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     public sealed class MethodCallExpression : Expression {
         private readonly MethodInfo _method;
         private readonly Expression _instance;
         private readonly ReadOnlyCollection<Expression> _arguments;
 
-        internal MethodCallExpression(Annotations annotations, Type returnType, InvokeMemberAction bindingInfo,
-            MethodInfo method, Expression instance, ReadOnlyCollection<Expression> /*!*/ arguments)
-            : base(annotations, AstNodeType.Call, returnType, bindingInfo) {
+        internal MethodCallExpression(
+            Annotations annotations,
+            Type returnType,
+            CallSiteBinder bindingInfo,
+            MethodInfo method,
+            Expression instance,
+            ReadOnlyCollection<Expression> arguments)
+            : base(annotations, ExpressionType.Call, returnType, bindingInfo) {
+
             if (IsBound) {
                 RequiresBound(instance, "instance");
                 RequiresBoundItems(arguments, "arguments");
@@ -45,12 +52,42 @@ namespace Microsoft.Scripting.Ast {
             get { return _method; }
         }
 
-        public Expression Instance {
+        public Expression Object {
             get { return _instance; }
         }
 
         public ReadOnlyCollection<Expression> Arguments {
             get { return _arguments; }
+        }
+
+        internal override void BuildString(StringBuilder builder) {
+            Debug.Assert(_arguments != null, "arguments should not be null");
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            int start = 0;
+            Expression ob = _instance;
+
+            // TODO: we go through a dynamic helper untill we can guarantee
+            // that ExtensionAttribute is always available.
+            if (TypeUtils.ExtensionAttributeType != null) {
+                if (Attribute.GetCustomAttribute(_method, TypeUtils.ExtensionAttributeType) != null) {
+                    start = 1;
+                    ob = _arguments[0];
+                }
+            }
+
+            if (ob != null) {
+                ob.BuildString(builder);
+                builder.Append(".");
+            }
+            builder.Append(_method.Name);
+            builder.Append("(");
+            for (int i = start, n = _arguments.Count; i < n; i++) {
+                if (i > start)
+                    builder.Append(", ");
+                _arguments[i].BuildString(builder);
+            }
+            builder.Append(")");
         }
     }
 
@@ -58,52 +95,214 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
+
+        #region Call
+
+        //CONFORMING
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) {
-            return Call(Annotations.Empty, null, method, arguments);
+            return Call(null, method, Annotations.Empty, arguments);
         }
 
-        // TODO: should take Annotations instead of SourceSpan
-        public static MethodCallExpression Call(SourceSpan span, MethodInfo method, params Expression[] arguments) {
-            return Call(span, null, method, arguments);
+        public static MethodCallExpression Call(MethodInfo method, Annotations annotations, IEnumerable<Expression> arguments) {
+            return Call(null, method, annotations, arguments);
         }
 
+        //CONFORMING
+        public static MethodCallExpression Call(Expression instance, MethodInfo method) {
+            return Call(instance, method, Annotations.Empty, new Expression[0]);
+        }
+
+        //CONFORMING
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) {
-            return Call(Annotations.Empty, instance, method, arguments);
+            return Call(instance, method, Annotations.Empty, arguments);
         }
 
-        // TODO: should take Annotations instead of SourceSpan
-        public static MethodCallExpression Call(SourceSpan span, Expression instance, MethodInfo method, params Expression[] arguments) {
-            return Call(Annotate(span), instance, method, arguments);
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) {
+            return Call(instance, method, Annotations.Empty, arguments);
         }
 
-        public static MethodCallExpression Call(Annotations annotations, Expression instance, MethodInfo method, params Expression[] arguments) {
+        //CONFORMING
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) {
+            ContractUtils.RequiresNotNull(instance, "instance");
+            ContractUtils.RequiresNotNull(methodName, "methodName");
+            if (arguments == null) arguments = new Expression[] { };
+
+            BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
+            return Expression.Call(instance, FindMethod(instance.Type, methodName, typeArguments, arguments, flags), arguments);
+        }
+
+        //CONFORMING
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(methodName, "methodName");
+
+            if (arguments == null) arguments = new Expression[] { };
+            BindingFlags flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
+            return Expression.Call(null, FindMethod(type, methodName, typeArguments, arguments, flags), arguments);
+        }
+
+        //CONFORMING
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, Annotations annotations, IEnumerable<Expression> arguments) {
+            ReadOnlyCollection<Expression> argList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ValidateCallArgs(instance, method, ref argList);
+            return new MethodCallExpression(annotations, method.ReturnType, null, method, instance, argList);
+        }
+
+        //CONFORMING
+        private static void ValidateCallArgs(Expression instance, MethodInfo method, ref ReadOnlyCollection<Expression> arguments) {
             ContractUtils.RequiresNotNull(method, "method");
-            ContractUtils.Requires(!method.IsGenericMethodDefinition, "method");
-            ContractUtils.Requires(!method.ContainsGenericParameters, "method");
-            if (method.IsStatic) {
-                ContractUtils.Requires(instance == null, "instance", "Instance must be null for static method");
-            } else {
+            ContractUtils.RequiresNotNull(arguments, "arguments");
+
+            ValidateMethodInfo(method);
+            if (!method.IsStatic) {
                 ContractUtils.RequiresNotNull(instance, "instance");
-                if (!TypeUtils.CanAssign(method.DeclaringType, instance.Type)) {
-                    throw new ArgumentException(
-                        String.Format(
-                             "Invalid instance type for {0}.{1}. Expected {0}, got {2}.",
-                             method.DeclaringType.Name,
-                             method.Name,
-                             instance.Type.Name
-                        ),
-                        "instance"
-                    );
+                ValidateCallInstanceType(instance.Type, method);
+            }
+            ValidateArgumentTypes(method, ref arguments);
+        }
+
+        //CONFORMING
+        private static void ValidateCallInstanceType(Type instanceType, MethodInfo method) {
+            if (!TypeUtils.AreReferenceAssignable(method.DeclaringType, instanceType)) {
+                if (instanceType.IsValueType) {
+                    if (TypeUtils.AreReferenceAssignable(method.DeclaringType, typeof(System.Object))) {
+                        return;
+                    }
+                    if (TypeUtils.AreReferenceAssignable(method.DeclaringType, typeof(System.ValueType))) {
+                        return;
+                    }
+                    if (instanceType.IsEnum && TypeUtils.AreReferenceAssignable(method.DeclaringType, typeof(System.Enum))) {
+                        return;
+                    }
+                    // A call to an interface implemented by a struct is legal whether the struct has
+                    // been boxed or not.
+                    if (method.DeclaringType.IsInterface) {
+                        foreach (Type interfaceType in instanceType.GetInterfaces())
+                            if (TypeUtils.AreReferenceAssignable(method.DeclaringType, interfaceType))
+                                return;
+                    }
+                }
+                throw Error.MethodNotDefinedForType(method, instanceType);
+            }
+        }
+
+        //CONFORMING
+        private static void ValidateArgumentTypes(MethodInfo method, ref ReadOnlyCollection<Expression> arguments) {
+            ParameterInfo[] pis = method.GetParameters();
+            if (pis.Length > 0) {
+                if (pis.Length != arguments.Count) {
+                    throw Error.IncorrectNumberOfMethodCallArguments(method);
+                }
+                Expression[] newArgs = null;
+                for (int i = 0, n = pis.Length; i < n; i++) {
+                    Expression arg = arguments[i];
+                    ParameterInfo pi = pis[i];
+                    ContractUtils.RequiresNotNull(arg, "arguments");
+                    Type pType = pi.ParameterType;
+                    if (pType.IsByRef) {
+                        pType = pType.GetElementType();
+                    }
+                    TypeUtils.ValidateType(pType);
+                    if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {
+                        if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType())) {
+                            arg = Expression.Quote(arg);
+                        } else {
+                            throw Error.ExpressionTypeDoesNotMatchMethodParameter(arg.Type, pType, method);
+                        }
+                    }
+                    if (newArgs == null && arg != arguments[i]) {
+                        newArgs = new Expression[arguments.Count];
+                        for (int j = 0; j < i; j++) {
+                            newArgs[j] = arguments[j];
+                        }
+                    }
+                    if (newArgs != null) {
+                        newArgs[i] = arg;
+                    }
+                }
+                if (newArgs != null) {
+                    arguments = new ReadOnlyCollection<Expression>(newArgs);
+                }
+
+            } else if (arguments.Count > 0) {
+                throw Error.IncorrectNumberOfMethodCallArguments(method);
+            }
+        }
+
+        //CONFORMING
+        private static MethodInfo FindMethod(Type type, string methodName, Type[] typeArgs, Expression[] args, BindingFlags flags) {
+            MemberInfo[] members = type.FindMembers(MemberTypes.Method, flags, Type.FilterNameIgnoreCase, methodName);
+            if (members == null || members.Length == 0)
+                throw Error.MethodDoesNotExistOnType(methodName, type);
+
+            MethodInfo method;
+
+            MethodInfo[] methodInfos = ArrayUtils.ConvertAll<MemberInfo, MethodInfo>(members, delegate(MemberInfo t) { return (MethodInfo)t; });
+            int count = FindBestMethod(methodInfos, typeArgs, args, out method);
+
+            if (count == 0)
+                throw Error.MethodWithArgsDoesNotExistOnType(methodName, type);
+            if (count > 1)
+                throw Error.MethodWithMoreThanOneMatch(methodName, type);
+            return method;
+        }
+
+        //CONFORMING
+        private static int FindBestMethod(IEnumerable<MethodInfo> methods, Type[] typeArgs, Expression[] args, out MethodInfo method) {
+            int count = 0;
+            method = null;
+            foreach (MethodInfo mi in methods) {
+                MethodInfo moo = ApplyTypeArgs(mi, typeArgs);
+                if (moo != null && IsCompatible(moo, args)) {
+                    // favor public over non-public methods
+                    if (method == null || (!method.IsPublic && moo.IsPublic)) {
+                        method = moo;
+                        count = 1;
+                    }
+                        // only count it as additional method if they both public or both non-public
+                    else if (method.IsPublic == moo.IsPublic) {
+                        count++;
+                    }
                 }
             }
-
-            ContractUtils.RequiresNotNullItems(arguments, "arguments");
-            ParameterInfo[] parameters = method.GetParameters();
-
-            ValidateCallArguments(parameters, arguments);
-
-            return new MethodCallExpression(annotations, method.ReturnType, null, method, instance, CollectionUtils.ToReadOnlyCollection(arguments));
+            return count;
         }
+
+        //CONFORMING
+        private static bool IsCompatible(MethodBase m, Expression[] args) {
+            ParameterInfo[] parms = m.GetParameters();
+            if (parms.Length != args.Length)
+                return false;
+            for (int i = 0; i < args.Length; i++) {
+                Expression arg = args[i];
+                ContractUtils.RequiresNotNull(arg, "argument");
+                Type argType = arg.Type;
+                Type pType = parms[i].ParameterType;
+                if (pType.IsByRef) {
+                    pType = pType.GetElementType();
+                }
+                if (!TypeUtils.AreReferenceAssignable(pType, argType) &&
+                    !(TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType()))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        //CONFORMING
+        private static MethodInfo ApplyTypeArgs(MethodInfo m, Type[] typeArgs) {
+            if (typeArgs == null || typeArgs.Length == 0) {
+                if (!m.IsGenericMethodDefinition)
+                    return m;
+            } else {
+                if (m.IsGenericMethodDefinition && m.GetGenericArguments().Length == typeArgs.Length)
+                    return m.MakeGenericMethod(typeArgs);
+            }
+            return null;
+        }
+
+
+        #endregion
 
         /// <summary>
         /// A dynamic or unbound method call
@@ -113,70 +312,40 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="bindingInfo">call binding information (method name, named arguments, etc)</param>
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
-        public static MethodCallExpression Call(Type returnType, Expression instance, InvokeMemberAction bindingInfo, params Expression[] arguments) {
-            return Call(Annotations.Empty, returnType, instance, bindingInfo, arguments);
+        public static MethodCallExpression Call(Type returnType, Expression instance, OldInvokeMemberAction bindingInfo, params Expression[] arguments) {
+            return Call(returnType, instance, bindingInfo, Annotations.Empty, arguments);
         }
 
         /// <summary>
         /// A dynamic or unbound method call
         /// </summary>
+        /// <param name="returnType">the type that the method returns, or null for an unbound node</param>
+        /// <param name="instance">the instance to call; must be non-null</param>
+        /// <param name="bindingInfo">call binding information (method name, named arguments, etc)</param>
         /// <param name="annotations">annotations for the node</param>
-        /// <param name="returnType">the type that the method returns, or null for an unbound node</param>
-        /// <param name="instance">the instance to call; must be non-null</param>
-        /// <param name="bindingInfo">call binding information (method name, named arguments, etc)</param>
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
-        public static MethodCallExpression Call(Annotations annotations, Type returnType, Expression instance, InvokeMemberAction bindingInfo, params Expression[] arguments) {
+        public static MethodCallExpression Call(Type returnType, Expression instance, OldInvokeMemberAction bindingInfo, Annotations annotations, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(instance, "instance");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.RequiresNotNullItems(arguments, "arguments");
+
+            ReadOnlyCollection<Expression> argumentList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ContractUtils.RequiresNotNullItems(argumentList, "arguments");
 
             // Validate ArgumentInfos. For now, includes the instance.
             // This needs to be reconciled with InvocationExpression
-            if (bindingInfo.Signature.ArgumentCount != arguments.Length + 1) {
+            if (bindingInfo.Signature.ArgumentCount != argumentList.Count + 1) {
                 throw new ArgumentException(
                     string.Format(
                         "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'",
-                        arguments.Length + 1,
+                        argumentList.Count + 1,
                         bindingInfo.Signature.ArgumentCount
                     ),
                     "bindingInfo"
                 );
             }
 
-            return new MethodCallExpression(annotations, returnType, bindingInfo, null, instance, CollectionUtils.ToReadOnlyCollection(arguments));
-        }
-
-        private static void ValidateCallArguments(IList<ParameterInfo> parameters, IList<Expression> arguments) {
-            ContractUtils.Requires(parameters.Count == arguments.Count, "arguments", "Argument count must match parameter count");
-
-            int count = parameters.Count;
-            for (int index = 0; index < count; index++) {
-                Type pt = parameters[index].ParameterType;
-                ContractUtils.Requires(!TypeUtils.IsGeneric(pt), "arguments");
-                if (pt.IsByRef) {
-                    pt = pt.GetElementType();
-                }
-                if (!TypeUtils.CanAssign(pt, arguments[index].Type)) {
-                    throw new ArgumentException(
-                        String.Format(
-                            "Invalid type for argument {0}. Expected {1}, got {2}.",
-                            index, pt.Name, arguments[index].Type.Name
-                        ),
-                        "arguments"
-                    );
-                }
-            }
-        }
-
-        internal static MethodCallExpression Call(Expression instance, MethodInfo method, IList<Expression> arguments) {
-            if (arguments == null) {
-                return Call(instance, method);
-            } else {
-                Expression[] args = new Expression[arguments.Count];
-                arguments.CopyTo(args, 0);
-                return Call(instance, method, args);
-            }
+            return new MethodCallExpression(annotations, returnType, bindingInfo, null, instance, argumentList);
         }
 
         /// <summary>
@@ -310,11 +479,11 @@ namespace Microsoft.Scripting.Ast {
                             while (consumed < arguments.Length) {
                                 paramArray[paramIndex++] = ConvertHelper(arguments[consumed++], elementType);
                             }
-                            argument = NewArray(parameter.ParameterType, paramArray);
+                            argument = NewArrayInit(elementType, paramArray);
                         }
                     } else {
                         // No. Create an empty array.
-                        argument = NewArray(parameter.ParameterType);
+                        argument = NewArrayInit(parameter.ParameterType.GetElementType());
                     }
                 } else {
                     if (consumed < arguments.Length) {
@@ -358,28 +527,39 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+
+        #region ArrayIndex
+
+
+        //CONFORMING
         public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) {
-            return ArrayIndex(array, (IList<Expression>)indexes);
+            return ArrayIndex(array, (IEnumerable<Expression>)indexes);
         }
 
-        public static MethodCallExpression ArrayIndex(Expression array, IList<Expression> indexes) {
+        //CONFORMING
+        public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) {
             ContractUtils.RequiresNotNull(array, "array");
             ContractUtils.RequiresNotNull(indexes, "indexes");
 
             Type arrayType = array.Type;
-            ContractUtils.Requires(arrayType.IsArray, "array", "Array argument must be array.");
+            if (!arrayType.IsArray)
+                throw Error.ArgumentMustBeArray();
 
             ReadOnlyCollection<Expression> indexList = CollectionUtils.ToReadOnlyCollection(indexes);
-            ContractUtils.Requires(array.Type.GetArrayRank() == indexList.Count, "indexes", "Incorrect number of indexes.");
+            if (arrayType.GetArrayRank() != indexList.Count)
+                throw Error.IncorrectNumberOfIndexes();
 
             foreach (Expression e in indexList) {
                 ContractUtils.RequiresNotNull(e, "indexes");
-                ContractUtils.Requires(e.Type == typeof(int), "indexes", "Array indexes must be ints.");
+                if (e.Type != typeof(int))
+                    throw Error.ArgumentMustBeArrayIndexType();
             }
 
             MethodInfo mi = array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance);
             return Call(array, mi, indexList);
         }
+
+        #endregion
 
     }
 }

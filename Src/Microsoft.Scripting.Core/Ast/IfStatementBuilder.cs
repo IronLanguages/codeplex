@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class IfStatementBuilder {
         private readonly List<IfStatementTest> _clauses = new List<IfStatementTest>();
 
@@ -25,18 +25,14 @@ namespace Microsoft.Scripting.Ast {
 
         public IfStatementBuilder ElseIf(Expression test, params Expression[] body) {
             ContractUtils.RequiresNotNullItems(body, "body");
-            return ElseIf(SourceSpan.None, test, SourceLocation.None, Expression.Block(body));
+            return ElseIf(test, Expression.Block(body));
         }
 
         public IfStatementBuilder ElseIf(Expression test, Expression body) {
-            return ElseIf(SourceSpan.None, test, SourceLocation.None, body);
-        }
-
-        public IfStatementBuilder ElseIf(SourceSpan span, Expression test, SourceLocation bodyLocation, Expression body) {
             ContractUtils.RequiresNotNull(test, "test");
             ContractUtils.Requires(test.Type == typeof(bool), "test");
             ContractUtils.RequiresNotNull(body, "body");
-            _clauses.Add(Expression.IfCondition(span, bodyLocation, test, body));
+            _clauses.Add(Expression.IfCondition(test, body));
             return this;
         }
 
@@ -57,13 +53,8 @@ namespace Microsoft.Scripting.Ast {
             while (index-- > 0) {
                 IfStatementTest ist = clauses[index];
 
-                Expression test = ist.Test;
-                if (ist.Start.IsValid && ist.Header.IsValid) {
-                    test = Expression.Comma(new SourceSpan(ist.Start, ist.Header), test);
-                }
-
-                result = Expression.Condition(                    
-                    test,
+                result = Expression.Condition(
+                    ist.Test,
                     Expression.Void(ist.Body),
                     result
                 );
@@ -95,10 +86,6 @@ namespace Microsoft.Scripting.Ast {
             return If().ElseIf(test, body);
         }
 
-        public static IfStatementBuilder If(SourceSpan testSpan, Expression test, SourceLocation header, Expression body) {
-            return If().ElseIf(testSpan, test, header, body);
-        }
-
         public static Expression If(IfStatementTest[] tests, Expression @else) {
             ContractUtils.RequiresNotNullItems(tests, "tests");
             return IfStatementBuilder.BuildConditions(tests, @else);
@@ -115,7 +102,7 @@ namespace Microsoft.Scripting.Ast {
         public static Expression IfThenElse(Expression test, Expression body, Expression @else) {
             return If(
                 new IfStatementTest[] {
-                    Expression.IfCondition(SourceSpan.None, SourceLocation.None, test, body)
+                    Expression.IfCondition(test, body)
                 },
                 @else
             );

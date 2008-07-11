@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     /// <summary>
     /// Presents a flat enumerable view of multiple dictionaries
     /// </summary>

@@ -14,13 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
+using System.Globalization;
+using System.Scripting.Utils;
+using System.Text;
+using Microsoft.Contracts; 
 
 namespace Microsoft.Scripting.Math {
     /// <summary>
@@ -1709,7 +1709,7 @@ namespace Microsoft.Scripting.Math {
                     if (format[0] == 'x') {
                         for (int i = 0; i < res.Length; i++) {
                             if (res[i] >= 'A' && res[i] <= 'F') {
-                                res[i] = Char.ToLowerInvariant(res[i]);
+                                res[i] = Char.ToLower(res[i], CultureInfo.InvariantCulture);
                             }
                         }
                     }

@@ -13,59 +13,41 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
 
     /// <summary>
     /// VariableExpression represents actual memory/dictionary location in the generated code.
-    /// </summary>
+    /// </summary>    
     public sealed class VariableExpression : Expression {
-        private readonly SymbolId _name;
+        private readonly string _name;
 
-        internal VariableExpression(AstNodeType kind, string name, Type type)
-            : base(kind, type) {
+        internal VariableExpression(Annotations annotations, Type type, string name)
+            : base(annotations, ExpressionType.Variable, type) {
             Debug.Assert(type != typeof(void));
-            Debug.Assert(
-                kind == AstNodeType.LocalVariable ||
-                kind == AstNodeType.TemporaryVariable ||
-                kind == AstNodeType.GlobalVariable);
 
-            // TODO: remove conversion to SymbolId, store as System.String
-            SymbolId s = name != null ? SymbolTable.StringToId(name) : SymbolId.Empty;
-            _name = s;
+            _name = name;
         }
 
-        public SymbolId Name {
+        public string Name {
             get { return _name; }
+        }
+
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+            builder.Append(_name ?? "<var>");
         }
     }
 
     public partial class Expression {
-        // TODO: Remove
-        public static VariableExpression Read(VariableExpression variable) {
-            ContractUtils.RequiresNotNull(variable, "variable");
-            return variable;
+        public static VariableExpression Variable(Type type, string name) {
+            return Variable(type, name, Annotations.Empty);
         }
-
-        // TODO: Remove
-        public static VariableExpression ReadDefined(VariableExpression variable) {
-            return Read(variable);
-        }
-
-        public static VariableExpression Local(Type type, string name) {
-            return new VariableExpression(AstNodeType.LocalVariable, name, GetNonVoidType(type));
-        }
-
-        public static VariableExpression Temporary(Type type, string name) {
-            return new VariableExpression(AstNodeType.TemporaryVariable, name, GetNonVoidType(type));
-        }
-
-        public static VariableExpression Global(Type type, string name) {
-            return new VariableExpression(AstNodeType.GlobalVariable, name, GetNonVoidType(type));
+        public static VariableExpression Variable(Type type, string name, Annotations annotations) {
+            return new VariableExpression(annotations, GetNonVoidType(type), name);
         }
 
         // Converts typeof(void) to typeof(object), leaving other types unchanged.
@@ -78,6 +60,24 @@ namespace Microsoft.Scripting.Ast {
         // where expression.Type is void.
         private static Type GetNonVoidType(Type t) {
             return (t != typeof(void)) ? t : typeof(object);
+        }
+
+        // TODO: remove obsolete factories:
+        [Obsolete("use Expression.Variable instead")]
+        public static VariableExpression Local(Type type, string name) {
+            return Variable(type, name, Annotations.Empty);
+        }
+        [Obsolete("use Expression.Variable instead")]
+        public static VariableExpression Local(Type type, string name, Annotations annotations) {
+            return Variable(type, name, annotations);
+        }
+        [Obsolete("use Expression.Variable instead")]
+        public static VariableExpression Temporary(Type type, string name) {
+            return Variable(type, name, Annotations.Empty);
+        }
+        [Obsolete("use Expression.Variable instead")]
+        public static VariableExpression Temporary(Type type, string name, Annotations annotations) {
+            return Variable(type, name, annotations);
         }
     }
 }

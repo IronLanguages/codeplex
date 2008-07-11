@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Represents an ops-extension method which is used to implement a property.
     /// </summary>

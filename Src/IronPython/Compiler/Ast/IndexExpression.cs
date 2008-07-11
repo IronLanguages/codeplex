@@ -14,17 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class IndexExpression : Expression {
         private readonly Expression _target;
@@ -44,7 +42,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.Action.Operator(
+            return AstUtils.Operator(
                 ag.Binder,
                 GetOperator,
                 type,
@@ -56,13 +54,14 @@ namespace IronPython.Compiler.Ast {
         private MSAst.Expression[] GetActionArgumentsForGetOrDelete(AstGenerator ag) {
             TupleExpression te = _index as TupleExpression;
             if (te != null && te.IsExpandable) {
-                return ArrayUtils.Insert(ag.Transform(_target), ag.Transform(te.Items));
+                return ArrayUtils.Insert(Ast.CodeContext(), ag.Transform(_target), ag.Transform(te.Items));
             }
 
             SliceExpression se = _index as SliceExpression;
             if (se != null) {
                 if (se.StepProvided) {
                     return new MSAst.Expression[] { 
+                        Ast.CodeContext(),
                         ag.Transform(_target),
                         GetSliceValue(ag, se.SliceStart),
                         GetSliceValue(ag, se.SliceStop),
@@ -71,13 +70,14 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 return new MSAst.Expression[] { 
+                    Ast.CodeContext(),
                     ag.Transform(_target),
                     GetSliceValue(ag, se.SliceStart),
                     GetSliceValue(ag, se.SliceStop)
                 };
             }
 
-            return new MSAst.Expression[] { ag.Transform(_target), ag.Transform(_index) };
+            return new MSAst.Expression[] { Ast.CodeContext(), ag.Transform(_target), ag.Transform(_index) };
         }
 
         private static MSAst.Expression GetSliceValue(AstGenerator ag, Expression expr) {
@@ -85,7 +85,7 @@ namespace IronPython.Compiler.Ast {
                 return ag.Transform(expr);
             }
 
-            return Ast.ReadField(null, typeof(MissingParameter).GetField("Value"));
+            return Ast.Field(null, typeof(MissingParameter).GetField("Value"));
         }
 
         private MSAst.Expression[] GetActionArgumentsForSet(AstGenerator ag, MSAst.Expression right) {
@@ -94,11 +94,12 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op != Operators.None) {
-                right = Ast.Action.Operator(
+                right = AstUtils.Operator(
                     ag.Binder,
                     op,
                     typeof(object),
-                    Ast.Action.Operator(
+                    Ast.CodeContext(),
+                    AstUtils.Operator(
                         ag.Binder,
                         GetOperator,
                         typeof(object),
@@ -108,9 +109,9 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Block(
+            return AstUtils.Block(
                 Span,
-                Ast.Action.Operator(
+                AstUtils.Operator(
                     ag.Binder,
                     SetOperator,
                     typeof(object),
@@ -120,7 +121,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return Ast.Action.Operator(
+            return AstUtils.Operator(
                 Span,
                 ag.Binder,
                 DeleteOperator,

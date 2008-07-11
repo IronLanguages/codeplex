@@ -13,13 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Scripting;
 
 namespace IronPython.Compiler {
-
-
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Dedent")]
     public enum TokenKind {

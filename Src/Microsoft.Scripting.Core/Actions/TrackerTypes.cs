@@ -13,11 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     [Flags]
     public enum TrackerTypes {
         None = 0x00,

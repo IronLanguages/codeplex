@@ -13,7 +13,10 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Ast {
+using System.Scripting.Utils;
+
+namespace System.Linq.Expressions {
+
     public sealed class DoStatement : Expression {
         private readonly Expression /*!*/ _test;
         private readonly Expression /*!*/ _body;
@@ -24,14 +27,10 @@ namespace Microsoft.Scripting.Ast {
         /// Called by <see cref="DoStatementBuilder"/>.
         /// </summary>
         internal DoStatement(Annotations annotations, LabelTarget label, Expression /*!*/ test, Expression /*!*/ body)
-            : base(annotations, AstNodeType.DoStatement, typeof(void)) {
+            : base(annotations, ExpressionType.DoStatement, typeof(void)) {
             _test = test;
             _body = body;
             _label = label;
-        }
-
-        public SourceLocation Header {
-            get { return Annotations.Get<SourceLocation>(); }
         }
 
         public Expression Test {
@@ -44,6 +43,21 @@ namespace Microsoft.Scripting.Ast {
 
         new public LabelTarget Label {
             get { return _label; }
+        }
+    }
+
+    public partial class Expression {
+        public static DoStatement DoWhile(Expression body, Expression test) {
+            return DoWhile(body, test, null, Annotations.Empty);
+        }
+        public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label) {
+            return DoWhile(body, test, label, Annotations.Empty);
+        }
+        public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label, Annotations annotations) {
+            ContractUtils.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(test, "test");
+            ContractUtils.RequiresNotNull(annotations, "annotations");
+            return new DoStatement(annotations, label, test, body);
         }
     }
 }

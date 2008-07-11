@@ -12,11 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     // 
     /// <summary>
     /// Gives us a concrete Type object to represent null's to allow for more uniform

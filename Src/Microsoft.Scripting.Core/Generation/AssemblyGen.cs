@@ -13,36 +13,24 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Resources;
+using System.Scripting.Utils;
 using System.Security;
+using System.Text;
 using System.Threading;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using System.Text;
-
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
     internal class AssemblyGen {
         private readonly AssemblyBuilder/*!*/ _myAssembly;
         private readonly ModuleBuilder/*!*/ _myModule;
         private readonly PortableExecutableKinds _peKind;
         private readonly ImageFileMachine _machine;
         private readonly bool _isDebuggable;
-
-        // A simple single item cache for symbol document writers.
-        // If URL and language match chached symbol writer is reused.
-        private string _lastSymbolDocumentUrl;
-        private LanguageContext _lastSymbolDocumentLanguage;
-        private ISymbolDocumentWriter _lastSymbolDocumentWriter;
 
 #if !SILVERLIGHT
         private readonly string _outFileName;       // can be null iff !SaveAndReloadAssemblies
@@ -94,11 +82,18 @@ namespace Microsoft.Scripting.Generation {
                 _outDir = outDir;
             }
 
+            // mark the assembly transparent so that it works in partial trust:
+            CustomAttributeBuilder[] attributes = new CustomAttributeBuilder[] { 
+                new CustomAttributeBuilder(typeof(SecurityTransparentAttribute).GetConstructor(Type.EmptyTypes), ArrayUtils.EmptyObjects)
+            };
+
             if (outDir != null) {
-                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, outDir);
+                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, outDir, 
+                    null, null, null, null, false, attributes);
+
                 _myModule = _myAssembly.DefineDynamicModule(name.Name, _outFileName, isDebuggable);
             } else {
-                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
+                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run, attributes);
                 _myModule = _myAssembly.DefineDynamicModule(name.Name, isDebuggable);
             }
 
@@ -129,25 +124,6 @@ namespace Microsoft.Scripting.Generation {
             _myModule.SetCustomAttribute(new CustomAttributeBuilder(
                 typeof(DebuggableAttribute).GetConstructor(argTypes), argValues)
             );
-        }
-
-        internal ISymbolDocumentWriter/*!*/ GetSymbolWriter(string/*!*/ sourceUrl, LanguageContext/*!*/ language) {
-            Assert.NotEmpty(sourceUrl);
-            Assert.NotNull(language);
-            Debug.Assert(_isDebuggable);
-
-            // caching:
-            if (sourceUrl != _lastSymbolDocumentUrl || _lastSymbolDocumentLanguage != language) {
-                _lastSymbolDocumentUrl = sourceUrl;
-                _lastSymbolDocumentLanguage = language;
-                _lastSymbolDocumentWriter = _myModule.DefineDocument(sourceUrl,
-                    language.LanguageGuid,
-                    language.VendorGuid,
-                    SymbolGuids.DocumentType_Text
-                );
-            }
-
-            return _lastSymbolDocumentWriter;
         }
 
 #if !SILVERLIGHT // IResourceWriter
@@ -315,10 +291,12 @@ namespace Microsoft.Scripting.Generation {
         #endregion
 
         internal TypeBuilder DefinePublicType(string name, Type parent, bool preserveName) {
+            return DefineType(name, parent, TypeAttributes.Public, preserveName);
+        }
+
+        internal TypeBuilder DefineType(string name, Type parent, TypeAttributes attr, bool preserveName) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(parent, "parent");
-
-            TypeAttributes attrs = TypeAttributes.Public;
 
             StringBuilder sb = new StringBuilder(name);
             if (!preserveName) {
@@ -334,13 +312,8 @@ namespace Microsoft.Scripting.Generation {
 
             name = sb.ToString();
 
-            TypeBuilder tb = _myModule.DefineType(name, attrs);
-
-            tb.SetParent(parent);
-            return tb;
+            return _myModule.DefineType(name, attr, parent);
         }
-
-
 
 #if !SILVERLIGHT
         internal void SetEntryPoint(MethodInfo mi, PEFileKinds kind) {

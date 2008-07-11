@@ -13,18 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Diagnostics;
 using System.Reflection;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// Represents the top reflected package which contains extra information such as
     /// all the assemblies loaded and the built-in modules.
@@ -98,7 +91,7 @@ namespace Microsoft.Scripting.Actions {
                 _packageAssemblies.Add(assem);
                 UpdateId();
 #if !SILVERLIGHT // ComObject
-                Microsoft.Scripting.Actions.ComDispatch.ComObjectWithTypeInfo.PublishComTypes(assem);
+                System.Scripting.Com.ComObjectWithTypeInfo.PublishComTypes(assem);
 #endif
             }
 

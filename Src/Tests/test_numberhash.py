@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -16,7 +16,7 @@
 
 # Test that hash and equality operations cooperate for numbers.
 #  cmp(x,y)==0 --> hash(x) == hash(y).
-# 
+#
 # Python has equality comparisons between int, float, long (BigInteger), and Complex
 
 from lib.assert_util import *
@@ -55,7 +55,7 @@ def test_complex_bigint():
 
 #
 # Test hash qualities. We want to ensure that we get different hash results
-# for similar, yet different, inputs. 
+# for similar, yet different, inputs.
 #
 
 
@@ -67,10 +67,10 @@ def test_floathash_quality():
   h2 = hash(f +.1)
   Assert(h1 != h2)
 
-# Ensure that we have a decent hash function that doesn't just map 
+# Ensure that we have a decent hash function that doesn't just map
 # everything to zero.
 # bug 320659
-def test_bigint_hash_quality():   
+def test_bigint_hash_quality():
   l1=long(1.23e300)
   h1 = hash(l1)
   Assert(h1 != 0)

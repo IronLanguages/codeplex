@@ -14,22 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using System.Runtime.InteropServices;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Math;
 
-[assembly: PythonExtensionType(typeof(Complex64), typeof(ComplexOps), DerivationType=typeof(ExtensibleComplex))]
 namespace IronPython.Runtime.Operations {
     public class ExtensibleComplex : Extensible<Complex64> {
         public ExtensibleComplex() : base() { }
@@ -135,6 +125,9 @@ namespace IronPython.Runtime.Operations {
         #region Unary operators
 
         public static int __hash__(Complex64 x) {
+            if (x.Imag == 0) {
+                return DoubleOps.__hash__(x.Real);
+            }
             return x.GetHashCode();
         }
 
@@ -167,7 +160,7 @@ namespace IronPython.Runtime.Operations {
 
             if (y is BigInteger || y is Extensible<BigInteger>) throw PythonOps.OverflowError("long too large to convert");
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public static string __repr__(Complex64 x) {            
@@ -181,6 +174,19 @@ namespace IronPython.Runtime.Operations {
             }
 
             return FormatComplexValue(x.Imag) + "j";
+        }
+
+        // report the same errors as CPython for these invalid conversions
+        public static double __float__(Complex64 self) {
+            throw PythonOps.TypeError("can't convert complex to float; use abs(z)");
+        }
+
+        public static int __int__(Complex64 self) {
+            throw PythonOps.TypeError(" can't convert complex to int; use int(abs(z))");
+        }
+
+        public static BigInteger __long__(Complex64 self) {
+            throw PythonOps.TypeError("can't convert complex to long; use long(abs(z))");
         }
 
         private static string FormatComplexValue(double x) {

@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class YieldStatement : Expression {
         private readonly Expression /*!*/ _expr;
 
         internal YieldStatement(Annotations annotations, Expression /*!*/ expression)
-            : base(annotations, AstNodeType.YieldStatement, typeof(void)) {
+            : base(annotations, ExpressionType.YieldStatement, typeof(void)) {
             _expr = expression;
         }
 
@@ -34,14 +34,9 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public partial class Expression {
         public static YieldStatement Yield(Expression expression) {
-            return Yield(Microsoft.Scripting.Annotations.Empty, expression);
+            return Yield(expression, Annotations.Empty);
         }
-
-        public static YieldStatement Yield(SourceSpan span, Expression expression) {
-            return Yield(Annotate(span), expression);
-        }
-
-        public static YieldStatement Yield(Annotations annotations, Expression expression) {
+        public static YieldStatement Yield(Expression expression, Annotations annotations) {
             ContractUtils.Requires(expression != null, "expression");
             return new YieldStatement(annotations, expression);
         }

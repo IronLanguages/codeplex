@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -139,7 +139,7 @@ def test_sanity():
     result = F.__cmp__(f, 20)
     result = f.__cmp__(20)
 
-@skip("silverlight")    
+@skip("silverlight")
 def test_system_drawing():
     clr.AddReferenceByPartialName("System.Drawing")
     from System.Drawing import Rectangle
@@ -331,9 +331,9 @@ def test_enum():
     ]
 
     for p in parameters:
-	    #No implicit conversions from enum to numeric types are allowed
+        #No implicit conversions from enum to numeric types are allowed
         for m in methods:
-    		AssertError(TypeError, m, p)
+            AssertError(TypeError, m, p)
         x = int(p)
         x = bool(p)
 
@@ -554,7 +554,7 @@ Check(283, Dispatch.M83, d, "True")
 #        public void M90<T>(int arg) { Flag = 190; }
 #======================================================================
 AssertError(TypeError, d.M90, 1)
-Check(191, d.M91, 1) 
+Check(191, d.M91, 1)
 
 #======================================================================
 #======================================================================
@@ -690,9 +690,9 @@ strDictData = [strdict]
 mixedDictFunctions = [cd.MixedDictTest]
 mixedDictData = [mixeddict]
 
-modCases = [ (cd.ObjIList, (intlist, strlist, otherlist)), 
-             ( cd.IntIList, (intlist,) ),  
-             ( cd.StringIList, (strlist,) ),   
+modCases = [ (cd.ObjIList, (intlist, strlist, otherlist)),
+             ( cd.IntIList, (intlist,) ),
+             ( cd.StringIList, (strlist,) ),
               ]
 
 testCases = [ [objFunctions, objData],
@@ -703,7 +703,7 @@ testCases = [ [objFunctions, objData],
 
 dictTestCases = ( (objDictFunctions, objDictData ),
                   (intDictFunctions, intDictData ),
-                  (strDictFunctions, strDictData), 
+                  (strDictFunctions, strDictData),
                   (mixedDictFunctions, mixedDictData) )
 
 ############################################3
@@ -902,11 +902,11 @@ def test_function():
     def testfunctionhelper(c, o):
         ############ OptimizedFunctionX ############
         line = ""
-        for i in range(6): 
+        for i in range(6):
             args = ",".join(['1'] * i)
             line += 'AreEqual(o.IM%d(%s), "IM%d")\n' % (i, args, i)
             line += 'AreEqual(c.IM%d(o,%s), "IM%d")\n' % (i, args, i)
-            if i > 0: 
+            if i > 0:
                 line += 'try: o.IM%d(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i-1)))
                 line += 'try: c.IM%d(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i-1)))
             line += 'try: o.IM%d(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i+1)))
@@ -915,7 +915,7 @@ def test_function():
             line += 'AreEqual(o.SM%d(%s), "SM%d")\n' % (i, args, i)
             line += 'AreEqual(c.SM%d(%s), "SM%d")\n' % (i, args, i)
             
-            if i > 0: 
+            if i > 0:
                 line += 'try: o.SM%d(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i-1)))
                 line += 'try: c.SM%d(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i-1)))
             line += 'try: o.SM%d(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i+1)))
@@ -925,7 +925,7 @@ def test_function():
         exec line
 
         ############ OptimizedFunctionAny ############
-        ## 1    
+        ## 1
         line = ""
         for i in range(7):
             args = ",".join(['1'] * i)
@@ -937,7 +937,7 @@ def test_function():
                 line += 'try: c.IDM0(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
             
         #print line
-        exec line    
+        exec line
     
         line = ""
         for i in range(7):
@@ -950,7 +950,7 @@ def test_function():
                 line += 'try: c.SDM0(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
             
         #print line
-        exec line    
+        exec line
 
         ## 2
         line = ""
@@ -968,7 +968,7 @@ def test_function():
                 line += 'AreEqual(c.SDM1(%s), "SDM1-x")\n' % (args)
                 
         #print line
-        exec line    
+        exec line
     
         line = ""
         for i in range(7):
@@ -985,7 +985,7 @@ def test_function():
                 line += 'AreEqual(c.SDM4(%s), "SDM4-x")\n' % (args)
             
         #print line
-        exec line    
+        exec line
 
         ## 3
         line = ""
@@ -998,7 +998,7 @@ def test_function():
                 line += 'try: o.IDM2(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
                 line += 'try: c.IDM2(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
         #print line
-        exec line    
+        exec line
     
         line = ""
         for i in range(7):
@@ -1011,7 +1011,7 @@ def test_function():
                 line += 'try: c.SDM2(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
 
         #print line
-        exec line    
+        exec line
     
         ## 4
         line = ""
@@ -1025,7 +1025,7 @@ def test_function():
                 line += 'try: c.IDM5(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
 
         #print line
-        exec line    
+        exec line
 
         line = ""
         for i in range(7):
@@ -1038,7 +1038,7 @@ def test_function():
                 line += 'try: c.SDM5(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
 
         #print line
-        exec line    
+        exec line
 
         ## 5
         line = ""
@@ -1052,7 +1052,7 @@ def test_function():
                 line += 'AreEqual(c.IDM3(o,%s), "IDM3-x")\n' % (args)
             
         #print line
-        exec line    
+        exec line
     
         line = ""
         for i in range(7):
@@ -1065,11 +1065,11 @@ def test_function():
                 line += 'AreEqual(c.SDM3(%s), "SDM3-x")\n' % (args)
             
         #print line
-        exec line   
+        exec line
 
         ############ OptimizedFunctionN ############
         line = ""
-        for i in range(6): 
+        for i in range(6):
             args = ",".join(['1'] * i)
             line +=  'AreEqual(o.IPM0(%s), "IPM0-%d")\n' % (args, i)
             line +=  'AreEqual(o.SPM0(%s), "SPM0-%d")\n' % (args, i)
@@ -1082,7 +1082,7 @@ def test_function():
             line +=  'AreEqual(c.SPM1(0,%s), "SPM1-%d")\n' % (args, i)
 
         #print line
-        exec line   
+        exec line
         
     class DispatchAgain2(DispatchAgain): pass
     
@@ -1092,7 +1092,7 @@ def test_function():
     AreEqual(type(BindTest.ReturnTest('char')), System.Char)
     AreEqual(type(BindTest.ReturnTest('null')), type(None))
     AreEqual(type(BindTest.ReturnTest('object')), object)
-    if not is_silverlight: 
+    if not is_silverlight:
         Assert(repr(BindTest.ReturnTest("com")).startswith('<System.__ComObject'))
 
 #####################################################################
@@ -1101,14 +1101,14 @@ def test_multicall_generator():
     c = MultiCall()
 
     def AllEqual(exp, meth, passins):
-        for arg in passins: 
+        for arg in passins:
             #print meth, arg
             AreEqual(meth(*arg), exp)
 
     def AllAssert(type, meth, passins):
-        for arg in passins: 
+        for arg in passins:
             #print meth, arg
-            AssertError(type, meth, arg)    
+            AssertError(type, meth, arg)
 
     import sys
     maxint = sys.maxint
@@ -1129,10 +1129,10 @@ def test_multicall_generator():
     func = c.M0
     AllEqual(1, func, [(0,), (1,), (maxint,), (myint,)])
     AllEqual(2, func, [(maxint + 1,), (-maxint-10,), (10L,)])
-    AllAssert(TypeError, func, [ 
+    AllAssert(TypeError, func, [
                                 (-10.2,),
-                                (1+2j,), 
-                                ("10",), 
+                                (1+2j,),
+                                ("10",),
                                 (System.Byte.Parse("2"),),
                 ])
     
@@ -1143,16 +1143,16 @@ def test_multicall_generator():
 
     func = c.M1
     AllEqual(1, func, [
-                        (0,), 
-                        (1,), 
-                        (maxint,), 
+                        (0,),
+                        (1,),
+                        (maxint,),
                         (System.Byte.Parse("2"),),
                         (myint, ),
-                        #(10L,), 
+                        #(10L,),
                         #(-1234.0,),
             ])
     AllEqual(2, func, [
-                        #(maxint + 1,), 
+                        #(maxint + 1,),
                         #(-maxint-10,),
                         ])
     AllEqual(3, func, [(-10.2,), (1+2j,), ("10",),])
@@ -1166,12 +1166,12 @@ def test_multicall_generator():
     
     func = c.M2
     AllEqual(1, func, [
-        (0, 0), (1, maxint), (maxint, 1), (maxint, maxint), 
+        (0, 0), (1, maxint), (maxint, 1), (maxint, maxint),
         #(10L, 0),
         ])
     
     AllEqual(2, func, [
-        #(maxint+1, 0), 
+        #(maxint+1, 0),
         #(maxint+10, 10),
         #(maxint+10, 10L),
         #(maxlong1, 0),
@@ -1179,35 +1179,35 @@ def test_multicall_generator():
         ])
 
     AllEqual(3, func, [
-        #(0, maxint+1), 
+        #(0, maxint+1),
         #(10, maxint+10),
         #(10L, maxint+10),
         ])
     
     AllEqual(4, func, [
-        #(maxint+10, maxint+1), 
+        #(maxint+10, maxint+1),
         #(-maxint-10, maxint+10),
         #(-maxint-10L, maxint+100),
         #(maxlong1, maxlong1),
         #(maxlong2, maxlong1),
-        ])  
+        ])
     
     AllEqual(5, func, [
         (maxlong1 + 1, 1),
         (maxlong2 + 1, 1),
-        (maxint, maxlong1 + 10), 
-        (maxint, maxlong2 + 10), 
+        (maxint, maxlong1 + 10),
+        (maxint, maxlong2 + 10),
         (1, "100L"),
         (10.2, 1),
-        ])       
+        ])
     
-    #############################################################################################    
+    #############################################################################################
     #        public int M4(int arg1, int arg2, int arg3, int arg4) { return 1; }
     #        public int M4(object arg1, object arg2, object arg3, object arg4) { return 2; }
     
     if not is_silverlight:
-        one = [t.Parse("5") for t in [System.Byte, System.SByte, System.UInt16, System.Int16, System.UInt32, System.Int32, 
-                System.UInt32, System.Int32, System.UInt64, System.Int64, 
+        one = [t.Parse("5") for t in [System.Byte, System.SByte, System.UInt16, System.Int16, System.UInt32, System.Int32,
+                System.UInt32, System.Int32, System.UInt64, System.Int64,
                 System.Char, System.Decimal, System.Single, System.Double] ]
     else: one = []
     
@@ -1219,7 +1219,7 @@ def test_multicall_generator():
     
     two.extend([None, "5", "5.5", maxint * 2, ])
     
-    together = [] 
+    together = []
     together.extend(one)
     together.extend(two)
     
@@ -1235,7 +1235,7 @@ def test_multicall_generator():
                         AreEqual(c.M4(a1, a2, a3, a4), 1)
     '''
 
-    #############################################################################################    
+    #############################################################################################
     #        public int M5(DispatchHelpers.B arg1, DispatchHelpers.B args) { return 1; }
     #        public int M5(DispatchHelpers.D arg1, DispatchHelpers.B args) { return 2; }
     #        public int M5(object arg1, object args) { return 3; }
@@ -1248,7 +1248,7 @@ def test_multicall_generator():
     AllEqual(2, func, [(d, b), (d, d)])
     AllEqual(3, func, [(1, 2)])
     
-    #############################################################################################    
+    #############################################################################################
     #        public int M6(DispatchHelpers.B arg1, DispatchHelpers.B args) { return 1; }
     #        public int M6(DispatchHelpers.B arg1, DispatchHelpers.D args) { return 2; }
     #        public int M6(object arg1, DispatchHelpers.D args) { return 3; }
@@ -1260,7 +1260,7 @@ def test_multicall_generator():
     AllEqual(3, func, [(1, d), (6L, d)])
     AllAssert(TypeError, func, [(1,1), (None, None), (None, d), (3, b)])
     
-    #############################################################################################    
+    #############################################################################################
     #        public int M7(DispatchHelpers.B arg1, DispatchHelpers.B args) { return 1; }
     #        public int M7(DispatchHelpers.B arg1, DispatchHelpers.D args) { return 2; }
     #        public int M7(DispatchHelpers.D arg1, DispatchHelpers.B args) { return 3; }
@@ -1273,7 +1273,7 @@ def test_multicall_generator():
     AllEqual(4, func, [(d, d)])
     AllAssert(TypeError, func, [(1,1), (None, None), (None, d)])
 
-    #############################################################################################    
+    #############################################################################################
     #        public int M8(int arg1, int arg2) { return 1;}
     #        public int M8(DispatchHelpers.B arg1, DispatchHelpers.B args) { return 2; }
     #        public int M8(object arg1, object arg2) { return 3; }
@@ -1283,28 +1283,28 @@ def test_multicall_generator():
     AllEqual(2, func, [(b, b), (b, d), (d, b), (d, d)])
     AllEqual(3, func, [(5.1, b), (1, d), (d, 1), (d, maxlong2), (maxlong1, d), (None, 3), (3, None)])
 
-    #############################################################################################    
+    #############################################################################################
     # public static int M92(out int i, out int j, out int k, bool boolIn)
     AreEqual(Dispatch.M92(True), (4, 1,2,3))
     AreEqual(Dispatch.Flag, 192)
 
-    #############################################################################################    
+    #############################################################################################
     # public int M93(out int i, out int j, out int k, bool boolIn)
     AreEqual(Dispatch().M93(True), (4, 1,2,3))
     AreEqual(Dispatch.Flag, 193)
 
-    #############################################################################################    
+    #############################################################################################
     # public int M94(out int i, out int j, bool boolIn, out int k)
     AreEqual(Dispatch().M94(True), (4, 1,2,3))
     AreEqual(Dispatch.Flag, 194)
 
-    #############################################################################################    
+    #############################################################################################
     # public static int M95(out int i, out int j, bool boolIn, out int k)
     AreEqual(Dispatch.M95(True), (4, 1,2,3))
     AreEqual(Dispatch.Flag, 195)
 
-    #############################################################################################    
-    # public static int M96(out int x, out int j, params int[] extras) 
+    #############################################################################################
+    # public static int M96(out int x, out int j, params int[] extras)
     AreEqual(Dispatch.M96(), (0, 1,2))
     AreEqual(Dispatch.Flag, 196)
     AreEqual(Dispatch.M96(1,2), (3, 1,2))
@@ -1312,7 +1312,7 @@ def test_multicall_generator():
     AreEqual(Dispatch.M96(1,2,3), (6, 1,2))
     AreEqual(Dispatch.Flag, 196)
 
-    #############################################################################################    
+    #############################################################################################
     # public int M97(out int x, out int j, params int[] extras)
     AreEqual(Dispatch().M97(), (0, 1,2))
     AreEqual(Dispatch.Flag, 197)
@@ -1322,7 +1322,7 @@ def test_multicall_generator():
     AreEqual(Dispatch.Flag, 197)
 
 
-    #############################################################################################    
+    #############################################################################################
     # public void M98(string a, string b, string c, string d, out int x, ref Dispatch di)
     a = Dispatch()
     x = a.M98('1', '2', '3', '4', a)
@@ -1334,10 +1334,10 @@ def test_multicall_generator():
     #DDB 76340
     if not is_silverlight:
         # call type.InvokeMember on String.ToString - all methods have more arguments than max args.
-        res = clr.GetClrType(str).InvokeMember('ToString', 
-                                               System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.InvokeMethod, 
-                                               None, 
-                                               'abc', 
+        res = clr.GetClrType(str).InvokeMember('ToString',
+                                               System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.InvokeMethod,
+                                               None,
+                                               'abc',
                                                ())
         AreEqual(res, 'abc')
 
@@ -1402,15 +1402,15 @@ def test_explicit():
 def test_security_crypto():
     Assert(System.Security.Cryptography.MD5.Create("MD5") != None)
 
-@skip("silverlight")    
+@skip("silverlight")
 def test_windows_forms():
     clr.AddReference('System.Windows.Forms')
     import System
     x = System.Windows.Forms.Form()
     try:
-    	font = x.DefaultFont
+        font = x.DefaultFont
     except AttributeError, e:
-    	Assert(e.message.find("static property 'DefaultFont' of 'Control' can only be read through a type, not an instance") != -1)
+        Assert(e.message.find("static property 'DefaultFont' of 'Control' can only be read through a type, not an instance") != -1)
     else: AssertUnreachable()
 
 @skip("silverlight") #no AssertErrorWithMessage

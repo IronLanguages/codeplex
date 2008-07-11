@@ -15,11 +15,10 @@
 
 using System;
 using IronPython.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
-using Operators = Microsoft.Scripting.Runtime.Operators;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class DictionaryExpression : Expression {
         private readonly SliceExpression[] _items;

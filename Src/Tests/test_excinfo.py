@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -26,12 +26,12 @@ import sys
 # Rules:
 # 1) thread has a current exception
 # 2) except block sets current exception
-# 3) when method returns (either normally, via exception, or via generator), 
+# 3) when method returns (either normally, via exception, or via generator),
 #    it restores the current exception to what it was on function entry.
 #
 # exc_info() is pretty useless in a finally block. It may be non-null, but it's value
-# depends on how exactly we got to execute the finally. In fact, in a finally, exc_info 
-# may be non-null, but not for the current exception. 
+# depends on how exactly we got to execute the finally. In fact, in a finally, exc_info
+# may be non-null, but not for the current exception.
 # Or it may be null, even when there's an outstanding exception. $$$ is that true?
 
 # return the current exception arg or None
@@ -59,7 +59,7 @@ def test_simple():
 # test setting in except params
 def test_excep_params():
   def t(): # called as argument in except clause
-    A(63) 
+    A(63)
     return TypeError
   def f():
     try:
@@ -69,7 +69,7 @@ def test_excep_params():
   try:
     f()
   except:
-    A(63)  
+    A(63)
 
 
 # raise new ex out of catch; check in finally
@@ -84,7 +84,7 @@ def test_except_rethrow():
       raise ValueError(43)
     finally:
       # still using the original exc since we haven't hit a new exc block yet.
-      A(81) 
+      A(81)
   try:
     f()
   except:
@@ -93,7 +93,7 @@ def test_except_rethrow():
 
 # finally, same function as active except, exception path
 def test_fin_except():
-  A(None)  
+  A(None)
   try:
     raise ValueError(20)
   except:
@@ -109,7 +109,7 @@ def test_fin_except2():
     A(None)
     raise ValueError(20)
   def f2():
-    A(None)  
+    A(None)
     try:
       f1() # throw from a different function
       Assert(False)
@@ -125,7 +125,7 @@ def test_fin_except2():
   A(20)
 
 
-# Finally w/o an except block does not see the exception. 
+# Finally w/o an except block does not see the exception.
 # compare to test_fin_except()
 def helper_fin_no_except():
   A(None)
@@ -146,7 +146,7 @@ def test_fin_no_except():
 # The mere presence of an except block is enough to set exc_info(). We don't
 # need to actually execute the handlers.
 def helper_fin_inactive():
-  A(None)  
+  A(None)
   try:
     raise ValueError(20)
   except TypeError: # mismatched, still causes exc_info() to be set
@@ -193,7 +193,7 @@ def test_nested():
       raise ValueError(20)
     except:
       A(20)
-    A(20)      
+    A(20)
   except:
     Assert(False)
   A(20)
@@ -202,7 +202,7 @@ def test_nested():
 
    
   
-# Child function inherits exc_info() from parent, but can't change parents. 
+# Child function inherits exc_info() from parent, but can't change parents.
 # only changed by a function having an except block.
 def test_call():
   def f():
@@ -213,7 +213,7 @@ def test_call():
       A(20)
     A(20)
     # will be restored to 7 on function return
-  #   
+  #
   try:
     raise ValueError(7)
   except:
@@ -238,9 +238,9 @@ def test_call2():
       A(22)
       return # return from Except, swallows Ex
     Assert(False)
-  def f2():  
+  def f2():
     A(55)
-    f3a() 
+    f3a()
     A(55)
     f3b()
     A(55)
@@ -293,7 +293,7 @@ def test_funcs():
 # ???
 # Tests splitting across multiple functions to show reset
 def f():
-  pass  
+  pass
 
 
 # Test with exc_info and generators.
@@ -317,11 +317,11 @@ def test_generator():
         # We're in the non-exception path of a finally, but still have exc_info set since
         # generator was called from a catch block.
         A(6)
-      yield 4 
+      yield 4
       A(6) # still set from generator's caller
-    A(6) # 
+    A(6) #
     yield 5
-  # call the generator     
+  # call the generator
   g=f()
   AreEqual(g.next(), 1)
   A(None) # generator's exc value shouldn't taint the caller
@@ -343,7 +343,7 @@ def test_generator():
     # this will execute a finally in the generator.
     AreEqual(g.next(), 4)
     A(6)
-  A(6) 
+  A(6)
   AreEqual(g.next(), 5)
 
 
@@ -366,7 +366,7 @@ def test_gen_throw():
       g.throw(ValueError(87))
       Assert(False)
     finally:
-      # exceptional path. 
+      # exceptional path.
       # exc_info should have been cleared on exiting generator.
       A(None)
   except:
@@ -378,8 +378,8 @@ def test_gen_throw():
 #
 # Test sys.exc_clear(), which was added in Python 2.3
 # This clears the last exception status.
-# 
-#---------------------------------------------------------------------  
+#
+#---------------------------------------------------------------------
 
 # simple case of clear in an except block.
 def test_clear_simple():
@@ -391,7 +391,7 @@ def test_clear_simple():
     A(None)
   A(None)
 
-# cases with nesting. 
+# cases with nesting.
 def test_clear_nested():
   try:
     raise ValueError(13)
@@ -406,9 +406,9 @@ def test_clear_nested():
     A(None)
   A(None)
 
-# 
+#
 def test_clear_nested_func():
-  def f(): 
+  def f():
     try:
       A(13)
       raise ValueError(54)
@@ -446,11 +446,11 @@ def test_clear_no_active_ex():
 
 #---------------------------------------------------------------------
 # With!
-#---------------------------------------------------------------------  
+#---------------------------------------------------------------------
 
 
 #========================================================
-# With's Pep (http://www.python.org/dev/peps/pep-0343/) says the 
+# With's Pep (http://www.python.org/dev/peps/pep-0343/) says the
 # __exit__ can be invoked by an except block,
 # but unlike a normal except, that shouldn't set sys.exc_info().
 
@@ -479,7 +479,7 @@ def test_with_fail():
     # exit is invoked when 'with' body exits (either via exception, branch)
     def __exit__(self, t,v, tb):
       AreEqual(v[0], 15) # exception passed in as local
-      A(None) # but sys.exc_info() should not be set!! 
+      A(None) # but sys.exc_info() should not be set!!
       return True # swallow exception
   #
   # With.__exit__ does not see current exception
@@ -495,7 +495,7 @@ def test_with_except_pass():
     # exit is invoked when 'with' body exits (either via exception, branch)
     def __exit__(self, t,v, tb):
       AreEqual(v, None) #
-      A(15) # 
+      A(15) #
       return True # swallow exception
   #
   # With.__exit__ does not see current exception

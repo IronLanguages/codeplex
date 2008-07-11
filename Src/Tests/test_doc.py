@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -153,9 +153,9 @@ def test_func_meth_class():
     AreEqual(d.m_4.__doc__, None)
 
     dd = d()
-    for x in (f_1, f_2, f_3, f_4, 
-                c_1, c_2, c_3, c_4, 
-                n_1, n_2, n_3, n_4, 
+    for x in (f_1, f_2, f_3, f_4,
+                c_1, c_2, c_3, c_4,
+                n_1, n_2, n_3, n_4,
                 dd.m_1, dd.m_2, dd.m_3, dd.m_4):
         x()
 
@@ -179,9 +179,9 @@ def test_types():
 
 def test_builtin_nones():
     for x in [Ellipsis, None, NotImplemented, ]:
-        Assert(x.__doc__==None, str(x) + ".__doc__ != None")    
+        Assert(x.__doc__==None, str(x) + ".__doc__ != None")
 
-#Needs CPython's site.py for this to work under IP.  
+#Needs CPython's site.py for this to work under IP.
 #See CodePlex 10823 for details.
 @skip("cli", "silverlight")
 def test_builtin_nones_cpy_site():

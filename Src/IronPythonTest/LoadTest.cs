@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace IronPythonTest.LoadTest {
 
     public class Values {

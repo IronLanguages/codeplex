@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -14,11 +14,11 @@
 #####################################################################################
 
 '''
-This module is in place to test the interoperatbility between CPython and CLR numerical 
+This module is in place to test the interoperatbility between CPython and CLR numerical
 types.
 
 TODO:
-- at the moment the test cases in place are simple sanity checks to ensure the 
+- at the moment the test cases in place are simple sanity checks to ensure the
   appropriate operator overloads have been implemented.  This needs to be extended
   quite a bit (e.g., see what happens with OverFlow cases).
 - a few special cases aren't covered yet - comlex numbers, unary ops, System.Char,
@@ -56,7 +56,7 @@ py_float_types   = ["float"]
 py_types = py_integer_types + py_float_types
 
 bug_operands = []
-unsupported_operands = [                                                  
+unsupported_operands = [
                          #System.Decimal +: System.Single, System.Double, long, float
                          "System.Decimal+long",
                          "long+System.Decimal",
@@ -73,17 +73,17 @@ unsupported_operands = [
                          "System.Decimal/long",
                          "long/System.Decimal",
                          
-                         #System.Decimal //:System.Byte System.SByte 
-                         "System.Decimal//System.Byte", 
-                         "System.Decimal//System.SByte", 
-                         "System.Decimal//System.Int16", 
-                         "System.Decimal//System.UInt16", 
-                         "System.Decimal//System.Int32", 
-                         "System.Decimal//System.UInt32", 
-                         "System.Decimal//System.Int64", 
-                         "System.Decimal//System.UInt64", 
-                         "System.Decimal//System.Decimal", 
-                         "System.Decimal//int", 
+                         #System.Decimal //:System.Byte System.SByte
+                         "System.Decimal//System.Byte",
+                         "System.Decimal//System.SByte",
+                         "System.Decimal//System.Int16",
+                         "System.Decimal//System.UInt16",
+                         "System.Decimal//System.Int32",
+                         "System.Decimal//System.UInt32",
+                         "System.Decimal//System.Int64",
+                         "System.Decimal//System.UInt64",
+                         "System.Decimal//System.Decimal",
+                         "System.Decimal//int",
                          "System.Decimal//long",
                          "System.Byte//System.Decimal",
                          "System.SByte//System.Decimal",
@@ -97,16 +97,16 @@ unsupported_operands = [
                          "int//System.Decimal",
                          "long//System.Decimal",
                          
-                         "System.Decimal**System.Byte", 
-                         "System.Decimal**System.SByte", 
-                         "System.Decimal**System.Int16", 
-                         "System.Decimal**System.UInt16", 
-                         "System.Decimal**System.Int32", 
-                         "System.Decimal**System.UInt32", 
-                         "System.Decimal**System.Int64", 
-                         "System.Decimal**System.UInt64", 
-                         "System.Decimal**System.Decimal", 
-                         "System.Decimal**int", 
+                         "System.Decimal**System.Byte",
+                         "System.Decimal**System.SByte",
+                         "System.Decimal**System.Int16",
+                         "System.Decimal**System.UInt16",
+                         "System.Decimal**System.Int32",
+                         "System.Decimal**System.UInt32",
+                         "System.Decimal**System.Int64",
+                         "System.Decimal**System.UInt64",
+                         "System.Decimal**System.Decimal",
+                         "System.Decimal**int",
                          "System.Decimal**long",
                          "System.Byte**System.Decimal",
                          "System.SByte**System.Decimal",
@@ -121,7 +121,7 @@ unsupported_operands = [
                          "long**System.Decimal",
                          
                          "System.Decimal%long",
-                         "long%System.Decimal", 
+                         "long%System.Decimal",
                             ] + bug_operands
 
 
@@ -130,7 +130,7 @@ known_bugs = []
 #------------------------------------------------------------------------------
 def num_ok_for_type(number, proposed_type):
     '''
-    Helper function returns true if the number param is within the range of 
+    Helper function returns true if the number param is within the range of
     valid values for the proposed type
     '''
     #handle special cases first
@@ -179,7 +179,7 @@ def _test_interop_set(clr_types, py_types, test_cases):
         
         #------------------------------------------------------------------
         #get the right operand as a Python type
-        py_right = eval(rightop)       
+        py_right = eval(rightop)
         rightop_clr_types = [x for x in clr_types if num_ok_for_type(py_right, x)]
         rightop_clr_values = [eval(x + "(" + rightop + ")") for x in rightop_clr_types]
                     
@@ -199,7 +199,7 @@ def _test_interop_set(clr_types, py_types, test_cases):
             expression_str = left_type + "("+ left_op +") " + str(op) + " " + right_type + "("+ right_op +")"
             
             #if it's supposedly unsupported...make sure
-            if unsupported_operands.count(left_type + op + right_type)>0: 
+            if unsupported_operands.count(left_type + op + right_type)>0:
                 AssertError(TypeError, eval, expression_str)
                 return
                 
@@ -220,10 +220,10 @@ def _test_interop_set(clr_types, py_types, test_cases):
                 raise
             
             
-        #CLR-CLR           
+        #CLR-CLR
         for x in leftop_clr_types:
             for y in rightop_clr_types:
-                assertionHelper(x, leftop, op, y, rightop, expected_value)             
+                assertionHelper(x, leftop, op, y, rightop, expected_value)
                 
         #CLR-PY
         for x in leftop_clr_types:
@@ -242,7 +242,7 @@ def _test_interop_set(clr_types, py_types, test_cases):
 
 #------------------------------------------------------------------------------
 #--BOOLEAN
-bool_test_cases = [ 
+bool_test_cases = [
                     #x==x
                     ("0","==","0", True),
                     ("0.0","==","0", True),
@@ -386,7 +386,7 @@ def test_arithmetic():
     '''
     Test general arithmetic operations.
     '''
-    _test_interop_set(clr_types, py_types, arith_test_cases) 
+    _test_interop_set(clr_types, py_types, arith_test_cases)
     
     
 #------------------------------------------------------------------------------
@@ -405,28 +405,28 @@ bitwise_test_cases = [
                         
                         #bitwise AND
                         ("0", "&", "1", 0),
-                        ("1", "&", "1", 1),  
+                        ("1", "&", "1", 1),
                         ("7", "&", "2", 2),
-                        ("-1", "&", "1", 1),    
+                        ("-1", "&", "1", 1),
                         
                         #bitwise OR
                         ("0", "|", "1", 1),
-                        ("1", "|", "1", 1),  
+                        ("1", "|", "1", 1),
                         ("4", "|", "2", 6),
-                        ("-1", "|", "1", -1),    
+                        ("-1", "|", "1", -1),
                         
                         #bitwise XOR
                         ("0", "^", "1", 1),
-                        ("1", "^", "1", 0),  
+                        ("1", "^", "1", 0),
                         ("7", "^", "2", 5),
-                        ("-1", "^", "1", -2), 
+                        ("-1", "^", "1", -2),
                      ]
 
 def test_bitwiseshift():
     '''
     Test bitwise and shifting operations.
     '''
-    _test_interop_set(clr_integer_types, py_integer_types, bitwise_test_cases) 
+    _test_interop_set(clr_integer_types, py_integer_types, bitwise_test_cases)
 
 
 def test_sanity():

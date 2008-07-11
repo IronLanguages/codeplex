@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     public class LambdaExpression : Expression {

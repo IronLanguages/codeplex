@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -34,7 +34,7 @@ def assert_traceback(expected):
     import sys
     tb = sys.exc_info()[2]
     
-    if expected is None: 
+    if expected is None:
         AreEqual(None, expected)
     else:
         tb_list = []
@@ -57,9 +57,9 @@ def assert_traceback(expected):
 
 def test_no_traceback():
     #assert_traceback(None)
-    try:    
+    try:
         _raise_exception()
-    except: 
+    except:
         pass
     assert_traceback(None)
 
@@ -70,7 +70,7 @@ LINE100 = 70
 def test_catch_others_exception():
     try:
         _raise_exception()
-    except: 
+    except:
         assert_traceback([(LINE100 + 2, 0, FILE, 'test_catch_others_exception'), _retb])
 
 LINE110 = 78
@@ -78,7 +78,7 @@ LINE110 = 78
 def test_catch_its_own_exception():
     try:
         raise Exception()
-    except: 
+    except:
         assert_traceback([(LINE110 + 2, 0, FILE, 'test_catch_its_own_exception')])
 
 LINE120 = 86
@@ -86,7 +86,7 @@ LINE120 = 86
 def test_catch_others_exception_with_finally():
     try:
         _raise_exception_with_finally()
-    except: 
+    except:
         assert_traceback([(LINE120 + 2, 0, FILE, 'test_catch_others_exception_with_finally'), _rewftb])
 
 LINE130 = 94
@@ -94,7 +94,7 @@ LINE130 = 94
 def test_nested_caught_outside():
     try:
         x = 2
-        try: 
+        try:
             _raise_exception()
         except NameError:
             Assert(False, "unhittable")
@@ -107,7 +107,7 @@ LINE140 = 108
 def test_nested_caught_inside():
     try:
         x = 2
-        try: 
+        try:
             _raise_exception()
         except:
             assert_traceback([(LINE140 + 4, 0, FILE, 'test_nested_caught_inside'), _retb])
@@ -118,22 +118,22 @@ def test_nested_caught_inside():
 LINE150 = 120
 
 def test_throw_in_except():
-    try: 
+    try:
         _raise_exception()
     except:
         assert_traceback([(LINE150+2, 0, FILE, 'test_throw_in_except'), _retb])
-        try: 
+        try:
             assert_traceback([(LINE150+2, 0, FILE, 'test_throw_in_except'), _retb])
             _raise_exception()
-        except: 
+        except:
             assert_traceback([(LINE150+7, 0, FILE, 'test_throw_in_except'), _retb])
     assert_traceback([(LINE150+7, 0, FILE, 'test_throw_in_except'), _retb])
 
 LINE160 = 134
 
 class C1:
-    def M(self): 
-        try: 
+    def M(self):
+        try:
             _raise_exception()
         except:
             assert_traceback([(LINE160 + 3, 0, FILE, 'M'), _retb])
@@ -146,7 +146,7 @@ LINE170 = 147
 
 def test_throw_when_defining_class():
     class C2(object):
-        try: 
+        try:
             _raise_exception()
         except:
             assert_traceback([(LINE170 + 3, 0, FILE, 'C2'), _retb])
@@ -158,11 +158,11 @@ def throw_when_defining_class_directly():
 LINE180 = 160
 
 def test_throw_when_defining_class_directly():
-    try: 
+    try:
         throw_when_defining_class_directly()
     except:
-        assert_traceback([(LINE180 + 2, 0, FILE, 'test_throw_when_defining_class_directly'), 
-        (LINE180 - 5, 0, FILE, 'throw_when_defining_class_directly'), 
+        assert_traceback([(LINE180 + 2, 0, FILE, 'test_throw_when_defining_class_directly'),
+        (LINE180 - 5, 0, FILE, 'throw_when_defining_class_directly'),
         (LINE180 - 4, 0, FILE, 'C3'), _retb])
 LINE200 = 169
 
@@ -180,7 +180,7 @@ def generator_throw_before_yield():
 LINE210 = 181
 
 def test_throw_before_yield():
-    try: 
+    try:
         for x in generator_throw_before_yield():
             pass
     except:
@@ -193,24 +193,24 @@ def generator_throw_after_yield():
 LINE220 = 194
 
 def test_throw_while_yield():
-    try: 
+    try:
         for x in generator_throw_while_yield():
             pass
     except:
         assert_traceback([(LINE220+3, 0, FILE, 'test_throw_while_yield')])
 
 def generator_yield_inside_try():
-    try: 
+    try:
         yield 1
-        yield 2  
-        _raise_exception()    
-    except NameError: 
+        yield 2
+        _raise_exception()
+    except NameError:
         pass
 
 LINE230 = 211
 
 def test_yield_inside_try():
-    try: 
+    try:
         for x in generator_yield_inside_try():
             pass
     except:
@@ -258,5 +258,26 @@ def test_catch_MyException():
         catch_MyException()
     except:
         assert_traceback([(Line260+8, 0, FILE, 'test_catch_MyException'), (Line260+2, 0, FILE, 'catch_MyException'), _retb])
+
+Line263 = 263
+@skip("silverlight")
+def test_cp11923():
+    try:
+        _t_test = testpath.public_testdir + "\\cp11923.py"
+        write_to_file(_t_test, """def f():
+    x = 'something bad'
+    raise Exception(x)""")
+        
+        import cp11923
+        for i in xrange(3):
+            try:
+                cp11923.f()
+            except:
+                assert_traceback([(Line263 + 11, 69, 'test_traceback.py', 'test_cp11923'), (3, 22, get_full_dir_name(_t_test).lower(), 'f')])
+            reload(cp11923)
+        
+    finally:
+        import nt
+        nt.unlink(_t_test)
 
 run_test(__name__)

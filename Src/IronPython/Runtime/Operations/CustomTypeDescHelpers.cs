@@ -19,14 +19,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using System.Text;
-
-using Microsoft.Scripting;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
+using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -102,32 +99,47 @@ namespace IronPython.Runtime.Operations {
                     string s = o as string;
                     if (s == null) continue;
 
-                    PythonTypeSlot attrSlot;
+                    PythonTypeSlot attrSlot = null;
                     object attrVal;
 
                     if (self is OldInstance) {
-                        if (!((OldInstance)self).__class__.TryLookupSlot(SymbolTable.StringToId(s), out attrVal)) {
-                            continue;
+                        if (((OldInstance)self).__class__.TryLookupSlot(SymbolTable.StringToId(s), out attrVal)) {
+                            attrSlot = attrVal as PythonTypeSlot;
+                        } else {
+                            attrVal = ObjectOps.__getattribute__(DefaultContext.DefaultCLS, self, s);
                         }
-                        attrSlot = attrVal as PythonTypeSlot;
                     } else {
                         PythonType dt = DynamicHelpers.GetPythonType(self);
-                        if (!dt.TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(s), out attrSlot)) {
-                            continue;
-                        }
+                        dt.TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(s), out attrSlot);
+                        attrVal = ObjectOps.__getattribute__(DefaultContext.DefaultCLS, self, s);
                     }
-
-                    if(attrSlot == null || !attrSlot.TryGetBoundValue(DefaultContext.DefaultCLS, self, DynamicHelpers.GetPythonType(self), out attrVal)) continue;
 
                     Type attrType = (attrVal == null) ? typeof(NoneTypeOps) : attrVal.GetType();
 
-                    if (ShouldIncludeProperty(attrSlot, attributes)) {
+                    if ((attrSlot != null && ShouldIncludeProperty(attrSlot, attributes)) ||
+                        (attrSlot == null && ShouldIncludeInstanceMember(s, attributes))) {
                         descrs.Add(new SuperDynamicObjectPropertyDescriptor(s, attrType, self.GetType()));
                     }
                 }
             }
 
             return descrs.ToArray();
+        }
+
+        private static bool ShouldIncludeInstanceMember(string memberName, Attribute[] attributes) {
+            bool include = true;
+            foreach (Attribute attr in attributes) {
+                if (attr.GetType() == typeof(BrowsableAttribute)) {
+                    if (memberName.StartsWith("__") && memberName.EndsWith("__")) {
+                        include = false;
+                    }
+                } else {
+                    // unknown attribute, Python doesn't support attributes, so we
+                    // say this doesn't have that attribute.
+                    include = false;
+                }
+            }
+            return include;
         }
 
         private static bool ShouldIncludeProperty(PythonTypeSlot attrSlot, Attribute[] attributes) {
@@ -223,15 +235,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) {
-                // we need an instance...
-                ConstructorInfo ci = sourceType.GetConstructor(Type.EmptyTypes);
-                if (ci != null) {
-                    object value = ci.Invoke(ArrayUtils.EmptyObjects);
-                    object result;
-                    return Converter.TryConvert(value, convObj.GetType(), out result);
-                } else {
-                    throw new NotImplementedException("cannot determine conversion without instance");
-                }
+                return Converter.CanConvertFrom(sourceType, convObj.GetType(), NarrowingLevel.All);
             }
 
             public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value) {

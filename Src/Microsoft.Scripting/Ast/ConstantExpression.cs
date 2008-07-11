@@ -14,13 +14,24 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Math;
-
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Ast")]
+using System.Linq.Expressions;
+using Microsoft.Scripting.Math; 
 
 namespace Microsoft.Scripting.Ast {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1724:TypeNamesShouldNotMatchNamespaces")]
     public static partial class Utils {
+        /// <summary>
+        /// Wraps the given value in a WeakReference and returns a tree that will retrieve
+        /// the value from the WeakReference.
+        /// </summary>
+        public static MemberExpression WeakConstant(object value) {
+            System.Diagnostics.Debug.Assert(!(value is Expression));
+            return Expression.Property(
+                Expression.Constant(new WeakReference(value)),
+                typeof(WeakReference).GetProperty("Target")
+            );
+        }
+
         public static Expression Constant(object value) {
             BigInteger bi = value as BigInteger;
 
@@ -62,7 +73,7 @@ namespace Microsoft.Scripting.Ast {
             for (int i = 0; i < init.Length; i++) {
                 init[i] = Expression.Constant(array[i]);
             }
-            return Expression.NewArray(typeof(uint[]), init);
+            return Expression.NewArrayInit(typeof(uint), init);
         }
 
         private static Expression ComplexConstant(Complex64 value) {

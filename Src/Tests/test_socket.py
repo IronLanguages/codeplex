@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -20,6 +20,8 @@
 from lib.assert_util import *
 skiptest("silverlight")
 import sys
+import thread
+import time
 
 #workaround - _socket does not appear to be in $PYTHONPATH for CPython
 #only when run from the old test suite.
@@ -260,11 +262,11 @@ def test_getaddrinfo():
     
     #change the address family
     for addr_fam in ["AF_INET", "AF_UNSPEC"]:
-        addrinfo = socket.getaddrinfo("127.0.0.1", 
-                                       0, 
-                                       eval("socket." + addr_fam), 
-                                       0, 
-                                       0, 
+        addrinfo = socket.getaddrinfo("127.0.0.1",
+                                       0,
+                                       eval("socket." + addr_fam),
+                                       0,
+                                       0,
                                        0)
             
         AreEqual(repr(addrinfo), "[(2, 0, 0, '', ('127.0.0.1', 0))]")
@@ -272,13 +274,13 @@ def test_getaddrinfo():
     #change the socket type
     for socktype in ["SOCK_DGRAM", "SOCK_RAW", "SOCK_STREAM"]:
         socktype = eval("socket." + socktype)
-        addrinfo = socket.getaddrinfo("127.0.0.1", 
-                                       0, 
+        addrinfo = socket.getaddrinfo("127.0.0.1",
                                        0,
-                                       socktype, 
-                                       0, 
-                                       0)        
-        AreEqual(repr(addrinfo), "[(2, " + str(socktype) + ", 0, '', ('127.0.0.1', 0))]")    
+                                       0,
+                                       socktype,
+                                       0,
+                                       0)
+        AreEqual(repr(addrinfo), "[(2, " + str(socktype) + ", 0, '', ('127.0.0.1', 0))]")
         
         
     #change the protocol
@@ -288,22 +290,22 @@ def test_getaddrinfo():
         except:
             print proto
             continue
-        addrinfo = socket.getaddrinfo("127.0.0.1", 
-                                       0, 
+        addrinfo = socket.getaddrinfo("127.0.0.1",
                                        0,
                                        0,
-                                       proto,  
-                                       0)        
-        AreEqual(repr(addrinfo), "[(2, 0, " + str(proto) + ", '', ('127.0.0.1', 0))]")    
+                                       0,
+                                       proto,
+                                       0)
+        AreEqual(repr(addrinfo), "[(2, 0, " + str(proto) + ", '', ('127.0.0.1', 0))]")
     
     #negative cases
-    AssertError(socket.gaierror, socket.getaddrinfo, "should never work.dfkdfjkkjdfkkdfjkdjf", 0)    
+    AssertError(socket.gaierror, socket.getaddrinfo, "should never work.dfkdfjkkjdfkkdfjkdjf", 0)
 
-    AssertError(socket.gaierror, socket.getaddrinfo, "1", 0)    
-    AssertError(socket.gaierror, socket.getaddrinfo, ".", 0)    
-    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 3.14, 0, 0, 0, 0)       
-    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)    
-    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, 0, -1, 0, 0) 
+    AssertError(socket.gaierror, socket.getaddrinfo, "1", 0)
+    AssertError(socket.gaierror, socket.getaddrinfo, ".", 0)
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 3.14, 0, 0, 0, 0)
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, 0, -1, 0, 0)
 
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, -1000000, 0)
@@ -411,24 +413,51 @@ def test_cp12452():
     Need to fully test socket._fileobj when this bug gets fixed.
     '''
     expected_dir = [
-                    '__module__', 
+                    '__module__',
                     #-- Implementation dependent
                     #'__slots__',
                     #-- "_xyz" members probably do not need to be reimplemented in IP...
-                    #'_close', '_get_wbuf_len', '_getclosed', '_rbuf', 
+                    #'_close', '_get_wbuf_len', '_getclosed', '_rbuf',
                     #'_rbufsize', '_sock', '_wbuf', '_wbufsize',
-                    '__class__', '__del__', '__delattr__', '__doc__', 
-                    '__getattribute__', '__hash__', '__init__', '__iter__', 
-                    '__new__', '__reduce__', '__reduce_ex__', 
-                    '__repr__', '__setattr__', '__str__', 
-                     'bufsize', 
-                    'close', 'closed', 'default_bufsize', 'fileno', 'flush', 
-                    'mode', 'name', 'next', 'read', 'readline', 'readlines', 
+                    '__class__', '__del__', '__delattr__', '__doc__',
+                    '__getattribute__', '__hash__', '__init__', '__iter__',
+                    '__new__', '__reduce__', '__reduce_ex__',
+                    '__repr__', '__setattr__', '__str__',
+                     'bufsize',
+                    'close', 'closed', 'default_bufsize', 'fileno', 'flush',
+                    'mode', 'name', 'next', 'read', 'readline', 'readlines',
                     'softspace', 'write', 'writelines']
     fileobject_dir = dir(socket._fileobject)
     
     missing = [ x for x in expected_dir if x not in fileobject_dir ]
     AreEqual([], missing)
+
+#Dev10 446426
+@skip("multiple_execute")
+def test_makefile_refcount():
+    "Ensures that the socket stays open while there's still a file associated"
+    
+    def echoer(port):
+        s = socket.socket()
+        s.bind(('localhost', port))
+        s.listen(5)
+        (s2, ignore) = s.accept()
+        s2.send(s2.recv(10))
+    
+    port = 50008
+    
+    thread.start_new_thread(echoer, (port, ))
+    time.sleep(0)
+    s = socket.socket()
+    s.connect(('localhost', port))
+    f1 = s.makefile('r')
+    f2 = s.makefile('w')
+    s.close()
+    test_msg = 'abc\n'
+    f2.write(test_msg)
+    f2.flush()
+    str = f1.readline()
+    Assert(str==test_msg)
 
 
 run_test(__name__)

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -70,7 +70,7 @@ def CreateAssemblyGenerator(path, name):
     ab.DefineVersionInfoResource()
 
     constructor = clr.GetClrType(Diagnostics.DebuggableAttribute).GetConstructor(MakeArray(System.Type, clr.GetClrType(Diagnostics.DebuggableAttribute.DebuggingModes)))
-    attributeValue = MakeArray(System.Object, 
+    attributeValue = MakeArray(System.Object,
         Diagnostics.DebuggableAttribute.DebuggingModes.Default |
         Diagnostics.DebuggableAttribute.DebuggingModes.DisableOptimizations |
         Diagnostics.DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints
@@ -175,7 +175,7 @@ def EmitTestMethod(tg, name, argType):
         cg.ilg.Emit(OpCodes.Stloc, tostring)
         cg.ilg.Emit(OpCodes.Ldstr, "#EXCEPTION#")
         cg.ilg.Emit(OpCodes.Ldloc, tostring)
-        cg.ilg.EmitCall(OpCodes.Call, clr.GetClrType(str).GetMethod("Concat", MakeArray(System.Type, clr.GetClrType(System.String), clr.GetClrType(System.String))), None)        
+        cg.ilg.EmitCall(OpCodes.Call, clr.GetClrType(str).GetMethod("Concat", MakeArray(System.Type, clr.GetClrType(System.String), clr.GetClrType(System.String))), None)
         cg.ilg.Emit(OpCodes.Stloc, tostring)
         cg.ilg.EndExceptionBlock()
         cg.ilg.Emit(OpCodes.Br_S, end);
@@ -194,7 +194,7 @@ def EmitTestMethod(tg, name, argType):
         cg.ilg.Emit(OpCodes.Stloc, tostring)
         cg.ilg.Emit(OpCodes.Ldstr, "#EXCEPTION#")
         cg.ilg.Emit(OpCodes.Ldloc, tostring)
-        cg.ilg.EmitCall(OpCodes.Call, clr.GetClrType(System.String).GetMethod("Concat", MakeArray(System.Type, clr.GetClrType(System.String), clr.GetClrType(System.String))), None)        
+        cg.ilg.EmitCall(OpCodes.Call, clr.GetClrType(System.String).GetMethod("Concat", MakeArray(System.Type, clr.GetClrType(System.String), clr.GetClrType(System.String))), None)
         cg.ilg.Emit(OpCodes.Stloc, tostring)
         cg.ilg.EndExceptionBlock()
 

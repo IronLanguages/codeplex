@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -43,7 +43,7 @@ import gc
 
 # Test that generator.__del__ is invoked and that it calls Close()
 # Note that .NET's GC:
-# 1) runs on another thread, 
+# 1) runs on another thread,
 # 2) runs at a random time (but can be forcibly invoked from gc.collect)
 # So other generators that go out of scope will get closed() called at random times from wherever
 # the generator was left. This can introduce some nondeterminism in the tests.
@@ -52,14 +52,17 @@ import gc
 skiptest("silverlight")
 def test_del():
   l=[0]
-  def ff3(l):
-    try:
-      yield 10
-    finally:
-      l[0] += 1      
-  g=ff3(l)
-  AreEqual(g.next(), 10) # move to inside the finally
-  del g
+  def nested():
+    def ff3(l):
+      try:
+        yield 10
+      finally:
+        l[0] += 1
+    g=ff3(l)
+    AreEqual(g.next(), 10) # move to inside the finally
+    del g
+    
+  nested()
   gc.collect()
   AreEqual(l,[1]) # finally should have execute now.
 
@@ -72,7 +75,7 @@ def test_yield_lambda():
   g=f(10)
   AreEqual(g.next(), 10)
   AreEqual(g.send(9), 10*2)
-  AreEqual(g.send(5), (3+9, 5)) 
+  AreEqual(g.send(5), (3+9, 5))
 
   
 # This usage of lambda expression tests a different parsing path in IPY. (old lambda expressions)
@@ -90,21 +93,21 @@ def test_type_generator():
   AreEqual(type(f()), type(g()))
 
 
-# CPython 2.5 allows yield as a default parameter for lambda expressions 
+# CPython 2.5 allows yield as a default parameter for lambda expressions
 # (though not for regular def functions)
 def test_yield_default_param():
-    # This will return a generator that 
+    # This will return a generator that
     # defines a lambda expression, with default param initialized by send()
     # returns that lambda expression
     def f():
       yield lambda x=(yield 25): x * 2
       
     g=f()
-    AreEqual(g.next(), 25)    
+    AreEqual(g.next(), 25)
     l = g.send(15) # this sends in the default parameter, yields the lambda expression
     AreEqual(l(), 15*2) # this now uses the default param
     AreEqual(l(3), 3*2) # use a non-default param.
-    AreEqual(l(), 15*2)    
+    AreEqual(l(), 15*2)
 
 
 #
@@ -112,8 +115,8 @@ def test_yield_default_param():
 #
 
 # Test yield in a genexp body. This is a little bizare, but the CPython tests have this.
-def test_yield_genexp():    
-    # def f(): 
+def test_yield_genexp():
+    # def f():
     #   for i in range(5):
     #     yield (yield i)
     #
@@ -156,16 +159,16 @@ def test_yield_exp():
     l=[0,0]
     g=f(l)
     AreEqual(g.next(), 3)
-    AreEqual(g.send(100), None)    
+    AreEqual(g.send(100), None)
     AreEqual(g.next(), 10)
     AreEqual(l, [1,0])
     AreEqual(g.send(30), 37)
     AreEqual(l, [1,1])
     
-# test different parsing configurations of yield expression   
-# - Top-level assignment (=, +=) does not require parenthesis. 
+# test different parsing configurations of yield expression
+# - Top-level assignment (=, +=) does not require parenthesis.
 # - else yield used as expression does require parenthesis.
-# - argument to yield is optional 
+# - argument to yield is optional
 def test_yield_exp_parse():
     def f():
       # yield as statement, yielding tuple
@@ -178,7 +181,7 @@ def test_yield_exp_parse():
       y = 5
       y += yield 99
       AreEqual(y, 105)
-      y += yield 
+      y += yield
       AreEqual(y, 145)
       # test precedence. This is w = (yield (1,2)). Not w=(yield 1), 2
       w = yield 1,2
@@ -221,7 +224,7 @@ def test_send_after_closed():
     g.send(15)
   AreEqual(l, [0])
   AssertError(StopIteration, t)
-  AreEqual(l, [1])  
+  AreEqual(l, [1])
   EnsureClosed(g)
   AssertError(StopIteration, t)
   AreEqual(l, [1]) # no more change
@@ -242,8 +245,8 @@ def test_send_unstarted():
   AreEqual(g.next(), 5)
 
   
-# Ensure that sending an exception doesn't become a throw  
-def test_send_exception(): 
+# Ensure that sending an exception doesn't become a throw
+def test_send_exception():
   def f():
     y = yield
     AreEqual(y, MyError)
@@ -265,10 +268,10 @@ def test_throw_unhandled():
     # Simple iterator
     def f():
       # Caller will throw an exception after getting this value
-      yield 5  
+      yield 5
       Assert(False) # Iterator should not get here
 
-    g = f()  
+    g = f()
 
     i = g.next()
     AreEqual(i,5)
@@ -287,11 +290,11 @@ def test_throw_unhandled():
 def test_throw_handled():
     def f2():
       yield 1
-      try:    
+      try:
         yield 2  # caller throws from here
         Assert(False) # unreachable
       except MyError:
-        pass # 'Good: Generator caught exception from throw'    
+        pass # 'Good: Generator caught exception from throw'
         yield 3
       yield 4
 
@@ -299,7 +302,7 @@ def test_throw_handled():
     AreEqual(g.next(),1)
     AreEqual(g.next(),2)
 
-    # generator will catch this. 
+    # generator will catch this.
     # this throws from the last yield point, resumes executing the generator
     # and returns the result of the next yield point.
     i = g.throw(MyError)
@@ -310,7 +313,7 @@ def test_throw_handled():
 
 
 #
-# Test another throw overload passing (type,value). 
+# Test another throw overload passing (type,value).
 #
 def test_throw_value():
     class MyClass2:
@@ -337,7 +340,7 @@ def test_throw_value():
 #
 def test_catch_rethrow():
     def f4():
-      try:  
+      try:
         yield 1
         Assert(False)
       except MyError:
@@ -346,7 +349,7 @@ def test_catch_rethrow():
     g=f4()
     g.next() # move into try block
     try:
-      g.throw(MyError) # will get caught and rethrow MyError 2 
+      g.throw(MyError) # will get caught and rethrow MyError 2
       Assert(False)
     except MyError2: # catch different error than thrown
       pass
@@ -355,7 +358,7 @@ def test_catch_rethrow():
 
 
 #
-# Throw as first call  on the iterator. 
+# Throw as first call  on the iterator.
 # In this case, throw does not get to the first yield point.
 #
 def test_throw_unstarted():
@@ -374,10 +377,10 @@ def test_throw_unstarted():
       g.throw(MyError)
       Assert(False)
     except MyError:
-      pass      
+      pass
     EnsureClosed(g) # generator should now be closed.
 
-# Throw after closed, should raise its exception, 
+# Throw after closed, should raise its exception,
 # not another StopIteration / other exception
 # Note this is a little inconsistent with Next(), which raises a StopIteration exception
 # on closed generators.
@@ -410,7 +413,7 @@ def test_throw_from_finally():
         yield 1
         try:
           yield 2 # throw here
-          Assert(False) # 
+          Assert(False) #
         except MyError:
           l[0] = 2
 
@@ -435,7 +438,7 @@ def test_throw_from_finally():
 # Test that finallys properly execute when Gen.Throw is called.
 # This verifies that the exception is really being raised from the right spot
 # within the generator body.
-# 
+#
 
 
 
@@ -449,11 +452,11 @@ def f1(l):
     yield 2
     pass # '  Non exception case'
   finally:
-    pass # '  inside finally'  
-    l[0] = 1    
+    pass # '  inside finally'
+    l[0] = 1
   yield 3
 
-def test_throw_run_finally_nonexception(): 
+def test_throw_run_finally_nonexception():
     # Sanity check
     # 'Test: simple finally, no exception'
     l = [0]
@@ -467,9 +470,9 @@ def test_throw_run_finally_nonexception():
 
 
 #
-# Now try throwing before finally 
+# Now try throwing before finally
 #
-def test_throw_before_finally():    
+def test_throw_before_finally():
     l = [0]
     g=f1(l)
     AreEqual(g.next(), 1)
@@ -481,7 +484,7 @@ def test_throw_before_finally():
     AreEqual(l[0], 0) # finally should not have been executed
 
     # since we terminated with an exception, generator should be closed
-    EnsureClosed(g) 
+    EnsureClosed(g)
 
 #
 # Now try throwing in range of finally, so that finally is executed
@@ -506,8 +509,8 @@ def test_throw_run_finally_exception():
 
 #
 # Test that code/exceptions are being invoked from the right callstack,
-# either 
-#   a) inside the generator body, or 
+# either
+#   a) inside the generator body, or
 #   b) at the call to Generator.Throw(), but outside the generator body.
 # This is important so that the right set of catch blocks get applied.
 #
@@ -593,7 +596,7 @@ def test_close_catch_exit():
       pass # catch but exit, that's ok.
   g=f()
   AreEqual(g.next(), 1)
-  g.close()  
+  g.close()
 
 def test_close_rethrow():
   def f():
@@ -648,7 +651,7 @@ def consumer(func):
 # Yield in the middle of a tuple
 def test_exp_tuple():
   def f():
-    yield (1,(yield),3)  
+    yield (1,(yield),3)
   g=f()
   g.next()
   AreEqual(g.send(5), (1, 5, 3))
@@ -665,7 +668,7 @@ def test_exp_base_class():
 
     # generator to make a base class.
     @consumer
-    def M(): 
+    def M():
       # yield expression as a base class.
       class Foo((yield)):
         def m(self):
@@ -679,7 +682,7 @@ def test_exp_base_class():
 
 
 #
-# In print redirection slot. 
+# In print redirection slot.
 #
 class MyWriter:
   data=""
@@ -712,7 +715,7 @@ def test_exp_dict_literals():
     d2 = g.send(20) # {10: 'a', 20: 'b'}
     AreEqual(d2, {10: 'a', 20: 'b'})
 
-# 
+#
 # Test yield expressions in compound comparisons
 #
 
@@ -720,9 +723,9 @@ def gen_compare():
   f = ((yield 1) < (yield 2) < (yield 3))
   yield f
 
-# Compare expecting true.       
+# Compare expecting true.
 def test_exp_compare1():
-    g=gen_compare()    
+    g=gen_compare()
     AreEqual(g.next(), 1)
     AreEqual(g.send(5), 2)
     AreEqual(g.send(10), 3)
@@ -731,10 +734,10 @@ def test_exp_compare1():
 
 # compare expecting false. This will short-circuit
 def test_exp_compare2():
-    g=gen_compare()    
+    g=gen_compare()
     AreEqual(g.next(), 1)
     AreEqual(g.send(5), 2)
-    AreEqual(g.send(2), False)    
+    AreEqual(g.send(2), False)
     EnsureClosed(g)
 
 #
@@ -745,7 +748,7 @@ def test_exp_raise():
     def f():
       raise (yield), (yield)
       Assert(False)
-    g=f()      
+    g=f()
     g.send(ValueError)
     try:
       g.send(15)
@@ -762,7 +765,7 @@ def test_exp_slice():
     @consumer
     def f():
       l=range(0,10)
-      yield l[(yield):(yield)]  
+      yield l[(yield):(yield)]
 
     g=f()
     g.send(4)
@@ -775,11 +778,11 @@ def test_exp_slice():
 def test_layering():
     # manually implement the @consumer pattern
     def append_dict(d):
-      def f2():  
+      def f2():
         while True:
           (a,b) = ((yield), (yield))
           d[a]=(b)
-      g=f2() 
+      g=f2()
       g.next()
       return g
     # Wrapper around a generator.
@@ -805,12 +808,12 @@ def test_layering():
     AreEqual(d, {'a': 10, 'c': 30, 'b': 20})
 
 
-# 
+#
 # watered down example from Pep342
 #
 def test_layering_2():
     #
-    @consumer  
+    @consumer
     def Pager(dest):
       # group in threes
       while True:
@@ -818,15 +821,15 @@ def test_layering_2():
           s = ""
           s += '[%s,' % ((yield))
           s += str((yield))
-          s += ',%d]' % ((yield))    
+          s += ',%d]' % ((yield))
         except GeneratorExit:
           dest.send(s + "...incomplete")
           dest.close()
           return
         else:
-          dest.send(s)    
+          dest.send(s)
     #
-    @consumer  
+    @consumer
     def Writer(outstream):
        while True:
          try:
@@ -852,14 +855,14 @@ def test_layering_2():
 #
 
 # generator to use with test_yield_except_crazy*
-def getCatch():      
+def getCatch():
   yield 1
   l=[0,1,2]
   try:
     raise MyError, 'a'
   except (yield 'a'), l[(yield 'b')]:
-    AreEqual(sys.exc_info(), (None,None,None)) # will print None from the yields        
-    Assert(l[1] != 1) # validate that the catch properly assigned to it. 
+    AreEqual(sys.exc_info(), (None,None,None)) # will print None from the yields
+    Assert(l[1] != 1) # validate that the catch properly assigned to it.
     yield 'c'
   except (yield 'c'): # especially interesting here
     yield 'd'
@@ -872,21 +875,23 @@ def test_yield_except_crazy1():
     g=getCatch()
     AreEqual(g.next(), 1)
     AreEqual(g.next(), 'a')
+    AreEqual(sys.exc_info(), (None, None, None))
     AreEqual(g.send(MyError), 'b')
+    AreEqual(sys.exc_info(), (None, None, None))
     AreEqual(g.send(1), 'c')
     g.close()
 
 # executes the generators 2nd except clause
 def test_yield_except_crazy2():
     # try the 2nd clause
-    g=getCatch() 
+    g=getCatch()
     AreEqual(g.next(), 1)
     AreEqual(g.next(), 'a')
     AreEqual(g.send(ValueError), 'c') # Cause us to skip the first except handler
     AreEqual(g.send(MyError), 'd')
     g.close()
 
-# Yield statements without any return values.    
+# Yield statements without any return values.
 def test_yield_empty():
     def f():
         yield
@@ -901,5 +906,16 @@ def test_yield_empty():
     g = f()
     AreEqual(g.next(), None)
     AreEqual(g.next(), None)
+
+def test_throw_stop_iteration():
+    def f():
+        raise StopIteration('foo')
+        yield 3
     
+    x = f()
+    try:
+        x.next()
+    except StopIteration, e:
+        AreEqual(e.message, 'foo')
+
 run_test(__name__)

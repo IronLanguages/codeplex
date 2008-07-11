@@ -14,19 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime;
+using System.Reflection;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
 

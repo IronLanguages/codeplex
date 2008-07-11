@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace IronPython.Compiler {
     public partial class Tokenizer {
 

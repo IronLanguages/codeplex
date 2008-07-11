@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-
-using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
+using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {
@@ -53,12 +53,12 @@ namespace IronPython.Runtime.Operations {
             return _dictSplatSite.Invoke(context, func, args, dict);
         }
 
-        internal static DynamicAction MakeSplatAction() {
-            return CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(new ArgumentInfo(ArgumentKind.List)));
+        internal static OldDynamicAction MakeSplatAction() {
+            return OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(new ArgumentInfo(ArgumentKind.List)));
         }
 
-        internal static DynamicAction MakeDictSplatAction() {
-            return CallAction.Make(
+        internal static OldDynamicAction MakeDictSplatAction() {
+            return OldCallAction.Make(
                 DefaultContext.DefaultPythonBinder,
                 new CallSignature(
                     new ArgumentInfo(ArgumentKind.List),

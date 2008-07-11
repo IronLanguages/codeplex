@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -100,11 +100,11 @@ def test_tuple_hash():
     
 @skip('win32')
 def test_tuple_cli_interactions():
-	# verify you can call ToString on a tuple after importing clr
-	import clr
-	a = (0,)
-	
-	AreEqual(str(a), a.ToString())
+    # verify you can call ToString on a tuple after importing clr
+    import clr
+    a = (0,)
+    
+    AreEqual(str(a), a.ToString())
     
 
 def test_sequence_assign():

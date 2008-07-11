@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Exposes a IDictionary&lt;SymbolId, object&gt; as a IDictionary&lt;object, object&lt;
     /// </summary>

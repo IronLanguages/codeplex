@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -48,7 +48,7 @@ def test_getrandbits():
     except MemoryError:
         pass
     
-#jumpahead   
+#jumpahead
 def test_jumpahead():
     rand = _random.Random()
     old_state = rand.getstate()
@@ -57,17 +57,17 @@ def test_jumpahead():
     #Assert(old_state != rand.getstate())
     
 
-#random    
+#random
 def test_random():
     rand = _random.Random()
     result = rand.random()
     flag = result<1.0 and result >= 0.0
     Assert(flag,
-           "Result is not the value as expected,expected the result between 0.0 to 1.0,but the actual is not")        
+           "Result is not the value as expected,expected the result between 0.0 to 1.0,but the actual is not")
     
-#setstate   
+#setstate
 def test_setstate():
-    # state is object which 
+    # state is object which
     random = _random.Random()
     state1 = random.getstate()
     random.setstate(state1)
@@ -86,7 +86,7 @@ def test_setstate():
     AssertError(Exception,random.setstate,a)
     
     #state is a string object
-    b = "stete" 
+    b = "stete"
     AssertError(Exception,random.setstate,b)
     
     #state is a random object
@@ -94,7 +94,7 @@ def test_setstate():
     AssertError(Exception,random.setstate,c)
     
 
-#getstate    
+#getstate
 def test_getstate():
     random = _random.Random()
     a = random.getstate()
@@ -111,20 +111,20 @@ def test_getstate():
     AreEqual(c, random.getstate())
 
 
-#seed    
+#seed
 def test_seed():
-    i= 2  
+    i= 2
     random = _random.Random(i)
     a = random.getstate()
     
-    # parameter is None 
+    # parameter is None
     random.seed()
     b =random.getstate()
     if a == b:
         Fail("seed() method can't change the current internal state of the generator.")
   
     
-    # parameter is int    
+    # parameter is int
     x = 1
     random.seed(x)
     c = random.getstate()
@@ -132,7 +132,7 @@ def test_seed():
         Fail("seed(x) method can't change the current internal state of the generator when x is \
         int type.")
     
-    # parameter is string 
+    # parameter is string
     x = "seed"
     random.seed(x)
     d = random.getstate()

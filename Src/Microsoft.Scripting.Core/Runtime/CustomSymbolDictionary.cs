@@ -13,15 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
 
     /// <summary>
     /// Abstract base class used for optimized thread-safe SymbolDictionaries. 

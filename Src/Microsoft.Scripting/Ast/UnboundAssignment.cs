@@ -13,9 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundAssignment : Expression {
@@ -23,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
 
         internal UnboundAssignment(Annotations annotations, SymbolId name, Expression value)
-            : base(annotations, AstNodeType.Extension, typeof(object)) {
+            : base(annotations, ExpressionType.Extension, typeof(object)) {
             _name = name;
             _value = value;
         }
@@ -42,12 +43,14 @@ namespace Microsoft.Scripting.Ast {
 
         public override Expression Reduce() {
             return Expression.Call(
-                Annotations,
                 null,
-                typeof(RuntimeHelpers).GetMethod("SetNameReorder"),
-                Expression.Convert(_value, typeof(object)),
-                Expression.CodeContext(),
-                Expression.Constant(_name)
+                typeof(RuntimeHelpers).GetMethod("SetName"),
+                Annotations,
+                new Expression[] {
+                    Expression.CodeContext(), 
+                    Expression.Constant(_name),
+                    Expression.Convert(_value, typeof(object))
+                }
             );
         }
     }
@@ -57,9 +60,9 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static UnboundAssignment Assign(SymbolId name, Expression value) {
-            return Assign(SourceSpan.None, name, value);
+            return Assign(name, value, SourceSpan.None);
         }
-        public static UnboundAssignment Assign(SourceSpan span, SymbolId name, Expression value) {
+        public static UnboundAssignment Assign(SymbolId name, Expression value, SourceSpan span) {
             ContractUtils.Requires(!name.IsEmpty && !name.IsInvalid, "name", "Invalid or empty name is not allowed");
             ContractUtils.RequiresNotNull(value, "value");
             return new UnboundAssignment(Expression.Annotate(span), name, value);

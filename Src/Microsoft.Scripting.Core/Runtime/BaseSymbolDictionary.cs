@@ -13,15 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using System.Threading;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
 
     /// <summary>
     /// Base class for SymbolId dictionaries.  

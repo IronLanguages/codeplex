@@ -29,7 +29,7 @@ def test_explicitly_implemented_property():
              ]:
         x = t()
 
-        AssertError(AttributeError, lambda: x.Number)
+        Assert(hasattr(x, 'Number'))
         
         d = IData.Number
         d.SetValue(x, 20)

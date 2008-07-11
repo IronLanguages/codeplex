@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     class Return : Statement {
         private readonly Expression _expression;
@@ -32,10 +32,7 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            return Ast.Return(
-                Span,
-                _expression != null ? _expression.Generate(tg) : null
-            );
+            return AstUtils.Return(_expression != null ? _expression.Generate(tg) : null, Span);
         }
     }
 }

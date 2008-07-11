@@ -13,20 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Threading;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     public class AssemblyLoadedEventArgs : EventArgs {
         private Assembly _assembly;
 
@@ -44,7 +41,7 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// NamespaceTracker represent a CLS namespace.
     /// </summary>
-    public class NamespaceTracker : MemberTracker, IDynamicObject, IAttributesCollection, IMembersList {
+    public class NamespaceTracker : MemberTracker, IOldDynamicObject, IAttributesCollection, IMembersList {
         // _dict contains all the currently loaded entries. However, there may be pending types that have
         // not yet been loaded in _typeNames
         internal Dictionary<string, MemberTracker> _dict = new Dictionary<string, MemberTracker>();
@@ -530,20 +527,16 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
-        public LanguageContext LanguageContext {
-            get { return null; }
-        }
-
-        public RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        public RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
             if (action.Kind == DynamicActionKind.GetMember) {
-                return MakeGetMemberRule<T>((GetMemberAction)action, context);
+                return MakeGetMemberRule<T>((OldGetMemberAction)action, context);
             }
             return null;
         }
 
-        private RuleBuilder<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context) {
+        private RuleBuilder<T> MakeGetMemberRule<T>(OldGetMemberAction action, CodeContext context) where T : class {
             object value;
             if (TryGetValue(action.Name, out value)) {
                 Debug.Assert(value is MemberTracker);
@@ -552,12 +545,12 @@ namespace Microsoft.Scripting.Actions {
                 RuleBuilder<T> rule = new RuleBuilder<T>();
                 rule.MakeTest(typeof(NamespaceTracker));
                 rule.AddTest(
-                    Ast.Expression.Equal(
-                        Ast.Expression.ReadProperty(
-                            Ast.Expression.Convert(rule.Parameters[0], typeof(NamespaceTracker)),
+                    Expression.Equal(
+                        Expression.Property(
+                            Expression.Convert(rule.Parameters[0], typeof(NamespaceTracker)),
                             typeof(NamespaceTracker).GetProperty("Id")
                         ),
-                        Ast.Expression.Constant(Id)
+                        Expression.Constant(Id)
                     )
                 );
 

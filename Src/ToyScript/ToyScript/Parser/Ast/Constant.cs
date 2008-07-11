@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
     using Ast = MSAst.Expression;

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -47,12 +47,12 @@ def test_non_string_attrs():
     def SetDictionary(mod, dict):
         mod.__dict__ = dict
     
-    def CheckDictionary(d): 
+    def CheckDictionary(d):
         # add non-string index into the class and instance dictionary
         d[1] = '1'
         CheckObjectKeys(d)
         # Remove the non-string key since it causes problems later on
-        del d[1]    
+        del d[1]
     
     def CheckModule(mod):
         # add a new attribute to the type...
@@ -72,7 +72,7 @@ def test_non_string_attrs():
     CheckModule(me)
     
     # old style classes support module keys
-    class C:    
+    class C:
         a = 1
         b = 2
     
@@ -166,10 +166,10 @@ def test_meta_attrs():
     
     AreEqual(s.center, s.__getattribute__("center"))
     
-    AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only", 
+    AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only",
                                             "'str' object attribute 'center' is read-only", s.__setattr__, "center", "foo")
     
-    AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only", 
+    AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only",
                                             "'str' object attribute 'center' is read-only", s.__delattr__, "center")
     
     AssertError(TypeError, getattr, object(), None)
@@ -206,7 +206,7 @@ def test_access_checks():
     def del_nonExistantAttribute(c):
         del c.nonExistantAttribute
     
-    def attr_access(c): 
+    def attr_access(c):
         AssertError(TypeError, del_class, c)
         AssertError(AttributeError, del_doc, c)
         AssertError(AttributeError, del_module, c)
@@ -245,6 +245,6 @@ def test_cp13686():
     
     if is_cli:
         import System
-        AssertError(AttributeError, setattr, System, "name", "xyz")    
+        AssertError(AttributeError, setattr, System, "name", "xyz")
 
 run_test(__name__)

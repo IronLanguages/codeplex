@@ -14,16 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices;
-
-using Microsoft.Scripting;
-
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
@@ -39,6 +35,7 @@ namespace IronPython.Modules {
 
         private static readonly object _threadholdKey = new object();
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {            
             context.SetModuleState(_threadholdKey, PythonTuple.MakeTuple(64 * 1024, 256 * 1024, 1024 * 1024));
         }

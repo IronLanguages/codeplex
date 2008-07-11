@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     /// <summary>
     /// Used by BreakStatement and ContinueStatement to specify the target of
     /// the break/continue. The label object is shared with the enclosing

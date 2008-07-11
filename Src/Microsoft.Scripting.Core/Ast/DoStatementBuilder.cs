@@ -13,21 +13,19 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class DoStatementBuilder {
         private readonly Expression _body;
-        private readonly SourceLocation _doLocation;
-        private readonly SourceSpan _statementSpan;
+        private readonly Annotations _annotations;
         private readonly LabelTarget _label;
 
-        internal DoStatementBuilder(SourceSpan statementSpan, SourceLocation location, LabelTarget label, Expression body) {
+        internal DoStatementBuilder(Annotations annotations, LabelTarget label, Expression body) {
             ContractUtils.RequiresNotNull(body, "body");
 
             _body = body;
-            _doLocation = location;
-            _statementSpan = statementSpan;
+            _annotations = annotations;
             _label = label;
         }
 
@@ -35,35 +33,23 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(condition, "condition");
             ContractUtils.Requires(condition.Type == typeof(bool), "condition", "Condition must be boolean");
 
-            return new DoStatement(Expression.Annotate(_statementSpan, _doLocation), _label, condition, _body);
+            return new DoStatement(_annotations, _label, condition, _body);
         }
     }
 
     public partial class Expression {
         public static DoStatementBuilder Do(params Expression[] body) {
             ContractUtils.RequiresNotNullItems(body, "body");
-            return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, null, Block(body));
+            return new DoStatementBuilder(Annotations.Empty, null, Block(body));
         }
 
         public static DoStatementBuilder Do(LabelTarget label, params Expression[] body) {
             ContractUtils.RequiresNotNullItems(body, "body");
-            return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, label, Block(body));
+            return new DoStatementBuilder(Annotations.Empty, label, Block(body));
         }
 
-        public static DoStatementBuilder Do(Expression body) {
-            return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, null, body);
-        }
-
-        public static DoStatementBuilder Do(LabelTarget label, Expression body) {
-            return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, label, body);
-        }
-
-        public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, Expression body) {
-            return new DoStatementBuilder(statementSpan, location, null, body);
-        }
-
-        public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, LabelTarget label, Expression body) {
-            return new DoStatementBuilder(statementSpan, location, label, body);
+        public static DoStatementBuilder Do(LabelTarget label, Annotations annotations, params Expression[] body) {
+            return new DoStatementBuilder(annotations, label, Block(body));
         }
     }
 }

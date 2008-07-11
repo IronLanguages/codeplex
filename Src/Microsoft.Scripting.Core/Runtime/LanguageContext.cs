@@ -13,20 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
 using System.Text;
 
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-
-// TODO: remove HAPI references:
-using Hosting_EngineTextContentProvider = Microsoft.Scripting.Hosting.EngineTextContentProvider;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Provides language specific facilities which are typicalled called by the runtime.
     /// </summary>
@@ -79,7 +73,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Whether the language can parse code and create source units.
         /// </summary>
-        internal virtual bool CanCreateSourceCode {
+        public virtual bool CanCreateSourceCode {
             get { return true; }
         }
 
@@ -117,36 +111,9 @@ namespace Microsoft.Scripting.Runtime {
             return new ScopeExtension(scope);
         }
 
-        // TODO: remove
-        /// <summary>
-        /// Notification sent when a ScriptCode is about to be executed within given ModuleContext.
-        /// </summary>
-        public virtual void ModuleContextEntering(ScopeExtension newContext) {
-            // nop
-        }
-
-        // TODO: remove
-        public virtual void PublishModule(string/*!*/ name, Scope/*!*/ scope) {
-            // nop
-        }
-
         #endregion
 
         #region Source Code Parsing & Compilation
-
-        /// <summary>
-        /// Updates code properties of the specified source unit. 
-        /// The default implementation invokes code parsing. 
-        /// </summary>
-        public virtual void UpdateSourceCodeProperties(CompilerContext/*!*/ context) {
-            ContractUtils.RequiresNotNull(context, "context");
-
-            LambdaExpression lambda = ParseSourceCode(context);
-
-            if (!context.SourceUnit.CodeProperties.HasValue) {
-                context.SourceUnit.CodeProperties = (lambda != null) ? SourceCodeProperties.None : SourceCodeProperties.IsInvalid;
-            }
-        }
 
         public virtual StreamReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding defaultEncoding) {
             return new StreamReader(stream, defaultEncoding);
@@ -176,7 +143,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Looks up the name in the provided Scope using the current language's semantics.
         /// </summary>
         public virtual bool TryLookupName(CodeContext context, SymbolId name, out object value) {
-            if (context.Scope.TryLookupName(this, name, out value)) {
+            if (context.Scope.TryLookupName(this, name, out value) && value != Uninitialized.Instance) {
                 return true;
             }
 
@@ -324,26 +291,6 @@ namespace Microsoft.Scripting.Runtime {
             return false;
         }
 
-        // used by DynamicHelpers.GetDelegate
-        /// <summary>
-        /// Checks whether the target is callable with given number of arguments.
-        /// </summary>
-        public void CheckCallable(object target, int argumentCount) {
-            int min, max;
-            if (!IsCallable(target, argumentCount, out min, out max)) {
-                if (min == max) {
-                    throw RuntimeHelpers.SimpleTypeError(String.Format("expected compatible function, but got parameter count mismatch (expected {0} args, target takes {1})", argumentCount, min));
-                } else {
-                    throw RuntimeHelpers.SimpleTypeError(String.Format("expected compatible function, but got parameter count mismatch (expected {0} args, target takes at least {1} and at most {2})", argumentCount, min, max));
-                }
-            }
-        }
-
-        public virtual bool IsCallable(object target, int argumentCount, out int min, out int max) {
-            min = max = 0;
-            return true;
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFile")]
         public virtual Assembly LoadAssemblyFromFile(string file) {
 #if SILVERLIGHT
@@ -359,10 +306,13 @@ namespace Microsoft.Scripting.Runtime {
         /// Parses the source code within a specified compiler context. 
         /// The source unit to parse is held on by the context.
         /// </summary>
-        /// <param name="context">Compiler context.</param>
         /// <returns><b>null</b> on failure.</returns>
         /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
-        public abstract LambdaExpression ParseSourceCode(CompilerContext context);
+        internal protected abstract ScriptCode CompileSourceCode(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink);
+
+        internal protected virtual ScriptCode/*!*/ LoadCompiledCode(MethodInfo/*!*/ method) {
+            return ScriptCode.Load(method, this);
+        }
 
         public virtual string/*!*/ DisplayName {
             get {
@@ -410,9 +360,9 @@ namespace Microsoft.Scripting.Runtime {
             return exception.ToString();
         }
 
-        public virtual EngineOptions/*!*/ Options {
+        public virtual Microsoft.Scripting.EngineOptions/*!*/ Options {
             get {
-                return new EngineOptions();
+                return new Microsoft.Scripting.EngineOptions();
             }
         }
 
@@ -448,8 +398,7 @@ namespace Microsoft.Scripting.Runtime {
             ContractUtils.RequiresNotNull(path, "path");
             ContractUtils.RequiresNotNull(encoding, "encoding");
             
-            // TODO: remove hosting reference!!!
-            TextContentProvider provider = new Hosting_EngineTextContentProvider(this, new FileStreamContentProvider(DomainManager.Platform, path), encoding);
+            TextContentProvider provider = new LanguageBoundTextContentProvider(this, new FileStreamContentProvider(DomainManager.Platform, path), encoding);
             return CreateSourceUnit(provider, path, kind);
         }
 
@@ -498,16 +447,15 @@ namespace Microsoft.Scripting.Runtime {
             errorTypeName = exception.GetType().Name;
         }
 
-        internal protected virtual int ExecuteProgram(SourceUnit/*!*/ program) {
+        public virtual int ExecuteProgram(SourceUnit/*!*/ program) {
             ContractUtils.RequiresNotNull(program, "program");
 
-            ScriptCode compiledCode = program.Compile();
-            object returnValue = compiledCode.Run(compiledCode.MakeOptimizedScope());
+            object returnValue = program.Execute();
 
             CodeContext context = new CodeContext(new Scope(), this);
 
-            CallSite<DynamicSiteTarget<object, object>> site =
-                CallSite<DynamicSiteTarget<object, object>>.Create(ConvertToAction.Make(Binder, typeof(int), ConversionResultKind.ExplicitTry));
+            CallSite<DynamicSiteTarget<CodeContext, object, object>> site =
+                CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(OldConvertToAction.Make(Binder, typeof(int), ConversionResultKind.ExplicitTry));
 
             object exitCode = site.Target(site, context, returnValue);
             return (exitCode != null) ? (int)exitCode : 0;

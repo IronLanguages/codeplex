@@ -13,13 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Cached global value.  Created and maintained on a per-language basis.  Default
     /// implementation returns a singleton which indicates caching is not occuring.

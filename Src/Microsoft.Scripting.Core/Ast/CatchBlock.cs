@@ -13,44 +13,27 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     // TODO: Make internal?
     public sealed class CatchBlock {
-        private readonly SourceLocation _start;
-        private readonly SourceLocation _header;
-        private readonly SourceLocation _end;
+        private readonly Annotations _annotations;
         private readonly Type /*!*/ _test;
         private readonly VariableExpression _var;
         private readonly Expression /*!*/ _body;
+        private readonly Expression _filter;
 
-        internal CatchBlock(SourceSpan span, SourceLocation header, Type /*!*/ test, VariableExpression target, Expression /*!*/ body) {
+        internal CatchBlock(Annotations annotations, Type /*!*/ test, VariableExpression target, Expression /*!*/ body, Expression filter) {
             _test = test;
             _var = target;
             _body = body;
-            _start = span.Start;
-            _header = header;
-            _end = span.End;
+            _annotations = annotations;
+            _filter = filter;
         }
 
-        public SourceLocation Start {
-            get { return _start; }
-        }
-
-        public SourceLocation Header {
-            get { return _header; }
-        }
-
-        public SourceLocation End {
-            get { return _end; }
-        }
-
-        public SourceSpan Span {
-            get {
-                return new SourceSpan(_start, _end);
-            }
+        public Annotations Annotations {
+            get { return _annotations; }
         }
 
         public VariableExpression Variable {
@@ -64,22 +47,34 @@ namespace Microsoft.Scripting.Ast {
         public Expression Body {
             get { return _body; }
         }
+
+        public Expression Filter {
+            get {
+                return _filter;
+            }
+        }
     }
 
     public partial class Expression {
         public static CatchBlock Catch(Type type, Expression body) {
-            return Catch(SourceSpan.None, SourceLocation.None, type, null, body);
+            return Catch(type, null, body, null, Annotations.Empty);
         }
 
         public static CatchBlock Catch(Type type, VariableExpression target, Expression body) {
-            return Catch(SourceSpan.None, SourceLocation.None, type, target, body);
+            return Catch(type, target, body, null, Annotations.Empty);
         }
 
-        public static CatchBlock Catch(SourceSpan span, SourceLocation header, Type type, VariableExpression target, Expression body) {
+        public static CatchBlock Catch(Type type, VariableExpression target, Expression body, Expression filter) {
+            return Catch(type, target, body, filter, Annotations.Empty);
+        }
+
+        public static CatchBlock Catch(Type type, VariableExpression target, Expression body, Expression filter, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(target == null || TypeUtils.CanAssign(target.Type, type), "target");
             ContractUtils.RequiresNotNull(body, "body");
-            return new CatchBlock(span, header, type, target, body);
+            ContractUtils.Requires(filter == null || filter.Type == typeof(bool));
+
+            return new CatchBlock(annotations, type, target, body, filter);
         }
     }
 }

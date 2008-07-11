@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
     using Ast = MSAst.Expression;
@@ -33,22 +33,18 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            return Ast.If(
-                Ast.IfConditions(
-                    Ast.IfCondition(
-                        Span,
-                        _test.End,
-                        Ast.Action.ConvertTo(
-                            tg.Binder,
-                            typeof(bool),
-                            ConversionResultKind.ExplicitCast,
-                            _test.Generate(tg)
-                        ),
-                        _then.Generate(tg)
-                    )
+            MSAst.IfStatementBuilder ifb = Ast.If(
+                AstUtils.Comma(new SourceSpan(Span.Start, _test.End),
+                    tg.ConvertTo(typeof(bool), _test.Generate(tg))
                 ),
-                _else != null ? _else.Generate(tg) : null
+                _then.Generate(tg)
             );
+                
+            if (_else == null){
+                return ifb;
+            }else{
+                return ifb.Else(_else.Generate(tg));
+            }
         }
     }
 }

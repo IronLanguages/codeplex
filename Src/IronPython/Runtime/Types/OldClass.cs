@@ -16,23 +16,21 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.Serialization;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
+using Microsoft.Scripting;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     // OldClass represents the type of old-style Python classes (which could not inherit from 
     // built-in Python types). 
@@ -58,7 +56,7 @@ namespace IronPython.Runtime.Types {
 #endif
  ICodeFormattable,
         IMembersList,
-        IDynamicObject {
+        IOldDynamicObject {
 
         [NonSerialized]
         private List<OldClass> _bases;
@@ -76,7 +74,7 @@ namespace IronPython.Runtime.Types {
         public static string __doc__ = "classobj(name, bases, dict)";
 
         public static object __new__(CodeContext/*!*/ context, [NotNull]PythonType cls, string name, PythonTuple bases, IAttributesCollection dict) {
-            if (cls != TypeCache.OldClass) throw PythonOps.TypeError("{0} is not a subtype of classobj", PythonTypeOps.GetName(cls));
+            if (cls != TypeCache.OldClass) throw PythonOps.TypeError("{0} is not a subtype of classobj", cls.Name);
 
             if (!dict.ContainsKey(Symbols.Module)) {
                 object moduleValue;
@@ -192,7 +190,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public bool TryLookupSlot(SymbolId name, out object ret) {
+        internal bool TryLookupSlot(SymbolId name, out object ret) {
             if (__dict__._storage.TryGetValue(name, out ret)) {
                 return true;
             }
@@ -270,16 +268,18 @@ namespace IronPython.Runtime.Types {
                 } while (Interlocked.CompareExchange(ref _attrs, newAttrs, oldAttrs) != oldAttrs);
             }
         }
+
         public override string ToString() {
             return FullName;
         }
 
         #region Calls
+
         // Calling an OldClass instance means instantiating that class and invoking the __init__() member if 
         // it's defined.
 
-        // OldClass impls IDynamicObject. But May wind up here still if IDynamicObj doesn't provide a rule (such as for list sigs).
-        // If our IDynamicObject implementation is complete, we can then remove these Call methods.
+        // OldClass impls IOldDynamicObject. But May wind up here still if IDynamicObj doesn't provide a rule (such as for list sigs).
+        // If our IOldDynamicObject implementation is complete, we can then remove these Call methods.
         [SpecialName]
         public object Call(CodeContext context, [NotNull]params object[] args\u00F8) {
             OldInstance inst = new OldInstance(this);
@@ -305,6 +305,7 @@ namespace IronPython.Runtime.Types {
             }
             return inst;
         }
+
         #endregion // calls
         
         internal PythonType TypeObject {
@@ -393,21 +394,17 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        #region ICustomMembers Members
+        #region IMembersList Members
 
-        public IList<object> GetMemberNames(CodeContext context) {
+        IList<object> IMembersList.GetMemberNames(CodeContext context) {
             PythonDictionary attrs = new PythonDictionary(__dict__);
             RecurseAttrHierarchy(this, attrs);
             return PythonOps.MakeListFromSequence(attrs);
         }
 
-        public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            return (IDictionary<object, object>)__dict__;
-        }
-
         #endregion
 
-        public bool IsSubclassOf(object other) {
+        internal bool IsSubclassOf(object other) {
             if (this == other) return true;
 
             OldClass dt = other as OldClass;
@@ -483,30 +480,26 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
-        LanguageContext IDynamicObject.LanguageContext {
-            get { return DefaultContext.Default.LanguageContext; }
-        }
-
-        public RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        public RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
-                    return MakeGetMemberRule<T>((GetMemberAction)action, context, args);
+                    return MakeGetMemberRule<T>((OldGetMemberAction)action, context, args);
                 case DynamicActionKind.SetMember:
-                    return MakeSetMemberRule<T>((SetMemberAction)action, context, args);
+                    return MakeSetMemberRule<T>((OldSetMemberAction)action, context, args);
                 case DynamicActionKind.DeleteMember:
-                    return MakeDelMemberRule<T>((DeleteMemberAction)action, context, args);
+                    return MakeDelMemberRule<T>((OldDeleteMemberAction)action, context, args);
                 case DynamicActionKind.CreateInstance:
                 case DynamicActionKind.Call:
-                    return MakeCallRule<T>((CallAction)action, context, args);
+                    return MakeCallRule<T>((OldCallAction)action, context, args);
                 case DynamicActionKind.DoOperation:
-                    return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+                    return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
                 default: return null;
             }
         }
 
-        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
@@ -514,7 +507,7 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private static RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
             // This rule only handles simple signatures. Fallback on MethodBinder to handle complex signatures 
             // such as keyword args.
             if (!action.Signature.IsSimple) return null; 
@@ -544,13 +537,13 @@ namespace IronPython.Runtime.Types {
                             Ast.Call(
                                 Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                                 typeof(OldClass).GetMethod("TryLookupInit"),
-                                Ast.Read(instTmp),
-                                Ast.Read(tmp)
+                                instTmp,
+                                tmp
                             ),
-                            Ast.Action.Call(
+                            AstUtils.Call(
                                 action,
                                 typeof(object),
-                                ArrayUtils.Insert((Expression)Ast.Read(tmp), ArrayUtils.RemoveFirst(rule.Parameters))
+                                ArrayUtils.Insert<Expression>(rule.Context, tmp, ArrayUtils.RemoveFirst(rule.Parameters))
                             ),
                             // Checking the Parameter array directly here only works for simple signatures.
                             // It would get confused by cases like C(*()), C(**{}), or C(*E(), **{}), which could all
@@ -562,7 +555,7 @@ namespace IronPython.Runtime.Types {
                                     ) :
                                 Ast.Null()
                         ),
-                        Ast.Read(instTmp)
+                        instTmp
                     )
                 );
 
@@ -586,7 +579,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.TypeError("this constructor takes no arguments");
         }
 
-        private static RuleBuilder<T> MakeSetMemberRule<T>(SetMemberAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeSetMemberRule<T>(OldSetMemberAction action, CodeContext context, object[] args) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldClass));
             Expression call;
@@ -650,13 +643,13 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static RuleBuilder<T> MakeDelMemberRule<T>(DeleteMemberAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeDelMemberRule<T>(OldDeleteMemberAction action, CodeContext context, object[] args) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldClass));
             rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
                     typeof(PythonOps).GetMethod("OldClassDeleteMember"),
-                    Ast.CodeContext(),
+                    rule.Context,
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                     Ast.Constant(action.Name)
                 )
@@ -664,7 +657,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static RuleBuilder<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeGetMemberRule<T>(OldGetMemberAction action, CodeContext context, object[] args) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
 
             rule.MakeTest(typeof(OldClass));
@@ -676,24 +669,18 @@ namespace IronPython.Runtime.Types {
                         Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                         typeof(OldClass).GetMethod("DictionaryIsPublic")
                     ),
-                    Ast.ReadField(
+                    Ast.Field(
                         Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                         typeof(OldClass).GetField("__dict__")
                     )
                 );
             } else if (action.Name == Symbols.Bases) {
                 target = Ast.Call(
-                    typeof(PythonOps).GetMethod("MakeTupleFromSequence"),
-                    Ast.ConvertHelper(
-                        Ast.ReadProperty(
-                            Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                            typeof(OldClass).GetProperty("BaseClasses")
-                        ),
-                        typeof(object)
-                    )
+                    typeof(PythonOps).GetMethod("OldClassGetBaseClasses"),
+                    Ast.Convert(rule.Parameters[0], typeof(OldClass))
                 );
             } else if (action.Name == Symbols.Name) {
-                target = Ast.ReadProperty(
+                target = Ast.Property(
                     Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                     typeof(OldClass).GetProperty("Name")
                 );
@@ -705,13 +692,13 @@ namespace IronPython.Runtime.Types {
                             Ast.Call(
                                 Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                                 typeof(OldClass).GetMethod("TryLookupValue"),
-                                Ast.CodeContext(),
+                                rule.Context,
                                 Ast.Constant(action.Name),
-                                Ast.Read(tmp)
+                                tmp
                             ),
-                            Ast.Read(tmp),
+                            tmp,
                             Ast.Convert(
-                                Ast.ReadField(null, typeof(OperationFailed).GetField("Value")),
+                                Ast.Field(null, typeof(OperationFailed).GetField("Value")),
                                 typeof(object)
                             )
                         );
@@ -719,7 +706,7 @@ namespace IronPython.Runtime.Types {
                     target = Ast.Call(
                         Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                         typeof(OldClass).GetMethod("LookupValue"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         Ast.Constant(action.Name)
                     );
                 }

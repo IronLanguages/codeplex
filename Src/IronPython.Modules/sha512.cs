@@ -14,12 +14,9 @@
  * ***************************************************************************/
 
 using System;
+using System.Scripting.Runtime;
 using System.Security.Cryptography;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
@@ -38,6 +35,8 @@ namespace IronPython.Modules {
         private static readonly int digestSize = hasher512.HashSize / 8;
         private const int blockSize = 1;
 
+        public const string __doc__ = "SHA512 hash algorithm";
+
         public static Sha512Object sha512(object data) {
             return new Sha512Object(hasher512, data);
         }
@@ -54,6 +53,7 @@ namespace IronPython.Modules {
             return new Sha384Object(hasher384);
         }
 
+        [PythonHidden]
         public sealed class Sha384Object : HashBase, ICloneable {
             internal Sha384Object(HashAlgorithm hasher) : this(hasher, new byte[0]) { }
 
@@ -77,8 +77,14 @@ namespace IronPython.Modules {
             object ICloneable.Clone() {
                 return copy();
             }
+
+            public const int block_size = 128;
+            public const int digest_size = 48;
+            public const int digestsize = 48;
+            public const string name = "SHA384";
         }
 
+        [PythonHidden]
         public sealed class Sha512Object : HashBase, ICloneable {
             internal Sha512Object(HashAlgorithm hasher) : this(hasher, new byte[0]) { }
 
@@ -102,6 +108,11 @@ namespace IronPython.Modules {
             object ICloneable.Clone() {
                 return copy();
             }
+
+            public const int block_size = 128;
+            public const int digest_size = 64;
+            public const int digestsize = 64;
+            public const string name = "SHA512";
         }        
     }
 

@@ -13,13 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.IO;
 using System.Diagnostics;
+using System.Text;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public static class ArrayUtils {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
@@ -89,19 +87,6 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        /// <summary>
-        /// Resizes an array to a speficied new size and copies a portion of the original array into its beginning.
-        /// </summary>
-        internal static void ResizeInternal(ref char[] array, int newSize, int start, int count) {
-            Debug.Assert(array != null && newSize > 0 && count >= 0 && newSize >= count && start >= 0);
-
-            char[] result = (newSize != array.Length) ? new char[newSize] : array;
-
-            Buffer.BlockCopy(array, start * sizeof(char), result, 0, count * sizeof(char));
-
-            array = result;
-        }
-
         public static T[] Copy<T>(T[] array) {
             return (array.Length > 0) ? (T[])array.Clone() : array;
         }
@@ -163,6 +148,14 @@ namespace Microsoft.Scripting.Utils {
             T[] res = new T[list.Count + 1];
             res[0] = item;
             list.CopyTo(res, 1);
+            return res;
+        }
+
+        public static T[] Insert<T>(T item1, T item2, IList<T> list) {
+            T[] res = new T[list.Count + 2];
+            res[0] = item1;
+            res[1] = item2;
+            list.CopyTo(res, 2);
             return res;
         }
 

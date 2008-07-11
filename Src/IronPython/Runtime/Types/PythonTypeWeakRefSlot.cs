@@ -14,15 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("getset_descriptor")]

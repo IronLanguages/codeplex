@@ -16,14 +16,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
+using System.Scripting.Runtime;
 using System.Threading;
+using IronPython.Runtime;
 
 namespace IronPython.Hosting {
     internal class StringDictionaryStorage : DictionaryStorage {

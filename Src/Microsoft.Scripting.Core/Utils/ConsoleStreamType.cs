@@ -13,12 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
-
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public enum ConsoleStreamType {
         Input,
         Output,

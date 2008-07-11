@@ -13,10 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
+using System.Linq.Expressions;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Ast {
-    static class TypeUtils {
+namespace System.Scripting.Utils {
+
+    internal static class TypeUtils {
+
+        // TODO: this helper is needed to dynamically load ExtensionAttribute 
+        // until we can get the type statically via typeof(ExtensionAttribute)
+        internal static readonly Type ExtensionAttributeType = Type.GetType("System.Runtime.CompilerServices.ExtensionAttribute");
+
+        //CONFORMING
         internal static Type GetNonNullableType(Type type) {
             if (IsNullableType(type)) {
                 return type.GetGenericArguments()[0];
@@ -24,14 +32,26 @@ namespace Microsoft.Scripting.Ast {
             return type;
         }
 
+        //CONFORMING
+        internal static Type GetNullableType(Type type) {
+            System.Diagnostics.Debug.Assert(type != null, "type cannot be null");
+            if (type.IsValueType && !IsNullableType(type)) {
+                return typeof(Nullable<>).MakeGenericType(type);
+            }
+            return type;
+        }
+
+        //CONFORMING
         internal static bool IsNullableType(Type type) {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
+        //CONFORMING
         internal static bool IsBool(Type type) {
             return GetNonNullableType(type) == typeof(bool);
         }
 
+        //CONFORMING
         internal static bool IsNumeric(Type type) {
             type = GetNonNullableType(type);
             if (!type.IsEnum) {
@@ -53,6 +73,28 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
+        //CONFORMING
+        internal static bool IsInteger(Type type) {
+            type = GetNonNullableType(type);
+            if (type.IsEnum) {
+                return false;
+            }
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        //CONFORMING
         internal static bool IsArithmetic(Type type) {
             type = GetNonNullableType(type);
             if (!type.IsEnum) {
@@ -71,7 +113,8 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
-        internal static bool IsUnsigned(Type type) {
+        //CONFORMING
+        internal static bool IsUnsignedInt(Type type) {
             type = GetNonNullableType(type);
             if (!type.IsEnum) {
                 switch (Type.GetTypeCode(type)) {
@@ -84,6 +127,7 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
+        //CONFORMING
         internal static bool IsIntegerOrBool(Type type) {
             type = GetNonNullableType(type);
             if (!type.IsEnum) {
@@ -116,6 +160,7 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
+        //TODO: deprecate and use AreAssignable?
         internal static bool CanAssign(Type to, Type from) {
             if (to == from) {
                 return true;
@@ -134,6 +179,128 @@ namespace Microsoft.Scripting.Ast {
             } 
 
             return false;
+        }
+
+        //CONFORMING
+        internal static bool AreReferenceAssignable(Type dest, Type src) {
+            // WARNING: This actually implements "Is this identity assignable and/or reference assignable?"
+            if (dest == src) {
+                return true;
+            }
+            if (!dest.IsValueType && !src.IsValueType && AreAssignable(dest, src)) {
+                return true;
+            }
+            return false;
+        }
+        //CONFORMING
+        internal static bool AreAssignable(Type dest, Type src) {
+            if (dest == src) {
+                return true;
+            }
+            if (dest.IsAssignableFrom(src)) {
+                return true;
+            }
+            if (dest.IsArray && src.IsArray && dest.GetArrayRank() == src.GetArrayRank() && AreReferenceAssignable(dest.GetElementType(), src.GetElementType())) {
+                return true;
+            }
+            if (src.IsArray && dest.IsGenericType &&
+                (dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IEnumerable<>)
+                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IList<>)
+                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.ICollection<>))
+                && dest.GetGenericArguments()[0] == src.GetElementType()) {
+                return true;
+            }
+            return false;
+        }
+
+        //CONFORMING
+        internal static bool HasReferenceConversion(Type source, Type dest) {
+            System.Diagnostics.Debug.Assert(source != null);
+            System.Diagnostics.Debug.Assert(dest != null);
+            Type nnSourceType = GetNonNullableType(source);
+            Type nnDestType = GetNonNullableType(dest);
+            // Down conversion
+            if (AreAssignable(nnSourceType, nnDestType)) {
+                return true;
+            }
+            // Up conversion
+            if (AreAssignable(nnDestType, nnSourceType)) {
+                return true;
+            }
+            // Interface conversion
+            if (source.IsInterface || dest.IsInterface) {
+                return true;
+            }
+            // Object conversion
+            if (source == typeof(object) || dest == typeof(object)) {
+                return true;
+            }
+            //
+            //REVIEW: this conversion rule makes None type special.
+            // 
+            // None conversion. 
+            // None always has a value of "null" so it should be convertible to any reference type
+            if (source == typeof(None) && (dest.IsClass || dest.IsInterface)) {
+                return true;
+            }
+            return false;
+        }
+
+        //CONFORMING
+        internal static bool HasIdentityPrimitiveOrNullableConversion(Type source, Type dest) {
+            System.Diagnostics.Debug.Assert(source != null);
+            System.Diagnostics.Debug.Assert(dest != null);
+            // Identity conversion
+            if (source == dest) {
+                return true;
+            }
+            //REVIEW: is this correct?
+            // everything can be converted to void
+            if (dest == typeof(void)) {
+                return true;
+            }
+            // Nullable conversions
+            if (IsNullableType(source) && dest == GetNonNullableType(source)) {
+                return true;
+            }
+            if (IsNullableType(dest) && source == GetNonNullableType(dest)) {
+                return true;
+            }
+            // Primitive runtime conversions
+            // All conversions amongst enum, bool, char, integer and float types
+            // (and their corresponding nullable types) are legal except for
+            // nonbool==>bool and nonbool==>bool?
+            // Since we have already covered bool==>bool, bool==>bool?, etc, above,
+            // we can just disallow having a bool or bool? destination type here.
+            if (IsConvertible(source) && IsConvertible(dest) && GetNonNullableType(dest) != typeof(bool)) {
+                return true;
+            }
+            return false;
+        }
+
+        //CONFORMING
+        internal static bool IsConvertible(Type type) {
+            type = GetNonNullableType(type);
+            if (type.IsEnum) {
+                return true;
+            }
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Boolean:
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Char:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         internal static bool IsGeneric(Type type) {
@@ -186,38 +353,273 @@ namespace Microsoft.Scripting.Ast {
             return fromX <= toX && fromY <= toY;
         }
 
-        internal static bool HasBuiltinEquality(Type left, Type right) {
-            // Reference type can be compared to interfaces
-            if (left.IsInterface && !right.IsValueType ||
-                right.IsInterface && !left.IsValueType) {
+        //CONFORMING
+        internal static bool HasBuiltInEqualityOperator(Type left, Type right) {
+            // If we have an interface and a reference type then we can do 
+            // reference equality.
+            if (left.IsInterface && !right.IsValueType) {
                 return true;
             }
-
-            // Reference types compare if they are assignable
+            if (right.IsInterface && !left.IsValueType) {
+                return true;
+            }
+            // If we have two reference types and one is assignable to the
+            // other then we can do reference equality.
             if (!left.IsValueType && !right.IsValueType) {
-                if (CanAssign(left, right) || CanAssign(right, left)) {
+                if (AreReferenceAssignable(left, right) || AreReferenceAssignable(right, left)) {
                     return true;
                 }
             }
-
-            // Nullable<T> vs null
-            if (NullVsNullable(left, right) || NullVsNullable(right, left)) {
-                return true;
-            }
-
+            // Otherwise, if the types are not the same then we definitely 
+            // do not have a built-in equality operator.
             if (left != right) {
                 return false;
             }
-
-            if (left == typeof(bool) || IsNumeric(left) || left.IsEnum) {
+            // We have two identical value types, modulo nullability.  (If they were both the 
+            // same reference type then we would have returned true earlier.)
+            System.Diagnostics.Debug.Assert(left.IsValueType);
+            // Equality between struct types is only defined for numerics, bools, enums,
+            // and their nullable equivalents.
+            Type nnType = GetNonNullableType(left);
+            if (nnType == typeof(bool) || IsNumeric(nnType) || nnType.IsEnum) {
                 return true;
             }
-
             return false;
         }
 
-        private static bool NullVsNullable(Type left, Type right) {
-            return IsNullableType(left) && right == typeof(None);
+        //CONFORMING
+        internal static bool IsImplicitlyConvertible(Type source, Type destination) {
+            return IsIdentityConversion(source, destination) ||
+                IsImplicitNumericConversion(source, destination) ||
+                IsImplicitReferenceConversion(source, destination) ||
+                IsImplicitBoxingConversion(source, destination) ||
+                IsImplicitNullableConversion(source, destination);
+        }
+
+        //CONFORMING
+        private static bool IsIdentityConversion(Type source, Type destination) {
+            return source == destination;
+        }
+
+        //CONFORMING
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        private static bool IsImplicitNumericConversion(Type source, Type destination) {
+            TypeCode tcSource = Type.GetTypeCode(source);
+            TypeCode tcDest = Type.GetTypeCode(destination);
+
+            switch (tcSource) {
+                case TypeCode.SByte:
+                    switch (tcDest) {
+                        case TypeCode.Int16:
+                        case TypeCode.Int32:
+                        case TypeCode.Int64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.Byte:
+                    switch (tcDest) {
+                        case TypeCode.Int16:
+                        case TypeCode.UInt16:
+                        case TypeCode.Int32:
+                        case TypeCode.UInt32:
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.Int16:
+                    switch (tcDest) {
+                        case TypeCode.Int32:
+                        case TypeCode.Int64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.UInt16:
+                    switch (tcDest) {
+                        case TypeCode.Int32:
+                        case TypeCode.UInt32:
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.Int32:
+                    switch (tcDest) {
+                        case TypeCode.Int64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.UInt32:
+                    switch (tcDest) {
+                        case TypeCode.UInt32:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                    switch (tcDest) {
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.Char:
+                    switch (tcDest) {
+                        case TypeCode.UInt16:
+                        case TypeCode.Int32:
+                        case TypeCode.UInt32:
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    return false;
+                case TypeCode.Single:
+                    return (tcDest == TypeCode.Double);
+            }
+            return false;
+        }
+
+        //CONFORMING
+        private static bool IsImplicitReferenceConversion(Type source, Type destination) {
+            return AreAssignable(destination, source);
+        }
+
+        //CONFORMING
+        private static bool IsImplicitBoxingConversion(Type source, Type destination) {
+            if (source.IsValueType && (destination == typeof(object) || destination == typeof(System.ValueType)))
+                return true;
+            if (source.IsEnum && destination == typeof(System.Enum))
+                return true;
+            return false;
+        }
+
+        //CONFORMING
+        private static bool IsImplicitNullableConversion(Type source, Type destination) {
+            if (IsNullableType(destination))
+                return IsImplicitlyConvertible(GetNonNullableType(source), GetNonNullableType(destination));
+            return false;
+        }
+
+        //CONFORMING
+        internal static bool IsSameOrSubclass(Type type, Type subType) {
+            return (type == subType) || subType.IsSubclassOf(type);
+        }
+
+        //CONFORMING
+        internal static void ValidateType(Type type) {
+            if (type.IsGenericTypeDefinition) {
+                throw Error.TypeIsGeneric(type);
+            }
+            if (type.ContainsGenericParameters) {
+                throw Error.TypeContainsGenericParameters(type);
+            }
+        }
+
+        //CONFORMING
+        //from TypeHelper
+        internal static Type FindGenericType(Type definition, Type type) {
+            while (type != null && type != typeof(object)) {
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == definition)
+                    return type;
+                if (definition.IsInterface) {
+                    foreach (Type itype in type.GetInterfaces()) {
+                        Type found = FindGenericType(definition, itype);
+                        if (found != null)
+                            return found;
+                    }
+                }
+                type = type.BaseType;
+            }
+            return null;
+        }
+        
+        internal static Type NoRef(Type type) {
+            return type.IsByRef ? type.GetElementType() : type;
+        }
+
+        //CONFORMING
+        internal static bool IsUnsigned(Type type) {
+            type = GetNonNullableType(type);
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Byte:
+                case TypeCode.UInt16:
+                case TypeCode.Char:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        //CONFORMING
+        internal static bool IsFloatingPoint(Type type) {
+            type = GetNonNullableType(type);
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Single:
+                case TypeCode.Double:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        internal static Type GetNonNoneType(Type type) {
+            return (type == typeof(None)) ? typeof(object) : type;
+        }
+
+        // When emitting constants, we generally emit as the real type, even if
+        // it is non-visible. However, for some types (e.g. reflection types)
+        // we convert to the visible type, because the non-visible type isn't
+        // very useful.
+        internal static Type GetConstantType(Type type) {
+            // If it's a visible type, we're done
+            if (type.IsVisible) {
+                return type;
+            }
+
+            // Get the visible base type
+            Type bt = type;
+            do {
+                bt = bt.BaseType;
+            } while (!bt.IsVisible);
+
+            // If it's one of the known reflection types,
+            // return the known type.
+            if (bt == typeof(Type) ||
+                bt == typeof(ConstructorInfo) ||
+                bt == typeof(EventInfo) ||
+                bt == typeof(FieldInfo) ||
+                bt == typeof(MethodInfo) ||
+                bt == typeof(PropertyInfo)) {
+                return bt;
+            }
+
+            // else return the original type
+            return type;
         }
     }
 }

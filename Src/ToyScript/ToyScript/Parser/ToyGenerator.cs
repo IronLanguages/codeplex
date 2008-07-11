@@ -13,29 +13,28 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
-
+using System;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using Microsoft.Scripting.Ast;
+using ToyScript.Binders;
 using ToyScript.Parser.Ast;
-using Microsoft.Scripting.Actions;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser {
     class ToyGenerator {
         private readonly ToyLanguageContext _tlc;
         private ToyScope _scope;
 
-        private ToyGenerator(ToyLanguageContext tlc, string name) {
+        private ToyGenerator(ToyLanguageContext tlc, SourceUnit sourceUnit) {
             _tlc = tlc;
-            PushNewScope(name);
+            PushNewScope(sourceUnit.Path ?? "<toyblock>", MSAst.Expression.Annotate(sourceUnit.Information));
         }
 
         internal ToyLanguageContext Tlc {
             get { return _tlc; }
-        }
-
-        internal ActionBinder Binder {
-            get {
-                return _tlc.Binder;
-            }
         }
 
         internal ToyScope Scope {
@@ -44,8 +43,8 @@ namespace ToyScript.Parser {
             }
         }
 
-        internal ToyScope PushNewScope(string name) {
-            return _scope = new ToyScope(name, _scope);
+        internal ToyScope PushNewScope(string name, MSAst.Annotations annotations) {
+            return _scope = new ToyScope(_scope, name, annotations);
         }
 
         internal void PopScope() {
@@ -64,12 +63,196 @@ namespace ToyScript.Parser {
             return _scope.TopScope.GetOrMakeLocal(name);
         }
 
-        internal static MSAst.LambdaExpression Generate(ToyLanguageContext tlc, Statement statement, string name) {
-            ToyGenerator tg = new ToyGenerator(tlc, name);
+        internal static MSAst.LambdaExpression Generate(ToyLanguageContext tlc, Statement statement, SourceUnit sourceUnit) {
+            ToyGenerator tg = new ToyGenerator(tlc, sourceUnit);
 
             MSAst.Expression body = statement.Generate(tg);
 
             return tg.Scope.FinishScope(body);
+        }
+
+        internal static bool UseNewBinders = false;
+
+        internal MSAst.Expression ConvertTo(Type type, MSAst.Expression expression) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Convert(expression, type, Binder.Convert(type), MSAst.Annotations.Empty);
+            } else {
+                return Utils.ConvertTo(
+                    _tlc.Binder,
+                    typeof(bool),
+                    ConversionResultKind.ExplicitCast,
+                    MSAst.Expression.CodeContext(),
+                    expression
+                );
+            }
+        }
+
+        internal MSAst.Expression Call(MSAst.Expression target, MSAst.Expression[] arguments) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Invoke(
+                    MSAst.Annotations.Empty,
+                    typeof(object),
+                    target,
+                    Binder.Call(),
+                    arguments
+                );
+            } else {
+                return Utils.Call(
+                    _tlc.Binder,
+                    typeof(object),
+                    ArrayUtils.Insert(
+                        MSAst.Expression.CodeContext(),
+                        target,
+                        arguments
+                   )
+                );
+            }
+        }
+
+        internal MSAst.Expression GetMember(string member, MSAst.Expression target) {
+            if (UseNewBinders) {
+                return MSAst.Expression.GetMember(
+                    target,
+                    typeof(object),
+                    Binder.GetMember(member)
+                );
+            } else {
+                return Utils.GetMember(
+                    _tlc.Binder,
+                    member,
+                    typeof(object),
+                    MSAst.Expression.CodeContext(),
+                    target
+                );
+            }
+        }
+
+        internal MSAst.Expression Operator(Operators op, MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                switch (op) {
+                    case Operators.GetItem:
+                        return MSAst.Expression.ArrayIndex(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(op));
+                    default:
+                        throw new NotImplementedException();
+                }
+            } else {
+                return Utils.Operator(
+                    _tlc.Binder,
+                    op,
+                    typeof(object),
+                    MSAst.Expression.CodeContext(),
+                    left,
+                    right
+                );
+            }
+        }
+
+        internal MSAst.Expression SetItem(MSAst.Expression target, MSAst.Expression index, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.AssignArrayIndex(target, index, right, typeof(object), Binder.Operation(Operators.SetItem), MSAst.Annotations.Empty);
+            } else {
+                return Utils.Operator(
+                    _tlc.Binder,
+                    Operators.SetItem,
+                    typeof(object),
+                    MSAst.Expression.CodeContext(),
+                    target,
+                    index,
+                    right
+                );
+            }
+        }
+
+        internal MSAst.Expression Add(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Add(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Add));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.Add, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression Subtract(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Subtract(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Subtract));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.Subtract, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression Multiply(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Multiply(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Multiply));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.Multiply, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression Divide(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Divide(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Divide));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.Divide, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression LessThan(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.LessThan(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.LessThan));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.LessThan, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression LessThanOrEqual(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.LessThanOrEqual(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.LessThanOrEqual));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.LessThanOrEqual, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression GreaterThan(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.GreaterThan(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.GreaterThan));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.GreaterThan, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression GreaterThanOrEqual(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.GreaterThanOrEqual(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.GreaterThanOrEqual));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.GreaterThanOrEqual, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression Equal(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.Equal(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Equals));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.Equals, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression NotEqual(MSAst.Expression left, MSAst.Expression right) {
+            if (UseNewBinders) {
+                return MSAst.Expression.NotEqual(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.NotEquals));
+            } else {
+                return Utils.Operator(_tlc.Binder, Operators.NotEquals, typeof(object), MSAst.Expression.CodeContext(), left, right);
+            }
+        }
+
+        internal MSAst.Expression New(MSAst.Expression target, MSAst.Expression[] arguments) {
+            if (UseNewBinders) {
+                return MSAst.Expression.New(typeof(object), Binder.New(new CallSignature(arguments.Length)), ArrayUtils.Insert(target, arguments));
+            } else {
+                return Utils.Create(
+                    _tlc.Binder,
+                    typeof(object),
+                    ArrayUtils.Insert(MSAst.Expression.CodeContext(), target, arguments)
+                );
+            }
         }
     }
 }

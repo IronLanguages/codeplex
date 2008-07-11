@@ -14,11 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.IO;
-using Microsoft.Scripting.Utils;
+using System.Scripting;
+using System.Scripting.Utils;
+using System.Threading;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 

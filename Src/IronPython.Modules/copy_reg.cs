@@ -15,18 +15,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("copy_reg", typeof(IronPython.Modules.PythonCopyReg))]
 namespace IronPython.Modules {
@@ -210,6 +206,7 @@ namespace IronPython.Modules {
             }
         }
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             context.NewObject = (BuiltinFunction)dict[SymbolTable.StringToId("__newobj__")];
             context.PythonReconstructor = (BuiltinFunction)dict[SymbolTable.StringToId("_reconstructor")];

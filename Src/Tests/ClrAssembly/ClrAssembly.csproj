@@ -40,7 +40,7 @@
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
     <OutputPath>..\..\Bin\Silverlight Release</OutputPath>
@@ -49,7 +49,7 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
@@ -147,6 +147,7 @@
     <Csc TargetType="library" EmitDebugInformation="true" Sources="src\indexerdefinitionscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)indexerdefinitionscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
     <Csc TargetType="library" EmitDebugInformation="true" Sources="src\defaultmemberscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)defaultmemberscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
     <Csc TargetType="library" EmitDebugInformation="true" Sources="src\baseclasscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)baseclasscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\dynamicobjmodel.cs" OutputAssembly="$(OutputPath)\$(Prefix)dyanmicobjmodel.dll" References="$(OutputPath)\Microsoft.Scripting.Core.dll"/>
   </Target>
   <Target Name="VBManyArea" Inputs="@(AreaVBFile)" Outputs="@(AreaCSFile->'$(OutputPath)\$(Prefix)%(Filename).dll')" DependsOnTargets="TypeSample" >
     <Vbc TargetType="library" EmitDebugInformation="true" Sources="src\indexerdefinitionsvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)indexerdefinitionsvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />

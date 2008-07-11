@@ -13,23 +13,19 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class SwitchStatementBuilder {
-        private readonly SourceSpan _span;
-        private readonly SourceLocation _header;
+        private readonly Annotations _annotations;
         private Expression _test;
         private readonly List<SwitchCase> _cases = new List<SwitchCase>();
         private bool _default;
         private LabelTarget _label;
 
-        internal SwitchStatementBuilder(SourceSpan span, SourceLocation header, LabelTarget label, Expression test) {
-            _span = span;
-            _header = header;
+        internal SwitchStatementBuilder(Annotations annotations, LabelTarget label, Expression test) {
+            _annotations = annotations;
             _label = label;
             _test = test;
         }
@@ -42,28 +38,20 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public SwitchStatementBuilder Default(Expression body) {
-            return Default(SourceLocation.None, body);
-        }
-
-        public SwitchStatementBuilder Default(SourceLocation header, Expression body) {
             ContractUtils.Requires(_default == false, "body", "Already has default clause");
-            _cases.Add(Expression.DefaultCase(header, body));
+            _cases.Add(Expression.DefaultCase(body));
             _default = true;
             return this;
         }
 
         public SwitchStatementBuilder Case(int value, Expression body) {
-            return Case(SourceLocation.None, value, body);
-        }
-
-        public SwitchStatementBuilder Case(SourceLocation header, int value, Expression body) {
-            _cases.Add(Expression.SwitchCase(header, value, body));
+            _cases.Add(Expression.SwitchCase(value, body));
             return this;
         }
 
         public Expression ToStatement() {
             ContractUtils.Requires(_test != null);
-            return Expression.Switch(_span, _header, _label, _test, _cases.ToArray());
+            return Expression.Switch(_annotations, _label, _test, _cases.ToArray());
         }
 
         public static implicit operator Expression(SwitchStatementBuilder builder) {
@@ -73,36 +61,38 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Expression {
         public static SwitchStatementBuilder Switch() {
-            return Switch(SourceSpan.None, SourceLocation.None, null, null);
+            return Switch(null, null, Annotations.Empty);
         }
+        public static SwitchStatementBuilder Switch(Annotations annotations) {
+            return new SwitchStatementBuilder(annotations, null, null);
+        }
+
 
         public static SwitchStatementBuilder Switch(LabelTarget label) {
-            return Switch(SourceSpan.None, SourceLocation.None, label, null);
+            return Switch(null, label, Annotations.Empty);
         }
 
-        public static SwitchStatementBuilder Switch(SourceSpan span, SourceLocation header) {
-            return new SwitchStatementBuilder(span, header, null, null);
+        public static SwitchStatementBuilder Switch(LabelTarget label, Annotations annotations) {
+            return new SwitchStatementBuilder(annotations, label, null);
         }
 
-        public static SwitchStatementBuilder Switch(SourceSpan span, SourceLocation header, LabelTarget label) {
-            return new SwitchStatementBuilder(span, header, label, null);
-        }
 
         public static SwitchStatementBuilder Switch(Expression test) {
-            return Switch(SourceSpan.None, SourceLocation.None, null, test);
+            return Switch(test, null, Annotations.Empty);
         }
 
-        public static SwitchStatementBuilder Switch(LabelTarget label, Expression test) {
-            return Switch(SourceSpan.None, SourceLocation.None, label, test);
+        public static SwitchStatementBuilder Switch(Expression test, Annotations annotations) {
+            return Switch(test, null, annotations);
         }
 
-        public static SwitchStatementBuilder Switch(SourceSpan span, SourceLocation header, Expression test) {
-            return Switch(span, header, null, test);
-        }
 
-        public static SwitchStatementBuilder Switch(SourceSpan span, SourceLocation header, LabelTarget label, Expression test) {
+        public static SwitchStatementBuilder Switch(Expression test, LabelTarget label) {
+            return Switch(test, label, Annotations.Empty);
+        }
+        
+        public static SwitchStatementBuilder Switch(Expression test, LabelTarget label, Annotations annotations) {
             ContractUtils.RequiresNotNull(test, "test");
-            return new SwitchStatementBuilder(span, header, label, test);
+            return new SwitchStatementBuilder(annotations, label, test);
         }
     }
 }

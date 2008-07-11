@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -19,7 +19,7 @@ import _random
 import imp
     
 class testclass:
-	pass
+    pass
 
 class myCustom2:
     pass
@@ -28,7 +28,7 @@ class myCustom2:
 def test_constructor():
     #the argument can be callable
     copy_reg.constructor(testclass)
-    	
+    
     #the argument can not be callable
     AssertError(TypeError,copy_reg.constructor,0)
     AssertError(TypeError,copy_reg.constructor,"Hello")
@@ -55,7 +55,7 @@ def test__newobj__():
     reseult = None
     class customtype(object):
         def __new__(cls,b,c,d):
-            return object.__new__(cls)        
+            return object.__new__(cls)
         def __init__(self):
             pass
     c = True
@@ -86,35 +86,35 @@ def test_add_extension():
 
     # the value is zero or less than zero
     module = "module"
-    AssertError(ValueError,copy_reg.add_extension,module,obj,0)	
+    AssertError(ValueError,copy_reg.add_extension,module,obj,0)
     AssertError(ValueError,copy_reg.add_extension,module,object(),-987654)
 
-    # the key is already registered with code 
+    # the key is already registered with code
     AssertError(ValueError,copy_reg.add_extension,argu1,object(),100)
 
-    # the code is already in use for key 
+    # the code is already in use for key
     AssertError(ValueError,copy_reg.add_extension,_random,obj,100009)
 
 @skip("multiple_execute")
 def test_remove_extension():
-	#delete extension
-	copy_reg.remove_extension(_random,obj,100)
-	import argu1
-	copy_reg.remove_extension(argu1,obj,1)
-	module = True
-	copy_reg.remove_extension(module,obj,6)
+    #delete extension
+    copy_reg.remove_extension(_random,obj,100)
+    import argu1
+    copy_reg.remove_extension(argu1,obj,1)
+    module = True
+    copy_reg.remove_extension(module,obj,6)
 
-	#remove extension which has not been registed 
-	AssertError(ValueError,copy_reg.remove_extension,_random,obj,2)
-	AssertError(ValueError,copy_reg.remove_extension,_random,object(),100)
-	AssertError(ValueError,copy_reg.remove_extension,argu1,obj,1)
+    #remove extension which has not been registed
+    AssertError(ValueError,copy_reg.remove_extension,_random,obj,2)
+    AssertError(ValueError,copy_reg.remove_extension,_random,object(),100)
+    AssertError(ValueError,copy_reg.remove_extension,argu1,obj,1)
 
-	copy_reg.add_extension(argu1,obj,1)
-	AssertError(ValueError,copy_reg.remove_extension,argu1,obj,0)
+    copy_reg.add_extension(argu1,obj,1)
+    AssertError(ValueError,copy_reg.remove_extension,argu1,obj,0)
 
 
-#_extension_registry 
-def test_extension_registry():   
+#_extension_registry
+def test_extension_registry():
     #test getattr of the attribute and how the value of this attribute affects other method
     copy_reg.add_extension('a','b',123)
     key = copy_reg._inverted_registry[123]
@@ -134,11 +134,11 @@ def test_extension_registry():
     copy_reg._extension_registry["key"] = myvalue
     result = copy_reg._extension_registry["key"]
     Assert(result == myvalue,
-           "The set or the get of the attribute failed")    
+           "The set or the get of the attribute failed")
     
 #_inverted_registry
-def test_inverted_registry(): 
-    copy_reg.add_extension('obj1','obj2',64)  
+def test_inverted_registry():
+    copy_reg.add_extension('obj1','obj2',64)
     #get
     result = copy_reg._inverted_registry[64]
     Assert(result == ('obj1','obj2'),
@@ -164,7 +164,7 @@ def test_extension_cache():
     
     value = rand.getrandbits(16)
     copy_reg._extension_cache['cache2'] = value
-    result = copy_reg._extension_cache['cache2']  
+    result = copy_reg._extension_cache['cache2']
     Assert(result == value,
            "The get and set of the attribute failed")
 
@@ -208,12 +208,12 @@ def test_reconstructor():
            "set or get of the attribute failed!")
    
    
-#pickle	
+#pickle
 def test_pickle():
     def testfun():
         return testclass()
         
-    # type is a custom type    
+    # type is a custom type
     copy_reg.pickle(type(testclass), testfun)
     
     #type is a system type
@@ -269,9 +269,9 @@ def test_dispatch_table():
 def test_pickle_complex():
     
     #negative tests
-    AssertError(AttributeError,copy_reg.pickle_complex,1)   
-    AssertError(AttributeError,copy_reg.pickle_complex,"myargu") 
+    AssertError(AttributeError,copy_reg.pickle_complex,1)
+    AssertError(AttributeError,copy_reg.pickle_complex,"myargu")
     obj2 = myCustom2()
-    AssertError(AttributeError,copy_reg.pickle_complex,obj2)     
+    AssertError(AttributeError,copy_reg.pickle_complex,obj2)
            
 run_test(__name__)

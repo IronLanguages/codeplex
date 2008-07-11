@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -98,7 +98,7 @@ def test_get_referrers():
         AssertError(NotImplementedError, gc.get_referrers)
     else:
         gc.get_referrers(1,"hello",True)
-        gc.get_referrers() 
+        gc.get_referrers()
         
         class TempClass: pass
         tc = TempClass()
@@ -112,12 +112,12 @@ def test_get_referents():
         AssertError(NotImplementedError, gc.get_referents)
     else:
         gc.get_referents(1,"hello",True)
-        gc.get_referents() 
+        gc.get_referents()
         
         class TempClass: pass
-        AreEqual(gc.get_referents(TempClass).count('TempClass'), 1) 
+        AreEqual(gc.get_referents(TempClass).count('TempClass'), 1)
 
-#enable    
+#enable
 def test_enable():
     gc.enable()
     result = gc.isenabled()
@@ -132,7 +132,7 @@ def test_disable():
         result = gc.isenabled()
         Assert(result == False,"enable Method can't set gc.isenabled as false.")
 
-#isenabled    
+#isenabled
 def test_isenabled():
     gc.enable()
     result = gc.isenabled()
@@ -143,7 +143,7 @@ def test_isenabled():
         result = gc.isenabled()
         Assert(result == False,"enable Method can't set gc.isenabled as false.")
 
-#collect    
+#collect
 @skip("silverlight")
 def test_collect():
     if is_cli:
@@ -154,7 +154,7 @@ def test_collect():
             gc.collect()
     
     
-#set_dubug,get_debug  
+#set_dubug,get_debug
 def test_setdebug():
     if is_cli or is_silverlight:
         for debug in debug_list:
@@ -177,7 +177,7 @@ def test_gc():
         Assert(gc.gc != None,"gc.gc should not be None")
     
 #test DEBUG_STATS,DEBUG_COLLECTABLE,DEBUG_UNCOLLECTABLE,DEBUG_INSTANCES,DEBUG_OBJECTS,DEBUG_SAVEALL and DEBUG_LEAK
-def test_debug_stats():    
+def test_debug_stats():
     AreEqual(1,gc.DEBUG_STATS)
     AreEqual(2,gc.DEBUG_COLLECTABLE)
     AreEqual(4,gc.DEBUG_UNCOLLECTABLE)
@@ -192,7 +192,7 @@ def test_get_debug():
     state = [0,gc.DEBUG_STATS,gc.DEBUG_COLLECTABLE,gc.DEBUG_UNCOLLECTABLE,gc.DEBUG_INSTANCES,gc.DEBUG_OBJECTS,gc.DEBUG_SAVEALL,gc.DEBUG_LEAK]
     result = gc.get_debug()
     if result not in state:
-        Fail("Returned value of getdebug method is not valid value:" + str(result))  
+        Fail("Returned value of getdebug method is not valid value:" + str(result))
 
 #CodePlex Work Item# 8202
 #if gc.get_debug()!=0:

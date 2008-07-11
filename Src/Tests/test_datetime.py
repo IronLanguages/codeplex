@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -15,7 +15,7 @@
 
 ##
 ## Test the datetime module
-## 
+##
 
 from lib.assert_util import *
 import datetime
@@ -63,7 +63,7 @@ def test_date():
     AreEqual(x.day, 22)
 
     #right add
-    x = datetime.timedelta(1) + datetime.date(2005, 3, 22) 
+    x = datetime.timedelta(1) + datetime.date(2005, 3, 22)
     AreEqual(x.year, 2005)
     AreEqual(x.month, 3)
     AreEqual(x.day, 23)
@@ -328,18 +328,18 @@ def test_datetime():
     #--Test subtraction - timedelta
     test_data = { ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 0)) : (2006, 9, 29, 15, 37, 28, 686000),
                   ((2006, 9, 29, 15, 37, 28, 686000), (1, 0, 0)) : (2006, 9, 28, 15, 37, 28, 686000),
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 1, 0)) : (2006, 9, 29, 15, 37, 27, 686000), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 1)) : (2006, 9, 29, 15, 37, 28, 685999), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (1, 1, 1)) : (2006, 9, 28, 15, 37, 27, 685999), 
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 1, 0)) : (2006, 9, 29, 15, 37, 27, 686000),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 1)) : (2006, 9, 29, 15, 37, 28, 685999),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (1, 1, 1)) : (2006, 9, 28, 15, 37, 27, 685999),
                   
                   ((2006, 9, 29, 15, 37, 28, 686000), (-1, 0, 0)) : (2006, 9, 30, 15, 37, 28, 686000),
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, -1, 0)) : (2006, 9, 29, 15, 37, 29, 686000), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, -1)) : (2006, 9, 29, 15, 37, 28, 686001), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (-1, -1, -1)) : (2006, 9, 30, 15, 37, 29, 686001), 
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, -1, 0)) : (2006, 9, 29, 15, 37, 29, 686000),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, -1)) : (2006, 9, 29, 15, 37, 28, 686001),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (-1, -1, -1)) : (2006, 9, 30, 15, 37, 29, 686001),
                   
-                  ((9999, 12, 31, 23, 59, 59, 999999), (1, 1, 1)) : (9999, 12, 30, 23, 59, 58, 999998), 
+                  ((9999, 12, 31, 23, 59, 59, 999999), (1, 1, 1)) : (9999, 12, 30, 23, 59, 58, 999998),
                   ((9999, 12, 31, 23, 59, 59, 999999), (9999*365, 0, 0)) : (7, 8, 21, 23, 59, 59, 999999),
-                  ((9999, 12, 31, 23, 59, 59, 999999), (0, 0, 0)) : (9999, 12, 31, 23, 59, 59, 999999),  
+                  ((9999, 12, 31, 23, 59, 59, 999999), (0, 0, 0)) : (9999, 12, 31, 23, 59, 59, 999999),
                   }
     for (dt1, td0), value in test_data.iteritems():
         
@@ -357,18 +357,18 @@ def test_datetime():
     #--Test addition
     test_data = { ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 0)) : (2006, 9, 29, 15, 37, 28, 686000),
                   ((2006, 9, 29, 15, 37, 28, 686000), (1, 0, 0)) : (2006, 9, 30, 15, 37, 28, 686000),
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 1, 0)) : (2006, 9, 29, 15, 37, 29, 686000), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 1)) : (2006, 9, 29, 15, 37, 28, 686001), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (1, 1, 1)) : (2006, 9, 30, 15, 37, 29, 686001), 
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 1, 0)) : (2006, 9, 29, 15, 37, 29, 686000),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 1)) : (2006, 9, 29, 15, 37, 28, 686001),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (1, 1, 1)) : (2006, 9, 30, 15, 37, 29, 686001),
                   
                   ((2006, 9, 29, 15, 37, 28, 686000), (-1, 0, 0)) : (2006, 9, 28, 15, 37, 28, 686000),
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, -1, 0)) : (2006, 9, 29, 15, 37, 27, 686000), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, -1)) : (2006, 9, 29, 15, 37, 28, 685999), 
-                  ((2006, 9, 29, 15, 37, 28, 686000), (-1, -1, -1)) : (2006, 9, 28, 15, 37, 27, 685999), 
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, -1, 0)) : (2006, 9, 29, 15, 37, 27, 686000),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, -1)) : (2006, 9, 29, 15, 37, 28, 685999),
+                  ((2006, 9, 29, 15, 37, 28, 686000), (-1, -1, -1)) : (2006, 9, 28, 15, 37, 27, 685999),
     
-                  ((9999, 12, 31, 23, 59, 59, 999999), (-1, -1, -1)) : (9999, 12, 30, 23, 59, 58, 999998), 
+                  ((9999, 12, 31, 23, 59, 59, 999999), (-1, -1, -1)) : (9999, 12, 30, 23, 59, 58, 999998),
                   ((9999, 12, 31, 23, 59, 59, 999999), (-9999*365, 0, 0)) : (7, 8, 21, 23, 59, 59, 999999),
-                  ((9999, 12, 31, 23, 59, 59, 999999), (0, 0, 0)) : (9999, 12, 31, 23, 59, 59, 999999),  
+                  ((9999, 12, 31, 23, 59, 59, 999999), (0, 0, 0)) : (9999, 12, 31, 23, 59, 59, 999999),
                   }
     for (dt1, td0), value in test_data.iteritems():
         
@@ -807,9 +807,9 @@ def test_timedelta():
     x = datetime.timedelta(37, 28, 686000)
     AreEqual(abs(x), x)
     y = datetime.timedelta(-1, 0, 0)
-    AreEqual(abs(y), datetime.timedelta(1, 0, 0)) 
+    AreEqual(abs(y), datetime.timedelta(1, 0, 0))
     
-    #equality 
+    #equality
     x = datetime.timedelta(1, 2, 33)
     y = x
     Assert(x==y)
@@ -941,7 +941,7 @@ def test_time():
     x = datetime.time.resolution
     AreEqual(repr(x), 'datetime.timedelta(0, 0, 1)')
     
-    #equality 
+    #equality
     x = datetime.time(1, 2, 33, 444)
     y = x
     Assert(x==y)
@@ -1044,7 +1044,7 @@ def test_time():
     x = datetime.time(2,28,3,99,None)
     AreEqual(x.tzname(), None)
     
-@skip("win32")    
+@skip("win32")
 def test_tzinfo():
     x = datetime.tzinfo()
     AssertError(NotImplementedError, x.utcoffset, None)

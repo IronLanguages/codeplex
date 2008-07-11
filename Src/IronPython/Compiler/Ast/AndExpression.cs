@@ -14,18 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-
+using System.Scripting.Actions;
+using System.Scripting.Utils;
 using IronPython.Runtime;
-
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class AndExpression : Expression {
         private readonly Expression _left, _right;
@@ -56,8 +52,9 @@ namespace IronPython.Compiler.Ast {
             MSAst.VariableExpression tmp = ag.MakeTemp(Symbols.All, t);
             
             return Ast.Condition(
-                Ast.Action.ConvertTo(
-                    ConvertToAction.Make(ag.Binder, typeof(bool), ConversionResultKind.ExplicitCast),
+                AstUtils.ConvertTo(
+                    OldConvertToAction.Make(ag.Binder, typeof(bool), ConversionResultKind.ExplicitCast),
+                    Ast.CodeContext(),
                     Ast.Assign(
                         tmp,
                         Ast.ConvertHelper(
@@ -70,7 +67,7 @@ namespace IronPython.Compiler.Ast {
                     right,
                     t
                 ),
-                Ast.Read(tmp)
+                tmp
             );            
         }
 
@@ -84,6 +81,12 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return _left.CanThrow || _right.CanThrow;
+            }
         }
     }
 }

@@ -13,11 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     /// <summary>
     /// Provides hashing and equality based upon the value of the object instead of the reference.
     /// </summary>
@@ -26,7 +22,7 @@ namespace Microsoft.Scripting {
         /// Gets the hash code for the value of the instance.
         /// </summary>
         /// <returns>A hash code</returns>
-        /// <exception cref="Microsoft.Scripting.ArgumentTypeException">The type is mutable and cannot be hashed by value</exception>
+        /// <exception cref="System.Scripting.ArgumentTypeException">The type is mutable and cannot be hashed by value</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         int GetValueHashCode();
 

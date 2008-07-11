@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -89,7 +89,7 @@ y = ['1']
 y += Indexer()
 Assert(y == ['1', 1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
 
-AssertErrorWithMessages(TypeError, "iter() takes at least 1 argument (0 given)", 
+AssertErrorWithMessages(TypeError, "iter() takes at least 1 argument (0 given)",
                                    "iter expected at least 1 arguments, got 0", iter)
 
 
@@ -109,7 +109,7 @@ def test_itertools_islice_end():
     list(islice(it, 2))
     
     # we should still have the last value still present
-    for x in it: 
-        AreEqual(x, (4,6))                
+    for x in it:
+        AreEqual(x, (4,6))
         
 run_test(__name__)

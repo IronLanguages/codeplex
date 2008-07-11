@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
+using System.Scripting.Runtime;
 using Microsoft.Scripting.Actions;
+using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {

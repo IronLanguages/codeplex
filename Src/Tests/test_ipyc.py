@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -14,7 +14,7 @@
 #####################################################################################
 
 ##
-## Testing IronPython Compiler 
+## Testing IronPython Compiler
 ##
 
 from lib.assert_util import *
@@ -276,7 +276,7 @@ if (d.M2() !=  100):
     write_to_file(tempFileName1, tempFile1)
     write_to_file(tempFileName2, tempFile2)
     
-    AreEqual(launch_ironpython_changing_extensions(tempFileName2, ["-X:SaveAssemblies"], ["-X:TupleBasedOptimizedScopes", "-X:AssembliesDir"]), 0)
+    AreEqual(launch_ironpython_changing_extensions(tempFileName2, ["-X:SaveAssemblies"], ["-X:LightweightScopes", "-X:AssembliesDir"]), 0)
     RunPythonExe(tempExeName2)
 
     FileRemoval(tempFileName1, tempFileName2, tempExeName1, tempExeName2, tempPdbName1, tempPdbName2)
@@ -339,15 +339,15 @@ sys.exit(int(sys.argv[1]) + int(sys.argv[2]) + int(sys.argv[3]))
 @disabled("Needs to be updated or removed for DLR")
 def test_compilersinktest():
     from IronPythonTest import PythonCompilerSinkTest
-    st = PythonCompilerSinkTest() 
+    st = PythonCompilerSinkTest()
 
     for s in ['''
     class Class:zxvc
         "Description of Class"cxvxcvb
-    ''', 
-        '(1 and 1) = 1', 
+    ''',
+        '(1 and 1) = 1',
         '(lambda x: x = 1 )',
-        '	print 1', 
+        '    print 1',
         '(name1 =1) = 1',
         '''d = {}
     for x in d.keys()
@@ -357,9 +357,9 @@ def test_compilersinktest():
         Assert(st.CompileWithTestSink(s) > 0)
     
     for s in [
-        'name = 1', 
-        '(name) = 1', 
-        '(name1,name2) = (1,2)', 
+        'name = 1',
+        '(name) = 1',
+        '(name1,name2) = (1,2)',
         'name, = (1,0)',
         ]:
         Assert(st.CompileWithTestSink(s) == 0)
@@ -372,7 +372,7 @@ def test_ip_hosting_resource_file():
     rf_list = [ IronPython.Hosting.ResourceFile("name0", "file0"),
                 IronPython.Hosting.ResourceFile("name1", "file1", False),
                 ]
-    rf_list[0].PublicResource = False                
+    rf_list[0].PublicResource = False
                 
                 
     for i in xrange(len(rf_list)):
@@ -386,7 +386,27 @@ def test_ip_hosting_resource_file():
         
         AreEqual(rf_list[i].PublicResource, False)
         rf_list[i].PublicResource = True
-        AreEqual(rf_list[i].PublicResource, True)  
+        AreEqual(rf_list[i].PublicResource, True)
+
+
+def test_compiled_code():
+    import clr
     
+    # make sure we can compile
+    clr.CompileModules('test.pyil', testpath.public_testdir + '\\test_class.py')
+    
+    # make sure we can compile multiple files
+    clr.CompileModules('test.pyil', testpath.public_testdir + '\\test_class.py', testpath.public_testdir + '\\test_slice.py')
+    
+    clr.LoadModules('test.pyil')
+    import nt
+    
+    # and make sure we can run some reasonable sophisticated code...
+    System.IO.File.Move(testpath.public_testdir + '\\test_class.py', 'old_test_class.py')
+    try:
+        import test_class
+    finally:
+        System.IO.File.Move('old_test_class.py', testpath.public_testdir + '\\test_class.py')
+        
     
 run_test(__name__)

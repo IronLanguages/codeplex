@@ -14,7 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
 using System.Runtime.CompilerServices;
 
 namespace IronPythonTest {

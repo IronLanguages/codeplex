@@ -38,13 +38,18 @@ class NumType:
         self.is_float = (self.type(1)/self.type(2) != 0)
         
     def get_dict(self):
+        toObj = "(%s)" % self.name
+        toObjFooter = ""
+        if self.name == "Int32":
+            toObj = "System.Scripting.Runtime.RuntimeHelpers.Int32ToObject((Int32)"
+            toObjFooter = ")"
         if self.get_overflow_type() == bigint:
             op_type = 'BigInteger'
         else:
             op_type = 'Int32'
         return dict(type = self.name, bigger_type = self.get_overflow_type().get_signed().name,
             bigger_signed = self.get_overflow_type().get_signed().name,
-            type_to_object = "(%s)" % self.name, op_type=op_type, rop_type=op_type)
+            type_to_object = toObj, type_to_object_footer = toObjFooter, op_type=op_type, rop_type=op_type)
 
     def get_other_sign(self):
         if self.is_signed: return self.get_unsigned()
@@ -172,14 +177,14 @@ simple_compare_body = "return x == y ? 0 : x > y ? 1 : -1;"
 overflow1_body = """\
 %(bigger_type)s result = (%(bigger_type)s)(((%(bigger_type)s)x) %(symbol)s ((%(bigger_type)s)y));
 if (%(type)s.MinValue <= result && result <= %(type)s.MaxValue) {
-    return %(type_to_object)s(result);
+    return %(type_to_object)s(result)%(type_to_object_footer)s;
 } else {
     return result;
 }"""
 
 overflow2_body = """\
 try {
-    return %(type_to_object)s(checked(x %(symbol)s y));
+    return %(type_to_object)s(checked(x %(symbol)s y))%(type_to_object_footer)s;
 } catch (OverflowException) {
     return %(bigger_type)sOps.%(method_name)s((%(bigger_type)s)x, (%(bigger_type)s)y);
 }"""
@@ -187,7 +192,7 @@ try {
 overflow3_body = """\
 long result = (long) x %(symbol)s y;
 if (%(type)s.MinValue <= result && result <= %(type)s.MaxValue) {
-    return %(type_to_object)s(result);
+    return %(type_to_object)s(result)%(type_to_object_footer)s;
 } 
 return %(bigger_type)sOps.%(method_name)s((%(bigger_type)s)x, (%(bigger_type)s)y);
 """
@@ -306,10 +311,10 @@ def gen_binaryops(cw, ty):
         
         for symbol, name in [('&', 'BitwiseAnd'), ('|', 'BitwiseOr'), ('^', 'ExclusiveOr')]:
             write_binop1(cw, cast_simple_body, name, ty, symbol=symbol)
-            
-    cw.writeline()
-    cw.write("// Binary Operations - Comparisons")
-    write_compare(cw, simple_compare_body, 'Compare', ty, return_type='int')
+        
+        cw.writeline()
+        cw.write("// Binary Operations - Comparisons")
+        write_compare(cw, simple_compare_body, 'Compare', ty, return_type='int')
     
             
 implicit_conv = """\
@@ -425,21 +430,9 @@ def gen_all(cw):
         gen_type(cw, ty)
         
     
-def gen_attr(cw, ty):
-    if ty.name == "Int32" or ty.name == "Double":
-        cw.write('[assembly: PythonExtensionType(typeof(%s), typeof(%sOps), EnableDerivation=true)]' % (ty.name, ty.name))
-    else:
-        cw.write('[assembly: PythonExtensionType(typeof(%s), typeof(%sOps))]' % (ty.name, ty.name))
-
-    
-def gen_all_attr(cw):
-    for ty in types[:-2]: #don't generate complex or BigInteger
-        gen_attr(cw, ty)
-        
 def main():
     return generate(
         ("IntOps", gen_all),
-        ("ExtensionTypeAttributes", gen_all_attr)
     )
 
 if __name__ == "__main__":

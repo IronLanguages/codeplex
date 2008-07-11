@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -48,12 +48,12 @@ def test_sanity():
     # 2-dimension array
     array4 = System.Array.CreateInstance(int, 2, 2)
     array4[0, 1] = 1
-    AreEqual(repr(array4), "System.Int32[,](\n0, 1\n0, 0)")
+    AreEqual(repr(array4), "<2 dimensional Array[int] at 0x000000000000002B>")
 
     # 3-dimension array
     array5 = System.Array.CreateInstance(object, 2, 2, 2)
     array5[0, 1, 1] = int
-    AreEqual(repr(array5), "System.Object[,,]( Multi-dimensional array )")
+    AreEqual(repr(array5), "<3 dimensional Array[object] at 0x000000000000002C>")
 
     ## index access
     AssertError(TypeError, lambda : array5['s'])
@@ -64,15 +64,15 @@ def test_sanity():
 
     ## __add__/__mul__
     for f in (
-        lambda a, b : System.Array.__add__(a, b), 
+        lambda a, b : System.Array.__add__(a, b),
         lambda a, b : a + b
-        ) : 
+        ) :
         
         temp = System.Array.__add__(array1, array2)
         result = f(array1, array2)
         
         for i in range(6): AreEqual(i * 10, result[i])
-        AreEqual(repr(result), "System.Int32[](0, 10, 20, 30, 40, 50)")
+        AreEqual(repr(result), "Array[int]((0, 10, 20, 30, 40, 50))")
         
         result = f(array1, array3)
         AreEqual(len(result), 2 + 3)
@@ -81,7 +81,7 @@ def test_sanity():
         AssertError(NotImplementedError, f, array1, array4)
         
     for f in [
-        lambda a, x: System.Array.__mul__(a, x), 
+        lambda a, x: System.Array.__mul__(a, x),
         lambda a, x: array1 * x
         ]:
 
@@ -91,7 +91,7 @@ def test_sanity():
         AreEqual([x for x in f(array1, -10)], [])
 
 @skip("win32")
-def test_slice(): 
+def test_slice():
     array1 = System.Array.CreateInstance(int, 20)
     for i in range(20): array1[i] = i * i
     
@@ -99,13 +99,13 @@ def test_slice():
     array1[::2] = [x * 2 for x in range(10)]
 
     for i in range(0, 20, 2):
-        AreEqual(array1[i], i) 
+        AreEqual(array1[i], i)
     for i in range(1, 20, 2):
-        AreEqual(array1[i], i * i) 
+        AreEqual(array1[i], i * i)
 
     # negative: not-same-length
     def f(): array1[::2] = [x * 2 for x in range(11)]
-    AssertError(ValueError, f)    
+    AssertError(ValueError, f)
 
 @skip("win32")
 def test_creation():
@@ -116,7 +116,7 @@ def test_creation():
     for x in (ti([1,2]), t[int]([1, 2]), ti([1.5, 2.3])):
         AreEqual([i for i in x], [1, 2])
         t.Reverse(x)
-        AreEqual([i for i in x], [2, 1])    
+        AreEqual([i for i in x], [2, 1])
 
 
 def _ArrayEqual(a,b):
@@ -140,7 +140,7 @@ def test_nonzero_lowerbound():
     _ArrayEqual(a[2:4], System.Array[int]((2,3)))
     AreEqual(a[-1], 4)
 
-    AreEqual(repr(a), 'System.Int32[*](0, 1, 2, 3, 4)')
+    AreEqual(repr(a), 'Array[int]((0, 1, 2, 3, 4))')
 
     a = System.Array.CreateInstance(int, (5,), (15,))
     b = System.Array.CreateInstance(int, (5,), (20,))
@@ -150,14 +150,14 @@ def test_nonzero_lowerbound():
     a = System.Array.CreateInstance(int, (2,2,2,2,2), (1,2,3,4,5))
     AreEqual(a[0,0,0,0,0], 0)
 
-    for i in range(5):    
+    for i in range(5):
         index = [0,0,0,0,0]
-        index[i] = 1    
+        index[i] = 1
         
         a[index[0], index[1], index[2], index[3], index[4]] = i
         AreEqual(a[index[0], index[1], index[2], index[3], index[4]], i)
         
-    for i in range(5):    
+    for i in range(5):
         index = [0,0,0,0,0]
         index[i] = 0
         
@@ -189,7 +189,7 @@ def test_array_type():
                 
         a_normal = System.Array.CreateInstance(array_type, 3)
         Assert(str(AT)==str(type(a_normal)))
-        for i in xrange(3): 
+        for i in xrange(3):
             a_normal[i] = instance
             Assert(str(AT)==str(type(a_normal)))
    
@@ -238,7 +238,7 @@ def test_array_array_I():
     for x in [  0, 1, 2,
                 (2**8)-2, (2**8)-1, (2**8), (2**8)+1, (2**8)+2,
                 (2**16)-2, (2**16)-1, (2**16), (2**16)+1, (2**16)+2,
-                (2**32)-2, (2**32)-1, 
+                (2**32)-2, (2**32)-1,
                 ]:
                 
         temp_array1 = array.array('I', [x])

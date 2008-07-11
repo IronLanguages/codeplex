@@ -14,11 +14,12 @@
  * ***************************************************************************/
 
 using System.Diagnostics;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ExecStatement : Statement {
         private readonly Expression _code, _locals, _globals;
@@ -50,22 +51,22 @@ namespace IronPython.Compiler.Ast {
 
             if (_locals == null && _globals == null) {
                 // exec code
-                call = Ast.Call(
-                    Span,
-                    AstGenerator.GetHelperMethod("UnqualifiedExec"),
-                    Ast.CodeContext(),
+                call = AstUtils.Call(
+                    AstGenerator.GetHelperMethod("UnqualifiedExec"), 
+                    Span, 
+                    Ast.CodeContext(), 
                     ag.TransformAsObject(_code)
                 );
             } else {
                 // exec code in globals [ , locals ]
                 // We must have globals now (locals is last and may be absent)
                 Debug.Assert(_globals != null);
-                call = Ast.Call(
-                    Span,
-                    AstGenerator.GetHelperMethod("QualifiedExec"),
-                    Ast.CodeContext(),
-                    ag.TransformAsObject(_code),
-                    ag.TransformAndDynamicConvert(_globals, typeof(IAttributesCollection)),
+                call = AstUtils.Call(
+                    AstGenerator.GetHelperMethod("QualifiedExec"), 
+                    Span, 
+                    Ast.CodeContext(), 
+                    ag.TransformAsObject(_code), 
+                    ag.TransformAndDynamicConvert(_globals, typeof(IAttributesCollection)), 
                     ag.TransformOrConstantNull(_locals, typeof(object))
                 );
             }

@@ -13,16 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class AssertStatement : Statement {
         private readonly Expression _test, _message;
@@ -43,7 +38,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // If debugging is off, return empty statement
             if (ag.Optimize) {
-                return Ast.Empty(Span);
+                return AstUtils.Empty(Span);
             }
 
             // Transform into:

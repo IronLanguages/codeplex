@@ -19,30 +19,29 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Hosting;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 using PyAst = IronPython.Compiler.Ast;
-
-// TODO: remove HAPI reference
-using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Compilers;
+using System.Scripting.Generation;
 
 namespace IronPython.Runtime {
+    public delegate void CommandDispatcher(Delegate command);
+
     public sealed class PythonContext : LanguageContext {
         private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         private static readonly Guid LanguageVendor_Microsoft = new Guid(-1723120188, -6423, 0x11d2, 0x90, 0x3f, 0, 0xc0, 0x4f, 0xa3, 2, 0xa1);
@@ -50,13 +49,16 @@ namespace IronPython.Runtime {
         private static int _hookedAssemblyResolve;
 #endif
 
+        // fields used during startup
+        private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
+        private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
+        private readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
+        private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
+
+        // other fields which might only be conditionally used
         private readonly PythonEngineOptions/*!*/ _engineOptions;
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
-        /// <summary> stored for copy_reg module, used for reduce protocol </summary>
-        internal BuiltinFunction NewObject;
-        /// <summary> stored for copy_reg module, used for reduce protocol </summary>
-        internal BuiltinFunction PythonReconstructor;
         private string _initialVersionString;
 #if !SILVERLIGHT
         private string _initialExecutable, _initialPrefix = typeof(PythonContext).Assembly.CodeBase;
@@ -66,14 +68,21 @@ namespace IronPython.Runtime {
         private Scope _clrModule;
         private Scope _builtins;
 
-        private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
-        private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
-        private readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
-        private readonly PythonFileManager/*!*/ _fileManager = new PythonFileManager();
-        private readonly Dictionary<object, object> _moduleState = new Dictionary<object, object>();
-        private readonly Dictionary<string, object> _errorHandlers = new Dictionary<string, object>();
-        private readonly List<object> _searchFunctions = new List<object>();
-        private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
+        private PythonFileManager/*!*/ _fileManager;
+        private Dictionary<string, object> _errorHandlers;
+        private List<object> _searchFunctions;
+        private Dictionary<object, object> _moduleState;
+        /// <summary> stored for copy_reg module, used for reduce protocol </summary>
+        internal BuiltinFunction NewObject;
+        /// <summary> stored for copy_reg module, used for reduce protocol </summary>
+        internal BuiltinFunction PythonReconstructor;
+        private Dictionary<Type, object> _genericSiteStorage;
+        
+        private DynamicSite<object, object>[] _unarySites;
+        private DynamicSite<object, object, object, object>[] _ternarySites;
+        private CompiledLoader _compiledLoader;
+        internal bool _importWarningThrows;
+        private CommandDispatcher _commandDispatcher; // can be null
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -85,9 +94,9 @@ namespace IronPython.Runtime {
             // singletons:
             _engineOptions = new PythonEngineOptions();
 
-            DefaultContext.CreateContexts(this);
+            DefaultContext.CreateContexts(manager, this);
 
-            Binder = new PythonBinder(this, DefaultContext.DefaultCLS);
+            Binder = new PythonBinder(manager, this, DefaultContext.DefaultCLS);
 
             // need to run PythonOps 1st so the type system is spun up...
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(PythonOps).TypeHandle);
@@ -135,8 +144,16 @@ namespace IronPython.Runtime {
         /// Checks to see if module state has the current value stored already.
         /// </summary>
         public bool HasModuleState(object key) {
+            EnsureModuleState();
+
             lock (_moduleState) {
                 return _moduleState.ContainsKey(key);
+            }
+        }
+
+        private void EnsureModuleState() {
+            if (_moduleState == null) {
+                Interlocked.CompareExchange(ref _moduleState, new Dictionary<object, object>(), null);
             }
         }
 
@@ -145,6 +162,8 @@ namespace IronPython.Runtime {
         /// each piece of state it needs to store.
         /// </summary>
         public object GetModuleState(object key) {
+            EnsureModuleState();
+
             lock (_moduleState) {
                 Debug.Assert(_moduleState.ContainsKey(key));
 
@@ -157,8 +176,25 @@ namespace IronPython.Runtime {
         /// each piece of state it needs to store.
         /// </summary>
         public void SetModuleState(object key, object value) {
+            EnsureModuleState();
+
             lock (_moduleState) {
                 _moduleState[key] = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets per-runtime state used by a module and returns the previous value.  The module
+        /// should have a unique key for each piece of state it needs to store.
+        /// </summary>
+        public object GetSetModuleState(object key, object value) {
+            EnsureModuleState();
+
+            lock (_moduleState) {
+                object result;
+                _moduleState.TryGetValue(key, out result);
+                _moduleState[key] = value;
+                return result;
             }
         }
 
@@ -276,15 +312,23 @@ namespace IronPython.Runtime {
 
         public override string DisplayName {
             get {
-                return "IronPython 2.0 Beta";
+                return GetPythonDisplayName();
             }
+        }
+
+        internal static string GetPythonDisplayName() {
+            return "IronPython 2.0 Beta";
         }
 
         public override Version LanguageVersion {
             get {
                 // Assembly.GetName() can't be called in Silverlight...
-                return new AssemblyName(GetType().Assembly.FullName).Version;
+                return GetPythonVersion();
             }
+        }
+
+        internal static Version GetPythonVersion() {
+            return new AssemblyName(typeof(PythonContext).Assembly.FullName).Version;
         }
 
         /// <summary>
@@ -292,14 +336,14 @@ namespace IronPython.Runtime {
         /// </summary>
         private void InitializeSystemState() {
             // These fields do not get reset on "reload(sys)", we populate them once on startup
-            SetSystemStateValue("argv", new List(new object[] { String.Empty }));                
+            SetSystemStateValue("argv", List.FromArrayNoCopy(new object[] { String.Empty }));                
             SetSystemStateValue("modules", _modulesDict);
 
             _modulesDict["sys"] = _systemState;
 
             SetSystemStateValue("path", new List(3));
             SetSystemStateValue("ps1", ">>> ");
-            SetSystemStateValue("ps1", "... ");
+            SetSystemStateValue("ps2", "... ");
 
             SetStandardIO();
 
@@ -308,14 +352,15 @@ namespace IronPython.Runtime {
             SysModule.PerformModuleReload(this, _systemState.Dict);
         }
 
-        public override LambdaExpression ParseSourceCode(CompilerContext context) {
-            ContractUtils.RequiresNotNull(context, "context");
+        protected override ScriptCode CompileSourceCode(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
+            Assert.NotNull(sourceUnit, options, errorSink);
 
             PyAst.PythonAst ast;
             SourceCodeProperties properties = SourceCodeProperties.None;
             bool propertiesSet = false;
             int errorCode = 0;
 
+            CompilerContext context = new CompilerContext(sourceUnit, options, errorSink);
             using (Parser parser = Parser.CreateParser(context, PythonContext.GetPythonOptions(null))) {
                 switch (context.SourceUnit.Kind) {
                     case SourceCodeKind.InteractiveCode:
@@ -359,13 +404,44 @@ namespace IronPython.Runtime {
             pco.TrueDivision = ast.TrueDivision;
             pco.AllowWithStatement = ast.AllowWithStatement;
             pco.AbsoluteImports = ast.AbsoluteImports;
+            if (pco.ModuleName == null) {
+#if !SILVERLIGHT
+                if (context.SourceUnit.HasPath && context.SourceUnit.Path.IndexOfAny(Path.GetInvalidFileNameChars()) == -1) {
+                    pco.ModuleName = Path.GetFileNameWithoutExtension(context.SourceUnit.Path);
+#else
+                if (context.SourceUnit.HasPath) {                    
+                    pco.ModuleName = context.SourceUnit.Path;
+#endif
+                } else {
+                    pco.ModuleName = "<module>";
+                }
+            }
 
             PyAst.PythonNameBinder.BindAst(ast, context);
 
-            return ast.TransformToAst(context);
+            LambdaExpression lambda = ast.TransformToAst(context);
+
+            if ((pco.Module & ModuleOptions.Optimized) != 0) {
+                return new OptimizedScriptCode(lambda, context.SourceUnit);
+            } else {
+
+                // TODO: fix generated DLR ASTs
+                lambda = new GlobalLookupRewriter().RewriteLambda(lambda);
+                
+                return new ScriptCode(lambda, context.SourceUnit);
+            }
         }
 
-        public override StreamReader GetSourceReader(Stream stream, Encoding encoding) {
+        protected override ScriptCode/*!*/ LoadCompiledCode(MethodInfo/*!*/ method) {
+            ScriptCode result = OptimizedScriptCode.TryLoad(method, this);
+            if (result != null) {
+                return result;
+            }
+
+            return base.LoadCompiledCode(method);
+        }
+
+        public override StreamReader GetSourceReader(Stream/*!*/ stream, Encoding/*!*/ encoding) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(encoding, "encoding");
             ContractUtils.Requires(stream.CanSeek && stream.CanRead, "stream", "The stream must support seeking and reading");
@@ -497,82 +573,74 @@ namespace IronPython.Runtime {
         }
 
         public override ScopeExtension CreateScopeExtension(Scope scope) {
-            return CreatePythonModule(null, null, scope, ModuleOptions.None);
-        }
-
-        // TODO: remove
-        public override void ModuleContextEntering(ScopeExtension newContext) {
-            if (newContext == null) return;
-
-            PythonModule newPythonContext = (PythonModule)newContext;
-
-            // code executed in the scope of module cannot disable TrueDivision:
-
-            // TODO: doesn't work for evals (test_future.py) 
-            //if (newPythonContext.TrueDivision && !_trueDivision) {
-            //    throw new InvalidOperationException("Code cannot be executed in this module (TrueDivision cannot be disabled).");
-            //}
-
-            // flow options into the module if they're set
-            PythonCompilerOptions pco = ((PythonCompilerOptions)newPythonContext.Scope.CompilerContext.Options);
-            newPythonContext.TrueDivision |= pco.TrueDivision;
-            newPythonContext.AllowWithStatement |= pco.AllowWithStatement;
-            newPythonContext.AbsoluteImports |= pco.AbsoluteImports;
+            return CreatePythonModule(null, scope, ModuleOptions.None);
         }
 
         internal PythonModule/*!*/ CompileAndInitializeModule(string moduleName, string fileName, SourceUnit sourceUnit) {
             ScriptCode compiledCode;
-            return CompileModule(fileName, moduleName, sourceUnit, ModuleOptions.Initialize, false, out compiledCode);
+            return CompileModule(fileName, moduleName, sourceUnit, ModuleOptions.Initialize, out compiledCode);
         }
 
-        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options) {
-            ScriptCode compiledCode;
-            return CompileModule(fileName, moduleName, options, false, out compiledCode);
-        }
-
-        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options, bool skipFirstLine) {
-            ScriptCode compiledCode;
-            return CompileModule(fileName, moduleName, options, skipFirstLine, out compiledCode);
-        }
-
-        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options, bool skipFirstLine, out ScriptCode compiledCode) {
+        /// <summary>
+        /// Compiles the code stored in the specified filename with the given module name and options.  Returns the PythonModule
+        /// instance and the ScriptCode to be run.
+        /// </summary>
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options, out ScriptCode compiledCode) {
             SourceUnit sourceCode = CreateFileUnit(String.IsNullOrEmpty(fileName) ? null : fileName, DefaultEncoding);
-            return CompileModule(fileName, moduleName, sourceCode, options, skipFirstLine, out compiledCode);
+
+            return CompileModule(fileName, moduleName, sourceCode, options, out compiledCode);
         }
 
-        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options, bool skipFirstLine) {
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options) {
             ScriptCode compiledCode;
-            return CompileModule(fileName, moduleName, sourceCode, options, skipFirstLine, out compiledCode);
+            return CompileModule(fileName, moduleName, sourceCode, options, out compiledCode);
         }
 
-        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options, bool skipFirstLine,
-            out ScriptCode compiledCode) {
-
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options, out ScriptCode scriptCode) {
             ContractUtils.RequiresNotNull(fileName, "fileName");
             ContractUtils.RequiresNotNull(moduleName, "moduleName");
             ContractUtils.RequiresNotNull(sourceCode, "sourceCode");
 
+            scriptCode = GetScriptCode(sourceCode, moduleName, options);
+            Scope scope = scriptCode.CreateScope();
+            scope.SetExtension(ContextId, CreatePythonModule(fileName, scope, options));
+            return CreateModule(fileName, scope, scriptCode, options);
+        }
+
+        internal ScriptCode GetScriptCode(SourceUnit sourceCode, string moduleName, ModuleOptions options) {
+            ScriptCode compiledCode;
             PythonCompilerOptions compilerOptions = GetPythonCompilerOptions();
-            compilerOptions.SkipFirstLine = skipFirstLine;
+            compilerOptions.SkipFirstLine = (options & ModuleOptions.SkipFirstLine) != 0;
+            compilerOptions.ModuleName = moduleName;
 
             options |= ModuleOptions.Optimized;     // Below we always generate optimized scope.
             compilerOptions.Module = options;
 
             compiledCode = sourceCode.Compile(compilerOptions, ThrowingErrorSink.Default);
-            Scope scope = compiledCode.MakeOptimizedScope();
-            scope.SetExtension(ContextId, CreatePythonModule(moduleName, fileName, scope, options));
-            return CreateModule(moduleName, fileName, scope, compiledCode, options);
+            return compiledCode;
         }
 
-        public PythonModule/*!*/ CreateModule(string moduleName) {
-            return CreateModule(moduleName, null, PythonDictionary.MakeSymbolDictionary(), ModuleOptions.None);
+        internal PythonModule CreateBuiltinModule(string name) {
+            Type type;
+            if (Builtins.TryGetValue(name, out type)) {
+                // RuntimeHelpers.RunClassConstructor
+                // run the type's .cctor before doing any custom reflection on the type.
+                // This allows modules to lazily initialize PythonType's to custom values
+                // rather than having them get populated w/ the ReflectedType.  W/o this the
+                // cctor runs after we've done a bunch of reflection over the type that doesn't
+                // force the cctor to run.
+                System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+                return CreateBuiltinModule(name, type);
+            }
+
+            return null;
         }
 
-        public PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type) {
-            return CreateBuiltinModule(moduleName, type, ModuleOptions.None);
+        internal PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type) {
+            return CreateBuiltinModule(moduleName, type, ModuleOptions.NoBuiltins);
         }
 
-        public PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type, ModuleOptions options) {
+        internal PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type, ModuleOptions options) {
             PythonDictionary dict = new PythonDictionary(new ModuleDictionaryStorage(type));
 
             if (type == typeof(Builtin)) {
@@ -586,35 +654,25 @@ namespace IronPython.Runtime {
                 }
             }
 
-            //IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
-            return CreateModule(moduleName, null, new Scope(dict), null, options);
+            PythonModule mod = CreateModule(null, new Scope(dict), null, options);
+            mod.Scope.SetName(Symbols.Name, moduleName);
+            return mod;
         }
 
-        public PythonModule/*!*/ CreateModule(string moduleName, ModuleOptions options) {
-            return CreateModule(moduleName, null, PythonDictionary.MakeSymbolDictionary(), options);
+        public PythonModule/*!*/ CreateModule() {
+            return CreateModule(ModuleOptions.None);
         }
 
-        public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IDictionary<string, object> globals, ModuleOptions options) {
-            ContractUtils.RequiresNotNull(moduleName, "moduleName");
-            ContractUtils.RequiresNotNull(globals, "globals");
-
-            IAttributesCollection globalDict = globals as IAttributesCollection ?? new PythonDictionary(new StringDictionaryStorage(globals));
-            return CreateModule(moduleName, fileName, globalDict, options);
+        public PythonModule/*!*/ CreateModule(ModuleOptions options) {
+            return CreateModule(null, new Scope(PythonDictionary.MakeSymbolDictionary()), null, options);
         }
 
-        public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IAttributesCollection globals, ModuleOptions options) {
-            ContractUtils.RequiresNotNull(moduleName, "moduleName");
-            ContractUtils.RequiresNotNull(globals, "globals");
-
-            return CreateModule(moduleName, fileName, new Scope(globals), null, options);
-        }
-
-        private PythonModule/*!*/ CreateModule(string moduleName, string fileName, Scope scope, ScriptCode scriptCode, ModuleOptions options) {
+        internal PythonModule/*!*/ CreateModule(string fileName, Scope scope, ScriptCode scriptCode, ModuleOptions options) {
             if (scope == null) {
                 scope = new Scope(PythonDictionary.MakeSymbolDictionary());
             }
 
-            PythonModule module = CreatePythonModule(moduleName, fileName, scope, options);
+            PythonModule module = CreatePythonModule(fileName, scope, options);
             module.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
             module.TrueDivision = (options & ModuleOptions.TrueDivision) != 0;
             module.AllowWithStatement = (options & ModuleOptions.WithStatement) != 0;
@@ -622,15 +680,13 @@ namespace IronPython.Runtime {
             module.IsPythonCreatedModule = true;
 
             if ((options & ModuleOptions.Initialize) != 0) {
-                Importer.InitializeModule(this, moduleName, module, scriptCode, true);
-            } else if ((options & ModuleOptions.PublishModule) != 0) {
-                PublishModule(moduleName, module);
-            }
+                scriptCode.Run(module.Scope);
+            } 
 
             return module;
         }
 
-        internal PythonModule/*!*/ CreatePythonModule(string moduleName, string fileName, Scope/*!*/ scope, ModuleOptions options) {
+        private PythonModule/*!*/ CreatePythonModule(string fileName, Scope/*!*/ scope, ModuleOptions options) {
             ContractUtils.RequiresNotNull(scope, "scope");
 
             PythonModule module = new PythonModule(scope);
@@ -641,19 +697,10 @@ namespace IronPython.Runtime {
             // pass the appropriate flags to control this behavior.
             if ((options & ModuleOptions.NoBuiltins) == 0 && !scope.ContainsName(Symbols.Builtins)) {
                 if ((options & ModuleOptions.ModuleBuiltins) != 0) {
-                    module.Scope.SetName(Symbols.Builtins, BuiltinModuleInstance); // TODO: PythonContext.Id, 
+                    module.Scope.SetName(Symbols.Builtins, BuiltinModuleInstance);
                 } else {
-                    module.Scope.SetName(Symbols.Builtins, BuiltinModuleInstance.Dict); // TODO: PythonContext.Id, 
+                    module.Scope.SetName(Symbols.Builtins, BuiltinModuleInstance.Dict);
                 }
-            }
-
-            // do not set names if null to make attribute getter pas thru:
-            if (moduleName != null) {
-                module.SetName(moduleName);
-            }
-
-            if (fileName != null) {
-                module.SetFile(fileName);
             }
 
             // If the filename is __init__.py then this is the initialization code
@@ -671,11 +718,6 @@ namespace IronPython.Runtime {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(module, "module");
             SystemStateModules[name] = module.Scope;
-        }
-
-        // TODO: remove
-        public override void PublishModule(string/*!*/ name, Scope/*!*/ scope) {
-            PublishModule(name, DefaultContext.DefaultPythonContext.EnsurePythonModule(scope));
         }
 
         internal PythonModule GetReloadableModule(Scope/*!*/ scope) {
@@ -756,10 +798,6 @@ namespace IronPython.Runtime {
 
         public override bool EqualReturnBool(CodeContext context, object x, object y) {
             return PythonOps.EqualRetBool(x, y);
-        }
-
-        public override bool IsCallable(object obj, int argumentCount, out int min, out int max) {
-            return PythonOps.IsCallable(obj, argumentCount, out min, out max);
         }
 
         #region Assembly Loading
@@ -847,7 +885,7 @@ namespace IronPython.Runtime {
         }
 
         private static T GetAssemblyAttribute<T>() where T : Attribute {
-            Assembly asm = typeof(ScriptEngine).Assembly;
+            Assembly asm = typeof(PythonContext).Assembly;
             object[] attributes = asm.GetCustomAttributes(typeof(T), false);
             if (attributes != null && attributes.Length > 0) {
                 return (T)attributes[0];
@@ -1082,12 +1120,12 @@ namespace IronPython.Runtime {
             return GetContext(context).EnsurePythonModule(context.GlobalScope);
         }
 
-        public override ServiceType GetService<ServiceType>(params object[] args) {
-            if (typeof(ServiceType) == typeof(TokenCategorizer)) {
-                return (ServiceType)(object)new PythonTokenCategorizer();
+        public override TService GetService<TService>(params object[] args) {
+            if (typeof(TService) == typeof(TokenizerService)) {
+                return (TService)(object)new Tokenizer();
             }
 
-            return base.GetService<ServiceType>(args);
+            return base.GetService<TService>(args);
         }
 
         public static PythonEngineOptions GetPythonOptions(CodeContext context) {
@@ -1170,7 +1208,8 @@ namespace IronPython.Runtime {
             Builtin.PerformModuleReload(this, dict);
 
             //IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
-            Scope builtinModule = CreateModule("__builtin__", null, new Scope(dict), null, ModuleOptions.NoBuiltins).Scope;
+            Scope builtinModule = CreateModule(null, new Scope(dict), null, ModuleOptions.NoBuiltins).Scope;
+            builtinModule.SetName(Symbols.Name, "__builtin__");
 
             _modulesDict["__builtin__"] = builtinModule;
         }
@@ -1231,22 +1270,6 @@ namespace IronPython.Runtime {
                     return res;
                 }
             }
-        }
-
-        internal PythonModule CreateBuiltinModule(string name) {
-            Type type;
-            if (Builtins.TryGetValue(name, out type)) {
-                // RuntimeHelpers.RunClassConstructor
-                // run the type's .cctor before doing any custom reflection on the type.
-                // This allows modules to lazily initialize PythonType's to custom values
-                // rather than having them get populated w/ the ReflectedType.  W/o this the
-                // cctor runs after we've done a bunch of reflection over the type that doesn't
-                // force the cctor to run.
-                System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-                return CreateBuiltinModule(name, type);
-            }
-
-            return null;
         }
 
         private void BuiltinsChanged(object sender, ModuleChangeEventArgs e) {
@@ -1328,15 +1351,29 @@ namespace IronPython.Runtime {
             SetSystemStateValue("stderr", stderr);
         }
 
-        internal PythonFileManager/*!*/ FileManager {
+        internal PythonFileManager RawFileManager {
             get {
                 return _fileManager;
             }
         }
 
-        protected override int ExecuteProgram(SourceUnit/*!*/ program) {
+        internal PythonFileManager/*!*/ FileManager {
+            get {
+                if (_fileManager == null) {
+                    Interlocked.CompareExchange(ref _fileManager, new PythonFileManager(), null);
+                }
+
+                return _fileManager;
+            }
+        }
+
+        public override int ExecuteProgram(SourceUnit/*!*/ program) {
             try {
-                program.Execute(GetCompilerOptions(), ErrorSink.Default);
+                PythonCompilerOptions pco = (PythonCompilerOptions)GetCompilerOptions();
+                pco.ModuleName = "__main__";
+                pco.Module |= ModuleOptions.Initialize;
+
+                program.Execute(pco, ErrorSink.Default);
             } catch (SystemExitException e) {
                 object obj;
                 return e.GetExitCode(out obj);
@@ -1348,6 +1385,10 @@ namespace IronPython.Runtime {
         /// <summary> Dictionary of error handlers for string codecs. </summary>
         internal Dictionary<string, object> ErrorHandlers {
             get {
+                if (_errorHandlers == null) {
+                    Interlocked.CompareExchange(ref _errorHandlers, new Dictionary<string, object>(), null);
+                }
+
                 return _errorHandlers;
             }
         }
@@ -1355,8 +1396,214 @@ namespace IronPython.Runtime {
         /// <summary> Table of functions used for looking for additional codecs. </summary>
         internal List<object> SearchFunctions {
             get {
+                if (_searchFunctions == null) {
+                    Interlocked.CompareExchange(ref _searchFunctions, new List<object>(), null);
+                }
+
                 return _searchFunctions;
             }
         }
+
+        /// <summary>
+        /// Gets a SiteLocalStorage when no call site is available.
+        /// </summary>
+        internal SiteLocalStorage<T> GetGenericSiteStorage<T>() {
+            if (_genericSiteStorage == null) {
+                Interlocked.CompareExchange(ref _genericSiteStorage, new Dictionary<Type, object>(), null);
+            }
+
+            lock (_genericSiteStorage) {
+                object res;
+                if (!_genericSiteStorage.TryGetValue(typeof(T), out res)) {
+                    _genericSiteStorage[typeof(T)] = res = new SiteLocalStorage<T>();
+                }
+                return (SiteLocalStorage<T>)res;
+            }
+        }
+
+        internal SiteLocalStorage<DynamicSite<object, object[], object>> GetGenericCallSiteStorage() {
+            return GetGenericSiteStorage<DynamicSite<object, object[], object>>();
+
+        }
+
+        internal SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> GetGenericKeywordCallSiteStorage() {
+            return GetGenericSiteStorage<DynamicSite<object, object[], IAttributesCollection, object>>();
+
+        }
+
+        private bool InvokeOperatorWorker(CodeContext/*!*/ context, UnaryOperators oper, object target, out object result) {
+            if (_unarySites == null) {
+                _unarySites = new DynamicSite<object, object>[(int)UnaryOperators.Maximum];
+            }
+
+            if (!_unarySites[(int)oper].IsInitialized) {
+                _unarySites[(int)oper].EnsureInitialized(OldCallAction.Make(Binder, 0));
+            }
+
+            SymbolId symbol = GetUnarySymbol(oper);
+            PythonType pt = DynamicHelpers.GetPythonType(target);
+            PythonTypeSlot pts;
+            object callable;
+
+            if (pt.TryResolveMixedSlot(context, symbol, out pts) &&
+                pts.TryGetBoundValue(context, target, pt, out callable)) {
+
+                result = _unarySites[(int)oper].Invoke(context, callable);
+                return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static SymbolId GetUnarySymbol(UnaryOperators oper) {
+            SymbolId symbol;
+            switch (oper) {
+                case UnaryOperators.Repr: symbol = Symbols.Repr; break;
+                case UnaryOperators.Length: symbol = Symbols.Length; break;
+                case UnaryOperators.Hash: symbol = Symbols.Hash; break;
+                case UnaryOperators.String: symbol = Symbols.String; break;
+                default: throw new ArgumentException();
+            }
+            return symbol;
+        }
+
+        private bool InvokeOperatorWorker(CodeContext/*!*/ context, TernaryOperators oper, object target, object value1, object value2, out object result) {
+            if (_ternarySites == null) {
+                _ternarySites = new DynamicSite<object, object, object, object>[(int)TernaryOperators.Maximum];
+            }
+
+            if (!_ternarySites[(int)oper].IsInitialized) {
+                _ternarySites[(int)oper].EnsureInitialized(OldCallAction.Make(Binder, 2));
+            }
+
+            SymbolId symbol = GetTernarySymbol(oper);
+            PythonType pt = DynamicHelpers.GetPythonType(target);
+            PythonTypeSlot pts;
+            object callable;
+
+            if (pt.TryResolveMixedSlot(context, symbol, out pts) &&
+                pts.TryGetBoundValue(context, target, pt, out callable)) {
+
+                result = _ternarySites[(int)oper].Invoke(context, callable, value1, value2);
+                return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static SymbolId GetTernarySymbol(TernaryOperators oper) {
+            SymbolId symbol;
+            switch (oper) {
+                case TernaryOperators.SetDescriptor: symbol = Symbols.SetDescriptor; break;
+                case TernaryOperators.GetDescriptor: symbol = Symbols.GetDescriptor; break;
+                default: throw new ArgumentException();
+            }
+            return symbol;
+        }
+
+        internal static object InvokeUnaryOperator(CodeContext/*!*/ context, UnaryOperators oper, object target, string errorMsg) {
+            object res;
+            if (PythonContext.GetContext(context).InvokeOperatorWorker(context, oper, target, out res)) {
+                return res;
+            }
+
+            throw PythonOps.TypeError(errorMsg);
+        }
+
+        internal static object InvokeUnaryOperator(CodeContext/*!*/ context, UnaryOperators oper, object target) {
+            object res;
+            if (PythonContext.GetContext(context).InvokeOperatorWorker(context, oper, target, out res)) {
+                return res;
+            }
+
+            throw PythonOps.TypeError(String.Empty);
+        }
+
+        internal static bool TryInvokeTernaryOperator(CodeContext/*!*/ context, TernaryOperators oper, object target, object value1, object value2, out object res) {
+            return PythonContext.GetContext(context).InvokeOperatorWorker(context, oper, target, value1, value2, out res);
+        }
+
+        public CompiledLoader GetCompiledLoader() {
+            if (_compiledLoader == null) {
+                Interlocked.CompareExchange(ref _compiledLoader, new CompiledLoader(), null);
+            }
+            return _compiledLoader;
+        }
+
+        public class CompiledLoader {
+            private List<ScriptCode> _codes = new List<ScriptCode>();
+
+            internal void AddScriptCode(ScriptCode code) {
+                _codes.Add(code);
+            }
+
+            public ModuleLoader find_module(string fullname, List path) {
+                foreach (ScriptCode sc in _codes) {
+                    if (Path.GetFileNameWithoutExtension(sc.SourceUnit.Path) == fullname) {
+                        return new ModuleLoader(sc);
+                    }                    
+                }
+
+                return null;
+            }            
+        }
+
+        public class ModuleLoader {
+            private ScriptCode _sc;
+
+            public ModuleLoader(ScriptCode sc) {
+                _sc = sc;
+            }
+
+            public Scope load_module(CodeContext/*!*/ context, string fullName) {
+                PythonContext pc = PythonContext.GetContext(context);
+
+                return pc.CreateModule(_sc.SourceUnit.Path, _sc.CreateScope(), _sc, ModuleOptions.Initialize).Scope;
+            }
+        }
+
+        #region Command Dispatching
+
+        // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
+        // to cause code to be executed on a separate thread.
+        // It will be called with a null argument to indicate that the console session should be terminated.
+        // Can be null.
+
+        public CommandDispatcher GetSetCommandDispatcher(CommandDispatcher newDispatcher) {
+            return Interlocked.Exchange(ref _commandDispatcher, newDispatcher);
+        }
+
+        public void DispatchCommand(Delegate command) {
+            CommandDispatcher dispatcher = _commandDispatcher;
+            if (dispatcher != null) {
+                dispatcher(command);
+            } else if (command != null) {
+                command.DynamicInvoke();
+            }
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// List of unary operators which we have sites for to enable fast dispatch that
+    /// doesn't collide with other operators.
+    /// </summary>
+    enum UnaryOperators {
+        Repr,
+        Length,
+        Hash,
+        String,
+
+        Maximum
+    }
+
+    enum TernaryOperators {
+        SetDescriptor,
+        GetDescriptor,
+
+        Maximum
     }
 }

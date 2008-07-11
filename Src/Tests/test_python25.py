@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -30,13 +30,13 @@ Assert(isPython25)
 m = 0
 class A:
     def __enter__(self):
-        globals()["m"] += 99 
+        globals()["m"] += 99
         return 300
-    def __exit__(self,type,value,traceback): 
+    def __exit__(self,type,value,traceback):
         if(type == None and value == None and traceback == None):
-            globals()["m"] += 55 
+            globals()["m"] += 55
         else:
-            globals()["m"] *= 2 
+            globals()["m"] *= 2
         return 1
 
 a = A()
@@ -47,7 +47,7 @@ def foo():
         for x in [10,20,30,40,50,60,70,80,90]:
             with a as b:
                 p = p + 1
-                if ( x == 20 ): continue 
+                if ( x == 20 ): continue
                 if ( x == 50 and y == 5 ):    break
                 if( x != 40 and y != 4) : yield p
                 p = p + 5
@@ -60,11 +60,11 @@ def foo():
                     return
                 if(x  % 3  == 0 and y %3 == 0):
                     raise RuntimeError("we force exception")
-                if ( x == 90 ): continue 
+                if ( x == 90 ): continue
                 if ( x == 60 and y == 6 ): break
-                yield b + p 
+                yield b + p
                 p = p + 1
-try: 
+try:
     k = foo()
     while(k.next()):pass
 except StopIteration: AreEqual(m,427056988)
@@ -94,7 +94,7 @@ else :Fail("Expected TypeError but found None")
 
 #enter raises
 class D:
-    def __enter__(self): 
+    def __enter__(self):
         raise RuntimeError("we force an error")
     def __exit__(self, a,b,c): pass
 
@@ -104,7 +104,7 @@ except RuntimeError: pass
 else :Fail("Expected RuntimeError but found None")
 
 #missing enter
-class MissingEnter: 
+class MissingEnter:
     def __exit__(self,a,b,c): pass
 try:
     with MissingEnter(): pass
@@ -132,13 +132,13 @@ else :Fail("Expected TypeError but found None")
 
 #exit raises
 class H:
-    def __enter__(self): H.var1 = 100 
-    def __exit__(self, a,b,c): 
+    def __enter__(self): H.var1 = 100
+    def __exit__(self, a,b,c):
         H.var2 = 200
         raise RuntimeError("we force an error")
 
 try:
-    with H(): 
+    with H():
         H.var3 = 300
 except RuntimeError: AreEqual((H.var1,H.var2,H.var3),(100,200,300))
 else :Fail("Expected RuntimeError but found None")
@@ -148,20 +148,20 @@ class Myerr1(Exception):pass
 class Myerr2(Exception):pass
 class Myerr3(Exception):pass
 class ExitRaise:
-    def __enter__(self): H.var1 = 100 
+    def __enter__(self): H.var1 = 100
     def __exit__(self, a,b,c):
-        if(a == None and b == None and c == None): 
+        if(a == None and b == None and c == None):
             raise Myerr1
         raise Myerr2
 
 try:
-    with ExitRaise(): 
+    with ExitRaise():
         1+2+3
 except Myerr1: pass
 else :Fail("Expected Myerr1 but found None")
 
 try:
-    with ExitRaise(): 
+    with ExitRaise():
         raise Myerr3
 except Myerr2: pass
 else :Fail("Expected Myerr2 but found None")
@@ -186,14 +186,14 @@ try:
 except AttributeError:pass
 else: Fail("Expected AttributeError but found None")
 
-#exit consumes exception 
+#exit consumes exception
 class ConsumeException:
     def __enter__(self): pass
     def __exit__(self, a,b,c): return [1,2,3],{"dsad":"dsd"},"hello"
 with ConsumeException():1/0
 
 #missing exit
-class MissingExit: 
+class MissingExit:
     def __enter__(self): pass
 try:
     with MissingEnter(): pass
@@ -207,13 +207,13 @@ gblvar = 0
 
 #inheritance
 class cxtmgr:
-    def __exit__(self, a, b, c):  
+    def __exit__(self, a, b, c):
         globals()["gblvar"] += 10
         return False
 
 
 class inherited_cxtmgr(cxtmgr):
-    def __enter__(self): 
+    def __enter__(self):
         globals()["gblvar"] += 10
         return False
 
@@ -222,44 +222,44 @@ class inherited_cxtmgr(cxtmgr):
 #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally(With)))))
 try: #Try
     try: #try->try
-        globals()["gblvar"] += 1 
+        globals()["gblvar"] += 1
         1/0
     except ZeroDivisionError: #try->(try->except)
-        globals()["gblvar"] += 2 
+        globals()["gblvar"] += 2
         with inherited_cxtmgr() as ic: #try->(try->(except->with(inherited)))
             globals()["gblvar"] += 3
             def fun_in_with(): return "Python is smart"
             AreEqual(fun_in_with(),"Python is smart") #try->(try->(except->(with ->fun)))
             try:                                      #try->(try->(except->(with ->fun ->try)))
-                globals()["gblvar"] += 4 
+                globals()["gblvar"] += 4
                 with inherited_cxtmgr() as inherited_cxtmgr.var: #try->(try->(except->(with ->fun ->(try->with))))
                     globals()["gblvar"] += 5
                     raise Myerr1  #try->(try->(except->(with ->fun ->(try->with->raise))))
             finally:    #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally))))
                 AreEqual(sys.exc_info()[0], exceptions.ZeroDivisionError)
-                globals()["gblvar"] += 6 
+                globals()["gblvar"] += 6
                 class ClassInFinally:
-                    def __enter__(self): 
+                    def __enter__(self):
                         globals()["gblvar"] +=  7
                         return 200
                     def __exit__(self,a,b,c):
                         globals()["gblvar"] += 8
                         return False # it raises
                 with ClassInFinally(): #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally(With)))))
-                    globals()["gblvar"] += 9 
+                    globals()["gblvar"] += 9
 except Myerr1: AreEqual(globals()["gblvar"],85)
 
 # With in __enter__ and __exit__
-gblvar = 0            
-class A: 
-    def __enter__(self):  globals()["gblvar"] += 1 ; return 100            
-    def __exit__(self,a,b,c):  globals()["gblvar"] += 2; return 200    
+gblvar = 0
+class A:
+    def __enter__(self):  globals()["gblvar"] += 1 ; return 100
+    def __exit__(self,a,b,c):  globals()["gblvar"] += 2; return 200
 
 class WithInEnterExit:
-    def __enter__(self): 
+    def __enter__(self):
         with A() as b:
             globals()["gblvar"] += 3;return A()
-    def __exit__(self,a,b,c): 
+    def __exit__(self,a,b,c):
         with A() as c:
             globals()["gblvar"] += 4; return A()
 
@@ -271,7 +271,6 @@ with WithInEnterExit() as wie:
 AreEqual(globals()["gblvar"],116)
 
 #------------------------------------------------------------------------------
-@disabled("thread locks don't have __enter__ and __exit__ implemented")
 def test_thread_lock():
     import thread
 
@@ -284,7 +283,9 @@ def test_thread_lock():
     Assert(not temp_lock.locked())
     
     with thread.allocate_lock(): pass
-    
+
+@skip("silverlight")
+def test_with_file():    
     with file('abc.txt', 'w'):
         pass
 
@@ -298,12 +299,12 @@ def test_try_catch_finally():
     try:
         setvar()
     
-        # missing else, finally    
+        # missing else, finally
         try:1 / 0
         except ZeroDivisionError: setvar()
 
-        # missing else    
-        try: 
+        # missing else
+        try:
             setvar()
             a =[]
             a[10]
@@ -337,7 +338,7 @@ def test_try_catch_finally():
                 if myraise2 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise2 == "raiseInElse": setvar(); raise MyErr2
                 if myraise2 == "Unhandled": setvar(); raise MyErr4
@@ -362,7 +363,7 @@ def test_try_catch_finally():
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -385,7 +386,7 @@ def test_try_catch_finally():
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -408,7 +409,7 @@ def test_try_catch_finally():
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -419,7 +420,7 @@ def test_try_catch_finally():
             yield 1; setvar()
             yield 2; setvar()
         finally :
-            #uncomment the following 2 lines once we have the fix for PS:1752 
+            #uncomment the following 2 lines once we have the fix for PS:1752
             #and accordingly adjust the final expected result value
             #yield 1; setvar()
             #yield 2; setvar()
@@ -434,7 +435,7 @@ def test_try_catch_finally():
                 if myraise8 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise8 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -442,21 +443,21 @@ def test_try_catch_finally():
                 setvar()
                 if myraise9 == "Unhandled":  setvar(); raise MyErr4
                 setvar()
-            #uncomment the following 2 lines once we have the fix for PS:1752 
+            #uncomment the following 2 lines once we have the fix for PS:1752
             #and accordingly adjust the final expected result value
             #yield 1; setvar()
             #yield 2; setvar()
     
     
-    myraise1 = ["raiseInTry","outerTry","Unhandled","None"] 
-    myraise2 = ["raiseInExcept", "raiseInElse","Unhandled","None"] 
-    myraise3 = ["raiseInFinally","Unhandled","None"] 
-    myraise4 = ["raiseInTry","Unhandled","None"] 
-    myraise5 = ["Unhandled","None"] 
-    myraise6 = ["Unhandled","None"] 
-    myraise7 = ["raiseInTry","Unhandled","None"] 
-    myraise8 = ["Unhandled","None"] 
-    myraise9 = ["Unhandled","None"] 
+    myraise1 = ["raiseInTry","outerTry","Unhandled","None"]
+    myraise2 = ["raiseInExcept", "raiseInElse","Unhandled","None"]
+    myraise3 = ["raiseInFinally","Unhandled","None"]
+    myraise4 = ["raiseInTry","Unhandled","None"]
+    myraise5 = ["Unhandled","None"]
+    myraise6 = ["Unhandled","None"]
+    myraise7 = ["raiseInTry","Unhandled","None"]
+    myraise8 = ["Unhandled","None"]
+    myraise9 = ["Unhandled","None"]
 
     def fun():
         for a in myraise1:
@@ -566,13 +567,13 @@ def test_string_partition():
     AreEqual('\ff\67\56\d8\89\33\09\99\ee\20\00\56\78\45\77\e9'.partition('\ff\67\56\d8\89\33\09\99'), ('','\ff\67\56\d8\89\33\09\99','\ee\20\00\56\78\45\77\e9'))
     AreEqual(u'\ff\67\56\d8\89\33\09\99some random 8-bit text here \ee\20\00\56\78\45\77\e9'.partition('random'), (u'\ff\67\56\d8\89\33\09\99some ','random',' 8-bit text here \ee\20\00\56\78\45\77\e9'))
     AreEqual(u'\ff\67\56\d8\89\33\09\99some random 8-bit text here \ee\20\00\56\78\45\77\e9'.partition(u'\33\09\99some r'), (u'\ff\67\56\d8\89','\33\09\99some r','andom 8-bit text here \ee\20\00\56\78\45\77\e9'))
-    AssertError(ValueError,'sometextheretocauseanexeption'.partition,'')    
-    AssertError(ValueError,''.partition,'')    
-    AssertError(TypeError,'some\90text\ffhere\78to\88causeanexeption'.partition,None)    
+    AssertError(ValueError,'sometextheretocauseanexeption'.partition,'')
+    AssertError(ValueError,''.partition,'')
+    AssertError(TypeError,'some\90text\ffhere\78to\88causeanexeption'.partition,None)
     AssertError(TypeError,''.partition,None)
 
     prefix = """ this is some random text
-    and it has lots of text 
+    and it has lots of text
     """
 
     sep = """
@@ -582,10 +583,10 @@ def test_string_partition():
     suffix = """
             \78\ff\43\12\23ok"""
     
-    str = prefix + sep + suffix                
+    str = prefix + sep + suffix
 
-    AreEqual(str.partition(sep),(prefix,sep,suffix))            
-    AreEqual(str.partition('nomatch'),(str,'',''))            
+    AreEqual(str.partition(sep),(prefix,sep,suffix))
+    AreEqual(str.partition('nomatch'),(str,'',''))
     AssertError(TypeError,str.partition,None)
     AssertError(ValueError,str.partition,'')
 
@@ -603,13 +604,13 @@ def test_string_rpartition():
     AreEqual('\ff\67\56\d8\89\33\09\99\ee\20\00\56\78\45\77\e9'.rpartition('\ff\67\56\d8\89\33\09\99'), ('','\ff\67\56\d8\89\33\09\99','\ee\20\00\56\78\45\77\e9'))
     AreEqual(u'\ff\67\56\d8\89\33\09\99some random 8-bit text here \ee\20\00\56\78\45\77\e9'.rpartition('random'), (u'\ff\67\56\d8\89\33\09\99some ','random',' 8-bit text here \ee\20\00\56\78\45\77\e9'))
     AreEqual(u'\ff\67\56\d8\89\33\09\99some random 8-bit text here \ee\20\00\56\78\45\77\e9'.rpartition(u'\33\09\99some r'), (u'\ff\67\56\d8\89','\33\09\99some r','andom 8-bit text here \ee\20\00\56\78\45\77\e9'))
-    AssertError(ValueError,'sometextheretocauseanexeption'.rpartition,'')    
-    AssertError(ValueError,''.rpartition,'')    
-    AssertError(TypeError,'some\90text\ffhere\78to\88causeanexeption'.rpartition,None)    
+    AssertError(ValueError,'sometextheretocauseanexeption'.rpartition,'')
+    AssertError(ValueError,''.rpartition,'')
+    AssertError(TypeError,'some\90text\ffhere\78to\88causeanexeption'.rpartition,None)
     AssertError(TypeError,''.rpartition,None)
 
     prefix = """ this is some random text
-    and it has lots of text 
+    and it has lots of text
     """
 
     sep = """
@@ -619,10 +620,10 @@ def test_string_rpartition():
     suffix = """
             \78\ff\43\12\23ok"""
     
-    str = prefix + sep + suffix                
+    str = prefix + sep + suffix
 
-    AreEqual(str.rpartition(sep),(prefix,sep,suffix))            
-    AreEqual(str.rpartition('nomatch'),('','', str))            
+    AreEqual(str.rpartition(sep),(prefix,sep,suffix))
+    AreEqual(str.rpartition('nomatch'),('','', str))
     AssertError(TypeError,str.rpartition,None)
     AssertError(ValueError,str.rpartition,'')
 
@@ -697,7 +698,7 @@ def test_string_startswith():
     AreEqual(s.startswith((s,None),-len(s) - 1 ), True)
     AreEqual(s.startswith(("here",None),-len(s) - 400), True)
 
-    # with start and end parameters  
+    # with start and end parameters
       # with +ve start , +ve end
         # end > start
     AreEqual(s.startswith((m1,None),4,len(s)), True)
@@ -765,7 +766,7 @@ def test_string_startswith():
     AssertError(TypeError, s.startswith,(A, None, m1),4, -5)
 
         # end < start
-    #CodePlex Work Item #10646    
+    #CodePlex Work Item #10646
     if sys.platform=="win32":
         AssertError(TypeError, s.startswith, (m1,None),4,-len(s) + 1)
         AssertError(TypeError, s.startswith, (n1,None),4, -len(s))
@@ -803,7 +804,7 @@ def test_string_startswith():
     AreEqual(s.startswith(("here","nomatch"),-len(s) - 1,  -len(s) + 2), False)
 
         # end < start
-    #CodePlex Work Item #10646    
+    #CodePlex Work Item #10646
     if sys.platform=="win32":
         AssertError(TypeError, s.startswith, ("string",None),-6, -7)
         AssertError(TypeError, s.startswith, ("string000",None),-6,-8)
@@ -889,7 +890,7 @@ def test_string_endswith():
     AreEqual(s.endswith((s,None),-len(s) - 1 ), True)
     AreEqual(s.endswith(("string",None),-len(s) - 400), True)
 
-    #With starts , end parameter 
+    #With starts , end parameter
       # with +ve start , +ve end
         # end > start
     AreEqual(s.endswith((m1,"nomatch"),4,len(s)), False)
@@ -901,8 +902,8 @@ def test_string_endswith():
     AssertError(TypeError, s.endswith,(A, None, m1),4, len(s)-6)
 
         # end < start
-    #CodePlex Work Item #10646  
-    if sys.platform=="win32":  
+    #CodePlex Work Item #10646
+    if sys.platform=="win32":
         AssertError(TypeError, s.endswith, (m1,None),4,3)
         AssertError(TypeError, s.endswith, (n1,None),4, 3)
         AssertError(TypeError, s.endswith, (None, n1),4 , 3)
@@ -935,8 +936,8 @@ def test_string_endswith():
     AssertError(TypeError, s.endswith,(A, None, "here"),-len(s),4)
 
         # end < start
-    #CodePlex Work Item #10646   
-    if sys.platform=="win32":  
+    #CodePlex Work Item #10646
+    if sys.platform=="win32":
         AssertError(TypeError, s.endswith, ("here",None),-len(s) + 4, 2)
         AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 4, 2)
         AssertError(TypeError, s.endswith, (None, "he"),-len(s) + 4, 2)
@@ -958,8 +959,8 @@ def test_string_endswith():
     AssertError(TypeError, s.endswith,(A, None, m1),4, -6)
 
         # end < start
-    #CodePlex Work Item #10646  
-    if sys.platform=="win32":  
+    #CodePlex Work Item #10646
+    if sys.platform=="win32":
         AssertError(TypeError, s.endswith, (m1,None),4,-len(s) + 1)
         AssertError(TypeError, s.endswith, (n1,None),4, -len(s))
         AssertError(TypeError, s.endswith, (None, n1),4 , -len(s))
@@ -995,7 +996,7 @@ def test_string_endswith():
     AreEqual(s.endswith(("here","nomatch"),-len(s) - 1,  -len(s) + 2), False)
 
         # end < start
-    #CodePlex Work Item #10646    
+    #CodePlex Work Item #10646
     if sys.platform=="win32":
         AssertError(TypeError, s.endswith, ("here",None),-len(s) + 5, -len(s) + 4)
         AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 5, -len(s) + 4)
@@ -1040,7 +1041,7 @@ def test_any():
 
     AreEqual(any([None,False,0,1,raiser()]),True) # True before the raiser()
     AssertError(RuntimeError,any,[None,False,0,0,raiser(),1,2]) # True after the raiser()
-    AssertError(RuntimeError,any,{None:"",0:1000,raiser():True}) # raiser in dict 
+    AssertError(RuntimeError,any,{None:"",0:1000,raiser():True}) # raiser in dict
     AssertError(TypeError,any) # any without any params
     AssertError(TypeError,any,(20,30,40),(50,60,70))# any with more params
 
@@ -1095,41 +1096,41 @@ def test_max_with_kwarg():
         if(type(arg) == int):return 10
         if(type(arg) == str):return len(arg)
         if(type(arg) == list):return len(arg)
-        return 40    
+        return 40
         
     AreEqual(max(["b","aaaaaaaaaaaaaaaaa",["this",True,"is","Python"],0, a, None],key=userfunc),a)# array  + user method
     AreEqual(max(("b","aaa",["this",True,"is","Python"],0, 1.8, True,a, None),key=userfunc),1.8)# Tuple  + user method
     AreEqual(max("b","aaa",["this",None,"is","Python"], True,None,key=userfunc),["this",None,"is","Python"])# param list  + user method
     # error scenarios
     #apply invalid key k
-    try: max("aaaaa","b",k=len) 
+    try: max("aaaaa","b",k=len)
     except TypeError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply non-existing Name 
-    try: max([1,2,3,4],key=method) 
+    #apply non-existing Name
+    try: max([1,2,3,4],key=method)
     except NameError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply non-callable Method 
-    method = 100        
-    try: max([1,2,3,4],key=method) 
+    #apply non-callable Method
+    method = 100
+    try: max([1,2,3,4],key=method)
     except TypeError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply callable on empty list 
-    try: max([],key=len) 
+    #apply callable on empty list
+    try: max([],key=len)
     except ValueError:pass
     else: Fail("Expected ValueError, but found None")
 
-    #apply callable on non-enumerable type 
-    try: max(None,key=len) 
+    #apply callable on non-enumerable type
+    try: max(None,key=len)
     except TypeError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply Method on non callable class 
+    #apply Method on non callable class
     class B:pass
-    try: max((B(),"hi"),key=len) 
+    try: max((B(),"hi"),key=len)
     except AttributeError:pass
     else: Fail("Expected AttributeError, but found None")
 
@@ -1146,41 +1147,41 @@ def test_min_with_kwarg():
         if(type(arg) == int):return 80
         if(type(arg) == str):return len(arg)
         if(type(arg) == list):return len(arg)
-        return 5    
+        return 5
         
     AreEqual(min(["aaaaaaaaaaaaaaaaa",["this",True,"is","Python","Iron","Python"],0, a, None],key=userfunc),a)# array  + user method
     AreEqual(min(("aaaaaaaaaaaaa",["this",True,"is","Python","Iron","Python"],0, 1.8, True,a, None),key=userfunc),1.8)# Tuple  + user method
     AreEqual(min("aaaaaaaaaaaaaa",["this",None,"is","Python"], True,None,key=userfunc),["this",None,"is","Python"])# param list  + user method
     # error scenarios
     #apply invalid key k
-    try: min("aaaaa","b",k=len) 
+    try: min("aaaaa","b",k=len)
     except TypeError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply non-existing Name 
-    try: min([1,2,3,4],key=method) 
+    #apply non-existing Name
+    try: min([1,2,3,4],key=method)
     except NameError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply non-callable Method 
-    method = 100;        
-    try: min([1,2,3,4],key=method) 
+    #apply non-callable Method
+    method = 100;
+    try: min([1,2,3,4],key=method)
     except TypeError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply callable on empty list 
-    try: min([],key=len) 
+    #apply callable on empty list
+    try: min([],key=len)
     except ValueError:pass
     else: Fail("Expected ValueError, but found None")
 
-    #apply callable on non-enumerable type 
-    try: min(None,key=len) 
+    #apply callable on non-enumerable type
+    try: min(None,key=len)
     except TypeError:pass
     else: Fail("Expected TypeError, but found None")
 
-    #apply Method on non callable class 
+    #apply Method on non callable class
     class B:pass
-    try: min((B(),"hi"),key=len) 
+    try: min((B(),"hi"),key=len)
     except AttributeError:pass
     else: Fail("Expected AttributeError, but found None")
 
@@ -1212,7 +1213,7 @@ def test_missing():
     A.__missing__ = "dont call me!"
     AssertError(TypeError,a.__getitem__,300)
     
-    # set missing to with new function 
+    # set missing to with new function
     def newmissing(self,key): return key/2
     A.__missing__ = newmissing
     AreEqual( a[999], 999/2);
@@ -1223,7 +1224,7 @@ def test_missing():
     AssertError(KeyError,a.__getitem__,"sometext")
     
     # inheritance scenarios
-        #basic inheritance    
+        #basic inheritance
     class M(dict):
         def __missing__(self,key): return 99
     class N(M):pass
@@ -1254,7 +1255,7 @@ def test_with():
 with J():
     with J():
         yield 100
-""","","exec")    
+""","","exec")
     except SyntaxError,e: pass
 
 
@@ -1274,12 +1275,7 @@ def test_importwarning():
             pass
 
 def test_overflowwarning():
-    if sys.platform=="win32":
-        AssertError(AttributeError, lambda: exceptions.OverflowWarning)
-    else:
-        #Merlin 15346
-        #Please remove the snippet below once this bug is closed.
-        exceptions.OverflowWarning()
+    AssertError(AttributeError, lambda: exceptions.OverflowWarning)
 
 @skip("silverlight")
 def test_cp5609():

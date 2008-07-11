@@ -14,17 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime.Operations;
+using System.Scripting.Actions;
+using System.Text;
 using IronPython.Runtime.Types;
 
-[assembly: PythonExtensionType(typeof(TypeGroup), typeof(TypeGroupOps))]
 namespace IronPython.Runtime.Operations {
     public static class TypeGroupOps {
         public static string __repr__(TypeGroup self) {
@@ -35,7 +29,7 @@ namespace IronPython.Runtime.Operations {
                     sb.Append(", ");
                 }
                 PythonType dt = DynamicHelpers.GetPythonTypeFromType(type);
-                sb.Append(PythonOps.StringRepr(PythonTypeOps.GetName(dt)));
+                sb.Append(PythonOps.StringRepr(dt.Name));
                 pastFirstType = true;
             }
             sb.Append(">");

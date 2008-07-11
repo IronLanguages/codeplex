@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -24,7 +24,7 @@ def test_exception_line_no_with_finally():
         try:
             raise Exception()   # this line should correspond w/ the number below
         finally:
-            pass 
+            pass
     
     try:
         f()
@@ -363,7 +363,7 @@ if is_cli or is_silverlight:
             raise Exception
         except:
             import exceptions
-            AreEqual(sys.exc_info()[0], exceptions.Exception)  
+            AreEqual(sys.exc_info()[0], exceptions.Exception)
             AreEqual(sys.exc_info()[1].__class__, exceptions.Exception)
             
         try:
@@ -404,7 +404,7 @@ if is_cli or is_silverlight:
             a = System.Array()
         except Exception, e:
             AreEqual(e.__class__, TypeError)
-        else: 
+        else:
             Assert(False, "FAILED!")
 
 def test_assert_error():
@@ -422,20 +422,20 @@ def test_assert():
         Assert(False, "Failed message")
     except AssertionError, e:
         Assert(e.args[0] == "Failed message")
-    else: 
+    else:
         Fail("should have thrown")
 
     try:
         Assert(False, "Failed message 2")
     except AssertionError, e:
         Assert(e.args[0] == "Failed message 2")
-    else: 
+    else:
         Fail("should have thrown")
 
 
 def test_syntax_error_exception():
     try:
-        compile("if 2==2: x=2\nelse:y=", "Error", "exec") 
+        compile("if 2==2: x=2\nelse:y=", "Error", "exec")
     except SyntaxError, se:
         l1 = dir(se)
         Assert('lineno' in l1)
@@ -443,7 +443,7 @@ def test_syntax_error_exception():
         Assert('filename' in l1)
         Assert('text' in l1)
         if is_cli or is_silverlight:
-            l2 = dir(se.clsException)            
+            l2 = dir(se.clsException)
             Assert('Line' in l2)
             Assert('Column' in l2)
             Assert('GetSymbolDocumentName' in l2)
@@ -451,24 +451,28 @@ def test_syntax_error_exception():
         AreEqual(se.lineno, 2)
         # Bug 1132
         #AreEqual(se.offset, 7)
-        AreEqual(se.filename, "Error") 
+        AreEqual(se.filename, "Error")
         AreEqual(se.text, "else:y=")
         if is_cli or is_silverlight:
             AreEqual(se.clsException.Line, 2)
             # Bug 1132
             #AreEqual(se.clsException.Column, 7)
-            AreEqual(se.clsException.GetSymbolDocumentName(), "Error") 
+            AreEqual(se.clsException.GetSymbolDocumentName(), "Error")
             AreEqual(se.clsException.GetCodeLine(), "else:y=")
+        AreEqual(se.__dict__, {})
+        AreEqual(type(se.__dict__), dict)
     
 def test_syntax_error_exception_exec():
     try:
-        compile("if 2==2: x=", "Error", "exec") 
+        compile("if 2==2: x=", "Error", "exec")
     except SyntaxError, se:
         AreEqual(se.lineno, 1)
         # Bug 1132
         #AreEqual(se.offset, 11)
         AreEqual(se.filename, "Error")
         AreEqual(se.text, "if 2==2: x=")
+        AreEqual(se.__dict__, {})
+        AreEqual(type(se.__dict__), dict)
         
 def test_syntax_error_exception_eval():
     try:
@@ -479,6 +483,9 @@ def test_syntax_error_exception_eval():
         #AreEqual(se.offset, 2)
         AreEqual(se.filename, "Error")
         AreEqual(se.text, "if 2==2: x=")
+        AreEqual(se.__dict__, {})
+        AreEqual(type(se.__dict__), dict)
+        
 
 def test_user_syntax_error_exception():
     x = SyntaxError()
@@ -488,8 +495,15 @@ def test_user_syntax_error_exception():
     AreEqual(x.message, '')
     AreEqual(x.offset, None)
     AreEqual(x.print_file_and_line, None)
-    AreEqual(x.text, None)    
-
+    AreEqual(x.text, None)
+    #Run a few minimal tests to ensure the __dict__ member works OK
+    AreEqual(x.__dict__, {})
+    AreEqual(type(x.__dict__), dict)
+    x.arbitrary = 3.14
+    AreEqual(x.__dict__["arbitrary"], 3.14)
+    del x.__dict__["arbitrary"]
+    AreEqual(x.__dict__, {})
+    
     x = SyntaxError('hello')
     AreEqual(x.lineno, None)
     AreEqual(x.filename, None)
@@ -497,7 +511,7 @@ def test_user_syntax_error_exception():
     AreEqual(x.message, 'hello')
     AreEqual(x.offset, None)
     AreEqual(x.print_file_and_line, None)
-    AreEqual(x.text, None)    
+    AreEqual(x.text, None)
     
     x = SyntaxError('hello', (1,2,3,4))
     AreEqual(x.lineno, 2)
@@ -506,14 +520,14 @@ def test_user_syntax_error_exception():
     AreEqual(x.message, '')
     AreEqual(x.offset, 3)
     AreEqual(x.print_file_and_line, None)
-    AreEqual(x.text, 4) 
+    AreEqual(x.text, 4)
     
     AssertError(IndexError, SyntaxError, 'abc', ())
     AssertError(IndexError, SyntaxError, 'abc', (1,))
     AssertError(IndexError, SyntaxError, 'abc', (1,2))
     AssertError(IndexError, SyntaxError, 'abc', (1,2,3))
     
-def test_return():    
+def test_return():
     def test_func():
         try: pass
         finally:
@@ -530,7 +544,7 @@ def test_return():
             except:
                 try: raise 'foo'
                 except:
-                    return 42            
+                    return 42
 
     AreEqual(test_func(), 42)
     
@@ -543,7 +557,7 @@ def test_return():
                 except:
                     try: raise 'foo'
                     except:
-                        return 42            
+                        return 42
 
     AreEqual(test_func(), 42)
 
@@ -556,7 +570,7 @@ def test_return():
                 except:
                     try: raise 'foo'
                     except:
-                        return 42            
+                        return 42
 
     AreEqual(test_func(), 42)
 
@@ -572,7 +586,7 @@ def test_break_and_continue():
             try:
                 raise Exception()
             except:
-                for n in range(10): 
+                for n in range(10):
                     state.loops += 1
                     break
             return 42
@@ -584,7 +598,7 @@ def test_break_and_continue():
             try:
                 raise Exception()
             except:
-                for n in range(10): 
+                for n in range(10):
                     state.loops += 1
                     continue
             return 42
@@ -612,7 +626,7 @@ def test_break_and_continue():
             try:
                 raise Exception()
             except:
-                for n in range(10): 
+                for n in range(10):
                     state.loops += 1
                     if False: continue
                     
@@ -646,7 +660,7 @@ def test_break_and_continue():
                 break
         return 42
 
-    def test_break_in_finally(state):        
+    def test_break_in_finally(state):
         for x in range(10):
             try: pass
             finally:
@@ -665,7 +679,7 @@ def test_break_and_continue():
     def test_outer_for_with_finally(state, shouldRaise):
         for x in range(10):
             try:
-                try: 
+                try:
                     if shouldRaise:
                         raise 'hello world'
                 finally:
@@ -687,7 +701,7 @@ def test_break_and_continue():
     def test_outer_for_with_finally(state, shouldRaise):
         for x in range(10):
             try:
-                try: 
+                try:
                     if shouldRaise:
                         raise 'hello world'
                 finally:
@@ -815,6 +829,9 @@ def test_newstyle_raise():
 def test_enverror_init():
     x = EnvironmentError()
     AreEqual(x.message, '')
+    AreEqual(x.errno, None)
+    AreEqual(x.filename, None)
+    AreEqual(x.strerror, None)
     AreEqual(x.args, ())
     
     x.__init__('abc')
@@ -824,7 +841,7 @@ def test_enverror_init():
     x.__init__('123', '456')
     AreEqual(x.message, 'abc')
     AreEqual(x.errno, '123')
-    AreEqual(x.strerror, '456')    
+    AreEqual(x.strerror, '456')
     AreEqual(x.args, ('123', '456'))
     
     x.__init__('def', 'qrt', 'foo')
@@ -841,11 +858,21 @@ def test_enverror_init():
     AreEqual(x.filename, 'foo')
     AreEqual(x.args, ())
 
-    AssertError(TypeError, x.__init__, '1', '2', '3', '4')
-
-    # OSError doesn't override __init__, message should be EnvError
-    AssertErrorWithPartialMessage(TypeError, "EnvironmentError", OSError, '1', '2', '3', '4')
-
+    if is_cli or is_silverlight:
+        # CPython 2.5.0 is broken
+        x.__init__('1', '2', '3', '4')
+        AreEqual(x.message, 'abc')
+        AreEqual(x.errno, 'def')
+        AreEqual(x.strerror, 'qrt')
+        AreEqual(x.filename, 'foo')
+        AreEqual(x.args, ('1', '2', '3', '4'))
+        
+        x = EnvironmentError('a', 'b', 'c', 'd')
+        AreEqual(x.message, '')
+        AreEqual(x.errno, None)
+        AreEqual(x.filename, None)
+        AreEqual(x.strerror, None)
+        AreEqual(x.args, ('a', 'b', 'c', 'd'))
 
 
 run_test(__name__)

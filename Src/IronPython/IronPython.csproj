@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30428</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -11,6 +11,7 @@
     <RootNamespace>IronPython</RootNamespace>
     <AssemblyName>IronPython</AssemblyName>
     <OldToolsVersion>2.0</OldToolsVersion>
+    <WarningsNotAsErrors>618</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -51,7 +52,7 @@
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -62,7 +63,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <BaseAddress>1933574144</BaseAddress>
@@ -84,7 +85,7 @@
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\Hosts\SilverLight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
+    <Compile Include="..\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
     <Compile Include="Compiler\Ast\AndExpression.cs" />
@@ -160,7 +161,6 @@
     <Compile Include="Compiler\Generation\NewTypeMaker.cs" />
     <Compile Include="Compiler\Generation\PythonCodeDomCodeGen.cs" />
     <Compile Include="Compiler\PythonCompilerOptions.cs" />
-    <Compile Include="Compiler\PythonTokenCategorizer.cs" />
     <Compile Include="Compiler\Parser.cs" />
     <Compile Include="Compiler\Token.cs" />
     <Compile Include="Compiler\Tokenizer.cs" />
@@ -220,6 +220,9 @@
     <Compile Include="Runtime\MissingParameter.cs" />
     <Compile Include="Runtime\ModuleDictionaryStorage.cs" />
     <Compile Include="Hosting\ScriptScopeOps.cs" />
+    <Compile Include="Runtime\Operations\DBNullOps.cs" />
+    <Compile Include="Runtime\Operations\DictionaryOfTOps.cs" />
+    <Compile Include="Runtime\Operations\ListOfTOps.cs" />
     <Compile Include="Runtime\StringDictionaryStorage.cs" />
     <Compile Include="Runtime\SymbolIdDictionaryStorage.cs" />
     <Compile Include="Runtime\NameType.cs" />
@@ -246,7 +249,6 @@
     <Compile Include="Runtime\ConversionWrappers.cs" />
     <Compile Include="Runtime\Converter.cs" />
     <Compile Include="Runtime\PythonDictionary.cs" />
-    <Compile Include="Runtime\DictComparers.cs" />
     <Compile Include="Runtime\DictionaryOps.cs" />
     <Compile Include="Runtime\DocBuilder.cs" />
     <Compile Include="Runtime\Enumerate.cs" />
@@ -289,7 +291,6 @@
     <Compile Include="Runtime\PythonFile.cs" />
     <Compile Include="Runtime\PythonModule.cs" />
     <Compile Include="Runtime\PythonNarrowing.cs" />
-    <Compile Include="Runtime\PythonTypeContext.cs" />
     <Compile Include="Runtime\ScopeDictionaryStorage.cs" />
     <Compile Include="Runtime\Set.cs" />
     <Compile Include="Runtime\Slice.cs" />
@@ -303,13 +304,11 @@
     <Compile Include="Runtime\Types\CustomAttributeTracker.cs" />
     <Compile Include="Runtime\Types\CustomOldClassDictionary.cs" />
     <Compile Include="Runtime\Types\DelegateBuilder.cs" />
-    <Compile Include="Runtime\Types\DelegateInvoker.cs" />
     <Compile Include="Runtime\Types\DelegateType.cs" />
     <Compile Include="Runtime\Types\DictProxy.cs" />
     <Compile Include="Runtime\Types\FunctionType.cs" />
     <Compile Include="Runtime\Types\ResolvedMember.cs" />
     <Compile Include="Runtime\Types\SlotFieldAttribute.cs" />
-    <Compile Include="Runtime\Types\PythonTypeChangedEventArgs.cs" />
     <Compile Include="Runtime\Types\PythonTypeDictSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeTypeSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeUserDescriptorSlot.cs" />
@@ -321,9 +320,7 @@
     <Compile Include="Runtime\Types\OldInstance.Generated.cs" />
     <Compile Include="Runtime\Types\OperatorMapping.cs" />
     <Compile Include="Runtime\Types\PythonAssemblyOps.cs" />
-    <Compile Include="Runtime\Types\PythonExtensionTypeAttribute.cs" />
     <Compile Include="Runtime\Types\ScopeOps.cs" />
-    <Compile Include="Runtime\Types\PythonTypeCustomizer.cs" />
     <Compile Include="Runtime\Types\ReflectedSlotProperty.cs" />
     <Compile Include="Runtime\Types\TypeCache.Generated.cs" />
     <Compile Include="Runtime\Types\TypeInfo.cs" />
@@ -339,9 +336,6 @@
     <Compile Include="Runtime\Types\ReflectedGetterSetter.cs" />
     <Compile Include="Runtime\Types\ReflectedIndexer.cs" />
     <Compile Include="Runtime\Types\ReflectedProperty.cs" />
-    <Compile Include="Runtime\Types\ScriptTypeAttribute.cs" />
-    <Compile Include="Runtime\Types\TransformedName.cs" />
-    <Compile Include="Runtime\Types\TypeCreatedEventArgs.cs" />
     <Compile Include="Runtime\Types\PythonType.cs" />
     <Compile Include="Runtime\Types\ExtensionPropertyInfo.cs" />
     <Compile Include="Runtime\Types\IPythonObject.cs" />

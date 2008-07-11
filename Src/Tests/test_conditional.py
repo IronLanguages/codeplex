@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -24,7 +24,7 @@ def test_simple():
     Assert(0 if 0 else 200 == 200)
 
 def test_multiple_assignment():
-    # Conditional multiple assignment 
+    # Conditional multiple assignment
     x, y, z, w, u  = 1 if 0 else 2, 2 if 1 else 3, 3 if 10 else 4, 1 & 0 if 0 and 3 or 4 else 100, 1 and 0 if 0 and 3 or 4 & 0 else 100
     AreEqual((x,y,z,w,u), (2,2,3,0,100))
 
@@ -43,7 +43,7 @@ def test_if_else():
     Assert(p == 200)
 
 def test_nested_conditionals():
-    # nested conditionals 
+    # nested conditionals
     if 0 if (0 if 100 else 1 ) else 10:
         x = 300
     else:
@@ -96,8 +96,8 @@ def test_errors():
 
 def test_conditional_in_lambda():
     try:
-        list = [f for f in (1, lambda x: x if x >= 0 else -1)]	
-        list = [f for f in 1, lambda x: (x if x >= 0 else -1)] 
+        list = [f for f in (1, lambda x: x if x >= 0 else -1)]
+        list = [f for f in 1, lambda x: (x if x >= 0 else -1)]
         list = [f for f in 1, (lambda x: x if x >= 0 else -1)]
     except e:
         Assert(False, e.message)
@@ -110,7 +110,7 @@ def test_conditional_return_types():
     
     class NewK(object): pass
     
-    for x in [  
+    for x in [
                 -2, -1, 0, 1, 2, 2**16,
                 -2L, -1L, 0L, 1L, 2L, 2**32,
                 3.14,
@@ -120,7 +120,7 @@ def test_conditional_return_types():
                 [], [1], [1, 2],
                 xrange(0), xrange(1), xrange(2),
                 OldK, NewK, OldK(), NewK(),
-                None, str, object, 
+                None, str, object,
                 ]:
         temp = 0 if 0 else x
         AreEqual(temp, x)
@@ -135,5 +135,51 @@ def test_conversions():
         pass
     else:
         Fail("Expression incorrectly evaluated")
+
+def test_cp13299():
+    true_conditions = [ 1, 1L, -1, -1L, True, 1.1, -1.1, "abc", int, 0.1, -0.1]
+    false_conditions = [ 0, 0L, None, 0.0, -0, -0.0, False, (), [], ""]
+    
+    for condition in true_conditions:
+        x = condition if condition else False
+        AreEqual(x, condition)
+
+    for condition in false_conditions:
+        x = True if condition else condition
+        AreEqual(x, condition)
+            
+    AreEqual(3.14 if True else 1, 3.14)
+    AreEqual(3.14 if True else 1L, 3.14)
+    AreEqual(3.14 if True else -1, 3.14)
+    AreEqual(3.14 if True else True, 3.14)
+    AreEqual(3.14 if True else 1.1, 3.14)
+    AreEqual(3.14 if True else -1.1, 3.14)
+    AreEqual(3.14 if True else "abc", 3.14)
+    AreEqual(3.14 if True else int, 3.14)
+    AreEqual(3.14 if True else 0, 3.14)
+    AreEqual(3.14 if True else 0L, 3.14)
+    AreEqual(3.14 if True else None, 3.14)
+    AreEqual(3.14 if True else False, 3.14)
+    AreEqual(3.14 if True else (), 3.14)
+    AreEqual(3.14 if True else [[1]], 3.14)
+    AreEqual(3.14 if True else u"", 3.14)
+    
+    AreEqual(1 if False else 3.14, 3.14)
+    AreEqual(1L if False else 3.14, 3.14)
+    AreEqual(-1 if False else 3.14, 3.14)
+    AreEqual(True if False else 3.14, 3.14)
+    AreEqual(1.1 if False else 3.14, 3.14)
+    AreEqual(-1.1 if False else 3.14, 3.14)
+    AreEqual("abc" if False else 3.14, 3.14)
+    AreEqual(int if False else 3.14, 3.14)
+    AreEqual(0 if False else 3.14, 3.14)
+    AreEqual(0L if False else 3.14, 3.14)
+    AreEqual(None if False else 3.14, 3.14)
+    AreEqual(False if False else 3.14, 3.14)
+    AreEqual(() if False else 3.14, 3.14)
+    AreEqual([[1]] if False else 3.14, 3.14)
+    AreEqual(u"" if False else 3.14, 3.14)
+    
+    
 
 run_test(__name__)

@@ -15,15 +15,12 @@
 
 using System;
 using System.Diagnostics;
-
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-
 using IronPython.Runtime.Calls;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class GeneratorExpression : Expression {
         private readonly FunctionDefinition _function;
@@ -40,9 +37,10 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(func.Type == typeof(PythonFunction));
             // Generator expressions always return functions.  We could do even better here when all PythonFunction's are in the same class.
 
-            return Ast.Action.Call(
+            return AstUtils.Call(
                 ag.Binder,
                 typeof(object),
+                Ast.CodeContext(),
                 func,
                 ag.TransformAsObject(_iterable)
             );

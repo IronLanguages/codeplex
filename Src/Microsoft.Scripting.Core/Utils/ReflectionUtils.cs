@@ -13,15 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Diagnostics;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public static class ReflectionUtils {
 
         // Generic type names have the arity (number of generic type paramters) appended at the end. 
@@ -119,7 +119,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         /// <exception cref="InvalidImplementationException">The type failed to instantiate.</exception>
-        internal static T/*!*/ CreateInstance<T>(Type actualType, params object[] args) {
+        public static T/*!*/ CreateInstance<T>(Type actualType, params object[] args) {
             Type type = typeof(T);
 
             Debug.Assert(type.IsAssignableFrom(actualType));
@@ -133,22 +133,16 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-#if !SILVERLIGHT
-        // This overload is only available in CLR V2 SP1
-        private static readonly Type[] _DynamicMethodConstructorSignature = new Type[] { typeof(string), typeof(Type), typeof(Type[]) };
-        private static readonly ConstructorInfo _DynamicMethodConstructor = typeof(DynamicMethod).GetConstructor(_DynamicMethodConstructorSignature);
-#endif
-        // Module is used only for CLR before V2 SP1
-        internal static DynamicMethod CreateDynamicMethod(string/*!*/ name, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes, Module/*!*/ module) {
+        internal static DynamicMethod CreateDynamicMethod(string/*!*/ name, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes) {
 #if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
             return new DynamicMethod(name, returnType, parameterTypes);
 #else
-            if (_DynamicMethodConstructor != null) {
-                object[] parameters = new object[] { name, returnType, parameterTypes };
-                return (DynamicMethod)_DynamicMethodConstructor.Invoke(parameters);
-            } else {
-                return new DynamicMethod(name, returnType, parameterTypes, module);
-            }
+            //
+            // WARNING: we set restrictedSkipVisibility == true  (last parameter)
+            //          setting this bit will allow accessing nonpublic members
+            //          for more information see http://msdn.microsoft.com/en-us/library/bb348332.aspx
+            //
+            return new DynamicMethod(name, returnType, parameterTypes, true);
 #endif
         }
 

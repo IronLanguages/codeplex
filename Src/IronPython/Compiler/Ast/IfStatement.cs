@@ -13,11 +13,12 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class IfStatement : Statement {
         private readonly IfStatementTest[] _tests;
@@ -50,11 +51,11 @@ namespace IronPython.Compiler.Ast {
             while (i-- > 0) {
                 IfStatementTest ist = _tests[i];
 
-                result = Ast.Condition(
-                    new SourceSpan(ist.Start, ist.Header),
-                    ag.TransformAndDynamicConvert(ist.Test, typeof(bool)),
-                    ag.Transform(ist.Body),
-                    result
+                result = AstUtils.Condition(
+                    ag.TransformAndDynamicConvert(ist.Test, typeof(bool)), 
+                    ag.Transform(ist.Body), 
+                    result, 
+                    new SourceSpan(ist.Start, ist.Header)
                 );
             }
 
@@ -73,6 +74,12 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return this._tests[0].Test.CanThrow;
+            }
         }
     }
 }

@@ -13,25 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Reflection;
-using System.Reflection.Emit;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+namespace System.Scripting.Generation {
+    using Ast = System.Linq.Expressions.Expression;
 
     public static class CompilerHelpers {
         public static readonly MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
-        private static readonly MethodInfo _CreateInstanceMethod = typeof(BinderOps).GetMethod("CreateInstance");
+        private static readonly MethodInfo _CreateInstanceMethod = typeof(RuntimeHelpers).GetMethod("CreateInstance");
 
         public static string[] GetArgumentNames(ParameterInfo[] parameterInfos) {
             string[] ret = new string[parameterInfos.Length];
@@ -61,23 +57,8 @@ namespace Microsoft.Scripting.Generation {
             return method.GetParameters().Length + 1;
         }
 
-        public static bool IsParamsMethod(MethodBase method) {
-            return IsParamsMethod(method.GetParameters());
-        }
-
-        public static bool IsParamsMethod(ParameterInfo[] pis) {
-            foreach (ParameterInfo pi in pis) {
-                if (IsParamArray(pi) || IsParamDictionary(pi)) return true;
-            }
-            return false;
-        }
-
         public static bool IsParamArray(ParameterInfo parameter) {
             return parameter.IsDefined(typeof(ParamArrayAttribute), false);
-        }
-
-        public static bool IsParamDictionary(ParameterInfo parameter) {
-            return parameter.IsDefined(typeof(ParamDictionaryAttribute), false);
         }
 
         public static bool IsOutParameter(ParameterInfo pi) {
@@ -248,6 +229,27 @@ namespace Microsoft.Scripting.Generation {
             return Operators.None;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        public static string OperatorToReverseOperator(string op) {
+            switch (op) {
+                case StandardOperators.LessThan: return StandardOperators.GreaterThan;
+                case StandardOperators.LessThanOrEqual: return StandardOperators.GreaterThanOrEqual;
+                case StandardOperators.GreaterThan: return StandardOperators.LessThan;
+                case StandardOperators.GreaterThanOrEqual: return StandardOperators.LessThanOrEqual;
+                case StandardOperators.Equal: return StandardOperators.Equal;
+                case StandardOperators.NotEqual: return StandardOperators.NotEqual;
+            }
+            return StandardOperators.None;
+        }
+
+        public static string InPlaceOperatorToOperator(string op) {
+            if (op.StartsWith("InPlace")) {
+                return op.Substring(7);
+            }
+
+            return StandardOperators.None;
+        }
+
         public static Operators InPlaceOperatorToOperator(Operators op) {
             switch (op) {
                 case Operators.InPlaceAdd: return Operators.Add;
@@ -281,12 +283,25 @@ namespace Microsoft.Scripting.Generation {
             return false;
         }
 
+        public static bool IsComparisonOperator(string op) {
+            switch (op) {
+                case StandardOperators.LessThan: return true;
+                case StandardOperators.LessThanOrEqual: return true;
+                case StandardOperators.GreaterThan: return true;
+                case StandardOperators.GreaterThanOrEqual: return true;
+                case StandardOperators.Equal: return true;
+                case StandardOperators.NotEqual: return true;
+                case StandardOperators.Compare: return true;
+            }
+            return false;
+        }
+        
         /// <summary>
         /// Returns the System.Type for any object, including null.  The type of null
         /// is represented by None.Type and all other objects just return the 
         /// result of Object.GetType
         /// </summary>
-        public static Type GetType(object obj) {
+        public static Type/*!*/ GetType(object obj) {
             return obj == null ? None.Type : obj.GetType();
         }
 
@@ -297,6 +312,14 @@ namespace Microsoft.Scripting.Generation {
             Type[] types = new Type[args.Length];
             for (int i = 0; i < args.Length; i++) {
                 types[i] = GetType(args[i]);
+            }
+            return types;
+        }
+
+        internal static Type[] GetTypes(IList<Expression> args) {
+            Type[] types = new Type[args.Count];
+            for (int i = 0, n = types.Length; i < n; i++) {
+                types[i] = args[i].Type;
             }
             return types;
         }
@@ -325,6 +348,7 @@ namespace Microsoft.Scripting.Generation {
             method = method.GetBaseDefinition();
 
             if (method.DeclaringType.IsVisible) return method;
+            if (method.DeclaringType.IsInterface) return method;
             // maybe we can get it from an interface...
             Type[] interfaces = method.DeclaringType.GetInterfaces();
             foreach (Type iface in interfaces) {
@@ -421,11 +445,11 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public static Type GetVisibleType(object value) {
+        public static Type/*!*/ GetVisibleType(object value) {
             return GetVisibleType(GetType(value));
         }
 
-        public static Type GetVisibleType(Type t) {
+        public static Type/*!*/ GetVisibleType(Type t) {
             while (!t.IsVisible) {
                 t = t.BaseType;
             }
@@ -452,23 +476,15 @@ namespace Microsoft.Scripting.Generation {
                 return ArrayUtils.Insert<MethodBase>(GetStructDefaultCtor(t), ci);
             }
 
-            if (typeof(Delegate).IsAssignableFrom(t)) {
-                return ArrayUtils.Insert<MethodBase>(GetDelegateCtor(t), ci);
-            }
-
             return ci;
         }
 
         private static MethodBase GetStructDefaultCtor(Type t) {
-            return typeof(BinderOps).GetMethod("CreateInstance").MakeGenericMethod(t);
+            return typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(t);
         }
 
         private static MethodBase GetArrayCtor(Type t) {
-            return typeof(BinderOps).GetMethod("CreateArray").MakeGenericMethod(t.GetElementType());
-        }
-
-        private static MethodBase GetDelegateCtor(Type t) {
-            return typeof(BinderOps).GetMethod("CreateDelegate").MakeGenericMethod(t);
+            return typeof(RuntimeHelpers).GetMethod("CreateArray").MakeGenericMethod(t.GetElementType());
         }
 
         public static bool HasImplicitConversion(Type fromType, Type toType) {
@@ -536,7 +552,22 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static bool IsStrongBox(Type t) {
-            return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StrongBox<>);
+            return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(System.Runtime.CompilerServices.StrongBox<>);
+        }
+
+        /// <summary>
+        /// Returns a value which indicates failure when a OldConvertToAction of ImplicitTry or
+        /// ExplicitTry.
+        /// </summary>
+        public static Expression GetTryConvertReturnValue(Type type) {
+            Expression res;
+            if (type.IsInterface || type.IsClass || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))) {
+                res = Ast.Null(type);
+            } else {
+                res = Ast.Constant(Activator.CreateInstance(type));
+            }
+
+            return res;
         }
 
         /// <summary>
@@ -544,17 +575,8 @@ namespace Microsoft.Scripting.Generation {
         /// ExplicitTry.
         /// </summary>
         public static Expression GetTryConvertReturnValue(CodeContext context, RuleBuilder rule) {
-            Expression failed;
-            if (rule.ReturnType.IsInterface || rule.ReturnType.IsClass) {
-                failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.Constant(null));
-            } else if (rule.ReturnType.IsGenericType && rule.ReturnType.GetGenericTypeDefinition() == typeof(Nullable<>) ||
-                (rule.ReturnType.IsGenericType && rule.ReturnType.GetGenericTypeDefinition() == typeof(Nullable<>))) {
-                failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.Constant(null));
-            } else {
-                failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.RuntimeConstant(Activator.CreateInstance(rule.ReturnType)));
-            }
             rule.IsError = true;
-            return failed;
+            return rule.MakeReturn(context.LanguageContext.Binder, GetTryConvertReturnValue(rule.ReturnType));
         }
 
         public static MethodBase[] GetMethodTargets(object obj) {
@@ -590,12 +612,17 @@ namespace Microsoft.Scripting.Generation {
             return res.ToArray();
         }
 
-        internal static Type/*!*/[]/*!*/ GetSiteTypes(IList<Expression>/*!*/ arguments, Type/*!*/ returnType) {
-            Type/*!*/[]/*!*/ ret = new Type/*!*/[arguments.Count + 1];
-            for (int i = 0; i < arguments.Count; i++) {
+        public static Type/*!*/[]/*!*/ GetSiteTypes(IList<Expression>/*!*/ arguments, Type/*!*/ returnType) {
+            int count = arguments.Count;
+
+            Type/*!*/[]/*!*/ ret = new Type/*!*/[count + 1];
+
+            for (int i = 0; i < count; i++) {
                 ret[i] = arguments[i].Type;
             }
-            ret[arguments.Count] = returnType;
+
+            ret[count] = returnType;
+
             NonNullType.AssertInitialized(ret);
             return ret;
         }
@@ -611,6 +638,27 @@ namespace Microsoft.Scripting.Generation {
             }
 
             return res;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
+        public static Type GetReturnType(LambdaExpression lambda) {
+            return lambda.Type.GetMethod("Invoke").ReturnType;
+        }
+
+        // Gets the name of a VariableExpression or ParameterExpression
+        public static SymbolId GetVariableSymbol(Expression variable) {
+            string name = GetVariableName(variable);
+            return name != null ? SymbolTable.StringToId(name) : SymbolId.Empty;
+        }
+
+        // Gets the name of a VariableExpression or ParameterExpression
+        internal static string GetVariableName(Expression variable) {
+            Debug.Assert(variable is VariableExpression || variable is ParameterExpression);
+            if (variable.NodeType == ExpressionType.Variable) {
+                return ((VariableExpression)variable).Name;
+            } else {
+                return ((ParameterExpression)variable).Name;
+            }
         }
     }
 }

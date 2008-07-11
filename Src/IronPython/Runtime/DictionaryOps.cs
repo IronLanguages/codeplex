@@ -16,19 +16,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
 
-[assembly: PythonExtensionTypeAttribute(typeof(BaseSymbolDictionary), typeof(DictionaryOps))]
 namespace IronPython.Runtime {
     /// <summary>
     /// Provides both helpers for implementing Python dictionaries as well
@@ -40,7 +36,7 @@ namespace IronPython.Runtime {
         #region Dictionary Public API Surface
 
         [SpecialName]
-        public static bool __contains__([StaticThis]IDictionary<object, object> self, object value) {
+        public static bool __contains__(IDictionary<object, object> self, object value) {
             return self.ContainsKey(value);
         }
 
@@ -53,7 +49,7 @@ namespace IronPython.Runtime {
                 object len, iteritems;
                 if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, other, Symbols.Length, out len) ||
                     !PythonOps.TryGetBoundAttr(DefaultContext.Default, other, SymbolTable.StringToId("iteritems"), out iteritems)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 // user-defined dictionary...
@@ -80,7 +76,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public static object Equal(IDictionary<object, object> self, object other) {
             if (!(other is PythonDictionary || other is IDictionary<object, object>))
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
 
             return EqualsHelper(self, other);
         }
@@ -89,7 +85,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public static object GreaterThanOrEqual(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
-            if (res == PythonOps.NotImplemented) return res;
+            if (res == NotImplementedType.Value) return res;
 
             return ((int)res) >= 0;
         }
@@ -98,7 +94,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public static object GreaterThan(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
-            if (res == PythonOps.NotImplemented) return res;
+            if (res == NotImplementedType.Value) return res;
 
             return ((int)res) > 0;
         }
@@ -118,7 +114,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public static object LessThanOrEqual(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
-            if (res == PythonOps.NotImplemented) return res;
+            if (res == NotImplementedType.Value) return res;
 
             return ((int)res) <= 0;
         }
@@ -132,7 +128,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public static object LessThan(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
-            if (res == PythonOps.NotImplemented) return res;
+            if (res == NotImplementedType.Value) return res;
 
             return ((int)res) < 0;
         }
@@ -141,36 +137,48 @@ namespace IronPython.Runtime {
         [SpecialName]
         public static object NotEqual(IDictionary<object, object> self, object other) {
             object res = Equal(self, other);
-            if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
+            if (res != NotImplementedType.Value) return PythonOps.Not(res);
 
             return res;
         }
 
-        public static string/*!*/ __repr__(IDictionary<object, object> self) {            
-            StringBuilder buf = new StringBuilder();
-            buf.Append("{");
-            bool first = true;
-            foreach (KeyValuePair<object, object> kv in self) {
-                if (first) first = false;
-                else buf.Append(", ");
-
-                if (BaseSymbolDictionary.IsNullObject(kv.Key))
-                    buf.Append("None");
-                else
-                    buf.Append(PythonOps.StringRepr(kv.Key));
-                buf.Append(": ");
-
-                // StringRepr enforces recursion for ICodeFormattable types, but
-                // arbitrary dictionaries may not hit that.  We do the simple
-                // recursive check here and let StringRepr handle the rest.
-                if (Object.ReferenceEquals(kv.Value, self)) {
-                    buf.Append("{...}");
-                } else {
-                    buf.Append(PythonOps.StringRepr(kv.Value));
-                }
+        public static string/*!*/ __repr__(IDictionary<object, object> self) {
+            List<object> infinite = PythonOps.GetAndCheckInfinite(self);
+            if (infinite == null) {
+                return "{...}";
             }
-            buf.Append("}");
-            return buf.ToString();
+
+            int index = infinite.Count;
+            infinite.Add(self);
+            try {
+                StringBuilder buf = new StringBuilder();
+                buf.Append("{");
+                bool first = true;
+                foreach (KeyValuePair<object, object> kv in self) {
+                    if (first) first = false;
+                    else buf.Append(", ");
+
+                    if (BaseSymbolDictionary.IsNullObject(kv.Key))
+                        buf.Append("None");
+                    else
+                        buf.Append(PythonOps.StringRepr(kv.Key));
+                    buf.Append(": ");
+
+                    // StringRepr enforces recursion for ICodeFormattable types, but
+                    // arbitrary dictionaries may not hit that.  We do the simple
+                    // recursive check here and let StringRepr handle the rest.
+                    if (Object.ReferenceEquals(kv.Value, self)) {
+                        buf.Append("{...}");
+                    } else {
+                        buf.Append(PythonOps.StringRepr(kv.Value));
+                    }
+                }
+                buf.Append("}");
+                return buf.ToString();
+            } finally {
+                System.Diagnostics.Debug.Assert(index == infinite.Count - 1);
+                infinite.RemoveAt(index);
+            }
         }
 
         public static void clear(IDictionary<object, object> self) {
@@ -267,23 +275,32 @@ namespace IronPython.Runtime {
             return PythonOps.MakeListFromSequence(self.Values);
         }
 
-        public static void update(CodeContext/*!*/ context, IDictionary<object, object> self, object b) {
+        public static void update(CodeContext/*!*/ context, PythonDictionary/*!*/ self, object b) {
+            PythonDictionary pyDict;
+
+            if ((pyDict = b as PythonDictionary) != null) {
+                pyDict._storage.CopyTo(self._storage);
+            } else {
+                SlowUpdate(context, self, b);
+            }
+        }
+
+        private static void SlowUpdate(CodeContext/*!*/ context, PythonDictionary/*!*/ self, object b) {
             object keysFunc;
             DictProxy dictProxy;
             IDictionary dict;
-
             if ((dictProxy = b as DictProxy) != null) {
-                update(context, self, dictProxy.Type.GetMemberDictionary(context));
+                update(context, self, dictProxy.Type.GetMemberDictionary(context, false));
             } else if ((dict = b as IDictionary) != null) {
                 IDictionaryEnumerator e = dict.GetEnumerator();
                 while (e.MoveNext()) {
-                    self[e.Key] = e.Value;
+                    self._storage.Add(e.Key, e.Value);
                 }
             } else if (PythonOps.TryGetBoundAttr(b, Symbols.Keys, out keysFunc)) {
                 // user defined dictionary
                 IEnumerator i = PythonOps.GetEnumerator(PythonCalls.Call(keysFunc));
                 while (i.MoveNext()) {
-                    self[i.Current] = PythonOps.GetIndex(b, i.Current);
+                    self._storage.Add(i.Current, PythonOps.GetIndex(b, i.Current));
                 }
             } else {
                 // list of lists (key/value pairs), list of tuples,
@@ -341,13 +358,13 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        internal static bool AddKeyValue(IDictionary<object, object> self, object o) {
+        internal static bool AddKeyValue(PythonDictionary self, object o) {
             IEnumerator i = PythonOps.GetEnumerator(o); //c.GetEnumerator();
             if (i.MoveNext()) {
                 object key = i.Current;
                 if (i.MoveNext()) {
                     object value = i.Current;
-                    self[key] = value;
+                    self._storage.Add(key, value);
 
                     return !i.MoveNext();
                 }

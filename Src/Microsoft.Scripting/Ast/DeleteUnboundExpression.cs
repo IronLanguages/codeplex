@@ -13,15 +13,17 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class DeleteUnboundExpression : Expression {
         private readonly SymbolId _name;
 
         internal DeleteUnboundExpression(Annotations annotations, SymbolId name)
-            : base(annotations, AstNodeType.Extension, typeof(object)) {
+            : base(annotations, ExpressionType.Extension, typeof(object)) {
             _name = name;
         }
 
@@ -35,22 +37,32 @@ namespace Microsoft.Scripting.Ast {
 
         public override Expression Reduce() {
             return Expression.Call(
+                typeof(ExpressionHelpers).GetMethod("RemoveName"),
                 Annotations,
-                null,
-                typeof(RuntimeHelpers).GetMethod("RemoveName"),
-                Expression.CodeContext(), 
-                Expression.Constant(_name)
+                new Expression[] {
+                    Expression.CodeContext(),
+                    Expression.Constant(_name)
+                }
             );
         }
     }
 
     public static partial class Utils {
         public static DeleteUnboundExpression Delete(SymbolId name) {
-            return Delete(SourceSpan.None, name);
+            return Delete(name, SourceSpan.None);
         }
-        public static DeleteUnboundExpression Delete(SourceSpan span, SymbolId name) {
+        public static DeleteUnboundExpression Delete(SymbolId name, SourceSpan span) {
             ContractUtils.Requires(!name.IsInvalid && !name.IsEmpty, "name");
             return new DeleteUnboundExpression(Expression.Annotate(span), name);
+        }
+    }
+
+    public static partial class ExpressionHelpers {
+        /// <summary>
+        /// Called from generated code, helper to remove a name
+        /// </summary>
+        public static object RemoveName(CodeContext context, SymbolId name) {
+            return context.LanguageContext.RemoveName(context, name);
         }
     }
 }

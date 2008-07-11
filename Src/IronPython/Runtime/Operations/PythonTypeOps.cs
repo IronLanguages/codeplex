@@ -15,22 +15,18 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Compiler.Generation;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     internal static class PythonTypeOps {
@@ -61,7 +57,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static string GetModuleName(CodeContext/*!*/ context, Type type) {
-            if (IsRuntimeAssembly(type.Assembly) || PythonTypeCustomizer.IsPythonType(type)) {
+            if (IsRuntimeAssembly(type.Assembly) || PythonBinder.IsPythonType(type)) {
                 Type curType = type;
                 while (curType != null) {
                     string moduleName;
@@ -96,10 +92,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object CallWorker(CodeContext/*!*/ context, PythonType dt, IAttributesCollection kwArgs, object[] args) {
-            object[] allArgs = new object[kwArgs.Count + args.Length];
+            object[] allArgs = ArrayOps.CopyArray(args, kwArgs.Count + args.Length);
             string[] argNames = new string[kwArgs.Count];
 
-            Array.Copy(args, allArgs, args.Length);
             int i = args.Length;
             foreach (KeyValuePair<SymbolId, object> kvp in kwArgs.SymbolAttributes) {
                 allArgs[i] = kvp.Value;
@@ -186,7 +181,7 @@ namespace IronPython.Runtime.Operations {
         internal static bool IsRuntimeAssembly(Assembly assembly) {
             if (assembly == typeof(PythonOps).Assembly || // IronPython.dll
                 assembly == typeof(Microsoft.Scripting.Math.BigInteger).Assembly || // Microsoft.Scripting.dll
-                assembly == typeof(Microsoft.Scripting.SymbolId).Assembly) {  // Microsoft.Scripting.Core.dll
+                assembly == typeof(SymbolId).Assembly) {  // Microsoft.Scripting.Core.dll
                 return true;
             }
 
@@ -207,21 +202,8 @@ namespace IronPython.Runtime.Operations {
                 (cls != TypeCache.PythonType || argCnt > 1);
         }
 
-        internal static string GetName(Type type) {
-            string name;
-            if (!PythonTypeCustomizer.SystemTypes.TryGetValue(type, out name) &&
-                NameConverter.TryGetName(type, out name) == NameType.None) {
-                name = type.Name;
-            }
-            return name;
-        }
-
-        internal static string GetName(PythonType dt) {
-            return dt.Name;
-        }
-
         internal static string GetName(object o) {
-            return GetName(DynamicHelpers.GetPythonType(o));
+            return DynamicHelpers.GetPythonType(o).Name;
         }
 
         internal static PythonType[] ObjectTypes(object[] args) {
@@ -264,11 +246,12 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        internal static PythonTypeSlot/*!*/ GetSlot(MemberGroup group) {
+        internal static PythonTypeSlot/*!*/ GetSlot(MemberGroup group, string name) {
             if (group.Count == 0) {
                 return null;
             }
 
+            group = FilterNewSlots(group);
             TrackerTypes tt = GetMemberType(group);
             switch(tt) {
                 case TrackerTypes.Method:
@@ -276,7 +259,7 @@ namespace IronPython.Runtime.Operations {
                     foreach (MemberTracker mt in group) {
                         mems.Add(((MethodTracker)mt).Method);
                     }
-                    return GetFinalSlotForFunction(GetBuiltinFunction(group[0].DeclaringType, group[0].Name, mems.ToArray()));
+                    return GetFinalSlotForFunction(GetBuiltinFunction(group[0].DeclaringType, group[0].Name, name, null, mems.ToArray()));
                 case TrackerTypes.Field:
                     return GetReflectedField(((FieldTracker)group[0]).Field);
                 case TrackerTypes.Property:
@@ -299,8 +282,36 @@ namespace IronPython.Runtime.Operations {
                 case TrackerTypes.Custom:
                     return ((PythonCustomTracker)group[0]).GetSlot();
                 default:
-                    throw new InvalidOperationException();
+                    // if we have a new slot in the derived class filter out the 
+                    // members from the base class.
+                    throw new InvalidOperationException(String.Format("Bad member type {0} on {1}.{2}", tt.ToString(), group[0].DeclaringType, name));
             }
+        }
+
+        internal static MemberGroup FilterNewSlots(MemberGroup group) {
+            if (GetMemberType(group) == TrackerTypes.All) {
+                Type declType = group[0].DeclaringType;
+                for (int i = 1; i < group.Count; i++) {
+                    if (group[i].DeclaringType != declType) {
+                        if (group[i].DeclaringType.IsSubclassOf(declType)) {
+                            declType = group[i].DeclaringType;
+                        }
+                    }
+                }
+                List<MemberTracker> trackers = new List<MemberTracker>();
+
+                for (int i = 0; i < group.Count; i++) {
+                    if (group[i].DeclaringType == declType) {
+                        trackers.Add(group[i]);
+                    }
+                }
+
+                if (trackers.Count != group.Count) {
+                    return new MemberGroup(trackers.ToArray());
+                }
+            }
+
+            return group;
         }
 
         private static BuiltinFunction GetConstructor(Type t) {
@@ -353,7 +364,11 @@ namespace IronPython.Runtime.Operations {
             ReflectedEvent res;
             lock (_eventCache) {
                 if (!_eventCache.TryGetValue(tracker, out res)) {
-                    _eventCache[tracker] = res = new ReflectedEvent(tracker.Event, false);
+                    if (PythonBinder.IsExtendedType(tracker.DeclaringType)) {
+                        _eventCache[tracker] = res = new ReflectedEvent(tracker.Event, false);
+                    } else {
+                        _eventCache[tracker] = res = new ReflectedEvent(tracker.Event, true);
+                    }
                 }
             }
             return res;
@@ -390,13 +405,15 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal struct BuiltinFunctionKey {
-            public BuiltinFunctionKey(ReflectionCache.MethodBaseCache cache, FunctionType funcType) {
-                Cache = cache;
-                FunctionType = funcType;
-            }
-
+            Type DeclaringType;
             ReflectionCache.MethodBaseCache Cache;
             FunctionType FunctionType;
+
+            public BuiltinFunctionKey(Type declaringType, ReflectionCache.MethodBaseCache cache, FunctionType funcType) {
+                Cache = cache;
+                FunctionType = funcType;
+                DeclaringType = declaringType;
+            }
         }
 
         public static MethodBase[] GetNonBaseHelperMethodInfos(MemberInfo[] members) {
@@ -412,17 +429,54 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static BuiltinFunction/*!*/ GetBuiltinFunction(Type/*!*/ type, string/*!*/ name, FunctionType? funcType, params MemberInfo/*!*/[]/*!*/ mems) {
+            return GetBuiltinFunction(type, name, name, funcType, mems);
+        }
+
+        /// <summary>
+        /// Gets a builtin function for the given declaring type and member infos.
+        /// 
+        /// Given the same inputs this always returns the same object ensuring there's only 1 builtinfunction
+        /// for each .NET method.
+        /// 
+        /// This method takes both a cacheName and a pythonName.  The cache name is the real method name.  The pythonName
+        /// is the name of the method as exposed to Python.
+        /// </summary>
+        internal static BuiltinFunction/*!*/ GetBuiltinFunction(Type/*!*/ type, string/*!*/ cacheName, string/*!*/ pythonName, FunctionType? funcType, params MemberInfo/*!*/[]/*!*/ mems) {
             BuiltinFunction res = null;
             
             MethodBase[] bases = GetNonBaseHelperMethodInfos(mems);
 
+            // get the base most declaring type, first sort the list so that
+            // the most derived class is at the beginning.
+            Array.Sort<MethodBase>(bases, delegate(MethodBase x, MethodBase y) {
+                if (x.DeclaringType.IsSubclassOf(y.DeclaringType)) {
+                    return -1;
+                } else if (y.DeclaringType.IsSubclassOf(x.DeclaringType)) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            // then if the provided type is a subclass of the most derived type
+            // then our declaring type is the methods declaring type.
+            foreach (MethodBase mb in bases) {
+                // skip extension methods
+                if (mb.DeclaringType.IsAssignableFrom(type)) {
+                    
+                    if (type == mb.DeclaringType || type.IsSubclassOf(mb.DeclaringType)) {
+                        type = mb.DeclaringType;
+                        break;
+                    }
+                }
+            }
+
             if (mems.Length != 0) {
                 FunctionType ft = funcType ?? GetMethodFunctionType(type, bases);
-                BuiltinFunctionKey cache = new BuiltinFunctionKey(new ReflectionCache.MethodBaseCache(name, bases), ft);
+                BuiltinFunctionKey cache = new BuiltinFunctionKey(type, new ReflectionCache.MethodBaseCache(cacheName, bases), ft);
 
                 lock (_functions) {
                     if (!_functions.TryGetValue(cache, out res)) {
-                        _functions[cache] = res = BuiltinFunction.MakeMethod(name, ReflectionUtils.GetMethodInfos(mems), type, ft);
+                        _functions[cache] = res = BuiltinFunction.MakeMethod(pythonName, ReflectionUtils.GetMethodInfos(mems), type, ft);
                     }
                 }
             }
@@ -468,11 +522,13 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            if (PythonTypeCustomizer.IsPythonType(type)) {
+            if (PythonBinder.IsPythonType(type)) {
                 bool alwaysVisible = true;
                 // only show methods defined outside of the system types (object, string)
                 foreach (MethodInfo mi in methods) {
-                    if (PythonTypeCustomizer.SystemTypes.ContainsKey(mi.DeclaringType)) {
+                    if (PythonBinder.IsExtendedType(mi.DeclaringType) ||
+                        PythonBinder.IsExtendedType(mi.GetBaseDefinition().DeclaringType) || 
+                        mi.IsDefined(typeof(PythonHiddenAttribute), false)) {
                         alwaysVisible = false;
                         break;
                     }
@@ -487,7 +543,7 @@ namespace IronPython.Runtime.Operations {
                 bool alwaysVisible = true;
                 foreach (MethodInfo mi in methods) {
                     MethodInfo baseDef = mi.GetBaseDefinition();
-                    if (PythonTypeCustomizer.SystemTypes.ContainsKey(mi.DeclaringType)) {
+                    if (PythonBinder.IsExtendedType(mi.DeclaringType)) {
                         alwaysVisible = false;
                         break;
                     }
@@ -500,12 +556,6 @@ namespace IronPython.Runtime.Operations {
                 ft |= FunctionType.AlwaysVisible;
             }
 
-            foreach (MethodBase mb in methods) {
-                if (ExtensionTypeAttribute.IsExtensionType(mb.DeclaringType)) {
-                    ft |= FunctionType.OpsFunction;
-                }
-            }
-
             return ft;
         }
 
@@ -514,14 +564,17 @@ namespace IronPython.Runtime.Operations {
         /// with StaticExtensionMethod decoration.
         /// </summary>
         private static bool IsStaticFunction(Type type, MethodInfo mi) {            
-            return mi.IsStatic && (mi.DeclaringType.IsAssignableFrom(type) || mi.IsDefined(typeof(StaticExtensionMethodAttribute), false));
+            return mi.IsStatic &&       // method must be truly static
+                !mi.IsDefined(typeof(WrapperDescriptorAttribute), false) &&     // wrapper descriptors are instance methods
+                (mi.DeclaringType.IsAssignableFrom(type) || mi.IsDefined(typeof(StaticExtensionMethodAttribute), false)); // or it's not an extension method or it's a static extension method
         }
 
         internal static ReflectedField GetReflectedField(FieldInfo info) {
             ReflectedField res;
 
             NameType nt = NameType.Field;
-            if (!PythonTypeCustomizer.SystemTypes.ContainsKey(info.DeclaringType)) {
+            if (!PythonBinder.IsExtendedType(info.DeclaringType) && 
+                !info.IsDefined(typeof(PythonHiddenAttribute), false)) {
                 nt |= NameType.PythonField;
             }
 
@@ -561,8 +614,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static string FixCtorDoc(Type type, string autoDoc) {
-            return autoDoc.Replace("__new__(cls)", GetName(type) + "()").
-                            Replace("__new__(cls, ", GetName(type) + "(");
+            return autoDoc.Replace("__new__(cls)", DynamicHelpers.GetPythonTypeFromType(type).Name + "()").
+                            Replace("__new__(cls, ", DynamicHelpers.GetPythonTypeFromType(type).Name + "(");
         }
 
         internal static ReflectedGetterSetter GetReflectedProperty(PropertyTracker pt) {
@@ -590,7 +643,7 @@ namespace IronPython.Runtime.Operations {
                     ReflectedPropertyTracker rpt = pt as ReflectedPropertyTracker;
                     Debug.Assert(rpt != null);
 
-                    if (PythonTypeCustomizer.SystemTypes.ContainsKey(pt.DeclaringType) ||
+                    if (PythonBinder.IsExtendedType(pt.DeclaringType) ||
                         rpt.Property.IsDefined(typeof(PythonHiddenAttribute), true)) {
                         nt = NameType.Property;
                     }
@@ -643,11 +696,13 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static bool TryInvokeUnaryOperator(CodeContext context, object o, SymbolId si, out object value) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "UnaryOp " + CompilerHelpers.GetType(o).Name + " " + SymbolTable.IdToString(si));
+
             PythonTypeSlot pts;
             PythonType pt = DynamicHelpers.GetPythonType(o);
             object callable;
 
-            if (DynamicHelpers.GetPythonType(o).TryResolveMixedSlot(context, si, out pts) &&
+            if (pt.TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
                 value = PythonCalls.Call(callable);
                 return true;
@@ -658,10 +713,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static bool TryInvokeBinaryOperator(CodeContext context, object o, object arg1, SymbolId si, out object value) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "BinaryOp " + CompilerHelpers.GetType(o).Name + " " + SymbolTable.IdToString(si));
+
             PythonTypeSlot pts;
             PythonType pt = DynamicHelpers.GetPythonType(o);
             object callable;
-            if (DynamicHelpers.GetPythonType(o).TryResolveMixedSlot(context, si, out pts) &&
+            if (pt.TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
                 value = PythonCalls.Call(callable, arg1);
                 return true;
@@ -672,10 +729,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static bool TryInvokeTernaryOperator(CodeContext context, object o, object arg1, object arg2, SymbolId si, out object value) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "TernaryOp " + CompilerHelpers.GetType(o).Name + " " + SymbolTable.IdToString(si));
+
             PythonTypeSlot pts;
             PythonType pt = DynamicHelpers.GetPythonType(o);
             object callable;
-            if (DynamicHelpers.GetPythonType(o).TryResolveMixedSlot(context, si, out pts) &&
+            if (pt.TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
                 value = PythonCalls.Call(callable, arg1, arg2);
                 return true;
@@ -711,6 +770,13 @@ namespace IronPython.Runtime.Operations {
 
             // We found only interfaces. We need do add System.Object to the bases
             return new PythonTuple(bases, TypeCache.Object);
+        }
+
+        internal static Type GetFinalSystemType(Type type) {
+            while (typeof(IPythonObject).IsAssignableFrom(type) && !type.IsDefined(typeof(DynamicBaseTypeAttribute), false)) {
+                type = type.BaseType;
+            }
+            return type;
         }
     }
 }

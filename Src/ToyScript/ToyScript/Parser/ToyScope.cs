@@ -15,21 +15,18 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser {
     class ToyScope {
         private ToyScope _parent;
-        private MSAst.LambdaBuilder _block;
+        private LambdaBuilder _block;
         private Dictionary<string, MSAst.Expression> _variables = new Dictionary<string, MSAst.Expression>();
 
-        public ToyScope(string name, ToyScope parent) {
-            _block = MSAst.Expression.Lambda(name ?? "<toyblock>", typeof(object));
+        public ToyScope(ToyScope parent, string name, MSAst.Annotations annotations) {
+            _block = Utils.Lambda(typeof(object), name, annotations);
             _parent = parent;
         }
 

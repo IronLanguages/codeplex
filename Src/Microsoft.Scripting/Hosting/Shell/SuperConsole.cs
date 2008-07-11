@@ -17,8 +17,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting.Utils;
 using System.Text;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 #if !SILVERLIGHT // SuperConsole (ConsoleColor)

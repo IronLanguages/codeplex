@@ -9,8 +9,6 @@
 
 ; OwningTeam=DLR
 
-AmbiguousFileName=File name is ambiguous; more files are matching the same name (including '{0}' and '{1}')
-BindingTarget_BindingFailed=An expression cannot be produced because the method binding was unsuccessful.
 CantAddCasing=can't add another casing for identifier {0}
 CantAddIdentifier=can't add new identifier {0}
 CantDelete=can't perform deletion

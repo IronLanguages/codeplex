@@ -14,23 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-using System.Collections.Generic;
-
-
-[assembly: PythonExtensionType(typeof(Array), typeof(ArrayOps))]
 namespace IronPython.Runtime.Operations {
     // Since this uses [SpecialName] and the method binder, it must be publicly visible.
     // This is conceptually nested in ArrayOps, but publicly visible types shouldn't be nested.
@@ -59,14 +52,6 @@ namespace IronPython.Runtime.Operations {
 
         [SlotField, SpecialName]
         public static readonly PythonTypeSlot Call = new ArrayCallSlot();
-
-
-        public static bool __contains__(object[] data, int size, object item) {
-            for (int i = 0; i < size; i++) {
-                if (PythonOps.EqualRetBool(data[i], item)) return true;
-            }
-            return false;
-        }
 
         [SpecialName]
         public static Array Add(Array data1, Array data2) {
@@ -228,38 +213,45 @@ namespace IronPython.Runtime.Operations {
                 value);
         }
 
-        public static string __repr__(Array a) {
-            if (a == null) throw PythonOps.TypeError("expected array, got None");
-
-            StringBuilder ret = new StringBuilder();
-            ret.Append(a.GetType().FullName);
-            ret.Append("(");
-            switch (a.Rank) {
-                case 1: {
-                        for (int i = 0; i < a.Length; i++) {
-                            if (i > 0) ret.Append(", ");
-                            ret.Append(PythonOps.StringRepr(a.GetValue(i + a.GetLowerBound(0))));
-                        }
-                    }
-                    break;
-                case 2: {
-                        int imax = a.GetLength(0);
-                        int jmax = a.GetLength(1);
-                        for (int i = 0; i < imax; i++) {
-                            ret.Append("\n");
-                            for (int j = 0; j < jmax; j++) {
-                                if (j > 0) ret.Append(", ");
-                                ret.Append(PythonOps.StringRepr(a.GetValue(i + a.GetLowerBound(0), j + a.GetLowerBound(1))));
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    ret.Append(" Multi-dimensional array ");
-                    break;
+        public static string __repr__([NotNull]Array/*!*/ self) {
+            List<object> infinite = PythonOps.GetAndCheckInfinite(self);
+            if (infinite == null) {
+                return "...";
             }
-            ret.Append(")");
-            return ret.ToString();
+
+            int index = infinite.Count;
+            infinite.Add(self);
+            try {
+                StringBuilder ret = new StringBuilder();
+                if (self.Rank == 1) {
+                    // single dimensional Array's have a valid display
+                    ret.Append("Array[");
+                    Type elemType = self.GetType().GetElementType();
+                    ret.Append(DynamicHelpers.GetPythonTypeFromType(elemType).Name);
+                    ret.Append("]");
+                    ret.Append("((");
+                    for (int i = 0; i < self.Length; i++) {
+                        if (i > 0) ret.Append(", ");
+                        ret.Append(PythonOps.StringRepr(self.GetValue(i + self.GetLowerBound(0))));
+                    }
+                    ret.Append("))");
+                } else {
+                    // multi dimensional arrays require multiple statements to construct so we just
+                    // give enough info to identify the object and its type.
+                    ret.Append("<");
+                    ret.Append(self.Rank);
+                    ret.Append(" dimensional Array[");
+                    Type elemType = self.GetType().GetElementType();
+                    ret.Append(DynamicHelpers.GetPythonTypeFromType(elemType).Name);
+                    ret.Append("] at ");
+                    ret.Append(PythonOps.HexId(self));
+                    ret.Append(">");
+                }
+                return ret.ToString();
+            } finally {
+                System.Diagnostics.Debug.Assert(index == infinite.Count - 1);
+                infinite.RemoveAt(index);
+            }
         }
 
         #endregion
@@ -273,10 +265,8 @@ namespace IronPython.Runtime.Operations {
         internal static object[] Multiply(object[] data, int size, int count) {
             int newCount = size * count;
 
-            object[] ret = new object[newCount];
+            object[] ret = ArrayOps.CopyArray(data, newCount);
             if (count > 0) {
-                Array.Copy(data, 0, ret, 0, size);
-
                 // this should be extremely fast for large count as it uses the same algoithim as efficient integer powers
                 // ??? need to test to see how large count and n need to be for this to be fastest approach
                 int block = size;
@@ -299,8 +289,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="size2"></param>
         /// <returns></returns>
         internal static object[] Add(object[] data1, int size1, object[] data2, int size2) {
-            object[] ret = new object[size1 + size2];
-            Array.Copy(data1, 0, ret, 0, size1);
+            object[] ret = ArrayOps.CopyArray(data1, size1 + size2);
             Array.Copy(data2, 0, ret, size1, size2);
             return ret;
         }
@@ -395,7 +384,20 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeErrorForBadInstance("bad array index: {0}", index);
         }
 
-        
+        internal static object[] CopyArray(object[] data, int newSize) {
+            if (newSize == 0) return ArrayUtils.EmptyObjects;
+
+            object[] newData = new object[newSize];
+            if (data.Length < 20) {
+                for (int i = 0; i < data.Length && i < newSize; i++) {
+                    newData[i] = data[i];
+                }
+            } else {
+                Array.Copy(data, newData, Math.Min(newSize, data.Length));
+            }
+
+            return newData;
+        }
 
         #endregion
 

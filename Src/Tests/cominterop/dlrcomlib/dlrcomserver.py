@@ -20,7 +20,7 @@ from lib.cominterop_util import *
 from System.Runtime.InteropServices import COMException
 from System import InvalidOperationException
 from System.Reflection import TargetParameterCountException
-from Microsoft.Scripting import ArgumentTypeException
+from System.Scripting import ArgumentTypeException
 
 com_type_name = "DlrComLibrary.DlrComServer"
 
@@ -66,6 +66,9 @@ def test_errorInfo():
         # AreEqual("Test error message" in str(e), True)
         AreEqual("Test error message", e.Message)
 
+# Bug filed as
+# http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=465316
+@skip("cli")
 def test_documentation():
     import IronPython
     ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations
@@ -103,11 +106,12 @@ def test_namedArgs():
 #Verify that one is able to enumerate over the object in a loop
 #TODO: add more tests for enumerators - bad enumerator, different array sizes, different types.
 def test_enumerator():
-	#Both the following calls are bugs since we should be able to do [for x in com_obj] - Merlin 368789
     if not preferComDispatch:
+        AreEqual( [x for x in com_obj] , [ 42, True, "DLR"] )
         AreEqual( [x for x in com_obj.GetEnumerator()] , [ 42, True, "DLR"] )
     else:
+        AreEqual( [x for x in com_obj] , [ 42, True, "DLR"] )
         AreEqual( [x for x in com_obj.GetEnumerator] , [ 42, True, "DLR"] )
-        
+
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

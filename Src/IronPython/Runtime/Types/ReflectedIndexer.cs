@@ -14,15 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -56,22 +55,22 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        public override Type DeclaringType {
+        internal override Type DeclaringType {
             get { return _info.DeclaringType; }
         }
 
-        public override string Name {
+        public override string __name__ {
             get { return _info.Name; }
         }
 
         #region Public APIs
 
-        public bool SetValue(CodeContext context, object [] keys, object value) {
-            return CallSetter(context, _instance, keys, value);
+        public bool SetValue(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object[] keys, object value) {
+            return CallSetter(context, storage, _instance, keys, value);
         }
 
-        public object GetValue(CodeContext context, object[] keys) {
-            return CallGetter(context, _instance, keys);
+        public object GetValue(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object[] keys) {
+            return CallGetter(context, storage, _instance, keys);
         }
         
         public object __get__(object instance, object owner) {
@@ -80,13 +79,13 @@ namespace IronPython.Runtime.Types {
             return val;
         }
 
-        public object this[params object[] key] {
+        public object this[SiteLocalStorage<DynamicSite<object, object[], object>> storage, params object[] key] {
             get {
-                return GetValue(DefaultContext.Default, key);
+                return GetValue(DefaultContext.Default, storage, key);
             }
             set {
-                if (!SetValue(DefaultContext.Default, key, value)) {
-                    throw PythonOps.AttributeErrorForReadonlyAttribute(DeclaringType.Name, SymbolTable.StringToId(Name));
+                if (!SetValue(DefaultContext.Default, storage, key, value)) {
+                    throw PythonOps.AttributeErrorForReadonlyAttribute(DeclaringType.Name, SymbolTable.StringToId(__name__));
                 }
             }
         }

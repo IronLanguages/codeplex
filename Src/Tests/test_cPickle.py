@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -17,6 +17,7 @@
 # test cPickle low-level bytecode output
 #
 
+from __future__ import with_statement
 from lib.assert_util import *
 
 from cStringIO import StringIO
@@ -177,7 +178,7 @@ class TestBank:
     #     protocol_m: expected_output,
     #     protocol_n: (expected_alternative1, expected_alternative2),
     #     })
-    # 
+    #
     # If thing_to_pickle is a NamedObject instance, then the NamedObject's
     # 'name' attr will be printed and its 'obj' attr will be pickled.
     #
@@ -665,7 +666,7 @@ def test_unpickler(module=cPickle, verbose=True):
                 actual = normalized_repr(unpickled_obj)
 
                 if expected != actual:
-                    print 
+                    print
                     Fail('Wrong unpickled value:\n'
                         'with pickle %d %r\n'
                         'expected\n'
@@ -694,7 +695,7 @@ def test_persistent_load():
     for binary in [True, False]:
         src = StringIO()
         p = cPickle.Pickler(src)
-        p.persistent_id = persistent_id 
+        p.persistent_id = persistent_id
         p.binary = binary
         
         value = MyData('abc')
@@ -709,7 +710,7 @@ def test_persistent_load():
         # errors
         src = StringIO()
         p = cPickle.Pickler(src)
-        p.persistent_id = persistent_id 
+        p.persistent_id = persistent_id
         p.binary = binary
         
         value = MyData('abc')
@@ -742,7 +743,7 @@ def test_pers_load():
     for binary in [True, False]:
         src = StringIO()
         p = cPickle.Pickler(src)
-        p.persistent_id = persistent_id 
+        p.persistent_id = persistent_id
         p.binary = binary
         
         value = MyData('abc')
@@ -757,7 +758,7 @@ def test_pers_load():
         # errors
         src = StringIO()
         p = cPickle.Pickler(src)
-        p.persistent_id = persistent_id 
+        p.persistent_id = persistent_id
         p.binary = binary
         
         value = MyData('abc')
@@ -776,15 +777,136 @@ def test_pers_load():
 def test_loads_negative():
     AssertError(EOFError, cPickle.loads, "")
     
-@disabled("CodePlex 3290")    
+@disabled("CodePlex 3290")
 def test_load_negative():
     if cPickle.__name__ == "cPickle":   # pickle vs. cPickle report different exceptions, even on Cpy
         filename = nt.tempnam()
         for temp in ['\x02', "No"]:
-            write_to_file(filename, content=temp)            
+            write_to_file(filename, content=temp)
             f = open(filename)
             AssertError(cPickle.UnpicklingError, cPickle.load, f)
             f.close()
+
+def test_cp15803():
+    '''
+    '''
+    _testdir = 'cp15803'
+    pickle_file = path_combine(testpath.public_testdir, "cp15803.pickle")
+    
+    module_txt = """
+class K%s(object):
+    static_member = 1
+    def __init__(self):
+        self.member = 2
+        
+%s = K%s()
+"""
+    
+    _testdir_init       = path_combine(testpath.public_testdir, _testdir, '__init__.py')
+    write_to_file(_testdir_init, module_txt % ("", "FROM_INIT", ""))
+    
+    _testdir_mod        = path_combine(testpath.public_testdir, _testdir, 'mod.py')
+    write_to_file(_testdir_mod, module_txt % ("Mod", "FROM_MOD", "Mod") + """
+from cp15803 import K
+FROM_INIT_IN_MOD = K()
+"""
+    )
+    
+    _testdir_sub        = path_combine(testpath.public_testdir, _testdir, 'sub')
+    _testdir_sub_init   = path_combine(_testdir_sub, '__init__.py')
+    write_to_file(_testdir_sub_init)
+    
+    _testdir_sub_submod = path_combine(_testdir_sub, 'submod.py')
+    write_to_file(_testdir_sub_submod, module_txt % ("SubMod", "FROM_SUB_MOD", "SubMod") + """
+from cp15803 import mod
+FROM_MOD_IN_SUBMOD = mod.KMod()
+"""
+    )
+   
+    import cp15803
+    import cp15803.mod
+    import cp15803.sub.submod
+    import cp15803.sub.submod as newname
+    
+    try:
+        for x in [
+                    cp15803.K(), cp15803.FROM_INIT,
+                    cp15803.mod.KMod(), cp15803.mod.FROM_MOD, cp15803.mod.K(), cp15803.mod.FROM_INIT_IN_MOD,
+                    cp15803.sub.submod.KSubMod(), cp15803.sub.submod.FROM_SUB_MOD, cp15803.sub.submod.FROM_MOD_IN_SUBMOD,
+                    cp15803.sub.submod.mod.KMod(), cp15803.sub.submod.mod.FROM_MOD, cp15803.sub.submod.mod.K(), cp15803.sub.submod.mod.FROM_INIT_IN_MOD,
+                        
+                    newname.KSubMod(), newname.FROM_SUB_MOD, newname.FROM_MOD_IN_SUBMOD,
+                    newname.mod.KMod(), newname.mod.FROM_MOD, newname.mod.K(), newname.mod.FROM_INIT_IN_MOD,
+                    ]:
+            with open(pickle_file, "w") as f:
+                cPickle.dump(x, f)
+            
+            with open(pickle_file, "r") as f:
+                x_unpickled = cPickle.load(f)
+            
+                AreEqual(x.__class__.__name__, x_unpickled.__class__.__name__)
+                AreEqual(x.static_member, x_unpickled.static_member)
+                AreEqual(x.member, x_unpickled.member)
+                
+    finally:
+        import nt
+        try:
+            nt.unlink(pickle_file)
+            for f_name in [ _testdir_init, _testdir_mod,
+                            _testdir_sub_init, _testdir_sub_submod,
+                            ]:
+                nt.unlink(f_name)
+                if sys.platform=="win32":
+                    nt.unlink(f_name + "c")
+            
+            
+            for dir_name in [ _testdir_sub, _testdir]:
+                nt.rmdir(dir_name)
+        except:
+            pass
+        
+def test_cp945():
+    #--sanity
+    try:
+        x = 1/0
+        Fail("should have been division by zero error")
+    except Exception, e:
+        temp_msg = e.message
+     
+        
+    x_pickled = cPickle.dumps(e)
+    x_unpickled = cPickle.loads(x_pickled)
+    AreEqual(x_unpickled.message, temp_msg)
+    
+    #--comprehensive
+    import exceptions
+    
+    special_types = [ "UnicodeTranslateError", "UnicodeEncodeError", "UnicodeDecodeError"]
+    exception_types = [ x for x in exceptions.__dict__.keys() if x.startswith("__")==False and special_types.count(x)==0]
+    exception_types = [ eval("exceptions." + x) for x in exception_types]
+    
+    for exception_type in exception_types:
+        except_list = [exception_type(), exception_type("a single param")]
+        
+        for t_except in except_list:
+            try:
+                raise t_except
+            except exception_type, e:
+                temp_msg = e.message
+            
+            x_pickled = cPickle.dumps(e)
+            x_unpickled = cPickle.loads(x_pickled)
+            AreEqual(x_unpickled.message, temp_msg)
+                        
+    #--special cases
+    if not is_silverlight:
+        for e in [  exceptions.UnicodeEncodeError("1", u"2", 3, 4, "5"),
+                    exceptions.UnicodeDecodeError("1", "2", 3, 4, "5"),
+                    #CodePlex 15345 #exceptions.UnicodeTranslateError(u"1", 2, 3, "4")
+                    ]:
+            x_pickled = cPickle.dumps(e)
+            x_unpickled = cPickle.loads(x_pickled)
+            AreEqual(x_unpickled.object, e.object)
 
     
 run_test(__name__)

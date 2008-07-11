@@ -16,20 +16,16 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class FunctionDefinition : ScopeStatement {
         protected Statement _body;
@@ -218,7 +214,7 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(_variable != null, "Shouldn't be called by lamda expression");
 
             MSAst.Expression function = TransformToFunctionExpression(ag);
-            return Ast.Assign(new SourceSpan(Start, Header), _variable.Variable, function);
+            return AstUtils.Assign(_variable.Variable, function, new SourceSpan(Start, Header));
         }
 
         private static int _lambdaId;
@@ -233,7 +229,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             // Create AST generator to generate the body with
-            AstGenerator bodyGen = new AstGenerator(ag, SourceSpan.None, name, IsGenerator, false);
+            AstGenerator bodyGen = new AstGenerator(ag, MSAst.Expression.Annotate(SourceSpan.None), name, IsGenerator, false);
 
             // Transform the parameters.
             // Populate the list of the parameter names and defaults.
@@ -258,6 +254,13 @@ namespace IronPython.Compiler.Ast {
                 MSAst.Expression s1 = YieldExpression.CreateCheckThrowExpression(bodyGen, SourceSpan.None);
                 statements.Add(s1);
             }
+            
+            MSAst.VariableExpression extracted = null;
+            if (!IsGenerator && _canSetSysExcInfo) {
+                // need to allocate the exception here so we don't share w/ exceptions made & freed
+                // during the body.
+                extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
+            }
 
             // Transform the body and add the resulting statements into the list
             TransformBody(bodyGen, statements);
@@ -265,7 +268,7 @@ namespace IronPython.Compiler.Ast {
             if (ag.DebugMode) {
                 // add beginning and ending break points for the function.
                 if (GetExpressionEnd(statements[statements.Count - 1]) != Body.End) {
-                    statements.Add(Ast.Empty(new SourceSpan(Body.End, Body.End)));
+                    statements.Add(AstUtils.Empty(new SourceSpan(Body.End, Body.End)));
                 }
             }
 
@@ -280,8 +283,7 @@ namespace IronPython.Compiler.Ast {
             // Skip this if we're a generator. For generators, the try finally is handled by the PythonGenerator class 
             //  before it's invoked. This is because the restoration must occur at every place the function returns from 
             //  a yield point. That's different than the finally semantics in a generator.
-            if (!IsGenerator && this._canSetSysExcInfo) {
-                MSAst.VariableExpression extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
+            if (extracted != null) {
                 MSAst.Expression s = Ast.Try(
                     Ast.Assign(
                         extracted,
@@ -301,44 +303,44 @@ namespace IronPython.Compiler.Ast {
             bodyGen.Block.Body = bodyGen.WrapScopeStatements(body);
 
             FunctionAttributes flags = ComputeFlags(_parameters);
-            MSAst.LambdaExpression code;
+            bool needsWrapperMethod = flags != FunctionAttributes.None;
+            if (_canSetSysExcInfo) {
+                flags |= FunctionAttributes.CanSetSysExcInfo;
+            }
+            
+            MSAst.Expression code;
             if (IsGenerator) {
-                // in generators the LineNumberUpdated is getting tracked in the
-                // environment and that's not strongly typed.  Therefore we
-                // need to explicitly initialize it to false to get a boxed bool
-                // so we don't later blow up pulling it out. Instead we could
-                // stop using DLR generators or add support for real locals inside
-                // of them.
-                bodyGen.Block.Body = Ast.Block(
-                        Ast.Assign(bodyGen.LineNumberUpdated, Ast.Constant(false)),
-                        Ast.Assign(bodyGen.LineNumberExpression, Ast.Constant(0)),
-                        bodyGen.Block.Body
-                    );
-                code = bodyGen.Block.MakeGenerator(GetDelegateType(_parameters, flags != FunctionAttributes.None), typeof(PythonGenerator), typeof(PythonGenerator.NextTarget));
+                code = bodyGen.Block.MakeGenerator(GetGeneratorDelegateType(_parameters, needsWrapperMethod));
+                flags |= FunctionAttributes.Generator;
             } else {
-                code = bodyGen.Block.MakeLambda(GetDelegateType(_parameters, flags != FunctionAttributes.None));
+                code = bodyGen.Block.MakeLambda(GetDelegateType(_parameters, needsWrapperMethod));
             }
 
             MSAst.Expression ret = Ast.Call(
-                typeof(PythonOps).GetMethod("MakeFunction"),                               // method
+                typeof(PythonOps).GetMethod("MakeFunction"),                                    // method
                 Ast.CodeContext(),                                                              // 1. Emit CodeContext
                 Ast.Constant(name),                                                             // 2. FunctionName
                 code,                                                                           // 3. delegate
-                Ast.NewArray(typeof(string[]), names),                                          // 4. parameter names
-                Ast.NewArray(typeof(object[]), defaults),                                       // 5. default values
+                names.Count == 0 ?                                                              // 4. parameter names
+                    Ast.Constant(null, typeof(string[])) :
+                    (MSAst.Expression)Ast.NewArrayInit(typeof(string), names),
+                defaults.Count == 0 ?                                                           // 5. default values
+                    Ast.Constant(null, typeof(object[])) :
+                    (MSAst.Expression)Ast.NewArrayInit(typeof(object), defaults),                                   
                 Ast.Constant(flags),                                                            // 6. flags
                 Ast.Constant(ag.GetDocumentation(_body), typeof(string)),                       // 7. doc string or null
                 Ast.Constant(this.Start.Line),                                                  // 8. line number
-                Ast.Constant(_sourceUnit.GetSymbolDocument(this.Start.Line), typeof(string))    // 9. filename
+                Ast.Constant(_sourceUnit.Path, typeof(string))    // 9. filename
             );
 
             // add decorators
             if (_decorators != null) {
                 for (int i = _decorators.Count - 1; i >= 0; i--) {
                     Expression decorator = _decorators[i];
-                    ret = Ast.Action.Call(
+                    ret = AstUtils.Call(
                         ag.Binder,
                         typeof(object),
+                        Ast.CodeContext(),
                         ag.Transform(decorator),
                         ret);
                 }
@@ -357,6 +359,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         private void TransformParameters(AstGenerator outer, AstGenerator inner, List<MSAst.Expression> defaults, List<MSAst.Expression> names) {
+            if (inner.IsGenerator) {
+                inner.CreateGeneratorParameter();
+            }
+
             for (int i = 0; i < _parameters.Length; i++) {
                 // Create the parameter in the inner code block
                 Parameter p = _parameters[i];
@@ -426,6 +432,16 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         private static Type GetDelegateType(Parameter[] parameters, bool wrapper) {
             return PythonCallTargets.GetPythonTargetType(wrapper, parameters.Length);
+        }
+
+        private static Type GetGeneratorDelegateType(Parameter[] parameters, bool wrapper) {
+            return PythonCallTargets.GetGeneratorTargetType(wrapper, parameters.Length);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return false;
+            }
         }
     }
 }

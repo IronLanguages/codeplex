@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -32,7 +32,7 @@ def test_field():
     AreEqual(OverrideAll.Field, 'OverrideAll.Field')
     
     # write and read back
-    Base.Field = 'FirstString'    
+    Base.Field = 'FirstString'
     AreEqual(Base.Field, 'FirstString')
     AreEqual(OverrideNothing.Field, 'FirstString')
     AreEqual(OverrideAll.Field, 'OverrideAll.Field')
@@ -49,7 +49,7 @@ def test_field():
     AreEqual(OverrideNothing.Field, 'FirstString')
     AreEqual(OverrideAll.Field, 'ThirdString')
 
-    # reset back 
+    # reset back
     Base.Field = 'Base.Field'
     OverrideAll.Field = 'OverrideAll.Field'
 
@@ -73,7 +73,7 @@ def test_field():
     AreEqual(o1.Field, 'FirstString')
     AreEqual(o2.Field, 'ThirdString')
     
-    # del 
+    # del
     def f(target): del target.Field
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, Base)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, OverrideNothing)
@@ -90,7 +90,7 @@ def test_property():
     AreEqual(OverrideAll.Property, 'OverrideAll.Property')
     
     # write and read back
-    Base.Property = 'FirstString'    
+    Base.Property = 'FirstString'
     AreEqual(Base.Property, 'FirstString')
     AreEqual(OverrideNothing.Property, 'FirstString')
     AreEqual(OverrideAll.Property, 'OverrideAll.Property')
@@ -107,7 +107,7 @@ def test_property():
     AreEqual(OverrideNothing.Property, 'FirstString')
     AreEqual(OverrideAll.Property, 'ThirdString')
     
-    # reset back 
+    # reset back
     Base.Property = 'Base.Property'
     OverrideAll.Property = 'OverrideAll.Property'
 
@@ -119,12 +119,12 @@ def test_property():
     AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be read through a type, not an instance", f_read, o1)
     AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be read through a type, not an instance", f_read, o2)
 
-    def f_write(target): target.Property = 'Anything'  
-    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, b)      
-    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be assigned to through a type, not an instance", f_write, o2)      
-    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, o1)                
+    def f_write(target): target.Property = 'Anything'
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, b)
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be assigned to through a type, not an instance", f_write, o2)
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, o1)
       
-    # del 
+    # del
     def f(target): del target.Property
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, Base)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, OverrideNothing)
@@ -173,7 +173,7 @@ def test_event():
     # Play on instance
     b, o1, o2 = Base(), OverrideNothing(), OverrideAll()
     
-    b.Event += lambda1 
+    b.Event += lambda1
     AreEqual(Base.TryEvent(), 'FirstString')
     AreEqual(OverrideNothing.TryEvent(), 'FirstString')
     AreEqual(OverrideAll.TryEvent(), 'Still None here')
@@ -227,11 +227,11 @@ def test_method():
     b, d1, d2 = Base(), OverrideNothing(), OverrideAll()
     for x in [b, d1, d2]:
         AreEqual(Base.Method_Base(x), 'Base.Method_Base')
-        AreEqual(OverrideNothing.Method_Base(x), 'Base.Method_Base')       
+        AreEqual(OverrideNothing.Method_Base(x), 'Base.Method_Base')
         
     AssertErrorWithMessage(TypeError, 'expected OverrideAll, got Base', OverrideAll.Method_Base, b)
     AssertErrorWithMessage(TypeError, 'expected OverrideAll, got OverrideNothing', OverrideAll.Method_Base, d1)
-    AreEqual(OverrideAll.Method_Base(d2), 'OverrideAll.Method_Base')        
+    AreEqual(OverrideAll.Method_Base(d2), 'OverrideAll.Method_Base')
 
     #==============================================================
 
@@ -270,14 +270,14 @@ def test_method():
     AssertErrorWithMessage(TypeError, 'expected OverrideAll, got Base', o2.Method_Base, b)
 
     AreEqual(b.Method_Base(o1), 'Base.Method_Base')
-    AreEqual(o1.Method_Base(o1), 'Base.Method_Base') 
+    AreEqual(o1.Method_Base(o1), 'Base.Method_Base')
     AssertErrorWithMessage(TypeError, 'expected OverrideAll, got OverrideNothing', o2.Method_Base, o1)
     
     AreEqual(b.Method_Base(o2), 'Base.Method_Base')
     AreEqual(o1.Method_Base(o2), 'Base.Method_Base')
     AreEqual(o2.Method_Base(o2), 'OverrideAll.Method_Base')
 
-    # del 
+    # del
     def f(target): del target.Method_None
 
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, Base)
@@ -338,7 +338,7 @@ def test_operator():
     
     AreEqual(o.M6(sc), 123)
 
-    # op_Explicit 
+    # op_Explicit
     x = G1[int](456)
     y = G2[int, str].op_Explicit(x)
     z = G2[str, int].op_Explicit(x)

@@ -13,47 +13,32 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;   
-using Microsoft.Scripting;
 
-namespace Microsoft.Scripting.Runtime {
-    public abstract class Generator : IEnumerator, IEnumerator<object>, IDisposable {
+namespace System.Scripting.Runtime {
+    public delegate bool GeneratorNext(Generator generator, out object next);
+
+    public sealed class Generator : IEnumerator, IEnumerator<object>, IDisposable {
         private object _current;
-        private readonly CodeContext _context;
+        private readonly GeneratorNext _next;
 
         public int location = Int32.MaxValue;
 
-        protected Generator(CodeContext context) {
-            _context = context;
+        public Generator(GeneratorNext next) {
+            _next = next;
         }
 
         public object Current {
             get { return _current; }
-            protected set { _current = value; }
         }
 
-        public CodeContext Context {
-            get { return _context; }
+        public bool MoveNext() {
+            return _next(this, out _current);
         }
-
-        /// <summary>
-        /// Protected so languages can expose their own set of public API surface
-        /// </summary>
-        protected abstract bool MoveNext();
 
         public void Reset() {
             throw new NotImplementedException();
-        }
-        
-        /// <summary>
-        /// Explicitly implemented so languages can expose their own set of public API surface
-        /// </summary>
-        /// <returns></returns>
-        bool IEnumerator.MoveNext() {
-            return MoveNext();
         }
 
         #region IDisposable Members

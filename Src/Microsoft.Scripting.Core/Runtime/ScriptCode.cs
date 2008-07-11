@@ -13,136 +13,205 @@
  *
  * ***************************************************************************/
 
-using System.Diagnostics;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Threading;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Runtime;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     /// <summary>
     /// ScriptCode is an instance of compiled code that is bound to a specific LanguageContext
-    /// but not a specific ScriptScope.  The code can be re-executed multiple times in different
-    /// contexts. Hosting API counterpart for this class is <c>CompiledCode</c>.
+    /// but not a specific ScriptScope. The code can be re-executed multiple times in different
+    /// scopes. Hosting API counterpart for this class is <c>CompiledCode</c>.
     /// </summary>
     public class ScriptCode {
-        private readonly LambdaExpression/*!*/ _code;
-        private readonly LanguageContext/*!*/ _languageContext;
-        private readonly CompilerContext/*!*/ _compilerContext;
+        private readonly LambdaExpression _code;
+        private readonly SourceUnit/*!*/ _sourceUnit;
+        private DlrMainCallTarget _target;
 
-        private DlrMainCallTarget _simpleTarget;
+        public ScriptCode(LambdaExpression/*!*/ code, SourceUnit/*!*/ sourceUnit)
+            : this(code, null, sourceUnit) {
+        }
 
-        private DlrMainCallTarget _optimizedTarget;
-        private Scope _optimizedScope;
+        public ScriptCode(LambdaExpression code, DlrMainCallTarget target, SourceUnit/*!*/ sourceUnit) {
+            ContractUtils.Requires(code != null || target != null, "Either code or target must be specified.");
+            ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
 
-        internal ScriptCode(LambdaExpression/*!*/ code, LanguageContext/*!*/ languageContext, CompilerContext/*!*/ compilerContext) {
-            Assert.NotNull(code, languageContext, compilerContext);
-            
             _code = code;
-            _languageContext = languageContext;
-            _compilerContext = compilerContext;
+            _sourceUnit = sourceUnit;
+            _target = target;
         }
 
         public LanguageContext/*!*/ LanguageContext {
-            get { return _languageContext; }
+            get { return _sourceUnit.LanguageContext; }
         }
 
-        public CompilerContext/*!*/ CompilerContext {
-            get { return _compilerContext; }
+        public DlrMainCallTarget Target {
+            get { return _target; }
         }
 
         public SourceUnit/*!*/ SourceUnit {
-            get { return _compilerContext.SourceUnit; }
+            get { return _sourceUnit; }
         }
 
-        internal LambdaExpression/*!*/ Lambda {
-            get {
-                return _code;
-            }
+        public LambdaExpression Code {
+            get { return _code; }
         }
 
-        internal Scope OptimizedScope {
-            set {
-                Debug.Assert(_optimizedScope == null);
-                _optimizedScope = value;
-            }
+        public virtual Scope/*!*/ CreateScope() {
+            return new Scope();
         }
 
-        internal DlrMainCallTarget OptimizedTarget {
-            set {
-                _optimizedTarget = value;
-            }
-        }
-        
-        public void EnsureCompiled() {            
-            if (_simpleTarget == null) {
-                lock (this) { // TODO: mutex object
-                    if (_simpleTarget == null) {
-                        _simpleTarget = LambdaCompiler.CompileTopLevelLambda(SourceUnit, _code);
-                    }
-                }
-            }
+        public virtual void EnsureCompiled() {
+            EnsureTarget(_code);
         }
 
         public object Run(Scope/*!*/ scope) {
-            return Run(scope, false);
+            return InvokeTarget(_code, scope);
         }
 
-        public object Run(Scope/*!*/ scope, bool tryEvaluate) {
-            ContractUtils.RequiresNotNull(scope, "scope");
-
-            ScopeExtension scopeExtension = _languageContext.EnsureScopeExtension(scope.ModuleScope);
-            
-            scope.ModuleScope.CompilerContext = _compilerContext;
-
-            // Python only: assigns TrueDivision from _compilerContext to codeContext.ModuleContext
-            _languageContext.ModuleContextEntering(scopeExtension);
-
-            return Run(new CodeContext(scope, _languageContext), tryEvaluate);
+        public object Run() {
+            return Run(CreateScope());
         }
 
-        public object Run(CodeContext/*!*/ context, bool tryEvaluate) {
-            ContractUtils.RequiresNotNull(context, "context");
+        protected virtual object InvokeTarget(LambdaExpression/*!*/ code, Scope/*!*/ scope) {
+            return EnsureTarget(code)(scope, LanguageContext);
+        }
 
-            bool doEvaluation = tryEvaluate || _languageContext.Options.InterpretedMode;
-            if (_simpleTarget == null && _optimizedTarget == null
-                && doEvaluation
-                && Interpreter.InterpretChecker.CanEvaluate(_code)) {
-
-                return Interpreter.Interpreter.TopLevelExecute(_code, context);
+        private DlrMainCallTarget/*!*/ EnsureTarget(LambdaExpression/*!*/ code) {
+            if (_target == null) {
+                Interlocked.CompareExchange(ref _target, Compile<DlrMainCallTarget>(code, SourceUnit.EmitDebugSymbols), null);
+            }
+            return _target;
+        }
+        
+        internal void CompileToDisk(TypeGen/*!*/ typeGen) {
+            if (_code == null) {
+                throw new InvalidOperationException("No code to compile");
             }
 
-            if (context.GlobalScope == _optimizedScope) {
-                return _optimizedTarget(context);
+            MethodBuilder mb = typeGen.TypeBuilder.DefineMethod(
+                SourceUnit.Path,
+                CompilerHelpers.PublicStatic | MethodAttributes.SpecialName,
+                typeof(object),
+                new Type[] { typeof(Scope), typeof(LanguageContext) }
+            );
+
+            CustomAttributeBuilder cab = new CustomAttributeBuilder(
+                typeof(DlrCachedCodeAttribute).GetConstructor(new Type[] { typeof(Type) }),
+                new object[] { LanguageContext.GetType() }
+            );
+            mb.SetCustomAttribute(cab);
+
+            LambdaExpression lambda = PrepareCodeForSave(mb);
+            LambdaCompiler.CompileLambda(lambda, typeGen, mb, _sourceUnit.EmitDebugSymbols);
+        }
+
+        public static ScriptCode/*!*/ Load(MethodInfo/*!*/ method, LanguageContext/*!*/ language) {
+            SourceUnit su = new SourceUnit(language, NullTextContentProvider.Null, method.Name, SourceCodeKind.File);
+            return new ScriptCode(null, (DlrMainCallTarget)Delegate.CreateDelegate(typeof(DlrMainCallTarget), method), su);
+        }
+
+        protected virtual LambdaExpression/*!*/ PrepareCodeForSave(MethodBuilder/*!*/ builder) {
+            return new ToDiskRewriter().RewriteLambda(_code);
+        }
+
+        /// <summary>
+        /// This takes an assembly name including extension and saves the provided ScriptCode objects into the assembly.  
+        /// 
+        /// The provided script codes can constitute code from multiple languages.  The assemblyName can be either a fully qualified 
+        /// or a relative path.  The DLR will simply save the assembly to the desired location.  The assembly is created by the DLR and 
+        /// if a file already exists than an exception is raised.  
+        /// 
+        /// The DLR determines the internal format of the ScriptCode and the DLR can feel free to rev this as appropriate.  
+        /// </summary>
+        public static void SaveToAssembly(string/*!*/ assemblyName, params ScriptCode/*!*/[]/*!*/ codes) {
+            ContractUtils.RequiresNotNull(assemblyName, "assemblyName");
+            ContractUtils.RequiresNotNullItems(codes, "codes");
+
+            // break the assemblyName into it's dir/name/extension
+            string dir = Path.GetDirectoryName(assemblyName);
+            if (String.IsNullOrEmpty(dir)) {
+                dir = Environment.CurrentDirectory;
             }
 
-            EnsureCompiled();
-            return _simpleTarget(context);
+            string name = Path.GetFileNameWithoutExtension(assemblyName);
+            string ext = Path.GetExtension(assemblyName);
+
+            // build the assembly & type gen that all the script codes will live in...
+            AssemblyGen ag = new AssemblyGen(new AssemblyName(name), dir, ext, /*emitSymbols*/false);
+            TypeBuilder tb = ag.DefinePublicType("DLRCachedCode", typeof(object), true);
+            TypeGen tg = new TypeGen(ag, tb);
+
+            // then compile all of the code
+            foreach (ScriptCode sc in codes) {
+                sc.CompileToDisk(tg);
+            }
+
+            tg.FinishType();
+            ag.Dump();
+        }
+
+        /// <summary>
+        /// This will take an assembly object which the user has loaded and return a new set of ScriptCode’s which have 
+        /// been loaded into the provided ScriptDomainManager.  
+        /// 
+        /// If the language associated with the ScriptCode’s has not already been loaded the DLR will load the 
+        /// LanguageContext into the ScriptDomainManager based upon the saved LanguageContext type.  
+        /// 
+        /// If the LanguageContext or the version of the DLR the language was compiled against is unavailable a 
+        /// TypeLoadException will be raised unless policy has been applied by the administrator to redirect bindings.
+        /// </summary>
+        public static ScriptCode/*!*/[]/*!*/ LoadFromAssembly(ScriptDomainManager/*!*/ runtime, Assembly/*!*/ assembly) {
+            ContractUtils.RequiresNotNull(runtime, "runtime");
+            ContractUtils.RequiresNotNull(assembly, "assembly");
+
+            // get the type which has our cached code...
+            Type t = assembly.GetType("DLRCachedCode");
+            if (t == null) {
+                return new ScriptCode[0];
+            }
+
+            List<ScriptCode> codes = new List<ScriptCode>();
+
+            // look for methods which are associated with a saved ScriptCode...
+            foreach (MethodInfo mi in t.GetMethods()) {
+                // we mark the methods as special name when we generate them because the 
+                // method name implies the filename.
+                if (!mi.IsSpecialName) {
+                    continue;
+                }
+
+                // we also put an attribute which contains additional information
+                object[] attrs = mi.GetCustomAttributes(typeof(DlrCachedCodeAttribute), false);
+                if (attrs.Length != 1) {
+                    continue;
+                }
+
+                DlrCachedCodeAttribute code = (DlrCachedCodeAttribute)attrs[0];
+
+                LanguageContext lc = runtime.GetLanguageContext(code.LanguageContextType);
+                ScriptCode sc = lc.LoadCompiledCode(mi);
+                codes.Add(sc);
+            }
+
+            return codes.ToArray();
         }
 
         [Confined]
         public override string/*!*/ ToString() {
-            return string.Format("ScriptCode '{0}' from {1}", SourceUnit, _languageContext.DisplayName);
+            return String.Format("ScriptCode '{0}' from {1}", SourceUnit.Path, LanguageContext.DisplayName);
         }
-
-        public Scope/*!*/ MakeOptimizedScope() {
-            Scope scope;
-
-            // TODO:
-            // This is a "double-bug". Both of the following issues need to be fixed:
-            // 1) If the follwoing code is uncommented (a non-optimized scope is returned), interpretation tests will fail some assertions (bug #375352).
-            // 2) Interpreted mode shouldn't totaly give up optimized scopes. Optimized storage should be available for interpreter.
-            // But that would require decoupling optimized storage from compiled code.
-
-            //if (_languageContext.Options.InterpretedMode) {
-            //    scope = new Scope(_languageContext);
-            //} else {
-                scope = OptimizedModuleGenerator.Create(this).GenerateScope();
-            //}
-
-            return scope;
+        
+        public static T/*!*/ Compile<T>(LambdaExpression/*!*/ code, bool emitDebugSymbols) {
+            ContractUtils.RequiresNotNull(code, "code");
+            return LambdaCompiler.CompileLambda<T>(code, emitDebugSymbols);
         }
     }
 }

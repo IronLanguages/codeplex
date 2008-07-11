@@ -17,12 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {
     
