@@ -41,7 +41,7 @@ namespace System.Scripting.Com {
     public class ComObjectWithTypeInfo : GenericComObject {
 
         private Type _comType;
-        private List<SymbolId> _comTypeMemberNames;
+        private List<string> _comTypeMemberNames;
         private static SynchronizedDictionary<Guid, Type> _comTypeCache = new SynchronizedDictionary<Guid, Type>();
 
         private ComObjectWithTypeInfo(object rcw, Type comInterface)
@@ -89,22 +89,22 @@ namespace System.Scripting.Com {
 
         #region IMembersList
 
-        public override IList<SymbolId> GetMemberNames() {
+        public override IList<string> GetMemberNames() {
             if (_comTypeMemberNames == null) {
                 InitializeMemberNames();
             }
 
-            return _comTypeMemberNames;
+            return _comTypeMemberNames.ToArray();
         }
 
         private void InitializeMemberNames() {
-            _comTypeMemberNames = new List<SymbolId>();
+            _comTypeMemberNames = new List<string>();
 
             InitializeMemberNames(_comType);
             RemoveDuplicates(_comTypeMemberNames);
         }
 
-        private static void RemoveDuplicates(List<SymbolId> list) {
+        private static void RemoveDuplicates(List<string> list) {
             list.Sort();
             for (int i = list.Count - 2; i >= 0; --i) {
                 if (list[i] == list[i + 1]) {
@@ -115,7 +115,7 @@ namespace System.Scripting.Com {
 
         private void InitializeMemberNames(Type type) {
             foreach (MemberInfo member in type.GetMembers()) {
-                _comTypeMemberNames.Add(SymbolTable.StringToId(member.Name));
+                _comTypeMemberNames.Add(member.Name);
             }
 
             // An interface does not contain methods declared by its parent interfaces. Hence, we
@@ -132,7 +132,7 @@ namespace System.Scripting.Com {
         #region IDynamicObject
 
         public override MetaObject GetMetaObject(Expression parameter) {
-            return new TypeInfoMetaObject(parameter, _comType);
+            return new TypeInfoMetaObject(parameter, _comType, this);
         }
 
         #endregion
@@ -214,7 +214,7 @@ namespace System.Scripting.Com {
 
             Debug.Assert(_comTypeCache.ContainsKey(typeInfoGuid));
             if (!_comTypeCache.ContainsKey(typeInfoGuid)) {
-                throw new COMException("TypeLib " + interfaceType.Assembly + " does not contain COM interface + " + typeInfoGuid);
+                throw Error.TypeLibDoesNotContainInterface(interfaceType.Assembly, typeInfoGuid);
             }
 
             return _comTypeCache[typeInfoGuid];
@@ -253,7 +253,7 @@ namespace System.Scripting.Com {
 
                     Debug.Assert(_comTypeCache.ContainsKey(typeInfoGuid));
                     if (!_comTypeCache.ContainsKey(typeInfoGuid)) {
-                        throw new COMException("TypeLib " + asmName + " does not contain COM interface + " + typeInfoGuid);
+                        throw Error.TypeLibDoesNotContainInterface(asmName, typeInfoGuid);
                     }
                     return _comTypeCache[typeInfoGuid];
                 } catch (FileNotFoundException) { }
@@ -269,7 +269,7 @@ namespace System.Scripting.Com {
         /// Since scanning all loaded assemblies can be expensive, in the future, we might consider a more explicit 
         /// user action to trigger scanning of COM types.
         /// </summary>
-        internal static void PublishComTypes(Assembly interopAssembly) {
+        public static void PublishComTypes(Assembly interopAssembly) {
             Dictionary<Guid, Type> rawComTypeCache = _comTypeCache.UnderlyingDictionary;
 
             lock (rawComTypeCache) { // We lock over the entire operation so that we can publish a consistent view

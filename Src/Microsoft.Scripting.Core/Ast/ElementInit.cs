@@ -68,7 +68,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(addMethod, "addMethod");
             ContractUtils.RequiresNotNull(arguments, "arguments");
             ValidateElementInitAddMethodInfo(addMethod);
-            ReadOnlyCollection<Expression> argumentsRO = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> argumentsRO = arguments.ToReadOnly();
             ValidateArgumentTypes(addMethod, ref argumentsRO);
             return new ElementInit(addMethod, argumentsRO);
         }

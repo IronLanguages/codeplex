@@ -1402,17 +1402,6 @@ def test_explicit():
 def test_security_crypto():
     Assert(System.Security.Cryptography.MD5.Create("MD5") != None)
 
-@skip("silverlight")
-def test_windows_forms():
-    clr.AddReference('System.Windows.Forms')
-    import System
-    x = System.Windows.Forms.Form()
-    try:
-        font = x.DefaultFont
-    except AttributeError, e:
-        Assert(e.message.find("static property 'DefaultFont' of 'Control' can only be read through a type, not an instance") != -1)
-    else: AssertUnreachable()
-
 @skip("silverlight") #no AssertErrorWithMessage
 def test_array_error_message():
     import clr

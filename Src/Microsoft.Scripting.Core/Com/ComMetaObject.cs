@@ -24,8 +24,8 @@ namespace System.Scripting.Com {
         private const string _comObjectTypeName = "System.__ComObject";
         private readonly static Type _comObjectType = Type.GetType(_comObjectTypeName);
 
-        internal ComMetaObject(Expression expression, Restrictions restrictions)
-            : base(expression, restrictions) {
+        internal ComMetaObject(Expression expression, Restrictions restrictions, object arg)
+            : base(expression, restrictions, arg) {
         }
 
         #region MetaObject
@@ -76,8 +76,8 @@ namespace System.Scripting.Com {
             return wrap;
         }
 
-        internal static MetaObject GetComMetaObject(Expression expression) {
-            return new ComMetaObject(expression, Restrictions.Empty);
+        internal static MetaObject GetComMetaObject(Expression expression, object arg) {
+            return new ComMetaObject(expression, Restrictions.Empty, arg);
         }
 
         internal static bool IsGenericComObject(object obj) {

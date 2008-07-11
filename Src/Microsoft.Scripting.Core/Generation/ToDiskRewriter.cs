@@ -90,13 +90,18 @@ namespace System.Linq.Expressions {
                 return RewriteCallSite(site);
             }
 
+            IExpressionSerializable exprSerializable = node.Value as IExpressionSerializable;
+            if (exprSerializable != null) {
+                return VisitNode(exprSerializable.CreateExpression());
+            }
+
             return base.Visit(node);
         }
 
         private Expression RewriteCallSite(CallSite site) {
             IExpressionSerializable serializer = site.Binder as IExpressionSerializable;
             if (serializer == null) {
-                throw new InvalidOperationException("generating code from non-serializable CallSiteBinder");
+                throw Error.GenNonSerializableBinder();
             }
 
             // add the initialization code that we'll generate later into the outermost

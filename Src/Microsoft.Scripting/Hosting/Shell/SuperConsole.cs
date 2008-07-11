@@ -246,7 +246,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 }
 
                 try {
-                    IList<string> result = _commandLine.GetMemberNames(attr);
+                    IList<string> result;
+                    if (String.IsNullOrEmpty(attr)) {
+                        result = _commandLine.GetGlobals(name);
+                    } else {
+                        result = _commandLine.GetMemberNames(attr);
+                    }
+
                     _options.Root = root;
                     foreach (string option in result) {
                         if (option.StartsWith(pref, StringComparison.CurrentCultureIgnoreCase)) {

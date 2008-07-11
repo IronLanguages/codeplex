@@ -146,27 +146,6 @@ namespace System.Scripting.Utils {
             }
         }
 
-        public static ReadOnlyCollection<T> ToReadOnlyCollection<T>(IEnumerable<T> enumerable) {
-            ReadOnlyCollection<T> readOnlyCollection;
-            ICollection<T> collection;
-            if (enumerable == null) {
-                return DefaultReadOnlyCollection<T>.Empty;
-            } else if ((readOnlyCollection = enumerable as ReadOnlyCollection<T>) != null) {
-                return readOnlyCollection;
-            } else if ((collection = enumerable as ICollection<T>) != null) {
-                int count = collection.Count;
-                if (count == 0) {
-                    return DefaultReadOnlyCollection<T>.Empty;
-                }
-                T[] array = new T[count];
-                collection.CopyTo(array, 0);
-                return new ReadOnlyCollection<T>(array);
-            } else {
-                // ToArray trims the excess space and speeds up access
-                return new ReadOnlyCollection<T>(new List<T>(enumerable).ToArray());
-            }
-        }
-
         internal static int GetHashCode<T>(IEnumerable<T> list) {
             int h = 6551;
             foreach (T t in list) {
@@ -193,7 +172,4 @@ namespace System.Scripting.Utils {
         }
     }
 
-    internal static class DefaultReadOnlyCollection<T> {
-        internal static ReadOnlyCollection<T> Empty = new ReadOnlyCollection<T>(new T[0]);
-    }
 }

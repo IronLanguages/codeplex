@@ -15,8 +15,8 @@
 
 #if !SILVERLIGHT // ComObject
 
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Scripting.Runtime;
 
 namespace System.Scripting.Com {
     // TODO: should this be an IDO?
@@ -48,7 +48,7 @@ namespace System.Scripting.Com {
         public object InPlaceSubtract(object func) {
             ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, false);
             if (comEventSink == null) {
-                throw new System.InvalidOperationException("removing an event handler that is not registered");
+                throw Error.RemovingUnregisteredEvent();
             }
 
             comEventSink.RemoveHandler(_dispid, func);

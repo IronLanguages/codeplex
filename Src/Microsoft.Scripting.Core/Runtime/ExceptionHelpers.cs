@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 
@@ -53,7 +54,7 @@ namespace System.Scripting.Runtime {
                 if (_caughtExceptions != null && _caughtExceptions.Count > 0) {
                     return _caughtExceptions[_caughtExceptions.Count - 1];
                 } else {
-                    throw new InvalidOperationException("No exception");
+                    throw Error.NoException();
                 }
             }
         }

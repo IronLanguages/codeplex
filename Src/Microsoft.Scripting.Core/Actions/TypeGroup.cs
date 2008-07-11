@@ -19,6 +19,7 @@ using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using Microsoft.Contracts;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Actions {
     /// <summary>
@@ -136,7 +137,7 @@ namespace System.Scripting.Actions {
                     return nonGenericType;
                 }
 
-                throw new TypeLoadException("The operation requires a non-generic type for " + NormalizedName + ", but this represents generic types only");
+                throw Error.NonGenericWithGenericGroup(NormalizedName);
             }
         }
 

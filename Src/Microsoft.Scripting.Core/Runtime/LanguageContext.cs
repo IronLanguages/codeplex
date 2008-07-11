@@ -95,7 +95,7 @@ namespace System.Scripting.Runtime {
             if (extension == null) {
                 extension = CreateScopeExtension(scope);
                 if (extension == null) {
-                    throw new InvalidImplementationException("CreateScopeExtension must return a scope extension.");
+                    throw Error.MustReturnScopeExtension();
                 }
                 return scope.SetExtension(ContextId, extension);
             }
@@ -425,13 +425,11 @@ namespace System.Scripting.Runtime {
 
         private static T GetArg<T>(object[] arg, int index, bool optional) {
             if (!optional && index >= arg.Length) {
-                throw new ArgumentException("Invalid number of parameters for the service");
+                throw Error.InvalidParamNumForService();
             }
 
             if (!(arg[index] is T)) {
-                throw new ArgumentException(
-                    String.Format("Invalid argument type; expecting {0}", typeof(T)),
-                    String.Format("arg[{0}]", index));
+                throw Error.InvalidArgumentType(String.Format("arg[{0}]", index), typeof(T));
             }
 
             return (T)arg[index];

@@ -19,10 +19,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace System.Scripting.Com {
@@ -118,10 +118,14 @@ namespace System.Scripting.Com {
 
         public ComTypeDesc ComTypeDesc {
             get {
-                
                 EnsureScanDefinedFunctions();
-             
                 return _comTypeDesc;
+            }
+        }
+
+        public IDispatchObject DispatchObject {
+            get {
+                return _dispatchObject;
             }
         }
 
@@ -137,10 +141,6 @@ namespace System.Scripting.Com {
 
             dispId = dispIds[0];
             return hresult;
-        }
-
-        private static int GetIDsOfNames(IDispatch dispatch, SymbolId name, out int dispId) {
-            return GetIDsOfNames(dispatch, SymbolTable.IdToString(name), out dispId);
         }
 
         static int Invoke(IDispatch dispatch, int memberDispId, out object result) {
@@ -197,7 +197,7 @@ namespace System.Scripting.Com {
                     value = null;
                     return false;
                 } else if (hresult != ComHresults.S_OK) {
-                    throw new MissingMemberException(string.Format("Could not get DispId for {0} (error:0x{1:X})", name, hresult));
+                    throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
                 }
 
                 methodDesc = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYGET);
@@ -227,7 +227,7 @@ namespace System.Scripting.Com {
                     value = null;
                     return false;
                 } else if (hresult != ComHresults.S_OK) {
-                    throw new MissingMemberException(string.Format("Could not get DispId for {0} (error:0x{1:X})", name, hresult));
+                    throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
                 } else if (dispId != ComDispIds.DISPID_VALUE) {
                     value = null;
                     return false;
@@ -242,7 +242,7 @@ namespace System.Scripting.Com {
             return true;
         }
 
-        public bool TryGetAttr(SymbolId name, out object value) {
+        public bool TryGetAttr(string name, out object value) {
 
             // Check if the name exists
             EnsureScanDefinedFunctions();
@@ -267,7 +267,7 @@ namespace System.Scripting.Com {
                     value = null;
                     return false;
                 } else if (hresult != ComHresults.S_OK) {
-                    throw new MissingMemberException(string.Format("Could not get DispId for {0} (error:0x{1:X})", name, hresult));
+                    throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
                 }
 
                 methodDesc = new ComMethodDesc(name.ToString(), dispId);
@@ -295,7 +295,7 @@ namespace System.Scripting.Com {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId="context")]
-        public bool TrySetAttr(SymbolId name, object value, out Exception exception) {
+        public bool TrySetAttr(string name, object value, out Exception exception) {
 
             exception = null;
 
@@ -328,7 +328,7 @@ namespace System.Scripting.Com {
                 bindingFlags |= System.Reflection.BindingFlags.Instance;
 
                 typeof(IDispatchForReflection).InvokeMember(
-                    SymbolTable.IdToString(name),
+                    name,
                     bindingFlags,
                     Type.DefaultBinder,
                     Obj,
@@ -347,17 +347,17 @@ namespace System.Scripting.Com {
 
         #region IMembersList
 
-        public override IList<SymbolId> GetMemberNames() {
+        public override IList<string> GetMemberNames() {
             EnsureScanDefinedFunctions();
             EnsureScanDefinedEvents();
-            IList<SymbolId> list = new List<SymbolId>();
+            List<string> list = new List<string>();
 
-            foreach (SymbolId symbol in _comTypeDesc.Funcs.Keys) {
+            foreach (string symbol in _comTypeDesc.Funcs.Keys) {
                 list.Add(symbol);
             }
 
             if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
-                foreach (SymbolId symbol in _comTypeDesc.Events.Keys) {
+                foreach (string symbol in _comTypeDesc.Events.Keys) {
                     list.Add(symbol);
                 }
             }
@@ -369,7 +369,7 @@ namespace System.Scripting.Com {
 
         public override MetaObject GetMetaObject(Expression parameter) {
             EnsureScanDefinedFunctions();
-            return new IDispatchMetaObject(parameter, _comTypeDesc);
+            return new IDispatchMetaObject(parameter, _comTypeDesc, this);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
@@ -379,7 +379,7 @@ namespace System.Scripting.Com {
 
             // GetFuncDesc should never return null, this is just to be safe
             if (pFuncDesc == IntPtr.Zero) {
-                throw new COMException("ResolveComReference.CannotRetrieveTypeInformation");
+                throw Error.CannotRetrieveTypeInformation();
             }
 
             funcDesc = (ComTypes.FUNCDESC)Marshal.PtrToStructure(pFuncDesc, typeof(ComTypes.FUNCDESC));
@@ -415,7 +415,7 @@ namespace System.Scripting.Com {
             ComTypeDesc typeDesc = ComTypeDesc.FromITypeInfo(typeInfo, null);
 
             ComTypes.ITypeInfo classTypeInfo = null;
-            Dictionary<SymbolId, ComEventDesc> events = null;
+            Dictionary<string, ComEventDesc> events = null;
 
             ComTypes.IConnectionPointContainer cpc = Obj as ComTypes.IConnectionPointContainer;
             if (cpc == null) {
@@ -427,7 +427,7 @@ namespace System.Scripting.Com {
                 Debug.Assert(false, "object support IConnectionPoint but no class info found");
                 events = ComTypeDesc.EmptyEvents;
             } else {
-                events = new Dictionary<SymbolId, ComEventDesc>();
+                events = new Dictionary<string, ComEventDesc>();
 
                 ComTypes.TYPEATTR classTypeAttr = ComRuntimeHelpers.GetTypeAttrForTypeInfo(classTypeInfo);
                 for (int i = 0; i < classTypeAttr.cImplTypes; i++) {
@@ -462,7 +462,7 @@ namespace System.Scripting.Com {
 
         }
 
-        private static void ScanSourceInterface(ComTypes.ITypeInfo sourceTypeInfo, ref Dictionary<SymbolId, ComEventDesc> events) {
+        private static void ScanSourceInterface(ComTypes.ITypeInfo sourceTypeInfo, ref Dictionary<string, ComEventDesc> events) {
             ComTypes.TYPEATTR sourceTypeAttribute = ComRuntimeHelpers.GetTypeAttrForTypeInfo(sourceTypeInfo);
 
             for (int index = 0; index < sourceTypeAttribute.cFuncs; index++) {
@@ -483,7 +483,7 @@ namespace System.Scripting.Com {
                     // TODO: prefixing events is a temporary workaround to allow dsitinguising 
                     // between methods and events in IntelliSense.
                     // Ideally, we should solve this problem by passing out flags.
-                    SymbolId name = ComRuntimeHelpers.GetSymbolIdOfMethod(sourceTypeInfo, funcDesc.memid, "Event_");
+                    string name = ComRuntimeHelpers.GetNameOfMethod(sourceTypeInfo, funcDesc.memid, "Event_");
 
                     // Sometimes coclass has multiple source interfaces. Usually this is caused by
                     // adding new events and putting them on new interfaces while keeping the
@@ -564,10 +564,9 @@ namespace System.Scripting.Com {
 
             ComTypeDesc typeDesc = ComTypeDesc.FromITypeInfo(typeInfo, null);
 
-            Dictionary<SymbolId, ComMethodDesc> funcs;
             ComMethodDesc getItem = null;
             ComMethodDesc setItem = null;
-            funcs = new Dictionary<SymbolId, ComMethodDesc>(typeAttr.cFuncs);
+            Dictionary<string, ComMethodDesc> funcs = new Dictionary<string, ComMethodDesc>(typeAttr.cFuncs);
             Queue<KeyValuePair<IntPtr, ComTypes.FUNCDESC>> writeOnlyCandidates = new Queue<KeyValuePair<IntPtr, ComTypes.FUNCDESC>>();
             List<int> usedDispIds = new List<int>();
 
@@ -602,19 +601,19 @@ namespace System.Scripting.Com {
                         }
 
                         ComMethodDesc methodDesc;
-                        SymbolId name;
+                        string name;
 
                         usedDispIds.Add(funcDesc.memid);
 
                         if (funcDesc.memid == ComDispIds.DISPID_NEWENUM) {
                             methodDesc = new ComMethodDesc(typeInfo, funcDesc);
-                            name = SymbolTable.StringToId("GetEnumerator");
+                            name = "GetEnumerator";
                             funcs.Add(name, methodDesc);
                             continue;
                         }
 
                         methodDesc = new ComMethodDesc(typeInfo, funcDesc);
-                        name = SymbolTable.StringToId(methodDesc.Name);
+                        name = methodDesc.Name;
                         funcs.Add(name, methodDesc);
 
                         // for the special dispId == 0, we need to store the method descriptor 
@@ -635,7 +634,7 @@ namespace System.Scripting.Com {
                     try {
                         if (!usedDispIds.Contains(woc.Value.memid)) {
                             ComMethodDesc methodDesc = new ComMethodDesc(typeInfo, woc.Value);
-                            funcs.Add(SymbolTable.StringToId(methodDesc.Name), methodDesc);
+                            funcs.Add(methodDesc.Name, methodDesc);
                             usedDispIds.Add(woc.Value.memid);
                         }
                     } finally {

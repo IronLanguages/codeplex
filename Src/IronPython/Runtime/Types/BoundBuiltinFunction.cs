@@ -20,7 +20,7 @@ using System.Scripting.Actions;
 using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -28,9 +28,10 @@ using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Types {
     using Ast = System.Linq.Expressions.Expression;
+    using System.Reflection;
 
     [PythonSystemType("builtin_function_or_method")]
-    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IValueEquality {
+    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IValueEquality, IDelegateConvertible {
         private readonly BuiltinFunction/*!*/ _target;
         private readonly object _instance;
 
@@ -266,6 +267,38 @@ namespace IronPython.Runtime.Types {
             if (bbf == null) return false;
 
             return PythonOps.EqualRetBool(bbf._instance, _instance) && bbf._target == _target;
+        }
+
+        #endregion
+
+        #region IDelegateConvertible Members
+
+        Delegate IDelegateConvertible.ConvertToDelegate(Type type) {
+            // see if we have any functions which are compatible with the delegate type...
+            ParameterInfo[] delegateParams = type.GetMethod("Invoke").GetParameters();
+
+            // if we have overloads then we need to do the overload resolution at runtime
+            if (Target.Targets.Count == 1) {
+                MethodInfo mi = Target.Targets[0] as MethodInfo;
+                if (mi != null) {
+                    ParameterInfo[] methodParams = mi.GetParameters();
+                    if (methodParams.Length == delegateParams.Length) {
+                        bool match = true;
+                        for (int i = 0; i < methodParams.Length; i++) {
+                            if (delegateParams[i].ParameterType != methodParams[i].ParameterType) {
+                                match = false;
+                                break;
+                            }
+                        }
+
+                        if (match) {
+                            return Delegate.CreateDelegate(type, _instance, mi);
+                        }
+                    }
+                }
+            }
+
+            return null;
         }
 
         #endregion

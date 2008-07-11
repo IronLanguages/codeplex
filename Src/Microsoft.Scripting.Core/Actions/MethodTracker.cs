@@ -99,9 +99,9 @@ namespace System.Scripting.Actions {
                         Ast.Null(),
                         Ast.NewArrayHelper(typeof(object), arguments)),
                     Method.ReturnType);
-            } 
+            }
 
-            if (arguments.Length == 0) throw new InvalidOperationException("no instance for call");
+            if (arguments.Length == 0) throw Error.NoInstanceForCall();
 
             return Ast.Convert(
                 Ast.Call(

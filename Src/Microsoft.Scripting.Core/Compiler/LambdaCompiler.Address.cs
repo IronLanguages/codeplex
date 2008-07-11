@@ -24,6 +24,12 @@ namespace System.Linq.Expressions {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     partial class LambdaCompiler {
 
+        // TODO: need to remove the address-of support for some of the nodes
+        // marked below, because 1) it doesn't make sense (there is no IL
+        // equivalent), and/or 2) it's a breaking change from LinqV1
+        //
+        // We don't want to "ref" parameters to modify values of expressions
+        // except where it would in IL: locals, args, fields, and array elements
         private void EmitAddress(Expression node, Type type) {
             Debug.Assert(node != null);
 
@@ -144,7 +150,7 @@ namespace System.Linq.Expressions {
 
             // TODO: Do something better
             if (node.Type == typeof(void)) {
-                throw new NotSupportedException("Cannot emit address of void-typed block");
+                throw Error.AddressOfVoidBlock();
             }
 
             for (int index = 0; index < expressions.Count; index++) {
@@ -163,15 +169,18 @@ namespace System.Linq.Expressions {
         private void AddressOf(MemberExpression node, Type type) {
             if (type == node.Type) {
                 // emit "this", if any
-                EmitInstance(node.Expression, node.Member.DeclaringType);
-                EmitMemberAddress(node.Member);
+                Type objectType = null;
+                if (node.Expression != null) {
+                    EmitInstance(node.Expression, objectType = node.Expression.Type);
+                }
+                EmitMemberAddress(node.Member, objectType);
             } else {
                 EmitExpressionAddress(node, type);
             }
         }
 
         // assumes the instance is already on the stack
-        private void EmitMemberAddress(MemberInfo member) {
+        private void EmitMemberAddress(MemberInfo member, Type objectType) {
             if (member.MemberType == MemberTypes.Field) {
                 FieldInfo field = (FieldInfo)member;
 
@@ -198,7 +207,7 @@ namespace System.Linq.Expressions {
                 }
             }
 
-            EmitMemberGet(member);
+            EmitMemberGet(member, objectType);
             LocalBuilder temp = _ilg.GetLocal(GetMemberType(member));
             _ilg.Emit(OpCodes.Stloc, temp);
             _ilg.Emit(OpCodes.Ldloca, temp);
@@ -227,7 +236,9 @@ namespace System.Linq.Expressions {
         private void AddressOf(UnaryExpression node, Type type) {
             Debug.Assert(node.NodeType == ExpressionType.Convert);
 
-            if (node.Operand.Type == typeof(object) && type.IsValueType) {
+            // TODO: this is bad--we're letting things modify the boxed value
+            // TODO: doesn't work on Nullable<T>, possibly a JIT bug
+            if (node.Operand.Type == typeof(object) && type.IsValueType && !TypeUtils.IsNullableType(type)) {
                 EmitExpression(node.Operand);
                 _ilg.Emit(OpCodes.Unbox, type);
             } else {

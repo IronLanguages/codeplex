@@ -26,7 +26,7 @@ using System.Scripting.Utils;
 using System.Text;
 using IronPython.Compiler;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -820,6 +820,54 @@ namespace IronPython.Runtime {
 
         public static bool issubclass(PythonType c, object typeinfo) {
             return PythonOps.IsSubClass(c, typeinfo);
+        }
+
+        public static bool issubclass(CodeContext/*!*/ context, object o, object typeinfo) {
+            PythonTuple pt = typeinfo as PythonTuple;
+            if (pt != null) {
+                // Recursively inspect nested tuple(s)
+                foreach (object subTypeInfo in pt) {
+                    PythonOps.FunctionPushFrame();
+                    try {
+                        if (issubclass(context, o, subTypeInfo)) {
+                            return true;
+                        }
+                    } finally {
+                        PythonOps.FunctionPopFrame();
+                    }
+                }
+                return false;
+            }
+
+            object bases;
+            PythonTuple tupleBases;
+
+            if (!PythonOps.TryGetBoundAttr(o, Symbols.Bases, out bases) || (tupleBases = bases as PythonTuple) == null) {
+                throw PythonOps.TypeError("issubclass() arg 1 must be a class");
+            }
+
+            foreach (object baseCls in tupleBases) {
+                PythonType pyType;
+                OldClass oc;
+
+                if (baseCls == typeinfo) {
+                    return true;
+                } else if ((pyType = baseCls as PythonType) != null) {
+                    if (issubclass(pyType, typeinfo)) {
+                        return true;
+                    }
+                } else if ((oc = baseCls as OldClass) != null) {
+                    if (issubclass(oc, typeinfo)) {
+                        return true;
+                    }
+                } else if (hasattr(context, baseCls, "__bases__")) {
+                    if (issubclass(context, baseCls, typeinfo)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public static IEnumerator iter(object o) {

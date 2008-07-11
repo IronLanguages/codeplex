@@ -569,7 +569,11 @@ namespace System.Linq.Expressions {
                 VisitNode(node.Object);
                 Out(").");
             }
-            Out("(" + node.Method.ReflectedType.Name + "." + node.Method.Name + ")(");
+            if (node.Method.ReflectedType != null) {
+                Out("(" + node.Method.ReflectedType.Name + "." + node.Method.Name + ")(");
+            } else {
+                Out("(" + node.Method.Name + ")(");
+            }
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
                 foreach (Expression e in node.Arguments) {
@@ -858,15 +862,15 @@ namespace System.Linq.Expressions {
             VisitNode(node.Body);
             Dedent();
             VisitNodes(node.Handlers, Visit);
-            if (node.FinallyStatement != null) {
+            if (node.Finally != null) {
                 Out("} .finally {", Flow.NewLine);
                 Indent();
-                VisitNode(node.FinallyStatement);
+                VisitNode(node.Finally);
                 Dedent();
-            } else if (node.FaultStatement != null) {
+            } else if (node.Fault != null) {
                 Out("} .fault {", Flow.NewLine);
                 Indent();
-                VisitNode(node.FaultStatement);
+                VisitNode(node.Fault);
                 Dedent();
             }
 

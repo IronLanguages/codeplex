@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Ast = System.Linq.Expressions.Expression;
 
 namespace System.Scripting.Com {
@@ -51,6 +52,12 @@ namespace System.Scripting.Com {
                         typeof(Marshal).GetMethod("StringToBSTR"),
                         base.ToExpression(parameters))),
                 _unmanagedTemp);
+        }
+
+        internal override VariableExpression[] TemporaryVariables {
+            get {
+                return ArrayUtils.Insert(_unmanagedTemp, base.TemporaryVariables);
+            }
         }
 
         protected override Expression UpdatedValue() {

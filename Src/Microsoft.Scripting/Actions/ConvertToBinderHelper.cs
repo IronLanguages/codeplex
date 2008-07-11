@@ -91,7 +91,7 @@ namespace Microsoft.Scripting.Actions {
         private bool TryConvertToObject(Type toType, Type knownType) {
             if (toType == typeof(object)) {
                 if (knownType.IsValueType) {
-                    MakeBoxingTarget();
+                    MakeBoxingTarget(knownType);
                 } else {
                     MakePerfectMatchTarget();
                 }
@@ -125,7 +125,7 @@ namespace Microsoft.Scripting.Actions {
                     return false;
                 }
                 // MakeSimpleConversionTarget handles the ConversionResultKind check
-                MakeSimpleConversionTarget(toType);
+                MakeSimpleConversionTarget(toType, type);
                 return true;
             }
 
@@ -240,7 +240,7 @@ namespace Microsoft.Scripting.Actions {
                     if (TypeUtils.IsImplicitlyConvertible(fromx, fromy, tox, toy)) {
                         // MakeSimpleConversionTarget handles the ConversionResultKind check
                         if (type == checkType) {
-                            MakeSimpleConversionTarget(toType);
+                            MakeSimpleConversionTarget(toType, type);
                         } else {
                             MakeSimpleExtensibleConversionTarget(toType);
                         }
@@ -307,7 +307,7 @@ namespace Microsoft.Scripting.Actions {
                 if (toType.IsInterface) {
                     // Converting a COM object to any interface is always considered possible - it will result in 
                     // a QueryInterface at runtime
-                    MakeSimpleConversionTarget(toType);
+                    MakeSimpleConversionTarget(toType, knownType);
                     return true;
                 }
             }
@@ -363,9 +363,9 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce a rule which just boxes a value type
         /// </summary>
-        private void MakeBoxingTarget() {
+        private void MakeBoxingTarget(Type knownType) {
             // MakeSimpleConversionTarget handles the ConversionResultKind check
-            MakeSimpleConversionTarget(typeof(object));
+            MakeSimpleConversionTarget(typeof(object), knownType);
         }
 
         /// <summary>
@@ -411,7 +411,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce a rule when no conversion is required (the strong type of the expression
         /// input matches the type we're converting to or has an implicit conversion at the IL level)
         /// </summary>
-        private void MakeSimpleConversionTarget(Type toType) {
+        private void MakeSimpleConversionTarget(Type toType, Type knownType) {
             if (toType.IsValueType && _rule.ReturnType == typeof(object) && _rule.Parameters[0].Type == typeof(object)) {
                 // boxed value type is being converted back to object.  We've done 
                 // the type check, there's no need to unbox & rebox the value.  infact 
@@ -422,10 +422,14 @@ namespace Microsoft.Scripting.Actions {
                         _rule.Parameters[0]
                     );
             } else {
+                Expression arg = _rule.Parameters[0];
+                if (arg.Type != knownType && knownType != typeof(None)) {
+                    arg = Ast.Convert(arg, CompilerHelpers.GetVisibleType(knownType));
+                }
                 _rule.Target =
                     _rule.MakeReturn(
                         Binder,
-                        Ast.ConvertHelper(_rule.Parameters[0], CompilerHelpers.GetVisibleType(toType))
+                        Ast.ConvertHelper(arg, CompilerHelpers.GetVisibleType(toType))
                     );
             }
         }

@@ -16,11 +16,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+
 
 namespace System.Scripting.Generation {
 
@@ -795,7 +797,7 @@ namespace System.Scripting.Generation {
 
         private void EmitSimpleConstant(object value) {
             if (!TryEmitConstant(value, value == null ? typeof(object) : value.GetType())) {
-                throw new ArgumentException(String.Format("Cannot emit constant {0} ({1})", value, value.GetType()));
+                throw Error.CanotEmitConstant(value, value.GetType());
             }
         }
 
@@ -824,39 +826,22 @@ namespace System.Scripting.Generation {
                 return true;
             }
 
-            if (value is Missing) {
-                Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
-                return true;
-            }
-
-            if (value is RuntimeTypeHandle) {
-                RuntimeTypeHandle rth = (RuntimeTypeHandle)value;
-                if (!rth.Equals(default(RuntimeTypeHandle))) {
-                    Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle(rth));
-                    return true;
-                }
-            }
-
             Type t = value as Type;
-            if (t != null && (t is TypeBuilder || t.IsGenericParameter || t.IsVisible)) {
-                // can only ldtoken on a visible type
+            if (t != null && ShouldLdtoken(t)) {
                 EmitType(t);
                 return true;
             }
 
-            if (value is RuntimeMethodHandle) {
-                RuntimeMethodHandle rmh = (RuntimeMethodHandle)value;
-                if (rmh != default(RuntimeMethodHandle)) {
-                    Emit(OpCodes.Ldtoken, MethodBase.GetMethodFromHandle(rmh));
-                    return true;
-                }
-            }
-
-            // can't ldtoken on a DynamicMethod
             MethodBase mb = value as MethodBase;
-            if (mb != null && !(mb is DynamicMethod)) {
+            if (mb != null && ShouldLdtoken(mb)) {
                 Emit(OpCodes.Ldtoken, mb);
-                EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+                Type dt = mb.DeclaringType;
+                if (dt != null && dt.IsGenericType) {
+                    Emit(OpCodes.Ldtoken, dt);
+                    EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
+                } else {
+                    EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+                }
                 type = TypeUtils.GetConstantType(type);
                 if (type != typeof(MethodBase)) {
                     Emit(OpCodes.Castclass, type);
@@ -865,6 +850,21 @@ namespace System.Scripting.Generation {
             }
 
             return false;
+        }
+
+        // TODO: Can we always ldtoken and let restrictedSkipVisibility sort things out?
+        internal static bool ShouldLdtoken(Type t) {
+            return t is TypeBuilder || t.IsGenericParameter || t.IsVisible;
+        }
+
+        internal static bool ShouldLdtoken(MethodBase mb) {
+            // Can't ldtoken on a DynamicMethod
+            if (mb is DynamicMethod) {
+                return false;
+            }
+
+            Type dt = mb.DeclaringType;
+            return dt == null || ShouldLdtoken(dt);
         }
 
         //CONFORMING
@@ -924,13 +924,13 @@ namespace System.Scripting.Generation {
 
         public void EmitImplicitCast(Type from, Type to) {
             if (!TryEmitCast(from, to, true)) {
-                throw new ArgumentException(String.Format("No implicit cast from {0} to {1}", from, to));
+                throw Error.NoImplicitCast(from, to);
             }
         }
 
         public void EmitExplicitCast(Type from, Type to) {
             if (!TryEmitCast(from, to, false)) {
-                throw new ArgumentException(String.Format("No explicit cast from {0} to {1}", from, to));
+                throw Error.NoExplicitCast(from, to);
             }
         }
 
@@ -1599,7 +1599,7 @@ namespace System.Scripting.Generation {
                         Emit(OpCodes.Initobj, type);
                         Emit(OpCodes.Ldloc, lb);
                     } else {
-                        throw new ArgumentException("No default value for a given type");
+                        throw Error.NoDefaultValue();
                     }
                     break;
 

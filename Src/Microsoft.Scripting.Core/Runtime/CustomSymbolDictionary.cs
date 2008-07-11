@@ -16,6 +16,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Scripting.Utils;
 using Microsoft.Contracts;
 
@@ -601,7 +602,7 @@ namespace System.Scripting.Runtime {
         #endregion
 
         public void CopyTo(Array/*!*/ array, int index) {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            throw Error.MethodOrOperatorNotImplemented();
         }
 
         public bool IsSynchronized {

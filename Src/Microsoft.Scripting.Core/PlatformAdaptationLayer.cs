@@ -16,6 +16,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Linq.Expressions;
 
 namespace System.Scripting {
 
@@ -210,8 +211,8 @@ namespace System.Scripting {
 #if !SILVERLIGHT
             try {
                 return Path.GetFullPath(path);
-            } catch (Exception e) {
-                throw new ArgumentException("Specified path is invalid", "path", e);
+            } catch (Exception) {
+                throw Error.InvalidPath();
             }
 #else
             throw new NotImplementedException();

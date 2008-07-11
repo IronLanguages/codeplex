@@ -17,7 +17,7 @@
 #------------------------------------------------------------------------------
 ip_supported_encodings = [  'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 
                             'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 
-                            'raw-unicode-escape']
+                            'raw-unicode-escape', 'utf-7', 'utf-8-sig']
 #make sure all encoding names are lowercase
 ip_supported_encodings = [ x.lower() for x in ip_supported_encodings]
 #now make them uppercase as well

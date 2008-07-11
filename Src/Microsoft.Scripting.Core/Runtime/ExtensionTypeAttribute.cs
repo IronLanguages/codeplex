@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 
+using System.Linq.Expressions;
+
 namespace System.Scripting.Runtime {
     /// <summary>
     /// Marks a class in the assembly as being an extension type for another type.
@@ -32,7 +34,7 @@ namespace System.Scripting.Runtime {
                 throw new ArgumentNullException("extends");
             }
             if (extensionType != null && !extensionType.IsPublic && !extensionType.IsNestedPublic) {
-                throw new ArgumentException(String.Format("Extension type {0} must be public", extensionType.FullName), "extensionType");
+                throw Error.ExtensionMustBePublic(extensionType.FullName);
             }
 
             _extends = extends;

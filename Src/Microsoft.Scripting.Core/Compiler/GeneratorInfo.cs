@@ -15,7 +15,6 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 
 namespace System.Linq.Expressions {
     /// <summary>
@@ -36,18 +35,16 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// The top targets for the generator dispatch.
         /// </summary>
-        private readonly IList<YieldTarget> _topTargets;
+        internal readonly IList<YieldTarget> TopTargets;
 
-        internal GeneratorInfo(Dictionary<TryStatement, TryStatementInfo> tryInfos,
-                               Dictionary<YieldStatement, YieldTarget> yieldTargets,
-                               List<YieldTarget> topTargets) {
+        internal GeneratorInfo(
+            Dictionary<TryStatement, TryStatementInfo> tryInfos,
+            Dictionary<YieldStatement, YieldTarget> yieldTargets,
+            List<YieldTarget> topTargets) {
+
             _tryInfos = tryInfos;
             _yieldTargets = yieldTargets;
-            _topTargets = topTargets;
-        }
-
-        internal IList<YieldTarget> TopTargets {
-            get { return _topTargets; }
+            TopTargets = topTargets;
         }
 
         internal TryStatementInfo TryGetTsi(TryStatement ts) {

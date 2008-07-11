@@ -37,6 +37,7 @@ namespace System.Scripting.Actions {
         internal Expression _target;                // the target that executes if the rule is true
         internal Expression _context;               // CodeContext, if any.
         internal Expression[] _parameters;          // the parameters which the rule is processing
+        internal Expression[] _parametersMinusSite; // the parameters which the rule is processing minus the CallSite parameter
         internal Expression[] _allParameters;       // The parameters, including CodeContext, if any.
         internal List<Func<bool>> _validators;  // the list of validates which indicate when the rule is no longer valid
         private bool _error;                        // true if the rule represents an error
@@ -93,7 +94,7 @@ namespace System.Scripting.Actions {
         /// </summary>
         public IList<Expression> Parameters {
             get {
-                return _parameters;
+                return _parametersMinusSite;
             }
         }
 
@@ -228,7 +229,7 @@ namespace System.Scripting.Actions {
         /// </summary>
         public int ParameterCount {
             get {
-                return _parameters.Length;
+                return _parameters.Length - 1;
             }
         }
 
@@ -270,13 +271,13 @@ namespace System.Scripting.Actions {
         public RuleBuilder() {
 
             if (!typeof(Delegate).IsAssignableFrom(typeof(T))) {
-                throw new InvalidOperationException("RuleBuilder generic argument must be a delegate");
+                throw Error.TypeParameterIsNotDelegate(typeof(T));
             }
 
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
 
             if (pis.Length == 0 || pis[0].ParameterType != typeof(CallSite)) {
-                throw new InvalidOperationException("RuleBuilder can only be used with delegates whose first argument is CallSite");
+                throw Error.FirstArgumentMustBeCallSite();
             }
 
             MakeParameters(pis);
@@ -286,27 +287,29 @@ namespace System.Scripting.Actions {
             // First argument is the dynamic site
             const int FirstParameterIndex = 1;
 
-            Expression[] all = new Expression[pis.Length - FirstParameterIndex];
-            ParameterExpression[] vars = new ParameterExpression[pis.Length - FirstParameterIndex];
+            Expression[] all = new Expression[pis.Length];
+            ParameterExpression[] vars = new ParameterExpression[pis.Length];
 
+            vars[0] = Ast.Parameter(typeof(CallSite), "callSite");
             for (int i = FirstParameterIndex; i < pis.Length; i++) {
-                int index = i - FirstParameterIndex;
                 Type pt = pis[i].ParameterType;
-                all[index] = vars[index] =
+                all[i] = vars[i] =
                     pt.IsByRef
-                        ? Ast.ByRefParameter(pt, "$arg" + index)
-                        : Ast.Parameter(pt, "$arg" + index);
+                        ? Ast.ByRefParameter(pt, "$arg" + i)
+                        : Ast.Parameter(pt, "$arg" + i);
             }
 
             _paramVariables = vars;
             _allParameters = all;
 
-            if (all.Length > 0 && typeof(CodeContext).IsAssignableFrom(all[0].Type)) {
-                _context = all[0];
-                _parameters = ArrayUtils.ShiftLeft(all, 1);
+            if (all.Length > 1 && typeof(CodeContext).IsAssignableFrom(all[1].Type)) {
+                _context = all[1];
+                _parameters = ArrayUtils.RemoveAt(all, 1);
             } else {
                 _parameters = all;
             }
+
+            _parametersMinusSite = ArrayUtils.RemoveFirst(_parameters);
         }
 
         [Confined]
@@ -323,10 +326,10 @@ namespace System.Scripting.Actions {
         public Rule<T> CreateRule() {
             if (_rule == null) {
                 if (_test == null) {
-                    throw new InvalidOperationException("Missing test.");
+                    throw Error.MissingTest();
                 }
                 if (_target == null) {
-                    throw new InvalidOperationException("Missing target.");
+                    throw Error.MissingTarget();
                 }
 
                 _rule = new Rule<T>(

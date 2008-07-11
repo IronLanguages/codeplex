@@ -28,7 +28,7 @@ using System.Text;
 using System.Threading;
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -83,6 +83,7 @@ namespace IronPython.Runtime {
         private CompiledLoader _compiledLoader;
         internal bool _importWarningThrows;
         private CommandDispatcher _commandDispatcher; // can be null
+        private readonly BinderState _defaultBinderState = null, _defaultClsBinderState = null;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -1527,10 +1528,21 @@ namespace IronPython.Runtime {
 
         public CompiledLoader GetCompiledLoader() {
             if (_compiledLoader == null) {
-                Interlocked.CompareExchange(ref _compiledLoader, new CompiledLoader(), null);
+                if (Interlocked.CompareExchange(ref _compiledLoader, new CompiledLoader(), null) == null) {
+                    SymbolId meta_path = SymbolTable.StringToId("meta_path");
+                    object path;
+                    List lstPath;
+
+                    if (!SystemState.Dict.TryGetValue(meta_path, out path) || ((lstPath = path as List) == null)) {
+                        SystemState.Dict[meta_path] = lstPath = new List();
+                    }
+
+                    lstPath.append(GetCompiledLoader());
+                }
             }
+
             return _compiledLoader;
-        }
+        }        
 
         public class CompiledLoader {
             private List<ScriptCode> _codes = new List<ScriptCode>();
@@ -1541,13 +1553,24 @@ namespace IronPython.Runtime {
 
             public ModuleLoader find_module(string fullname, List path) {
                 foreach (ScriptCode sc in _codes) {
+                    
                     if (Path.GetFileNameWithoutExtension(sc.SourceUnit.Path) == fullname) {
+                        // normal .py file
                         return new ModuleLoader(sc);
-                    }                    
+                    } else if (fullname.IndexOf('.') > 0) {
+                        string packagePath = Path.Combine(Path.GetDirectoryName(sc.SourceUnit.Path), Path.GetFileNameWithoutExtension(sc.SourceUnit.Path)).Replace(Path.DirectorySeparatorChar, '.');
+                        if (packagePath == fullname) {
+                            return new ModuleLoader(sc);
+                        }
+                    }
+
+                    if (sc.SourceUnit.Path.EndsWith("__init__.py") && sc.SourceUnit.Path.EndsWith(fullname + Path.DirectorySeparatorChar + "__init__.py")) {
+                        return new ModuleLoader(sc);
+                    }
                 }
 
                 return null;
-            }            
+            }
         }
 
         public class ModuleLoader {
@@ -1561,6 +1584,18 @@ namespace IronPython.Runtime {
                 PythonContext pc = PythonContext.GetContext(context);
 
                 return pc.CreateModule(_sc.SourceUnit.Path, _sc.CreateScope(), _sc, ModuleOptions.Initialize).Scope;
+            }
+        }
+
+        internal BinderState DefaultBinderState {
+            get {
+                return _defaultBinderState;
+            }
+        }
+
+        internal BinderState DefaultClsBinderState {
+            get {
+                return _defaultClsBinderState;
             }
         }
 

@@ -20,7 +20,7 @@ using System.Scripting.Actions;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Actions;

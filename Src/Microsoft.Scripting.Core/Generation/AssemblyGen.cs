@@ -16,6 +16,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Resources;
@@ -69,13 +70,13 @@ namespace System.Scripting.Generation {
             if (outDir != null) {
                 try {
                     outDir = Path.GetFullPath(outDir);
-                } catch (Exception e) {
-                    throw new ArgumentException("Invalid output directory", e);
+                } catch (Exception) {
+                    throw Error.InvalidOutputDir();
                 }
                 try {
                     Path.Combine(outDir, name.Name + outFileExtension);
-                } catch (ArgumentException e) {
-                    throw new ArgumentException("Invalid assembly name or file extension", e);
+                } catch (ArgumentException) {
+                    throw Error.InvalidAsmNameOrExtension();
                 }
 
                 _outFileName = name.Name + outFileExtension;

@@ -48,6 +48,9 @@ class Symbol:
 
     def __repr__(self):
         return 'Symbol(%s)' % self.symbol
+        
+    def is_comparison(self):
+        return self.symbol in (sym for sym, name, rname,clrName,opposite, bool1, bool2, bool3 in compares)
 
 class Operator(Symbol):
     def __init__(self, symbol, name, rname, clrName=None,prec=-1, opposite=None, bool1=None, bool2=None, bool3=None, dotnetOp=False):
@@ -136,7 +139,7 @@ class Operator(Symbol):
             cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s([NotNull]OldInstance self, object other)" % self.title_name())
         cw.writeline('object res = InvokeOne(self, other, Symbols.Operator%s);' % self.title_name())
-        cw.writeline('if (res != PythonOps.NotImplemented) return res;')
+        cw.writeline('if (res != NotImplementedType.Value) return res;')
 
         cw.writeline()
         cw.writeline("OldInstance otherOc = other as OldInstance;")
@@ -144,7 +147,7 @@ class Operator(Symbol):
         cw.writeline('return InvokeOne(other, self, Symbols.OperatorReverse%s);' % self.title_name())
         cw.exit_block() # end of otherOc != null        
         
-        cw.writeline("return PythonOps.NotImplemented;")
+        cw.writeline("return NotImplementedType.Value;")
         cw.exit_block() # end method
         cw.writeline()
         
@@ -407,7 +410,7 @@ def tokens_generator(cw):
 
 IBINOP = """
 private static readonly DynamicSite<object, object, object> %(name)sSharedSite =
-    DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
+    DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
 
 public static object %(name)s(object x, object y) {
     return %(name)sSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
@@ -417,7 +420,7 @@ BINOP = IBINOP
 
 CMPOP2 = """
 private static readonly DynamicSite<object, object, bool> %(name)sBooleanSharedSite =
-    DynamicSite<object, object, bool>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
+    DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
 
 public static bool %(name)sRetBool(object x, object y) {
     return %(name)sBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
@@ -492,17 +495,17 @@ def gen_OperatorToSymbol(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
         op.genOperatorToSymbol(cw)
-        
+
 def weakref_operators(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
+        if op.is_comparison(): continue
         op.genWeakRefOperatorNames(cw)
-
-CodeGenerator("WeakRef Operators Initialization", weakref_operators).doit()
 
 def weakrefCallabelProxy_operators(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
+        if op.is_comparison(): continue
         op.genWeakRefCallableProxyOperatorNames(cw)
 
 def oldinstance_operators(cw):

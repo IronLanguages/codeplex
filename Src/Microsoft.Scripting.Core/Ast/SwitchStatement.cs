@@ -74,7 +74,7 @@ namespace System.Linq.Expressions {
 
             ContractUtils.Requires(UniqueCaseValues(cases, min, max), "cases", "Case values must be unique");
 
-            return new SwitchStatement(annotations, label, value, CollectionUtils.ToReadOnlyCollection(cases));
+            return new SwitchStatement(annotations, label, value, cases.ToReadOnly());
         }
 
         // Below his threshold we'll use brute force N^2 algorithm

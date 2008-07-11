@@ -50,12 +50,6 @@ namespace System.Linq.Expressions {
         private readonly bool _dynamicMethod;
 
         /// <summary>
-        /// The compiler which contains the compilation-wide information
-        /// such as other lambdas and their Compilers.
-        /// </summary>
-        private readonly Compiler _compiler;
-
-        /// <summary>
         /// The generator information for the generator being compiled.
         /// This is null if the current lambda is not a generator
         /// </summary>
@@ -73,7 +67,8 @@ namespace System.Linq.Expressions {
         // The currently active variable scope
         private CompilerScope _scope;
 
-        private readonly ReadOnlyCollection<ParameterExpression> _parameters;
+        // The lambda we are compiling
+        private readonly LambdaExpression _lambda;
 
         /// <summary>
         /// Argument types
@@ -106,8 +101,7 @@ namespace System.Linq.Expressions {
         private const int BranchForContinue = 3;
 
         private LambdaCompiler(
-            Compiler compiler,
-            LambdaExpression lambda,
+            CompilerScope scope,
             TypeGen typeGen,
             MethodBase mi,
             ILGenerator ilg,
@@ -116,11 +110,18 @@ namespace System.Linq.Expressions {
             bool emitDebugSymbols) {
 
             ContractUtils.Requires(dynamicMethod || mi.IsStatic, "dynamicMethod");
-
+            Debug.Assert(scope != null);
+            _lambda = (LambdaExpression)scope.Expression;
             _typeGen = typeGen;
             _method = mi;
             _paramTypes = new ReadOnlyCollection<Type>(paramTypes);
             _dynamicMethod = dynamicMethod;
+            _scope = scope;
+
+            // get generator info is this is a generator
+            if (_lambda.NodeType == ExpressionType.Generator) {
+                _generatorInfo = YieldLabelBuilder.BuildYieldTargets(_lambda);
+            }
 
             // Create the ILGen instance, debug or not
             if (CompilerDebugOptions.DumpIL || CompilerDebugOptions.ShowIL) {
@@ -135,23 +136,6 @@ namespace System.Linq.Expressions {
                 _constantCache = new Dictionary<object, int>(ReferenceEqualityComparer<object>.Instance);
             }
 
-            // Initialize _info and _compiler
-            if (lambda != null) {
-                if (compiler == null) {
-                    // No compiler, analyze the tree to create one (possibly rewriting lambda)
-                    compiler = new Compiler(AnalyzeLambda(ref lambda));
-                }
-                _scope = compiler.GetCompilerScope(lambda);
-                Debug.Assert(_scope != null);
-
-                if (lambda.NodeType == ExpressionType.Generator) {
-                    _generatorInfo = compiler.GetGeneratorInfo(lambda);
-                }
-
-                _parameters = lambda.Parameters;
-            }
-            _compiler = compiler;
-
             Debug.Assert(!emitDebugSymbols || _typeGen != null);
             _emitDebugSymbols = emitDebugSymbols && _typeGen.AssemblyGen.IsDebuggable;
 
@@ -163,10 +147,6 @@ namespace System.Linq.Expressions {
         }
 
         #region Properties
-
-        private Compiler Compiler {
-            get { return _compiler; }
-        }
 
         internal ILGen IL {
             get { return _ilg; }
@@ -195,7 +175,7 @@ namespace System.Linq.Expressions {
         }
 
         internal ReadOnlyCollection<ParameterExpression> Parameters {
-            get { return _parameters; }
+            get { return _lambda.Parameters; }
         }
 
         private bool HasClosure {
@@ -262,8 +242,7 @@ namespace System.Linq.Expressions {
 
             // 2. Create lambda compiler
             LambdaCompiler c = CreateDynamicLambdaCompiler(
-                null, // compiler
-                lambda,
+                AnalyzeLambda(lambda),
                 name,
                 returnType,
                 types,
@@ -317,8 +296,7 @@ namespace System.Linq.Expressions {
             ComputeSignature(lambda, out types, out names, out lambdaName, out returnType);
 
             LambdaCompiler lc = new LambdaCompiler(
-                null,
-                lambda,
+                AnalyzeLambda(lambda),
                 tg,
                 mb,
                 mb.GetILGenerator(),
@@ -333,7 +311,7 @@ namespace System.Linq.Expressions {
 
         #endregion
 
-        private static AnalyzedTree AnalyzeLambda(ref LambdaExpression lambda) {
+        private static CompilerScope AnalyzeLambda(LambdaExpression lambda) {
             DumpLambda(lambda);
 
             // first re-write all DynamicSite's into normal nodes
@@ -343,12 +321,11 @@ namespace System.Linq.Expressions {
             // constructs which require entering w/ an empty stack
             lambda = StackSpiller.AnalyzeLambda(lambda);
 
-            // finally bind any variable references across the lambdas
-            AnalyzedTree at = VariableBinder.Bind(lambda);
-
+            // finally bind any variable references in this lambda
+            CompilerScope scope = VariableBinder.Bind(null, lambda);
             DumpLambda(lambda);
 
-            return at;
+            return scope;
         }
 
         [Conditional("DEBUG")]
@@ -358,7 +335,7 @@ namespace System.Linq.Expressions {
 
         private void EmitImplicitCast(Type from, Type to) {
             if (!TryEmitImplicitCast(from, to)) {
-                throw new ArgumentException(String.Format("Cannot cast from '{0}' to '{1}'", from, to));
+                throw Error.CannotCastTypeToType(from, to);
             }
         }
 
@@ -482,7 +459,7 @@ namespace System.Linq.Expressions {
         /// a new (static) method on the same type.
         /// </summary>
         private LambdaCompiler CreateLambdaCompiler(
-            LambdaExpression lambda,
+            CompilerScope scope,
             string name,
             Type retType,
             IList<Type> paramTypes,
@@ -491,9 +468,9 @@ namespace System.Linq.Expressions {
 
             LambdaCompiler lc;
             if (_dynamicMethod) {
-                lc = CreateDynamicLambdaCompiler(_compiler, lambda, name, retType, paramTypes, paramNames, closure, _emitDebugSymbols, false);
+                lc = CreateDynamicLambdaCompiler(scope, name, retType, paramTypes, paramNames, closure, _emitDebugSymbols, false);
             } else {
-                lc = CreateStaticLambdaCompiler(_compiler, lambda, _typeGen, name, retType, paramTypes, paramNames, _dynamicMethod, closure, _emitDebugSymbols);
+                lc = CreateStaticLambdaCompiler(scope, _typeGen, name, retType, paramTypes, paramNames, _dynamicMethod, closure, _emitDebugSymbols);
             }
 
             // TODO: better way to flow this in?
@@ -536,8 +513,7 @@ namespace System.Linq.Expressions {
         /// the one method
         /// </summary>
         private static LambdaCompiler CreateDynamicLambdaCompiler(
-            Compiler compiler,
-            LambdaExpression lambda,
+            CompilerScope scope,
             string methodName,
             Type returnType,
             IList<Type> paramTypes,
@@ -560,8 +536,7 @@ namespace System.Linq.Expressions {
             if ((Snippets.Shared.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
                 TypeGen typeGen = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
                 lc = CreateStaticLambdaCompiler(
-                    compiler,
-                    lambda,
+                    scope,
                     typeGen,
                     methodName,
                     returnType,
@@ -575,8 +550,7 @@ namespace System.Linq.Expressions {
                 Type[] parameterTypes = MakeParameterTypeArray(paramTypes, true /*dynamicMethod*/, closure);
                 DynamicMethod target = Snippets.Shared.CreateDynamicMethod(methodName, returnType, parameterTypes);
                 lc = new LambdaCompiler(
-                    compiler,
-                    lambda,
+                    scope,
                     null, // typeGen
                     target,
                     target.GetILGenerator(),
@@ -593,8 +567,7 @@ namespace System.Linq.Expressions {
         /// Creates a LambdaCompiler backed by a method on a static type (represented by tg).
         /// </summary>
         private static LambdaCompiler CreateStaticLambdaCompiler(
-            Compiler compiler,
-            LambdaExpression lambda,
+            CompilerScope scope,
             TypeGen tg,
             string name,
             Type retType,
@@ -610,8 +583,7 @@ namespace System.Linq.Expressions {
 
             MethodBuilder mb = tg.TypeBuilder.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
             LambdaCompiler lc = new LambdaCompiler(
-                compiler,
-                lambda,
+                scope,
                 tg,
                 mb,
                 mb.GetILGenerator(),

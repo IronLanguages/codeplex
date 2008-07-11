@@ -502,8 +502,8 @@ namespace IronPython.Modules {
             public stat_result(ISequence statResult, [DefaultParameterValue(null)]object dict) {
                 // dict is allowed by CPython's stat_result, but doesn't seem to do anything, so we ignore it here.
 
-                if (statResult.__len__() != 10) {
-                    throw PythonOps.TypeError("stat_result() takes a 10-sequence ({0}-sequence given)", statResult.__len__());
+                if (statResult.__len__() < 10) {
+                    throw PythonOps.TypeError("stat_result() takes an at least 10-sequence ({0}-sequence given)", statResult.__len__());
                 }
 
                 this.mode = Converter.ConvertToBigInteger(statResult[0]);

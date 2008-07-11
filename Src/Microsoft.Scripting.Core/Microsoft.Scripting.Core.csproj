@@ -105,6 +105,7 @@
     <Compile Include="..\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
+    <Compile Include="Actions\ActionSelfExpression.cs" />
     <Compile Include="Actions\ArgumentInfo.cs" />
     <Compile Include="Actions\CallAction.cs" />
     <Compile Include="Actions\CallSiteBinder.cs" />
@@ -132,7 +133,9 @@
     <Compile Include="Actions\StandardActionKind.cs" />
     <Compile Include="Ast\Argument.cs" />
     <Compile Include="Ast\CodeContextExpression.cs" />
+    <Compile Include="Ast\Extensions.cs" />
     <Compile Include="Ast\IndexedPropertyExpression.cs" />
+    <Compile Include="Compiler\Set.cs" />
     <Compile Include="Compiler\ExpressionQuoter.cs" />
     <Compile Include="Ast\ElementInit.cs" />
     <Compile Include="Ast\ListInitExpression.cs" />
@@ -185,6 +188,8 @@
     <Compile Include="Com\IDispatchComObject.cs" />
     <Compile Include="Com\IDispatchMetaObject.cs" />
     <Compile Include="Com\IDispatchObject.cs" />
+    <Compile Include="Com\InvokeBinder.cs" />
+    <Compile Include="Com\MetaUnwrappedComObject.cs" />
     <Compile Include="Com\NullArgBuilder.cs" />
     <Compile Include="Com\ReferenceArgBuilder.cs" />
     <Compile Include="Com\ReturnBuilder.cs" />
@@ -235,7 +240,6 @@
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
     <Compile Include="Actions\Old\OldSetMemberAction.cs" />
-    <Compile Include="Actions\SimpleRuleBuilder.cs" />
     <Compile Include="Actions\SmallRuleSet.cs" />
     <Compile Include="Actions\RuleBuilder.cs" />
     <Compile Include="Actions\TemplatedValue.cs" />
@@ -275,7 +279,6 @@
     <Compile Include="Runtime\LanguageBoundTextContentProvider.cs" />
     <Compile Include="PlatformAdaptationLayer.cs" />
     <Compile Include="Runtime\AssemblyTypeNames.cs" />
-    <Compile Include="Compiler\AnalyzedTree.cs" />
     <Compile Include="Compiler\StackSpiller.Generated.cs" />
     <Compile Include="Compiler\ExpressionWriter.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
@@ -290,7 +293,6 @@
     <Compile Include="Compiler\ConstantCheck.cs" />
     <Compile Include="Compiler\StackSpiller.cs" />
     <Compile Include="Ast\LocalScopeExpression.cs" />
-    <Compile Include="Compiler\Compiler.cs" />
     <Compile Include="Compiler\TryStatementInfo.cs" />
     <Compile Include="Compiler\VariableBinder.cs" />
     <Compile Include="Ast\DoStatementBuilder.cs" />
@@ -419,7 +421,9 @@
     <Compile Include="Utils\ConsoleStreamType.cs" />
     <Compile Include="Utils\ContractUtils.cs" />
     <Compile Include="Utils\DictionaryUnionEnumerator.cs" />
+    <Compile Include="Utils\ExceptionFactory.Generated.cs" />
     <Compile Include="Utils\ExceptionUtils.cs" />
+    <Compile Include="Utils\Extension.cs" />
     <Compile Include="Utils\ReadOnlyDictionary.cs" />
     <Compile Include="Utils\ReferenceEqualityComparer.cs" />
     <Compile Include="Utils\Function.cs" />

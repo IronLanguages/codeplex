@@ -23,7 +23,7 @@ using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Threading;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;

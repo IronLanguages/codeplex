@@ -86,6 +86,7 @@ namespace Microsoft.Scripting.Actions {
                 return _restrictions;
             }
             set {
+                ContractUtils.RequiresNotNull(value, "value");
                 _restrictions = value;
             }
         }
@@ -101,7 +102,7 @@ namespace Microsoft.Scripting.Actions {
 
             return new MetaObject(
                 _body,
-                Restrictions.Combine(types)
+                Restrictions.Combine(types).Merge(Restrictions)
             );
         }
 

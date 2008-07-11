@@ -19,7 +19,7 @@ using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Utils;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;

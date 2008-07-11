@@ -20,6 +20,9 @@ using System.Scripting;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 
+// importing full namespace causes conflicts due to RuntimeHelpers
+using IStrongBox = System.Runtime.CompilerServices.IStrongBox;
+
 namespace Microsoft.Scripting.Runtime {
 
     /// <summary>
@@ -29,7 +32,7 @@ namespace Microsoft.Scripting.Runtime {
         private readonly ILocalVariables _locals;
 
         // TODO: remove, lazily created stuff for CustomSymbolDictionary
-        private Dictionary<SymbolId, int> _indexes;
+        private Dictionary<SymbolId, IStrongBox> _boxes;
         private SymbolId[] _symbols;
 
         public LocalsDictionary(ILocalVariables locals) {
@@ -52,19 +55,18 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
         
-        private void EnsureIndexes() {
-            if (_indexes == null) {
+        private void EnsureBoxes() {
+            if (_boxes == null) {
                 EnsureSymbols();
 
                 int count = _symbols.Length;
-                Dictionary<SymbolId, int> indexes = new Dictionary<SymbolId, int>(count);
-                for (int index = 0; index < count; index++) {
-                    indexes[_symbols[index]] = index;
+                Dictionary<SymbolId, IStrongBox> boxes = new Dictionary<SymbolId, IStrongBox>(count);
+                for (int i = 0; i < count; i++) {
+                    boxes[_symbols[i]] = _locals[i];
                 }
-                _indexes = indexes;
+                _boxes = boxes;
             }
         }
-
 
         public override SymbolId[] GetExtraKeys() {
             EnsureSymbols();
@@ -72,11 +74,11 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         protected override bool TrySetExtraValue(SymbolId key, object value) {
-            EnsureIndexes();
+            EnsureBoxes();
 
-            int index;
-            if (_indexes.TryGetValue(key, out index)) {
-                _locals[index] = value;
+            IStrongBox box;
+            if (_boxes.TryGetValue(key, out box)) {
+                box.Value = value;
                 return true;
             }
 
@@ -84,11 +86,11 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         protected override bool TryGetExtraValue(SymbolId key, out object value) {
-            EnsureIndexes();
+            EnsureBoxes();
 
-            int index;
-            if (_indexes.TryGetValue(key, out index)) {
-                value = _locals[index];
+            IStrongBox box;
+            if (_boxes.TryGetValue(key, out box)) {
+                value = box.Value;
                 return true;
             }
             value = null;

@@ -27,13 +27,16 @@ namespace System.Scripting.Com {
     /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
     internal abstract class ArgBuilder {
-
-        // TODO: Collect temporary variables for scope
-
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
         /// </summary>
         internal abstract Expression ToExpression(IList<Expression> parameters);
+
+        internal virtual VariableExpression[] TemporaryVariables {
+            get {
+                return new VariableExpression[0];
+            }
+        }
 
         /// <summary>
         /// Returns the type required for the argument or null if the ArgBuilder

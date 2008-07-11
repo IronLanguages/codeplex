@@ -18,6 +18,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using System.Linq.Expressions;
 
 using Marshal = System.Runtime.InteropServices.Marshal;
 using VarEnum = System.Runtime.InteropServices.VarEnum;
@@ -101,7 +102,7 @@ namespace System.Scripting.Com {
 
             internal void Dummy() {
                 _cByte = 0;
-                throw new InvalidOperationException("This method exists only to keep the compiler happy");
+                throw Error.MethodShouldNotBeCalled();
             }
 
             internal static object GetDefaultValue(ref PARAMDESC paramdesc) {
@@ -111,7 +112,7 @@ namespace System.Scripting.Com {
 
                 PARAMDESCEX varValue = (PARAMDESCEX)Marshal.PtrToStructure(paramdesc.lpVarValue, typeof(PARAMDESCEX));
                 if (varValue._cByte != (ulong)(Marshal.SizeOf((typeof(PARAMDESCEX))))) {
-                    throw new InvalidProgramException("Default value of COM parameter cannot be read properly");
+                    throw Error.DefaultValueCannotBeRead();
                 }
 
                 return varValue._varDefaultValue.ToObject();
@@ -127,8 +128,7 @@ namespace System.Scripting.Com {
                 case VarEnum.VT_EMPTY:
                 case VarEnum.VT_NULL:
                 case VarEnum.VT_RECORD:
-                    string message = String.Format("Unexpected VarEnum {0} in ELEMDESC", vt);
-                    throw new InvalidOperationException(message);
+                    throw Error.UnexpectedVarEnum(vt);
 
                 // VarEnums which are not used in VARIANTs, but which can occur in a TYPEDESC
                 case VarEnum.VT_VOID:

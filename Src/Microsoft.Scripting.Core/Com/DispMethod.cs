@@ -16,9 +16,8 @@
 #if !SILVERLIGHT // ComObject
 
 namespace System.Scripting.Com {
-    public class DispMethod : DispCallable {
-        [CLSCompliant(false)]
-        public DispMethod(IDispatchObject dispatch, ComMethodDesc methodDesc)
+    public sealed class DispMethod : DispCallable {
+        internal DispMethod(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {
         }
     }

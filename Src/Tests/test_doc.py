@@ -188,4 +188,26 @@ def test_builtin_nones_cpy_site():
     for x in [exit, quit, ]:
         Assert(x.__doc__==None, str(x) + ".__doc__ != None")
 
+def test_class_doc():
+    # sanity, you can assign to __doc__
+    class x(object): pass
+    
+    class y(object):
+        __slots__ = '__doc__'
+    
+    class z(object):
+        __slots__ = '__dict__'
+
+    for t in (x, y, z):
+        a = t()
+        a.__doc__ = 'Hello World'    
+        AreEqual(a.__doc__, 'Hello World')
+    
+    
+    class x(object): __slots__ = []
+    
+    def f(a): a.__doc__ = 'abc'
+    AssertError(AttributeError, f, x())
+    AssertError(AttributeError, f, object())
+
 run_test(__name__)

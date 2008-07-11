@@ -319,9 +319,8 @@ namespace System.Scripting.Actions {
             // Check the produced rule
             //
             if (rule == null || rule.Binding == null) {
-                throw new InvalidOperationException("No or Invalid rule produced");
+                throw Error.NoOrInvalidRuleProduced();
             }
-
             ExpressionWriter.Dump(rule);
 
 

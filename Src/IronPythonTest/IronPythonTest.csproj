@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30428</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{B6B42537-07F8-4F6C-A99A-B155CAEB124E}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -90,6 +90,7 @@
     <Compile Include="OperatorTest.cs" />
     <Compile Include="ProtocolTest.cs" />
     <Compile Include="StaticTest.cs" />
+    <Compile Include="StringDictionaryStorage.cs" />
     <Compile Include="TypeDescriptor.cs" />
     <AppDesigner Include="Properties\" />
   </ItemGroup>

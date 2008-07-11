@@ -318,7 +318,6 @@ if not is_silverlight:
 
 # SuperDelegate Tests
 
-@disabled("TFS Bug 262182")
 def test_basic():
     class TestCounter:
         myhandler = 0
@@ -457,7 +456,6 @@ def test_basic():
 ##    Event Handler Add / Removal
 ###############################################################
 
-@disabled("TFS Bug 262182")
 def test_event_handler_add_removal_sequence():
     class C: pass
     c = C()
@@ -660,29 +658,29 @@ def test_python_code_as_event_handler():
     AreEqual(called, True)
     IronPythonTest.Events.OtherStaticTest -= myhandler
 
-@disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=7992")
 def test_AddDelegateFromCSharpAndRemoveFromPython():
     a = IronPythonTest.Events()
 
     a.Marker = False
-    called = False
     a.AddSetMarkerDelegateToInstanceTest()
     a.InstanceTest -= IronPythonTest.EventTestDelegate(a.SetMarker)
     a.CallInstance()
     AreEqual(a.Marker, False)
-    AreEqual(called, True)
 
-@disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=7992")
+    IronPythonTest.Events.StaticMarker = False
+    IronPythonTest.Events.AddSetMarkerDelegateToStaticTest()
+    IronPythonTest.Events.StaticTest -= IronPythonTest.EventTestDelegate(IronPythonTest.Events.StaticSetMarker)
+    IronPythonTest.Events.CallStatic()
+    AreEqual(IronPythonTest.Events.StaticMarker, False)
+
 def test_AddRemoveDelegateFromPython():
     a = IronPythonTest.Events()
 
     a.Marker = False
-    called = False
     a.InstanceTest += IronPythonTest.EventTestDelegate(a.SetMarker)
     a.InstanceTest -= IronPythonTest.EventTestDelegate(a.SetMarker)
     a.CallInstance()
     AreEqual(a.Marker, False)
-    AreEqual(called, True)
 
 def test_event_as_attribute_disallowed_ops():
     a = IronPythonTest.Events()
@@ -783,5 +781,48 @@ def test_reflected_event_ops():
         #Just ensure it doesn't throw
         IronPythonTest.Events.StaticTest.Event.__set__(stuff, IronPythonTest.Events.StaticTest)
 
+def test_strongly_typed_events():
+    """verify recreating a strongly typed delegate doesn't prevent
+       us from removing the event
+   """
+    def f():
+        global called
+        called = True
+    
+    global called
+    called = False
+    ev = IronPythonTest.Events() 
+    ev.InstanceTest += IronPythonTest.EventTestDelegate(f)
+    
+    ev.CallInstance(); AreEqual(called, True); called = False;
+
+    ev.InstanceTest -= IronPythonTest.EventTestDelegate(f)
+    ev.CallInstance(); AreEqual(called, False); 
+
+
+def test_bound_builtin_functions():
+    d  = {}
+    func = d.setdefault    
+    args = EventArgs()    
+    ev = IronPythonTest.Events() 
+    
+    
+    ev.InstanceOther += func
+    ev.CallOtherInstance('abc', args)    
+    AreEqual(d, {'abc': args})
+    
+    ev.InstanceOther -= func
+    ev.CallOtherInstance('def', args)
+    AreEqual(d, {'abc': args})
+
+    d.clear()
+
+    ev.InstanceOther += IronPythonTest.OtherEvent(func)
+    ev.CallOtherInstance('abc', args)    
+    AreEqual(d, {'abc': args})
+    
+    ev.InstanceOther -= IronPythonTest.OtherEvent(func)
+    ev.CallOtherInstance('def', args)
+    AreEqual(d, {'abc': args})
 
 run_test(__name__)

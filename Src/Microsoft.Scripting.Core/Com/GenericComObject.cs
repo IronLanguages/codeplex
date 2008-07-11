@@ -38,8 +38,8 @@ namespace System.Scripting.Com {
 
         #region IMembersList Members
 
-        public override IList<SymbolId> GetMemberNames() {
-            return new List<SymbolId>();
+        public override IList<string> GetMemberNames() {
+            return new string[0];
         }
 
         #endregion

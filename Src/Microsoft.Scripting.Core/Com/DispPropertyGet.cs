@@ -18,8 +18,8 @@
 using System.Diagnostics;
 
 namespace System.Scripting.Com {
-    public class DispPropertyGet : DispCallable {
-        public DispPropertyGet(IDispatchObject dispatch, ComMethodDesc methodDesc)
+    public sealed class DispPropertyGet : DispCallable {
+        internal DispPropertyGet(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {
             Debug.Assert(methodDesc.IsPropertyGet);
         }
@@ -28,7 +28,7 @@ namespace System.Scripting.Com {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1043:UseIntegralOrStringArgumentForIndexers")]
         public object this[params object[] args] {
             get {
-                return UnoptimizedInvoke(SymbolId.EmptySymbols, args); 
+                return ComRuntimeHelpers.UnoptimizedInvoke(ComMethodDesc, DispatchObject, new string[0], args); 
             }
         }
     }

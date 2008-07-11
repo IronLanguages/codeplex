@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Utils {
     
@@ -21,8 +22,6 @@ namespace System.Scripting.Utils {
     /// A simple dictionary of queues, keyed off a particular type
     /// This is useful for storing free lists of variables
     /// </summary>
-    /// <typeparam name="K"></typeparam>
-    /// <typeparam name="V"></typeparam>
     internal sealed class KeyedQueue<K, V> {
         private readonly Dictionary<K, Queue<V>> _data;
 
@@ -41,7 +40,7 @@ namespace System.Scripting.Utils {
         internal V Dequeue(K key) {
             Queue<V> queue;
             if (!_data.TryGetValue(key, out queue)) {
-                throw new InvalidOperationException("Queue empty.");
+                throw Error.QueueEmpty();
             }
             V result = queue.Dequeue();
             if (queue.Count == 0) {
@@ -66,7 +65,7 @@ namespace System.Scripting.Utils {
         internal V Peek(K key) {
             Queue<V> queue;
             if (!_data.TryGetValue(key, out queue)) {
-                throw new InvalidOperationException("Queue empty.");
+                throw Error.QueueEmpty();
             }
             return queue.Peek();
         }

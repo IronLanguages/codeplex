@@ -50,30 +50,39 @@ namespace IronPython.Runtime.Operations {
 
         [StaticExtensionMethod]
         public static object __new__(CodeContext context, PythonType cls, object x) {
-            if (cls == TypeCache.BigInteger) {
-                if (x is string) return ParseBigIntegerSign((string)x, 10);
-                BigInteger intVal;
-                if (Converter.TryConvertToBigInteger(x, out intVal)) {
-                    if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
-                    return intVal;
-                }
-            } else {
-                BigInteger intVal = null;
+            Extensible<string> es;
 
-                if (x is string) intVal = ParseBigIntegerSign((string)x, 10);
-                if (Converter.TryConvertToBigInteger(x, out intVal)) {
-                    if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
+            if (x is string) {
+                return ReturnBigInteger(context, cls, ParseBigIntegerSign((string)x, 10));
+            } else if ((es = x as Extensible<string>) != null) {
+                object value;
+                if (PythonTypeOps.TryInvokeUnaryOperator(context, x, Symbols.ConvertToLong, out value)) {
+                    return ReturnBigInteger(context, cls, (BigInteger)value);
                 }
 
-                if (!Object.ReferenceEquals(intVal, null)) {
-                    return cls.CreateInstance(context, intVal);
-                }
+                return ReturnBigInteger(context, cls, ParseBigIntegerSign(es.Value, 10));
             }
+
+            BigInteger intVal;
+            if (Converter.TryConvertToBigInteger(x, out intVal)) {
+                if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
+
+                return ReturnBigInteger(context, cls, intVal);
+            }
+
 
             if (x is Complex64) throw PythonOps.TypeError("can't convert complex to long; use long(abs(z))");
 
             throw PythonOps.ValueError("long argument must be convertible to long (string, number, or type that defines __long__, got {0})",
                 StringOps.Quote(PythonOps.GetPythonTypeName(x)));
+        }
+
+        private static object ReturnBigInteger(CodeContext context, PythonType cls, BigInteger intVal) {
+            if (cls == TypeCache.BigInteger) {
+                return intVal;
+            } else {
+                return cls.CreateInstance(context, intVal);
+            }
         }
 
         [StaticExtensionMethod]

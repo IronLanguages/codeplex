@@ -17,6 +17,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 namespace System.Scripting.Utils {
+    //TODO: localize
     public static class ContractUtils {
 
         public static void Requires(bool precondition) {

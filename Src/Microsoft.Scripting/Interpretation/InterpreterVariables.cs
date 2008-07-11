@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Interpretation {
 
@@ -41,7 +38,9 @@ namespace Microsoft.Scripting.Interpretation {
             _vars = node.Variables;
         }
 
-        #region ILocalVariables Members
+        public int Count {
+            get { return _vars.Count; }
+        }
 
         public ReadOnlyCollection<string> Names {
             get {
@@ -60,95 +59,28 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
-        #endregion
-
-        #region IList<object> Members
-
-        public int IndexOf(object item) {
-            int i = 0;
-            foreach (object element in this) {
-                if (object.Equals(element, item)) {
-                    return i;
-                }
-                i++;
-            }
-            return -1;
-        }
-
-        public void Insert(int index, object item) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public void RemoveAt(int index) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public object this[int index] {
+        public IStrongBox this[int index] {
             get {
-                ContractUtils.RequiresArrayIndex(this, index, "index");
-                return _state.GetValue(_vars[index]);
-            }
-            set {
-                ContractUtils.RequiresArrayIndex(this, index, "index");
-                _state.SetValue(_vars[index], value);
+                return new InterpreterBox(_state, _vars[index]);
             }
         }
 
-        #endregion
+        // TODO: InterpreterState should store values in strongly typed
+        // StrongBox<T>, which gives us the correct cast error if the wrong
+        // type is set at runtime.
+        private sealed class InterpreterBox : IStrongBox {
+            private readonly InterpreterState _state;
+            private readonly Expression _variable;
 
-        #region ICollection<object> Members
+            internal InterpreterBox(InterpreterState state, Expression variable) {
+                _state = state;
+                _variable = variable;
+            }
 
-        public void Add(object item) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public void Clear() {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public bool Contains(object item) {
-            return IndexOf(item) >= 0;
-        }
-
-        public void CopyTo(object[] array, int arrayIndex) {
-            ContractUtils.RequiresNotNull(array, "array");
-            ContractUtils.RequiresArrayRange(array, arrayIndex, Count, "arrayIndex", "array");
-
-            foreach (object value in this) {
-                array[arrayIndex++] = value;
+            public object Value {
+                get { return _state.GetValue(_variable); }
+                set { _state.SetValue(_variable, value); }
             }
         }
-
-        public int Count {
-            get { return _vars.Count; }
-        }
-
-        public bool IsReadOnly {
-            get { return false; }
-        }
-
-        public bool Remove(object item) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        #endregion
-
-        #region IEnumerable<object> Members
-
-        public IEnumerator<object> GetEnumerator() {
-            foreach (Expression v in _vars) {
-                yield return _state.GetValue(v);
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable Members
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
-            return GetEnumerator();
-        }
-
-        #endregion
     }
 }

@@ -16,6 +16,7 @@
 using System.Collections.Generic;
 using System.Scripting.Utils;
 using System.Threading;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Runtime {
 
@@ -741,7 +742,7 @@ namespace System.Scripting.Runtime {
             public void CheckWritable(SymbolId name) {
                 ScopeMemberAttributes scopeAttrs;
                 if (_attrs != null && _attrs.TryGetValue(name, out scopeAttrs) && (scopeAttrs & ScopeMemberAttributes.ReadOnly) != 0) {
-                    throw new MemberAccessException("can only write to member " + SymbolTable.IdToString(name));
+                    throw Error.MemberWriteOnly(SymbolTable.IdToString(name));
                 }
             }
 
@@ -769,7 +770,7 @@ namespace System.Scripting.Runtime {
                 ScopeMemberAttributes scopeAttrs;
                 if (_objectAttrs != null) {
                     if (_objectAttrs.TryGetValue(name, out scopeAttrs) && (scopeAttrs & ScopeMemberAttributes.ReadOnly) != 0) {
-                        throw new MemberAccessException("can only write to member " + name.ToString());
+                        throw Error.MemberWriteOnly(name.ToString());
                     }
                 } else {
                     string stringName = name as string;

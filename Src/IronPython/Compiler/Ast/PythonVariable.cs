@@ -106,17 +106,23 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression Transform(AstGenerator ag) {
             Debug.Assert(_kind != VariableKind.Parameter);
+
+            string name = SymbolTable.IdToString(_name);
             switch (_kind) {
                 case VariableKind.Global:
-                    return _variable = ag.Block.CreateGlobalVariable(_name, _type);
+                    return _variable = MSAst.Expression.GlobalVariable(_type, name);
 
                 case VariableKind.Local:
                 case VariableKind.HiddenLocal:
                 case VariableKind.GlobalLocal:
-                    return _variable = ag.Block.CreateLocalVariable(_name, _type);
+                    if (_accessedInNestedScope) {
+                        return _variable = ag.Block.ClosedOverVariable(_type, name);
+                    } else {
+                        return _variable = ag.Block.Variable(_type, name);
+                    }
 
                 case VariableKind.Temporary:
-                    return _variable = ag.Block.CreateTemporaryVariable(_name, _type);
+                    return _variable = ag.Block.HiddenVariable(_type, name);
 
                 default: 
                     throw Assert.Unreachable;

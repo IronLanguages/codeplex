@@ -19,7 +19,7 @@ using System.Scripting;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Threading;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;

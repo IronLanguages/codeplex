@@ -13,9 +13,11 @@
  *
  * ***************************************************************************/
 
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 
+// TODO: move to System.Runtime.CompilerServices
+// (This class is intended to be used by compilers and language runtimes)
 namespace System.Linq.Expressions {
 
     /// <summary>
@@ -23,8 +25,11 @@ namespace System.Linq.Expressions {
     /// Created by LocalScopeExpression
     /// 
     /// TODO: review public API
+    /// TODO: rename !!! (IHoistedVariables?) 
     /// </summary>
-    public interface ILocalVariables : IList<object> {
+    public interface ILocalVariables {
+        int Count { get; } // equivalent to Names.Count
         ReadOnlyCollection<string> Names { get; }
+        IStrongBox this[int index] { get; }
     }
 }

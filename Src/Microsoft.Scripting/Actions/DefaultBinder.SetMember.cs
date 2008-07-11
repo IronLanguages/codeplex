@@ -77,7 +77,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MetaObject/*!*/ MakeSetMemberTarget(SetOrDeleteMemberInfo/*!*/ memInfo, MetaObject/*!*/ target, MetaObject/*!*/ value) {
-            Type type = target.RuntimeType;
+            Type type = target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
             memInfo.Body.Restrictions = restrictions.Merge(Restrictions.TypeRestriction(target.Expression, type));
@@ -241,7 +241,7 @@ namespace Microsoft.Scripting.Actions {
                             Ast.Call(
                                 Ast.Constant(((ReflectedPropertyTracker)info).Property), // TODO: Private binding on extension properties
                                 typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
-                                Ast.ConvertHelper(instance, typeof(object)),
+                                instance == null ? Ast.Null() : Ast.ConvertHelper(instance, typeof(object)),
                                 Ast.ConvertHelper(target.Expression, typeof(object)),
                                 Ast.NewArrayInit(typeof(object))
                             ),
@@ -341,7 +341,7 @@ namespace Microsoft.Scripting.Actions {
                     VariableExpression tmp = Ast.Variable(target.Expression.Type, "setValue");
                     memInfo.Body.AddVariable(tmp);
 
-                    Expression call = MakeCallExpression(memInfo.CodeContext, setMem, self, Ast.Constant(memInfo.Name), tmp);
+                    Expression call = MakeCallExpression(memInfo.CodeContext, setMem, Ast.ConvertHelper(self, type), Ast.Constant(memInfo.Name), tmp);
 
                     call = Ast.Comma(Ast.Assign(tmp, target.Expression), call);
 

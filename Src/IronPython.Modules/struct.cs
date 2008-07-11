@@ -267,84 +267,70 @@ namespace IronPython.Modules {
             return length + (size - 1) & ~(size - 1);
         }
 
+        internal static int GetNativeSize(char c) {
+            switch (c) {
+                case 'c': // char
+                case 'b': // signed byte
+                case 'B': // unsigned byte
+                case 'x': // pad byte
+                case 's': // null-terminated string
+                case 'p': // Pascal string
+                case 'u': // unicode char (used by array module; TODO: fix)
+                    return 1;
+                case 'h': // signed short
+                case 'H': // unsigned short
+                    return 2;
+                case 'i': // signed int
+                case 'I': // unsigned int
+                case 'l': // signed long
+                case 'L': // unsigned long
+                case 'f': // float
+                    return 4;
+                case 'P': // pointer
+                    return IntPtr.Size;
+                case 'q': // signed long long
+                case 'Q': // unsigned long long
+                case 'd': // double
+                    return 8;
+                default:
+                    return 0;
+            }
+        }
+
         public static int calcsize(string fmt) {
             int len = 0;
             int count = 1;
             for (int i = 0; i < fmt.Length; i++) {
-                switch (fmt[i]) {
-                    case 'x': // pad byte
-                    case 'c': // char
-                    case 'b': // signed char
-                    case 'B': // unsigned char
-                    case 's': // char[]
-                        len += (count);
-                        count = 1;
-                        break;
-                    case 'h': // short
-                    case 'H': // unsigned short
-                        len = Align(len, 2);
-
-                        len += 2 * count;
-                        count = 1;
-                        break;
-                    case 'i': // int
-                    case 'I': // unsigned int
-                    case 'l': // long
-                    case 'L': // unsigned long
-                        len = Align(len, 4);
-
-                        len += 4 * count;
-                        count = 1;
-                        break;
-                    case 'q': // long long
-                    case 'Q': // unsigned long long
-                        len = Align(len, 8);
-
-                        len += 8 * count;
-                        count = 1;
-                        break;
-                    case 'f': // float
-                        len = Align(len, 4);
-
-                        len += 4 * count;
-                        count = 1;
-                        break;
-                    case 'd': // double
-                        len = Align(len, 8);
-
-                        len += 8 * count;
-                        count = 1;
-                        break;
-                    case 'p': // char[]
-                        len += count + 1;
-                        break;
-                    case 'P': // void *
-                        len = Align(len, IntPtr.Size);
-
-                        len += IntPtr.Size;
-                        break;
-                    case ' ':
-                    case '\t':
-                        break;
-                    case '=': // native
-                    case '@': // native
-                    case '<': // little endian
-                    case '>': // big endian
-                    case '!': // big endian
-                        if (i != 0) PythonExceptions.CreateThrowable(error, "unexpected byte order");
-                        break;
-                    default:
-                        if (Char.IsDigit(fmt[i])) {
-                            count = 0;
-                            while (Char.IsDigit(fmt[i])) {
-                                count = count * 10 + (fmt[i] - '0');
-                                i++;
-                            }
-                            i--;
+                int nativeSize = GetNativeSize(fmt[i]);
+                if (nativeSize > 0) {
+                    len = Align(len, nativeSize);
+                    len += (nativeSize * count);
+                    count = 1;
+                } else {
+                    switch (fmt[i]) {
+                        case ' ':
+                        case '\t':
                             break;
-                        }
+                        case '=': // native
+                        case '@': // native
+                        case '<': // little endian
+                        case '>': // big endian
+                        case '!': // big endian
+                            if (i != 0) PythonExceptions.CreateThrowable(error, "unexpected byte order");
+                            break;
+                        default:
+                            if (Char.IsDigit(fmt[i])) {
+                                count = 0;
+                                while (Char.IsDigit(fmt[i])) {
+                                    count = count * 10 + (fmt[i] - '0');
+                                    i++;
+                                }
+                                i--;
+                                break;
+                            }
 
-                        throw Error("bad format string");
+                            throw Error("bad format string");
+                    }
                 }
             }
             return len;

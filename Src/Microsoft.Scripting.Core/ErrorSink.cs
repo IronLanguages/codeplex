@@ -29,6 +29,7 @@ namespace System.Scripting {
         protected ErrorSink() {
         }
 
+        //TODO: need localization
         public virtual void Add(SourceUnit source, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
             throw new SyntaxErrorException(message, source, span, errorCode, severity);
         }

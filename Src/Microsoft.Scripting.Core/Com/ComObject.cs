@@ -86,7 +86,7 @@ namespace System.Scripting.Com {
 
                 ComObject comObjectInfo = CreateComObject(rcw);
                 if (!Marshal.SetComObjectData(rcw, _ComObjectInfoKey, comObjectInfo)) {
-                    throw new COMException("Marshal.SetComObjectData failed");
+                    throw Error.SetComObjectDataFailed();
                 }
 
                 return comObjectInfo;
@@ -119,9 +119,8 @@ namespace System.Scripting.Com {
 
         #region Abstract Members
 
-        // TODO: Change to string!!!
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]   // TODO: Fix
-        public abstract IList<SymbolId> GetMemberNames();
+        public abstract IList<string> GetMemberNames();
 
 
         public abstract string Documentation {

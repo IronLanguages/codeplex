@@ -18,7 +18,7 @@ using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -110,7 +110,7 @@ namespace IronPython.Runtime.Types {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
                 case Operators.CallSignatures:
-                    return IronPython.Runtime.Calls.PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Template.Targets, DynamicHelpers.GetPythonType(args[0]));
+                    return IronPython.Runtime.Binding.PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Template.Targets, DynamicHelpers.GetPythonType(args[0]));
             }
             return null;
         }

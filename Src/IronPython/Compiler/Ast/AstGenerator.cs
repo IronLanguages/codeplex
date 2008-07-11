@@ -142,7 +142,7 @@ namespace IronPython.Compiler.Ast {
                     }
                 }
             }
-            return _block.CreateTemporaryVariable(name, type);
+            return _block.HiddenVariable(type, SymbolTable.IdToString(name));
         }
 
 
@@ -213,7 +213,7 @@ namespace IronPython.Compiler.Ast {
         internal MSAst.VariableExpression LineNumberExpression {
             get {
                 if (_lineNoVar == null) {
-                    _lineNoVar = _block.CreateTemporaryVariable(SymbolTable.StringToId("$lineNo"), typeof(int));
+                    _lineNoVar = _block.HiddenVariable(typeof(int), "$lineNo");
                 }
 
                 return _lineNoVar;
@@ -239,7 +239,7 @@ namespace IronPython.Compiler.Ast {
         internal MSAst.VariableExpression LineNumberUpdated {
             get {
                 if (_lineNoUpdated == null) {
-                    _lineNoUpdated = _block.CreateTemporaryVariable(SymbolTable.StringToId("$lineUpdated"), typeof(bool));
+                    _lineNoUpdated = _block.HiddenVariable(typeof(bool), "$lineUpdated");
                 }
 
                 return _lineNoUpdated;

@@ -29,7 +29,9 @@ namespace System.Scripting.Runtime {
         private bool _verbose;
         private bool _cachePointersInApartment;
         private bool _lightweightScopes;
-        private bool _preferComDispatchOverTypeInfo;
+
+        // COM IDispatch support is the default.
+        private bool _preferComDispatchOverTypeInfo = true;
 
         /// <summary>
         /// Whether the application is in debug mode.

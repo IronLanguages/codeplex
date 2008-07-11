@@ -120,7 +120,7 @@ namespace System.Scripting.Actions {
                     case MemberTypes.TypeInfo:
                     case MemberTypes.NestedType: res = new NestedTypeTracker((Type)member); break;
                     case MemberTypes.Property: res = new ReflectedPropertyTracker((PropertyInfo)member); break;
-                    default: throw new InvalidOperationException("unknown type: " + member.MemberType);
+                    default: throw Error.UnknownMemberType(member.MemberType);
                 }
 
                 _trackers[key] = res;

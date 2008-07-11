@@ -15,7 +15,7 @@
 
 using System;
 using System.Diagnostics;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {

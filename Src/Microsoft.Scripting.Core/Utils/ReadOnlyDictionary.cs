@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Utils {
 
@@ -34,11 +35,11 @@ namespace System.Scripting.Utils {
             #region ICollection<T> Members
 
             public void Add(T item) {
-                throw new NotSupportedException("Collection is read-only.");
+                throw Error.CollectionReadOnly();
             }
 
             public void Clear() {
-                throw new NotSupportedException("Collection is read-only.");
+                throw Error.CollectionReadOnly();
             }
 
             public bool Contains(T item) {
@@ -58,7 +59,7 @@ namespace System.Scripting.Utils {
             }
 
             public bool Remove(T item) {
-                throw new NotSupportedException("Collection is read-only.");
+                throw Error.CollectionReadOnly();
             }
 
             #endregion
@@ -125,11 +126,11 @@ namespace System.Scripting.Utils {
 
 
         void IDictionary<K, V>.Add(K key, V value) {
-            throw new NotSupportedException("Collection is read-only.");
+            throw Error.CollectionReadOnly();
         }
 
         bool IDictionary<K, V>.Remove(K key) {
-            throw new NotSupportedException("Collection is read-only.");
+            throw Error.CollectionReadOnly();
         }
 
         V IDictionary<K, V>.this[K key] {
@@ -137,7 +138,7 @@ namespace System.Scripting.Utils {
                 return _dict[key];
             }
             set {
-                throw new NotSupportedException("Collection is read-only.");
+                throw Error.CollectionReadOnly();
             }
         }
 
@@ -162,15 +163,15 @@ namespace System.Scripting.Utils {
         }
 
         void ICollection<KeyValuePair<K, V>>.Add(KeyValuePair<K, V> item) {
-            throw new NotSupportedException("Collection is read-only.");
+            throw Error.CollectionReadOnly();
         }
 
         void ICollection<KeyValuePair<K, V>>.Clear() {
-            throw new NotSupportedException("Collection is read-only.");
+            throw Error.CollectionReadOnly();
         }
 
         bool ICollection<KeyValuePair<K,V>>.Remove(KeyValuePair<K, V> item) {
-            throw new NotSupportedException("Collection is read-only.");
+            throw Error.CollectionReadOnly();
         }
 
         #endregion

@@ -152,10 +152,10 @@ namespace System.Scripting.Actions {
             MethodInfo invoke = target.GetMethod("Invoke");
             ParameterInfo[] pinfos = invoke.GetParameters();
             ContractUtils.Requires(pinfos.Length > 0 && pinfos[0].ParameterType == typeof(CallSite), "target");
-            ContractUtils.Requires(pinfos.Length - 1 == parameters.Count);
+            ContractUtils.Requires(pinfos.Length == parameters.Count);
 
-            for (int i = 1; i < pinfos.Length; i++) {
-                ParameterExpression parameter = parameters[i - 1];
+            for (int i = 0; i < pinfos.Length; i++) {
+                ParameterExpression parameter = parameters[i];
                 ContractUtils.RequiresNotNull(parameter, "parameters");
                 Type type = pinfos[i].ParameterType;
                 if (parameter.IsByRef) {

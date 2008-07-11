@@ -21,7 +21,7 @@ using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using System.Security;
@@ -136,7 +136,7 @@ namespace IronPython.Runtime {
 
             PythonContext pc = PythonContext.GetContext(context);
             Encoding enc;
-            if (!StringOps.TryGetEncoding(pc.DefaultEncoding, strName, out enc)) {
+            if (!StringOps.TryGetEncoding(strName, out enc)) {
                 throw PythonOps.LookupError("'{0}' does not match any available encodings", strName);
             }
 

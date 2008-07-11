@@ -24,8 +24,8 @@ namespace System.Scripting.Com {
     internal sealed class TypeInfoMetaObject : MetaObject {
         private readonly Type _comType;
 
-        internal TypeInfoMetaObject(Expression parameter, Type comType)
-            : base(parameter, Restrictions.Empty) {
+        internal TypeInfoMetaObject(Expression parameter, Type comType, ComObjectWithTypeInfo self)
+            : base(parameter, Restrictions.Empty, self) {
             _comType = comType;
         }
 
@@ -84,7 +84,7 @@ namespace System.Scripting.Com {
             MetaObject[] copy = ArrayUtils.Copy(args);
 
             // Replace self with unwrapped Com object value
-            copy[0] = new MetaObject(
+            copy[0] = new MetaUnwrappedComObject(
                 Expression.Convert(
                     Expression.Property(
                         Expression,
@@ -97,7 +97,13 @@ namespace System.Scripting.Com {
 
             return copy;
         }
-    }
+
+        internal new ComObjectWithTypeInfo Value {
+            get {
+                return (ComObjectWithTypeInfo)base.Value;
+            }
+        }
+    }    
 }
 
 #endif

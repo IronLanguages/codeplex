@@ -15,206 +15,350 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Generation;
 using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
     /// <summary>
-    /// The base class for LambdaBinder and RuleBinder.
+    /// Determines if variables are closed over in nested lambdas and need to
+    /// be hoisted.
+    /// 
+    /// TODO: Here's a thought for improvement. We should have a seperate
+    /// walker for binding inner lambdas verse the scope we're binding. That
+    /// would elimininate the checks for "currentLambda" all over the place.
+    /// Finally, we might want to have a derived class for binding generators
+    /// since they need to do a bit of extra work.
     /// </summary>
     internal sealed class VariableBinder : ExpressionTreeVisitor {
-        // Information collected about the scopes while doing variable binding
-        private sealed class ScopeBindingInfo {
-            // created during post processing
-            internal CompilerScope CompilerScope;
 
-            // true if this scope closes over variables in a parent lambda
-            internal bool IsClosure;
+        // The parent scope to the one we're binding, or null if we're binding
+        // the outermost scope
+        private readonly CompilerScope _parentScope;
 
-            // true if this scope contains a yield statement
-            internal bool HasYield;
+        // The scope/lambda/generator we're binding
+        private readonly Expression _expression;
 
-            internal readonly LambdaExpression Lambda;
-            internal readonly Expression Scope;
-            internal readonly ScopeBindingInfo Parent;
-            internal readonly List<VariableBindingInfo> Variables = new List<VariableBindingInfo>();
-            internal readonly List<VariableExpression> GeneratorTemps = new List<VariableExpression>();
+        // A stack of variables that are defined in nested scopes. We search
+        // this first when resolving a variable in case a nested scope shadows
+        // one of our variable insteances.
+        private readonly Stack<Set<Expression>> _hiddenVars = new Stack<Set<Expression>>();
 
-            internal ScopeBindingInfo(Expression scope, LambdaExpression lambda, ScopeBindingInfo parent) {
-                Scope = scope;
-                Lambda = lambda;
-                Parent = parent;
+        // For each variable in this scope: should it be hoisted to a closure?
+        private readonly Dictionary<Expression, bool> _hoistMyVariables = new Dictionary<Expression, bool>();
+
+        // For each variable referenced from this scope, this stores the
+        // reference count. If the variable is referenced "enough", we'll cache
+        // the closure StrongBox<T> into an IL local
+        private readonly Dictionary<Expression, int> _referenceCount = new Dictionary<Expression, int>();
+
+        // A list of variables in this scope, including merged ones.
+        // Needed so we can preserve the order
+        private readonly List<Expression> _myVariables = new List<Expression>();
+
+        // The lambda that contains the scope we're binding
+        // Or the lambda itself if we're binding a lambda
+        private readonly LambdaExpression _topLambda;
+
+        // The lambda that we're walking in
+        private LambdaExpression _currentLambda;
+
+        // Does this scope contain a yield?
+        private bool _hasYield;
+
+        // Is this scope a closure?
+        // (references variables from an outer scope)
+        private bool _isClosure;
+
+        // A list of temps that need to be hoisted by the generator
+        private readonly List<VariableExpression> _temps;
+
+        // Stack of scopes. Only used if this is a generator
+        private readonly Stack<ScopeExpression> _scopes;
+
+        private VariableBinder(CompilerScope parent, Expression scope) {
+            _parentScope = parent;
+            _expression = scope;
+            if (scope.NodeType == ExpressionType.Scope) {
+                _topLambda = parent.Lambda;
+            } else {
+                _topLambda = (LambdaExpression)scope;
+                if (scope.NodeType == ExpressionType.Generator) {
+                    _temps = new List<VariableExpression>();
+                    _scopes = new Stack<ScopeExpression>();
+                }
             }
+        }
 
-            internal bool HoistAll {
-                get {
-                    return Lambda.NodeType == ExpressionType.Generator && (HasYield || Scope == Lambda);
+        /// <summary>
+        /// VariableBinder entry point. Binds the scope that is passed in.
+        /// </summary>
+        internal static CompilerScope Bind(CompilerScope parent, Expression scope) {
+            return new VariableBinder(parent, scope).Bind();
+        }
+
+        private CompilerScope Bind() {
+            // Define variables on this scope
+            Expression body = DefineVariables();
+
+            // Merge with child scopes
+            Queue<Expression> mergedScopes = MergeScopes(ref body);
+
+            // Walk the body to figure out which variables to hoist
+            VisitNode(body);
+
+            List<Expression> hoisted = new List<Expression>();
+            List<Expression> locals = new List<Expression>();
+            if (_hasYield) {
+                hoisted = _myVariables;
+            } else {
+                foreach (Expression v in _myVariables) {
+                    (_hoistMyVariables[v] ? hoisted : locals).Add(v);
                 }
             }
 
-            internal VariableBindingInfo AddVariable(Expression variable) {
-                VariableBindingInfo result = new VariableBindingInfo(variable, this);
-                Variables.Add(result);
-                return result;
+            // Hoist generator temps
+            KeyedQueue<Type, VariableExpression> temps = null;
+            if (_temps != null) {
+                temps = new KeyedQueue<Type, VariableExpression>();
+                foreach (VariableExpression v in _temps) {
+                    hoisted.Add(v);
+                    temps.Enqueue(v.Type, v);
+                }
+            }
+            
+            // Dummy variable for hoisted locals
+            VariableExpression hoistedSelfVar;
+            if (_hasYield && _expression.NodeType == ExpressionType.Scope) {
+                // store on generator's closure
+                hoistedSelfVar = _parentScope.GetGeneratorTemp(typeof(object[]));
+            } else {
+                // store as an IL local
+                hoistedSelfVar = Expression.Variable(typeof(object[]), "$hoistedLocals");
+                locals.Add(hoistedSelfVar);
             }
 
-            internal void AddGeneratorTemp(Type type) {
-                VariableExpression temp = Expression.Variable(type, "temp$" + GeneratorTemps.Count);
-                AddVariable(temp);
-                GeneratorTemps.Add(temp);
+            // Cache the StrongBox for hoisted variables into an IL local
+            Set<Expression> cached = new Set<Expression>();
+            foreach (var refCount in _referenceCount) {
+                // Cache in local if refcount > 1
+                // TODO: What's the optimal value? How cheap are locals?
+                if (refCount.Value > 1) {
+                    cached.Add(refCount.Key);
+                }
             }
+
+            return new CompilerScope(
+                _parentScope,
+                _expression,
+                _isClosure,
+                hoistedSelfVar,
+                new ReadOnlyCollection<Expression>(hoisted),
+                new ReadOnlyCollection<Expression>(locals),
+                mergedScopes,
+                temps,
+                cached
+            );
         }
 
-        // Information collected about the variables while doing variable binding
-        private sealed class VariableBindingInfo {
-            // true if this variable is hoisted to an array
-            internal bool IsHoisted;
-            internal readonly Expression Variable;
-            internal readonly ScopeBindingInfo Scope;
-
-            internal VariableBindingInfo(Expression variable, ScopeBindingInfo scope) {
-                Variable = variable;
-                Scope = scope;
+        private Expression DefineVariables() {
+            Expression body;
+            if (_expression.NodeType == ExpressionType.Scope) {
+                ScopeExpression scope = (ScopeExpression)_expression;
+                foreach (Expression v in scope.Variables) {
+                    _myVariables.Add(v);
+                    _hoistMyVariables.Add(v, false);
+                }
+                body = scope.Body;
+            } else {
+                foreach (Expression v in _topLambda.Parameters) {
+                    _myVariables.Add(v);
+                    _hoistMyVariables.Add(v, false);
+                }
+                body = _topLambda.Body;
             }
+            _currentLambda = _topLambda;
+            return body;
         }
 
-        // The list of all scopes, in prefix order, for post processing
-        private readonly List<ScopeBindingInfo> _scopeList = new List<ScopeBindingInfo>();
+        // If the immediate child is another scope, merge it into this one
+        // (This is an optimization to save environment allocations and
+        // array accesses)
+        private Queue<Expression> MergeScopes(ref Expression body) {
+            Queue<Expression> mergedScopes = new Queue<Expression>();
 
-        // The dictionary of all scopes and their infos in the tree
-        private Dictionary<Expression, ScopeBindingInfo> _scopes = new Dictionary<Expression, ScopeBindingInfo>();
+            while (body.NodeType == ExpressionType.Scope) {
+                ScopeExpression scope = (ScopeExpression)body;
+                mergedScopes.Enqueue(scope);
+                foreach (Expression v in scope.Variables) {
+                    _myVariables.Add(v);
+                    _hoistMyVariables.Add(v, false);
+                }
+                body = scope.Body;
+            }
 
-        // The dictionary of all variables and their infos in the tree
-        private Dictionary<Expression, VariableBindingInfo> _variables = new Dictionary<Expression, VariableBindingInfo>();
-
-        // The dictionary of all generators and their infos in the tree.
-        private Dictionary<LambdaExpression, GeneratorInfo> _generators;
-
-        // The CompilerScopes that are the result of the variable binder
-        private Dictionary<Expression, CompilerScope> _resultScopes;
-
-        // Stack to keep track of scope nesting.
-        private Stack<ScopeBindingInfo> _stack = new Stack<ScopeBindingInfo>();
-
-        private VariableBinder() {
+            return mergedScopes;
         }
 
-        #region entry point
+        private void Reference(Expression variable, bool hoist) {
+            // Skip variables that belong to another scope/lambda
+            foreach (Set<Expression> hidden in _hiddenVars) {
+                if (hidden.Contains(variable)) {
+                    return;
+                }
+            }
 
-        /// <summary>
-        /// LambdaBinder entry point.
-        /// </summary>
-        internal static AnalyzedTree Bind(LambdaExpression ast) {
-            return new VariableBinder().BindLambda(ast);
-        }
+            // Increment the reference count
+            int refCount;
+            if (!_referenceCount.TryGetValue(variable, out refCount)) {
+                refCount = 0;
+            }
+            _referenceCount[variable] = refCount + 1;
 
-        #endregion
+            // If it belongs to this scope, hoist it
+            if (_hoistMyVariables.ContainsKey(variable)) {
+                if (hoist) {
+                    EnsureNotByRef(variable);
+                    _hoistMyVariables[variable] = true;
+                }
+                return;
+            }
 
-        private AnalyzedTree BindLambda(LambdaExpression lambda) {
-            // Collect the lambdas
-            Visit(lambda);
-            BindTheScopes();
+            // If we don't have an outer scope, than it's an unbound reference
+            if (_parentScope == null) {
+                throw new InvalidOperationException(
+                    string.Format(
+                        "Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope",
+                        CompilerHelpers.GetVariableName(variable),
+                        CompilerScope.GetName(_currentLambda) ?? "<unnamed>"
+                    )
+                );
+            }
 
-            return new AnalyzedTree(_resultScopes, _generators);
-        }
-
-        private LambdaExpression GetTopLambda() {
-            return _stack.Peek().Lambda;
+            // It belongs to an outer scope. Mark this scope as a closure
+            _isClosure = true;
         }
 
         #region ExpressionVisitor overrides
 
         protected override Expression Visit(VariableExpression node) {
-            Reference(node);
+            Reference(node, ShouldHoist);
             return node;
         }
 
         protected override Expression Visit(ParameterExpression node) {
-            Reference(node);
+            Reference(node, ShouldHoist);
             return node;
         }
 
         protected override Expression Visit(LambdaExpression node) {
-            if (Push(node)) {
-                base.Visit(node);
-            }
-
-            if (node.NodeType == ExpressionType.Generator) {
-                MakeGeneratorInfo(node);
-            }
-
-            ScopeBindingInfo sbi = Pop();
-            Debug.Assert(sbi.Scope == node);
+            LambdaExpression saved = _currentLambda;
+            _currentLambda = node;
+            _hiddenVars.Push(new Set<Expression>(node.Parameters));
+            VisitNode(node.Body);
+            _hiddenVars.Pop();
+            _currentLambda = saved;
             return node;
         }
 
-        private void MakeGeneratorInfo(LambdaExpression node) {
-            if (_generators == null) {
-                _generators = new Dictionary<LambdaExpression, GeneratorInfo>();
+        protected override Expression Visit(ScopeExpression node) {
+            if (_currentLambda == _topLambda && _scopes != null) {
+                _scopes.Push(node);
             }
+            _hiddenVars.Push(new Set<Expression>(node.Variables));
+            VisitNode(node.Body);
+            _hiddenVars.Pop();
+            // may have been popped already
+            if (_currentLambda == _topLambda &&
+                _scopes != null && _scopes.Count > 0 && _scopes.Peek() == node) {
+                _scopes.Pop();
+            }
+            return node;
+        }
 
-            // the info may already exist if we've already processed this lambda
-            // (i.e. it appears in multiple places in the tree)
-            if (!_generators.ContainsKey(node)) {
+        protected override Expression Visit(LocalScopeExpression node) {
+            // Force hoisting of these variables
+            foreach (Expression v in node.Variables) {
+                Reference(v, true);
+            }
+            return node;
+        }
 
-                int tempsNeeded;
-                GeneratorInfo gi = YieldLabelBuilder.BuildYieldTargets(node, out tempsNeeded);
-                _generators.Add(node, gi);
-
-                for (int i = 0; i < tempsNeeded; i++) {
-                    _stack.Peek().AddGeneratorTemp(typeof(Exception));
-                }
-                    
-                // For scopes inside a generator, we need to hoist the scope
-                // access slots. Otherwise, the scope would be null when
-                // calling back into the generator.
-                for (int i = _scopeList.Count - 1; i >= 0; i--) {
-                    ScopeBindingInfo s = _scopeList[i];
-
-                    // stop when we get to the generator itself
-                    if (s.Scope == node) {
-                        break;
-                    }
-
-                    // If this scope exists immediately in the generator and
-                    // yields, we want to hoist its access slot and use a
-                    // generator temp instead of an IL local
-                    if (s.Lambda == node && s.HasYield) {
-                        _stack.Peek().AddGeneratorTemp(typeof(object[]));
-
-                        // mark closures up to the generator
-                        for (ScopeBindingInfo t = s; t.Scope != node; t = t.Parent) {
-                            t.IsClosure = true;
-                        }
-                    }
+        protected override Expression Visit(YieldStatement node) {
+            // If we're directly in the lambda/scope
+            if (_hiddenVars.Count == 0) {
+                _hasYield = true;
+                // If this is a scope, it needs access to its generator temp,
+                // so mark it as a closure
+                if (_expression.NodeType == ExpressionType.Scope) {
+                    _isClosure = true;
                 }
             }
+
+            // if we're directly inside the lambda we're binding
+            if (_currentLambda == _expression) {
+
+                // Validation: yield cannot appear outside of a generator
+                if (_expression.NodeType == ExpressionType.Lambda) {
+                    throw new InvalidOperationException(string.Format(
+                        "yield outside of generator in lambda '{0}'",
+                        CompilerScope.GetName(_expression) ?? "<unnamed>"
+                    ));
+                }
+
+                // Create a generator temp for storing each scope's environment
+                // TODO: only scopes that actually have environments need slots
+                for (int i = 0; i < _scopes.Count; i++) {
+                    _temps.Add(Expression.Variable(typeof(object[]), "tempScope$" + _temps.Count));
+                }
+                // empty the stack so we don't create temps for these scopes again
+                _scopes.Clear();
+            }
+
+            return base.Visit(node);
+        }
+
+        protected override Expression Visit(TryStatement node) {
+            if (_temps != null && (node.Finally ?? node.Fault) != null) {
+                _temps.Add(Expression.Variable(typeof(Exception), "tempException$" + _temps.Count));
+            }
+            return base.Visit(node);
         }
 
         // This may not belong here because it is checking for the
-        // AST type consistency. However, since it is the only check
-        // it seems unwarranted to make an extra walk of the AST just
+        // tree type consistency. However, since it is the only check
+        // it seems unwarranted to make an extra walk of the tree just
         // to verify this condition.
         protected override Expression Visit(ReturnStatement node) {
-            LambdaExpression lambda = GetTopLambda();
-            Type returnType = CompilerHelpers.GetReturnType(lambda);
+            // If we're binding the lambda, and we're in it or in ones of its
+            // scopes, check return
+            if (_currentLambda == _expression) {
+                Type returnType = CompilerHelpers.GetReturnType(_currentLambda);
 
-            if (node.Expression != null) {
-                if (lambda.NodeType == ExpressionType.Lambda) {
-                    if (!returnType.IsAssignableFrom(node.Expression.Type)) {
-                        throw InvalidReturnStatement("Invalid type of return expression value", node);
+                if (node.Expression != null) {
+                    if (_expression.NodeType == ExpressionType.Lambda) {
+                        if (!returnType.IsAssignableFrom(node.Expression.Type)) {
+                            throw InvalidReturnStatement("Invalid type of return expression value", node);
+                        }
                     }
-                }
-            } else {
-                // return without expression can be only from lambda with void return type
-                if (returnType != typeof(void)) {
-                    throw InvalidReturnStatement("Missing return expression", node);
+                } else {
+                    // return without expression can be only from lambda with void return type
+                    if (returnType != typeof(void)) {
+                        throw InvalidReturnStatement("Missing return expression", node);
+                    }
                 }
             }
 
             return base.Visit(node);
+        }
+
+        #endregion
+
+        private bool ShouldHoist {
+            // Hoist variables referenced from an inner lambda, or variables in
+            // a generator (which are effectively referenced from an inner
+            // method thanks to how we compile it)
+            get { return _topLambda != _currentLambda || _topLambda.NodeType == ExpressionType.Generator; }
         }
 
         private static ArgumentException InvalidReturnStatement(string message, ReturnStatement node) {
@@ -227,338 +371,18 @@ namespace System.Linq.Expressions {
             );
         }
 
-        protected override Expression Visit(ScopeExpression node) {
-            if (Push(node)) {
-                base.Visit(node);
-            }
-
-            ScopeBindingInfo sbi = Pop();
-            Debug.Assert(sbi.Scope == node);
-            return node;
-        }
-
-        protected override CatchBlock Visit(CatchBlock node) {
-            if (node.Variable != null) {
-                Reference(node.Variable);
-            }
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(YieldStatement node) {
-            // Mark the whole scope chain in this generator as having a yield
-            ScopeBindingInfo sbi = _stack.Peek();
-
-            ScopeBindingInfo current = sbi;
-            while (current.Scope.NodeType != ExpressionType.Generator) {
-                Debug.Assert(current.Lambda == sbi.Lambda);
-
-                current.HasYield = true;
-                current = current.Parent;
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(LocalScopeExpression node) {
-            // Ensure that all variables are defined in an outer scope
-            // Force hoisting of variables if needed
-
-            ScopeBindingInfo current = _stack.Peek();
-            foreach (Expression v in node.Variables) {
-                // Make sure the variable is defined
-                VariableBindingInfo vbi;
-                if (!_variables.TryGetValue(v, out vbi)) {
-                    throw InvalidVariableReference(v);
-                }
-
-                // Cannot access ref parameters via local scope expression
-                if (IsByRefParameter(v)) {
-                    throw InvalidVariableReference(v);
-                }
-
-                // Close over the variable if necessary
-                if (node.IsClosure) {
-                    // reference it from this scope
-                    Reference(v);
-
-                    // force hoisting even if it's in the same lambda
-                    vbi.IsHoisted = true;
-                }
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(BinaryExpression node) {
-            if (node.Conversion != null) {
-                Visit(node.Conversion);
-            }
-            return base.Visit(node);
-        }
-
-        #endregion
-
-        #region processing scope expressions
-
-        private bool Push(Expression scope) {
-            // We've seen this scope already
-            // (referenced from multiple places in the tree)
-            ScopeBindingInfo sbi;
-            if (_scopes.TryGetValue(scope, out sbi)) {
-                // Push the expression so PostWalk can pop it
-                _stack.Push(sbi);
-                return false;
-            }
-
-            // The parent of the scope is the scope currently
-            // on top of the stack, or a null if at top level.
-            ScopeBindingInfo parent = null;
-            LambdaExpression lambda = null;
-
-            if (_stack.Count > 0) {
-                parent = _stack.Peek();
-                lambda = parent.Lambda;
-            }
-
-            if (scope.NodeType != ExpressionType.Scope) {
-                lambda = (LambdaExpression)scope;
-            }
-
-            sbi = new ScopeBindingInfo(scope, lambda, parent);
-
-            // Remember we saw the scope already
-            _scopes[scope] = sbi;
-
-            // Store it for post processing
-            _scopeList.Add(sbi);
-
-            // And push it on the stack.
-            _stack.Push(sbi);
-
-            // define variables in this scope
-            DefineVariables(scope);
-
-            // if the child of this scope is another scope, merge them
-            return MergeWithChildScope(scope);
-        }
-
-        // Merges variables from child scopes into the parent
-        // This is an optimization for the common patterm:
-        //      Expression.Lambda(Expression.Scope(...), ...)
-        //
-        // It saves both array allocations and speeds up access
-        //
-        private bool MergeWithChildScope(Expression scope) {
-
-            Expression body;
-            if (scope.NodeType == ExpressionType.Scope) {
-                body = ((ScopeExpression)scope).Body;
-            } else {
-                body = ((LambdaExpression)scope).Body;
-            }
-
-            if (body.NodeType == ExpressionType.Scope) {
-
-                // While the body is a ScopeExpression, merge the variables
-                // into this scope
-                do {
-                    ScopeExpression se = (ScopeExpression)body;
-                    foreach (VariableExpression v in se.Variables) {
-                        DefineVariable(v);
-                    }
-                    body = se.Body;
-
-                } while (body.NodeType == ExpressionType.Scope);
-
-                // we finally found a non-scope body, walk it
-                VisitNode(body);
-
-                // return false so we don't walk the body again
-                return false;
-            }
-
-            // continue normal walking of the tree
-            return true;
-        }
-
-        private void DefineVariables(Expression scope) {
-            if (scope.NodeType == ExpressionType.Scope) {
-                ScopeExpression se = (ScopeExpression)scope;
-                foreach (VariableExpression v in se.Variables) {
-                    DefineVariable(v);
-                }
-            } else {
-                LambdaExpression le = (LambdaExpression)scope;
-                foreach (ParameterExpression p in le.Parameters) {
-                    DefineVariable(p);
-                }
-            }
-        }
-
-        private void DefineVariable(Expression v) {
-            if (_variables.ContainsKey(v)) {
-                throw InvalidVariableDefinition(v);
-            }
-
-            _variables.Add(v, _stack.Peek().AddVariable(v));
-        }
-
-        private ScopeBindingInfo Pop() {
-            Debug.Assert(_stack != null && _stack.Count > 0);
-            ScopeBindingInfo sbi = _stack.Pop();
-
-            // Remove variables that are no longer in scope
-            // (this allows other parallel scopes to reuse variable instances)
-            foreach (VariableBindingInfo vbi in sbi.Variables) {
-                _variables.Remove(vbi.Variable);
-            }
-
-            return sbi;
-        }
-
-        #endregion
-
-        #region Closure resolution
-
-        /// <summary>
-        /// Called when a variable is referenced inside the current lambda.
-        /// 
-        /// If the variable is defined on an outer lambda:
-        ///   1. Mark the current lambda and lambdas between as closures
-        ///   2. Mark the variable as hoisted
-        /// </summary>
-        private void Reference(Expression variable) {
-            Debug.Assert(variable != null && _stack != null && _stack.Count > 0);
-
-            VariableBindingInfo vbi;
-            if (!_variables.TryGetValue(variable, out vbi)) {
-                throw InvalidVariableReference(variable);
-            }
-
-            ScopeBindingInfo referenceScope = _stack.Peek();
-            ScopeBindingInfo definingScope = vbi.Scope;
-
-            // Mark all scopes between the use and the definition as closures.
-            // If the variable ends up getting hoisted, we need to be able to
-            // get at its hoisted locals.
-            for (ScopeBindingInfo s = referenceScope; s != definingScope; s = s.Parent) {
-                s.IsClosure = true;
-            }
-
-            // If it's defined in this lambda, don't hoist it.
-            // Only hoist variables that are closed over, or need to be hoisted
-            // for some other reason (generators, scope access)
-            if (definingScope.Lambda != referenceScope.Lambda) {
-                // Cannot close over ref parameters
-                if (IsByRefParameter(variable)) {
-                    throw InvalidVariableReference(variable);
-                }
-                vbi.IsHoisted = true;
-            }
-        }
-
-        private Exception InvalidVariableReference(Expression variable) {
-            return new InvalidOperationException(
-                string.Format(
-                    "Variable '{0}' referenced from scope '{1}', but it is not defined in an outer scope",
-                    CompilerHelpers.GetVariableName(variable),
-                    CompilerScope.GetName(_stack.Peek().Scope) ?? "<unnamed>"
-                )
-            );
-        }
-
-        private Exception InvalidVariableDefinition(Expression variable) {
-            return new InvalidOperationException(
-                string.Format(
-                    "Variable '{0}' definined in scope '{1}', but it is already defined in '{2}'",
-                    CompilerHelpers.GetVariableName(variable),
-                    CompilerScope.GetName(_stack.Peek().Scope) ?? "<unnamed>",
-                    CompilerScope.GetName(_variables[variable].Scope.Scope) ?? "<unnamed>"
-                )
-            );
-        }
-
-        /// <summary>
-        /// Post processing of the tree:
-        ///   1. Hoist all locals if necessary (generators, scopes with yield)
-        ///   2. Group variables into hoisted, locals, and globals
-        ///   3. Finally, create a CompilerScopes for each scope we encountered
-        /// </summary>
-        private void BindTheScopes() {
-            Debug.Assert(_stack.Count == 0);
-
-            // free items we don't need anymore
-            _variables = null;
-            _scopes = null;
-            _stack = null;
-
-            // allocate the result dictionary
-            _resultScopes = new Dictionary<Expression, CompilerScope>(_scopeList.Count);
-
-            // walk each scope, and build the CompilerScope
-            foreach (ScopeBindingInfo sbi in _scopeList) {
-                Debug.Assert(sbi.CompilerScope == null);
-
-                BindScope(sbi);                
-            }
-        }
-
-        private void BindScope(ScopeBindingInfo sbi) {
-            List<Expression> hoisted = new List<Expression>();
-            List<Expression> locals = new List<Expression>();
-
-            foreach (VariableBindingInfo vbi in sbi.Variables) {
-                if (vbi.IsHoisted || vbi.Scope.HoistAll) {
-                    hoisted.Add(vbi.Variable);
-                } else {
-                    locals.Add(vbi.Variable);
-                }
-            }
-
-            CompilerScope parent = null;
-            if (sbi.Parent != null) {
-                parent = sbi.Parent.CompilerScope;
-                Debug.Assert(parent != null);
-            }
-
-            CompilerScope si = new CompilerScope(
-                parent,
-                sbi.Scope,
-                sbi.IsClosure,
-                sbi.HasYield,
-                new ReadOnlyCollection<Expression>(hoisted),
-                new ReadOnlyCollection<Expression>(locals),
-                DefaultReadOnlyCollection<VariableExpression>.Empty
-            );
-
-            // Create the scope for the inner generator.
-            //
-            // The inner generator scope doesn't have any variables, but closes
-            // over all variables from the outer generator method.
-            //
-            // We do this here so we don't have to play games with state inside
-            // CompilerScope, by ensuring that the scope chain mirrors the
-            // actual generated code.
-            if (si.Expression.NodeType == ExpressionType.Generator) {
-                si = new CompilerScope(
-                    si,
-                    sbi.Scope,
-                    true,  // isClosure
-                    false, // hasYield
-                    DefaultReadOnlyCollection<Expression>.Empty,
-                    DefaultReadOnlyCollection<Expression>.Empty,
-                    new ReadOnlyCollection<VariableExpression>(sbi.GeneratorTemps)                    
+        // Cannot close over ref parameters
+        private void EnsureNotByRef(Expression variable) {
+            ParameterExpression pe = variable as ParameterExpression;
+            if (pe != null && pe.IsByRef) {
+                throw new InvalidOperationException(
+                    string.Format(
+                        "Can not close over byref parameter '{0}' referenced in lambda '{1}'",
+                        CompilerHelpers.GetVariableName(variable),
+                        CompilerScope.GetName(_currentLambda) ?? "<unnamed>"
+                    )
                 );
             }
-
-            _resultScopes.Add(si.Expression, sbi.CompilerScope = si);
-        }
-
-        #endregion
-
-        private static bool IsByRefParameter(Expression var) {
-            ParameterExpression pe = var as ParameterExpression;
-            return pe != null && pe.IsByRef;
         }
     }
 }

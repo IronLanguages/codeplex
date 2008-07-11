@@ -48,12 +48,12 @@ namespace Microsoft.Scripting.Actions {
                     name,
                     codeContext
                 ),
-                target.Restrict(target.RuntimeType)
+                target.Restrict(target.LimitType)
             );
         }
 
         private MetaObject/*!*/ MakeDeleteMemberTarget(SetOrDeleteMemberInfo/*!*/ delInfo, MetaObject/*!*/ target) {
-            Type type = target.RuntimeType;
+            Type type = target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
 

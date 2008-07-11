@@ -45,14 +45,14 @@ namespace IronPython.Compiler {
                     }
                     return Tokens.MultiplyToken;
                 case '/':
+                    if (NextChar('=')) {
+                        return Tokens.DivideEqualToken;
+                    }
                     if (NextChar('/')) {
                         if (NextChar('=')) {
                             return Tokens.FloorDivideEqualToken;
                         }
                         return Tokens.FloorDivideToken;
-                    }
-                    if (NextChar('=')) {
-                        return Tokens.DivideEqualToken;
                     }
                     return Tokens.DivideToken;
                 case '%':

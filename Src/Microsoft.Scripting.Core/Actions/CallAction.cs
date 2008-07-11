@@ -29,7 +29,7 @@ namespace System.Scripting.Actions {
             : base(StandardActionKind.Call) {
             _name = name;
             _caseInsensitive = caseInsensitive;
-            _arguments = CollectionUtils.ToReadOnlyCollection(arguments);
+            _arguments = arguments.ToReadOnly();
         }
 
         protected CallAction(string name, bool caseInsensitive, params Argument[] arguments)

@@ -288,7 +288,7 @@ namespace System.Linq.Expressions {
 
             // Codegen is affected by presence/absence of loop control statements
             // (break/continue) or return/yield statement in finally clause
-            TryFlowResult flow = TryFlowAnalyzer.Analyze(node.FinallyStatement ?? node.FaultStatement);
+            TryFlowResult flow = TryFlowAnalyzer.Analyze(node.Finally ?? node.Fault);
 
             // This will return null if we are not in a generator
             // or if the try statement is unaffected by yields
@@ -319,8 +319,8 @@ namespace System.Linq.Expressions {
             }
 
             VariableExpression exception = null;
-            if (node.FinallyStatement != null || node.FaultStatement != null) {
-                exception = _scope.GetGeneratorTemp(_ilg, typeof(Exception));
+            if (node.Finally != null || node.Fault != null) {
+                exception = _scope.GetGeneratorTemp(typeof(Exception));
                 _ilg.EmitNull();
                 _scope.EmitSet(exception);
             }
@@ -338,7 +338,7 @@ namespace System.Linq.Expressions {
             // and rethrow
             //******************************************************************
             Label endFinallyBlock = new Label();
-            if (node.FinallyStatement != null || node.FaultStatement != null) {
+            if (node.Finally != null || node.Fault != null) {
                 PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
                 _ilg.BeginExceptionBlock();
                 endFinallyBlock = _ilg.DefineLabel();
@@ -434,7 +434,7 @@ namespace System.Linq.Expressions {
             // Emit the finally body
             //******************************************************************
 
-            if (node.FinallyStatement != null || node.FaultStatement != null) {
+            if (node.Finally != null || node.Fault != null) {
                 _ilg.MarkLabel(endFinallyBlock);
                 PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
                 _ilg.BeginCatchBlock(typeof(Exception));
@@ -444,7 +444,7 @@ namespace System.Linq.Expressions {
 
                 PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
 
-                if (node.FinallyStatement != null) {
+                if (node.Finally != null) {
                     _ilg.BeginFinallyBlock();
                 } 
                 // if we're a fault block we can just continue to run after the catch.
@@ -458,10 +458,10 @@ namespace System.Linq.Expressions {
 
                 // Emit the finally body
 
-                if (node.FinallyStatement != null) {
-                    EmitExpressionAsVoid(node.FinallyStatement);
+                if (node.Finally != null) {
+                    EmitExpressionAsVoid(node.Finally);
                 } else {
-                    EmitExpressionAsVoid(node.FaultStatement);
+                    EmitExpressionAsVoid(node.Fault);
                 }
 
                 // Rethrow the exception, if any
@@ -593,7 +593,7 @@ namespace System.Linq.Expressions {
             //
             LocalBuilder flowControlFlag = null;
             if (flow.Any) {
-                Debug.Assert(node.FinallyStatement != null);
+                Debug.Assert(node.Finally != null);
 
                 flowControlFlag = _ilg.GetLocal(typeof(int));
                 _ilg.EmitInt(LambdaCompiler.FinallyExitsNormally);
@@ -663,7 +663,7 @@ namespace System.Linq.Expressions {
             // 4. Emit the finally block
             //******************************************************************
 
-            if (node.FinallyStatement != null || node.FaultStatement != null) {
+            if (node.Finally != null || node.Fault != null) {
                 LocalBuilder rethrow = null;
                 if (flow.Any) {
                     // If there is a control flow in finally/fault, end the catch
@@ -695,7 +695,7 @@ namespace System.Linq.Expressions {
 
                 PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
 
-                if (node.FinallyStatement != null) {
+                if (node.Finally != null) {
                     _ilg.BeginFinallyBlock();
                 } else if (!flow.Any) {
                     // dynamic methods don't support fault blocks so we
@@ -708,7 +708,7 @@ namespace System.Linq.Expressions {
                 }
 
                 // Emit the body
-                EmitExpressionAsVoid(node.FinallyStatement ?? node.FaultStatement);
+                EmitExpressionAsVoid(node.Finally ?? node.Fault);
 
                 // rethrow the exception if we have flow control or a catch in
                 // a dynamic method.
@@ -722,7 +722,7 @@ namespace System.Linq.Expressions {
                     _ilg.Emit(OpCodes.Ldloc, rethrow);
                     _ilg.Emit(OpCodes.Throw);
                     _ilg.MarkLabel(noRethrow);
-                } else if (node.FaultStatement != null && IsDynamicMethod) {
+                } else if (node.Fault != null && IsDynamicMethod) {
                     // rethrow when we generated a catch
                     _ilg.Emit(OpCodes.Rethrow);
                 }

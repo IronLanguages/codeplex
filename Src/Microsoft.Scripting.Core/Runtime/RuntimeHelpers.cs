@@ -61,15 +61,20 @@ namespace System.Scripting.Runtime {
         }
 
         public static Exception SimpleAttributeError(string message) {
+            //TODO: localize
             return new MissingMemberException(message);
         }
 
         public static void ThrowUnboundLocalError(SymbolId name) {
-            throw new UnboundLocalException(string.Format("local variable '{0}' referenced before assignment", SymbolTable.IdToString(name)));
+            throw Error.ReferencedBeforeAssignment(SymbolTable.IdToString(name));
         }
 
         public static object ReadOnlyAssignError(bool field, string fieldName) {
-            throw SimpleAttributeError(String.Format("{0} {1} is read-only", field ? "Field" : "Property", fieldName));
+            if (field) {
+                throw Error.FieldReadonly(fieldName);
+            } else {
+                throw Error.PropertyReadonly(fieldName);
+            }
         }
 
         public static DynamicStackFrame[] GetDynamicStackFrames(Exception e) {
@@ -180,24 +185,25 @@ namespace System.Scripting.Runtime {
             EventTracker et = value as EventTracker;
             if (et != null) {
                 if (et != eventTracker) {
-                    throw new ArgumentException(String.Format("expected event from {0}.{1}, got event from {2}.{3}",
-                                                eventTracker.DeclaringType.Name,
+                    throw Error.UnexpectedEvent(eventTracker.DeclaringType.Name,
                                                 eventTracker.Name,
                                                 et.DeclaringType.Name,
-                                                et.Name));
+                                                et.Name);
                 }
                 return;
             }
 
             BoundMemberTracker bmt = value as BoundMemberTracker;
-            if (bmt == null) throw new ArgumentTypeException("expected bound event, got " + CompilerHelpers.GetType(value).Name);
-            if (bmt.BoundTo.MemberType != TrackerTypes.Event) throw new ArgumentTypeException("expected bound event, got " + bmt.BoundTo.MemberType.ToString());
+            if (bmt == null) {
+                throw Error.ExpectedBoundEvent(CompilerHelpers.GetType(value).Name);
+            }
+            if (bmt.BoundTo.MemberType != TrackerTypes.Event) throw Error.ExpectedBoundEvent(bmt.BoundTo.MemberType.ToString());
 
-            if (bmt.BoundTo != eventTracker) throw new ArgumentException(String.Format("expected event from {0}.{1}, got event from {2}.{3}",
+            if (bmt.BoundTo != eventTracker) throw Error.UnexpectedEvent(
                 eventTracker.DeclaringType.Name,
                 eventTracker.Name,
                 bmt.BoundTo.DeclaringType.Name,
-                bmt.BoundTo.Name));
+                bmt.BoundTo.Name);
         }
 
         // TODO: just emit this in the generated code
@@ -214,7 +220,7 @@ namespace System.Scripting.Runtime {
 
         // TODO: just emit this in the generated code
         public static T IncorrectBoxType<T>(object received) {
-            throw new ArgumentTypeException(String.Format("Expected type StrongBox<{0}>, got {1}", typeof(T).Name, CompilerHelpers.GetType(received).Name));
+            throw Error.UnexpectedType("StrongBox<" + typeof(T).Name + ">", CompilerHelpers.GetType(received).Name);
         }
         
         public static void InitializeSymbols(Type t) {

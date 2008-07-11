@@ -143,7 +143,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static MethodCallExpression Call(Expression instance, MethodInfo method, Annotations annotations, IEnumerable<Expression> arguments) {
-            ReadOnlyCollection<Expression> argList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateCallArgs(instance, method, ref argList);
             return new MethodCallExpression(annotations, method.ReturnType, null, method, instance, argList);
         }
@@ -163,25 +163,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         private static void ValidateCallInstanceType(Type instanceType, MethodInfo method) {
-            if (!TypeUtils.AreReferenceAssignable(method.DeclaringType, instanceType)) {
-                if (instanceType.IsValueType) {
-                    if (TypeUtils.AreReferenceAssignable(method.DeclaringType, typeof(System.Object))) {
-                        return;
-                    }
-                    if (TypeUtils.AreReferenceAssignable(method.DeclaringType, typeof(System.ValueType))) {
-                        return;
-                    }
-                    if (instanceType.IsEnum && TypeUtils.AreReferenceAssignable(method.DeclaringType, typeof(System.Enum))) {
-                        return;
-                    }
-                    // A call to an interface implemented by a struct is legal whether the struct has
-                    // been boxed or not.
-                    if (method.DeclaringType.IsInterface) {
-                        foreach (Type interfaceType in instanceType.GetInterfaces())
-                            if (TypeUtils.AreReferenceAssignable(method.DeclaringType, interfaceType))
-                                return;
-                    }
-                }
+            if (!TypeUtils.IsValidInstanceType(method, instanceType)) {
                 throw Error.MethodNotDefinedForType(method, instanceType);
             }
         }
@@ -329,19 +311,15 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(instance, "instance");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
 
-            ReadOnlyCollection<Expression> argumentList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> argumentList = arguments.ToReadOnly();
             ContractUtils.RequiresNotNullItems(argumentList, "arguments");
 
             // Validate ArgumentInfos. For now, includes the instance.
             // This needs to be reconciled with InvocationExpression
             if (bindingInfo.Signature.ArgumentCount != argumentList.Count + 1) {
-                throw new ArgumentException(
-                    string.Format(
-                        "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'",
+                throw Error.ArgumentCountMustMatchBinding(
                         argumentList.Count + 1,
                         bindingInfo.Signature.ArgumentCount
-                    ),
-                    "bindingInfo"
                 );
             }
 
@@ -545,7 +523,7 @@ namespace System.Linq.Expressions {
             if (!arrayType.IsArray)
                 throw Error.ArgumentMustBeArray();
 
-            ReadOnlyCollection<Expression> indexList = CollectionUtils.ToReadOnlyCollection(indexes);
+            ReadOnlyCollection<Expression> indexList = indexes.ToReadOnly();
             if (arrayType.GetArrayRank() != indexList.Count)
                 throw Error.IncorrectNumberOfIndexes();
 

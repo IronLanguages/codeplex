@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Runtime {
     /// <summary>
@@ -97,7 +98,7 @@ namespace System.Scripting.Runtime {
             }
 
             if (_data[0] != null) {
-                throw new InvalidOperationException("already initialized");
+                throw Error.AlreadyInitialized();
             }
 
             for (int i = 0; i < _names.Length; i++) {

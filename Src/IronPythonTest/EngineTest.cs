@@ -24,7 +24,7 @@ using System.Scripting.Utils;
 using System.Text;
 using IronPython.Hosting;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting.Hosting;
 

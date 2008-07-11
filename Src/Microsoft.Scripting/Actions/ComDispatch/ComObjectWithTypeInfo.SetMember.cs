@@ -16,6 +16,7 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
@@ -104,7 +105,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 PropertyTracker info = (PropertyTracker)properties[0];
 
                 Expression comObject = Rule.Parameters[0];
-                Rule.Parameters[0] = Expression.Call(Rule.Parameters[0], typeof(ComObject).GetProperty("Obj").GetGetMethod());
+                IList<Expression> parameters = Rule.Parameters;
+                parameters[0] = Expression.Call(Rule.Parameters[0], typeof(ComObject).GetProperty("Obj").GetGetMethod());
 
                 MethodInfo setter = info.GetSetMethod(true);
 
@@ -112,7 +114,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     setter = CompilerHelpers.GetCallableMethod(setter);
 
                     if (setter.IsPublic) {
-                        AddToBody(Rule.MakeReturn(Binder, MakeReturnValue(Binder.MakeCallExpression(Rule.Context, setter, Rule.Parameters))));
+                        AddToBody(Rule.MakeReturn(Binder, MakeReturnValue(Binder.MakeCallExpression(Rule.Context, setter, parameters))));
                     } else {
                         AddToBody(Binder.MakeMissingMemberError(targetType, StringName).MakeErrorForRule(Rule, Binder));
                     }

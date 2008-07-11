@@ -111,7 +111,7 @@ namespace System.Linq.Expressions {
                 return new Closure(CopyArray(newData, closure.Constants), null);
             }
 
-            throw new InvalidOperationException("bad data bound to delegate");
+            throw Error.BadDelegateData();
         }
 
         private static object[] CopyArray(object[] newData, object[] oldData) {

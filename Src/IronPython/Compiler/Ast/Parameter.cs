@@ -78,7 +78,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression Transform(AstGenerator inner) {
-            MSAst.ParameterExpression parameter = inner.Block.CreateParameter(Name, typeof(object));
+            MSAst.ParameterExpression parameter;
+            string name = SymbolTable.IdToString(Name);
+            if (_variable.AccessedInNestedScope) {
+                parameter = inner.Block.ClosedOverParameter(typeof(object), name);
+            } else {
+                parameter = inner.Block.Parameter(typeof(object), name);
+            }
             _variable.SetParameter(parameter);
             return parameter;
         }

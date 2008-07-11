@@ -24,7 +24,7 @@ using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using IronPython.Compiler.Generation;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
@@ -1123,7 +1123,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.AttributeErrorForMissingAttribute(self.PythonType, name);
         }
 
-        private static IAttributesCollection GetDictionary(IPythonObject self) {
+        internal static IAttributesCollection GetDictionary(IPythonObject self) {
             IAttributesCollection dict = self.Dict;
             if (dict == null) {
                 dict = self.SetDict(PythonDictionary.MakeSymbolDictionary());

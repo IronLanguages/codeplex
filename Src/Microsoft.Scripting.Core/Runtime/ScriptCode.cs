@@ -93,7 +93,7 @@ namespace System.Scripting {
         
         internal void CompileToDisk(TypeGen/*!*/ typeGen) {
             if (_code == null) {
-                throw new InvalidOperationException("No code to compile");
+                throw Error.NoCodeToCompile();
             }
 
             MethodBuilder mb = typeGen.TypeBuilder.DefineMethod(

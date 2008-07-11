@@ -340,10 +340,8 @@ def test_sub():
     Assert(re.sub('([^aeiou])y$', r'\1ies', 'vacancy') == 'vacancies')
     
     AreEqual(re.sub("a+", "\n\t\\\?\"\b", "abc"), '\n\t\\?"\x08bc')
-    #CodePlex Work Item 6273
-    #AreEqual(re.sub("a+", r"\n\t\\\?\"\b", "abc"), '\n\t\\\\?\\"\x08bc')
-    #CodePlex Work Item 6273
-    #AreEqual(re.sub("a+", "\n\t\\\\\\?\"\b", "abc"), '\n\t\\\\?"\x08bc')
+    AreEqual(re.sub("a+", r"\n\t\\\?\"\b", "abc"), '\n\t\\\\?\\"\x08bc')
+    AreEqual(re.sub("a+", "\n\t\\\\\\?\"\b", "abc"), '\n\t\\\\?"\x08bc')
 
 def test_dot():
     a = re.compile('.')
@@ -626,6 +624,11 @@ def test_groups():
     m2 = reg2.search("")
     Assert ( m2.groups() == (None,))
     Assert ( m2.groups('Default') == ('Default',))
+
+def test_locale_flags():
+    AreEqual(re.compile(r"^\#[ \t]*(\w[\d\w]*)[ \t](.*)").flags, 0)
+    AreEqual(re.compile(r"^\#[ \t]*(\w[\d\w]*)[ \t](.*)", re.L).flags, re.L)
+    AreEqual(re.compile(r"(?L)^\#[ \t]*(\w[\d\w]*)[ \t](.*)").flags, re.L)
 
 def test_end():
     ex = re.compile(r'\s+')

@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using Microsoft.Contracts;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Runtime {
     /// <summary>
@@ -42,7 +43,7 @@ namespace System.Scripting.Runtime {
             lock(_contexts) {
                 ContextId res;
                 if (_contexts.TryGetValue(identifier, out res)) {
-                    throw new InvalidOperationException("language already registered");
+                    throw Error.LanguageRegistered();
                 }
 
                 ContextId id = new ContextId();

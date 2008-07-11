@@ -113,5 +113,23 @@ def test_negative():
     
     class my: pass
     AssertError(ValueError, marshal.dumps, my())  ## unmarshallable object
+
+@skip("silverlight") # file IO    
+def test_file_multiple_reads():
+    """calling load w/ a file should only advance the length of the file"""
+    l = []
+    for i in xrange(10):
+        l.append(marshal.dumps({i:i}))
+    
+    data = ''.join(l)
+    f = file('tempfile.txt', 'w')
+    f.write(data)
+    f.close()
+    
+    f = file('tempfile.txt')
+    
+    for i in xrange(10):
+        obj = marshal.load(f)
+        AreEqual(obj, {i:i})
     
 run_test(__name__)

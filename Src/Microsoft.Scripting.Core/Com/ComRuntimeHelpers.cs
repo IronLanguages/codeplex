@@ -16,33 +16,32 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace System.Scripting.Com {
 
     public static class ComRuntimeHelpers {
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#"), CLSCompliant(false)]
-        public static void CheckThrowException(int hresult, ref ExcepInfo excepInfo, uint argErr, DispCallable dispCallable) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#")]
+        [CLSCompliant(false)]
+        public static void CheckThrowException(int hresult, ref ExcepInfo excepInfo, uint argErr, string message) {
             if (ComHresults.IsSuccess(hresult)) {
                 return;
             }
-
-            string genericMessage = "Error while invoking " + dispCallable.ComMethodDesc.Name;
 
             switch (hresult) {
                 case ComHresults.DISP_E_BADPARAMCOUNT:
                     // The number of elements provided to DISPPARAMS is different from the number of arguments 
                     // accepted by the method or property.
-                    throw new TargetParameterCountException(genericMessage);
+                    throw Error.DispBadParamCount(message);
 
                 case ComHresults.DISP_E_BADVARTYPE:
                     //One of the arguments in rgvarg is not a valid variant type.
@@ -56,15 +55,15 @@ namespace System.Scripting.Com {
                 case ComHresults.DISP_E_MEMBERNOTFOUND:
                     // The requested member does not exist, or the call to Invoke tried to set the value of a 
                     // read-only property.
-                    throw new MissingMemberException(genericMessage);
+                    throw Error.DispMemberNotFound(message);
 
                 case ComHresults.DISP_E_NONAMEDARGS:
                     // This implementation of IDispatch does not support named arguments.
-                    throw new ArgumentException(genericMessage + ". Named arguments are not supported");
+                    throw Error.DispNoNamedArgs(message);
 
                 case ComHresults.DISP_E_OVERFLOW:
                     // One of the arguments in rgvarg could not be coerced to the specified type.
-                    throw new OverflowException(genericMessage);
+                    throw Error.DispOverflow(message);
 
                 case ComHresults.DISP_E_PARAMNOTFOUND:
                     // One of the parameter DISPIDs does not correspond to a parameter on the method. In this case, 
@@ -74,8 +73,7 @@ namespace System.Scripting.Com {
                 case ComHresults.DISP_E_TYPEMISMATCH:
                     // One or more of the arguments could not be coerced. The index within rgvarg of the first 
                     // parameter with the incorrect type is returned in the puArgErr parameter.
-                    string message = String.Format("Could not convert argument {0} for call to {1}", argErr, dispCallable.ComMethodDesc.Name);
-                    throw new ArgumentTypeException(message);
+                    throw Error.DispTypeMismatch(argErr, message);
 
                 case ComHresults.DISP_E_UNKNOWNINTERFACE:
                     // The interface identifier passed in riid is not IID_NULL.
@@ -88,7 +86,7 @@ namespace System.Scripting.Com {
 
                 case ComHresults.DISP_E_PARAMNOTOPTIONAL:
                     // A required parameter was omitted.
-                    throw new ArgumentException(genericMessage + ". A required parameter was omitted.");
+                    throw Error.DispParamNotOptional(message);
             }
 
             Marshal.ThrowExceptionForHR(hresult);
@@ -108,9 +106,9 @@ namespace System.Scripting.Com {
             return rgNames[0];
         }
 
-        internal static SymbolId GetSymbolIdOfMethod(ComTypes.ITypeInfo typeInfo, int memid, string prefix) {
+        internal static string GetNameOfMethod(ComTypes.ITypeInfo typeInfo, int memid, string prefix) {
             string name = GetNameOfMethod(typeInfo, memid);
-            return SymbolTable.StringToId(prefix + name);
+            return prefix + name;
         }
 
         internal static string GetNameOfLib(ComTypes.ITypeLib typeLib) {
@@ -209,7 +207,7 @@ namespace System.Scripting.Com {
 
             // GetTypeAttr should never return null, this is just to be safe
             if (pAttrs == IntPtr.Zero) {
-                throw new COMException("ResolveComReference.CannotRetrieveTypeInformation");
+                throw Error.CannotRetrieveTypeInformation();
             }
 
             try {
@@ -227,7 +225,7 @@ namespace System.Scripting.Com {
 
             // GetTypeAttr should never return null, this is just to be safe
             if (pAttrs == IntPtr.Zero) {
-                throw new COMException("ResolveComReference.CannotRetrieveTypeInformation");
+                throw Error.CannotRetrieveTypeInformation();
             }
 
             try {
@@ -359,7 +357,7 @@ namespace System.Scripting.Com {
                 }
 
                 if (methodDispId != dispIds[0]) {
-                    throw new InvalidImplementationException(String.Format("IDispatch::GetIDsOfNames behaved unexpectedly for {0}", names[0]));
+                    throw Error.GetIDsOfNamesInvalid(names[0]);
                 }
 
                 int[] keywordArgDispIds = ArrayUtils.RemoveFirst(dispIds); // Remove the dispId of the method name
@@ -602,6 +600,75 @@ namespace System.Scripting.Com {
             }
 
             #endregion
+        }
+
+        private static void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
+            VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
+            object[] allArgs = ArrayUtils.Insert<object>(null, explicitArgs);
+            for (int i = 0; i < variantBuilders.Length; i++) {
+                variantBuilders[i].ArgBuilder.UpdateFromReturn(argsForCall[i], allArgs);
+            }
+        }
+
+        public static object UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs) {
+            try {
+                VarEnumSelector varEnumSelector = new VarEnumSelector(typeof(object), explicitArgs);
+                object[] allArgs = ArrayUtils.Insert<object>(null, explicitArgs);
+                ParameterModifier parameterModifiers;
+                object[] argsForCall = varEnumSelector.BuildArguments(allArgs, out parameterModifiers);
+
+                BindingFlags bindingFlags = BindingFlags.Instance;
+                if (method.IsPropertyGet) {
+                    bindingFlags |= BindingFlags.GetProperty;
+                } else if (method.IsPropertyPut) {
+                    bindingFlags |= BindingFlags.SetProperty;
+                } else {
+                    bindingFlags |= BindingFlags.InvokeMethod;
+                }
+
+                string memberName = method.DispIdString; // Use the "[DISPID=N]" format to avoid a call to GetIDsOfNames
+                string[] namedParams = null;
+                if (keywordArgNames.Length > 0) {
+                    // InvokeMember does not allow the method name to be in "[DISPID=N]" format if there are namedParams
+                    memberName = method.Name;
+
+                    namedParams = keywordArgNames;
+                    argsForCall = ArrayUtils.RotateRight(argsForCall, namedParams.Length);
+                }
+
+                // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
+                // have to worry about marshalling the arguments. Type.InvokeMember will use
+                // IDispatch.Invoke under the hood.
+                object retVal = dispatch.DispatchObject.GetType().InvokeMember(
+                    memberName,
+                    bindingFlags,
+                    Type.DefaultBinder,
+                    dispatch.DispatchObject,
+                    argsForCall,
+                    new ParameterModifier[] { parameterModifiers },
+                    null,
+                    namedParams
+                    );
+
+                UpdateByrefArguments(explicitArgs, argsForCall, varEnumSelector);
+
+                return retVal;
+            } catch (TargetInvocationException e) {
+                COMException comException = e.InnerException as COMException;
+                if (comException != null) {
+                    int errorCode = comException.ErrorCode;
+                    if (errorCode > ComHresults.DISP_E_UNKNOWNINTERFACE && errorCode < ComHresults.DISP_E_PARAMNOTOPTIONAL) {
+                        // If the current exception was caused because of a DISP_E_* errorcode, call
+                        // ComRuntimeHelpers.CheckThrowException which handles these errorcodes specially. This ensures
+                        // that we preserve identical behavior in both cases.
+                        ExcepInfo excepInfo = new ExcepInfo();
+                        ComRuntimeHelpers.CheckThrowException(comException.ErrorCode, ref excepInfo, UInt32.MaxValue, method.Name);
+                    }
+                }
+
+                // Unwrap the real (inner) exception and raise it
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+            }
         }
     }
 }

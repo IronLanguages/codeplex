@@ -87,7 +87,11 @@ namespace System.Scripting.Actions {
                     return false;
                 }
 
-                return !CompilerHelpers.IsSealed(Expression.Type);
+                if (CompilerHelpers.IsSealed(Expression.Type)) {
+                    return typeof(IDynamicObject).IsAssignableFrom(Expression.Type);
+                }
+
+                return true;
             }
         }
 

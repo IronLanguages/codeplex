@@ -26,7 +26,7 @@ using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -47,7 +47,7 @@ namespace IronPython.Runtime.Types {
     /// </summary>    
     [PythonSystemType("builtin_function_or_method")]
     public class BuiltinFunction :
-        PythonTypeSlot, IOldDynamicObject, ICodeFormattable {
+        PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDelegateConvertible {
         private string/*!*/ _name;
         private MethodBase/*!*/[]/*!*/ _targets;
         private readonly Type/*!*/ _declType;
@@ -513,6 +513,38 @@ namespace IronPython.Runtime.Types {
                 }
                 return hc;
             }
+        }
+
+        #endregion
+
+        #region IDelegateConvertible Members
+
+        Delegate IDelegateConvertible.ConvertToDelegate(Type type) {
+            // see if we have any functions which are compatible with the delegate type...
+            ParameterInfo[] delegateParams = type.GetMethod("Invoke").GetParameters();
+
+            // if we have overloads then we need to do the overload resolution at runtime
+            if (Targets.Count == 1) {
+                MethodInfo mi = Targets[0] as MethodInfo;
+                if (mi != null) {
+                    ParameterInfo[] methodParams = mi.GetParameters();
+                    if (methodParams.Length == delegateParams.Length) {
+                        bool match = true;
+                        for (int i = 0; i < methodParams.Length; i++) {
+                            if (delegateParams[i].ParameterType != methodParams[i].ParameterType) {
+                                match = false;
+                                break;
+                            }
+                        }
+
+                        if (match) {
+                            return Delegate.CreateDelegate(type, mi);
+                        }
+                    }
+                }
+            }
+
+            return null;
         }
 
         #endregion

@@ -16,15 +16,15 @@
 using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
-    // TODO: Make internal?
+
     public sealed class CatchBlock {
         private readonly Annotations _annotations;
-        private readonly Type /*!*/ _test;
+        private readonly Type _test;
         private readonly VariableExpression _var;
-        private readonly Expression /*!*/ _body;
+        private readonly Expression _body;
         private readonly Expression _filter;
 
-        internal CatchBlock(Annotations annotations, Type /*!*/ test, VariableExpression target, Expression /*!*/ body, Expression filter) {
+        internal CatchBlock(Annotations annotations, Type test, VariableExpression target, Expression body, Expression filter) {
             _test = test;
             _var = target;
             _body = body;

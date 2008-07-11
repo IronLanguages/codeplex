@@ -339,6 +339,18 @@ namespace Microsoft.Scripting.Hosting.Shell {
             // TODO: why doesn't this work ???
             //return _memberCompletionSite.Invoke(new CodeContext(_scope, _language), value);
         }
+
+        public virtual IList<string>/*!*/ GetGlobals(string/*!*/ name) {
+            List<string> res = new List<string>();
+            foreach (SymbolId scopeName in _scope.Keys) {
+                string strName = SymbolTable.IdToString(scopeName);
+                if (strName.StartsWith(name)) {
+                    res.Add(strName);
+                }
+            }
+
+            return res;
+        }
         
         #endregion
     }

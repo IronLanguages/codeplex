@@ -114,11 +114,10 @@ def test_property():
     # read / write on instance
     b, o1, o2 = Base(), OverrideNothing(), OverrideAll()
 
-    def f_read(target): print target.Property
-    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be read through a type, not an instance", f_read, b)
-    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be read through a type, not an instance", f_read, o1)
-    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be read through a type, not an instance", f_read, o2)
-
+    AreEqual(b.Property, 'Base.Property')
+    AreEqual(o1.Property, 'Base.Property')
+    AreEqual(o2.Property, 'OverrideAll.Property')
+    
     def f_write(target): target.Property = 'Anything'
     AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, b)
     AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be assigned to through a type, not an instance", f_write, o2)

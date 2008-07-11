@@ -91,7 +91,6 @@ def test_negative():
 
     AssertError(struct.error, struct.pack, 'c', 300)
 
-@skip("cli", "silverlight") #CodePlex 9976
 def test_calcsize_alignment():
     '''
     TODO: Side by side test?

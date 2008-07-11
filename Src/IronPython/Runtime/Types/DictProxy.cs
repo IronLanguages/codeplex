@@ -20,8 +20,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Scripting;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
+using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("dictproxy")]
@@ -51,6 +52,15 @@ namespace IronPython.Runtime.Types {
         public bool has_key(object key) {
             object dummy;
             return TryGetValue(key, out dummy);
+        }
+
+        public object get([NotNull]object k, [DefaultParameterValue(null)]object d) {
+            object res;
+            if (!TryGetValue(k, out res)) {
+                res = d;
+            }
+
+            return res;
         }
 
         public object keys(CodeContext context) {
@@ -88,6 +98,10 @@ namespace IronPython.Runtime.Types {
             }
 
             return res;
+        }
+
+        public PythonDictionary copy() {
+            return new PythonDictionary(this);
         }
 
         #endregion
@@ -139,7 +153,7 @@ namespace IronPython.Runtime.Types {
         }
 
         void IDictionary.Clear() {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException("dictproxy is read-only");
         }
 
         IDictionaryEnumerator IDictionary.GetEnumerator() {
@@ -155,15 +169,29 @@ namespace IronPython.Runtime.Types {
         }
 
         ICollection IDictionary.Keys {
-            get { throw new NotImplementedException(); }
+            get {
+                ICollection<object> res = _dt.GetMemberDictionary(DefaultContext.Default, false).Keys;
+                ICollection coll = res as ICollection;
+                if (coll != null) {
+                    return coll;
+                }
+
+                return new List<object>(res);
+            }
         }
 
         void IDictionary.Remove(object key) {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException("dictproxy is read-only");
         }
 
         ICollection IDictionary.Values {
-            get { throw new NotImplementedException(); }
+            get {
+                List<object> res = new List<object>();
+                foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(DefaultContext.Default, false).AsObjectKeyedDictionary()) {
+                    res.Add(kvp.Value);
+                }
+                return res;
+            }
         }
 
         #endregion
@@ -171,7 +199,9 @@ namespace IronPython.Runtime.Types {
         #region ICollection Members
 
         void ICollection.CopyTo(Array array, int index) {
-            throw new NotImplementedException();
+            foreach (DictionaryEntry de in this) {
+                array.SetValue(de, index++);
+            }
         }
 
         int ICollection.Count {

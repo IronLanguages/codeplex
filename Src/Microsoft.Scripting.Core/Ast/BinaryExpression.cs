@@ -351,15 +351,12 @@ namespace System.Linq.Expressions {
                 left = TypeUtils.GetNonNullableType(left);
                 right = TypeUtils.GetNonNullableType(left);
             }
-            Type[] types = new Type[] { pms[0].ParameterType };
-            MethodInfo opTrue = method.DeclaringType.GetMethod("op_True", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
-            MethodInfo opFalse = method.DeclaringType.GetMethod("op_False", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
-            if (opTrue == null || opFalse == null)
+            MethodInfo opTrue = TypeUtils.GetBooleanOperator(method.DeclaringType, "op_True");
+            MethodInfo opFalse = TypeUtils.GetBooleanOperator(method.DeclaringType, "op_False");
+            if (opTrue == null || opTrue.ReturnType != typeof(bool) ||
+                opFalse == null || opFalse.ReturnType != typeof(bool)) {
                 throw Error.LogicalOperatorMustHaveBooleanOperators(nodeType, method.Name);
-            if (opTrue.ReturnType != typeof(bool))
-                throw Error.LogicalOperatorMustHaveBooleanOperators(nodeType, method.Name);
-            if (opFalse.ReturnType != typeof(bool))
-                throw Error.LogicalOperatorMustHaveBooleanOperators(nodeType, method.Name);
+            }
         }
 
         //CONFORMING

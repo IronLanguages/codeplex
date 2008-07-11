@@ -29,11 +29,12 @@ using System.Text;
 using System.Threading;
 using IronPython.Compiler;
 using IronPython.Hosting;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 
@@ -296,7 +297,14 @@ namespace IronPython.Runtime.Operations {
             if (pt != null) {
                 // Recursively inspect nested tuple(s)
                 foreach (object o in pt) {
-                    if (IsSubClass(c, o)) return true;
+                    FunctionPushFrame();
+                    try {
+                        if (IsSubClass(c, o)) {
+                            return true;
+                        }
+                    } finally {
+                        FunctionPopFrame();
+                    }
                 }
                 return false;
             }
@@ -351,7 +359,12 @@ namespace IronPython.Runtime.Operations {
             PythonTuple tt = typeinfo as PythonTuple;
             if (tt != null) {
                 foreach (object type in tt) {
-                    if (IsInstance(o, type)) return true;
+                    PythonOps.FunctionPushFrame();
+                    try {
+                        if (IsInstance(o, type)) return true;
+                    } finally {
+                        PythonOps.FunctionPopFrame();
+                    }
                 }
                 return false;
             }
@@ -1058,6 +1071,19 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static bool TryGetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name, out object ret) {
+            DynamicSite<object, object> site = GetTryGetMemberSite(o, name);
+
+            try {
+                ret = site.Invoke(context, o);
+            } catch (MissingMemberException) {
+                ret = null;
+                return false;
+            }
+
+            return ret != OperationFailed.Value;
+        }
+
+        private static DynamicSite<object, object> GetTryGetMemberSite(object o, SymbolId name) {
             DynamicSite<object, object> site;
 
             lock (_tryGetMemSites) {
@@ -1066,9 +1092,7 @@ namespace IronPython.Runtime.Operations {
                     _tryGetMemSites[key] = site = DynamicSite<object, object>.Create(OldGetMemberAction.Make(DefaultContext.DefaultPythonBinder, name, GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow));
                 }
             }
-            
-            ret = site.Invoke(context, o);
-            return ret != OperationFailed.Value;
+            return site;
         }
 
         public static void DeleteAttr(CodeContext/*!*/ context, object o, SymbolId name) {
@@ -1097,8 +1121,11 @@ namespace IronPython.Runtime.Operations {
         }
         
         public static object GetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name) {
-            object ret;
-            if (!TryGetBoundAttr(context, o, name, out ret)) {
+            DynamicSite<object, object> site = GetTryGetMemberSite(o, name);
+
+            object ret = site.Invoke(context, o);
+            
+            if (ret == OperationFailed.Value) {
                 if (o is OldClass) {
                     throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
                         ((OldClass)o).Name, SymbolTable.IdToString(name));
@@ -1613,7 +1640,7 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.AttributeError("'{0}' object has no attribute '{1}'", typeName, SymbolTable.IdToString(attributeName));
         }
 
-        public static void InitializeForFinalization(object newObject) {
+        public static void InitializeForFinalization(CodeContext/*!*/ context, object newObject) {
             IWeakReferenceable iwr = newObject as IWeakReferenceable;
             Debug.Assert(iwr != null);
 
@@ -1948,7 +1975,7 @@ namespace IronPython.Runtime.Operations {
         public static void PrintExpressionValue(CodeContext/*!*/ context, object value) {
             if (value != null) {
                 Print(context, PythonOps.StringRepr(value));
-                ScopeOps.SetMemberAfter(context, PythonContext.GetContext(context).BuiltinModuleInstance, "_", value);
+                ScopeOps.SetMember(context, PythonContext.GetContext(context).BuiltinModuleInstance, "_", value);
             }
         }
 
@@ -2365,6 +2392,14 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
+        /// helper function for re-raised exceptions.
+        /// </summary>
+        public static Exception MakeRethrownException(CodeContext/*!*/ context) {
+            PythonTuple t = GetExceptionInfo(context);
+            return MakeException(context, t[0], t[1], t[2]);
+        }
+
+        /// <summary>
         /// helper function for non-re-raise exceptions.
         /// 
         /// type is the type of exception to throw or an instance.  If it 
@@ -2375,15 +2410,6 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static Exception MakeException(CodeContext/*!*/ context, object type, object value, object traceback) {
             Exception throwable;
-
-            if (type == null && value == null && traceback == null) {
-                // rethrow
-                PythonTuple t = GetExceptionInfo(context);
-                type = t[0];
-                value = t[1];
-                traceback = t[2];
-            }
-
             PythonType pt;
 
             if (type is Exception) {
@@ -2618,11 +2644,9 @@ namespace IronPython.Runtime.Operations {
                 } else {
                     PythonTypeSlot dts;
                     if (t.TryLookupSlot(context, name, out dts)) {
-                        if (instance != null) {
-                            object ret;
-                            if (dts.TryGetBoundValue(context, instance, type, out ret)) {
-                                return ret;
-                            }
+                        object ret;
+                        if (dts.TryGetBoundValue(context, instance, type, out ret)) {
+                            return ret;
                         }
                         return dts;
                     }
@@ -3201,6 +3225,47 @@ namespace IronPython.Runtime.Operations {
             } else {
                 Warn(context, PythonExceptions.DeprecationWarning, "classic int division");
             }
+        }
+
+        /// <summary>
+        /// Provides access to AppDomain.DefineDynamicAssembly which cannot be called from a DynamicMethod
+        /// </summary>
+        public static AssemblyBuilder DefineDynamicAssembly(AssemblyName name, AssemblyBuilderAccess access) {
+            return AppDomain.CurrentDomain.DefineDynamicAssembly(name, access);
+        }
+
+        /// <summary>
+        /// Provides the entry point for a compiled module.  The stub exe calls into InitializeModule which
+        /// does the actual work of adding references and importing the main module.  Upon completion it returns
+        /// the exit code that the program reported via SystemExit or 0.
+        /// </summary>
+        public static int InitializeModule(Assembly/*!*/ precompiled, string/*!*/ main, string[] references) {
+            ContractUtils.RequiresNotNull(precompiled, "precompiled");
+            ContractUtils.RequiresNotNull(main, "main");
+
+            ScriptRuntime sr = ScriptRuntime.Create();
+            ScriptEngine se = sr.GetEngine(typeof(PythonContext));
+            PythonContext pc = (PythonContext)HostingHelpers.GetLanguageContext(se);
+
+            foreach (ScriptCode sc in ScriptCode.LoadFromAssembly(HostingHelpers.GetDomainManager(sr), precompiled)) {
+                pc.GetCompiledLoader().AddScriptCode(sc);
+            }
+
+            if (references != null) {
+                foreach (string referenceName in references) {
+                    sr.LoadAssembly(Assembly.Load(referenceName));
+                }
+            }
+
+            // import __main__
+            try {
+                Importer.Import(new CodeContext(new Scope(), pc), main, PythonTuple.EMPTY, 0);
+            } catch (SystemExitException ex) {
+                object dummy;
+                return ex.GetExitCode(out dummy);
+            }
+
+            return 0;
         }
     }
 }

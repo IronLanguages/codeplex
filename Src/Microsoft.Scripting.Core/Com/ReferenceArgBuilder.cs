@@ -81,6 +81,12 @@ namespace System.Scripting.Com {
             }
         }
 
+        internal override VariableExpression[] TemporaryVariables {
+            get {
+                return new VariableExpression[] { _tmp };
+            }
+        }
+
         protected virtual Expression UpdatedValue() {
             return _tmp;
         }

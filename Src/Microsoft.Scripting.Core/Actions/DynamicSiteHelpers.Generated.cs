@@ -34,7 +34,7 @@ namespace System.Scripting.Actions {
         }
 
         public static Type MakeDynamicSiteTargetType(Type/*!*/[] types) {
-            ContractUtils.Requires(types != null && types.Length > 1, "types");
+            ContractUtils.Requires(types != null && types.Length >= 1, "types");
 
             switch (types.Length) {
 

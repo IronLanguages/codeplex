@@ -29,16 +29,17 @@ namespace System.Scripting.Actions {
     public abstract class MetaAction : CallSiteBinder {
         public sealed override Rule<T> Bind<T>(object[] args) {
             if (!typeof(Delegate).IsAssignableFrom(typeof(T))) {
-                throw new InvalidOperationException("RuleBuilder generic argument must be a delegate");
+                throw Error.TypeParameterIsNotDelegate(typeof(T));
             }
 
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
 
             if (pis.Length == 0 || pis[0].ParameterType != typeof(CallSite)) {
-                throw new InvalidOperationException("RuleBuilder can only be used with delegates whose first argument is CallSite");
+                throw Error.FirstArgumentMustBeCallSite();
             }
 
             ParameterExpression[] pes;
+            ParameterExpression siteExpr = Expression.Parameter(typeof(CallSite), "callSite");
             Expression[] expressions = MakeParameters(pis, out pes);
 
             MetaObject[] mos = new MetaObject[args.Length];
@@ -49,7 +50,7 @@ namespace System.Scripting.Actions {
                     mos[i] = ido.GetMetaObject(expressions[i]);
 #if !SILVERLIGHT
                 } else if (ComMetaObject.IsGenericComObject(arg)) {
-                    mos[i] = ComMetaObject.GetComMetaObject(expressions[i]);
+                    mos[i] = ComMetaObject.GetComMetaObject(expressions[i], arg);
 #endif
                 } else {
                     mos[i] = new ParameterMetaObject(expressions[i], arg);
@@ -58,16 +59,16 @@ namespace System.Scripting.Actions {
 
             MetaObject binding = Bind(mos);
             if (binding == null) {
-                throw new InvalidOperationException("Bind cannot return null");
+                throw Error.BindingCannotBeNull();
             }
 
             return new Rule<T>(
                 Expression.Scope(
-                    GetMetaObjectRule(binding, GetReturnType(typeof(T))),
+                    GetMetaObjectRule(binding, GetReturnType(typeof(T)), siteExpr),
                     "<rule>"
                 ),
                 null,
-                new ReadOnlyCollection<ParameterExpression>(pes)
+                new ReadOnlyCollection<ParameterExpression>(ArrayUtils.Insert(siteExpr, pes))
             );
         }
 
@@ -81,13 +82,13 @@ namespace System.Scripting.Actions {
                     );
                 case ExpressionType.Conditional:
                     ConditionalExpression conditional = (ConditionalExpression)body;
-                    if (conditional.IfTrue.BindingInfo == this) {
+                    if (IsDeferExpression(conditional.IfTrue)) {
                         return Expression.Condition(
                             Expression.Not(conditional.Test),
                             Expression.Return(Expression.ConvertHelper(conditional.IfFalse, retType)),
                             Expression.Empty()
                         );
-                    } else if (conditional.IfFalse.BindingInfo == this) {
+                    } else if (IsDeferExpression(conditional.IfFalse)) {
                         return Expression.Condition(
                             conditional.Test,
                             Expression.Return(Expression.ConvertHelper(conditional.IfTrue, retType)),
@@ -106,14 +107,33 @@ namespace System.Scripting.Actions {
             }
         }
 
+        private bool IsDeferExpression(Expression e) {
+            if (e.BindingInfo == this) {
+                return true;
+            }
+
+            if (e.NodeType == ExpressionType.Convert) {
+                return IsDeferExpression(((UnaryExpression)e).Operand);
+            }
+
+            return false;
+        }
+
         private static Type/*!*/ GetReturnType(Type/*!*/ dlgType) {
             return dlgType.GetMethod("Invoke").ReturnType;
         }
 
-        private Expression GetMetaObjectRule(MetaObject/*!*/ binding, Type/*!*/ retType) {
+        private Expression GetMetaObjectRule(MetaObject/*!*/ binding, Type/*!*/ retType, Expression/*!*/ siteExpr) {
             Debug.Assert(binding != null);
 
-            Expression body = AddReturn(binding.Expression, retType);
+            ActionSelfRewriter rewriter = new ActionSelfRewriter(
+                Expression.Property(
+                    siteExpr,
+                    typeof(CallSite).GetProperty("Binder")
+                )
+            );
+
+            Expression body = rewriter.VisitNode(AddReturn(binding.Expression, retType));
 
             if (binding.Restrictions != Restrictions.Empty) {
                 // add the test only if we have one
@@ -154,6 +174,11 @@ namespace System.Scripting.Actions {
 
             parameters = vars;
             return all;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public static Expression GetSelfExpression() {
+            return new ActionSelfExpression();
         }
     }
 }

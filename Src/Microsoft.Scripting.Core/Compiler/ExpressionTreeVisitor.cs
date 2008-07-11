@@ -109,12 +109,14 @@ namespace System.Linq.Expressions {
         }
 
         protected virtual Expression Visit(BinaryExpression node) {
+            // Evaluation order: left, conversion, right
             Expression l = VisitNode(node.Left);
+            LambdaExpression c = (LambdaExpression)VisitNode(node.Conversion);
             Expression r = VisitNode(node.Right);
             if (l == node.Left && r == node.Right) {
                 return node;
             }
-            return new BinaryExpression(node.Annotations, node.NodeType, l, r, node.Type, node.Method);
+            return new BinaryExpression(node.Annotations, node.NodeType, l, r, node.Type, node.Method, node.Conversion, node.BindingInfo);
         }
 
         protected virtual Expression Visit(Block node) {
@@ -173,7 +175,12 @@ namespace System.Linq.Expressions {
         }
 
         protected virtual Expression Visit(LocalScopeExpression node) {
-            return node;
+            ReadOnlyCollection<Expression> v = VisitNodes(node.Variables);
+            if (v == node.Variables) {
+                return node;
+            }
+            // go through the factory for validation
+            return Expression.AllVariables(node.Annotations, v);
         }
 
         protected virtual Expression Visit(InvocationExpression node) {
@@ -312,35 +319,26 @@ namespace System.Linq.Expressions {
         }
 
         protected virtual CatchBlock Visit(CatchBlock node) {
-            //
-            // TODO: Visit the variable?
-            //
-            // Generally, we only visit variables in places where they are
-            // being evaluated/assigned. This is sort of like assignment,
-            // but has the big downside that we'd have to cast the
-            // rewritten expression.
-            //
-            // Given that issue, I prefer to not visit it here and let derived
-            // classes override this method if they care.
-            //
+            // TODO: change CatchBlock.Variable to any lvalue?
+            VariableExpression v = (VariableExpression)VisitNode(node.Variable);
             Expression b = VisitNode(node.Body);
             Expression f = VisitNode(node.Filter);
-            if (b == node.Body && f == node.Filter) {
+            if (v == node.Variable && b == node.Body && f == node.Filter) {
                 return node;
             }
-            return new CatchBlock(node.Annotations, node.Test, node.Variable, b, f);
+            return new CatchBlock(node.Annotations, node.Test, v, b, f);
         }
 
         protected virtual Expression Visit(TryStatement node) {
             ReadOnlyCollection<CatchBlock> h = VisitNodes(node.Handlers, Visit);
             Expression b = VisitNode(node.Body);
-            Expression y = VisitNode(node.FinallyStatement);
-            Expression f = VisitNode(node.FaultStatement);
+            Expression y = VisitNode(node.Finally);
+            Expression f = VisitNode(node.Fault);
 
             if (b == node.Body &&
                 h == node.Handlers &&
-                y == node.FinallyStatement &&
-                f == node.FaultStatement) {
+                y == node.Finally &&
+                f == node.Fault) {
                 return node;
             }
 

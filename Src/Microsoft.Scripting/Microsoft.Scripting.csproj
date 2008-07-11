@@ -159,6 +159,7 @@
     <Compile Include="Actions\ComDispatch\VariantBuilder.cs" />
     <Compile Include="Actions\ConvertToBinderHelper.cs" />
     <Compile Include="Actions\CreateInstanceBinderHelper.cs" />
+    <Compile Include="Actions\DefaultBinder.Create.cs" />
     <Compile Include="Actions\DefaultBinder.cs" />
     <Compile Include="Actions\DeleteMemberBinderHelper.cs" />
     <Compile Include="Actions\DoOperationBinderHelper.cs" />
@@ -167,6 +168,7 @@
     <Compile Include="Actions\GetMemberBinderHelper.cs" />
     <Compile Include="Actions\InvokeMemberBinderHelper.cs" />
     <Compile Include="Actions\MemberBinderHelper.cs" />
+    <Compile Include="Actions\NoSideEffectsAttribute.cs" />
     <Compile Include="Actions\OperatorInfo.cs" />
     <Compile Include="Actions\SetMemberBinderHelper.cs" />
     <Compile Include="Actions\ComboActionRewriter.cs" />

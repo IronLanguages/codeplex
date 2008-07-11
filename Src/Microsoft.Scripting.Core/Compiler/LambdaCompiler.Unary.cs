@@ -38,7 +38,7 @@ namespace System.Linq.Expressions {
             if (hoistedLocals != null) {
                 // HoistedLocals is internal so emit as System.Object
                 EmitConstant(hoistedLocals, typeof(object));
-                _scope.EmitNearestHoistedLocals(_ilg);
+                _scope.EmitGet(hoistedLocals.SelfVariable);
                 _ilg.EmitCall(typeof(RuntimeHelpers).GetMethod("Quote"));
 
                 if (quote.Type != typeof(Expression)) {

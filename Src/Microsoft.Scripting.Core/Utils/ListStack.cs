@@ -16,6 +16,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Contracts;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Utils {
 
@@ -86,7 +87,7 @@ namespace System.Scripting.Utils {
             for (int i = _list.Count - 1; i >= 0; i--) {
                 yield return _list[i];
                 if (_version != version) {
-                    throw new InvalidOperationException("Stack changed while enumerating");
+                    throw Error.StackChangedWhileEnumerationg();
                 }
             }
         }

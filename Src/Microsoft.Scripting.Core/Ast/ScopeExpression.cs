@@ -90,7 +90,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(annotations, "annotations");
 
-            ReadOnlyCollection<VariableExpression> varList = CollectionUtils.ToReadOnlyCollection(variables);
+            ReadOnlyCollection<VariableExpression> varList = variables.ToReadOnly();
             ContractUtils.RequiresNotNullItems(varList, "variables");
 
             return new ScopeExpression(body, name, annotations, varList);

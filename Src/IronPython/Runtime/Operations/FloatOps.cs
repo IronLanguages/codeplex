@@ -34,8 +34,9 @@ namespace IronPython.Runtime.Operations {
             if (cls == TypeCache.Double) {
                 if (x is string) {
                     return ParseFloat((string)x);
-                }
-                if (x is char) {
+                } else if (x is Extensible<string>) {
+                    return ParseFloat(((Extensible<string>)x).Value);
+                } else if (x is char) {
                     return ParseFloat(RuntimeHelpers.CharToString((char)x));
                 }
 

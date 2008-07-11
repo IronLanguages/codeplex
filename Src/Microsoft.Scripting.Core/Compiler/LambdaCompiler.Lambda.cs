@@ -68,7 +68,12 @@ namespace System.Linq.Expressions {
             } else {
                 _ilg.EmitNull();
             }
-            _scope.EmitNearestHoistedLocals(_ilg);
+            HoistedLocals locals = _scope.NearestHoistedLocals();
+            if (locals != null) {
+                _scope.EmitGet(locals.SelfVariable);
+            } else {
+                _ilg.EmitNull();
+            }
             _ilg.EmitNew(typeof(Closure).GetConstructor(new Type[] { typeof(object[]), typeof(object[]) }));
         }
 
@@ -105,14 +110,32 @@ namespace System.Linq.Expressions {
         /// <param name="lambda">Lambda for which to generate a delegate</param>
         /// <param name="delegateType">Type of the delegate.</param>
         private void EmitDelegateConstruction(LambdaExpression lambda, Type delegateType) {
-            CompilerScope si = _compiler.GetCompilerScope(lambda);
-            Debug.Assert(si != null);
+            // 1. create the scope
+            CompilerScope scope = VariableBinder.Bind(_scope, lambda);
 
-            //
-            // Emit the lambda itself
-            //
-            LambdaCompiler lc = Compiler.ProvideLambdaImplementation(this, lambda, si.IsClosure);
-            EmitDelegateConstruction(lc, delegateType, si.IsClosure);
+            // 2. create the signature
+            List<Type> paramTypes;
+            List<string> paramNames;
+            string implName;
+            Type returnType;
+            ComputeSignature(scope.Lambda, out paramTypes, out paramNames, out implName, out returnType);
+
+            // 3. create the new compiler
+            LambdaCompiler impl = CreateLambdaCompiler(
+                scope,
+                implName,
+                returnType,
+                paramTypes,
+                paramNames.ToArray(),
+                scope.IsClosure
+            );
+
+            // 4. emit the lambda
+            impl.EmitBody();
+            impl.Finish();
+
+            // 5. emit the delegate creation in the outer lambda
+            EmitDelegateConstruction(impl, delegateType, scope.IsClosure);
         }
 
         /// <summary>
@@ -165,29 +188,6 @@ namespace System.Linq.Expressions {
             return prefix + "$" + Interlocked.Increment(ref _Counter);
         }
 
-        /// <summary>
-        /// Defines the method with the correct signature and sets up the context slot appropriately.
-        /// </summary>
-        internal static LambdaCompiler CreateLambdaCompiler(LambdaCompiler outer, LambdaExpression lambda, bool closure) {
-            List<Type> paramTypes;
-            List<string> paramNames;
-            string implName;
-            Type returnType;
-
-            // Create the signature
-            ComputeSignature(lambda, out paramTypes, out paramNames, out implName, out returnType);
-
-            // Create the new method & setup its locals
-            return outer.CreateLambdaCompiler(
-                lambda,
-                implName,
-                returnType,
-                paramTypes,
-                paramNames.ToArray(),
-                closure
-            );
-        }
-
         // Used by Compiler
         internal void EmitBody() {
             if (_generatorInfo != null) {
@@ -198,26 +198,23 @@ namespace System.Linq.Expressions {
         }
 
         private void EmitLambdaBody() {
-            Debug.Assert(_scope.Expression is LambdaExpression);
-            LambdaExpression lambda = (LambdaExpression)_scope.Expression;
+            _scope.EnterLambda(this);
 
-            _scope.Enter(this);
-
-            EmitLambdaStart(lambda);
+            EmitLambdaStart(_lambda);
 
             Type returnType = CompilerHelpers.GetReturnType(_method);
             if (returnType == typeof(void)) {
-                EmitExpressionAsVoid(lambda.Body);
-                EmitLambdaEnd(lambda);
+                EmitExpressionAsVoid(_lambda.Body);
+                EmitLambdaEnd(_lambda);
             } else {
-                if (lambda.Body.Type != typeof(void)) {
-                    Expression body = lambda.Body;
+                if (_lambda.Body.Type != typeof(void)) {
+                    Expression body = _lambda.Body;
                     Debug.Assert(TypeUtils.AreReferenceAssignable(returnType, body.Type));
                     EmitExpression(body);
-                    EmitLambdaEnd(lambda);
+                    EmitLambdaEnd(_lambda);
                 } else {
-                    EmitExpressionAsVoid(lambda.Body);
-                    EmitLambdaEnd(lambda);
+                    EmitExpressionAsVoid(_lambda.Body);
+                    EmitLambdaEnd(_lambda);
 
                     if (TypeUtils.CanAssign(typeof(object), returnType)) {
                         _ilg.EmitNull();
@@ -228,8 +225,6 @@ namespace System.Linq.Expressions {
             }
             //must be the last instruction in the body
             EmitReturn();
-
-            _scope.Exit();
         }
 
         #region DebugMarkers
@@ -307,11 +302,11 @@ namespace System.Linq.Expressions {
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
         /// <returns></returns>
-        private LambdaCompiler CreateGeneratorLambdaCompiler(LambdaExpression block) {
+        private LambdaCompiler CreateGeneratorLambdaCompiler() {
             // Create the GenerateNext function
             LambdaCompiler ncg = CreateLambdaCompiler(
-                block,
-                GetGeneratorMethodName(block.Name),     // Method Name
+                _scope,
+                GetGeneratorMethodName(_scope.Lambda.Name),     // Method Name
                 typeof(bool),                           // Return Type
                 new Type[] {                            // signature
                     typeof(Generator),
@@ -332,33 +327,25 @@ namespace System.Linq.Expressions {
         /// Compiler for the inner method which implements the user code defined in the generator.
         /// </summary>
         private void EmitGeneratorLambdaBody() {
-            Debug.Assert(_scope.GeneratorOuterScope != null);
-
-            LambdaExpression block = (LambdaExpression)_scope.Expression;
-
             // 1. Create a nested code gen and emit the generator body
-            LambdaCompiler ncg = CreateGeneratorLambdaCompiler(block);
-            _scope.Enter(ncg);
-            ncg.EmitGenerator(block);
-            _scope.Exit();
+            LambdaCompiler ncg = CreateGeneratorLambdaCompiler();
+            ncg.EmitGenerator();
 
             // 2. Emit the generator construction
-            _scope = _scope.GeneratorOuterScope;
-            _scope.Enter(this);
-
+            _scope.EnterGeneratorOuter(this);
             bool needsClosure = _scope.IsClosure || _scope.HasHoistedLocals;
             EmitDelegateConstruction(ncg, typeof(GeneratorNext), needsClosure);
             _ilg.EmitNew(typeof(Generator), new Type[] { typeof(GeneratorNext) });
             EmitReturn();
-
-            _scope.Exit();
         }
 
         private static string GetGeneratorMethodName(string name) {
             return name + "$g" + _GeneratorCounter++;
         }
 
-        private void EmitGenerator(LambdaExpression block) {
+        private void EmitGenerator() {
+            _scope.EnterGeneratorInner(this);
+
             IList<YieldTarget> topTargets = _generatorInfo.TopTargets;
             Debug.Assert(topTargets != null);
 
@@ -377,7 +364,7 @@ namespace System.Linq.Expressions {
             // fall-through on first pass
             // yield statements will insert the needed labels after their returns
 
-            EmitExpression(block.Body);
+            EmitExpression(_lambda.Body);
 
             // fall-through is almost always possible in generators, so this
             // is almost always needed

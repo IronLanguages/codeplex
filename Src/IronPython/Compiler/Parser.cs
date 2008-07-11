@@ -1974,38 +1974,45 @@ namespace IronPython.Compiler {
 
         // trailer: '(' [ arglist_genexpr ] ')' | '[' subscriptlist ']' | '.' NAME
         private Expression AddTrailers(Expression ret, bool allowGeneratorExpression) {
-            while (true) {
-                switch (PeekToken().Kind) {
-                    case TokenKind.LeftParenthesis:
-                        if (!allowGeneratorExpression) return ret;
+            bool prevAllow = _allowIncomplete;
+            try {
+                _allowIncomplete = true;
 
-                        NextToken();
-                        Arg[] args = FinishArgListOrGenExpr();
-                        CallExpression call = FinishCallExpr(ret, args);
-                        call.SetLoc(ret.Start, GetEnd());
-                        ret = call;
-                        break;
-                    case TokenKind.LeftBracket:
-                        NextToken();
-                        Expression index = ParseSubscriptList();
-                        IndexExpression ie = new IndexExpression(ret, index);
-                        ie.SetLoc(ret.Start, GetEnd());
-                        ret = ie;
-                        break;
-                    case TokenKind.Dot:
-                        NextToken();
-                        SymbolId name = ReadNameMaybeNone();
-                        MemberExpression fe = new MemberExpression(ret, name);
-                        fe.SetLoc(ret.Start, GetEnd());
-                        ret = fe;
-                        break;
-                    case TokenKind.Constant:
-                        // abc.1, abc"", abc 1L, abc 0j
-                        ReportSyntaxError("invalid syntax");
-                        return new ErrorExpression();
-                    default:
-                        return ret;
+                while (true) {
+                    switch (PeekToken().Kind) {
+                        case TokenKind.LeftParenthesis:
+                            if (!allowGeneratorExpression) return ret;
+
+                            NextToken();
+                            Arg[] args = FinishArgListOrGenExpr();
+                            CallExpression call = FinishCallExpr(ret, args);
+                            call.SetLoc(ret.Start, GetEnd());
+                            ret = call;
+                            break;
+                        case TokenKind.LeftBracket:
+                            NextToken();
+                            Expression index = ParseSubscriptList();
+                            IndexExpression ie = new IndexExpression(ret, index);
+                            ie.SetLoc(ret.Start, GetEnd());
+                            ret = ie;
+                            break;
+                        case TokenKind.Dot:
+                            NextToken();
+                            SymbolId name = ReadNameMaybeNone();
+                            MemberExpression fe = new MemberExpression(ret, name);
+                            fe.SetLoc(ret.Start, GetEnd());
+                            ret = fe;
+                            break;
+                        case TokenKind.Constant:
+                            // abc.1, abc"", abc 1L, abc 0j
+                            ReportSyntaxError("invalid syntax");
+                            return new ErrorExpression();
+                        default:
+                            return ret;
+                    }
                 }
+            } finally {
+                _allowIncomplete = prevAllow;
             }
         }
 

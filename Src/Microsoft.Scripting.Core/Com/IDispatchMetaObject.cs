@@ -15,21 +15,37 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Scripting.Actions;
 
 namespace System.Scripting.Com {
 
     internal sealed class IDispatchMetaObject : MetaObject {
         private readonly ComTypeDesc _wrapperType;
 
-        internal IDispatchMetaObject(Expression expression, ComTypeDesc wrapperType)
-            : base(expression, Restrictions.Empty) {
+        internal IDispatchMetaObject(Expression expression, ComTypeDesc wrapperType, IDispatchComObject self)
+            : base(expression, Restrictions.Empty, self) {
             _wrapperType = wrapperType;
         }
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
-            return base.Call(action, args);
+            ComMethodDesc methodDesc;
+
+            if (_wrapperType.Funcs.TryGetValue(action.Name, out methodDesc)) {
+                return new InvokeBinder(
+                    action.Arguments,
+                    args,
+                    IDispatchRestriction(),
+                    Expression.Constant(methodDesc),
+                    Expression.Property(
+                        Expression.Convert(Expression, typeof(IDispatchComObject)),
+                        typeof(IDispatchComObject).GetProperty("DispatchObject")
+                    ),
+                    methodDesc
+                ).Invoke();
+            }
+
+            return action.Fallback(args);
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
@@ -57,7 +73,7 @@ namespace System.Scripting.Com {
                     Expression.Call(
                         Expression.Convert(Expression, typeof(IDispatchComObject)),
                         typeof(IDispatchComObject).GetMethod("TryGetAttr"),
-                        Expression.Constant(SymbolTable.StringToId(action.Name)),
+                        Expression.Constant(action.Name),
                         dispCallable
                     ),
                     dispCallable,                       // true
@@ -89,7 +105,7 @@ namespace System.Scripting.Com {
                 case "GetMemberNames":
                     return GetMemberNames(args);
                 default:
-                    throw new NotSupportedException(action.Operation);
+                    return base.Operation(action, args);
             }
         }
 
@@ -170,7 +186,7 @@ namespace System.Scripting.Com {
                         Expression.Call(
                             Expression.Convert(Expression, typeof(IDispatchComObject)),
                             typeof(IDispatchComObject).GetMethod("TrySetAttr"),
-                            Expression.Constant(SymbolTable.StringToId(action.Name)),
+                            Expression.Constant(action.Name),
                             args[1].Expression,
                             exception
                         ),

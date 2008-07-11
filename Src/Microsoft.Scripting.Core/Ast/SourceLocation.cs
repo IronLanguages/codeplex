@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+using System.Linq.Expressions;
 
 namespace System.Scripting {
     /// <summary>
@@ -42,13 +43,13 @@ namespace System.Scripting {
 
         private static void ValidateLocation(int index, int line, int column) {
             if (index < 0) {
-                throw new ArgumentOutOfRangeException("index", "must be greater than or equal to 0");
+                throw Error.OutOfRange("index", "0");
             }
             if (line < 1) {
-                throw new ArgumentOutOfRangeException("line", "must be greater than or equal to 1");
+                throw Error.OutOfRange("line", "1");
             }
             if (column < 1) {
-                throw new ArgumentOutOfRangeException("column", "must be greater than or equal to 1");
+                throw Error.OutOfRange("column", "1");
             }
         }
 

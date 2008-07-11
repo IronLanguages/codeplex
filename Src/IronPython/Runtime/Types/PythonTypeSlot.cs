@@ -62,6 +62,17 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        /// <summary>
+        /// True if TryGetValue will always succeed, false if it may fail.
+        /// 
+        /// This is used to optimize away error generation code.
+        /// </summary>
+        internal virtual bool GetAlwaysSucceeds {
+            get {
+                return false;
+            }
+        }
+        
         internal virtual bool IsSetDescriptor(CodeContext context, PythonType owner) {
             return false;
         }

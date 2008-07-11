@@ -874,5 +874,20 @@ def test_enverror_init():
         AreEqual(x.strerror, None)
         AreEqual(x.args, ('a', 'b', 'c', 'd'))
 
+def test_raise_None():
+    lineno1, lineno2 = 0, 0
+    try:
+        raise None
+    except:
+        lineno1 = sys.exc_info()[2].tb_lineno
+    
+    try:
+        # dummy line
+        raise None
+    except:
+        lineno2 = sys.exc_info()[2].tb_lineno
+    
+    Assert(lineno1 != lineno2, "FAILED! Should not have reused exception")
+
 
 run_test(__name__)

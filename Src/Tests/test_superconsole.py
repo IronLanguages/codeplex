@@ -163,7 +163,6 @@ def test_string_exception():
         Assert(errlines[i].startswith(expected[i]), str(errlines) + " != " + str(expected))
     
 
-@disabled("CodePlex Work Item 10928")
 def test_unique_prefix_completion():
     '''
     Ensure that an attribute with a prefix unique to the dictionary is
@@ -184,7 +183,6 @@ def test_unique_prefix_completion():
     AreEqual(removePrompts(getTestOutput()[1]),
              [])
 
-@disabled("CodePlex Work Item 10928")
 def test_nonunique_prefix_completion():
     '''
     Ensure that tabbing on a non-unique prefix cycles through the available
@@ -203,6 +201,21 @@ def test_nonunique_prefix_completion():
     verifyResults(getTestOutput()[0], testRegex)
     AreEqual(removePrompts(getTestOutput()[1]),
              [])
+
+def test_builtin_completion():
+    """
+    verifies we can complete to builtins.  This tests min() is available
+    """
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    testRegex = ""
+
+    superConsole.SendKeys('print mi{TAB}{(}1,2,3{)}{ENTER}')
+    testRegex += '1'
+
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
 
 def test_member_completion():
     '''
@@ -232,7 +245,7 @@ def test_member_completion():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
-    
+
 def test_autoindent():
     '''
     Auto-indent
@@ -351,8 +364,8 @@ def test_tab_insertion():
     superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
     testRegex = ""
     
-    superConsole.SendKeys('print "x{TAB}{TAB}y"{ENTER}')
-    testRegex += 'x    y'
+    superConsole.SendKeys('print "j{TAB}{TAB}y"{ENTER}')
+    testRegex += 'j    y'
 
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')

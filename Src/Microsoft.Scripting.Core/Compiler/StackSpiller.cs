@@ -159,7 +159,7 @@ namespace System.Linq.Expressions {
 
         // ActionExpression
         private static Result RewriteActionExpression(StackSpiller self, Expression expr, Stack stack) {
-            throw new InvalidOperationException("dynamic nodes have been reduced");
+            throw Error.DynamicNotReduced();
         }
 
         // array index assignment
@@ -278,7 +278,7 @@ namespace System.Linq.Expressions {
                 case ExpressionType.Variable:
                     return RewriteVariableAssignment(self, node, stack);
                 default:
-                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
+                    throw Error.InvalidLvalue(node.Expression.NodeType);
             }
         }
 
@@ -860,10 +860,10 @@ namespace System.Linq.Expressions {
                 }
             }
 
-            Result fault = RewriteExpression(self, node.FaultStatement, Stack.Empty);
+            Result fault = RewriteExpression(self, node.Fault, Stack.Empty);
             action |= fault.Action;
 
-            Result @finally = RewriteExpression(self, node.FinallyStatement, Stack.Empty);
+            Result @finally = RewriteExpression(self, node.Finally, Stack.Empty);
             action |= @finally.Action;
 
             // If the stack is initially not empty, rewrite to spill the stack
@@ -916,7 +916,7 @@ namespace System.Linq.Expressions {
 
         private static Result RewriteExtensionExpression(StackSpiller self, Expression expr, Stack stack) {
             // can't get here because DynamicNodeRewriter runs first and will take care of this
-            throw new InvalidOperationException("Found unreduced Extension node" + expr.GetType().Name);
+            throw Error.ExtensionNotReduced();
         }
 
         #endregion
