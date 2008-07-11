@@ -13,16 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using System.Scripting.Runtime;
 
     public enum ParameterKind {
         Normal,

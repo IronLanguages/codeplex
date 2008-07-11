@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class WhileStatement : Statement {
         private SourceLocation _header;
@@ -63,13 +63,13 @@ namespace IronPython.Compiler.Ast {
             } finally {
                 ag.ExitLoop();
             }
-            return Ast.While(
-                Span,
-                _header,
-                label,
-                ag.TransformAndDynamicConvert(_test, typeof(bool)),
-                body,
-                ag.Transform(_else)
+            return AstUtils.While(
+                ag.TransformAndDynamicConvert(_test, typeof(bool)), 
+                body, 
+                ag.Transform(_else), 
+                label, 
+                _header, 
+                Span
             );
         }
 
@@ -86,6 +86,12 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return _test.CanThrow;
+            }
         }
     }
 }

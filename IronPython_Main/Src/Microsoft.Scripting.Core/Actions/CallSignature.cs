@@ -13,16 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
+using System.Text;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// Richly represents the signature of a callsite.
     /// </summary>
@@ -243,7 +242,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
-        /// True if the CallAction includes an ArgumentInfo of ArgumentKind.Dictionary or ArgumentKind.Named.
+        /// True if the OldCallAction includes an ArgumentInfo of ArgumentKind.Dictionary or ArgumentKind.Named.
         /// </summary>
         public bool HasKeywordArgument() {
             if (_infos != null) {
@@ -299,6 +298,24 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return result.ToArray();
+        }
+
+        public Expression CreateExpression() {            
+            if (_infos == null) {
+                return Expression.New(
+                    typeof(CallSignature).GetConstructor(new Type[] { typeof(int) }),
+                    Expression.Constant(ArgumentCount)
+                );
+            } else {
+                Expression[] args = new Expression[_infos.Length];
+                for (int i = 0; i < args.Length; i++) {
+                    args[i] = _infos[i].CreateExpression();
+                }
+                return Expression.New(
+                    typeof(CallSignature).GetConstructor(new Type[] { typeof(ArgumentInfo[]) }), 
+                    Expression.NewArrayInit(typeof(ArgumentInfo), args)
+                );
+            }
         }
 
         #endregion

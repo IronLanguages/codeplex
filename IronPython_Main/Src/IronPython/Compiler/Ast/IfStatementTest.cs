@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-
     public class IfStatementTest : Node {
         private SourceLocation _header;
         private readonly Expression _test;

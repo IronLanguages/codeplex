@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     /// <summary>
     /// Breaks to the end of the the target LabeledStatement
     /// </summary>
@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly LabelTarget/*!*/ _target;
 
         internal BreakStatement(Annotations annotations, LabelTarget target)
-            : base(annotations, AstNodeType.BreakStatement, typeof(void)) {
+            : base(annotations, ExpressionType.BreakStatement, typeof(void)) {
             _target = target;
         }
 
@@ -34,12 +34,9 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Expression {
         public static BreakStatement Break(LabelTarget target) {
-            return Break(SourceSpan.None, target);
+            return Break(target, Annotations.Empty);
         }
-        public static BreakStatement Break(SourceSpan span, LabelTarget target) {
-            return new BreakStatement(Annotate(span), target);
-        }
-        public static BreakStatement Break(Annotations annotations, LabelTarget target) {
+        public static BreakStatement Break(LabelTarget target, Annotations annotations) {
             ContractUtils.RequiresNotNull(target, "target");
             return new BreakStatement(annotations, target);
         }

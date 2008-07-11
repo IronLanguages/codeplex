@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -318,19 +318,19 @@ def test_seven_args():
 def default_test_maker(size):
     global f
     
-    if size == 1: 
+    if size == 1:
         def f(a=1): pass
-    elif size == 2: 
+    elif size == 2:
         def f(a=1,b=2): pass
-    elif size == 3: 
+    elif size == 3:
         def f(a=1,b=2,c=3): pass
-    elif size == 4: 
+    elif size == 4:
         def f(a=1,b=2,c=3,d=4): pass
-    elif size == 5: 
+    elif size == 5:
         def f(a=1,b=2,c=3,d=4,e=5): pass
-    elif size == 6: 
+    elif size == 6:
         def f(a=1,b=2,c=3,d=4,e=5,f=6): pass
-    elif size == 7: 
+    elif size == 7:
         def f(a=1,b=2,c=3,d=4,e=5,f=6,g=7): pass
         
     for x in xrange(loops):
@@ -365,19 +365,19 @@ def default_test_maker(size):
 def kwdict_test_maker(size):
     global f
     
-    if size == 1:   
+    if size == 1:
         def f(**a): pass
-    elif size == 2: 
+    elif size == 2:
         def f(a=1,**b): pass
-    elif size == 3: 
+    elif size == 3:
         def f(a=1,b=2,**c): pass
-    elif size == 4: 
+    elif size == 4:
         def f(a=1,b=2,c=3,**d): pass
-    elif size == 5: 
+    elif size == 5:
         def f(a=1,b=2,c=3,d=4,**e): pass
-    elif size == 6: 
+    elif size == 6:
         def f(a=1,b=2,c=3,d=4,e=5,**f): pass
-    elif size == 7: 
+    elif size == 7:
         def f(a=1,b=2,c=3,d=4,e=5,f=6,**g): pass
 
     dt = {}
@@ -413,19 +413,19 @@ def kwdict_test_maker(size):
 def splat_test_maker(size):
     global f
     
-    if size == 1:   
+    if size == 1:
         def f(*a): pass
-    elif size == 2: 
+    elif size == 2:
         def f(a,*b): pass
-    elif size == 3: 
+    elif size == 3:
         def f(a,b,*c): pass
-    elif size == 4: 
+    elif size == 4:
         def f(a,b,c,*d): pass
-    elif size == 5: 
+    elif size == 5:
         def f(a,b,c,d,*e): pass
-    elif size == 6: 
+    elif size == 6:
         def f(a,b,c,d,e,*f): pass
-    elif size == 7: 
+    elif size == 7:
         def f(a,b,c,d,e,f,*g): pass
     
     l = (1,2,3,4,5,6,7)
@@ -461,19 +461,19 @@ def splat_test_maker(size):
 def dict_splat_test_maker(size):
     global f
     
-    if size == 1:   
+    if size == 1:
         def f(**a): pass
-    elif size == 2: 
+    elif size == 2:
         def f(a=1,**b): pass
-    elif size == 3: 
+    elif size == 3:
         def f(a=1,b=2,**c): pass
-    elif size == 4: 
+    elif size == 4:
         def f(a=1,b=2,c=3,**d): pass
-    elif size == 5: 
+    elif size == 5:
         def f(a=1,b=2,c=3,d=4,**e): pass
-    elif size == 6: 
+    elif size == 6:
         def f(a=1,b=2,c=3,d=4,e=5,**f): pass
-    elif size == 7: 
+    elif size == 7:
         def f(a=1,b=2,c=3,d=4,e=5,f=6,**g): pass
     
     l = {'a':1,'b':2,'c':3,'d':4, 'e':5, 'f':6, 'g':7 }

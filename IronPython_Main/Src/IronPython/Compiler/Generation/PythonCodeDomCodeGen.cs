@@ -12,15 +12,10 @@
  *
  *
  * ***************************************************************************/
-using System;
+
 using System.CodeDom;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
-
-using Ast = IronPython.Compiler.Ast;
 
 #if !SILVERLIGHT // CodeDom objects are not available
 

@@ -13,14 +13,43 @@
  *
  * ***************************************************************************/
 
+using System.Scripting;
+using System.Linq.Expressions;
+
 namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
     public static partial class Utils {
-        public static LoopStatement Loop(SourceSpan span, SourceLocation header, Expression test, Expression increment, Expression body, Expression @else) {
-            return Expression.Loop(Expression.Annotate(span, header), null, test, increment, body, @else);
+        public static LoopStatement While(Expression test, Expression body, Expression @else) {
+            return Expression.Loop(test, null, body, @else, null);
+        }
+
+        public static LoopStatement While(Expression test, Expression body, Expression @else, LabelTarget label) {
+            return Expression.Loop(test, null, body, @else, label);
+        }
+
+        public static LoopStatement While(Expression test, Expression body, Expression @else, LabelTarget label, SourceLocation header, SourceSpan span) {
+            return Expression.Loop(test, null, body, @else, label, Expression.Annotate(header, span));
+        }
+
+
+        public static LoopStatement Infinite(Expression body) {
+            return Expression.Loop(null, null, body, null, null);
+        }
+
+        public static LoopStatement Infinite(Expression body, LabelTarget label) {
+            return Expression.Loop(null, null, body, null, label);
+        }
+
+
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else) {
+            return Expression.Loop(test, increment, body, @else, null);
+        }
+
+
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label, SourceLocation header, SourceSpan span) {
+            return Expression.Loop(test, increment, body, @else, label, Expression.Annotate(span, header));
         }
     }
-
 }

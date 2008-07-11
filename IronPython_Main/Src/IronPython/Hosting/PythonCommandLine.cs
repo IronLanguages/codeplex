@@ -14,25 +14,20 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Hosting.Shell;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Threading;
+using IronPython.Compiler;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using IronPython.Compiler;
-using System.Diagnostics;
-using System.Threading;
+using Microsoft.Scripting.Hosting.Shell;
 
 namespace IronPython.Hosting {
-   
+
     /// <summary>
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
@@ -48,20 +43,28 @@ namespace IronPython.Hosting {
 
         protected override string/*!*/ Logo {
             get {
-                return VersionString + 
-                    Environment.NewLine + 
-                    "Copyright (c) Microsoft Corporation. All rights reserved." + 
-                    Environment.NewLine;
+                return GetLogoDisplay();
             }
+        }
+
+        public static string GetLogoDisplay() {
+            return GetVersionString() +
+                            Environment.NewLine +
+                            "Copyright (c) Microsoft Corporation. All rights reserved." +
+                            Environment.NewLine;
         }
 
         private string/*!*/ VersionString {
             get {
-                return String.Format("{0} ({1}) on .NET {2}",
-                    Language.DisplayName,
-                    Language.LanguageVersion.ToString(),
-                    Environment.Version);                    
+                return GetVersionString();                    
             }
+        }
+
+        private static string GetVersionString() {
+            return String.Format("{0} ({1}) on .NET {2}",
+                                PythonContext.GetPythonDisplayName(),
+                                PythonContext.GetPythonVersion().ToString(),
+                                Environment.Version);
         }
 
         private int GetEffectiveExitCode(SystemExitException/*!*/ e) {
@@ -161,11 +164,12 @@ namespace IronPython.Hosting {
 
         protected override Scope/*!*/ CreateScope() {
             ModuleOptions trueDiv = (PythonContext.PythonOptions.DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
-            PythonModule module = PythonContext.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule | ModuleOptions.ModuleBuiltins);
+            PythonModule module = PythonContext.CreateModule(trueDiv | ModuleOptions.ModuleBuiltins);
+            PythonContext.PublishModule("__main__", module);
             module.Scope.SetName(Symbols.Doc, null);
+            module.Scope.SetName(Symbols.Name, "__main__");
             return module.Scope;
         }
-
         
         private void InitializePath() {
             PythonContext.AddToPath(PythonContext.DomainManager.Platform.CurrentDirectory);
@@ -317,8 +321,10 @@ namespace IronPython.Hosting {
             bool continueInteraction;
             string s = ReadStatement(out continueInteraction);
 
-            if (continueInteraction == false)
+            if (continueInteraction == false) {
+                PythonContext.DispatchCommand(null); // Notify dispatcher that we're done
                 return 0;
+            }
 
             if (String.IsNullOrEmpty(s)) {
                 // Is it an empty line?
@@ -331,20 +337,23 @@ namespace IronPython.Hosting {
             PythonCompilerOptions pco = (PythonCompilerOptions)Language.GetCompilerOptions(Scope);
             pco.Module |= ModuleOptions.ExecOrEvalCode;
 
-            su.Compile(pco, ErrorSink).Run(Scope);
+            Delegate action = (Action)(delegate() {
+                try {
+                    su.Compile(pco, ErrorSink).Run(Scope);
+                } catch (Exception e) {
+                    // Need to handle exceptions in the delegate so that they're not wrapped
+                    // in a TargetInvocationException
+                    Console.WriteLine(Language.FormatException(e), Style.Error);
+                }
+            });
+
+            PythonContext.DispatchCommand(action);
+
             return null;
         }
 
         protected override ErrorSink/*!*/ ErrorSink {
             get { return ThrowingErrorSink.Default; }
-        }
-
-        protected override string ReadLine(int autoIndentSize) {
-            string res = base.ReadLine(autoIndentSize);
-
-            Language.DomainManager.DispatchCommand(null);
-
-            return res;
         }
 
         protected override int GetNextAutoIndentSize(string text) {
@@ -401,7 +410,13 @@ namespace IronPython.Hosting {
         
         private int RunFileWorker(string/*!*/ fileName) {
             ScriptCode compiledCode;
-            PythonModule module = PythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized | ModuleOptions.ModuleBuiltins, Options.SkipFirstSourceLine, out compiledCode);
+            ModuleOptions modOpt = ModuleOptions.Optimized | ModuleOptions.ModuleBuiltins;
+            if(Options.SkipFirstSourceLine) {
+                modOpt |= ModuleOptions.SkipFirstLine;
+
+            }
+            PythonModule module = PythonContext.CompileModule(fileName, "__main__", modOpt, out compiledCode);
+            PythonContext.PublishModule("__main__", module);
             Scope = module.Scope;
 
             try {

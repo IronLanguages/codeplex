@@ -13,27 +13,68 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     public sealed class ParameterExpression : Expression {
         private readonly string _name;
+        private readonly bool _isByRef;
 
-        internal ParameterExpression(Type type, string name)
-            : base(AstNodeType.Parameter, type) {
+        internal ParameterExpression(Annotations annotations, Type type, string name, bool isByRef)
+            : base(annotations, ExpressionType.Parameter, type) {
             _name = name;
+            _isByRef = isByRef;
         }
 
         public string Name {
             get { return _name; }
         }
+
+        public bool IsByRef {
+            get {
+                return _isByRef;
+            }
+        }
+
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+            builder.Append(_name ?? "<param>");
+        }
     }
 
     public partial class Expression {
         public static ParameterExpression Parameter(Type type, string name) {
-            ContractUtils.Requires(type != typeof(void));
-            return new ParameterExpression(type, name);
+            return Parameter(type, name, Annotations.Empty);
+        }
+
+        //CONFORMING
+        public static ParameterExpression Parameter(Type type, string name, Annotations annotations) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(!type.IsByRef, "type");
+
+            if (type == typeof(void)) {
+                throw Error.ArgumentCannotBeOfTypeVoid();
+            }
+
+            return new ParameterExpression(annotations, type, name, false);
+        }
+
+        public static ParameterExpression ByRefParameter(Type type, string name) {
+            return ByRefParameter(type, name, Annotations.Empty);
+        }
+
+        public static ParameterExpression ByRefParameter(Type type, string name, Annotations annotations) {
+            ContractUtils.RequiresNotNull(type, "type");
+
+            if (type == typeof(void)) {
+                throw Error.ArgumentCannotBeOfTypeVoid();
+            }
+
+            type = TypeUtils.NoRef(type);
+
+            return new ParameterExpression(annotations, type, name, true);
         }
     }
 }

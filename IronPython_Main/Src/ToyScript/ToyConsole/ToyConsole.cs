@@ -14,13 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Hosting.Shell;
+using Microsoft.Scripting.Hosting.Shell; 
 
 namespace ToyScript {
     class ToyConsole : ConsoleHost {

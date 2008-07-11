@@ -14,18 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
 
-[assembly: PythonExtensionType(typeof(char), typeof(CharOps))]
 namespace IronPython.Runtime.Operations {
     /// <summary>
     /// We override the behavior of equals, compare and hashcode to make
@@ -58,15 +50,23 @@ namespace IronPython.Runtime.Operations {
                 return diff > 0 ? 1 : diff < 0 ? -1 : 0;
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
-        [ImplicitConversionMethod]
+        public static bool __contains__(char self, char other) {
+            return self == other;
+        }
+
+        public static bool __contains__(char self, string other) {
+            return other.Length == 1 && other[0] == self;
+        }
+
+        [SpecialName, ImplicitConversionMethod]
         public static string ConvertToString(char self) {
             return new string(self, 1);
         }
 
-        [ExplicitConversionMethod]
+        [SpecialName, ExplicitConversionMethod]
         public static char ConvertToChar(int value) {
             if (value < 0 || value > Char.MaxValue) throw new OverflowException();
 

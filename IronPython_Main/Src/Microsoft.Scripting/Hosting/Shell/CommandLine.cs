@@ -14,16 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+using System.IO;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-using System.Collections.Generic;
-using Microsoft.Scripting.Actions;
-using System.IO;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -141,14 +138,12 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             if (Options.HandleExceptions) {
                 try {
-                    source.ExecuteProgram();
-                    result = 0;
+                    result = source.ExecuteProgram();
                 } catch (Exception e) {
                     Console.Write(_language.FormatException(e), Style.Error);
                 }
             } else {
-                source.ExecuteProgram();
-                result = 0;
+                result = source.ExecuteProgram();
             }
 
             return result;
@@ -336,7 +331,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         //private static DynamicSite<object, IList<string>>/*!*/ _memberCompletionSite =
-        //    new DynamicSite<object, IList<string>>(DoOperationAction.Make(Operators.GetMemberNames));
+        //    new DynamicSite<object, IList<string>>(OldDoOperationAction.Make(Operators.GetMemberNames));
 
         public IList<string>/*!*/ GetMemberNames(string/*!*/ code) {
             object value = _language.CreateSnippet(code, SourceCodeKind.Expression).Execute(_scope);

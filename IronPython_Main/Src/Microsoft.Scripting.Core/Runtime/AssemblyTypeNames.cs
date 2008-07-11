@@ -13,19 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Reflection;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Actions;
+namespace System.Scripting.Runtime {
 
-namespace Microsoft.Scripting.Runtime {
-
-    internal struct TypeName {
-        string _namespace;
-        string _typeName;
+    public struct TypeName {
+        private readonly string _namespace;
+        private readonly string _typeName;
 
         internal TypeName(Type type) {
             Debug.Assert(!ReflectionUtils.IsNested(type));
@@ -40,10 +37,34 @@ namespace Microsoft.Scripting.Runtime {
 
         internal string Namespace { get { return _namespace; } }
         internal string Name { get { return _typeName; } }
+
+        public override int GetHashCode() {
+            int hash = 13 << 20;
+            if (_namespace != null) hash ^= _namespace.GetHashCode();
+            if (_typeName != null) hash ^= _typeName.GetHashCode();
+            return hash;
+        }
+
+        public override bool Equals(object obj) {
+            if (!(obj is TypeName)) {
+                return false;
+            }
+            TypeName tn = (TypeName)obj;
+            return tn._namespace == _namespace && tn._typeName == _typeName;
+        }
+
+        public static bool operator ==(TypeName a, TypeName b) {
+            return a._namespace == b._namespace && a._typeName == b._typeName;
+        }
+
+        public static bool operator !=(TypeName a, TypeName b) {
+            return !(a == b);
+        }
     }
 
-    internal class AssemblyTypeNames {
-        internal static IEnumerable<TypeName> GetTypeNames(Assembly assem, bool includePrivateTypes) {
+    // TODO: Only used by ComObjectWityTypeInfo. Remove when gone!
+    public static class AssemblyTypeNames {
+        public static IEnumerable<TypeName> GetTypeNames(Assembly assem, bool includePrivateTypes) {
 #if !SILVERLIGHT
             AssemblyName assemblyName = new AssemblyName(assem.FullName);
             switch (assemblyName.Name) {
@@ -85,7 +106,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        internal static Type[] LoadTypesFromAssembly(Assembly asm, bool includePrivateTypes) {
+        public static Type[] LoadTypesFromAssembly(Assembly asm, bool includePrivateTypes) {
             if (includePrivateTypes) {
                 return GetAllTypesFromAssembly(asm);
             }

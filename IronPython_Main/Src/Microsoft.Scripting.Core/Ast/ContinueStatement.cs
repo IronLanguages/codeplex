@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     /// <summary>
     /// Breaks to the beginning of the the target LabeledStatement
     /// </summary>
@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly LabelTarget/*!*/ _target;
 
         internal ContinueStatement(Annotations annotations, LabelTarget target)
-            : base(annotations, AstNodeType.ContinueStatement, typeof(void)) {
+            : base(annotations, ExpressionType.ContinueStatement, typeof(void)) {
             _target = target;
         }
 
@@ -34,12 +34,9 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Expression {
         public static ContinueStatement Continue(LabelTarget target) {
-            return Continue(SourceSpan.None, target);
+            return Continue(target, Annotations.Empty);
         }
-        public static ContinueStatement Continue(SourceSpan span, LabelTarget target) {
-            return new ContinueStatement(Annotate(span), target);
-        }
-        public static ContinueStatement Continue(Annotations annotations, LabelTarget target) {
+        public static ContinueStatement Continue(LabelTarget target, Annotations annotations) {
             ContractUtils.RequiresNotNull(target, "target");
             return new ContinueStatement(annotations, target);
         }

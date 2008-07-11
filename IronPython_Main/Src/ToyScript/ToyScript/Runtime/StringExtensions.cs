@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
+using System.Scripting.Runtime;
 using System.Text;
-using Microsoft.Scripting.Runtime;
 using ToyScript.Runtime;
 
 [assembly:ExtensionType(typeof(string), typeof(StringExtensions))]

@@ -13,18 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.IO;
-using System.Text;
-using System.Collections.Generic;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
-
-using IronPython.Compiler;
+using System.Scripting;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     internal class ThrowingErrorSink : ErrorSink {

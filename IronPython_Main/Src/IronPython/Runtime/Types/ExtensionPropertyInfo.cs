@@ -15,11 +15,7 @@
 
 using System;
 using System.Reflection;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
 
@@ -53,6 +49,11 @@ namespace IronPython.Runtime.Types {
 
         private int GetEffectiveParameterCount(MethodInfo mi) {
             int cnt = mi.IsStatic ? 0 : 1;
+            if (mi.IsDefined(typeof(StaticExtensionMethodAttribute), false)) {
+                // this is only used for checking the correct number of args,
+                // so just bump it up for the instance which isn't there.
+                cnt++;
+            }
             ParameterInfo[] pis = mi.GetParameters();
             cnt += pis.Length;
             if (pis.Length > 0 && pis[0].ParameterType == typeof(CodeContext)) {

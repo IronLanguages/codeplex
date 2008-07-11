@@ -13,19 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
 
-[assembly: PythonExtensionType(typeof(TypeTracker), typeof(TypeTrackerOps))]
 namespace IronPython.Runtime.Operations {
     public static class TypeTrackerOps {
         [SpecialName, PropertyMethod]

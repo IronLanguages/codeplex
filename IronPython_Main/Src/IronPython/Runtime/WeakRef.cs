@@ -15,19 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime.Operations;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-using Microsoft.Scripting.Runtime;
+using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     /// <summary>

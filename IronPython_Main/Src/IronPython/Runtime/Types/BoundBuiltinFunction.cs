@@ -14,24 +14,23 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     [PythonSystemType("builtin_function_or_method")]
-    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IDynamicObject, ICodeFormattable, IValueEquality {
+    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IValueEquality {
         private readonly BuiltinFunction/*!*/ _target;
         private readonly object _instance;
 
@@ -48,7 +47,6 @@ namespace IronPython.Runtime.Types {
 
         #region Object overrides
 
-        [PythonHidden]
         public override bool Equals(object obj) {
             BoundBuiltinFunction other = obj as BoundBuiltinFunction;
             if (other == null) return false;
@@ -56,7 +54,6 @@ namespace IronPython.Runtime.Types {
             return other._instance == _instance && other._target == _target;
         }
 
-        [PythonHidden]
         public override int GetHashCode() {
             return _instance.GetHashCode() ^ _target.GetHashCode();
         }
@@ -72,21 +69,17 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
-        LanguageContext IDynamicObject.LanguageContext {
-            get { return DefaultContext.Default.LanguageContext; }
-        }
-
-        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind) {
-                case DynamicActionKind.Call: return MakeCallRule<T>((CallAction)action, context, args);
-                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+                case DynamicActionKind.Call: return MakeCallRule<T>((OldCallAction)action, context, args);
+                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
             }
             return null;
         }
 
-        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch(doOperationAction.Operation) {
                 case Operators.CallSignatures:
                     return PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Target.Targets, DynamicHelpers.GetPythonType(args[0]));
@@ -96,8 +89,8 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
-            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(
+        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(
                 context, 
                 action, 
                 args, 
@@ -105,7 +98,7 @@ namespace IronPython.Runtime.Types {
                 Target.Level,
                 Target.IsReversedOperator);
             RuleBuilder<T> rule = helper.Rule;
-            Expression instance = Ast.ReadProperty(
+            Expression instance = Ast.Property(
                 Ast.Convert(
                     rule.Parameters[0],
                     typeof(BoundBuiltinFunction)
@@ -132,13 +125,20 @@ namespace IronPython.Runtime.Types {
                     if (selfType == typeof(object) && Target.DeclaringType.IsInterface) {
                         selfType = Target.DeclaringType;
                     }
+
+                    if (Target.DeclaringType.IsInterface && selfType.IsValueType) {
+                        // explitit interface implementation dispatch on a value type, don't
+                        // unbox the value type before the dispatch.
+                        instance = Ast.Convert(instance, Target.DeclaringType);
+                    } else {
 #if SILVERLIGHT
                     instance = Ast.Convert(instance, selfType);
 #else
-                    Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(Target.DeclaringType) : selfType;
+                        Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(Target.DeclaringType) : selfType;
 
-                    instance = Ast.Convert(instance, convType);
+                        instance = Ast.Convert(instance, convType);
 #endif
+                    }
                 }
             } else {
                 // we don't want to cast the enum to it's real type, it will unbox it 
@@ -167,14 +167,14 @@ namespace IronPython.Runtime.Types {
 
             if (newRule.IsError && Target.IsBinaryOperator && args.Length == 2) { // 1 bound function + 1 args
                 // BinaryOperators return NotImplemented on failure.
-                newRule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented"));
+                newRule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Property(null, typeof(PythonOps), "NotImplemented"));
             }
 
             return newRule;
         }
 
         private MemberExpression/*!*/ ReadStrongBoxValue(Expression instance) {
-            return Ast.ReadField(
+            return Ast.Field(
                 Ast.Convert(instance, __self__.GetType()),
                 __self__.GetType().GetField("Value")
             );
@@ -207,28 +207,26 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public object __call__(CodeContext context, [ParamDictionary]IDictionary<object, object> dictArgs, params object[] args) {
-            object[] realArgs;
-            string[] argNames;
-            Target.DictArgsHelper(dictArgs, args, out realArgs, out argNames);
-
-            return Target.CallHelper(context, ArrayUtils.Insert(__self__, realArgs), argNames, null);
+        public object __call__(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+            return Target.Call(context, storage, __self__, args, dictArgs);
         }
 
         public object/*!*/ this[PythonTuple key] {
+            [PythonHidden]
             get {
                 return new BoundBuiltinFunction(Target[key], __self__);
             }
         }
 
         public object/*!*/ this[params object[] key] {
+            [PythonHidden]
             get {
                 return new BoundBuiltinFunction(Target[key], __self__);
             }
         }
 
-        [PythonHidden]
         public BuiltinFunctionOverloadMapper/*!*/ Overloads {
+            [PythonHidden]
             get {
                 return new BuiltinFunctionOverloadMapper(Target, __self__);
             }

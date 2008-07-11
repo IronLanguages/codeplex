@@ -13,24 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
 
     /// <summary>
     /// Provides a StreamContentProvider for a stream of content backed by a file on disk.
     /// </summary>
     [Serializable]
-    internal class FileStreamContentProvider : StreamContentProvider {
+    internal sealed class FileStreamContentProvider {
         private readonly string/*!*/ _path;
         private readonly PALHolder/*!*/ _pal;
 
-        public string/*!*/ Path {
+        internal string/*!*/ Path {
             get { return _path; }
         }
 
@@ -45,7 +41,7 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        public override Stream GetStream() {
+        internal Stream GetStream() {
             return _pal.GetStream(Path);
         }
 
@@ -58,11 +54,11 @@ namespace Microsoft.Scripting {
             [NonSerialized]
             private readonly PlatformAdaptationLayer/*!*/ _pal;
 
-            public PALHolder(PlatformAdaptationLayer/*!*/ pal) {
+            internal PALHolder(PlatformAdaptationLayer/*!*/ pal) {
                 _pal = pal;
             }
 
-            public Stream GetStream(string path) {
+            internal Stream GetStream(string path) {
                 return _pal.OpenInputFileStream(path);
             }
         }

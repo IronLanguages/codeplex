@@ -13,18 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Threading;
-using System.Reflection;
 using System.Diagnostics;
-using System.Globalization;
-using System.Collections.Generic;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// TODO: Rename to LocalScope
     /// </summary>    
@@ -61,17 +53,6 @@ namespace Microsoft.Scripting.Runtime {
             get {
                 return _languageContext;
             }
-        }
-
-        // TODO: remove: DLR should use an internal tuple chain instead of asking code context:
-        internal protected virtual TTuple/*!*/ GetStorage<TTuple>() where TTuple : Tuple {
-            return ((TupleDictionary<TTuple>)_scope.Dict).TupleData;
-        }
-
-        // TODO: remove: DLR should use an internal tuple chain instead of asking code context:
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        internal protected virtual CodeContext GetStorageParent() {
-            return _parent;
         }
 
         public CodeContext(Scope scope, LanguageContext/*!*/ languageContext)

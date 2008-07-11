@@ -45,12 +45,12 @@ collection = testdata.merge_lists(
                                 testdata.list_myint,
                                 testdata.list_myfloat,
                                 testdata.list_mylong,
-                                testdata.get_clrnumbers(),
                             )
                             
 collection_oldstyle = [oldstyle(x) for x in collection]
 collection_newstyle = [newstyle(x) for x in collection]
-                                            
+
+
 class common(object):
     def true_compare(self, leftc, rightc, oplist = ["<", ">", ">=", "<=", "==", "<>" ]):
         for a in leftc:
@@ -181,7 +181,7 @@ class test_onetype(common):
         super(test_onetype, self).compare_asbool([newstyle(x) for x in self.data], self.data)
         super(test_onetype, self).compare_asbool(self.data, [oldstyle(x) for x in self.data])
         super(test_onetype, self).compare_asbool([oldstyle(x) for x in self.data], self.data)
-    def xtest_true_compare_neg(self):
+    def test_true_compare_neg(self):
         # comparing to None is still valid
         super(test_onetype, self).true_compare(self.data, collection)
         super(test_onetype, self).true_compare(collection, self.data)
@@ -189,7 +189,8 @@ class test_onetype(common):
         super(test_onetype, self).true_compare(self.data, collection_oldstyle)
         super(test_onetype, self).true_compare(collection_newstyle, self.data)
         super(test_onetype, self).true_compare(collection_oldstyle, self.data)
-    def xtest_compare_asbool_neg(self):
+        
+    def test_compare_asbool_neg(self):
         super(test_onetype, self).compare_asbool(self.data, collection)
         super(test_onetype, self).compare_asbool(collection, self.data)
         super(test_onetype, self).compare_asbool(self.data, collection_newstyle)
@@ -208,6 +209,24 @@ class test_complex(test_onetype):
 class test_dict(test_onetype):
     def __init__(self):
         self.data = testdata.merge_lists(testdata.list_dict)
+
+    def test_true_compare_neg(self):
+        '''
+        Override this as its busted.
+        Please remove the function entirely once Dev10 438851 gets fixed.
+        '''
+        if sys.platform!="win32" and not ({} < 2):
+            printwith("Dev10 438851 has been fixed.  Please remove this.")
+            
+
+    def test_compare_asbool_neg(self):
+        '''
+        Override this as its busted.
+        Please remove the function entirely once Dev10 438851 gets fixed.
+        '''
+        if sys.platform!="win32" and not ({} < 2):
+            printwith("Dev10 438851 has been fixed.  Please remove this.")
+
 
 runtests(test_simple)
 

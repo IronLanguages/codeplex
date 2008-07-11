@@ -13,21 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Scripting.Actions;
 
-using Microsoft.Scripting.Actions;
-
-namespace Microsoft.Scripting.Runtime {
-    public interface IDynamicObject {
-        /// <summary>
-        /// The language the object is defined in.
-        /// Do not use this property! It will be gone when ICallable interfaces are removed and we figure out how to do GetDelegate via dynamic sites.
-        /// </summary>
-        LanguageContext LanguageContext { get; }
-
+namespace System.Scripting.Runtime {
+    public interface IOldDynamicObject {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")] // TODO: fix
-        RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args);
+        RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class;
     }
 }

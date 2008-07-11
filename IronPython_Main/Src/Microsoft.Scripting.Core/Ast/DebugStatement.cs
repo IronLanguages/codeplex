@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public partial class Expression {
         public static Expression DebugMarker(string marker) {
             ContractUtils.RequiresNotNull(marker, "marker");

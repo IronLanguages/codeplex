@@ -13,15 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Runtime.InteropServices;
-
-using Microsoft.Scripting;
-
-using IronPython.Runtime.Types;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Calls {
     [PythonSystemType]

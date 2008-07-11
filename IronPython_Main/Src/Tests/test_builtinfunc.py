@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -17,7 +17,7 @@
 #These have to be run first: importing lib.assert_util masked a bug. Just make sure
 #these do not throw
 for stuff in [bool, True, False]:
-    temp = dir(stuff)  
+    temp = dir(stuff)
 
 items = globals().items() #4716
 
@@ -233,30 +233,30 @@ def test_max_min():
 def test_abs():
     AssertError(TypeError,abs,None)
 
-    #	long integer passed to abs
-    AreEqual(22L, abs(22L)) 
+    #long integer passed to abs
+    AreEqual(22L, abs(22L))
     AreEqual(22L, abs(-22L))
 
-    #	bool passed to abs
-    AreEqual(1, abs(True)) 
+    #bool passed to abs
+    AreEqual(1, abs(True))
     AreEqual(0, abs(False))
 
-    #	__abs__ defined on user type
+    #__abs__ defined on user type
     class myclass:
         def __abs__(self):
             return "myabs"
     c = myclass()
     AreEqual("myabs", abs(c))
     
-def test_coerce():    
+def test_coerce():
     AreEqual(coerce(None, None), (None, None))
     AssertError(TypeError, coerce, None, 1)
     AssertError(TypeError, coerce, 1, None)
    
 def test_zip():
-    def foo(): yield 2    
+    def foo(): yield 2
 
-    def bar(): 
+    def bar():
         yield 2
         yield 3
 
@@ -404,12 +404,12 @@ def test_compile():
     sys.stdout = out
     try:
         c = compile('2', 'test', 'single')
-        exec c      
-        AreEqual(out.data, ['2', '\n'])  
+        exec c
+        AreEqual(out.data, ['2', '\n'])
     finally:
         sys.stdout = sys.__stdout__
         
-    for code in ["abc" + chr(0) + "def", chr(0) + "def", "def" + chr(0)]:        
+    for code in ["abc" + chr(0) + "def", chr(0) + "def", "def" + chr(0)]:
         AssertError(TypeError, compile, code, 'f', 'exec')
 
 def test_str_none():

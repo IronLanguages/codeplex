@@ -14,21 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections;
-using System.Threading;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Math;
 
-[assembly: PythonExtensionType(typeof(BigInteger), typeof(BigIntegerOps), EnableDerivation=true)]
 namespace IronPython.Runtime.Operations {
 
     public static partial class BigIntegerOps {
@@ -105,7 +96,7 @@ namespace IronPython.Runtime.Operations {
             } else if (y is BigInteger) {
                 return Power(x, (BigInteger)y, z);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [SpecialName]
@@ -119,7 +110,7 @@ namespace IronPython.Runtime.Operations {
             } else if (z == null) {
                 return Power(x, y);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [SpecialName]
@@ -133,7 +124,7 @@ namespace IronPython.Runtime.Operations {
             } else if (z == null) {
                 return Power(x, y);
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [SpecialName]
@@ -372,7 +363,7 @@ namespace IronPython.Runtime.Operations {
             // The python spec says __int__  should return a long if needed, rather than overflow.
             int i32;
             if (x.AsInt32(out i32)) {
-                return i32;
+                return System.Scripting.Runtime.RuntimeHelpers.Int32ToObject(i32);
             }
 
             return x;
@@ -495,6 +486,24 @@ namespace IronPython.Runtime.Operations {
 
         public static BigInteger __index__(BigInteger self) {
             return self;
+        }
+
+        public static int __hash__(BigInteger self) {
+            // Call the DLR's BigInteger hash function, which will return an int32 representation of
+            // b if b is within the int32 range. We use that as an optimization for hashing, and 
+            // assert the assumption below.
+            int hash = self.GetHashCode();
+#if DEBUG
+            int i;
+            if (self.AsInt32(out i)) {
+                Debug.Assert(i == hash, "input:" + i);
+            }
+#endif
+            return hash;
+        }
+
+        public static string __repr__([NotNull]BigInteger/*!*/ self) {
+            return self.ToString() + "L";
         }
     }
 }

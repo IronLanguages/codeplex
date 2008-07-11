@@ -15,30 +15,31 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Generation;
 
 namespace ToyScript.Runtime {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
-    class ToyBinder : ActionBinder {
-        public ToyBinder(CodeContext context)
-            : base(context) {
+    class ToyBinder : DefaultBinder {
+        public ToyBinder(ScriptDomainManager manager)
+            : base(manager) {
         }
 
-        protected override RuleBuilder<T> MakeRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
+        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction action, object[] args) {
+            object[] extracted;
+            CodeContext cc = ExtractCodeContext(args, out extracted);
+
             RuleBuilder<T> rule = null;
             //
-            // Try IDynamicObject
+            // Try IOldDynamicObject
             //
-            IDynamicObject ido = args[0] as IDynamicObject;
+            IOldDynamicObject ido = extracted[0] as IOldDynamicObject;
             if (ido != null) {
-                rule = ido.GetRule<T>(action, callerContext, args);
+                rule = ido.GetRule<T>(action, cc, extracted);
                 if (rule != null) {
                     return rule;
                 }
@@ -48,7 +49,7 @@ namespace ToyScript.Runtime {
             // Try ToyScript rules
             //
             if (action.Kind == DynamicActionKind.DoOperation) {
-                rule = MakeDoRule<T>((DoOperationAction)action, args);
+                rule = MakeDoRule<T>((OldDoOperationAction)action, extracted);
                 if (rule != null) {
                     return rule;
                 }
@@ -57,10 +58,10 @@ namespace ToyScript.Runtime {
             //
             // Fall back to DLR default rules
             //
-            return base.MakeRule<T>(callerContext, action, args);
+            return base.MakeRule<T>(action, args);
         }
 
-        private RuleBuilder<T> MakeDoRule<T>(DoOperationAction action, object[] args) {
+        private RuleBuilder<T> MakeDoRule<T>(OldDoOperationAction action, object[] args) where T : class {
             if (action.Operation == Operators.Add &&
                 args[0] is string &&
                 args[1] is string) {
@@ -105,11 +106,11 @@ namespace ToyScript.Runtime {
             throw new NotImplementedException();
         }
 
-        public override Expression ConvertExpression(Expression expr, Type toType) {
+        public override Expression ConvertExpression(Expression expr, Type toType, ConversionResultKind kind, Expression context) {
             return Ast.ConvertHelper(expr, toType);
         }
 
-        protected override IList<Type> GetExtensionTypes(Type t) {
+        public override IList<Type> GetExtensionTypes(Type t) {
             if (t == typeof(string)) {
                 return new Type[] { typeof(StringExtensions) };
             }

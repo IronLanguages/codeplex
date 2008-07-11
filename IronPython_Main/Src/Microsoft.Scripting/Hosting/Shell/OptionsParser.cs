@@ -17,10 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.Serialization;
-
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Generation;
+using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -159,18 +159,10 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     Snippets.Shared.SnippetsDirectory = dir;
                     break;
 
-                // TODO: remove (needed by SNAP right now)
-                case "-X:StaticMethods": break;
-                case "-X:NoOptimize": break;
-                
                 case "-X:Interpret": EngineOptions.InterpretedMode = true; break;
                 case "-X:Frames": GlobalOptions.Frames = true; break;
 
-                // TODO: remove (needed by SNAP right now)
-                case "-X:GenerateAsSnippets":
-                case "-X:TupleBasedOptimizedScopes": GlobalOptions.TupleBasedOptimizedScopes = true; break;
-
-                case "-X:ILDebug": Snippets.Shared.ILDebug = true; break;
+                case "-X:LightweightScopes": GlobalOptions.LightweightScopes = true; break;
 
                 case "-X:PassExceptions": ConsoleOptions.HandleExceptions = false; break;
                 // TODO: #if !IRONPYTHON_WINDOW
@@ -180,9 +172,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 case "-X:AutoIndent": ConsoleOptions.AutoIndent = true; break;
                 //#endif
 
-                case "-X:ShowRules": GlobalOptions.ShowRules = true; break;
-                case "-X:DumpTrees": GlobalOptions.DumpTrees = true; break;
-                case "-X:ShowTrees": GlobalOptions.ShowTrees = true; break;
+                // TODO: remove
+                case "-X:DumpIL":
+                case "-X:ShowIL":
+                case "-X:ShowRules": 
+                case "-X:DumpTrees": 
+                case "-X:ShowTrees": 
+                case "-X:ShowScopes":
+                    SetCompilerDebugOption(arg.Substring(3));
+                    break;
 
                 case "-X:PerfStats": EngineOptions.PerfStats = true; break;
                 case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
@@ -209,6 +207,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     //   EngineOptions.Arguments = PopRemainingArgs();
                     break;
             }
+        }
+
+        // Note: this works because it runs before the compiler picks up the
+        // environment variable
+        internal static void SetCompilerDebugOption(string option) {
+#if !SILVERLIGHT
+            string env = Environment.GetEnvironmentVariable("lambdacompiler_debug");
+            Environment.SetEnvironmentVariable("lambdacompiler_debug", option + " " + env);
+#endif
         }
 
         protected void IgnoreRemainingArgs() {
@@ -266,7 +273,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "-X:ExceptionDetail",          "Enable ExceptionDetail mode" },
                 { "-X:Interpret",                "Enable interpreted mode" },
                 { "-X:Frames",                   "Generate custom frames" },
-                { "-X:TupleBasedOptimizedScopes","Use tuples for optimized scopes" },
+                { "-X:LightweightScopes",        "Generate optimized scopes that can be garbage collected" },
                 { "-X:ILDebug",                  "Output generated IL code to a text file for debugging" },
                 { "-X:MaxRecursion",             "Set the maximum recursion level" },
                 { "-X:NoTraceback",              "Do not emit traceback code" },
@@ -277,6 +284,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "-X:DumpTrees",                "Dump all ASTs generated to a file"},
                 { "-X:ShowClrExceptions",        "Display CLS Exception information" },
                 { "-X:ShowRules",                "Show the AST for rules generated" },
+                { "-X:ShowScopes",               "Print all scopes and closures to the console" }, 
                 { "-X:SlowOps",                  "Enable fast ops" },
 #if !SILVERLIGHT
                 { "-X:TabCompletion",            "Enable TabCompletion mode" },

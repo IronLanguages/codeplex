@@ -14,22 +14,21 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     [PythonSystemType("method_descriptor")]
-    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IDynamicObject, ICodeFormattable {
+    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, ICodeFormattable {
         internal readonly BuiltinFunction/*!*/ _template;
 
         internal BuiltinMethodDescriptor(BuiltinFunction/*!*/ function) {
@@ -60,48 +59,21 @@ namespace IronPython.Runtime.Types {
             get { return _template; }
         }
 
-        internal Type DeclaringType {
+        internal Type/*!*/ DeclaringType {
             get {
                 return _template.DeclaringType;
             }
         }
 
-        internal static void CheckSelfWorker(CodeContext context, object self, BuiltinFunction template) {
+        internal static void CheckSelfWorker(CodeContext/*!*/ context, object self, BuiltinFunction template) {
             // to a fast check on the CLR types, if they match we can avoid the slower
             // check that involves looking up dynamic types. (self can be null on
             // calls like set.add(None) 
-            if (self != null && self.GetType() == template.DeclaringType) return;
-
             Type selfType = CompilerHelpers.GetType(self);
-            Debug.Assert(selfType != null);
-
-            if (!selfType.IsAssignableFrom(template.DeclaringType)) {
+            if (selfType != template.DeclaringType && !template.DeclaringType.IsAssignableFrom(selfType)) {
                 // if a conversion exists to the type allow the call.
                 context.LanguageContext.Binder.Convert(self, template.DeclaringType);
             }
-        }
-
-        #endregion
-
-        #region Private Helpers
-
-        private void CheckSelf(CodeContext context, object self) {
-            // if the type has been re-optimized (we also have base type info in here) 
-            // then we can't do the type checks right now :(.
-            if ((_template.FunctionType & FunctionType.SkipThisCheck) != 0)
-                return;
-
-            if ((_template.FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
-                CheckSelfWorker(context, self, _template);
-            }
-        }
-
-        #endregion
-
-        #region IContextAwareMember Members
-
-        internal override bool IsVisible(CodeContext context, PythonType owner) {
-            return _template.IsVisible(context, owner);
         }
 
         internal override bool IsAlwaysVisible {
@@ -112,22 +84,28 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region Private Helpers
 
-        LanguageContext IDynamicObject.LanguageContext {
-            get { return DefaultContext.Default.LanguageContext; }
+        private void CheckSelf(CodeContext/*!*/ context, object self) {
+            if ((_template.FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
+                CheckSelfWorker(context, self, _template);
+            }
         }
 
-        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        #endregion
+
+        #region IOldDynamicObject Members
+
+        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             if (action.Kind == DynamicActionKind.Call) {
-                return MakeCallRule<T>((CallAction)action, context, args);
+                return MakeCallRule<T>((OldCallAction)action, context, args);
             } else if (action.Kind == DynamicActionKind.DoOperation) {
-                return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+                return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
             }
             return null;
         }
 
-        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
@@ -137,12 +115,12 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
-            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Template.Targets, Template.Level, Template.IsReversedOperator);
+        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(context, action, args, Template.Targets, Template.Level, Template.IsReversedOperator);
             RuleBuilder<T> rule = helper.MakeRule();
             if (Template.IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 built-in method descriptor + 2 args
                 // BinaryOperators return NotImplemented on failure.
-                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented"));
+                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Property(null, typeof(PythonOps), "NotImplemented"));
             }
             rule.AddTest(
                 Template.MakeFunctionTest(
@@ -170,9 +148,15 @@ namespace IronPython.Runtime.Types {
                 return Template.__doc__;
             }
         }
-      
-        public object __call__(CodeContext context, [ParamDictionary]IDictionary<object, object> dictArgs, params object[] args) {
-            return _template.__call__(context, dictArgs, args);
+
+        public object __call__(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+            return _template.__call__(context, storage, dictArgs, args);
+        }
+
+        public PythonType/*!*/ __objclass__ {
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(_template.DeclaringType);
+            }
         }
 
         #endregion
@@ -182,7 +166,7 @@ namespace IronPython.Runtime.Types {
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<method {0} of {1} objects>",
                 PythonOps.StringRepr(Template.Name),
-                PythonOps.StringRepr(PythonTypeOps.GetName(DeclaringType)));
+                PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name));
         }
 
         #endregion

@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
 
 namespace IronPython.Compiler.Ast {
     public abstract class Node {
@@ -56,6 +54,16 @@ namespace IronPython.Compiler.Ast {
         public virtual string NodeName {
             get {
                 return GetType().Name;
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the node can throw, false otherwise.  Used to determine
+        /// whether or not we need to update the current dynamic stack info.
+        /// </summary>
+        internal virtual bool CanThrow {
+            get {
+                return true;
             }
         }
     }

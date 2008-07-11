@@ -13,11 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 
@@ -180,9 +175,6 @@ namespace IronPython.Runtime {
         }
         public static PythonType UnicodeWarning {
             get { return PythonExceptions.UnicodeWarning; }
-        }
-        public static PythonType OverflowWarning {
-            get { return PythonExceptions.OverflowWarning; }
         }
 
         // *** END GENERATED CODE ***

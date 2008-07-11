@@ -14,17 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("field#")]
@@ -118,10 +113,6 @@ namespace IronPython.Runtime.Types {
                 throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
             }
             return false;
-        }
-
-        internal override bool IsVisible(CodeContext context, PythonType owner) {
-            return _nameType == NameType.PythonField || PythonOps.IsClsVisible(context);
         }
 
         internal override bool IsAlwaysVisible {

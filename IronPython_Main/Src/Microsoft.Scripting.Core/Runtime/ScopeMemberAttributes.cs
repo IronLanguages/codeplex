@@ -12,11 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Common attributes used to control attributes of a Scope.
     /// </summary>

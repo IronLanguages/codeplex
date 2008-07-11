@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System.Collections;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
-using Operators = Microsoft.Scripting.Runtime.Operators;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     public class ListComprehensionFor : ListComprehensionIterator {

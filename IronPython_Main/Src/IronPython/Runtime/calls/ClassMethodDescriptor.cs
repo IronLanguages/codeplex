@@ -12,18 +12,15 @@
  *
  *
  * ***************************************************************************/
+
 using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Calls {
-    [PythonSystemType("class-method")]
+    [PythonSystemType("method_descriptor")]
     public class ClassMethodDescriptor : PythonTypeSlot, ICodeFormattable {
         internal readonly BuiltinFunction _func;
 
@@ -47,8 +44,8 @@ namespace IronPython.Runtime.Calls {
                 if (!owner.IsSubclassOf(DynamicHelpers.GetPythonTypeFromType(_func.DeclaringType))) {
                     throw PythonOps.TypeError("descriptor {0} for type {1} doesn't apply to type {2}",
                         PythonOps.StringRepr(_func.Name),
-                        PythonOps.StringRepr(PythonTypeOps.GetName(_func.DeclaringType)),
-                        PythonOps.StringRepr(PythonTypeOps.GetName(owner)));
+                        PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(_func.DeclaringType).Name),
+                        PythonOps.StringRepr(owner.Name));
                 }
             }
             if (instance != null)
@@ -66,7 +63,7 @@ namespace IronPython.Runtime.Calls {
             if (bf != null) {
                 return String.Format("<method {0} of {1} objects>",
                     PythonOps.StringRepr(bf.Name),
-                    PythonOps.StringRepr(PythonTypeOps.GetName(bf.DeclaringType)));
+                    PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(bf.DeclaringType).Name));
             }
 
             return String.Format("<classmethod object at {0}>",

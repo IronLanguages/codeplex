@@ -13,21 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Reflection.Emit;
+using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Threading;
-using System.Diagnostics;
-
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+namespace System.Scripting.Actions {
+    using Ast = System.Linq.Expressions.Expression;
 
     /// <summary>
     /// Rule Builder
@@ -39,10 +35,12 @@ namespace Microsoft.Scripting.Actions {
     public abstract class RuleBuilder {
         internal Expression _test;                  // the test that determines if the rule is applicable for its parameters
         internal Expression _target;                // the target that executes if the rule is true
+        internal Expression _context;               // CodeContext, if any.
         internal Expression[] _parameters;          // the parameters which the rule is processing
-        internal List<object> _templateData;        // the templated parameters for this rule 
-        internal List<Function<bool>> _validators;  // the list of validates which indicate when the rule is no longer valid
+        internal Expression[] _allParameters;       // The parameters, including CodeContext, if any.
+        internal List<Func<bool>> _validators;  // the list of validates which indicate when the rule is no longer valid
         private bool _error;                        // true if the rule represents an error
+        internal List<VariableExpression> _temps;    // temporaries allocated by the rule
 
         // TODO revisit these fields and their uses when LambdaExpression moves down
         internal ParameterExpression[] _paramVariables;       // TODO: Remove me when we can refer to params as expressions
@@ -54,7 +52,11 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public Expression Test {
             get { return _test; }
-            set { _test = value; }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                ContractUtils.Requires(TypeUtils.IsBool(value.Type), "value", "Type of test must be bool");
+                _test = value;
+            }
         }
 
         /// <summary>
@@ -63,6 +65,12 @@ namespace Microsoft.Scripting.Actions {
         public Expression Target {
             get { return _target; }
             set { _target = value; }
+        }
+
+        public Expression Context {
+            get {
+                return _context;
+            }
         }
 
         /// <summary>
@@ -75,8 +83,8 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// The validator returns true if the rule should still be considered valid.
         /// </summary>
-        public void AddValidator(Function<bool> validator) {
-            if (_validators == null) _validators = new List<Function<bool>>();
+        public void AddValidator(Func<bool> validator) {
+            if (_validators == null) _validators = new List<Func<bool>>();
             _validators.Add(validator);
         }
 
@@ -89,26 +97,35 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        public IList<Expression> AllParameters {
+            get {
+                return _allParameters;
+            }
+        }
+
         /// <summary>
         /// Allocates a temporary variable for use during the rule.
-        /// TODO: remove
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public VariableExpression GetTemporary(Type type, string name) {
-            return Expression.Temporary(type, name);
+            if (_temps == null) {
+                _temps = new List<VariableExpression>();
+            }
+            VariableExpression t = Expression.Variable(type, name);
+            _temps.Add(t);
+            return t;
         }
 
         public Expression MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.Type != typeof(void)) {
                 VariableExpression variable = GetTemporary(expr.Type, "$retVal");
-                Expression read = Ast.ReadDefined(variable);
-                Expression conv = binder.ConvertExpression(read, ReturnType);
-                if (conv == read) return Ast.Return(expr);
+                Expression conv = binder.ConvertExpression(variable, ReturnType, ConversionResultKind.ExplicitCast, Context);
+                if (conv == variable) return Ast.Return(expr);
 
                 return Ast.Return(Ast.Comma(Ast.Assign(variable, expr), conv));
             }
-            return Ast.Return(binder.ConvertExpression(expr, ReturnType));
+            return Ast.Return(binder.ConvertExpression(expr, ReturnType, ConversionResultKind.ExplicitCast, Context));
         }
 
         public Expression MakeError(Expression expr) {
@@ -127,13 +144,15 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return _error;
             }
-            internal set {
+            set {
                 _error = value;
             }
         }
 
         public void AddTest(Expression expression) {
-            Assert.NotNull(expression);
+            ContractUtils.RequiresNotNull(expression, "expression");
+            ContractUtils.Requires(TypeUtils.IsBool(expression.Type), "expression", "Type of the expression must be bool");
+
             if (_test == null) {
                 _test = expression;
             } else {
@@ -147,13 +166,6 @@ namespace Microsoft.Scripting.Actions {
 
         public void MakeTest(params Type[] types) {
             _test = MakeTestForTypes(types, 0);
-        }
-
-        /// <summary>
-        /// Gets the logical parameters to the dynamic site in the form of Variables.
-        /// </summary>
-        internal ParameterExpression[] ParamVariables {
-            get { return _paramVariables; }
         }
 
         public static Expression MakeTypeTestExpression(Type t, Expression expr) {
@@ -180,55 +192,6 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Constant(t)
                 )
             );
-        }
-
-        /// <summary>
-        /// Adds a templated constant that can enable code sharing across rules.
-        /// </summary>
-        public Expression AddTemplatedConstant(Type type, object value) {
-            ContractUtils.RequiresNotNull(type, "type");
-            if (value != null) {
-                if (!type.IsAssignableFrom(value.GetType())) {
-                    throw new ArgumentException("type must be assignable from value");
-                }
-            } else {
-                if (!type.IsValueType) {
-                    throw new ArgumentException("value must not be null for value types");
-                }
-            }
-
-            if (_templateData == null) _templateData = new List<object>(1);
-            Type genType = typeof(TemplatedValue<>).MakeGenericType(type);
-            object template = Activator.CreateInstance(genType, value, _templateData.Count);
-
-            _templateData.Add(value);
-            return Ast.ReadProperty(Ast.RuntimeConstant(template), genType.GetProperty("Value"));
-        }
-
-        public Expression AddTemplatedWeakConstant(Type type, object value) {
-            if (value != null) {
-                if (!type.IsAssignableFrom(value.GetType())) {
-                    throw new ArgumentException("type must be assignable from value");
-                }
-            } else {
-                if (!type.IsValueType) {
-                    throw new ArgumentException("value must not be null for value types");
-                }
-            }
-
-            Expression expr = AddTemplatedConstant(typeof(WeakReference), new WeakReference(value));
-
-            return Ast.ConvertHelper(
-                Ast.ReadProperty(expr, typeof(WeakReference).GetProperty("Target")),
-                type
-            );
-        }
-
-        internal int TemplateParameterCount {
-            get {
-                if (_templateData == null) return 0;
-                return _templateData.Count;
-            }
         }
 
         public Expression MakeTestForTypes(Type[] types, int index) {
@@ -269,23 +232,22 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-
         public Expression MakeTypeTestExpression(Type t, int param) {
             return MakeTypeTestExpression(t, Parameters[param]);
         }
 
-#if DEBUG
-        public string Dump {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        private string Dump {
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
-                    AstWriter.Dump(Test, "Test", writer);
+                    ExpressionWriter.Dump(Test, "Test", writer);
                     writer.WriteLine();
-                    AstWriter.Dump(Target, "Target", writer);
+                    ExpressionWriter.Dump(Target, "Target", writer);
                     return writer.ToString();
                 }
             }
         }
-#endif
     }
 
     /// <summary>
@@ -299,43 +261,51 @@ namespace Microsoft.Scripting.Actions {
     /// probably change in the future as we unify around the notion of Lambdas.
     /// </summary>
     /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
-    public class RuleBuilder<T> : RuleBuilder {
-        private Rule<T> _rule;              // Completed rule
-
-        // 1 - site, 2 - CodeContext
-        private const int FirstParameterIndex = 2;
+    public class RuleBuilder<T> : RuleBuilder where T : class {
+        /// <summary>
+        /// Completed rule
+        /// </summary>
+        private Rule<T> _rule;
 
         public RuleBuilder() {
-            int firstParameter = FirstParameterIndex;
+
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T))) {
+                throw new InvalidOperationException("RuleBuilder generic argument must be a delegate");
+            }
 
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
-            if (!DynamicSiteHelpers.IsBigTarget(typeof(T))) {
-                _parameters = new Expression[pis.Length - firstParameter];
-                List<ParameterExpression> paramVars = new List<ParameterExpression>();
-                for (int i = firstParameter; i < pis.Length; i++) {
-                    ParameterExpression p = Ast.Parameter(pis[i].ParameterType, "$arg" + (i - firstParameter));
-                    paramVars.Add(p);
-                    _parameters[i - firstParameter] = p;
-                }
-                _paramVariables = paramVars.ToArray();
-            } else {
-                MakeTupleParameters(typeof(T).GetGenericArguments()[0]);
+
+            if (pis.Length == 0 || pis[0].ParameterType != typeof(CallSite)) {
+                throw new InvalidOperationException("RuleBuilder can only be used with delegates whose first argument is CallSite");
             }
+
+            MakeParameters(pis);
         }
 
-        private void MakeTupleParameters(Type tupleType) {
-            int count = Tuple.GetSize(tupleType);
+        private void MakeParameters(ParameterInfo[] pis) {
+            // First argument is the dynamic site
+            const int FirstParameterIndex = 1;
 
-            ParameterExpression tupleVar = Ast.Parameter(tupleType, "$arg0");
-            _paramVariables = new ParameterExpression[] { tupleVar };
+            Expression[] all = new Expression[pis.Length - FirstParameterIndex];
+            ParameterExpression[] vars = new ParameterExpression[pis.Length - FirstParameterIndex];
 
-            _parameters = new Expression[count];
-            for (int i = 0; i < _parameters.Length; i++) {
-                Expression tupleAccess = tupleVar;
-                foreach (PropertyInfo pi in Tuple.GetAccessPath(tupleType, i)) {
-                    tupleAccess = Ast.ReadProperty(tupleAccess, pi);
-                }
-                _parameters[i] = tupleAccess;
+            for (int i = FirstParameterIndex; i < pis.Length; i++) {
+                int index = i - FirstParameterIndex;
+                Type pt = pis[i].ParameterType;
+                all[index] = vars[index] =
+                    pt.IsByRef
+                        ? Ast.ByRefParameter(pt, "$arg" + index)
+                        : Ast.Parameter(pt, "$arg" + index);
+            }
+
+            _paramVariables = vars;
+            _allParameters = all;
+
+            if (all.Length > 0 && typeof(CodeContext).IsAssignableFrom(all[0].Type)) {
+                _context = all[0];
+                _parameters = ArrayUtils.ShiftLeft(all, 1);
+            } else {
+                _parameters = all;
             }
         }
 
@@ -350,112 +320,31 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        #region Factory Methods
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        public static RuleBuilder<T> Simple(ActionBinder binder, MethodBase target, params Type[] types) {
-            RuleBuilder<T> ret = new RuleBuilder<T>();
-            BindingTarget bindingTarget = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }).MakeBindingTarget(CallTypes.None, types);
-
-            ret.MakeTest(types);
-            ret.Target = ret.MakeReturn(binder, bindingTarget.MakeExpression(ret, ret.Parameters));
-            return ret;
-        }
-
-        #endregion
-
-        internal Rule<T> CreateRule() {
+        public Rule<T> CreateRule() {
             if (_rule == null) {
-                //
-                // Extract the values of interest from the RuleBuilder. We do this for values that we access
-                // more than once so that we get _some_ consistent state. Alternative would be to introduce
-                // locking. Since we are doing validation on the rule (stack spiller, binder and code gen),
-                // this seems sufficient for now.
-                //
-                List<Function<bool>> validators = _validators;
-                List<object> template = _templateData;
+                if (_test == null) {
+                    throw new InvalidOperationException("Missing test.");
+                }
+                if (_target == null) {
+                    throw new InvalidOperationException("Missing target.");
+                }
 
-                Rule<T> rule = new Rule<T>(
-                    Ast.Condition(
-                        _test,
-                        Ast.ConvertHelper(_target, typeof(void)),
-                        Ast.Empty()
+                _rule = new Rule<T>(
+                    Expression.Scope(
+                        Expression.Condition(
+                            _test,
+                            Ast.ConvertHelper(_target, typeof(void)),
+                            Ast.Empty()
+                        ),
+                        "<rule>",
+                        _temps != null ? _temps.ToArray() : new VariableExpression[0]
                     ),
-                    validators != null ? validators.ToArray() : null,
-                    template != null ? template.ToArray() : null,
-                    _paramVariables
+                    RuleValidator.Create(_validators),
+                    new ReadOnlyCollection<ParameterExpression>(_paramVariables)
                 );
-
-                rule = StackSpiller.AnalyzeRule<T>(rule);
-
-                Interlocked.CompareExchange<Rule<T>>(ref _rule, rule, null);
             }
 
             return _rule;
-        }
-
-        /// <summary>
-        /// Provides support for creating rules which can have runtime constants 
-        /// replaced without recompiling the rule.
-        /// 
-        /// Template parameters can be added to a rule by calling 
-        /// RuleBuilder.AddTemplatedConstant with a type and the value for the 
-        /// current rule.  When the first templated rule is finished being constructed 
-        /// calling RuleBuilder.GetTemplateBuilder returns a template builder which 
-        /// can be used on future rules.
-        /// 
-        /// For future template requests the rule stil needs to be generated 
-        /// (this is a current limitation due to needing to have a version
-        /// of the AST w/ the correct constants at evaluation time).  Call 
-        /// TempalatedRuleBuilder.MakeRuleFromTemplate with the new template parameters 
-        /// (in the same order as AddTemplatedConstant was called) and the rule will be updated to 
-        /// to enable code sharing.
-        /// </summary>
-        public void CopyTemplateToRule(RuleBuilder<T> builder) {
-            Rule<T> from = CreateRule();
-            Delegate target = (Delegate)(object)from.MonomorphicRuleSet.GetOrMakeTarget();
-            Rule<T> to = builder.CreateRule();
-            to.MonomorphicRuleSet.RawTarget = CloneDelegate(to.Template, target);
-        }
-
-        private T CloneDelegate(object[] newData, Delegate existingDelegate) {
-            T dlg;
-            DynamicMethod templateMethod = _rule.MonomorphicRuleSet.MonomorphicTemplate;
-            if (templateMethod != null) {
-                dlg = (T)(object)templateMethod.CreateDelegate(typeof(T), CloneData(existingDelegate.Target, newData));
-            } else {
-                dlg = (T)(object)Delegate.CreateDelegate(typeof(T), CloneData(existingDelegate.Target, newData), existingDelegate.Method);
-            }
-            return dlg;
-        }
-
-        /// <summary>
-        /// Clones the delegate target to create new delegate around it.
-        /// The delegates created by the compiler are closed over the instance of Closure class.
-        /// </summary>
-        private static object CloneData(object data, params object[] newData) {
-            Debug.Assert(data != null);
-
-            Closure closure = data as Closure;
-            if (closure != null) {
-                return new Closure(closure.Context, CopyArray(newData, closure.Constants));
-            }
-
-            throw new InvalidOperationException("bad data bound to delegate");
-        }
-
-        private static object[] CopyArray(object[] newData, object[] oldData) {
-            object[] res = new object[oldData.Length];
-            for (int i = 0; i < oldData.Length; i++) {
-                ITemplatedValue itv = oldData[i] as ITemplatedValue;
-                if (itv == null) {
-                    res[i] = oldData[i];
-                    continue;
-                }
-
-                res[i] = itv.CopyWithNewValue(newData[itv.Index]);
-            }
-            return res;
-        }
+        }        
     }
 }

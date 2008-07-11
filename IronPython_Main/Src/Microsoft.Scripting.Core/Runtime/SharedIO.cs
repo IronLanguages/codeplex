@@ -13,14 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
+using System.Text;
 using System.Threading;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     public sealed class SharedIO {
         // prevents this object from transitions to an inconsistent state, doesn't sync output or input:
         private readonly object/*!*/ _mutex = new object();
@@ -158,9 +156,9 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         /// <summary>
-        /// Only host can redirect I/O.
+        /// Only host should redirect I/O.
         /// </summary>
-        internal void SetOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
+        public void SetOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
             Assert.NotNull(stream, writer);
             lock (_mutex) {
                 _outputStream = stream;
@@ -168,7 +166,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        internal void SetErrorOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
+        public void SetErrorOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
             Assert.NotNull(stream, writer);
             lock (_mutex) {
                 _errorStream = stream;
@@ -176,7 +174,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        internal void SetInput(Stream/*!*/ stream, TextReader/*!*/ reader, Encoding/*!*/ encoding) {
+        public void SetInput(Stream/*!*/ stream, TextReader/*!*/ reader, Encoding/*!*/ encoding) {
             Assert.NotNull(stream, reader, encoding);
             lock (_mutex) {
                 _inputStream = stream;
@@ -185,7 +183,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        internal void RedirectToConsole() {
+        public void RedirectToConsole() {
             lock (_mutex) {
                 _inputEncoding = null;
                 _inputStream = null;

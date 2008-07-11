@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 using System.Globalization;
@@ -21,11 +20,10 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Scripting.Utils;
 using System.Text;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
     public class DebugILGen : ILGen {
         private readonly TextWriter _txt;
         
@@ -40,7 +38,11 @@ namespace Microsoft.Scripting.Generation {
         /// Begins a catch block.
         /// </summary>
         public override void BeginCatchBlock(Type exceptionType) {
-            Write("}} catch ({0}) {{", exceptionType.FullName);
+            if (exceptionType == null) {
+                Write("} catch {");
+            } else {
+                Write("}} catch ({0}) {{", exceptionType.FullName);
+            }
             base.BeginCatchBlock(exceptionType);
         }
 
@@ -49,7 +51,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public override void BeginExceptFilterBlock() {
             Write("} filter {");
-            base.BeginExceptionBlock();
+            base.BeginExceptFilterBlock();
         }
 
         /// <summary>
@@ -370,9 +372,28 @@ namespace Microsoft.Scripting.Generation {
                 return;
             }
 
+#if !SILVERLIGHT
+            if (_txt == Console.Out) {
+                ConsoleColor color = Console.ForegroundColor;
+                try {
+                    if (Console.BackgroundColor == ConsoleColor.White) {
+                        Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    } else {
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                    }
+                    _txt.WriteLine(str);
+                    _txt.Flush();
+                } finally {
+                    Console.ForegroundColor = color;
+                }
+                return;
+            }
+#endif
+
             _txt.WriteLine(str);
             _txt.Flush();
         }
+
 
         private void Write(string format, object arg0) {
             Write(String.Format(CultureInfo.CurrentCulture, format, arg0));

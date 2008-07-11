@@ -15,15 +15,14 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Utils;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class BinaryExpression : Expression {
         private readonly Expression _left, _right;
@@ -112,11 +111,12 @@ namespace IronPython.Compiler.Ast {
             if (IsComparison(bright._right)) {
                 rright = bright.FinishCompare(temp, ag);
             } else {
+                MSAst.Expression transformedRight = ag.Transform(bright.Right);
                 rright = MakeBinaryOperation(
                     ag,
                     bright.Operator,
                     temp,
-                    ag.Transform(bright.Right),
+                    transformedRight,
                     typeof(object),
                     bright.Span
                 );
@@ -125,7 +125,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(temp);
 
             // return (left (op) (temp = rleft)) and (rright)
-            return Ast.CoalesceTrue(
+            return AstUtils.CoalesceTrue(
                 ag.Block,
                 comparison,
                 rright,
@@ -146,10 +146,37 @@ namespace IronPython.Compiler.Ast {
         }
 
         private static MSAst.Expression MakeBinaryOperation(AstGenerator ag, PythonOperator op, MSAst.Expression left, MSAst.Expression right, Type type, SourceSpan span) {
+            if (op == PythonOperator.NotIn) {
+                return
+                    Ast.ConvertHelper(Ast.Not(AstUtils.Operator(ag.Binder, Operators.Contains, typeof(bool), Ast.CodeContext(), left, right)), type);
+            }
+
             Operators action = PythonOperatorToAction(op);
             if (action != Operators.None) {
                 // Create action expression
-                return Ast.Action.Operator(ag.Binder, action, type, left, right);
+                if (op == PythonOperator.Divide &&
+                    (ag.DivisionOptions == PythonDivisionOptions.Warn || ag.DivisionOptions == PythonDivisionOptions.WarnAll)) {
+                    MSAst.VariableExpression tempLeft = ag.MakeTempExpression("left", left.Type);
+                    MSAst.VariableExpression tempRight = ag.MakeTempExpression("right", right.Type);
+                    return Ast.Comma(
+                        Ast.Call(
+                            AstGenerator.GetHelperMethod("WarnDivision"),
+                            Ast.CodeContext(),
+                            Ast.Constant(ag.DivisionOptions),
+                            Ast.ConvertHelper(
+                                Ast.Assign(tempLeft, left),
+                                typeof(object)
+                            ),
+                            Ast.ConvertHelper(
+                                Ast.Assign(tempRight, right),
+                                typeof(object)
+                            )
+                        ),
+                        AstUtils.Operator(ag.Binder, action, type, Ast.CodeContext(), left, right)
+                    );
+                }
+
+                return AstUtils.Operator(ag.Binder, action, type, Ast.CodeContext(), left, right);
             } else {
                 // Call helper method
                 return Ast.Call(
@@ -213,6 +240,8 @@ namespace IronPython.Compiler.Ast {
                     return Operators.NotEquals;
 
                 case PythonOperator.In:
+                    return Operators.Contains;
+
                 case PythonOperator.NotIn:
                 case PythonOperator.IsNot:
                 case PythonOperator.Is:
@@ -238,6 +267,15 @@ namespace IronPython.Compiler.Ast {
                 default:
                     Debug.Assert(false, "Invalid PythonOperator: " + op.ToString());
                     return null;
+            }
+        }
+
+        internal override bool CanThrow {
+            get {
+                if (_op == PythonOperator.Is || _op == PythonOperator.IsNot) {
+                    return _left.CanThrow || _right.CanThrow;
+                }
+                return true;
             }
         }
     }

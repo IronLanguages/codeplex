@@ -14,13 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Utils;
+    using Ast = System.Linq.Expressions.Expression;
 
     public abstract class ListComprehensionIterator : Node {
         internal abstract MSAst.Expression Transform(AstGenerator ag, MSAst.Expression body);
@@ -56,10 +55,10 @@ namespace IronPython.Compiler.Ast {
                 );
 
             // 2. Create body from _item:   list.Append(_item)
-            MSAst.Expression body = Ast.Call(
+            MSAst.Expression body = AstUtils.Call(
+                AstGenerator.GetHelperMethod("ListAddForComprehension"),
                 _item.Span,
                 list,
-                typeof(List).GetMethod("append"),                    
                 ag.TransformAsObject(_item)
             );
 

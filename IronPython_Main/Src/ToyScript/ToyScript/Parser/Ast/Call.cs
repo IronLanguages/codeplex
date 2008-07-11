@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Expression;
 
     class Call : Expression {
         private readonly Expression _target;
@@ -30,15 +29,13 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            MSAst.Expression[] arguments = new MSAst.Expression[_arguments.Length + 1];
-
-            arguments[0] = _target.Generate(tg);
+            MSAst.Expression target = _target.Generate(tg);
+            MSAst.Expression[] arguments = new MSAst.Expression[_arguments.Length];
             for (int i = 0; i < _arguments.Length; i++) {
-                arguments[i+1] = _arguments[i].Generate(tg);
+                arguments[i] = _arguments[i].Generate(tg);
             }
 
-            // TODO: Invoke or call?
-            return Ast.Action.Call(tg.Binder, typeof(object), arguments);
+            return tg.Call(target, arguments);
         }
     }
 }

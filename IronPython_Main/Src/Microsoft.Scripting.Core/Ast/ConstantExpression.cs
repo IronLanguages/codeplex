@@ -13,72 +13,105 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     public sealed class ConstantExpression : Expression {
         private readonly object _value;
 
-        internal ConstantExpression(object value, Type /*!*/ type)
-            : base(AstNodeType.Constant, type) {
+        internal ConstantExpression(Annotations annotations, object value, Type /*!*/ type)
+            : base(annotations, ExpressionType.Constant, type) {
             _value = value;
         }
 
         public object Value {
             get { return _value; }
         }
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            if (_value != null) {
+                if (_value is string) {
+                    builder.Append("\"");
+                    builder.Append(_value);
+                    builder.Append("\"");
+                } else if (_value.ToString() == _value.GetType().ToString()) {
+                    builder.Append("value(");
+                    builder.Append(_value);
+                    builder.Append(")");
+                } else {
+                    builder.Append(_value);
+                }
+            } else {
+                builder.Append("null");
+            }
+        }
     }
 
     public partial class Expression {
         public static ConstantExpression True() {
-            return new ConstantExpression(true, typeof(bool));
+            return new ConstantExpression(Annotations.Empty, true, typeof(bool));
         }
 
         public static ConstantExpression False() {
-            return new ConstantExpression(false, typeof(bool));
+            return new ConstantExpression(Annotations.Empty, false, typeof(bool));
         }
 
         public static ConstantExpression Zero() {
-            return new ConstantExpression(0, typeof(int));
+            return new ConstantExpression(Annotations.Empty, 0, typeof(int));
         }
 
         public static ConstantExpression Null() {
-            return new ConstantExpression(null, typeof(object));
+            return new ConstantExpression(Annotations.Empty, null, typeof(object));
         }
 
         public static ConstantExpression Null(Type type) {
             ContractUtils.Requires(!type.IsValueType, "type");
-            return new ConstantExpression(null, type);
+            return new ConstantExpression(Annotations.Empty, null, type);
         }
 
+        //CONFORMING
         public static ConstantExpression Constant(object value) {
-            return new ConstantExpression(value, value == null ? typeof(object) : value.GetType());
+            return new ConstantExpression(Annotations.Empty, value, value == null ? typeof(object) : value.GetType());
         }
 
         public static ConstantExpression Constant(object value, Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-            if (value == null) {
-                ContractUtils.Requires(!type.IsValueType, "type");
-            } else {
-                ContractUtils.Requires(TypeUtils.CanAssign(type, value.GetType()), "type");
-            }
-            return new ConstantExpression(value, type);
+            return Constant(value, type, Annotations.Empty);
         }
 
+        //CONFORMING
+        public static ConstantExpression Constant(object value, Type type, Annotations annotations) {
+            ContractUtils.RequiresNotNull(type, "type");
+            if (value == null && type.IsValueType && !TypeUtils.IsNullableType(type)) {
+                throw Error.ArgumentTypesMustMatch();
+            }
+            if (value != null && !TypeUtils.AreAssignable(type, value.GetType())) {
+                throw Error.ArgumentTypesMustMatch();
+            }
+            return new ConstantExpression(annotations, value, type);
+        }
+
+        [Obsolete("use Expression.Constant instead")]
         public static ConstantExpression RuntimeConstant(object value) {
-            return new ConstantExpression(new RuntimeConstant(value), value == null ? typeof(object) : value.GetType());
+            return Constant(value);
+        }
+
+        [Obsolete("use Expression.Constant instead")]
+        public static ConstantExpression RuntimeConstant(object value, Type type) {
+            return Constant(value, type);
         }
 
         /// <summary>
         /// Wraps the given value in a WeakReference and returns a tree that will retrieve
         /// the value from the WeakReference.
         /// </summary>
+        [Obsolete("use Utils.WeakConstant in Microsoft.Scripting instead")]
         public static MemberExpression WeakConstant(object value) {
             System.Diagnostics.Debug.Assert(!(value is Expression));
-            return Expression.ReadProperty(
-                Expression.RuntimeConstant(new WeakReference(value)),
+            return Expression.Property(
+                Expression.Constant(new WeakReference(value)),
                 typeof(WeakReference).GetProperty("Target")
             );
         }

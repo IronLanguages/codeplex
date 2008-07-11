@@ -14,16 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
 using System.IO;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Generation;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
+using System.Threading;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -44,6 +44,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected ConsoleHost() {
         }
 
+        protected void InitializeOptionsParser() {
+            if (_optionsParser == null) {
+                ScriptRuntimeSetup setup = CreateScriptEnvironmentSetup();
+                ConsoleHostOptions options = new ConsoleHostOptions();
+                _optionsParser = new ConsoleHostOptionsParser(options, ScriptDomainManager.Options, setup);
+            }
+        }
+
         /// <summary>
         /// Console Host entry-point .exe name.
         /// </summary>
@@ -61,6 +69,16 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         protected virtual void ParseHostOptions(string/*!*/[]/*!*/ args) {
             _optionsParser.Parse(args);
+        }
+
+        /// <summary>
+        /// Gets the ConsoleHostOptions so that languages can provide values from 
+        /// their own command line parser.
+        /// </summary>
+        public virtual ConsoleHostOptions HostOptions {
+            get {
+                return _optionsParser.Options;
+            }    
         }
 
         protected virtual ScriptRuntimeSetup/*!*/ CreateScriptEnvironmentSetup() {
@@ -111,11 +129,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public int Run(string/*!*/[]/*!*/ args) {
+            InitializeOptionsParser();
 
-            ScriptRuntimeSetup setup = CreateScriptEnvironmentSetup();
-            ConsoleHostOptions options = new ConsoleHostOptions();
-            _optionsParser = new ConsoleHostOptionsParser(options, ScriptDomainManager.Options, setup);
-            
             try {
                 ParseHostOptions(args);
             } catch (InvalidOptionException e) {
@@ -123,19 +138,10 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 return _exitCode = 1;
             } 
             
-            if (Options.DisplayLogo) {
-                PrintLogo();
-            }
-
-            if (Options.RunAction == ConsoleHostOptions.Action.DisplayHelp) {
-                PrintHelp();
-                return _exitCode = 0;
-            }
-
             SetEnvironment();
 
             // TODO: this initialization needs to be fixed when hosting config is fixed:
-            _runtime = ScriptRuntime.Create(setup);
+            _runtime = ScriptRuntime.Create(RuntimeConfig);
             _languageOptionsParser = CreateOptionsParser();
 
             try {
@@ -148,7 +154,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _engine.SetScriptSourceSearchPaths(Options.SourceUnitSearchPaths);
 
             _languageOptionsParser.Engine = _engine;
-            _languageOptionsParser.Platform = _runtime.Platform;
+            _languageOptionsParser.Platform = _runtime.Host.PlatformAdaptationLayer;
             _languageOptionsParser.EngineOptions = _engine.Options;
             _languageOptionsParser.GlobalOptions = GlobalOptions;
 
@@ -159,15 +165,16 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 return _exitCode = -1;
             }
 
+            if (Options.RunAction == ConsoleHostOptions.Action.DisplayHelp) {
+                PrintHelp();
+                return _exitCode = 0;
+            }
+
             Execute();
             return _exitCode;
         }
 
-        #region Printing logo and help
-
-        protected virtual void PrintLogo() {
-            // nop by default
-        }
+        #region Printing help
 
         protected virtual void PrintHelp() {
             Console.WriteLine(GetHelp());            

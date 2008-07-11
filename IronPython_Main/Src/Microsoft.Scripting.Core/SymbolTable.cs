@@ -13,14 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-
 using System.Diagnostics;
-using System.Threading;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     public static class SymbolTable {
         private static readonly object _lockObj = new object();
 
@@ -28,7 +25,7 @@ namespace Microsoft.Scripting {
 
         private const int InitialTableSize = 256;
         private static readonly Dictionary<int, string> _fieldDict = CreateFieldDictionary();
-        [Microsoft.Scripting.Runtime.MultiRuntimeAware]
+        [System.Scripting.Runtime.MultiRuntimeAware]
         private static int _nextCaseInsensitiveId = 1;
 
         private static Dictionary<int, string>  CreateFieldDictionary() {

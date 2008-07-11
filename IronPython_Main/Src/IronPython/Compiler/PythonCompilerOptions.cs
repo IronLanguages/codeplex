@@ -14,13 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using IronPython.Hosting;
+using System.Scripting;
 using IronPython.Runtime;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
 
 namespace IronPython.Compiler {
     [Flags]
@@ -36,6 +31,7 @@ namespace IronPython.Compiler {
         private PythonLanguageFeatures _languageFeatures;
         private ModuleOptions _module = ModuleOptions.Optimized;
         private bool _skipFirstLine, _dontImplyIndent;
+        private string _moduleName;
 
         public PythonLanguageFeatures LanguageFeatures {
             get { return _languageFeatures; }
@@ -83,6 +79,15 @@ namespace IronPython.Compiler {
             }
             set {
                 _module = value;
+            }
+        }
+
+        public string ModuleName {
+            get {
+                return _moduleName;
+            }
+            set {
+                _moduleName = value;
             }
         }
 

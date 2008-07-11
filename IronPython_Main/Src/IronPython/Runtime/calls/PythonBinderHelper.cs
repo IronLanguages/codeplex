@@ -14,32 +14,25 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     static class PythonBinderHelper {
-        /// <summary>
-        /// dictionary of templated type error rules.
-        /// </summary>
-        private static readonly Dictionary<TypeErrorKey, object> _typeErrorTemplates = new Dictionary<TypeErrorKey, object>();
-
-        public static Expression[] GetCollapsedIndexArguments<T>(DoOperationAction action, object[] args, RuleBuilder<T> rule) {
+        public static Expression[] GetCollapsedIndexArguments<T>(OldDoOperationAction action, object[] args, RuleBuilder<T> rule) where T : class {
             int simpleArgCount = (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) ? 2 : 3;
 
             Expression[] exprargs = new Expression[simpleArgCount];
-            exprargs[0] = Ast.CodeContext();
+            exprargs[0] = rule.Context;
 
             if (args.Length > simpleArgCount) {
                 Expression[] tupleArgs = new Expression[args.Length - simpleArgCount + 1];
@@ -63,23 +56,15 @@ namespace IronPython.Runtime.Calls {
             return exprargs;
         }
 
-        public static void MakeTest(RuleBuilder rule, bool templatable, params PythonType[] types) {
-            rule.Test = MakeTestForTypes(rule, types, templatable, 0);
-        }
-
         public static void MakeTest(RuleBuilder rule, params PythonType[] types) {
             rule.Test = MakeTestForTypes(rule, types, 0);
         }
 
         public static Expression MakeTestForTypes(RuleBuilder rule, PythonType[] types, int index) {
-            return MakeTestForTypes(rule, types, false, index);
-        }
-
-        public static Expression MakeTestForTypes(RuleBuilder rule, PythonType[] types, bool templatable, int index) {
             Debug.Assert(rule != null);
-            Expression test = MakeTypeTest(rule, types[index], rule.Parameters[index], templatable);
+            Expression test = MakeTypeTest(rule, types[index], rule.Parameters[index]);
             if (index + 1 < types.Length) {
-                Expression nextTests = MakeTestForTypes(rule, types, templatable, index + 1);
+                Expression nextTests = MakeTestForTypes(rule, types, index + 1);
                 if (ConstantCheck.Check(test, true)) {
                     return nextTests;
                 } else if (ConstantCheck.Check(nextTests, true)) {
@@ -92,27 +77,15 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public static Expression MakeTypeTest(RuleBuilder rule, PythonType type, Expression tested, bool templatable) {
-            if (!templatable && (type == null || type.IsNull)) {
+        public static Expression MakeTypeTest(RuleBuilder rule, PythonType type, Expression tested) {
+            if (type == null || type.IsNull) {
                 return Ast.Equal(tested, Ast.Null());
             }
 
             Type clrType = type.UnderlyingSystemType;
             bool isStaticType = !typeof(IPythonObject).IsAssignableFrom(clrType);
 
-            Expression test;
-            if (!templatable) {
-                test = RuleBuilder.MakeTypeTestExpression(type.UnderlyingSystemType, tested);
-            } else {
-                test =                     
-                    Ast.Equal(
-                        Ast.Call(
-                            typeof(CompilerHelpers).GetMethod("GetType", new Type[] { typeof(object) }),
-                            Ast.ConvertHelper(tested, typeof(object))
-                        ),
-                        rule.AddTemplatedConstant(typeof(Type), type.UnderlyingSystemType)
-                    );
-            }
+            Expression test = RuleBuilder.MakeTypeTestExpression(type.UnderlyingSystemType, tested);
 
             if (!isStaticType) {
                 int version = type.Version;
@@ -121,7 +94,7 @@ namespace IronPython.Runtime.Calls {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("CheckTypeVersion"),
                         Ast.ConvertHelper(tested, typeof(object)),
-                        GetVersionExpression(rule, templatable, version)
+                        Ast.Constant(version)
                     )
                 );
                 rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).Validate);
@@ -130,28 +103,18 @@ namespace IronPython.Runtime.Calls {
             return test;
         }
 
-        private static Expression GetVersionExpression(RuleBuilder rule, bool templatable, int version) {
-            Expression verExpr;
-            if (!templatable) {
-                verExpr = Ast.Constant(version);
-            } else {
-                verExpr = rule.AddTemplatedConstant(typeof(int), version);
-            }
-            return verExpr;
-        }
-
         /// <summary>
         /// Produces an error message for the provided message and type names.  The error message should contain
         /// string formatting characters ({0}, {1}, etc...) for each of the type names.
         /// </summary>
-        public static RuleBuilder<T> TypeError<T>(string message, params PythonType[] types) {
+        public static RuleBuilder<T> TypeError<T>(string message, params PythonType[] types) where T : class {
             RuleBuilder<T> ret = new RuleBuilder<T>();
-            MakeTest(ret, true, types);
+            MakeTest(ret, types);
             Expression[] formatArgs = new Expression[types.Length + 1];
             for (int i = 1; i < formatArgs.Length; i++) {
-                formatArgs[i] = ret.AddTemplatedConstant(typeof(string), PythonTypeOps.GetName(types[i - 1]));
+                formatArgs[i] = Ast.Constant(types[i - 1].Name);
             }
-            formatArgs[0] = ret.AddTemplatedConstant(typeof(string), message);
+            formatArgs[0] = Ast.Constant(message);
             Type[] typeArgs = CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), types.Length + 1);
             typeArgs[0] = typeof(string);
 
@@ -167,49 +130,8 @@ namespace IronPython.Runtime.Calls {
                     )
                 );
 
-            RuleBuilder<T> builder;
-            lock (_typeErrorTemplates) {
-                object objBuilder;
-                TypeErrorKey tek = new TypeErrorKey(typeof(T), types);
-                if (!_typeErrorTemplates.TryGetValue(tek, out objBuilder)) {
-                    _typeErrorTemplates[tek] = builder = ret;
-                } else {
-                    builder = (RuleBuilder<T>)objBuilder;
-                    builder.CopyTemplateToRule(ret);
-                }
-            }
             return ret;
-        }
-
-        class TypeErrorKey {
-            private Type _type;
-            private bool[] _static;
-
-            public TypeErrorKey(Type type, PythonType[] types) {
-                _type = type;
-                _static = new bool[types.Length];
-                for (int i = 0; i < types.Length; i++) {
-                    _static[i] = types[i].IsSystemType;
-                }
-            }
-
-            public override int GetHashCode() {
-                return _type.GetHashCode();
-            }
-
-            public override bool Equals(object obj) {
-                TypeErrorKey other = obj as TypeErrorKey;
-                if (other == null) return false;
-
-                if (_type != other._type) return false;
-                if (_static.Length != other._static.Length) return false;
-
-                for (int i = 0; i < _static.Length; i++) {
-                    if (_static[i] != other._static[i]) return false;
-                }
-                return true;
-            }
-        }
+        }        
 
         private class PythonTypeValidator {
             /// <summary>
@@ -237,7 +159,7 @@ namespace IronPython.Runtime.Calls {
         //
         // Various helpers related to calling Python __*__ conversion methods 
         //
-        internal static Expression GetConversionFailedReturnValue<T>(CodeContext context, ConvertToAction convertToAction, RuleBuilder<T> rule) {
+        internal static Expression GetConversionFailedReturnValue<T>(CodeContext context, OldConvertToAction convertToAction, RuleBuilder<T> rule) where T : class {
             ErrorInfo error = context.LanguageContext.Binder.MakeConversionError(convertToAction.ToType, rule.Parameters[0]);
             Expression failed;
             switch (convertToAction.ResultKind) {
@@ -257,16 +179,18 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Used for conversions to bool
         /// </summary>
-        internal static Expression GetConvertByLengthBody(CodeContext context, VariableExpression tmp) {
+        internal static Expression GetConvertByLengthBody(RuleBuilder rule, CodeContext context, VariableExpression tmp) {
             ActionBinder binder = PythonContext.GetContext(context).Binder;
             return Ast.NotEqual(
-                Ast.Action.ConvertTo(
+                AstUtils.ConvertTo(
                     binder,
                     typeof(int),
-                    Ast.Action.Call(
+                    rule.Context,
+                    AstUtils.Call(
                         binder,
                         typeof(object),
-                        Ast.Read(tmp)
+                        rule.Context,
+                        tmp
                     )
                 ),
                 Ast.Constant(0)
@@ -274,33 +198,33 @@ namespace IronPython.Runtime.Calls {
         }
         
         // Make a rule for objects that have immutable isCallable property (like functions).
-        internal static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
+        internal static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) where T : class {
             return BinderHelper.MakeIsCallableRule<T>(context, self, isCallable);
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember<T>(RuleBuilder<T> rule, PythonTypeSlot dts, VariableExpression tmp) {
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(RuleBuilder<T> rule, PythonTypeSlot dts, VariableExpression tmp) where T : class {
             return MakeTryGetTypeMember(rule, dts, tmp,
                 rule.Parameters[0],
-                Ast.ReadProperty(
+                Ast.Property(
                     Ast.Convert(
                         rule.Parameters[0],
                         typeof(IPythonObject)),
-                    typeof(IPythonObject).GetProperty("PythonType")
+                    TypeInfo._IPythonObject.PythonType
                 )
             );
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember<T>(RuleBuilder<T> rule, PythonTypeSlot dts, VariableExpression tmp, Expression instance, Expression pythonType) {
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(RuleBuilder<T> rule, PythonTypeSlot dts, VariableExpression tmp, Expression instance, Expression pythonType) where T : class {
             return Ast.Call(
-                typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
-                Ast.CodeContext(),
+                TypeInfo._PythonOps.SlotTryGetBoundValue,
+                rule.Context,
                 Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
                 Ast.ConvertHelper(instance, typeof(object)),
                 Ast.ConvertHelper(
                     pythonType,
                     typeof(PythonType)
                 ),
-                Ast.ReadDefined(tmp)
+                tmp
             );
         }
 
@@ -308,7 +232,7 @@ namespace IronPython.Runtime.Calls {
         // Rule to dynamically check for __call__ attribute.
         // Needed for instances whos call status can change over the lifetime of the instance.
         // For example, if we del(c.__call__) on a oldinstance, it's no longer callable.
-        internal static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self) {
+        internal static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self) where T : class {
             // Certain non-python types (encountered during interop) are callable, but don't have 
             // a __call__ attribute. The default base binder also checks these, but since we're overriding
             // the base binder, we check them here.
@@ -327,11 +251,12 @@ namespace IronPython.Runtime.Calls {
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.NotEqual(
-                        Ast.Action.GetMember(
+                        AstUtils.GetMember(
                             PythonContext.GetContext(context).Binder,
-                            Symbols.Call,
+                            "__call__",
                             GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow,
                             typeof(System.Object),
+                            rule.Context,
                             rule.Parameters[0]),
                         Ast.Constant(OperationFailed.Value))
                 );

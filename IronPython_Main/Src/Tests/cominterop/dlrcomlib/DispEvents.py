@@ -69,13 +69,14 @@ def bad_handler_signature_helper(e_trigger, com_event, bad_arg_handlers):
         AreEqual(HANDLER_CALL_COUNT, 0)
         
         #add the handler and verify events are received
+        com_event += handler
+
         try:
-            com_event += handler
-            Fail("Trying to add " + str(handler) + " as an event handler should have failed")
-        except TypeError, e:
+            e_trigger()
+            Fail("Trying to call " + str(handler) + " as an event handler should have failed")
+        except Exception, e:
             pass
-        
-        e_trigger()
+
         AreEqual(HANDLER_CALL_COUNT, 0)
             
         #send an event with no handlers to ensure removal

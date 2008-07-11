@@ -13,61 +13,62 @@
  *
  * ***************************************************************************/
 
-using System;
-
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
-    // TODO: rename to match InvocationExpression
-    public class CallAction : DynamicAction, IEquatable<CallAction> {
-        private readonly CallSignature _signature;
+namespace System.Scripting.Actions {
+    public abstract class CallAction : StandardAction {
+        private readonly string _name;
+        private readonly bool _caseInsensitive;
+        private readonly ReadOnlyCollection<Argument> _arguments;
 
-        protected CallAction(ActionBinder binder, CallSignature callSignature)
-            : base(binder) {
-            _signature = callSignature;
+        protected CallAction(string name, bool caseInsensitive, IEnumerable<Argument> arguments)
+            : base(StandardActionKind.Call) {
+            _name = name;
+            _caseInsensitive = caseInsensitive;
+            _arguments = CollectionUtils.ToReadOnlyCollection(arguments);
         }
 
-        public static CallAction Make(ActionBinder binder, CallSignature signature) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return new CallAction(binder, signature);
+        protected CallAction(string name, bool caseInsensitive, params Argument[] arguments)
+            : this(name, caseInsensitive, (IEnumerable<Argument>)arguments) {
         }
 
-        public static CallAction Make(ActionBinder binder, int argumentCount) {
-            ContractUtils.Requires(argumentCount >= 0, "argumentCount");
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return new CallAction(binder, new CallSignature(argumentCount));
+        public string Name {
+            get {
+                return _name;
+            }
         }
 
-        public CallSignature Signature {
-            get { return _signature; }
+        public bool CaseInsensitive {
+            get {
+                return _caseInsensitive;
+            }
         }
 
-        public override DynamicActionKind Kind {
-            get { return DynamicActionKind.Call; }
+        public ReadOnlyCollection<Argument> Arguments {
+            get {
+                return _arguments;
+            }
         }
 
-        [StateIndependent]
-        public bool Equals(CallAction other) {
-            if (other == null || other.GetType() != GetType()) return false;
-            return _signature.Equals(other._signature);
+        public sealed override MetaObject Bind(MetaObject[] args) {
+            ContractUtils.RequiresNotNullItems(args, "args");
+            ContractUtils.Requires(args.Length > 0);
+            return args[0].Call(this, args);
         }
 
         [Confined]
         public override bool Equals(object obj) {
-            return Equals(obj as CallAction);
+            CallAction ca = obj as CallAction;
+            return ca != null && ca._name == _name && ca._caseInsensitive == _caseInsensitive && CollectionUtils.Equal(ca._arguments, _arguments);
         }
 
         [Confined]
         public override int GetHashCode() {
-            return (int)Kind << 28 ^ _signature.GetHashCode();
-        }
-
-        [Confined]
-        public override string/*!*/ ToString() {
-            return base.ToString() + _signature.ToString();
+            return ((int)Kind << 28 ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0) ^ CollectionUtils.GetHashCode(_arguments));
         }
     }
 }
-
-

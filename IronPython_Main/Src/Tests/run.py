@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -14,15 +14,15 @@
 #####################################################################################
 
 '''
-This is a thin wrapper designed to run all Python tests distributed with IronPython 
+This is a thin wrapper designed to run all Python tests distributed with IronPython
 which do not have external dependencies.
 
 The following options are available:
 
   -M option (Extension mode)
     -M:0 : launch ip with ""
-           this is the default choice if -M: is not specified    
-    -M:1 : launch ip with "-O -D -X:TupleBasedOptimizedScopes -X:MaxRecursion 300"
+           this is the default choice if -M: is not specified
+    -M:1 : launch ip with "-O -D -X:LightweightScopes -X:MaxRecursion 300"
     -M:2 : launch ip with "-O -D -X:SaveAssemblies"
     -M:D : launch ip with all supported modes (i.e., -M:0, -M:1, ...)
     -M:"-O -D -X:SaveAssemblies" (use DOUBLE QUOTE)
@@ -31,13 +31,13 @@ The following options are available:
     -O:min : try to keep the output in one screen
              '.' for pass, 'X' for fail (followed by test name)
     -O:med : show 'PASS' and 'FAIL' for each test
-    -O:max : besides showing 'PASS' and 'FAIL' for each test, 
+    -O:max : besides showing 'PASS' and 'FAIL' for each test,
              print the exception message at the end
     
   -T option (to specify time related options)
-    -T:min : 
+    -T:min :
     -T:med : this is default
-    -T:max : 
+    -T:max :
       
   -h or -? : to show this help message
 
@@ -67,7 +67,7 @@ MODES_TO_RUN = []
 
 #Supported test modes
 M0 = ""
-M1 = "-O -D -X:TupleBasedOptimizedScopes -X:MaxRecursion 300"
+M1 = "-O -D -X:LightweightScopes -X:MaxRecursion 300"
 M2 = "-O -D -X:SaveAssemblies -X:AssembliesDir %s" % environ["TMP"]
 
 #Supported verbosity levels
@@ -92,7 +92,7 @@ SLOW_LIST = [
 #tests we do not wish to run. These should be in the "Tests" directory
 EXCLUDE_LIST = [
                 "test_dllsite.py",    #disabled for 2.0 branch
-                "test_cominterop.py", #Merlin 393974 - word fails under ""
+                "test_builds.py"      #Silverlight-only
                 ]
 
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
@@ -115,7 +115,7 @@ OUTPUT_COUNT = 0
 #--Process sys.argv
 
 #--HELP -h/-?
-if '-h' in argv or '-H' in argv or '-?' in argv: 
+if '-h' in argv or '-H' in argv or '-?' in argv:
     print __doc__
     exit(0)
 
@@ -132,7 +132,7 @@ for temp in argv[1:]:
     #Custom modes
     elif temp.startswith("-M:"):
         MODES_TO_RUN += [temp[3:len(temp)]]
-#throw away all -M: flags             
+#throw away all -M: flags
 argv = [x for x in argv if not x.startswith("-M:")]
 
 #If nothing was specified, just use M0
@@ -221,7 +221,7 @@ def multireader(*streams):
     for stream in streams:
         curReader = reader(stream)
         thread = Threading.Thread(Threading.ThreadStart(curReader))
-        readers.append(curReader)        
+        readers.append(curReader)
         threads.append(thread)
         thread.Start()
         
@@ -240,7 +240,7 @@ def run_one_command(*args):
     if res:
         print '%d running %s failed' % (res, ' '.join(args))
         print 'output was', output
-        print 'err', err       
+        print 'err', err
     return output, err, res
 
 def runTestSlow(test_name, mode):
@@ -360,6 +360,6 @@ if  len(FAILED_LIST)==0:
     exit(0)
 else:
     print "The following tests failed:"
-    for test_name in FAILED_LIST: print "\t" + test_name    
+    for test_name in FAILED_LIST: print "\t" + test_name
     exit(1)
     

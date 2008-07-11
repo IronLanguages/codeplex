@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     internal static partial class TypeInfo {

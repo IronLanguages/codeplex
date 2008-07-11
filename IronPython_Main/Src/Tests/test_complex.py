@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -17,11 +17,11 @@ from lib.assert_util import *
 from lib.type_util import *
 
 def test_from_string():
-    # complex from string: negative 
+    # complex from string: negative
     # - space related
     l = ['1.2', '.3', '4e3', '.3e-4', "0.031"]
 
-    for x in l:   
+    for x in l:
         for y in l:
             AssertError(ValueError, complex, "%s +%sj" % (x, y))
             AssertError(ValueError, complex, "%s+ %sj" % (x, y))

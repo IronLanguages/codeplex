@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -109,10 +109,10 @@ def test_gac():
 
     gaclist = get_gac()
     if (len(gaclist) > 0):
-	    clr.AddReferenceByName(gaclist[-1])
-	
+        clr.AddReferenceByName(gaclist[-1])
+    
 
-def test_nonamespaceloadtest():	
+def test_nonamespaceloadtest():
     import NoNamespaceLoadTest
     a = NoNamespaceLoadTest()
     AreEqual(a.HelloWorld(), 'Hello World')
@@ -126,7 +126,7 @@ using System;
 public class CollisionTest {
     public static string Result(){
         return "Test1";
-    }    
+    }
 }
 """
     
@@ -157,7 +157,7 @@ public class CollisionTest {
 
 #####################
 # VERIFY clr.AddReferenceToFile behavior...
-@skip("multiple_execute")    
+@skip("multiple_execute")
 def test_addreferencetofile_verification():
     tmp = testpath.temporary_dir
     sys.path.append(tmp)
@@ -210,10 +210,10 @@ public class test2{
     
     import test1
     # should create test1 (even though we're a top-level namespace)
-    a = test1()    
+    a = test1()
     AreEqual(a.Test2(), 'test1.test2')
     # should load test2 from path
-    AreEqual(a.Test1(), 'hello world')    
+    AreEqual(a.Test1(), 'hello world')
     AreEqual(len([x for x in clr.References if x.FullName.startswith("test2")]), 0)
     
     # this is to make peverify happy, apparently snippetx.dll referenced to test1
@@ -241,7 +241,7 @@ def compileAndLoad(name, filename, *args):
     AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
     return clr.LoadAssemblyFromFile(name)
 
-@skip("multiple_execute")    
+@skip("multiple_execute")
 def test_classname_same_as_ns():
     sys.path.append(sys.exec_prefix)
     AreEqual(run_csc("/nologo /t:library /out:\"" + sys.exec_prefix + "\"\\c4.dll \"" + get_local_filename('c4.cs') + "\""), 0)
@@ -251,7 +251,7 @@ def test_classname_same_as_ns():
     Assert(c4!=c4.c4)
 
 @skip("multiple_execute")
-def test_local_dll():    
+def test_local_dll():
     x = compileAndLoad('c3', get_local_filename('c3.cs') )
 
     AreEqual(repr(x), "<Assembly c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null>")
@@ -300,7 +300,7 @@ def test_namespaceimport():
     AreEqual(dir(TestNamespace), ['Test1'])
     clr.AddReference('testns2')
     # verify that you don't need to import TestNamespace again to see Test2
-    AreEqual(dir(TestNamespace), ['Test1', 'Test2'])    
+    AreEqual(dir(TestNamespace), ['Test1', 'Test2'])
 
 def test_no_names_provided():
     AssertError(TypeError, clr.AddReference, None)
@@ -318,8 +318,18 @@ def test_load_count():
     # if a new assembly gets loaded before this that contains System both numbers
     # need to be updated
     import clr, System
-    AreEqual(repr(System), "<module 'System' (CLS module, 3 assemblies loaded)>")
+    before = repr(System)
     clr.AddReference('System.Drawing')
-    AreEqual(repr(System), "<module 'System' (CLS module, 4 assemblies loaded)>")
+    after = repr(System)
+
+    # Strip common substring from start and end
+    start = 0; end = 1
+    while before[start] == after[start]: start += 1
+    while before[-end] == after[-end]: end += 1
+    end -= 1;
+
+    # what remains is an int - number of assemblies loaded.
+    # The integer must have increased value by 1
+    AreEqual(int(before[start:-end]) + 1, int(after[start:-end]))
     
 run_test(__name__)

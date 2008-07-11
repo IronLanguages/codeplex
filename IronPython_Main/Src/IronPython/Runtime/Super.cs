@@ -15,13 +15,11 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
+using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using System.Runtime.CompilerServices;
 
 namespace IronPython.Runtime {
     [PythonSystemType("super")]
@@ -51,7 +49,7 @@ namespace IronPython.Runtime {
                     this._selfClass = obj;
                     this._self = obj;
                 } else {
-                    throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type {1}, not {0}", PythonTypeOps.GetName(obj), PythonTypeOps.GetName(type));
+                    throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type {1}, not {0}", PythonTypeOps.GetName(obj), type.Name);
                 }
             } else {
                 this._thisClass = type;

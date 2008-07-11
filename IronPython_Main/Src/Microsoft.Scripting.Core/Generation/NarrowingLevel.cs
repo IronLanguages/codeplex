@@ -12,11 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
     /// <summary>
     /// Narrowing conversions are conversions that cannot be proved to always succeed, conversions that are 
     /// known to possibly lose information, and conversions across domains of types sufficiently different 

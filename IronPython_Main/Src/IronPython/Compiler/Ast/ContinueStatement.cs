@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class ContinueStatement : Statement {
         public ContinueStatement() {
@@ -24,7 +24,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
             if (ag.InLoop) {
-                return Ast.Continue(Span, ag.LoopLabel);
+                return AstUtils.Continue(ag.LoopLabel, Span);
             } else {
                 ag.AddError("'continue' not properly in loop", Span);
                 return null;
@@ -35,6 +35,12 @@ namespace IronPython.Compiler.Ast {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return false;
+            }
         }
     }
 }

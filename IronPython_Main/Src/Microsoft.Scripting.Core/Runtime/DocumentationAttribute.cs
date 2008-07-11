@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Provides a mechanism for providing documentation stored in an assembly as metadata.  
     /// 

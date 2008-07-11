@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -101,7 +101,7 @@ def call_reset(i):
     i.reset()
     AreEqual(i.read(37),text)
     i.reset()
-    AreEqual(i.read(38),text) 
+    AreEqual(i.read(38),text)
     i.close()
     AssertError(ValueError, i.read, 5)
     AssertError(ValueError, i.readline)
@@ -263,7 +263,7 @@ def test_empty():
     i = init_emptyStringI()
     AreEqual(i.read(0), "")
     AreEqual(i.tell(), 0)
-    AreEqual(i.read(1), "") 
+    AreEqual(i.read(1), "")
     AreEqual(i.tell(), 0)
     i.seek(2)
     AreEqual(i.tell(), 2)
@@ -286,7 +286,7 @@ def test_empty():
     
 def test_i_o():
     for t in [  call_close,
-                #Work Item 151029 
+                #Work Item 151029
                 #call_isatty,
                 call_read,
                 call_readline,
@@ -304,8 +304,8 @@ def test_i_o():
         t(o)
 
 def test_o():
-    for t in [  call_write, 
-                call_writelines, 
+    for t in [  call_write,
+                call_writelines,
                 call_softspace ]:
         o = init_StringO()
         t(o)

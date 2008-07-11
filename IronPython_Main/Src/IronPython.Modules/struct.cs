@@ -16,12 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.IO;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
-using Microsoft.Scripting.Math;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("struct", typeof(IronPython.Modules.PythonStruct))]
 namespace IronPython.Modules {
@@ -38,7 +37,10 @@ namespace IronPython.Modules {
             for (int i = 0; i < fmt.Length; i++) {
                 switch (fmt[i]) {
                     case 'x': // pad byte
-                        res.Append('\0');
+                        for (int j = 0; j < count; j++) {
+                            res.Append('\0');
+                        }
+                        count = 1;
                         break;
                     case 'c': // char
                         for (int j = 0; j < count; j++) res.Append(GetCharValue(curObj++, values));
@@ -182,15 +184,21 @@ namespace IronPython.Modules {
                         break;
                     case 'I': // unsigned int
                     case 'L': // unsigned long
-                        for (int j = 0; j < count; j++) res.Add(BigInteger.Create(CreateUIntValue(ref curIndex, fLittleEndian, data)));
+                        for (int j = 0; j < count; j++) {
+                            res.Add(BigIntegerOps.__int__(BigInteger.Create(CreateUIntValue(ref curIndex, fLittleEndian, data))));
+                        }
                         count = 1;
                         break;
                     case 'q': // long long
-                        for (int j = 0; j < count; j++) res.Add(BigInteger.Create(CreateLongValue(ref curIndex, fLittleEndian, data)));
+                        for (int j = 0; j < count; j++) {
+                            res.Add(BigIntegerOps.__int__(BigInteger.Create(CreateLongValue(ref curIndex, fLittleEndian, data))));
+                        }
                         count = 1;
                         break;
                     case 'Q': // unsigned long long
-                        for (int j = 0; j < count; j++) res.Add(BigInteger.Create(CreateULongValue(ref curIndex, fLittleEndian, data)));
+                        for (int j = 0; j < count; j++) {
+                            res.Add(BigIntegerOps.__int__(BigInteger.Create(CreateULongValue(ref curIndex, fLittleEndian, data))));
+                        }
                         count = 1;
                         break;
                     case 'f': // float                        

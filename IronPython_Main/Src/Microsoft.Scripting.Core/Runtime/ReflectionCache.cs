@@ -13,18 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Utils;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+using System.Scripting.Actions;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Provides a cache of reflection members.  Only one set of values is ever handed out per a 
     /// specific request.

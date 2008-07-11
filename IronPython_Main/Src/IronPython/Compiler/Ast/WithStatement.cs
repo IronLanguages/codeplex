@@ -14,13 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class WithStatement : Statement {
         private SourceLocation _header;
@@ -93,10 +94,11 @@ namespace IronPython.Compiler.Ast {
             MSAst.VariableExpression exit = ag.MakeTempExpression("with_exit");
             statements[1] = AstGenerator.MakeAssignment(
                 exit,
-                Ast.Action.GetMember(
+                AstUtils.GetMember(
                     ag.Binder,
-                    SymbolTable.StringToId("__exit__"),
+                    "__exit__",
                     typeof(object),
+                    Ast.CodeContext(),
                     manager
                 )
             );
@@ -107,13 +109,15 @@ namespace IronPython.Compiler.Ast {
             MSAst.VariableExpression value = ag.MakeTempExpression("with_value");
             statements[2] = AstGenerator.MakeAssignment(
                 value,
-                Ast.Action.Call(
+                AstUtils.Call(
                     ag.Binder,
                     typeof(object),
-                    Ast.Action.GetMember(
+                    Ast.CodeContext(),
+                    AstUtils.GetMember(
                         ag.Binder,
-                        SymbolTable.StringToId("__enter__"),
+                        "__enter__",
                         typeof(object),
+                        Ast.CodeContext(),
                         manager
                     )                
                 )
@@ -150,13 +154,9 @@ namespace IronPython.Compiler.Ast {
 
             statements[4] =
                 // try:
-                Ast.Try(
-                    // try statement location
-                    Span, _header,
-
-                    // try statement body
+                AstUtils.Try(// try statement body
                     _var != null ?
-                        Ast.Block(
+                        AstUtils.Block(
                             _body.Span,
                             // VAR = value
                             _var.TransformSet(ag, SourceSpan.None, value, Operators.None),
@@ -164,9 +164,8 @@ namespace IronPython.Compiler.Ast {
                             ag.Transform(_body)
                         ) :
                         // BLOCK
-                        ag.Transform(_body)
-
-                // except:
+                        ag.Transform(_body), // except:, // try statement location
+                        Span, _header
                 ).Catch(typeof(Exception), exception,
                     Ast.Block(
                         // Python specific exception handling code
@@ -181,7 +180,7 @@ namespace IronPython.Compiler.Ast {
                         //  if not exit(*sys.exc_info()):
                         //      raise
                         Ast.IfThen(
-                            Ast.Action.Operator(ag.Binder, Operators.Not, typeof(bool), MakeExitCall(ag, exit, exception)),
+                            AstUtils.Operator(ag.Binder, Operators.Not, typeof(bool), Ast.CodeContext(), MakeExitCall(ag, exit, exception)),
                             Ast.Rethrow()
                         )
                     )
@@ -191,19 +190,22 @@ namespace IronPython.Compiler.Ast {
                     //      exit(None, None, None)
                     Ast.IfThen(
                         exc,
-                        Ast.Action.Call(
-                            _contextManager.Span,
-                            ag.Binder,
+                        Ast.ActionExpression(
+                            OldCallAction.Make(ag.Binder, 3),  // signature doesn't include code context / function
                             typeof(object),
-                            exit,
-                            Ast.Null(),
-                            Ast.Null(),
-                            Ast.Null()
+                            MSAst.Expression.Annotate(_contextManager.Span),
+                            new MSAst.Expression[] {
+                                Ast.CodeContext(),
+                                exit,
+                                Ast.Null(),
+                                Ast.Null(),
+                                Ast.Null()
+                            }
                         )
                     )
                 );
 
-            return Ast.Block(_body.Span, statements);
+            return AstUtils.Block(_body.Span, statements);
         }
 
         private MSAst.Expression MakeExitCall(AstGenerator ag, MSAst.VariableExpression exit, MSAst.Expression exception) {
@@ -212,9 +214,10 @@ namespace IronPython.Compiler.Ast {
             //    exit(*sys.exc_info())
             // we'll actually do:
             //    exit(*PythonOps.GetExceptionInfoLocal($exception))
-            return Ast.Action.Call(
-                CallAction.Make(ag.Binder, new CallSignature(MSAst.ArgumentKind.List)),
+            return AstUtils.Call(
+                OldCallAction.Make(ag.Binder, new CallSignature(MSAst.ArgumentKind.List)),
                 typeof(bool),
+                Ast.CodeContext(),
                 exit,
                 Ast.Call(
                     AstGenerator.GetHelperMethod("GetExceptionInfoLocal"), 

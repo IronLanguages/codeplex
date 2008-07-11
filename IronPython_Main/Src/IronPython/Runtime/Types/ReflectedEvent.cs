@@ -14,21 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
 
@@ -95,11 +90,6 @@ namespace IronPython.Runtime.Types {
         internal override bool TryDeleteValue(CodeContext/*!*/ context, object instance, PythonType owner) {
             Assert.NotNull(context, owner);
             throw ReadOnlyException(DynamicHelpers.GetPythonTypeFromType(Info.DeclaringType));
-        }
-
-        internal override bool IsVisible(CodeContext/*!*/ context, PythonType owner) {
-            // events aren't visible w/o importing clr.
-            return !_clsOnly || PythonOps.IsClsVisible(context);
         }
 
         internal override bool IsAlwaysVisible {
@@ -188,7 +178,7 @@ namespace IronPython.Runtime.Types {
                     stubs = null;
                 } else {
                     // create signature converting stub:
-                    handler = Microsoft.Scripting.Runtime.RuntimeHelpers.GetDelegate(func, _event.Info.EventHandlerType);
+                    handler = BinderOps.GetDelegate(context, func, _event.Info.EventHandlerType);
                     stubs = _event.GetStubList(_instance);
                 }
 

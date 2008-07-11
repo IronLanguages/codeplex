@@ -13,15 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.Diagnostics;
+using System.Scripting.Runtime;
 
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     /// <summary>
     /// This class is useful for quickly collecting performance counts for expensive
     /// operations.  Usually this means operations involving either reflection or

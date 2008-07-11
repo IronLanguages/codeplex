@@ -13,20 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
+using System.Scripting.Runtime;
+using Microsoft.Scripting.Math; 
 
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-
-[assembly: PythonExtensionType(typeof(Decimal), typeof(DecimalOps))]
 namespace IronPython.Runtime.Operations {
     public static class DecimalOps {
 

@@ -18,21 +18,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     /// <summary>
     /// BuiltinFunction represents any standard CLR function exposed to Python.
@@ -45,10 +47,10 @@ namespace IronPython.Runtime.Types {
     /// </summary>    
     [PythonSystemType("builtin_function_or_method")]
     public class BuiltinFunction :
-        PythonTypeSlot, IDynamicObject, ICodeFormattable {
+        PythonTypeSlot, IOldDynamicObject, ICodeFormattable {
         private string/*!*/ _name;
         private MethodBase/*!*/[]/*!*/ _targets;
-        private Type/*!*/ _declType;
+        private readonly Type/*!*/ _declType;
         private FunctionType _funcType;
         
         private Dictionary<TypeList, BuiltinFunction> _boundGenerics;
@@ -64,6 +66,8 @@ namespace IronPython.Runtime.Types {
         }
 
         internal static BuiltinFunction/*!*/ MakeOrAdd(BuiltinFunction existing, string name, MethodBase mi, Type declaringType, FunctionType funcType) {
+            PythonBinder.AssertNotExtensionType(declaringType);
+
             if (existing != null) {
                 existing.AddMethod(mi);
                 return existing;
@@ -113,28 +117,54 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal object CallHelper(CodeContext context, object[] args, string[] names) {
-            return CallHelper(context, args, names, null);
-        }
-
-        internal object CallHelper(CodeContext context, object[] args, string[] names, object instance) {
-            MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, _targets, SymbolTable.StringsToIds(names));
-            BindingTarget bt = mb.MakeBindingTarget(instance == null ? CallTypes.None : CallTypes.ImplicitInstance, CompilerHelpers.GetTypes(args));
-
-            if (bt.Success) {
-                return bt.Call(context, args);
-            } else if (IsBinaryOperator && args.Length == 2) {
-                return PythonOps.NotImplemented;
-            }
+        internal object Call(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object instance, object[] args) {
+            storage = GetInitializedStorage(context, storage);
             
-            // TODO: Could do better than this to report error messages
-            if (instance != null) {
-                return mb.CallInstanceReflected(context, instance, args);
-            } else {
-                return mb.CallReflected(context, CallTypes.None, args);
+            object callable;
+            if (!GetDescriptor().TryGetBoundValue(context, instance, DynamicHelpers.GetPythonTypeFromType(DeclaringType), out callable)) {
+                callable = this;
             }
+
+            return storage.Data.Invoke(context, callable, args);
         }
 
+        private static SiteLocalStorage<DynamicSite<object, object[], object>> GetInitializedStorage(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage) {
+            if (storage == null) {
+                storage = PythonContext.GetContext(context).GetGenericCallSiteStorage();
+            }
+
+            if (!storage.Data.IsInitialized) {
+                storage.Data.EnsureInitialized(
+                    OldCallAction.Make(
+                        context.LanguageContext.Binder,
+                        new CallSignature(ArgumentKind.List)
+                    )
+                );
+            }
+            return storage;
+        }
+
+        internal object Call(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, object instance, object[] args, IAttributesCollection keywordArgs) {
+            if (storage == null) {
+                storage = PythonContext.GetContext(context).GetGenericKeywordCallSiteStorage();
+            }
+
+            if (!storage.Data.IsInitialized) {
+                storage.Data.EnsureInitialized(
+                    OldCallAction.Make(
+                        context.LanguageContext.Binder,
+                        new CallSignature(ArgumentKind.List, ArgumentKind.Dictionary)
+                    )
+                );
+            }
+
+            if (instance != null) {
+                return storage.Data.Invoke(context, this, ArrayUtils.Insert(instance, args), keywordArgs);
+            }
+
+            return storage.Data.Invoke(context, this, args, keywordArgs);
+        }
+        
         /// <summary>
         /// Returns a BuiltinFunction bound to the provided type arguments.  Returns null if the binding
         /// cannot be performed.
@@ -181,10 +211,8 @@ namespace IronPython.Runtime.Types {
         }
 
         internal void DictArgsHelper(IDictionary<object, object> dictArgs, object[] args, out object[] realArgs, out string[] argNames) {
-            realArgs = new object[args.Length + dictArgs.Count];
+            realArgs = ArrayOps.CopyArray(args, args.Length + dictArgs.Count);
             argNames = new string[dictArgs.Count];
-
-            Array.Copy(args, realArgs, args.Length);
 
             int index = 0;
             foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dictArgs) {
@@ -213,17 +241,7 @@ namespace IronPython.Runtime.Types {
 
         internal Type DeclaringType {
             get {
-                //return _declType;
-
-                MethodBase target = Targets[0];
-
-                if ((FunctionType & FunctionType.OpsFunction) == 0) {
-                    // normal method 
-                    return target.DeclaringType;
-                } else {
-                    //Debug.Assert(ExtensionTypeAttribute.IsExtensionType(target.DeclaringType), String.Format("Type {0} is not an Ops Type ({1})", target.DeclaringType, Name));
-                    return ExtensionTypeAttribute.GetExtendedTypeFromExtension(target.DeclaringType).UnderlyingSystemType;
-                }
+                return _declType;
             }
         }
 
@@ -275,21 +293,6 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IContextAwareMember Members
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
-        internal override bool IsVisible(CodeContext context, PythonType owner) {
-            Debug.Assert(context != null);
-
-            if (PythonOps.IsClsVisible(context)) {
-                return true;
-            }
-
-            return IsPythonVisible;
-        }
-
-        #endregion
-
         #region PythonTypeSlot Overrides
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -307,24 +310,18 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
-        LanguageContext IDynamicObject.LanguageContext {
-            get {
-                return DefaultContext.Default.LanguageContext;
-            }
-        }
-
-        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind) {
-                case DynamicActionKind.Call: return MakeCallRule<T>((CallAction)action, context, args);
-                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+                case DynamicActionKind.Call: return MakeCallRule<T>((OldCallAction)action, context, args);
+                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
             }
 
             return null;
         }
 
-        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch(doOperationAction.Operation) {
                 case Operators.CallSignatures:
                     return PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Targets, DynamicHelpers.GetPythonType(args[0]));
@@ -338,13 +335,13 @@ namespace IronPython.Runtime.Types {
             get {
                 return IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All;
             }
-        }   
-        private RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[]args) {
-            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Targets, Level, IsReversedOperator);
+        }
+        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(context, action, args, Targets, Level, IsReversedOperator);
             RuleBuilder<T> rule = helper.MakeRule();
             if (IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 function + 2 args
                 // BinaryOperators return NotImplemented on failure.
-                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented"));
+                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Field(null, typeof(PythonOps), "NotImplemented"));
             }
             rule.AddTest(MakeFunctionTest(rule.Parameters[0]));
             return rule;
@@ -396,8 +393,8 @@ namespace IronPython.Runtime.Types {
         /// signature with syntax like the following:
         ///    someClass.SomeMethod.Overloads[str, int]("Foo", 123)
         /// </summary>
-        [PythonHidden]
         public virtual BuiltinFunctionOverloadMapper Overloads {
+            [PythonHidden]
             get {
                 // The mapping is actually provided by a class rather than a dictionary
                 // since it's hard to generate all the keys of the signature mapping when
@@ -425,21 +422,18 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static object __self__ {
+        public object __self__ {
             get {
                 return null;
             }
         }
 
-        public object __call__(CodeContext context, [ParamDictionary]IDictionary<object, object> dictArgs, params object[] args) {
-            object[] realArgs;
-            string[] argNames;
-            DictArgsHelper(dictArgs, args, out realArgs, out argNames);
-
-            return CallHelper(context, realArgs, argNames, null);
+        public object __call__(CodeContext/*!*/ context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+            return Call(context, storage, null, args, dictArgs);
         }
 
         public BuiltinFunction/*!*/ this[PythonTuple tuple] {
+            [PythonHidden]
             get {
                 return this[tuple._data];
             }
@@ -450,6 +444,7 @@ namespace IronPython.Runtime.Types {
         /// the supplied type arguments.
         /// </summary>
         public BuiltinFunction/*!*/ this[params object[] key] {
+            [PythonHidden]
             get {
                 // Retrieve the list of type arguments from the index.
                 Type[] types = new Type[key.Length];

@@ -14,22 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Utils = Microsoft.Scripting.Utils;
-using IronPython.Runtime.Operations;
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using IronPython.Runtime.Operations;
+using Utils = System.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
-    [PythonSystemType("property#")]
+    [PythonSystemType("getset_descriptor")]
     public class ReflectedProperty : ReflectedGetterSetter, ICodeFormattable {
         private readonly PropertyInfo/*!*/ _info;
 
@@ -66,18 +60,18 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            return CallSetter(context, instance, Utils.ArrayUtils.EmptyObjects, value);
+            return CallSetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects, value);
         }
 
-        public override Type DeclaringType {
+        internal override Type DeclaringType {
             get { return _info.DeclaringType; }
         }
 
-        public override string Name {
+        public override string __name__ {
             get { return _info.Name; }
         }
 
-        public PropertyInfo Info {
+        internal PropertyInfo Info {
             get {
                 return _info;
             }
@@ -86,20 +80,13 @@ namespace IronPython.Runtime.Types {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
 
-            value = CallGetter(context, instance, Utils.ArrayUtils.EmptyObjects);
+            value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects);
             return true;
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             __delete__(instance);
             return true;
-        }
-
-        internal sealed override bool IsVisible(CodeContext context, PythonType owner) {
-            if (PythonOps.IsClsVisible(context))
-                return true;
-
-            return NameType == NameType.PythonProperty;
         }
 
         internal override bool IsAlwaysVisible {
@@ -117,6 +104,7 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Convenience function for users to call directly
         /// </summary>
+        [PythonHidden]
         public object GetValue(CodeContext context, object instance) {
             object value;
             if (TryGetValue(context, instance, DynamicHelpers.GetPythonType(instance), out value)) {
@@ -128,6 +116,7 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Convenience function for users to call directly
         /// </summary>
+        [PythonHidden]
         public void SetValue(CodeContext context, object instance, object value) {
             if (!TrySetValue(context, instance, DynamicHelpers.GetPythonType(instance), value)) {
                 throw new InvalidOperationException("cannot set property");
@@ -139,16 +128,15 @@ namespace IronPython.Runtime.Types {
             TrySetValue(DefaultContext.Default, instance, DynamicHelpers.GetPythonType(instance), value);
         }
 
-        [SpecialName]
         public void __delete__(object instance) {
             if (Setter.Length != 0)
                 throw PythonOps.AttributeErrorForReadonlyAttribute(
                     DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name,
-                    SymbolTable.StringToId(Name));
+                    SymbolTable.StringToId(__name__));
             else
                 throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(
                     DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name,
-                    SymbolTable.StringToId(Name));
+                    SymbolTable.StringToId(__name__));
         }
 
         public string __doc__ {
@@ -163,8 +151,8 @@ namespace IronPython.Runtime.Types {
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<property# {0} on {1}>",
-                Name,
-                PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(DeclaringType)));
+                __name__,
+                DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name);
         }
 
         #endregion

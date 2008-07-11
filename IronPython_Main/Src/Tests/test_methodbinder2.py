@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -27,13 +27,13 @@ class PT_I(I): pass
 
 class PT_C1(C1): pass
 
-class PT_I_int(I): 
+class PT_I_int(I):
     def __int__(self): return 100
 
-class PT_int_old: 
+class PT_int_old:
     def __int__(self): return 200
 
-class PT_int_new(object): 
+class PT_int_new(object):
     def __int__(self): return 300
 
 UInt32Max = System.UInt32.MaxValue
@@ -52,7 +52,7 @@ pt_int_new = PT_int_new()
 arrayInt = array_int((10, 20))
 tupleInt = ((10, 20), )
 listInt  = ([10, 20], )
-tupleLong1, tupleLong2  = ((10L, 20L), ), ((System.Int64.MaxValue, System.Int32.MaxValue * 2),)    
+tupleLong1, tupleLong2  = ((10L, 20L), ), ((System.Int64.MaxValue, System.Int32.MaxValue * 2),)
 arrayByte = array_byte((10, 20))
 arrayObj = array_object(['str', 10])
 
@@ -92,11 +92,11 @@ def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError, verbose=Fal
        mapping specifies (method-name, flag-value)
        funcOverflowError contains method-name, which will cause OverflowError when passing in 'arg'
     '''
-    if verbose: print arg, 
+    if verbose: print arg,
     for funcname in dir(target):
         if not _self_defined_method(funcname) : continue
         
-        if verbose: print funcname, 
+        if verbose: print funcname,
         func = getattr(target, funcname)
 
         if funcname in funcOverflowError: expectError = OverflowError
@@ -116,15 +116,15 @@ def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError, verbose=Fal
 
             if not isinstance(e, expectError):
                 Fail("expect '%s', but got '%s' (flag %s) when func %s with arg %s (%s)\n%s" % (expectError, e, Flag.Value, funcname, arg, type(arg), func.__doc__))
-        else:            
+        else:
             if not funcname in mapping.keys(): # Expecting exception
                 Fail("expect %s, but got no exception (flag %s) when func %s with arg %s (%s)\n%s" % (expectError, Flag.Value, funcname, arg, type(arg), func.__doc__))
             
             left, right = Flag.Value, mapping[funcname]
-            if left != right: 
+            if left != right:
                 Fail("left %s != right %s when func %s on arg %s (%s)\n%s" % (left, right, funcname, arg, type(arg), func.__doc__))
-            Flag.Value = -99           # reset 
-    if verbose: print 
+            Flag.Value = -99           # reset
+    if verbose: print
     
 def test_other_concerns():
     target = COtherOverloadConcern()
@@ -154,23 +154,23 @@ def test_other_concerns():
     target.M120(target, 100)
     AreEqual(Flag.Value, 120); Flag.Value = 99
     target.M120(100)
-    AreEqual(Flag.Value, 220); Flag.Value = 99    
+    AreEqual(Flag.Value, 220); Flag.Value = 99
 
     COtherOverloadConcern.M120(target, 100)
     AreEqual(Flag.Value, 120); Flag.Value = 99
     COtherOverloadConcern.M120(100)
-    AreEqual(Flag.Value, 220); Flag.Value = 99    
+    AreEqual(Flag.Value, 220); Flag.Value = 99
     
     # generic
-    for x in [100, 100.1234]: 
+    for x in [100, 100.1234]:
         target.M130(x)
         AreEqual(Flag.Value, 130); Flag.Value = 99
 
     AssertError(TypeError, target.M130, C1())
 
-    for x in [100, 100.1234]: 
+    for x in [100, 100.1234]:
         target.M130[int](x)
-        AreEqual(Flag.Value, 230); Flag.Value = 99    
+        AreEqual(Flag.Value, 230); Flag.Value = 99
 
 import clr
 clrRefInt = clr.Reference[int]()
@@ -346,12 +346,66 @@ def test_arg_Collections():
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
+#------------------------------------------------------------------------------
+#--Boolean
+def test_arg_boolean_boolean_overload():
+    o = COverloads_Boolean()
+    
+    param_method_map = {
+        None : [        o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, 
+                        o.M107, o.M108, o.M109, o.M110, o.M111],
+        True : [        o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, o.M107, o.M108, o.M109, o.M110, o.M111, o.M112],
+        False : [       o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, o.M107, o.M108, o.M109, o.M110, o.M111, o.M112],
+        100 : [         o.M100],
+        myint(100): [   o.M100],
+        -100 : [        o.M100],
+        UInt32Max: [    o.M100, o.M106],
+        200L : [        o.M100, o.M106, o.M109],
+        -200L : [       o.M100, o.M106, o.M109],
+        Byte10 : [      o.M100],
+        SBytem10 : [    o.M100],
+        Int1610 : [     o.M100],
+        Int16m20 : [    o.M100],
+        12.34 : [       o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, o.M107, o.M108, o.M109, o.M110],
+        
+    }
+    
+    for param in param_method_map.keys():
+        for meth in param_method_map[param]:
+            expected_flag = int(meth.__name__[1:])
+            meth(param)
+            AreEqual(expected_flag, Flag.Value)
+    
+    #True, False
+    #'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '
+    
+    """
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        
+(        True, _merge(_first(), _second('')), '', '', ),
+(       False, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
+(         100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(        -100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(   UInt32Max, _merge(_first('M100 M106 '), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 ', '', ),
+(        200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(       -200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(      Byte10, _merge(_first('M100 '), _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 ')), 'M102 ', '', ),
+(    SBytem10, _merge(_first('M100 '), _second('M102 M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M103 M105 M107 ', '', ),
+(     Int1610, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
+(    Int16m20, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
+(       12.34, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 '), _second('M111 M112 ')), '', '', ),
+    ]:
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
+    """
+
+
 def test_arg_Boolean():
     target = COverloads_Boolean()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (        None, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M112 ')), '', '', ),
-(        True, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
-(       False, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(        True, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
+(       False, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
 (         100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (        -100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
@@ -419,7 +473,7 @@ def test_arg_Int32():
 (    UInt32Max, _merge(_first(''), _second('M100 M106 M107 M108 M109 M110 M111 M112 ')), '', 'M101 M102 M103 M104 M105 ', ),
 (        200L, _merge(_first('M101 M109 '), _second('M100 M102 M104 M105 M106 M107 M108 M110 M111 M112 ')), '', 'M103 ', ),
 (       -200L, _merge(_first('M101 M109 '), _second('M100 M105 M108 M110 M111 M112 ')), '', 'M102 M103 M104 M106 M107 ', ),
-(      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112'), _second('M102 M104 M105 M106 M107 ')), '', '', ),        
+(      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112'), _second('M102 M104 M105 M106 M107 ')), '', '', ),
 (    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 M105 ')), '', '', ),
 (     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), '', '', ),
 (    Int16m20, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), '', '', ),

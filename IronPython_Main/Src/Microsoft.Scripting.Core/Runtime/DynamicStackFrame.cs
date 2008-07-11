@@ -13,14 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
 using System.Reflection;
-using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Helper for storing information about stack frames.
     /// </summary>

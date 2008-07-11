@@ -12,12 +12,11 @@
  *
  *
  * ***************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.Text;
 
+using System.Collections.Generic;
+using System.Scripting;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
+
 namespace IronPython.Runtime {
     class ObjectAttributesAdapter  : DictionaryStorage {
         private object _backing;

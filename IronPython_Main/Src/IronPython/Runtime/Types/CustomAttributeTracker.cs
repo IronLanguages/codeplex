@@ -14,40 +14,37 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting.Actions;
+using System.Linq.Expressions;
 using IronPython.Runtime.Operations;
-using System.Collections.Generic;
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
     
     public abstract class PythonCustomTracker : CustomTracker {
         public abstract PythonTypeSlot/*!*/ GetSlot();
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
-            return Ast.RuntimeConstant(GetSlot());
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
+            return Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot));
         }
 
         public override MemberTracker BindToInstance(Expression instance) {
             return new BoundMemberTracker(this, instance);
         }
 
-        public override Expression SetValue(ActionBinder binder, Type type, Expression value) {
-            return SetBoundValue(binder, type, value, Ast.Null());
+        public override Expression SetValue(Expression context, ActionBinder binder, Type type, Expression value) {
+            return SetBoundValue(context, binder, type, value, Ast.Null());
         }
 
-        protected override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotGetValue"),
-                Ast.CodeContext(),
-                Ast.RuntimeConstant(GetSlot()),
+                context,
+                Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot)),
                 Ast.ConvertHelper(
                     instance,
                     typeof(object)
@@ -56,11 +53,11 @@ namespace IronPython.Runtime.Types {
             );
         }
         
-        protected override Expression SetBoundValue(ActionBinder binder, Type type, Expression value, Expression instance) {
+        protected override Expression SetBoundValue(Expression context, ActionBinder binder, Type type, Expression value, Expression instance) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotSetValue"),
-                Ast.CodeContext(),
-                Ast.RuntimeConstant(GetSlot()),
+                context,
+                Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot)),
                 Ast.ConvertHelper(
                     instance,
                     typeof(object)
@@ -69,6 +66,17 @@ namespace IronPython.Runtime.Types {
                 value
             );
         }
+
+        public Expression GetBoundPythonValue(RuleBuilder builder, ActionBinder binder, PythonType accessing) {
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("SlotGetValue"),
+                builder.Context,
+                Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot)),
+                Ast.Null(),
+                Ast.RuntimeConstant(accessing)
+            );
+        }
+
     }
 
     /// <summary>
@@ -90,8 +98,8 @@ namespace IronPython.Runtime.Types {
             _slot = slot;
         }
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
-            return GetBoundValue(binder, type, Ast.Constant(null));
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
+            return GetBoundValue(context, binder, type, Ast.Constant(null));
         }
 
         public override string Name {
@@ -136,18 +144,8 @@ namespace IronPython.Runtime.Types {
             );
         }
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
-            return GetBoundValue(binder, type, Ast.Null());
-        }
-
-        public Expression GetBoundPythonValue(ActionBinder binder, PythonType accessing) {
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("SlotGetValue"),
-                Ast.CodeContext(),
-                Ast.RuntimeConstant(GetSlot()),
-                Ast.Null(),
-                Ast.RuntimeConstant(accessing)
-            );
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
+            return GetBoundValue(context, binder, type, Ast.Null());
         }
 
         public override Type DeclaringType {
@@ -191,8 +189,13 @@ namespace IronPython.Runtime.Types {
                 ft &= ~FunctionType.ReversedOperator;
             }
 
-            // operators are always visible as they get mapped into Python names.
-            ft |= FunctionType.AlwaysVisible;
+            // check if this operator is only availble after importing CLR (e.g. __getitem__ on functions)
+            foreach (MethodInfo mi in methods) {
+                if (!mi.IsDefined(typeof(PythonHiddenAttribute), false)) {
+                    ft |= FunctionType.AlwaysVisible;
+                    break;
+                }
+            }
 
             return PythonTypeOps.GetFinalSlotForFunction(PythonTypeOps.GetBuiltinFunction(DeclaringType, 
                         Name,

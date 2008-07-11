@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -14,10 +14,10 @@
 #####################################################################################
 
 '''
-Simple script which executes tests written for IP (and relevant for CPython) under 
+Simple script which executes tests written for IP (and relevant for CPython) under
 CPython to ensure compatibility.
 
-Parameters: 
+Parameters:
 - first parameter is the directory containing test lists
 - directories containing generic test files which should *not*
 be run (e.g., they're only relevant for .NET). This is entirely optional
@@ -86,10 +86,10 @@ for exclude_dir in argv[2:]:
         
     if DEBUG:
         print "exclude_dir:", exclude_dir, ", t_list:", t_list
-        print 
+        print
     
     #strip out IP-only tests
-    test_list = [ x for x in test_list if t_list.count(x)==0 ]   
+    test_list = [ x for x in test_list if t_list.count(x)==0 ]
 
 #strip out all IP-only tests
 test_list = [ x for x in test_list if EXCLUDE_LIST.count(x)==0 ]
@@ -110,7 +110,7 @@ for test_name in test_list:
     #if it fails, add it to the list
     if ec!=0:
         failed_tests.append(test_name + "; Exit Code=" + str(ec))
-    print    
+    print
     
 #------------------------------------------------------------------------------
 print
@@ -121,6 +121,6 @@ if  len(failed_tests)==0:
     exit(0)
 else:
     print "The following tests failed:"
-    for test_name in failed_tests: print test_name    
+    for test_name in failed_tests: print test_name
     exit(1)
     

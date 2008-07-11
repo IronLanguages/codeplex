@@ -14,13 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Scripting;
+using System.Scripting.Runtime;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {

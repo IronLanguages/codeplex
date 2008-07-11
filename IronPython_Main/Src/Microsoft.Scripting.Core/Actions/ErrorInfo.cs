@@ -13,19 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// Encapsulates information about the result that should be produced when 
-    /// a DynamicAction cannot be performed.  The ErrorInfo can hold one of:
+    /// a OldDynamicAction cannot be performed.  The ErrorInfo can hold one of:
     ///     an expression which creates an Exception to be thrown 
     ///     an expression which produces a value which should be returned 
     ///         directly to the user and represents an error has occured (for
@@ -101,31 +96,31 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public object GetValue(CodeContext context) {
-            switch(_kind) {
-                case ErrorInfoKind.Error:
-                case ErrorInfoKind.Success:
-                    return Interpreter.Interpreter.Evaluate(context, _value);                    
-                case ErrorInfoKind.Exception:
-                    throw (Exception)Interpreter.Interpreter.Evaluate(context, _value);
-                default:
-                    throw new InvalidOperationException();
+        public ErrorInfoKind Kind {
+            get {
+                return _kind;
             }
         }
 
-        enum ErrorInfoKind {
-            /// <summary>
-            /// The ErrorInfo expression produces an exception
-            /// </summary>
-            Exception,
-            /// <summary>
-            /// The ErrorInfo expression produces a value which represents the error (e.g. undefined)
-            /// </summary>
-            Error,
-            /// <summary>
-            /// The ErrorInfo expression produces a value which is not an error
-            /// </summary>
-            Success
+        public Expression Expression {
+            get {
+                return _value;
+            }
         }
+    }
+
+    public enum ErrorInfoKind {
+        /// <summary>
+        /// The ErrorInfo expression produces an exception
+        /// </summary>
+        Exception,
+        /// <summary>
+        /// The ErrorInfo expression produces a value which represents the error (e.g. undefined)
+        /// </summary>
+        Error,
+        /// <summary>
+        /// The ErrorInfo expression produces a value which is not an error
+        /// </summary>
+        Success
     }
 }

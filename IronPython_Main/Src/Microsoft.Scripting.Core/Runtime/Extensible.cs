@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     public class Extensible<T> {
         private T _value;
 

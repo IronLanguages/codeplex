@@ -14,19 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Reflection;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
-using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Compiler {
     /// <summary>
@@ -115,11 +109,14 @@ namespace IronPython.Compiler {
         }
 
         public static string GetTypeName(Type t) {
-            string name;
-            name = t.Name;
-
             if (t.IsArray) {
-                return "Array[" + PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(t.GetElementType())) + "]";
+                return "Array[" + GetTypeName(t.GetElementType()) + "]";
+            }
+
+            string name = PythonBinder.GetTypeNameInternal(t);
+
+            if (name != t.Name) {
+                return name;
             }
 
             int backtickIndex;
@@ -131,7 +128,7 @@ namespace IronPython.Compiler {
                 bool first = true;
                 foreach (Type tof in typeOf) {
                     if (first) first = false; else sb.Append(", ");
-                    sb.Append(PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(tof)));
+                    sb.Append(GetTypeName(tof));
                 }
                 sb.Append(']');
                 name = sb.ToString();                

@@ -15,16 +15,13 @@
 
 using System;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
-[assembly: PythonExtensionTypeAttribute(typeof(Scope), typeof(ScopeOps))]
 namespace IronPython.Runtime.Types {
     /// <summary>
     /// Represents functionality that is exposed on PythonModule's but not exposed on the common ScriptModule
@@ -34,7 +31,7 @@ namespace IronPython.Runtime.Types {
         [StaticExtensionMethod]
         public static Scope/*!*/ __new__(CodeContext/*!*/ context, PythonType/*!*/ cls, params object[]/*!*/ args\u00F8) {
             if (cls.IsSubclassOf(TypeCache.Module)) {
-                PythonModule module = PythonContext.GetContext(context).CreateModule("?");
+                PythonModule module = PythonContext.GetContext(context).CreateModule();
                 
                 // TODO: should be null
                 module.Scope.Clear();
@@ -54,7 +51,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public static void __init__(Scope/*!*/ scope, string name, string documentation) {
-            DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetName(name);
+            scope.SetName(Symbols.Name, name);
 
             if (documentation != null) {
                 scope.SetName(Symbols.Doc, documentation);

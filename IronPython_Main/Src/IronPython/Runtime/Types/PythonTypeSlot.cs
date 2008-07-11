@@ -13,15 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
 using System.Runtime.InteropServices;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -60,10 +54,6 @@ namespace IronPython.Runtime.Types {
         /// <returns>true if the value was deleted, false if it can't be deleted</returns>
         internal virtual bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {            
             return false;
-        }
-
-        internal virtual bool IsVisible(CodeContext context, PythonType owner) {
-            return true;
         }
 
         internal virtual bool IsAlwaysVisible {

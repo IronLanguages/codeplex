@@ -14,24 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
-
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
-using IronPython.Hosting;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Calls {
     /// <summary>
@@ -211,7 +198,7 @@ namespace IronPython.Runtime.Calls {
 
         internal object Call(Scope/*!*/ scope, bool tryEvaluate) {
             if (_code != null) {
-                return _code.Run(scope, tryEvaluate);
+                return PythonOps.RunScriptCode(scope, _code, tryEvaluate);
             } else if (_func != null) {
                 return _callSite.Invoke(DefaultContext.Default, _func);
             }

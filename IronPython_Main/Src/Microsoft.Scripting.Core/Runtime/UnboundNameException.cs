@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.Serialization;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     [Serializable]
     public class UnboundNameException : Exception {
         public UnboundNameException() : base() { }

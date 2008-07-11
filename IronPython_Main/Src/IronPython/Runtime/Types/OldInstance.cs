@@ -19,21 +19,20 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.Serialization;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     [PythonSystemType("instance")]
     [Serializable]
@@ -46,7 +45,7 @@ namespace IronPython.Runtime.Types {
         ISerializable,
         IWeakReferenceable,
         IMembersList,
-        IDynamicObject
+        IOldDynamicObject
     {
 
         private PythonDictionary __dict__;
@@ -112,7 +111,7 @@ namespace IronPython.Runtime.Types {
             get { return __dict__; }
         }
 
-        public CustomOldClassDictionaryStorage GetOptimizedDictionary(int keyVersion) {
+        public object GetOptimizedDictionary(int keyVersion) {
             CustomOldClassDictionaryStorage storage = __dict__._storage as CustomOldClassDictionaryStorage;
             if (storage == null || __class__.HasSetAttr || storage.KeyVersion != keyVersion) {
                 return null;
@@ -136,30 +135,26 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
-        LanguageContext IDynamicObject.LanguageContext {
-            get { return DefaultContext.Default.LanguageContext; }
-        }
-
-        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args)  {
+        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args)  {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                 case DynamicActionKind.SetMember:
                 case DynamicActionKind.DeleteMember:
-                    return MakeMemberRule<T>((MemberAction)action, context, args);
+                    return MakeMemberRule<T>((OldMemberAction)action, context, args);
                 case DynamicActionKind.DoOperation:
-                    return MakeOperationRule<T>((DoOperationAction)action, context, args);
+                    return MakeOperationRule<T>((OldDoOperationAction)action, context, args);
                 case DynamicActionKind.Call:
-                    return MakeCallRule<T>((CallAction)action, context, args);
+                    return MakeCallRule<T>((OldCallAction)action, context, args);
                 case DynamicActionKind.ConvertTo:
-                    return MakeConvertToRule<T>((ConvertToAction)action, context, args);
+                    return MakeConvertToRule<T>((OldConvertToAction)action, context, args);
                 default:
                     return null;
             }
         }
 
-        private RuleBuilder<T> MakeConvertToRule<T>(ConvertToAction convertToAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeConvertToRule<T>(OldConvertToAction convertToAction, CodeContext context, object[] args) where T : class {
             Type toType = convertToAction.ToType;
             if (toType == typeof(int)) {
                 return MakeConvertRuleForCall<T>(context, convertToAction, Symbols.ConvertToInt, "ConvertToInt");
@@ -182,7 +177,7 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private static RuleBuilder<T> MakeConvertToIEnumerator<T>(CodeContext context, ConvertToAction convertToAction) {
+        private static RuleBuilder<T> MakeConvertToIEnumerator<T>(CodeContext context, OldConvertToAction convertToAction) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
@@ -215,20 +210,20 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression WrapGenericEnumerator<T>(ConvertToAction convertToAction, RuleBuilder<T> rule, Expression call) {
+        private static Expression WrapGenericEnumerator<T>(OldConvertToAction convertToAction, RuleBuilder<T> rule, Expression call) where T : class {
             if (convertToAction.ToType != typeof(IEnumerator)) {
                 // generic enumerator
                 Debug.Assert(convertToAction.ToType.IsGenericType && 
                     convertToAction.ToType.GetGenericTypeDefinition() == typeof(IEnumerable<>));
                 call = Ast.New(
                     typeof(IEnumerableOfTWrapper<>).MakeGenericType(convertToAction.ToType.GetGenericArguments()[0]).GetConstructor(new Type[] { typeof(IEnumerable) }),
-                    Ast.Action.ConvertTo(DefaultContext.DefaultPythonBinder, typeof(IEnumerable), rule.Parameters[0])
+                    AstUtils.ConvertTo(DefaultContext.DefaultPythonBinder, typeof(IEnumerable), rule.Context, rule.Parameters[0])
                 );
             }
             return call;
         }
 
-        private static RuleBuilder<T> MakeConvertToIEnumerable<T>(CodeContext context, ConvertToAction convertToAction) {
+        private static RuleBuilder<T> MakeConvertToIEnumerable<T>(CodeContext context, OldConvertToAction convertToAction) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
@@ -256,21 +251,21 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression MakeIterRule<T>(CodeContext context, RuleBuilder<T> res, SymbolId symbolId, VariableExpression tmp, Expression @else, Expression call) {
+        private static Expression MakeIterRule<T>(CodeContext context, RuleBuilder<T> res, SymbolId symbolId, VariableExpression tmp, Expression @else, Expression call) where T : class {
             return Ast.IfThenElse(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                    Ast.CodeContext(),
+                    res.Context,
                     Ast.Convert(res.Parameters[0], typeof(OldInstance)),
                     Ast.Constant(symbolId),
-                    Ast.Read(tmp)
+                    tmp
                 ),
                 res.MakeReturn(context.LanguageContext.Binder, call),
                 @else
             );
         }
 
-        private static RuleBuilder<T> MakeConvertComplexRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
+        private static RuleBuilder<T> MakeConvertComplexRuleForCall<T>(CodeContext context, OldConvertToAction convertToAction) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
 
@@ -286,7 +281,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static RuleBuilder<T> MakeConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner) {
+        private static RuleBuilder<T> MakeConvertRuleForCall<T>(CodeContext context, OldConvertToAction convertToAction, SymbolId symbolId, string returner) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
 
@@ -300,22 +295,23 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, RuleBuilder<T> rule, VariableExpression tmp, Expression @else) {
+        private static Expression MakeConvertCallBody<T>(CodeContext context, OldConvertToAction convertToAction, SymbolId symbolId, string returner, RuleBuilder<T> rule, VariableExpression tmp, Expression @else) where T : class {
             return Ast.IfThenElse(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                    Ast.CodeContext(),
+                    rule.Context,
                     Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                     Ast.Constant(symbolId),
-                    Ast.Read(tmp)
+                    tmp
                 ),
                 rule.MakeReturn(context.LanguageContext.Binder,
                     Ast.Call(
                         PythonOps.GetConversionHelper(returner, convertToAction.ResultKind),
-                        Ast.Action.Call(
+                        AstUtils.Call(
                             PythonContext.GetContext(context).Binder,
                             typeof(object),
-                            Ast.Read(tmp)
+                            rule.Context,
+                            tmp
                         )
                     )
                 ),
@@ -323,7 +319,7 @@ namespace IronPython.Runtime.Types {
             );
         }
 
-        private static RuleBuilder<T> MakeBoolConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
+        private static RuleBuilder<T> MakeBoolConvertRuleForCall<T>(CodeContext context, OldConvertToAction convertToAction) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
 
@@ -347,31 +343,32 @@ namespace IronPython.Runtime.Types {
                 Ast.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                         Ast.Constant(Symbols.NonZero),
-                        Ast.Read(tmp)
+                        tmp
                     ),
                     rule.MakeReturn(context.LanguageContext.Binder,
                         Ast.Call(
                             PythonOps.GetConversionHelper("ConvertToNonZero", convertToAction.ResultKind),
-                            Ast.Action.Call(
+                            AstUtils.Call(
                                 PythonContext.GetContext(context).Binder,
                                 typeof(object),
-                                Ast.Read(tmp)
+                                rule.Context,
+                                tmp
                             )
                         )
                     ),
                     Ast.IfThenElse(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                            Ast.CodeContext(),
+                            rule.Context,
                             Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                             Ast.Constant(Symbols.Length),
-                            Ast.Read(tmp)
+                            tmp
                         ),
                         rule.MakeReturn(context.LanguageContext.Binder,
-                            PythonBinderHelper.GetConvertByLengthBody(context, tmp)
+                            PythonBinderHelper.GetConvertByLengthBody(rule, context, tmp)
                         ),
                         error
                     )
@@ -380,7 +377,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private RuleBuilder<T> MakeCallRule<T>(CallAction callAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeCallRule<T>(OldCallAction callAction, CodeContext context, object[] args) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             
@@ -388,24 +385,24 @@ namespace IronPython.Runtime.Types {
             // this favors less code generation.
             VariableExpression tmp = rule.GetTemporary(typeof(object), "callFunc");
             Expression[] callParams = ArrayUtils.MakeArray(rule.Parameters);
-            callParams[0] = Ast.Read(tmp);
+            callParams[0] = tmp;
             rule.Target =
                 Ast.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                         Ast.Constant(Symbols.Call),
-                        Ast.Read(tmp)
+                        tmp
                     ),
                     Ast.Block(
                         Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                         Ast.Try(
                             rule.MakeReturn(context.LanguageContext.Binder,
-                                Ast.Action.Call(
+                                AstUtils.Call(
                                     callAction,
                                     typeof(object),
-                                    callParams
+                                    ArrayUtils.Insert(rule.Context, callParams)
                                 )
                             )
                         ).Finally(
@@ -423,7 +420,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private RuleBuilder<T> MakeMemberRule<T>(MemberAction action, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeMemberRule<T>(OldMemberAction action, CodeContext context, object[] args) where T : class {
             CustomOldClassDictionaryStorage dict = this.Dictionary._storage as CustomOldClassDictionaryStorage;
             if (dict == null || __class__.HasSetAttr) {
                 return MakeDynamicOldInstanceRule<T>(action, context);
@@ -436,7 +433,7 @@ namespace IronPython.Runtime.Types {
 
             RuleBuilder<T> rule = new RuleBuilder<T>();
 
-            VariableExpression tmp = rule.GetTemporary(typeof(CustomOldClassDictionaryStorage), "dict");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "dict");
             Expression tryGetValue = Ast.Call(
                 Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                 typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
@@ -451,7 +448,7 @@ namespace IronPython.Runtime.Types {
                 Ast.Equal(
                     Ast.Call(
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                        TypeInfo.Object.GetType
+                        TypeInfo._Object.GetType
                     ),
                     Ast.Constant(typeof(OldInstance))
                 )
@@ -466,16 +463,16 @@ namespace IronPython.Runtime.Types {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                     target = Ast.Call(
-                        Ast.ReadDefined(tmp),
-                        typeof(CustomOldClassDictionaryStorage).GetMethod("GetValueHelper"),
+                        typeof(PythonOps).GetMethod("OldInstanceDictionaryGetValueHelper"),
+                        tmp,
                         Ast.Constant(key),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object))
                     );
                     break;
                 case DynamicActionKind.SetMember:
                     target = Ast.Call(
-                        Ast.ReadDefined(tmp),
-                        typeof(CustomOldClassDictionaryStorage).GetMethod("SetExtraValue"),
+                        typeof(PythonOps).GetMethod("OldInstanceDictionarySetExtraValue"),
+                        tmp,
                         Ast.Constant(key),
                         Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                     );
@@ -483,7 +480,7 @@ namespace IronPython.Runtime.Types {
                 case DynamicActionKind.DeleteMember:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         Ast.ConvertHelper(rule.Parameters[0], typeof(OldInstance)),
                         Ast.Constant(action.Name)
                     );
@@ -496,7 +493,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private RuleBuilder<T> MakeDynamicOldInstanceRule<T>(MemberAction action, CodeContext context) {
+        private RuleBuilder<T> MakeDynamicOldInstanceRule<T>(OldMemberAction action, CodeContext context) where T : class {
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             Expression instance = Ast.Convert(
@@ -505,20 +502,20 @@ namespace IronPython.Runtime.Types {
             Expression target;
              switch (action.Kind) {
                 case DynamicActionKind.GetMember:
-                    if (((GetMemberAction)action).IsNoThrow) {
+                    if (((OldGetMemberAction)action).IsNoThrow) {
                         VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
 
                         target = Ast.Condition(
                                     Ast.Call(
                                         typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                                        Ast.CodeContext(),
+                                        rule.Context,
                                         instance,
                                         Ast.Constant(action.Name),
-                                        Ast.Read(tmp)
+                                        tmp
                                     ),
-                                    Ast.Read(tmp),
+                                    tmp,
                                     Ast.Convert(
-                                        Ast.ReadField(null, typeof(OperationFailed).GetField("Value")),
+                                        Ast.Field(null, typeof(OperationFailed).GetField("Value")),
                                         typeof(object)
                                     )
                                 );
@@ -526,7 +523,7 @@ namespace IronPython.Runtime.Types {
                         target = Ast.Call(
                             instance,
                             typeof(OldInstance).GetMethod("GetBoundMember"),
-                            Ast.CodeContext(),
+                            rule.Context,
                             Ast.Constant(action.Name)
                         );
                     }
@@ -534,7 +531,7 @@ namespace IronPython.Runtime.Types {
                 case DynamicActionKind.SetMember:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceSetCustomMember"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         instance,
                         Ast.Constant(action.Name),
                         Ast.ConvertHelper(rule.Parameters[1], typeof(object))
@@ -543,7 +540,7 @@ namespace IronPython.Runtime.Types {
                  case DynamicActionKind.DeleteMember:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         instance,
                         Ast.Constant(action.Name)
                     );
@@ -556,7 +553,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static RuleBuilder<T> MakeOperationRule<T>(DoOperationAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeOperationRule<T>(OldDoOperationAction action, CodeContext context, object[] args) where T : class {
             switch (action.Operation) {
                 case Operators.GetItem:
                 case Operators.SetItem:
@@ -581,7 +578,7 @@ namespace IronPython.Runtime.Types {
         public override string ToString() {
             object ret = InvokeOne(this, Symbols.String);
 
-            if (ret != PythonOps.NotImplemented) {
+            if (ret != NotImplementedType.Value) {
                 string strRet;
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
@@ -598,7 +595,7 @@ namespace IronPython.Runtime.Types {
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
             object ret = InvokeOne(this, Symbols.Repr);
-            if(ret != PythonOps.NotImplemented) {
+            if(ret != NotImplementedType.Value) {
                 string strRet;
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
@@ -620,7 +617,7 @@ namespace IronPython.Runtime.Types {
             }
 
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -631,7 +628,7 @@ namespace IronPython.Runtime.Types {
                 return PythonCalls.Call(value, divmod);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public object __coerce__(CodeContext context, object other) {
@@ -641,7 +638,7 @@ namespace IronPython.Runtime.Types {
                 return PythonCalls.Call(value, other);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public object __len__(CodeContext context) {
@@ -879,7 +876,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public object __long__(CodeContext context) {
@@ -889,7 +886,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public object __float__(CodeContext context) {
@@ -899,7 +896,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public object __complex__(CodeContext context) {
@@ -909,7 +906,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         public object __getattribute__(CodeContext context, string name) {
@@ -1054,18 +1051,18 @@ namespace IronPython.Runtime.Types {
             //    throw Ops.TypeError("instance.cmp(x,y) -> y must be an instance, got {0}", Ops.StringRepr(DynamicHelpers.GetPythonType(other)));
 
             object res = InternalCompare(Symbols.Cmp, other);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
             if (oiOther != null) {
                 res = oiOther.InternalCompare(Symbols.Cmp, this);
-                if (res != PythonOps.NotImplemented) return ((int)res) * -1;
+                if (res != NotImplementedType.Value) return ((int)res) * -1;
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         private object CompareForwardReverse(object other, SymbolId forward, SymbolId reverse) {
             object res = InternalCompare(forward, other);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
             OldInstance oi = other as OldInstance;
             if (oi != null) {
@@ -1073,7 +1070,7 @@ namespace IronPython.Runtime.Types {
                 return oi.InternalCompare(reverse, this);
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
@@ -1132,7 +1129,7 @@ namespace IronPython.Runtime.Types {
         }
 
         EventDescriptorCollection ICustomTypeDescriptor.GetEvents(Attribute[] attributes) {
-            return CustomTypeDescHelpers.GetEvents(attributes);
+            return CustomTypeDescHelpers.GetEvents(this, attributes);
         }
 
         EventDescriptorCollection ICustomTypeDescriptor.GetEvents() {
@@ -1140,7 +1137,7 @@ namespace IronPython.Runtime.Types {
         }
 
         PropertyDescriptorCollection ICustomTypeDescriptor.GetProperties(Attribute[] attributes) {
-            return CustomTypeDescHelpers.GetProperties(attributes);
+            return CustomTypeDescHelpers.GetProperties(this, attributes);
         }
 
         PropertyDescriptorCollection ICustomTypeDescriptor.GetProperties() {
@@ -1174,11 +1171,14 @@ namespace IronPython.Runtime.Types {
         #region Rich Equality
         // Specific rich equality support for when the user calls directly from oldinstance type.
 
-        public object __hash__() {
+        public int __hash__() {
             object func;
             object ret = InvokeOne(this, Symbols.Hash);
-            if(ret != PythonOps.NotImplemented) {
-                if (!(ret is int))
+            if(ret != NotImplementedType.Value) {
+                BigInteger bi = ret as BigInteger;
+                if (!Object.ReferenceEquals(bi, null)) {
+                    return BigIntegerOps.__hash__(bi);
+                } else if (!(ret is int))
                     throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(ret)));
 
                 return (int)ret;
@@ -1189,43 +1189,43 @@ namespace IronPython.Runtime.Types {
                 throw PythonOps.TypeError("unhashable instance");
             }
 
-            return PythonOps.NotImplemented;
+            return GetHashCode();
         }
 
         [return: MaybeNotImplemented]
         public object __eq__(object other) {
             object res = InvokeBoth(other, Symbols.OperatorEquals);
-            if (res != PythonOps.NotImplemented) {
+            if (res != NotImplementedType.Value) {
                 return res;
             }
 
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         private object InvokeBoth(object other, SymbolId si) {
             object res = InvokeOne(this, other, si);
-            if (res != PythonOps.NotImplemented) {
+            if (res != NotImplementedType.Value) {
                 return res;
             }
             OldInstance oi = other as OldInstance;
             if (oi != null) {
                 res = InvokeOne(other, this, si);
-                if (res != PythonOps.NotImplemented) {
+                if (res != NotImplementedType.Value) {
                     return res;
                 }
             }
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         private static object InvokeOne(object self, object other, SymbolId si) {
             object func;
             try {
                 if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
             } catch (MissingMemberException) {
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
             }
 
             return PythonOps.CallWithContext(DefaultContext.Default, func, other);
@@ -1235,10 +1235,10 @@ namespace IronPython.Runtime.Types {
             object func;
             try {
                 if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
             } catch (MissingMemberException) {
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
             }
 
             return PythonOps.CallWithContext(DefaultContext.Default, func, other, other2);
@@ -1248,10 +1248,10 @@ namespace IronPython.Runtime.Types {
             object func;
             try {
                 if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
             } catch (MissingMemberException) {
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
             }
 
             return PythonOps.CallWithContext(DefaultContext.Default, func);
@@ -1260,20 +1260,20 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         public object __ne__(object other) {
             object res = InvokeBoth(other, Symbols.OperatorNotEquals);
-            if (res != PythonOps.NotImplemented) {
+            if (res != NotImplementedType.Value) {
                 return res;
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
         [SpecialName]
         public static object Power([NotNull]OldInstance self, object other, object mod) {
             object res = InvokeOne(self, other, mod, Symbols.OperatorPower);
-            if (res != PythonOps.NotImplemented) return res;
+            if (res != NotImplementedType.Value) return res;
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         #endregion

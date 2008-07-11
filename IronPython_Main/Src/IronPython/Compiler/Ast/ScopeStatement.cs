@@ -16,14 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public abstract class ScopeStatement : Statement {
         private ScopeStatement _parent;
@@ -120,7 +117,7 @@ namespace IronPython.Compiler.Ast {
                             init.Add(
                                 MSAst.Expression.Assign(
                                     var,
-                                    MSAst.Expression.ReadField(null, typeof(Uninitialized).GetField("Instance"))
+                                    MSAst.Expression.Field(null, typeof(Uninitialized).GetField("Instance"))
                                 )
                             );
                         }

@@ -13,76 +13,48 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
-    /// This is a cache of all generated rules (per ActionBinder)
+    /// This is a cache of all generated rules (per dynamic site class)
     /// </summary>
-    internal class RuleCache {
-        private readonly Dictionary<DynamicAction, ActionRuleCache> _rules = new Dictionary<DynamicAction, ActionRuleCache>();
+    internal class RuleCache<T> where T : class {
+        private readonly Dictionary<object, RuleTree<T>> _trees = new Dictionary<object, RuleTree<T>>();
 
         internal void Clear() {
-            _rules.Clear();
-        }
-
-        private ActionRuleCache FindActionRuleCache(DynamicAction action) {
-            ActionRuleCache actionRuleCache;
             lock (this) {
-                if (!_rules.TryGetValue(action, out actionRuleCache)) {
-                    actionRuleCache = new ActionRuleCache();
-                    _rules[action] = actionRuleCache;
+                _trees.Clear();
+            }
+        }
+
+        private RuleTree<T> GetOrMakeRuleTree(CallSiteBinder binder) {
+            RuleTree<T> tree;
+            object cookie = binder.HashCookie;
+
+            lock (this) {
+                if (!_trees.TryGetValue(cookie, out tree)) {
+                    tree = RuleTree<T>.MakeRuleTree();
+                    _trees[cookie] = tree;
                 }
             }
 
-            return actionRuleCache;
+            return tree;
         }
 
-        internal Rule<T>[] FindApplicableRules<T>(DynamicAction action, Type[] types) {
-            ActionRuleCache actionRuleCache = FindActionRuleCache(action);
-            RuleTree<T> tree = actionRuleCache.GetOrMakeTree<T>();
-
-            return tree.FindApplicableRules(types);
+        internal Rule<T>[] FindApplicableRules(CallSiteBinder binder, Type[] types, T previousTarget) {
+            RuleTree<T> tree = GetOrMakeRuleTree(binder);
+            return tree.FindApplicableRules(types, previousTarget);
         }
 
-        internal void AddRule<T>(DynamicAction action, Type[] args, Rule<T> rule) {
-            ActionRuleCache actionRuleCache = FindActionRuleCache(action);
-            actionRuleCache.AddRule<T>(args, rule);
+        internal void AddRule(CallSiteBinder binder, Type[] args, Rule<T> rule) {
+            RuleTree<T> tree = GetOrMakeRuleTree(binder);
+            tree.AddRule(args, rule);
         }
 
-        internal void RemoveRule<T>(DynamicAction action, Type[] args, Rule<T> rule) {
-            ActionRuleCache actionRuleCache = FindActionRuleCache(action);
-            actionRuleCache.RemoveRule<T>(args, rule);
-        }
-
-        /// <summary>
-        /// All the cached rules for a given Action (per LanguageBinder)
-        /// </summary>
-        private class ActionRuleCache {
-            private Dictionary<Type, object> _trees = new Dictionary<Type, object>();
-
-            internal ActionRuleCache() {
-            }
-
-            internal RuleTree<T> GetOrMakeTree<T>() {
-                lock (_trees) {
-                    if (!_trees.ContainsKey(typeof(T))) {
-                        _trees[typeof(T)] = RuleTree<T>.MakeRuleTree();
-                    }
-                    return (RuleTree<T>)_trees[typeof(T)];
-                }
-            }
-
-            internal void AddRule<T>(Type[] args, Rule<T> newRule) {
-                GetOrMakeTree<T>().AddRule(args, newRule);
-            }
-
-            internal void RemoveRule<T>(Type[] args, Rule<T> rule) {
-                GetOrMakeTree<T>().RemoveRule(args, rule);
-            }
+        internal void RemoveRule(CallSiteBinder binder, Type[] args, Rule<T> rule) {
+            RuleTree<T> tree = GetOrMakeRuleTree(binder);
+            tree.RemoveRule(args, rule);
         }
     }
 }

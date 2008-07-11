@@ -15,20 +15,16 @@
 //#define DUMP_TOKENS
 
 using System;
-using System.IO;
-using System.Text;
 using System.Diagnostics;
-using System.Collections.Generic;
-
-using IronPython.Runtime;
+using System.Scripting;
+using System.Scripting.Utils;
+using System.Text;
 using IronPython.Hosting;
+using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Compilers;
 
 namespace IronPython.Compiler {
 
@@ -36,7 +32,7 @@ namespace IronPython.Compiler {
     /// IronPython tokenizer
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Tokenizer")]
-    public sealed partial class Tokenizer { 
+    public sealed partial class Tokenizer : TokenizerService { 
         private const int EOF = -1;
         private const int MaxIndent = 80;
 
@@ -85,12 +81,21 @@ namespace IronPython.Compiler {
         private TokenizerBuffer _buffer;
         private ErrorSink _errors;
         private Severity _indentationInconsistencySeverity;
-        private bool _endContinues;        
+        private bool _endContinues;
 
-        public object CurrentState {
+        // TODO:
+        public override bool IsRestartable {
+            get { return false; }
+        }
+        
+        public override object CurrentState {
             get {
                 return _state;
             }
+        }
+
+        public override SourceLocation CurrentPosition {
+            get { return TokenStart; }
         }
 
         public SourceUnit SourceUnit {
@@ -99,7 +104,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        public ErrorSink Errors { 
+        public override ErrorSink ErrorSink { 
             get { return _errors; } 
             set {
                 ContractUtils.RequiresNotNull(value, "value");
@@ -142,6 +147,10 @@ namespace IronPython.Compiler {
             }
         }
 
+        public Tokenizer() 
+            : this(ErrorSink.Null, true) {
+        }
+
         public Tokenizer(ErrorSink errorSink)
             : this(errorSink, false) {
         }
@@ -167,7 +176,7 @@ namespace IronPython.Compiler {
             Initialize(null, sourceUnit.GetReader(), SourceLocation.MinValue, DefaultBufferCapacity);
         }
 
-        public void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation) {
+        public override void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation) {
             Initialize(state, sourceReader, initialLocation, DefaultBufferCapacity);
         }
 
@@ -189,23 +198,95 @@ namespace IronPython.Compiler {
             DumpBeginningOfUnit();
         }
 
-        public int ReadToken() {
-
+        public override TokenInfo ReadToken() {
             if (_buffer == null) {
                 throw new InvalidOperationException("Uninitialized");
             }
 
-            return (int)GetNextToken().Kind;
+            TokenInfo result = new TokenInfo();
+            Token token = GetNextToken();
+            result.SourceSpan = TokenSpan;
+
+            switch (token.Kind) {
+                case TokenKind.EndOfFile:
+                    result.Category = TokenCategory.EndOfStream;
+                    break;
+
+                case TokenKind.Comment:
+                    result.Category = TokenCategory.Comment;
+                    break;
+
+                case TokenKind.Name:
+                    result.Category = TokenCategory.Identifier;
+                    break;
+
+                case TokenKind.Error:
+                    result.Category = TokenCategory.Error;
+                    break;
+
+                case TokenKind.Constant:
+                    result.Category = (token.Value is string) ? TokenCategory.StringLiteral : TokenCategory.NumericLiteral;
+                    break;
+
+                case TokenKind.LeftParenthesis:
+                    result.Category = TokenCategory.Grouping;
+                    result.Trigger = TokenTriggers.MatchBraces | TokenTriggers.ParameterStart;
+                    break;
+
+                case TokenKind.RightParenthesis:
+                    result.Category = TokenCategory.Grouping;
+                    result.Trigger = TokenTriggers.MatchBraces | TokenTriggers.ParameterEnd;
+                    break;
+
+                case TokenKind.LeftBracket:
+                case TokenKind.LeftBrace:
+                case TokenKind.RightBracket:
+                case TokenKind.RightBrace:
+                    result.Category = TokenCategory.Grouping;
+                    result.Trigger = TokenTriggers.MatchBraces;
+                    break;
+
+                case TokenKind.Colon:
+                    result.Category = TokenCategory.Delimiter;
+                    break;
+
+                case TokenKind.Semicolon:
+                    result.Category = TokenCategory.Delimiter;
+                    break;
+
+                case TokenKind.Comma:
+                    result.Category = TokenCategory.Delimiter;
+                    result.Trigger = TokenTriggers.ParameterNext;
+                    break;
+
+                case TokenKind.Dot:
+                    result.Category = TokenCategory.Operator;
+                    result.Trigger = TokenTriggers.MemberSelect;
+                    break;
+
+                case TokenKind.NewLine:
+                    result.Category = TokenCategory.WhiteSpace;
+                    break;
+
+                default:
+                    if (token.Kind >= TokenKind.FirstKeyword && token.Kind <= TokenKind.LastKeyword) {
+                        result.Category = TokenCategory.Keyword;
+                        break;
+                    }
+
+                    result.Category = TokenCategory.Operator;
+                    break;
+            }
+
+            return result;
         }
 
-        internal bool TokenStringEquals(string str) {
-            if (_buffer.TokenLength != str.Length) 
+        internal bool TryGetTokenString(int len, out string tokenString) {
+            if (len != _buffer.TokenLength) {
+                tokenString = null;
                 return false;
-            
-            for (int i = 0; i < _buffer.TokenLength; i++) {
-                if (_buffer.GetChar(i) != str[i])
-                    return false;
             }
+            tokenString = _buffer.GetTokenString();
             return true;
         }
 

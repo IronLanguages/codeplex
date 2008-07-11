@@ -13,12 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     public abstract class TypeTracker : MemberTracker, IMembersList {
         internal TypeTracker() {
         }

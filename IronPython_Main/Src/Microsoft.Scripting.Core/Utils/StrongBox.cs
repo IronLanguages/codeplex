@@ -13,16 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+namespace System.Runtime.CompilerServices {
 
-namespace Microsoft.Scripting.Utils {
-    /// <summary>
-    /// Microsoft.Scripting version of System.Runtime.CompilerServices.StrongBox.
-    /// 
-    /// To be removed when merged with CLR v3.5.
-    /// </summary>
     public sealed class StrongBox<T> : IStrongBox {
         /// <summary>
         /// Gets the strongly typed value associated with the StrongBox.  This is explicitly
@@ -32,6 +24,7 @@ namespace Microsoft.Scripting.Utils {
 
         /// <summary>
         /// Creates a new StrongBox which can receive a value when used in a reference call.
+        /// TODO: review this new API
         /// </summary>
         public StrongBox() {
         }
@@ -44,8 +37,6 @@ namespace Microsoft.Scripting.Utils {
             Value = value;
         }
 
-        #region IStrongBox Members
-
         object IStrongBox.Value {
             get {
                 return Value;
@@ -54,13 +45,9 @@ namespace Microsoft.Scripting.Utils {
                 Value = (T)value;
             }
         }
-
-        #endregion
     }
 
     public interface IStrongBox {
-        object Value {
-            get; set;            
-        }
+        object Value { get; set; }
     }
 }

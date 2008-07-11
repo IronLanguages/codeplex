@@ -13,17 +13,15 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class SwitchCase {
-        private readonly SourceLocation _header;
         private readonly bool _default;
         private readonly int _value;
         private readonly Expression _body;
 
-        internal SwitchCase(SourceLocation header, bool @default, int value, Expression body) {
-            _header = header;
+        internal SwitchCase(bool @default, int value, Expression body) {
             _default = @default;
             _value = value;
             _body = body;
@@ -40,29 +38,17 @@ namespace Microsoft.Scripting.Ast {
         public Expression Body {
             get { return _body; }
         }
-
-        public SourceLocation Header {
-            get { return _header; }
-        }
     }
 
     public partial class Expression {
         public static SwitchCase DefaultCase(Expression body) {
-            return DefaultCase(SourceLocation.None, body);
-        }
-
-        public static SwitchCase DefaultCase(SourceLocation header, Expression body) {
             ContractUtils.RequiresNotNull(body, "body");
-            return new SwitchCase(header, true, 0, body);
+            return new SwitchCase(true, 0, body);
         }
 
         public static SwitchCase SwitchCase(int value, Expression body) {
-            return SwitchCase(SourceLocation.None, value, body);
-        }
-
-        public static SwitchCase SwitchCase(SourceLocation header, int value, Expression body) {
             ContractUtils.RequiresNotNull(body, "body");
-            return new SwitchCase(header, false, value, body);
+            return new SwitchCase(false, value, body);
         }
     }
 }

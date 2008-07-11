@@ -13,15 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {

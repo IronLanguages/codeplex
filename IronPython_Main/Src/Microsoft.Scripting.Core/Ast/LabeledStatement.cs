@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     /// <summary>
     /// Represents a labeled statement
     /// break and continue statements will jump to the end of body
@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly LabelTarget/*!*/ _label;
 
         internal LabeledStatement(Annotations annotations, LabelTarget label, Expression expression)
-            : base(annotations, AstNodeType.LabeledStatement, typeof(void)) {
+            : base(annotations, ExpressionType.LabeledStatement, typeof(void)) {
             _label = label;
             _expression = expression;
         }
@@ -43,14 +43,10 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Expression {
         public static LabeledStatement Labeled(LabelTarget label, Expression body) {
-            return Labeled(SourceSpan.None, label, body);
+            return Labeled(label, body, Annotations.Empty);
         }
 
-        public static LabeledStatement Labeled(SourceSpan span, LabelTarget label, Expression body) {
-            return Labeled(Annotate(span, span), label, body);
-        }
-
-        public static LabeledStatement Labeled(Annotations annotations, LabelTarget label, Expression body) {
+        public static LabeledStatement Labeled(LabelTarget label, Expression body, Annotations annotations) {
             ContractUtils.RequiresNotNull(label, "label");
             ContractUtils.RequiresNotNull(body, "body");
             return new LabeledStatement(annotations, label, body);

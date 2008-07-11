@@ -13,18 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
-using System.Diagnostics;
-using System.Runtime.Remoting;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
 
     // TODO: this class should be abstract
     public class ScopeExtension {

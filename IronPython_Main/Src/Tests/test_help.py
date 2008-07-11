@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -25,11 +25,11 @@ class stdout_reader:
 @skip('win32')
 def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR names
     import clr
-    import System        
-    load_iron_python_test()        
+    import System
+    load_iron_python_test()
     from IronPythonTest import WriteOnly
 
-    sys.stdout = stdout_reader()        
+    sys.stdout = stdout_reader()
     help(WriteOnly)
     if is_silverlight==False:
         help(System.IO.Compression)
@@ -51,7 +51,7 @@ def test_module():
     help(time)
     
     x = sys.stdout.text
-    sys.stdout = sys.__stdout__    
+    sys.stdout = sys.__stdout__
     
     if is_silverlight==False:
         Assert(x.find('clock(...)') != -1)      # should have help for our stuff
@@ -194,7 +194,7 @@ def test_methoddescriptor():
     
     Assert(x.find('append(...)') != -1)
 
-def test_oldstyle_class():    
+def test_oldstyle_class():
     class foo:
         """the slow lazy fox jumped over the quick brown dog..."""
                         
@@ -228,19 +228,19 @@ def test_nodoc():
     sys.stdout = sys.__stdout__
 
 def test_help_instance():
-	class foo(object):
-		"""my documentation"""
-		
-	a = foo()
-	
-	sys.stdout = stdout_reader()
-	
-	help(a)
-	
-	x = sys.stdout.text
-	sys.stdout = sys.__stdout__
-		
-	Assert(x.find('my documentation') != -1)
+    class foo(object):
+        """my documentation"""
+        
+    a = foo()
+    
+    sys.stdout = stdout_reader()
+    
+    help(a)
+    
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+        
+    Assert(x.find('my documentation') != -1)
     
 def test_str():
     sys.stdout = stdout_reader()
@@ -280,13 +280,13 @@ def test_user_function():
     out = run_help(f)
     Assert(out.find('f(*args, **kwargs)') != -1)
     
-    # default 
+    # default
     def f(abc = 3): pass
     out = run_help(f)
     Assert(out.find('f(abc=3)') != -1)
     
     # mutating default value
-    def f(a = [42]): 
+    def f(a = [42]):
         a.append(23)
     out = run_help(f)
     Assert(out.find('f(a=[42])') != -1)
@@ -301,7 +301,7 @@ def test_user_function():
 
     def f(a = foo()): pass
     out = run_help(f)
-    Assert(out.find('f(a=abc)') != -1)    
+    Assert(out.find('f(a=abc)') != -1)
 
 def test_user_method():
     class x:
@@ -330,7 +330,7 @@ def test_user_method():
     out = run_help(x.f)
     Assert(out.find('f(*args, **kwargs)') != -1)
     
-    # default 
+    # default
     class x:
         def f(abc = 3): pass
     out = run_help(x.f)
@@ -344,7 +344,7 @@ def test_user_method():
     class x:
         def f(a = foo()): pass
     out = run_help(x.f)
-    Assert(out.find('f(a=abc)') != -1)    
+    Assert(out.find('f(a=abc)') != -1)
     
     if is_silverlight==False:
         Assert(out.find('unbound __main__.x method') != -1)
@@ -376,7 +376,7 @@ def test_bound_user_method():
     out = run_help(x().f)
     Assert(out.find('f(*args, **kwargs)') != -1)
     
-    # default 
+    # default
     class x:
         def f(abc = 3): pass
     out = run_help(x().f)
@@ -390,7 +390,7 @@ def test_bound_user_method():
     class x:
         def f(a = foo()): pass
     out = run_help(x().f)
-    Assert(out.find('f(a=abc)') != -1) 
+    Assert(out.find('f(a=abc)') != -1)
 
     if is_silverlight==False:
         Assert(out.find('method of __main__.x instance') != -1)

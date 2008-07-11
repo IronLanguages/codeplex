@@ -13,14 +13,15 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Ast;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
@@ -39,7 +40,7 @@ namespace IronPython.Runtime.Types {
             internal void EnsureSite() {
                 if (!Site.IsInitialized) {
                     Site.EnsureInitialized(
-                        CallAction.Make(
+                        OldCallAction.Make(
                             DefaultContext.DefaultPythonBinder,
                             new CallSignature(
                                 new ArgumentInfo(ArgumentKind.Simple),

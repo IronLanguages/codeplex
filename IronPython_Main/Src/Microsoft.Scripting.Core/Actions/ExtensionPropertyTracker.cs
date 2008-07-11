@@ -13,14 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     public class ExtensionPropertyTracker : PropertyTracker {
         private string _name;
         private Type _declaringType;

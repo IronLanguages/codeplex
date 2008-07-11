@@ -13,33 +13,37 @@
  *
  * ***************************************************************************/
 
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using MSAst = Microsoft.Scripting.Ast;
-
+using System.Scripting;
+using System.Scripting.Runtime;
 using ToyScript.Parser;
 using ToyScript.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {
         public ToyLanguageContext(ScriptDomainManager manager) : base(manager) { 
-            Binder = new ToyBinder(new CodeContext(new Scope(), this));
+            Binder = new ToyBinder(manager);
         }
 
-        public override MSAst.LambdaExpression ParseSourceCode(CompilerContext context) {
-            ToyParser tp = new ToyParser(context.SourceUnit.GetCode());
+        protected override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
+            ToyParser tp = new ToyParser(sourceUnit);
+            MSAst.LambdaExpression ast;
 
-            switch (context.SourceUnit.Kind) {
+            switch (sourceUnit.Kind) {
                 case SourceCodeKind.InteractiveCode:
-                    context.SourceUnit.CodeProperties = SourceCodeProperties.None;
-                    return ToyGenerator.Generate(this, tp.ParseInteractiveStatement(), context.SourceUnit.Path);
+                    sourceUnit.CodeProperties = SourceCodeProperties.None;
+                    ast = ToyGenerator.Generate(this, tp.ParseInteractiveStatement(), sourceUnit);
+                    break;
 
                 default:
-                    context.SourceUnit.CodeProperties = SourceCodeProperties.None;
-                    return ToyGenerator.Generate(this, tp.ParseFile(), context.SourceUnit.Path);
+                    sourceUnit.CodeProperties = SourceCodeProperties.None;
+                    ast = ToyGenerator.Generate(this, tp.ParseFile(), sourceUnit);
+                    break;
             }
+
+            ast = new System.Scripting.Generation.GlobalLookupRewriter().RewriteLambda(ast);
+
+            return new ScriptCode(ast, sourceUnit);
         }
 
         public override string DisplayName {

@@ -13,17 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using System.Diagnostics;
-using System.Collections;
 using System.IO;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
+using System.Reflection;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
 
 #if SILVERLIGHT
     public class ExitProcessException : Exception {
@@ -211,9 +205,30 @@ namespace Microsoft.Scripting {
 #endif
         }
 
+        /// <exception cref="ArgumentException">Invalid path.</exception>
         public virtual string/*!*/ GetFullPath(string/*!*/ path) {
 #if !SILVERLIGHT
-            return Path.GetFullPath(path);
+            try {
+                return Path.GetFullPath(path);
+            } catch (Exception e) {
+                throw new ArgumentException("Specified path is invalid", "path", e);
+            }
+#else
+            throw new NotImplementedException();
+#endif
+        }
+
+        /// <exception cref="ArgumentException">Invalid path.</exception>
+        public virtual bool IsAbsolutePath(string/*!*/ path) {
+#if !SILVERLIGHT
+            // GetPathRoot returns either :
+            // "" -> relative to the current dir
+            // "\" -> relative to the drive of the current dir
+            // "X:" -> relative to the current dir, possibly on a different drive
+            // "X:\" -> absolute
+            return
+                Environment.OSVersion.Platform != PlatformID.Unix && Path.GetPathRoot(path).EndsWith(@":\") ||
+                Environment.OSVersion.Platform == PlatformID.Unix && Path.IsPathRooted(path);
 #else
             throw new NotImplementedException();
 #endif

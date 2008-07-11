@@ -16,24 +16,24 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.ComponentModel;
-
 using System.Diagnostics;
-
 using System.Reflection;
 using System.Reflection.Emit;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
+using CompilerServices = System.Runtime.CompilerServices;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -55,6 +55,8 @@ namespace IronPython.Compiler.Generation {
         public const string FieldGetterPrefix = "#field_get#", FieldSetterPrefix = "#field_set#";
 
         private static readonly Publisher<NewTypeInfo, Type> _newTypes = new Publisher<NewTypeInfo, Type>();
+        private static readonly Dictionary<Type, Dictionary<string, List<string>>> _specialNamesForSlottedTypes = new Dictionary<Type, Dictionary<string, List<string>>>();
+
         [MultiRuntimeAware]
         private static int _typeCount;
 
@@ -109,7 +111,17 @@ namespace IronPython.Compiler.Generation {
 
             if (typeInfo.Slots != null) {
                 Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray(typeof(object), typeInfo.Slots.Count));
+
+                Dictionary<string, List<string>> specialNames = null;
+                lock (_specialNamesForSlottedTypes) {
+                    _specialNamesForSlottedTypes.TryGetValue(ret, out specialNames);
+                }
+
                 ret = ret.MakeGenericType(tupleType);
+
+                if (specialNames != null) {
+                    GetTypeMaker(bases, typeInfo).AddBaseMethods(ret, specialNames);
+                }
 
                 for (int i = 0; i < typeInfo.Slots.Count; i++) {
                     string name = typeInfo.Slots[i];
@@ -415,7 +427,13 @@ namespace IronPython.Compiler.Generation {
 
             Type ret = FinishType();
 
-            AddBaseMethods(ret, specialNames);
+            if (_slots == null) {
+                AddBaseMethods(ret, specialNames);
+            } else {
+                lock (_specialNamesForSlottedTypes) {
+                    _specialNamesForSlottedTypes[ret] = specialNames;
+                }
+            }
 
             return ret;
         }
@@ -827,25 +845,42 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void ImplementDynamicObject() {
-            ImplementInterface(typeof(IDynamicObject));
+            ImplementInterface(typeof(IOldDynamicObject));
             MethodInfo decl;
             MethodBuilder impl;
             ILGen il;
 
-            il = DefineMethodOverride(MethodAttributes.Private, typeof(IDynamicObject), "GetRule", out decl, out impl);
+            il = DefineMethodOverride(MethodAttributes.Private, typeof(IOldDynamicObject), "GetRule", out decl, out impl);
             MethodInfo mi = typeof(UserTypeOps).GetMethod("GetRuleHelper");
             GenericTypeParameterBuilder[] types = impl.DefineGenericParameters("T");
+            types[0].SetGenericParameterAttributes(GenericParameterAttributes.ReferenceTypeConstraint);
 
             for (int i = 1; i < 4; i++) {
                 il.EmitLoadArg(i);
             }
 
             il.EmitCall(mi.MakeGenericMethod(types));
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
+            if (typeof(IOldDynamicObject).IsAssignableFrom(_baseType)) {
+                InterfaceMapping imap = _baseType.GetInterfaceMap(typeof(IOldDynamicObject));
+                foreach (MethodInfo baseMethod in imap.TargetMethods) {
+                    if (baseMethod.Name == "GetRule") {
+                        il.Emit(OpCodes.Dup);
+                        Label nonnullRule = il.DefineLabel();
+                        il.Emit(OpCodes.Brtrue, nonnullRule);
+                        il.Emit(OpCodes.Pop);
 
-            il = DefineMethodOverride(MethodAttributes.Private, typeof(IDynamicObject), "get_LanguageContext", out decl, out impl);
-            il.EmitCall(typeof(PythonOps), "GetLanguageContext");
+                        // call the base class
+                        for (int i = 0; i < 4; i++) {
+                            il.EmitLoadArg(i);
+                        }
+                        il.EmitCall(baseMethod.MakeGenericMethod(types));
+
+                        il.MarkLabel(nonnullRule);                        
+                        break;
+                    }
+                }               
+            }
+
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, decl);
         }
@@ -1060,7 +1095,7 @@ namespace IronPython.Compiler.Generation {
         private void ImplementProtectedFieldAccessors() {
             // For protected fields to be accessible from the derived type in Silverlight,
             // we need to create public helper methods that expose them. These methods are
-            // used by the IDynamicObject implementation (in UserTypeOps.GetRuleHelper)
+            // used by the IOldDynamicObject implementation (in UserTypeOps.GetRuleHelper)
 
             FieldInfo[] fields = _baseType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
             foreach (FieldInfo fi in fields) {
@@ -1370,7 +1405,7 @@ namespace IronPython.Compiler.Generation {
 
             if (typeof(IPythonObject).IsAssignableFrom(_baseType)) {
                 Debug.Assert(_typeField == null);
-                il.EmitPropertyGet(typeof(IPythonObject).GetProperty("PythonType"));
+                il.EmitPropertyGet(TypeInfo._IPythonObject.PythonType);
             } else {
                 il.EmitFieldGet(_typeField);
             }
@@ -1525,7 +1560,7 @@ namespace IronPython.Compiler.Generation {
             cctor.EmitCall(typeof(PythonOps).GetMethod(list ? "MakeListCallAction" : "MakeSimpleCallAction"));
 
             // Create the dynamic site
-            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2));
+            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(MakeSiteSignature(nargs));
             FieldBuilder site = _tg.DefineField("site$" + _site++, siteType, FieldAttributes.Private | FieldAttributes.Static);
             cctor.EmitCall(siteType.GetMethod("Create"));
             cctor.EmitFieldSet(site);
@@ -1536,41 +1571,23 @@ namespace IronPython.Compiler.Generation {
             // Emit the site invoke
             //
             il.EmitFieldGet(site);
-            PropertyInfo target = siteType.GetProperty("Target");
-            il.EmitPropertyGet(target);
+            FieldInfo target = siteType.GetField("Target");
+            il.EmitFieldGet(target);
             il.EmitFieldGet(site);
 
             // Emit the code context
-            if (context) {
-                il.EmitLoadArg(1);
-            } else {
-                il.EmitPropertyGet(typeof(DefaultContext).GetProperty("Default"));
-            }
+            EmitCodeContext(il, context);
 
-            if (DynamicSiteHelpers.IsBigTarget(target.PropertyType)) {
-                il.EmitTuple(target.PropertyType.GetGenericArguments()[0],
-                    args.Length + 1, delegate(int index) {
-                    if (index == 0) {
-                        il.Emit(OpCodes.Ldloc, callTarget);
-                    } else {
-                        ReturnFixer rf = ReturnFixer.EmitArgument(il, args[index - 1], index);
-                        if (rf != null) {
-                            fixers.Add(rf);
-                        }
-                    }
-                });
-            } else {
-                il.Emit(OpCodes.Ldloc, callTarget);
+            il.Emit(OpCodes.Ldloc, callTarget);
 
-                for (int i = firstArg; i < args.Length; i++) {
-                    ReturnFixer rf = ReturnFixer.EmitArgument(il, args[i], i + 1);
-                    if (rf != null) {
-                        fixers.Add(rf);
-                    }
+            for (int i = firstArg; i < args.Length; i++) {
+                ReturnFixer rf = ReturnFixer.EmitArgument(il, args[i], i + 1);
+                if (rf != null) {
+                    fixers.Add(rf);
                 }
             }
 
-            il.EmitCall(target.PropertyType, "Invoke");
+            il.EmitCall(target.FieldType, "Invoke");
 
             foreach (ReturnFixer rf in fixers) {
                 rf.FixReturn(il);
@@ -1578,6 +1595,23 @@ namespace IronPython.Compiler.Generation {
 
             EmitConvertFromObject(il, mi.ReturnType);
             il.Emit(OpCodes.Ret);
+        }
+
+        private static void EmitCodeContext(ILGen il, bool context) {
+            if (context) {
+                il.EmitLoadArg(1);
+            } else {
+                il.EmitPropertyGet(typeof(DefaultContext).GetProperty("Default"));
+            }
+        }
+
+        private static Type[] MakeSiteSignature(int nargs) {
+            Type[] sig = new Type[nargs + 3];
+            sig[0] = typeof(CodeContext);
+            for (int i = 1; i < sig.Length; i++) {
+                sig[i] = typeof(object);
+            }
+            return sig;
         }
 
         private static Type[] CreateSignatureWithContext(int count) {
@@ -1600,7 +1634,7 @@ namespace IronPython.Compiler.Generation {
         private readonly int _index;
 
         private ReturnFixer(LocalBuilder reference, ParameterInfo parameter, int index) {
-            Debug.Assert(reference.LocalType.IsGenericType && reference.LocalType.GetGenericTypeDefinition() == typeof(StrongBox<>));
+            Debug.Assert(reference.LocalType.IsGenericType && reference.LocalType.GetGenericTypeDefinition() == typeof(CompilerServices.StrongBox<>));
             Debug.Assert(parameter.ParameterType.IsByRef);
 
             _parameter = parameter;
@@ -1619,7 +1653,7 @@ namespace IronPython.Compiler.Generation {
             il.EmitLoadArg(index);
             if (parameter.ParameterType.IsByRef) {
                 Type elementType = parameter.ParameterType.GetElementType();
-                Type concreteType = typeof(StrongBox<>).MakeGenericType(elementType);
+                Type concreteType = typeof(CompilerServices.StrongBox<>).MakeGenericType(elementType);
                 LocalBuilder refSlot = il.DeclareLocal(concreteType);
                 il.EmitLoadValueIndirect(elementType);
                 il.EmitNew(concreteType, new Type[] { elementType });

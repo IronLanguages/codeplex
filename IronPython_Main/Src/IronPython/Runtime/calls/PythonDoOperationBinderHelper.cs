@@ -14,36 +14,38 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-
-#if !SILVERLIGHT
-using Microsoft.Scripting.Actions.ComDispatch;
-#endif
-
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+
+#if !SILVERLIGHT
+using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
+#endif
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-    public class PythonDoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
+    public class PythonDoOperationBinderHelper<T> : BinderHelper<T, OldDoOperationAction> where T : class {
         private object[] _args;
         private bool _testCoerceRecursionCheck, _disallowCoercion;
 
-        public PythonDoOperationBinderHelper(CodeContext context, DoOperationAction action)
+        public PythonDoOperationBinderHelper(CodeContext context, OldDoOperationAction action)
             : base(context, action) {
         }
 
@@ -111,40 +113,153 @@ namespace IronPython.Runtime.Calls {
             }
 #endif
 
-            if (Operation == Operators.IsCallable) {
-                // This will break in cross-language cases. Eg, if this rule applies to x,
-                // then Python's callable(x) will invoke this rule, but Ruby's callable(x) 
-                // will use the Ruby language binder instead and miss this rule, and thus 
-                // may get a different result than python.
-                return PythonBinderHelper.MakeIsCallableRule<T>(this.Context, _args[0]);
+            switch (Operation) {
+                case Operators.IsCallable:
+                    // This will break in cross-language cases. Eg, if this rule applies to x,
+                    // then Python's callable(x) will invoke this rule, but Ruby's callable(x) 
+                    // will use the Ruby language binder instead and miss this rule, and thus 
+                    // may get a different result than python.
+                    return PythonBinderHelper.MakeIsCallableRule<T>(this.Context, _args[0]);
+                case Operators.MemberNames:
+                    return MakeMemberNamesRule(types);
+                case Operators.CallSignatures:
+                    return MakeCallSignatureRule(Binder, CompilerHelpers.GetMethodTargets(_args[0]), types);
+                case Operators.GetItem:
+                case Operators.SetItem:
+                case Operators.GetSlice:
+                case Operators.SetSlice:
+                case Operators.DeleteItem:
+                case Operators.DeleteSlice:
+                    // Indexers need to see if the index argument is an expandable tuple.  This will
+                    // be captured in the AbstractValue in the future but today is captured in the
+                    // real value.
+                    return MakeIndexerRule(types);
+                case Operators.Dispose:  // hash code hack
+                    return MakeHashRule(Binder, types);
+                case Operators.Contains:
+                    return MakeContainsRule(Binder, types);
+                default:
+                    Operators op = Operation;
+                    if (Action.IsUnary) {
+                        Debug.Assert(types.Length == 1);
+                        return MakeUnaryRule(types, op);
+                    } else if (IsComparision) {
+                        return MakeComparisonRule(types, op);
+                    }
+
+                    return MakeSimpleRule(types, op);
+            }
+        }
+
+        /// <summary>
+        /// Creates a rule for the contains operator.  This is exposed via "x in y" in 
+        /// IronPython.  It is implemented by calling the __contains__ method on x and
+        /// passing in y.  
+        /// 
+        /// If a type doesn't define __contains__ but does define __getitem__ then __getitem__ is 
+        /// called repeatedly in order to see if the object is there.
+        /// 
+        /// For normal .NET enumerables we'll walk the iterator and see if it's present.
+        /// </summary>
+        private RuleBuilder<T> MakeContainsRule(ActionBinder binder, PythonType[] types) {
+            RuleBuilder<T> res = new RuleBuilder<T>();
+            PythonBinderHelper.MakeTest(res, types);
+
+            // the paramteres come in backwards from how we look up __contains__, flip them.
+            Debug.Assert(types.Length == 2);
+            ArrayUtils.SwapLastTwo(types); 
+
+            SlotOrFunction sf = GetSlotOrFunction(types, Symbols.Contains);
+
+            if (sf.Success) {
+                // just a call to __contains__
+                res.Target = res.MakeReturn(binder, sf.MakeCall(binder, res, new Expression[] { res.Parameters[1], res.Parameters[0] }));
+            } else {
+                sf = GetSlotOrFunction(types, Symbols.GetItem);
+                if (sf.Success) {
+                    // defines __getitem__, need to loop over the indexes and see if we match
+                    VariableExpression curIndex = res.GetTemporary(typeof(int), "count");
+                    VariableExpression getItemRes = res.GetTemporary(sf.ReturnType, "getItemRes");
+
+                    res.Target = Ast.Loop(
+                        null,                                                     // test
+                        Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
+                        Ast.Block(                                                // body
+                            // getItemRes = param0.__getitem__(curIndex)
+                            Ast.Try(
+                                Ast.Assign(
+                                    getItemRes,
+                                    sf.MakeCall(
+                                        binder,
+                                        res,
+                                        new Expression[] { 
+                                                res.Parameters[1], 
+                                                curIndex 
+                                        }
+                                    )
+                                )
+                            ).Catch(
+                            // end of indexes, return false
+                                typeof(IndexOutOfRangeException),
+                                res.MakeReturn(binder, Ast.Constant(false))
+                            ),
+                            // if(getItemRes == param1) return true
+                            Ast.If(
+                                AstUtils.Operator(
+                                    binder,
+                                    Operators.Equals,
+                                    typeof(bool),
+                                    res.Parameters[0],
+                                    getItemRes
+                                ),
+                                res.MakeReturn(binder, Ast.Constant(true))
+                            )
+                        ),
+                        res.MakeReturn(binder, Ast.Constant(false)),        // else
+                        null                                                // label target
+                    );
+                } else {    
+                    sf = GetSlotOrFunction(types, Symbols.Iter);
+                    if (sf.Success) {
+                        // non-iterable object
+                        res.Target = res.MakeReturn(
+                            Binder,
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("ContainsFromEnumerator"),
+                                AstUtils.ConvertTo(
+                                    Binder,
+                                    typeof(IEnumerator),
+                                    res.Parameters[1]
+                                ),
+                                res.Parameters[0]
+                            )
+                        );
+                    } else {
+                        // non-iterable object
+                        res.Target = res.MakeError(
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("TypeErrorForNonIterableObject"),
+                                Ast.ConvertHelper(
+                                    res.Parameters[1],
+                                    typeof(object)
+                                )
+                            )
+                        );
+                    }
+                }
             }
 
-            if (Operation == Operators.GetItem || Operation == Operators.SetItem ||
-                Operation == Operators.GetSlice || Operation == Operators.SetSlice ||
-                Operation == Operators.DeleteItem || Operation == Operators.DeleteSlice) {
-                // Indexers need to see if the index argument is an expandable tuple.  This will
-                // be captured in the AbstractValue in the future but today is captured in the
-                // real value.
-                return MakeIndexerRule(types);
-            }
+            return res;
+        }
 
-            Operators op = Operation;
-            if (op == Operators.MemberNames) {
-                return MakeMemberNamesRule(types);
-            } else if (op == Operators.CallSignatures) {
-                return MakeCallSignatureRule(Binder, CompilerHelpers.GetMethodTargets(_args[0]), types);
-            }
+        private RuleBuilder<T> MakeHashRule(ActionBinder binder, PythonType[] types) {
+            SlotOrFunction sf = GetSlotOrFunction(types, Symbols.Hash);
+            Debug.Assert(sf.Success); // everyone has __hash__
 
-            if (Action.IsUnary) {
-                Debug.Assert(types.Length == 1);
-                return MakeUnaryRule(types, op);
-            }
-
-            if (IsComparision) {
-                return MakeComparisonRule(types, op);
-            }
-
-            return MakeSimpleRule(types, op);
+            RuleBuilder<T> res = new RuleBuilder<T>();
+            res.Target = res.MakeReturn(binder, sf.MakeCall(binder, res, new Expression[] { res.Parameters[0] }));
+            PythonBinderHelper.MakeTest(res, types);
+            return res;
         }
 
         internal static RuleBuilder<T> MakeCallSignatureRule(ActionBinder binder, IList<MethodBase> targets, params PythonType[] types) {
@@ -155,7 +270,7 @@ namespace IronPython.Runtime.Calls {
 
                 Type retType = CompilerHelpers.GetReturnType(mb);
                 if (retType != typeof(void)) {
-                    res.Append(PythonTypeOps.GetName(retType));
+                    res.Append(DynamicHelpers.GetPythonTypeFromType(retType).Name);
                     res.Append(" ");
                 }
 
@@ -165,7 +280,7 @@ namespace IronPython.Runtime.Calls {
                     NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mb.DeclaringType), mi, out name);
                     res.Append(name);
                 } else {
-                    res.Append(PythonTypeOps.GetName(mb.DeclaringType));
+                    res.Append(DynamicHelpers.GetPythonTypeFromType(mb.DeclaringType).Name);
                 }
 
                 res.Append("(");
@@ -178,7 +293,7 @@ namespace IronPython.Runtime.Calls {
                     if (pi.ParameterType == typeof(CodeContext)) continue;
 
                     res.Append(comma);
-                    res.Append(PythonTypeOps.GetName(pi.ParameterType) + " " + pi.Name);
+                    res.Append(DynamicHelpers.GetPythonTypeFromType(pi.ParameterType).Name + " " + pi.Name);
                     comma = ", ";
                 }
                 res.Append(")");
@@ -206,6 +321,14 @@ namespace IronPython.Runtime.Calls {
 
             RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
+
+            if (types[0].IsSystemType && types[0].IsPythonType) {
+                if (PythonOps.IsClsVisible(Context)) {
+                    rule.Test = Ast.AndAlso(rule.Test, Ast.Call(typeof(PythonOps).GetMethod("IsClsVisible"), rule.Context));
+                } else {
+                    rule.Test = Ast.AndAlso(rule.Test, Ast.Not(Ast.Call(typeof(PythonOps).GetMethod("IsClsVisible"), rule.Context)));
+                }
+            }
 
             rule.Target = rule.MakeReturn(
                 Binder,
@@ -489,7 +612,7 @@ namespace IronPython.Runtime.Calls {
                                 args[0]
                             )
                         ),
-                        Ast.Action.Call(binder, typeof(object), ArrayUtils.Insert<Expression>(Ast.Read(tmp), ArrayUtils.RemoveFirst(args)))
+                        AstUtils.Call(binder, typeof(object), ArrayUtils.Insert<Expression>(rule.Context, tmp, ArrayUtils.RemoveFirst(args)))
                     );
                 }
             }
@@ -538,20 +661,20 @@ namespace IronPython.Runtime.Calls {
         /// return NotImplemented and allows the caller to modify the expression that
         /// is ultimately returned (e.g. to turn __cmp__ into a bool after a comparison)
         /// </summary>
-        private bool MakeOneCompareGeneric(SlotOrFunction target, RuleBuilder<T> rule, List<Expression> stmts, bool reverse, PythonType[] types, Function<Expression, RuleBuilder<T>, bool, Expression> returner) {
+        private bool MakeOneCompareGeneric(SlotOrFunction target, RuleBuilder<T> rule, List<Expression> stmts, bool reverse, PythonType[] types, Func<Expression, RuleBuilder<T>, bool, Expression> returner) {
             if (target == null || !target.Success) return true;
 
             VariableExpression tmp = rule.GetTemporary(target.ReturnType, "compareRetValue");
             Expression call = target.MakeCall(PythonBinder, rule, CheckTypesAndReverse(rule, reverse, types));
             Expression assign = Ast.Assign(tmp, call);
-            Expression ret = returner(Ast.ReadDefined(tmp), rule, reverse);
+            Expression ret = returner(tmp, rule, reverse);
 
             if (target.MaybeNotImplemented) {
                 stmts.Add(
                     Ast.IfThen(
                         Ast.NotEqual(
                             assign,
-                            Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))
+                            Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))
                         ),
                         ret)
                     );
@@ -670,7 +793,7 @@ namespace IronPython.Runtime.Calls {
 
         private Expression MakeValueCheck(RuleBuilder<T> rule, int val, Expression test) {
             if (test.Type != typeof(bool)) {
-                test = Ast.Action.ConvertTo(PythonBinder, typeof(bool), ConversionResultKind.ExplicitCast, test);
+                test = AstUtils.ConvertTo(PythonBinder, typeof(bool), ConversionResultKind.ExplicitCast, rule.Context, test);
             }
             return Ast.IfThen(
                 test,
@@ -683,9 +806,9 @@ namespace IronPython.Runtime.Calls {
                 case Operators.Equals: return Ast.Equal(expr, Ast.Constant(0));
                 case Operators.NotEquals: return Ast.NotEqual(expr, Ast.Constant(0));
                 case Operators.GreaterThan: return Ast.GreaterThan(expr, Ast.Constant(0));
-                case Operators.GreaterThanOrEqual: return Ast.GreaterThanEquals(expr, Ast.Constant(0));
+                case Operators.GreaterThanOrEqual: return Ast.GreaterThanOrEqual(expr, Ast.Constant(0));
                 case Operators.LessThan: return Ast.LessThan(expr, Ast.Constant(0));
-                case Operators.LessThanOrEqual: return Ast.LessThanEquals(expr, Ast.Constant(0));
+                case Operators.LessThanOrEqual: return Ast.LessThanOrEqual(expr, Ast.Constant(0));
                 default: throw new InvalidOperationException();
             }
         }
@@ -779,7 +902,7 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// calls __coerce__ for old-style classes and performs the operation if the coercion is successful.
         /// </summary>
-        private Expression DoCoerce(RuleBuilder<T> rule, Operators op, PythonType[] types, bool reverse, Function<Expression, Expression> returnTransform) {
+        private Expression DoCoerce(RuleBuilder<T> rule, Operators op, PythonType[] types, bool reverse, Func<Expression, Expression> returnTransform) {
             VariableExpression coerceResult = rule.GetTemporary(typeof(object), "coerceResult");
             VariableExpression coerceTuple = rule.GetTemporary(typeof(PythonTuple), "coerceTuple");
 
@@ -831,7 +954,7 @@ namespace IronPython.Runtime.Calls {
                                 coerceTuple,
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("ValidateCoerceResult"),
-                                    Ast.Read(coerceResult)
+                                    coerceResult
                                 )
                             ),
                             Ast.Constant(null)
@@ -841,10 +964,11 @@ namespace IronPython.Runtime.Calls {
                         rule.MakeReturn(
                             Binder,
                             returnTransform(
-                                Ast.Action.Operator(
+                                AstUtils.Operator(
                                     PythonBinder,
                                     op | Operators.UserDefinedFlag,     // TODO: Replace w/ custom action
                                     typeof(object),
+                                    rule.Context,
                                     reverse ? CoerceTwo(coerceTuple) : CoerceOne(coerceTuple),
                                     reverse ? CoerceOne(coerceTuple) : CoerceTwo(coerceTuple)
                                 )
@@ -860,14 +984,14 @@ namespace IronPython.Runtime.Calls {
         private static MethodCallExpression CoerceTwo(VariableExpression coerceTuple) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetCoerceResultTwo"),
-                Ast.Read(coerceTuple)
+                coerceTuple
             );
         }
 
         private static MethodCallExpression CoerceOne(VariableExpression coerceTuple) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetCoerceResultOne"),
-                Ast.Read(coerceTuple)
+                coerceTuple
             );
         }
 
@@ -994,10 +1118,10 @@ namespace IronPython.Runtime.Calls {
         /// The Callable objects get handed off to ItemBuilder's which then call them with the appropriate arguments.
         /// </summary>
         abstract class Callable {
-            private readonly ActionBinder/*!*/ _binder;
+            private readonly DefaultBinder/*!*/ _binder;
             private readonly Operators _op;
 
-            protected Callable(ActionBinder/*!*/ binder, Operators op) {
+            protected Callable(DefaultBinder/*!*/ binder, Operators op) {
                 Assert.NotNull(binder);
 
                 _binder = binder;
@@ -1008,7 +1132,7 @@ namespace IronPython.Runtime.Calls {
             /// Creates a new CallableObject.  If BuiltinFunction is available we'll create a BuiltinCallable otherwise
             /// we create a SlotCallable.
             /// </summary>
-            public static Callable MakeCallable(ActionBinder binder, Operators op, BuiltinFunction itemFunc, PythonTypeSlot itemSlot) {
+            public static Callable MakeCallable(DefaultBinder binder, Operators op, BuiltinFunction itemFunc, PythonTypeSlot itemSlot) {
                 if (itemFunc != null) {
                     // we'll call a builtin function to produce the rule
                     return new BuiltinCallable(binder, op, itemFunc);
@@ -1044,7 +1168,7 @@ namespace IronPython.Runtime.Calls {
                         arguments[0],
                         Ast.Call(
                             typeof(PythonOps).GetMethod("MakeTuple"),
-                            Ast.NewArray(typeof(object[]), tupleArgs)
+                            Ast.NewArrayInit(typeof(object), tupleArgs)
                         ),
                         arguments[arguments.Length-1]
                     };
@@ -1061,7 +1185,7 @@ namespace IronPython.Runtime.Calls {
                         arguments[0],
                         Ast.Call(
                             typeof(PythonOps).GetMethod("MakeTuple"),
-                            Ast.NewArray(typeof(object[]), tupleArgs)
+                            Ast.NewArrayInit(typeof(object), tupleArgs)
                         )
                     };
                 }
@@ -1070,9 +1194,9 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Adds the target of the call to the rule.
             /// </summary>
-            public abstract void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure);
+            public abstract void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T> rule, Expression[] args, Func<bool> customFailure);
 
-            protected ActionBinder Binder {
+            protected DefaultBinder Binder {
                 get { return _binder; }
             }
 
@@ -1090,9 +1214,9 @@ namespace IronPython.Runtime.Calls {
         /// the appropriate bindings.
         /// </summary>
         class BuiltinCallable : Callable {
-            private readonly BuiltinFunction/*!*/ _bf;            
+            private readonly BuiltinFunction/*!*/ _bf;
 
-            public BuiltinCallable(ActionBinder/*!*/ binder, Operators op, BuiltinFunction/*!*/ func)
+            public BuiltinCallable(DefaultBinder/*!*/ binder, Operators op, BuiltinFunction/*!*/ func)
                 : base(binder, op) {
                 Assert.NotNull(func);
 
@@ -1108,7 +1232,7 @@ namespace IronPython.Runtime.Calls {
                 return arguments;
             }
 
-            public override void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Function<bool> customFailure) {
+            public override void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Func<bool> customFailure) {
                 Assert.NotNull(args);
                 Assert.NotNullItems(args);
                 Assert.NotNull(rule);
@@ -1157,19 +1281,20 @@ namespace IronPython.Runtime.Calls {
         class SlotCallable : Callable {
             private PythonTypeSlot _slot;
 
-            public SlotCallable(ActionBinder binder, Operators op, PythonTypeSlot slot)
+            public SlotCallable(DefaultBinder binder, Operators op, PythonTypeSlot slot)
                 : base(binder, op) {
                 _slot = slot;
             }
 
-            public override void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure) {
+            public override void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T> rule, Expression[] args, Func<bool> customFailure) {
                 VariableExpression callable = rule.GetTemporary(typeof(object), "slot");
 
-                Expression retVal = Ast.Action.Call(
+                Expression retVal = AstUtils.Call(
                     binder,
                     typeof(object),
                     ArrayUtils.Insert<Expression>(
-                        Ast.Read(callable),
+                        rule.Context,
+                        callable,
                         ArrayUtils.RemoveFirst(args)
                     )
                 );
@@ -1182,14 +1307,14 @@ namespace IronPython.Runtime.Calls {
                     Ast.Comma(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("SlotTryGetValue"),
-                            Ast.CodeContext(),
+                            rule.Context,
                             Ast.ConvertHelper(Ast.WeakConstant(_slot), typeof(PythonTypeSlot)),
                             Ast.ConvertHelper(args[0], typeof(object)),
                             Ast.Call(
                                 typeof(DynamicHelpers).GetMethod("GetPythonType"),
                                 Ast.ConvertHelper(args[0], typeof(object))
                             ),
-                            Ast.Read(callable)
+                            callable
                         ),
                         rule.MakeReturn(Binder, retVal)
                     );
@@ -1253,23 +1378,25 @@ namespace IronPython.Runtime.Calls {
                     } else if (args[i].Type == typeof(int)) {
                         args[i] = MakeIntTest(args[0], args[i]);
                     } else if (args[i].Type.IsSubclassOf(typeof(Extensible<int>))) {
-                        args[i] = MakeIntTest(args[0], Ast.ReadProperty(args[i], args[i].Type.GetProperty("Value")));
+                        args[i] = MakeIntTest(args[0], Ast.Property(args[i], args[i].Type.GetProperty("Value")));
                     } else if (args[i].Type == typeof(BigInteger)) {
                         args[i] = MakeBigIntTest(args[0], args[i]);
                     } else if (args[i].Type.IsSubclassOf(typeof(Extensible<BigInteger>))) {
-                        args[i] = MakeBigIntTest(args[0], Ast.ReadProperty(args[i], args[i].Type.GetProperty("Value")));
+                        args[i] = MakeBigIntTest(args[0], Ast.Property(args[i], args[i].Type.GetProperty("Value")));
                     } else if (args[i].Type == typeof(bool)) {
                         args[i] = Ast.Condition(args[i], Ast.Constant(1), Ast.Constant(0));
                     } else {
                         // this type defines __index__, otherwise we'd have an ItemBuilder constructing a slice
                         args[i] = MakeIntTest(args[0],
-                            Ast.Action.Call(
+                            AstUtils.Call(
                                 binder,
                                 typeof(int),
-                                Ast.Action.GetMember(
+                                Rule.Context,
+                                AstUtils.GetMember(
                                     binder,
-                                    Symbols.Index,
+                                    "__index__",
                                     typeof(object),
+                                    Rule.Context,
                                     args[i]
                                 )
                             )
@@ -1297,7 +1424,7 @@ namespace IronPython.Runtime.Calls {
                     typeof(PythonOps).GetMethod("NormalizeBigInteger"),
                     self,
                     bigInt,
-                    Ast.Read(_lengthVar)
+                    _lengthVar
                 );
             }
 
@@ -1315,7 +1442,7 @@ namespace IronPython.Runtime.Calls {
                 return Ast.Call(
                     typeof(PythonOps).GetMethod("GetLengthOnce"),
                     self,
-                    Ast.Read(_lengthVar)
+                    _lengthVar
                 );
             }
 
@@ -1339,10 +1466,11 @@ namespace IronPython.Runtime.Calls {
                 Callable.CompleteRuleTarget(binder, Rule, tupleArgs, delegate() {
                     PythonTypeSlot indexSlot;
                     if (args[1].Type != typeof(Slice) && Types[1].TryResolveSlot(DefaultContext.Default, Symbols.Index, out indexSlot)) {
-                        args[1] = Ast.Action.Call(
+                        args[1] = AstUtils.Call(
                             binder,
                             typeof(int),
-                            Ast.Action.GetMember(binder, Symbols.Index, typeof(object), args[1])
+                            Rule.Context,
+                            AstUtils.GetMember(binder, "__index__", typeof(object), Rule.Context, args[1])
                         );
 
                         Callable.CompleteRuleTarget(binder, Rule, tupleArgs, null);
@@ -1373,27 +1501,6 @@ namespace IronPython.Runtime.Calls {
         private bool IsSlice {
             get {
                 return Operation == Operators.GetSlice || Operation == Operators.SetSlice || Operation == Operators.DeleteSlice;
-            }
-        }
-
-        private void FixArgsForIndex(PythonType[] types, Expression[] args, Type[] callTypes) {
-            if (Operation == Operators.GetItem || Operation == Operators.SetItem || Operation == Operators.DeleteItem) {
-                Debug.Assert(args.Length == types.Length && types.Length == callTypes.Length);
-
-                for (int i = 1; i < types.Length; i++) {
-                    if (PythonOps.IsNumericType(types[i].UnderlyingSystemType)) continue;
-
-                    PythonTypeSlot indexSlot;
-                    if (types[i].TryResolveSlot(Context, Symbols.Index, out indexSlot)) {
-                        args[i] = Ast.Action.Call(
-                            PythonBinder,
-                            typeof(int),
-                            Ast.Action.GetMember(PythonBinder, Symbols.Index, typeof(object), args[i])
-                        );
-
-                        callTypes[i] = typeof(int);
-                    }
-                }
             }
         }
 
@@ -1445,7 +1552,7 @@ namespace IronPython.Runtime.Calls {
                     VariableExpression tmp = ret.GetTemporary(typeof(object), "slotVal");
                     indexArgs[i] = Ast.Comma(
                         PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.RuntimeConstant(types[i])),
-                        Ast.Action.Call(PythonBinder, typeof(int), Ast.Read(tmp))
+                        AstUtils.Call(PythonBinder, typeof(int), ret.Context, tmp)
                     );
                     types[i] = TypeCache.Int32;
                 }
@@ -1596,22 +1703,23 @@ namespace IronPython.Runtime.Calls {
             return Ast.IfThen(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("SlotTryGetValue"),
-                    Ast.CodeContext(),
+                    block.Context,
                     Ast.ConvertHelper(Ast.WeakConstant(slotTarget), typeof(PythonTypeSlot)),
                     Ast.ConvertHelper(self, typeof(object)),
                     Ast.Call(
                         typeof(DynamicHelpers).GetMethod("GetPythonType"),
                         Ast.ConvertHelper(self, typeof(object))
                     ),
-                    Ast.Read(callable)
+                    callable
                 ),
                 CheckNotImplemented(
                     block,
-                    Ast.Action.Call(
+                    AstUtils.Call(
                         PythonBinder,
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
-                            Ast.Read(callable),
+                            block.Context,
+                            callable,
                             args
                         )
                     )
@@ -1625,8 +1733,8 @@ namespace IronPython.Runtime.Calls {
             Expression notImplCheck = Ast.IfThen(
                 Ast.NotEqual(
                     Ast.Assign(tmp, call),
-                    Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
-                block.MakeReturn(Binder, Ast.ReadDefined(tmp)));
+                    Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))),
+                block.MakeReturn(Binder, tmp));
 
             return notImplCheck;
         }
@@ -1883,7 +1991,7 @@ namespace IronPython.Runtime.Calls {
 
         private RuleBuilder<T> MakeDocumentationRule(PythonType[] types) {
             RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.Target = rule.MakeReturn(Binder, Ast.Action.GetMember(PythonBinder, Symbols.Doc, typeof(string), rule.Parameters[0]));
+            rule.Target = rule.MakeReturn(Binder, AstUtils.GetMember(PythonBinder, "__doc__", typeof(string), rule.Context, rule.Parameters[0]));
             PythonBinderHelper.MakeTest(rule, types);
             return rule;
         }
@@ -1919,7 +2027,7 @@ namespace IronPython.Runtime.Calls {
                     if (notExpr.Type == typeof(int)) {
                         notExpr = Ast.Equal(notExpr, Ast.Zero());
                     } else {
-                        notExpr = Ast.Action.Operator(PythonBinder, Operators.Compare, typeof(int), notExpr, Ast.Zero());
+                        notExpr = AstUtils.Operator(PythonBinder, Operators.Compare, typeof(int), rule.Context, notExpr, Ast.Zero());
                     }
                 }
             }

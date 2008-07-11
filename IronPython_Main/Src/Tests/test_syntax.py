@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -369,7 +369,7 @@ Assert(test_augassign_binding())
 # tests for multiline compound statements
 class MyException(Exception): pass
 def test_multiline_compound_stmts():
-    tests = [ 
+    tests = [
                 "if False: print 'In IF'\nelse: x = 2; raise MyException('expected')",
                 "if False: print 'In IF'\nelif True: x = 2;raise MyException('expected')\nelse: print 'In ELSE'",
                 "for i in (1,2): x = i\nelse: x = 5; raise MyException('expected')",
@@ -450,7 +450,7 @@ try:
     ret_from_finally_x2()
 except AssertionError, e:
     AreEqual(e.args[0], "This one")
-else:    
+else:
     Fail("Expected AssertionError, got none")
 
 try:
@@ -492,10 +492,20 @@ except:
 for code in try_syntax_error_tests:
     AssertError(SyntaxError, compile, code, "code", "exec")
 
+def test_break_in_else_clause():
+    def f():
+       exec ('''
+       while i >= 0:
+           pass
+       else:
+           break''')
+            
+    AssertError(f, SyntaxError)
+
 #Just make sure these don't throw
 print "^L"
 temp = 7
-print temp        
+print temp
 
 print "No ^L's..."
 

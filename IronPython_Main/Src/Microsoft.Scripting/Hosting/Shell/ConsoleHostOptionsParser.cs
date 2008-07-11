@@ -14,16 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
 using System.Globalization;
-
-using Microsoft.Scripting.Utils;
-using System.IO;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -95,10 +89,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
                         _options.SourceUnitSearchPaths = value.Split(';');
                         break;
 
-                    case "nologo":
-                        _options.DisplayLogo = false;
-                        break;
-
                     case "mta":
                         OptionNotAvailableOnSilverlight(name);
                         _options.IsMTA = true;
@@ -111,9 +101,12 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
                     case "x":
                         switch (value) {
-                            case "ShowTrees": _globalOptions.ShowTrees = true; break;
-                            case "DumpTrees": _globalOptions.DumpTrees = true; break;
-                            case "ShowRules": _globalOptions.ShowRules = true; break;
+                            case "ShowTrees":
+                            case "DumpTrees":
+                            case "ShowRules":
+                            case "ShowScopes":
+                                OptionsParser.SetCompilerDebugOption(value);
+                                break;
                             default: _options.IgnoredArgs.Add(current); break;
                         }
                         break;

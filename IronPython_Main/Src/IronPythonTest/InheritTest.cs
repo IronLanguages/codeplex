@@ -15,10 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.CompilerServices;
 using System.Diagnostics;
-using Microsoft.Scripting.Runtime;
+using System.Runtime.CompilerServices;
+using System.Scripting.Runtime;
+using System.Text;
 
 namespace IronPythonTest {
 

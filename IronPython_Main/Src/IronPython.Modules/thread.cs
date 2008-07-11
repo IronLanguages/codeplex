@@ -14,28 +14,23 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Collections;
-using System.Text;
-using System.Threading;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Threading;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using IronPython.Hosting;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
     public static class PythonThread {
         private static readonly object _stackSizeKey = new object();
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             context.SetModuleState(_stackSizeKey, 0);            
         }
@@ -118,9 +113,18 @@ namespace IronPython.Modules {
 
         [PythonSystemType]
         public class @lock {
-            AutoResetEvent blockEvent;
-            Thread curHolder;
+            private AutoResetEvent blockEvent;
+            private Thread curHolder;
 
+            public object __enter__() {
+                acquire();
+                return this;
+            }
+
+            public void __exit__(params object[] args) {
+                release();
+            }
+            
             public object acquire() {
                 return (acquire(RuntimeHelpers.True));
             }

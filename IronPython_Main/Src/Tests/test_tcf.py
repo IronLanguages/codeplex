@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -26,12 +26,12 @@ else:
     try:
         setvar()
     
-        # missing else, finally    
+        # missing else, finally
         try:1 / 0
         except ZeroDivisionError: setvar()
     
-        # missing else    
-        try: 
+        # missing else
+        try:
             setvar()
             a =[]
             a[10]
@@ -65,7 +65,7 @@ else:
                 if myraise2 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise2 == "raiseInElse": setvar(); raise MyErr2
                 if myraise2 == "Unhandled": setvar(); raise MyErr4
@@ -90,7 +90,7 @@ else:
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -113,7 +113,7 @@ else:
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -136,7 +136,7 @@ else:
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise5 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -147,7 +147,7 @@ else:
             yield 1; setvar()
             yield 2; setvar()
         finally :
-            #uncomment the following 2 lines once we have the fix for PS:1752 
+            #uncomment the following 2 lines once we have the fix for PS:1752
             #and accordingly adjust the final expected result value
             #yield 1; setvar()
             #yield 2; setvar()
@@ -162,7 +162,7 @@ else:
                 if myraise8 == "Unhandled": setvar(); raise MyErr4
                 setvar()
             except :setvar() # should never be executed
-            else : 
+            else :
                 setvar()
                 if myraise8 == "Unhandled": setvar(); raise MyErr4
                 setvar()
@@ -170,21 +170,21 @@ else:
                 setvar()
                 if myraise9 == "Unhandled":  setvar(); raise MyErr4
                 setvar()
-            #uncomment the following 2 lines once we have the fix for PS:1752 
+            #uncomment the following 2 lines once we have the fix for PS:1752
             #and accordingly adjust the final expected result value
             #yield 1; setvar()
             #yield 2; setvar()
     
     
-    myraise1 = ["raiseInTry","outerTry","Unhandled","None"] 
-    myraise2 = ["raiseInExcept", "raiseInElse","Unhandled","None"] 
-    myraise3 = ["raiseInFinally","Unhandled","None"] 
-    myraise4 = ["raiseInTry","Unhandled","None"] 
-    myraise5 = ["Unhandled","None"] 
-    myraise6 = ["Unhandled","None"] 
-    myraise7 = ["raiseInTry","Unhandled","None"] 
-    myraise8 = ["Unhandled","None"] 
-    myraise9 = ["Unhandled","None"] 
+    myraise1 = ["raiseInTry","outerTry","Unhandled","None"]
+    myraise2 = ["raiseInExcept", "raiseInElse","Unhandled","None"]
+    myraise3 = ["raiseInFinally","Unhandled","None"]
+    myraise4 = ["raiseInTry","Unhandled","None"]
+    myraise5 = ["Unhandled","None"]
+    myraise6 = ["Unhandled","None"]
+    myraise7 = ["raiseInTry","Unhandled","None"]
+    myraise8 = ["Unhandled","None"]
+    myraise9 = ["Unhandled","None"]
     
     def fun():
         for a in myraise1:

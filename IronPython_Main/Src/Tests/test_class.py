@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -93,7 +93,7 @@ def test_attrs():
 
 ############################################################
 def test_type_in():
-	AreEqual(type in (None, True, False, 1, {}, [], (), 1.0, 1L, (1+0j)), False)
+    AreEqual(type in (None, True, False, 1, {}, [], (), 1.0, 1L, (1+0j)), False)
 
 ############################################################
 def test_init_defaults():
@@ -149,10 +149,19 @@ def test_getattr():
         def __getattribute__(self, name):
             if name == 'xyz':
                 raise AttributeError(name)
+            if name == 'x':
+                return 42
             return object.__getattribute__(self, name)
 
+    # derived new-style type
+    class F(E):
+        pass
+
+    # verify that base class' __getattribute__ is called.
+    AreEqual(F().x, 42)
+        
     # exception shouldn't propagate out
-    for cls in [C, D, E]:  
+    for cls in [C, D, E, F]:
         AreEqual(getattr(cls(), 'xyz', 'DNE'), 'DNE')
         AreEqual(hasattr(cls(), 'xyz'), False)
     
@@ -356,9 +365,9 @@ def test_oldstyle_setattr():
     
     AreEqual(called, (a, 'abc', 'def'))
     
-    def setattr(self, name, value): 
+    def setattr(self, name, value):
         global called
-        called = (self, name, value)        
+        called = (self, name, value)
     
     C.__setattr__ = setattr
     
@@ -419,13 +428,13 @@ def test_raise_attrerror():
     
     class A:
         def __getattr__(self, name):
-            raise AttributeError, 'get outta here'        
+            raise AttributeError, 'get outta here'
         def __repr__(self):
             return 'foo'
     
     class B:
         def __getattr__(self, name):
-            raise AttributeError, 'get outta here'        
+            raise AttributeError, 'get outta here'
         def __str__(self):
             return 'foo'
     
@@ -476,7 +485,7 @@ def test_module_name():
         return C()
     
     def func3():
-        global __name__ 
+        global __name__
         __name__ = "right"
         class C: pass
         return C()
@@ -494,7 +503,7 @@ def test_module_name():
 ############################################################
 def test_check_dictionary():
     """tests to verify that Symbol dictionaries do the right thing in dynamic scenarios"""
-    def CheckDictionary(C): 
+    def CheckDictionary(C):
         # add a new attribute to the type...
         C.newClassAttr = 'xyz'
         AreEqual(C.newClassAttr, 'xyz')
@@ -521,7 +530,7 @@ def test_check_dictionary():
         class OldClass: pass
         
         if isinstance(C, type(OldClass)):
-            C.__dict__ = dict(C.__dict__)  
+            C.__dict__ = dict(C.__dict__)
             AreEqual(hasattr(C, 'newTypeAttr'), True)
         else:
             try:
@@ -536,15 +545,15 @@ def test_check_dictionary():
         a.__dict__  = dict(a.__dict__)
         AreEqual(hasattr(a, 'newInstanceAttr'), True)
     
-        a.abc = 'xyz'  
+        a.abc = 'xyz'
         AreEqual(hasattr(a, 'abc'), True)
         AreEqual(getattr(a, 'abc'), 'xyz')
         
     
-    class OldClass: 
+    class OldClass:
         def __init__(self):  pass
     
-    class NewClass(object): 
+    class NewClass(object):
         def __init__(self):  pass
     
     CheckDictionary(OldClass)
@@ -556,7 +565,7 @@ def test_check_dictionary():
 def test_call_type_call():
     for stuff in [object, int, str, bool, float]:
         AreEqual(type(type.__call__(stuff)), stuff)
-	
+    
     AreEqual(type.__call__(int, 5), 5)
     AreEqual(type.__call__(int), 0)
     
@@ -699,7 +708,7 @@ def test_mixed_inheritance():
 
 ############################################################
 def test_newstyle_unbound_inheritance():
-    """verify calling unbound method w/ new-style class on subclass which 
+    """verify calling unbound method w/ new-style class on subclass which
     new-style also inherits from works."""
     class foo:
         def func(self): return self
@@ -732,26 +741,26 @@ def test_mro():
     
     try:
         class N(A, B,C): pass
-        AssertUnreachable("impossible MRO created") 
+        AssertUnreachable("impossible MRO created")
     except TypeError:
         pass
     
     try:
         class N(A, A): pass
-        AssertUnreachable("can't dervie from the same base type twice") 
+        AssertUnreachable("can't dervie from the same base type twice")
     except TypeError:
         pass
 
 ############################################################
 def test_mro_bases():
     """verify replacing base classes also updates MRO"""
-    class C(object): 
-        def __getattribute__(self, name): 
+    class C(object):
+        def __getattribute__(self, name):
             if(name == 'xyz'): return 'C'
             return super(C, self).__getattribute__(name)
     
-    class C1(C): 
-        def __getattribute__(self, name): 
+    class C1(C):
+        def __getattribute__(self, name):
             if(name == 'xyz'):  return 'C1'
             return super(C1, self).__getattribute__(name)
     
@@ -771,6 +780,43 @@ def test_mro_bases():
     del(C1.__getattribute__)
     AreEqual(a.xyz, 'B')
 
+############################################################
+def test_dynamic_mro_bases():
+    class C(object):
+        pass
+    
+    def __getattribute__(self, name):
+        if (name == 'xyz'):
+            return 'C'
+        return super(C, self).__getattribute__(name)
+    
+    C.__getattribute__ = __getattribute__
+     
+    class C1(C):
+        pass
+    
+    def __getattribute__(self, name):
+        if (name == 'xyz'):
+            return 'C1'
+        return super(C1, self).__getattribute__(name)
+    
+     
+    C1.__getattribute__ = __getattribute__
+    
+     
+    class B(object):
+        pass
+    
+    def __getattribute__(self, name):
+        if (name == 'xyz'):
+            return 'B'
+        return super(B, self).__getattribute__(name)
+    
+    B.__getattribute__ = __getattribute__
+     
+    C1.__bases__ = (B, )
+    AreEqual(C1().xyz, 'C1')
+    
 ############################################################
 def test_builtin_mro():
     """int mro shouldn't include ValueType"""
@@ -812,7 +858,7 @@ def test_mixed_inheritance_mro():
     try:
         class H(A,B,E): pass
         AssertUnreachable()
-    except TypeError: 
+    except TypeError:
         pass
     
     
@@ -888,12 +934,12 @@ def test_newstyle_lookup():
     obj.__nonzero__ = lambda: False
     AreEqual(bool(obj), True)
     
-    def twoargs(self, other): 
-        global twoArgsCalled 
+    def twoargs(self, other):
+        global twoArgsCalled
         twoArgsCalled = True
         return self
     
-    def onearg(self): 
+    def onearg(self):
         return self
         
     def onearg_str(self):
@@ -907,12 +953,12 @@ def test_newstyle_lookup():
     class ForwardAndReverseTests:
         testCases = [
             #forward versions
-            ('__add__', 'obj + obj'), 
+            ('__add__', 'obj + obj'),
             ('__sub__', 'obj - obj'),
             ('__mul__', 'obj * obj'),
             ('__floordiv__', 'obj // obj'),
             ('__mod__', 'obj % obj'),
-            ('__divmod__', 'divmod(obj,obj)'), 
+            ('__divmod__', 'divmod(obj,obj)'),
             ('__pow__', 'pow(obj, obj)'),
             ('__lshift__', 'obj << obj'),
             ('__rshift__', 'obj >> obj'),
@@ -932,7 +978,7 @@ def test_newstyle_lookup():
             ('__rrshift__', '1 >> obj'),
             ('__rand__', '1  & obj'),
             ('__rxor__', '1 ^ obj'),
-            ('__ror__', '1 | obj'),      
+            ('__ror__', '1 | obj'),
             ]
         
         @staticmethod
@@ -940,7 +986,7 @@ def test_newstyle_lookup():
             setattr(obj, method, twoargs)
             
             try:
-                eval(testCase)    
+                eval(testCase)
                 AssertUnreachable()
             except TypeError, e:
                 pass
@@ -970,8 +1016,8 @@ def test_newstyle_lookup():
             ('__irshift__', 'obj >>= obj'),
             ('__iand__', 'obj &= obj'),
             ('__ixor__', 'obj ^= obj'),
-            ('__ior__', 'obj |= obj'),      
-        ]    
+            ('__ior__', 'obj |= obj'),
+        ]
         
         @staticmethod
         def NegativeTest(method, testCase):
@@ -992,19 +1038,19 @@ def test_newstyle_lookup():
             global twoArgsCalled
             twoArgsCalled = False
             exec testCase in globals(), locals()
-            AreEqual(twoArgsCalled, True)        
+            AreEqual(twoArgsCalled, True)
             
             delattr(Strange, method)
     
     
-    class SingleArgTests:    
+    class SingleArgTests:
         testCases = [
             # one-argument versions
-            ('__neg__', '-obj'), 
+            ('__neg__', '-obj'),
             ('__pos__', '+obj'),
             ('__abs__', 'abs(obj)'),
-            ('__invert__', '~obj'),     
-            ]        
+            ('__invert__', '~obj'),
+            ]
         
         @staticmethod
         def NegativeTest(method, testCase):
@@ -1023,7 +1069,7 @@ def test_newstyle_lookup():
             setattr(Strange, method, onearg)
 
             try:
-                AreEqual(eval(testCase), obj)                               
+                AreEqual(eval(testCase), obj)
             except TypeError:
                 Assert(method == '__oct__' or method == '__hex__')
             
@@ -1051,7 +1097,7 @@ def test_newstyle_lookup():
         def PositiveTest(method, testCase):
             setattr(Strange, method, onearg_str)
 
-            AreEqual(eval(testCase), 'abc')                               
+            AreEqual(eval(testCase), 'abc')
             
             delattr(Strange, method)
 
@@ -1090,12 +1136,22 @@ def test_newstyle_lookup():
     allTests = [ForwardAndReverseTests, InPlaceTests, SingleArgTests, ConversionTests, HexOctTests]
     
     for test in allTests:
-        for method,testCase in test.testCases: 
+        for method,testCase in test.testCases:
             test.NegativeTest(method, testCase)
-        for method,testCase in test.testCases: 
+        for method,testCase in test.testCases:
             test.PositiveTest(method, testCase)
-
-
+    
+    #Verify that the base type's defined special operators get picked up.
+    class DerivedStrange(Strange): pass
+    
+    obj = DerivedStrange()
+    for test in allTests:
+        for method,testCase in test.testCases:
+            test.NegativeTest(method, testCase)
+        for method,testCase in test.testCases:
+            test.PositiveTest(method, testCase)
+    
+     
 def test_bad_repr():
     # overriding a classes __repr__ and returning a
     # non-string should throw
@@ -1125,9 +1181,9 @@ def test_name():
 ############################################################
 def test_mro_super():
     """super for multiple inheritance we should follow the MRO as we go up the super chain"""
-    class F: 
+    class F:
         def meth(self):
-            return 'F' 
+            return 'F'
     
     class G: pass
     
@@ -1139,7 +1195,7 @@ def test_mro_super():
             if hasattr(super(A, self), 'meth'):
                 return 'A' + super(A, self).meth()
             else:
-                return "A" 
+                return "A"
     
     class B(A):
         def __init__(self):
@@ -1216,13 +1272,13 @@ def test_slots():
         AreEqual(hasattr(a, '__dict__'), False)
         AssertError(AttributeError, lambda: a.__dict__)
     
-    # sub-class of slots class, has no slots, has a __dict__    
+    # sub-class of slots class, has no slots, has a __dict__
     class foo(object):
         __slots__ = 'abc'
         def __init__(self):
             self.abc = 23
             
-    class bar(foo): 
+    class bar(foo):
         def __init__(self):
             super(bar, self).__init__()
         
@@ -1249,7 +1305,7 @@ def test_slots():
     
     # slots & metaclass
     if is_cli or is_silverlight:          # INCOMPATBILE: __slots__ not supported for subtype of type
-        class foo(type): 
+        class foo(type):
             __slots__ = ['abc']
     
         class bar(object):
@@ -1351,7 +1407,7 @@ def test_slots():
     
     a = foo('x', two='y')
     AreEqual(a.a, 'x')
-    AreEqual(a.b, 'y')    
+    AreEqual(a.b, 'y')
         
     # assign to __dict__
     
@@ -1469,7 +1525,7 @@ def test_slots11457():
             AreEqual(C().a, 5)
             
             setattr(C, 'a', 7)
-            AreEqual(C().a, 7)        
+            AreEqual(C().a, 7)
     
 ############################################################
 def test_inheritance_cycle():
@@ -1505,16 +1561,26 @@ def test_hexoct():
     AssertError(TypeError, hex, bar())
     AssertError(TypeError, oct, bar())
 
-@disabled("CodePlex Work Item 766")
+#@disabled("CodePlex Work Item 766")
 def test_no_clr_attributes():
     """verify types have no CLR attributes"""
-    for stuff in [int, float, bool, str, None]:
+    # list, 
+    for stuff in [object, int, float, bool, str, long, complex, dict, set, 
+                  None, NotImplemented, Ellipsis, type(test_no_clr_attributes),
+                  classmethod, staticmethod, frozenset, property, sys, 
+                  BaseException, type(zip), slice, buffer, enumerate, file,
+                  range, xrange]:
         for dir_stuff in dir(stuff):
             if dir_stuff[:1].isalpha():
-                Assert(dir_stuff[:1].islower(), 
+                Assert(dir_stuff[:1].islower(),
                        "%s should not be an attribute of %s" % (dir_stuff, str(stuff)))
 
-def test_no_clr_attributes_sanity():    
+def test_method_correct_name():
+    # __str__ is an InstanceOps method (ToStringMethod), but we should 
+    # report the proper name in __str__
+    Assert(repr(BaseException.__str__).find('__str__') != -1)
+
+def test_no_clr_attributes_sanity():
     AreEqual(hasattr(int, 'MaxValue'), False)
     AreEqual(hasattr(int, 'MinValue'), False)
     AreEqual(hasattr(int, 'Abs'), False)
@@ -1560,7 +1626,7 @@ def test_default_new_init():
                   ]
     anyNewList  = [list,        # classes that take any set of args to __new__
                    set,
-                   ]        
+                   ]
             
     for x in anyInitList:
         x().__init__(1,2,3)
@@ -1570,7 +1636,7 @@ def test_default_new_init():
     
     for x in anyNewList:
         AreEqual(len(x.__new__(x, 1, 2, 3)), 0)
-        AssertError(TypeError, x.__new__(x).__init__, 1, 2, 3)    
+        AssertError(TypeError, x.__new__(x).__init__, 1, 2, 3)
 
 
     
@@ -1602,6 +1668,12 @@ def test_hash():
         inst = x()
         AreEqual(inst.__hash__(), hash(inst))
         
+    # old style hash can return longs, the result of which is
+    # the hash of the long
+    class foo:
+        def __hash__(self): return 1<<35L
+        
+    AreEqual(hash(foo()), 8)
 
 def test_NoneSelf():
     try:
@@ -1678,14 +1750,14 @@ def test_override_mro():
     else: Fail("Expected NotImplementedError, got none")
 
 def test_type_mro():
-    AssertError(TypeError, type.mro)	
+    AssertError(TypeError, type.mro)
     AreEqual(object.mro(), list(object.__mro__))
     AreEqual(type(object.mro()), list)
     AreEqual(type(object.__mro__), tuple)
 
 def test_derived_tuple_eq():
     # verify overriding __eq__ on tuple still allows us to call the super version
-    class bazbar(tuple):    
+    class bazbar(tuple):
         def __eq__(self,other):
             other = bazbar(other)
             return super(bazbar,self).__eq__(other)
@@ -1721,13 +1793,13 @@ def test_slots_counter():
     testit()
     #collect not defined for silverlight
     if not is_silverlight:
-        gc.collect()    
+        gc.collect()
         AreEqual(Counter.c, 0)
 
 def test_override_container_contains():
     for x in (dict, list, tuple):
         class C(x):
-            def __contains__(self, other): 
+            def __contains__(self, other):
                 return other == "abc"
                 
         AreEqual('abc' in C(), True)
@@ -1806,7 +1878,7 @@ def test_getattribute_getattr():
     state = []
     class Derived(object):
         def __getattr__(self, name):
-            if name == "bar": 
+            if name == "bar":
                 AreEqual(state, [])
                 return 23
             raise AttributeError(name)
@@ -1815,8 +1887,36 @@ def test_getattribute_getattr():
                 state.append('getattribute')
                 return object.__getattribute__(self, name)
             finally:
-                AreEqual(state.pop(), 'getattribute')	
+                AreEqual(state.pop(), 'getattribute')
 
+    a = Derived()
+    AreEqual(a.bar, 23)
+
+def test_dynamic_getattribute_getattr():
+    class Base(object):
+        pass 
+    
+    def __getattribute__(self, name):
+        return object.__getattribute__(self, name)
+    
+    Base.__getattribute__ = __getattribute__
+    
+    class Derived(Base):
+        pass
+    
+    def __getattr__(self, name):
+        if name == "bar":
+            return 23
+        raise AttributeError(name)
+    
+     
+    Derived.__getattr__ = __getattr__
+    
+    def __getattribute__(self, name):
+        return Base.__getattribute__(self, name)
+    
+    Derived.__getattribute__ = __getattribute__
+    
     a = Derived()
     AreEqual(a.bar, 23)
 
@@ -1824,13 +1924,13 @@ def test_setattr():
     # verify defining __setattr__ works
     global setCalled
     
-    class KNew(object): 
+    class KNew(object):
         def __setattr__(self, name, value):
             global setCalled
             setCalled = True
             object.__setattr__(self, name, value)
             
-    class KOld: 
+    class KOld:
         def __setattr__(self, name, value):
             global setCalled
             setCalled = True
@@ -1840,11 +1940,11 @@ def test_setattr():
     
     class KOldSub(KOld): pass
 
-    for K in [  KOld, 
+    for K in [  KOld,
                 #KOldSub, #CodePlex 8018
-                KNew, 
+                KNew,
                 KNewSub]:
-        setCalled = False   
+        setCalled = False
         x = K()
         x.abc = 23
         AreEqual(x.abc, 23)
@@ -1870,7 +1970,7 @@ def test_dynamic_getattribute():
     # add
     class foo(object): pass
 
-    def getattr(self, name): 
+    def getattr(self, name):
         if name == 'abc': return 42
     
     foo.__getattribute__ = getattr
@@ -1898,7 +1998,7 @@ def test_nonstring_name():
         class D(object):
             __metaclass__ = C
             
-        AreEqual(D.__module__, 3)    
+        AreEqual(D.__module__, 3)
     finally:
         __name__ = name
     
@@ -1923,45 +2023,45 @@ def test_dictproxy_descrs():
 def test_fastnew_int():
     class C1:
         def __int__(self): return 100
-    class C2: 
+    class C2:
         def __int__(self): return myint(100)
     class C3:
         def __int__(self): return 100L
-    class C4: 
+    class C4:
         def __int__(self): return mylong(100L)
     class C5:
         def __int__(self): return -123456789012345678910
     class C6:
         def __int__(self): return C6()
-    class C7: 
+    class C7:
         def __int__(self): return "100"
     
     for x in [C1, C2, C3, C4]:   AreEqual(int(x()), 100)
     AreEqual(int(C5()), -123456789012345678910)
-    for x in [C6, C7]:      AssertError(TypeError, int, x())       
+    for x in [C6, C7]:      AssertError(TypeError, int, x())
         
     class C1(object):
         def __int__(self): return 100
-    class C2(object): 
+    class C2(object):
         def __int__(self): return myint(100)
     class C3(object):
         def __int__(self): return 100L
-    class C4(object): 
+    class C4(object):
         def __int__(self): return mylong(100L)
     class C5(object):
         def __int__(self): return -123456789012345678910
     class C6(object):
         def __int__(self): return C6()
-    class C7(object): 
+    class C7(object):
         def __int__(self): return "100"
     
     for x in [C1, C2, C3, C4]:   AreEqual(int(x()), 100)
     AreEqual(int(C5()), -123456789012345678910)
-    for x in [C6, C7]:      AssertError(TypeError, int, x())       
+    for x in [C6, C7]:      AssertError(TypeError, int, x())
 
 
 def test_type_type_is_type():
-    class OS: pass    
+    class OS: pass
     class NS(object): pass
     
     true_values = [type, NS, int, float, tuple, str]
@@ -1976,7 +2076,7 @@ def test_type_type_is_type():
     if is_cli:
         false_values += [ System.Boolean(1), System.Int32(3), System.Version(), System.Exception() ]
         
-    for x in false_values:    
+    for x in false_values:
         Assert(type(x) is not type)
     
 
@@ -2000,28 +2100,23 @@ def test_hash_return_values():
                 2L:2,
                 1<<32: 1,
                 (1<<32)+1: 2,
-                (1<<32)-1: -2,
                 1<<34: 4,
                 1<<31: -2147483648,
             }
-    #CodePlex Work Item #10578
-    if sys.platform!="win32":
-        print "CodePlex Work Item #10578"
-        tests = {}
     for retval in tests.keys():
         class foo:
             def __hash__(self): return retval
         
-        AreEqual(hash(foo()), tests[retval])    
+        AreEqual(hash(foo()), tests[retval])
 
        
-def test_cmp_notimplemented(): 
+def test_cmp_notimplemented():
     class foo(object):
         def __eq__(self, other):
             ran.append('foo.eq')
             return NotImplemented
         def __ne__(self, other):
-            ran.append('foo.ne')        
+            ran.append('foo.ne')
             return NotImplemented
         def __le__(self, other):
             ran.append('foo.le')
@@ -2097,7 +2192,7 @@ def test_override_repr():
 
 
 def test_mutate_base():
-        class basetype(object): 
+        class basetype(object):
             xyz = 3
         
         class subtype(basetype): pass
@@ -2129,14 +2224,14 @@ def test_mixed_newstyle_oldstyle_init():
     a = full()
     AreEqual(a.x, 4)
     
-    class full(bar, baz, ns): 
+    class full(bar, baz, ns):
         def __init__(self):
             self.x = 5
     
     a = full()
     AreEqual(a.x, 5)
 
-    class ns(object): 
+    class ns(object):
         def __init__(self):
             self.x = 6
     
@@ -2166,7 +2261,7 @@ def test_descriptor_meta_magic():
         def createShared( cls, nm, initValue=None ):
             o = valueDescriptor(initValue)
             setattr( cls,nm, o )
-            setattr( cls.__class__,nm, o )    
+            setattr( cls.__class__,nm, o )
     
     class A:
         __metaclass__ = Ameta
@@ -2174,7 +2269,7 @@ def test_descriptor_meta_magic():
     class B( A ):
         A.createShared("cls2",1)
     
-    def test(value):        
+    def test(value):
         AreEqual(o.cls2, value)
         AreEqual(o2.cls2, value)
         AreEqual(A.cls2, value)
@@ -2216,7 +2311,7 @@ def test_method():
 def test_descriptors_custom_attrs():
     """verifies the interaction between descriptors and custom attribute access works properly"""
     class mydesc(object):
-        def __get__(self, instance, ctx): 
+        def __get__(self, instance, ctx):
             raise AttributeError
     
     class f(object):
@@ -2236,8 +2331,8 @@ def test_cp5801():
 
 
 def test_property_always_set_descriptor():
-    """verifies that set descriptors take precedence over dictionary entries and 
-       properties are always treated as set descriptors, even if they have no 
+    """verifies that set descriptors take precedence over dictionary entries and
+       properties are always treated as set descriptors, even if they have no
        setter function"""
     
     class C(object):
@@ -2375,7 +2470,7 @@ def test_oldinstance_operator_exceptions():
         # unary operators that catch AttributeError
         getattr(type(OC3()), x)(OC3())
     
-    # IronPython still differs on these from CPython:    
+    # IronPython still differs on these from CPython:
     #for x in ['__iter__']:
     #    # unary operators that call, catch, and report another error
     #    called = []
@@ -2419,13 +2514,13 @@ def test_cp11760():
         def __str__(self): return "KOld"
     
     for K in [KNew, KOld]:
-        dir_str = dir(K().__str__)    
-        for x in [  '__class__', '__delattr__', '__doc__', 
-                    '__get__', '__getattribute__', '__hash__', '__init__', 
-                    '__new__', '__reduce__', '__reduce_ex__', '__repr__', 
-                    '__setattr__', '__str__', 'im_class', 
+        dir_str = dir(K().__str__)
+        for x in [  '__class__', '__delattr__', '__doc__',
+                    '__get__', '__getattribute__', '__hash__', '__init__',
+                    '__new__', '__reduce__', '__reduce_ex__', '__repr__',
+                    '__setattr__', '__str__', 'im_class',
                     'im_func', 'im_self',
-                    #'__call__', '__cmp__', 
+                    #'__call__', '__cmp__',
                     ]:
             Assert(x in dir_str, x + " is not in dir(K().__str__)")
 
@@ -2437,7 +2532,7 @@ def test_delattr():
             global called
             called = True
     
-    del X().abc      
+    del X().abc
     
     Assert(called)
   
@@ -2476,7 +2571,7 @@ def test_oldstyle_fancycallable():
             pass
     
     x = C(*(2,))
-    #Merlin 382112 
+    #Merlin 382112
     x = C(*(None,))
     Assert(x.__class__ is C)
     x = C(**{'a': None})
@@ -2590,12 +2685,11 @@ def test_cp13820():
         
         def __coerce__(self, other): return None
         
-        def __lt__(self, other): return True    
+        def __lt__(self, other): return True
         
     for K in [KOld, KNew]:
         obj = K()
-        if sys.platform=="win32" or K!=KNew: #CodePlex 13820
-            str(obj)
+        str(obj)
         obj==3
         hash(obj)
         bool(obj)
@@ -2627,7 +2721,7 @@ def test_keyword_type_construction():
     AreEqual(obj.abc, 3)
 
 def test_mixed_mro_respected():
-    """creates a class with an mro of "MC, NC, OC2, NC2, object, OC" and verifies that we get NC2 member, not OC"""    
+    """creates a class with an mro of "MC, NC, OC2, NC2, object, OC" and verifies that we get NC2 member, not OC"""
     class OC:
         abc = 3
     
@@ -2684,7 +2778,7 @@ def test_descriptor_object_getattribute_interactions():
         def __init__(self):
             self.nondata_shadowed_inst = "nondata_inst"
             self.data_shadowed_inst = "data_inst"
-            self.ro_shadowed_inst = 'ro_inst'        
+            self.ro_shadowed_inst = 'ro_inst'
         nondata_shadowed_class = 'nondata_shadowed_class'
         data_shadowed_class = 'data_shadowed_class'
         ro_shadowed_class = 'ro_shadowed_class'
@@ -2699,7 +2793,7 @@ def test_descriptor_object_getattribute_interactions():
     AreEqual(object.__getattribute__(a, 'ro_shadowed_class'), 'ro_shadowed_class')
     
     AreEqual(object.__getattribute__(a, 'nondata_shadowed_inst'), 'nondata_inst')
-    AreEqual(object.__getattribute__(a, 'data_shadowed_inst'), 'data_inst')       
+    AreEqual(object.__getattribute__(a, 'data_shadowed_inst'), 'data_inst')
     AreEqual(object.__getattribute__(a, 'ro_shadowed_inst'), 'ro_inst')
     
     AreEqual(object.__getattribute__(x, 'nondata_shadowed_class'), 'nondata_shadowed_class')
@@ -2707,11 +2801,119 @@ def test_descriptor_object_getattribute_interactions():
     AreEqual(object.__getattribute__(x, 'ro_shadowed_class'), (8, x, meta))
     
     AreEqual(object.__getattribute__(x, 'nondata_shadowed_inst'), (5, x, meta))
-    AreEqual(object.__getattribute__(x, 'data_shadowed_inst'), (6, x, meta))       
+    AreEqual(object.__getattribute__(x, 'data_shadowed_inst'), (6, x, meta))
     AreEqual(object.__getattribute__(x, 'ro_shadowed_inst'), (9, x, meta))
 
     AreEqual(object.__getattribute__(x, 'ro_data'), (7, x, meta))
     AreEqual(object.__getattribute__(x, 'nondata'), (1, x, meta))
-    AreEqual(object.__getattribute__(x, 'data'), (2, x, meta))       
+    AreEqual(object.__getattribute__(x, 'data'), (2, x, meta))
+
+def test_cp5803():
+
+    #--Simple
+    class KSimple(object):
+        def __radd__(self, other):
+            return
+            
+    for x in ["", 1, 3.14, None, u"stuff", object, KSimple]:
+        AreEqual(x + KSimple(), None)
+    AssertErrorWithPartialMessage(TypeError,
+                                  "unsupported operand type(s) for +: 'KSimple' and 'str'",
+                                  lambda: KSimple() + "")
+
+    #--Addition
+    class K(object): pass
+
+    class K0(object):
+        def __radd__(self, other):
+            return "__radd__:" + str(type(self)) + " " + str(type(other))
+
+    class K1(object):
+        def __radd__(self, other):
+            return "__radd__:" + str(type(self)) + " " + str(type(other))
+            
+        def __add__(self, other):
+            return "__add__:" + str(type(self)) + " " + str(type(other))
+    
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'K' and 'K'", lambda: K() + K())
+    AreEqual(K() + K0(), "__radd__:<class '" + __name__ + ".K0'> <class '" + __name__ + ".K'>")
+    AreEqual(K() + K1(), "__radd__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K'>")
+    
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'K0' and 'K'", lambda: K0() + K())
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'K0' and 'K0'", lambda: K0() + K0())
+    AreEqual(K0() + K1(), "__radd__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K0'>")
+
+    AreEqual(K1() + K(),  "__add__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K'>")
+    AreEqual(K1() + K0(), "__add__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K0'>")
+    AreEqual(K1() + K1(), "__add__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K1'>" )
+    
+    #--Subtraction
+    class K(object): pass
+
+    class K0(object):
+        def __rsub__(self, other):
+            return "__rsub__:" + str(type(self)) + " " + str(type(other))
+
+    class K1(object):
+        def __rsub__(self, other):
+            return "__rsub__:" + str(type(self)) + " " + str(type(other))
+            
+        def __sub__(self, other):
+            return "__sub__:" + str(type(self)) + " " + str(type(other))
+    
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for -: 'K' and 'K'", lambda: K() - K())
+    AreEqual(K() - K0(), "__rsub__:<class '" + __name__ + ".K0'> <class '" + __name__ + ".K'>")
+    AreEqual(K() - K1(), "__rsub__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K'>")
+    
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for -: 'K0' and 'K'", lambda: K0() - K())
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for -: 'K0' and 'K0'", lambda: K0() - K0())
+    AreEqual(K0() - K1(), "__rsub__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K0'>")
+
+    AreEqual(K1() - K(),  "__sub__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K'>")
+    AreEqual(K1() - K0(), "__sub__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K0'>")
+    AreEqual(K1() - K1(), "__sub__:<class '" + __name__ + ".K1'> <class '" + __name__ + ".K1'>" )
+
+    #--Old style
+    class K: pass
+
+    class K0:
+        def __radd__(self, other):
+            return "__radd__:" + str(type(self)) + " " + str(type(other))
+
+    class K1:
+        def __radd__(self, other):
+            return "__radd__:" + str(type(self)) + " " + str(type(other))
+            
+        def __add__(self, other):
+            return "__add__:" + str(type(self)) + " " + str(type(other))
+    
+    AssertError(TypeError, lambda: K() + K())
+    AreEqual(K() + K0(), "__radd__:<type 'instance'> <type 'instance'>")
+    AreEqual(K() + K1(), "__radd__:<type 'instance'> <type 'instance'>")
+    
+    AssertError(TypeError, lambda: K0() + K())
+    AreEqual(K0() + K0(), "__radd__:<type 'instance'> <type 'instance'>")
+    AreEqual(K0() + K1(), "__radd__:<type 'instance'> <type 'instance'>")
+
+    AreEqual(K1() + K(),  "__add__:<type 'instance'> <type 'instance'>")
+    AreEqual(K1() + K0(), "__add__:<type 'instance'> <type 'instance'>")
+    AreEqual(K1() + K1(), "__add__:<type 'instance'> <type 'instance'>")
+
+def test_special_type_attributes():
+    # some attributes on new-style class are alwayed retrieved
+    # from the type, not the classes dictionary
+    class x(object):
+        __dict__ = 'abc'
+        __class__ = 'abc'
+        __bases__ = 'abc'
+        __name__ = 'abc'
+        
+    class y(object): pass
+    
+    AreEqual(type(x.__dict__), type(y.__dict__))
+    AreEqual(x.__class__, type)
+    AreEqual(x.__bases__, (object, ))
+    AreEqual(x.__name__, 'x')
+
 
 run_test(__name__)

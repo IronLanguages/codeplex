@@ -13,17 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
 
     /// <summary>
     /// A stack implemented as a list. Allows both Push/Pop access and indexing into any member of the list.
     /// </summary>
-    public class ListStack<T> : IEnumerable<T> {
+    internal sealed class ListStack<T> : IEnumerable<T> {
         private readonly List<T> _list;
         private int _version;
 

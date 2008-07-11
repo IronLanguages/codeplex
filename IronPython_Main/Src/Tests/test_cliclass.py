@@ -14,6 +14,7 @@
 #####################################################################################
 
 """Test cases for class-related features specific to CLI"""
+from __future__ import with_statement
 
 from lib.assert_util import *
 import clr
@@ -224,9 +225,9 @@ def test_generic_TypeGroup():
     
     def handler():
         pass
-        
+
     try:
-        System.EventHandler(handler)
+        System.EventHandler(handler)("sender", None)
     except TypeError: pass
     else: AssertUnreachable()    
         
@@ -376,7 +377,7 @@ def test_type_descs():
     x = test.GetEvents(a, None)
     Assert(x.Count == 0)
     
-    x = test.GetProperties(a)
+    x = test.GetProperties(a, (System.ComponentModel.BrowsableAttribute(True), ))
     Assert(x.Count == 0)
     
     foo.bar = property(lambda x:'hello')
@@ -463,7 +464,7 @@ def test_repr():
     
     AreEqual(ra[sa:sa+13], rb[sb:sb+13])
     AreEqual(rb[sb:sb+13], rc[sc:sc+13])
-    AreEqual(ra[sa:sa+13], 'HelloWorld...')	# \r\n should be removed, replaced with ...    
+    AreEqual(ra[sa:sa+13], 'HelloWorld...') # \r\n should be removed, replaced with ...
 
 def test_explicit_interfaces():
     otdc = OverrideTestDerivedClass()
@@ -553,7 +554,7 @@ def test_array():
     import System
     arr = System.Array[int]([0])
     AreEqual(repr(arr), str(arr))
-    AreEqual(repr(System.Array[int]([0, 1])), 'System.Int32[](0, 1)')
+    AreEqual(repr(System.Array[int]([0, 1])), 'Array[int]((0, 1))')
 
 
 def test_strange_inheritance():
@@ -567,7 +568,7 @@ def test_strange_inheritance():
         def ParamsIntMethodWithContext(self, *arg):
             AreEqual(arg, (2,3))
 
-    a = m()	
+    a = m()
     a.CallWithContext('abc')
     a.CallParamsWithContext('abc', 'def')
     a.CallIntParamsWithContext(2, 3)   
@@ -621,7 +622,7 @@ End Class
     """)
         f.close()
         
-        name = '%s\\vbproptest%f.dll' % (testpath.temporary_dir, r.random())
+        name = 'vbproptest%f.dll' % (r.random())
         x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
         AreEqual(x, 0)
         import clr
@@ -841,6 +842,8 @@ def test_as_bool():
     """verify using expressions in if statements works correctly.  This generates an
     site whose return type is bool so it's important this works for various ways we can
     generate the body of the site, and use the site both w/ the initial & generated targets"""
+    import clr
+    clr.AddReference('System') # ensure test passes in ipt
     import System
     
     # instance property
@@ -950,6 +953,92 @@ def test_bad_inheritance():
     AssertErrorWithPartialMessage(TypeError, 'System.Single', f)
     AssertErrorWithPartialMessage(TypeError, 'System.Version', g)
 
+def test_disposable():
+    """classes implementing IDisposable should automatically support the with statement"""
+    x = DisposableTest()
+    
+    with x:
+        pass
+        
+    AreEqual(x.Called, True)
+    
+    Assert(hasattr(x, '__enter__'))
+    Assert(hasattr(x, '__exit__'))
+
+    x = DisposableTest()
+    x.__enter__()
+    try:
+        pass
+    finally:
+        AreEqual(x.__exit__(None, None, None), None)
+    
+    AreEqual(x.Called, True)
+    
+    Assert('__enter__' in dir(x))
+    Assert('__exit__' in dir(x))
+    Assert('__enter__' in dir(DisposableTest))
+    Assert('__exit__' in dir(DisposableTest))
+
+def test_dbnull():
+    """DBNull should not be true"""
+    
+    if System.DBNull.Value:
+        AssertUnreachable()
+
+
+def test_special_repr():
+    list = System.Collections.Generic.List[object]()
+    AreEqual(repr(list), 'List[object]()')
+    
+    list.Add('abc')    
+    AreEqual(repr(list), "List[object](['abc'])")
+    
+    list.Add(2)
+    AreEqual(repr(list), "List[object](['abc', 2])")
+    
+    list.Add(list)
+    AreEqual(repr(list), "List[object](['abc', 2, [...]])")
+    
+    dict = System.Collections.Generic.Dictionary[object, object]()
+    AreEqual(repr(dict), "Dictionary[object, object]()")
+    
+    dict["abc"] = "def"
+    AreEqual(repr(dict), "Dictionary[object, object]({'abc' : 'def'})")
+    
+    dict["two"] = "def"
+    Assert(repr(dict) == "Dictionary[object, object]({'abc' : 'def', 'two' : 'def'})" or
+           repr(dict) == "Dictionary[object, object]({'two' : 'def', 'def' : 'def'})")
+           
+    dict = System.Collections.Generic.Dictionary[object, object]()
+    dict['abc'] = dict
+    AreEqual(repr(dict), "Dictionary[object, object]({'abc' : {...}})")
+
+    dict = System.Collections.Generic.Dictionary[object, object]()
+    dict[dict] = 'abc'
+    
+    AreEqual(repr(dict), "Dictionary[object, object]({{...} : 'abc'})")
+
+def test_issubclass():    
+    Assert(issubclass(int, clr.GetClrType(int)))
+
+def test_explicit_interface_impl():
+    noConflict = ExplicitTestNoConflict()
+    oneConflict = ExplicitTestOneConflict()
+    
+    AreEqual(noConflict.A(), "A")
+    AreEqual(noConflict.B(), "B")
+    Assert(hasattr(noConflict, "A"))
+    Assert(hasattr(noConflict, "B"))
+    
+    AssertError(AttributeError, lambda : oneConflict.A())
+    AreEqual(oneConflict.B(), "B")
+    Assert(not hasattr(oneConflict, "A"))
+    Assert(hasattr(oneConflict, "B"))
+    
+@skip("silverlight") # no ArrayList on Silverlight
+def test_interface_isinstance():
+    l = System.Collections.ArrayList()
+    AreEqual(isinstance(l, System.Collections.IList), True)
+
 run_test(__name__)
 
-    

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -178,7 +178,7 @@ def test_direct_module_creation():
         AreEqual(repr(x), "<module 'aaa' (built-in)>")
         AreEqual(x.__doc__, 'zzz')
                 
-        # can't assign to module __dict__	 
+        # can't assign to module __dict__
         try:
             x.__dict__ = {}
         except TypeError: pass
@@ -249,7 +249,7 @@ def test_lock():
             imp.release_lock()
        
 
-# test is_frozen 
+# test is_frozen
 def test_is_frozen():
     for name in temp_name:
         f = imp.is_frozen(name)
@@ -294,8 +294,8 @@ def test_is_builtin():
     
     # supposedly you can't re-init these
     AreEqual(imp.is_builtin("sys"), -1)
-    AreEqual(imp.is_builtin("__builtin__"), -1)       
-    AreEqual(imp.is_builtin("exceptions"), -1)       
+    AreEqual(imp.is_builtin("__builtin__"), -1)
+    AreEqual(imp.is_builtin("exceptions"), -1)
     
     imp.init_builtin("sys")
     imp.init_builtin("__builtin__")
@@ -332,7 +332,7 @@ def test_sys_path_none_builtins():
         sys.path = prevPath
 
 
-@skip("silverlight")        
+@skip("silverlight")
 def test_sys_path_none_userpy():
     prevPath = sys.path
 
@@ -364,12 +364,12 @@ def test_sys_path_none_negative():
                 import does_not_exist
                 AssertUnerachable()
             except ImportError:
-                pass       
+                pass
     finally:
         sys.path = prevPath
 
 
-#init_builtin           
+#init_builtin
 def test_init_builtin():
     r  = imp.init_builtin("c_Pickle")
     AreEqual(r,None)
@@ -425,18 +425,18 @@ def test_user_defined_modules():
     from TopModule.SubModule import Object
     AreEqual(Object, theObj)
     
-    # verify we short-circuit the lookup in TopModule if 
+    # verify we short-circuit the lookup in TopModule if
     # we have a sys.modules entry...
-    SubModule2 = MockModule("SubModule2")    
-    SubModule2.Object2 = theObj    
+    SubModule2 = MockModule("SubModule2")
+    SubModule2.Object2 = theObj
     sys.modules["TopModule.SubModule"] = SubModule2
-    from TopModule.SubModule import Object2    
+    from TopModule.SubModule import Object2
     AreEqual(Object2, theObj)
     
     del sys.modules['TopModule']
     del sys.modules['TopModule.SubModule']
     
-def test_constructed_module():    
+def test_constructed_module():
     """verify that we don't load arbitrary modules from modules, only truly nested modules"""
     ModuleType = type(sys)
 
@@ -465,7 +465,7 @@ def test_import_from_custom():
             received = name, fromlist
             return foo()
     
-        saved = __builtin__.__import__ 
+        saved = __builtin__.__import__
         __builtin__.__import__ = __import__
     
         from a import b
@@ -523,7 +523,7 @@ called = 3.14
 def test_relative_control():
     """test various flavors of relative/absolute import and ensure the right
        arguments are delivered to __import__"""
-    def myimport(*args): 
+    def myimport(*args):
         global importArgs
         importArgs = list(args)
         importArgs[1] = None    # globals, we don't care about this
@@ -537,7 +537,7 @@ def test_relative_control():
             bar = 5
         return X
     old_import = get_builtins_dict()['__import__']
-    try:        
+    try:
         get_builtins_dict()['__import__'] = myimport
         
         import abc
@@ -559,13 +559,17 @@ def test_relative_control():
         AreEqual(importArgs, ['d', None, None, ('abc', 'bar'), 3])
         
         from d import (
-            abc, 
+            abc,
             bar)
         AreEqual(importArgs, ['d', None, None, ('abc', 'bar')])
 
         code = """from __future__ import absolute_import\nimport abc"""
         exec code in globals(), locals()
         AreEqual(importArgs, ['abc', None, None, None, 0])
+        
+        def f():exec "from import abc"
+        AssertError(SyntaxError, f)
+        
     finally:
         get_builtins_dict()['__import__'] = old_import
 
@@ -582,7 +586,7 @@ def test_import_hooks_import_precence():
             global myimpCalled
             myimpCalled = fullname, path
 
-    def myimport(*args): 
+    def myimport(*args):
         return 'myimport'
 
     import lib
@@ -590,7 +594,7 @@ def test_import_hooks_import_precence():
     mi = myimp()
     sys.meta_path.append(mi)
     builtinimp = get_builtins_dict()['__import__']
-    try:            
+    try:
         get_builtins_dict()['__import__'] = myimport
     
         import abc
@@ -608,7 +612,7 @@ def test_import_hooks_import_precence():
         get_builtins_dict()['__import__'] = builtinimp
         sys.meta_path.remove(mi)
 
-def test_import_hooks_bad_importer(): 
+def test_import_hooks_bad_importer():
     class bad_importer(object): pass
     
     mi = bad_importer()
@@ -641,7 +645,7 @@ def test_import_hooks_bad_importer():
     finally:
         sys.path.remove(mi)
 
-def test_import_hooks_importer(): 
+def test_import_hooks_importer():
     """importer tests - verify the importer gets passed correct values, handles
     errors coming back out correctly"""
     global myimpCalled
@@ -656,7 +660,7 @@ def test_import_hooks_importer():
     
     mi = myimp()
     sys.meta_path.append(mi)
-    try:    
+    try:
         try:
             import does_not_exist
             AssertUnreachable()
@@ -667,7 +671,7 @@ def test_import_hooks_importer():
         try:
             from lib import blah
             AssertUnreachable()
-        except ImportError: 
+        except ImportError:
             pass
 
         AreEqual(type(myimpCalled[1]), list)
@@ -680,7 +684,7 @@ def test_import_hooks_importer():
     finally:
         sys.meta_path.remove(mi)
 
-@skip("multiple_execute")        
+@skip("multiple_execute")
 def test_import_hooks_loader():
     """loader tests - verify the loader gets the right values, handles errors correctly"""
     global myimpCalled
@@ -717,10 +721,10 @@ def test_import_hooks_loader():
             
     mi = myimp()
     sys.meta_path.append(mi)
-    try:    
+    try:
         def f(): import does_not_exist_throw
         
-        AssertErrorWithMessage(Exception, 'hello again', f)        
+        AssertErrorWithMessage(Exception, 'hello again', f)
         
         def f(): import does_not_exist_return_none
         AssertError(ImportError, f)
@@ -747,7 +751,7 @@ def test_import_hooks_loader():
         
         import does_not_exist_create_pkg.does_not_exist_create_subpkg
         AreEqual(does_not_exist_create_pkg.__file__, '<myloader file 5>')
-        AreEqual(does_not_exist_create_pkg.fullname, 'does_not_exist_create_pkg')                
+        AreEqual(does_not_exist_create_pkg.fullname, 'does_not_exist_create_pkg')
     finally:
         sys.meta_path.remove(mi)
 
@@ -833,7 +837,64 @@ def test_meta_path():
         common_meta_import_tests()
     finally:
         sys.meta_path = metapath
+
+def test_custom_meta_path():
+    """most special methods invoked by the runtime from Python only invoke on the type, not the instance.
+       the import methods will invoke on instances including using __getattribute__ for resolution or on
+       old-style classes.   This test verifies we do a full member lookup to find these methods"""
+    metapath = list(sys.meta_path)
+    finder = None
+    loader = None
+    class K(object):
+        def __init__(self):
+            self.calls = []
+        def __getattribute__(self, name):
+            if name != 'calls': self.calls.append(name)
+            if name == 'find_module': return finder
+            if name == 'load_module': return loader
+            return object.__getattribute__(self, name)
+
+    loaderInst = K()
+    sys.meta_path.append(loaderInst)
+    
+    def ok_finder(name, path):
+        loaderInst.calls.append( (name, path) )
+        return loaderInst
+    
+    def ok_loader(name):
+        loaderInst.calls.append(name)
+        return 'abc'
         
+    try:
+        # dynamically resolve find_module to None
+        try:
+            import xyz
+        except TypeError:
+            AreEqual(loaderInst.calls[0], 'find_module')
+            loaderInst.calls = []
+        
+        # dynamically resolve find_module to a function,
+        # and load_module to None.
+        finder = ok_finder
+        try:
+            import xyz
+        except TypeError:
+            AreEqual(loaderInst.calls[0], 'find_module')
+            AreEqual(loaderInst.calls[1], ('xyz', None))
+            loaderInst.calls = []
+            
+            
+        loader = ok_loader
+        import xyz
+        
+        AreEqual(xyz, 'abc')
+        AreEqual(loaderInst.calls[0], 'find_module')
+        AreEqual(loaderInst.calls[1], ('xyz', None))
+        AreEqual(loaderInst.calls[2], 'load_module')
+        AreEqual(loaderInst.calls[3], 'xyz')
+    finally:
+        sys.meta_path = metapath
+
 def test_import_kw_args():
     AreEqual(__import__(name = 'sys', globals = globals(), locals = locals(), fromlist = [], level = -1), sys)
 

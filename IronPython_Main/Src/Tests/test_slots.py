@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -19,7 +19,7 @@ from lib.assert_util import *
 # ref: http://docs.python.org/ref/slots.html
 
 def test_basic():
-    class C(object): 
+    class C(object):
         __slots__ = 'a'
         
         def __init__(self):
@@ -44,7 +44,7 @@ def test_basic():
     #AreEqual(4, C.a.__get__(x))
 
 def test_remove_slots_afterwards():
-    class C(object): 
+    class C(object):
         __slots__ = 'a'
     
     del C.__slots__
@@ -59,7 +59,7 @@ def test_remove_slots_afterwards():
     AssertError(AttributeError, lambda: x.b)
     
     Assert(not hasattr(x, "__dict__"))
-    Assert(not hasattr(x, "__slots__"))    
+    Assert(not hasattr(x, "__slots__"))
 
 def test_add_slots_afterwards():
     class C(object): pass
@@ -74,7 +74,7 @@ def test_add_slots_afterwards():
     AreEqual(x.__slots__, ['b', 'c'])
 
 def test_change_slots_content():
-    class C(object): 
+    class C(object):
         __slots__ = ['a', 'b']
     
     x = C()
@@ -106,8 +106,8 @@ def test_dict_in_slots():
     x.c = 3; AreEqual(x.c, 3)
     x.m();   AreEqual(x.d, 4)
 
-# The action of a __slots__ declaration is limited to the class where it is defined. 
-# As a result, subclasses will have a __dict__ unless they also define __slots__. 
+# The action of a __slots__ declaration is limited to the class where it is defined.
+# As a result, subclasses will have a __dict__ unless they also define __slots__.
 def test_subclassing():
     class C(object):
         __slots__ = ['a']
@@ -141,10 +141,10 @@ def test_subclassing():
     #AssertError(AttributeError, f)  # bug 364438
 
     #
-    # If a class defines a slot also defined in a base class, the instance variable 
-    # defined by the base class slot is inaccessible (except by retrieving its descriptor 
-    # directly from the base class). This renders the meaning of the program undefined. 
-    # In the future, a check may be added to prevent this. 
+    # If a class defines a slot also defined in a base class, the instance variable
+    # defined by the base class slot is inaccessible (except by retrieving its descriptor
+    # directly from the base class). This renders the meaning of the program undefined.
+    # In the future, a check may be added to prevent this.
     #
     
     class D(C):
@@ -154,7 +154,7 @@ def test_subclassing():
     # ...
     
 def test_subclass_with_interesting_slots():
-    class C1(object): 
+    class C1(object):
         __slots__ = []
     class C2(object):
         __slots__ = ['a']
@@ -167,12 +167,12 @@ def test_subclass_with_interesting_slots():
         class D2(C2, C3): pass
     #AssertError(TypeError, f)  # bug 364423
     
-    class D3(C1, C4): 
-        pass 
+    class D3(C1, C4):
+        pass
     y = D3()
     y.not_in_slots = 1
     
-    class D4(C1, C4): 
+    class D4(C1, C4):
         __slots__ = []
     y = D4()
     y.not_in_slots = 2
@@ -182,7 +182,7 @@ def test_subclass_with_interesting_slots():
     class C1(object):
         __slots__ = 'a'
         
-    class C2(object): 
+    class C2(object):
         __slots__ = ['__dict__']
     
     class C3(object):
@@ -195,7 +195,7 @@ def test_subclass_with_interesting_slots():
     #class D3(C1, C3): pass
     #class D4(C3, C1): pass
     class D5(C2, C3): pass
-    class D6(C2, C3): 
+    class D6(C2, C3):
         __slots__ = 'b'
     
     # bug 367500
@@ -206,11 +206,11 @@ def test_subclass_with_interesting_slots():
         class D8(C2, C3): __slots__ = ['__dict__', 'd']
         
     # bug 367500
-    #AssertErrorWithPartialMessage(TypeError, "__dict__ slot disallowed: we already got one", f)  
+    #AssertErrorWithPartialMessage(TypeError, "__dict__ slot disallowed: we already got one", f)
 
     for D in [
-                #D1, D2, D3, D4, 
-                D5, D6, 
+                #D1, D2, D3, D4,
+                D5, D6,
                 #D7
              ]:
         d = D()
@@ -220,7 +220,7 @@ def test_subclass_with_interesting_slots():
     class C4(object): __slots__ = [ 'a', '__dict__']
     class C5(object): __slots__ = [ '__weakref__', 'c']
     
-    def f1(): 
+    def f1():
         class D(C1, C4): pass
     def f2():
         class D(C1, C5): pass
@@ -235,20 +235,20 @@ def test_slots_wild_choices():
         class C(object): __slots__ = x
         
     for x in [
-                [1, 2], 
-                1, 
+                [1, 2],
+                1,
                 'ab cde',
                 [None],
                 None,
                 '',
                 [ type ],
-                [B], 
+                [B],
                 ['a', f]
              ]:
         AssertError(TypeError, f, x)
     
     for x in [
-                [], 
+                [],
                 (),
                 'abc',
                 ('abc', 'def'),
@@ -289,7 +289,7 @@ def test_slots_choices():
     AssertError(AttributeError, lambda: x.a)
     AreEqual(len(x.__dict__), 2)
     x.c = 3
-    AreEqual(x.c, 3)    
+    AreEqual(x.c, 3)
 
 def test_name_mangling():
     class C(object):
@@ -319,22 +319,22 @@ def test_from_sbs_newtype_test():
     class C(float): __slots__ = 'a'
     class D(object): pass
     class E(C, D): pass
-    class F(E): pass 
+    class F(E): pass
 
     class n1(object): pass
     class n2(object): __slots__ = 'a'
     class g(n1, n2): __slots__ = 'b'  # used to throw AttributeError
     
     class o2: pass
-    class n2(object): 
+    class n2(object):
         __slots__ = ['a', 'b']
     class n6(n2): pass
     
-    def f(): 
+    def f():
         class g(o2, n2, n6): pass    # used to throw ValueError: Index
     AssertError(TypeError, f)
         
-# __slots__ do not work for classes derived from ``variable-length'' built-in types such 
+# __slots__ do not work for classes derived from ``variable-length'' built-in types such
 # as long, str and tuple.
 def test_builtin():   # TODO
     def f(x):

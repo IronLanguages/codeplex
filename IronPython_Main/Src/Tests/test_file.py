@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -29,11 +29,11 @@ def test_sanity():
         sin = file("onlyread.tmp", "r")
         sout = file("onlywrite.tmp", "w")
         
-	    # writer is null for sin
+        # writer is null for sin
         AssertError(IOError, sin.write, "abc")
         AssertError(IOError, sin.writelines, ["abc","def"])
 
-	    # reader is null for sout
+        # reader is null for sout
         if is_cli:
             AssertError(IOError, sout.read)
             AssertError(IOError, sout.read, 10)
@@ -41,31 +41,31 @@ def test_sanity():
             AssertError(IOError, sout.readline, 10)
             AssertError(IOError, sout.readlines)
             AssertError(IOError, sout.readlines, 10)
-    	
-	    sin.close()
-	    sout.close()
+        
+        sin.close()
+        sout.close()
 
-	    # now close a file and try to perform other I/O operations on it...
-	    # should throw ValueError according to docs
-	    f = file("onlywrite.tmp", "w")
-	    f.close()
-	    f.close()
-	    AssertError(ValueError, f.__iter__)
-	    AssertError(ValueError, f.flush)
-	    AssertError(ValueError, f.fileno)
-	    AssertError(ValueError, f.next)
-	    AssertError(ValueError, f.read)
-	    AssertError(ValueError, f.read, 10)
-	    AssertError(ValueError, f.readline)
-	    AssertError(ValueError, f.readline, 10)
-	    AssertError(ValueError, f.readlines)
-	    AssertError(ValueError, f.readlines, 10)
-	    AssertError(ValueError, f.seek, 10)
-	    AssertError(ValueError, f.seek, 10, 10)
-	    AssertError(ValueError, f.write, "abc")
-	    AssertError(ValueError, f.writelines, ["abc","def"])
+        # now close a file and try to perform other I/O operations on it...
+        # should throw ValueError according to docs
+        f = file("onlywrite.tmp", "w")
+        f.close()
+        f.close()
+        AssertError(ValueError, f.__iter__)
+        AssertError(ValueError, f.flush)
+        AssertError(ValueError, f.fileno)
+        AssertError(ValueError, f.next)
+        AssertError(ValueError, f.read)
+        AssertError(ValueError, f.read, 10)
+        AssertError(ValueError, f.readline)
+        AssertError(ValueError, f.readline, 10)
+        AssertError(ValueError, f.readlines)
+        AssertError(ValueError, f.readlines, 10)
+        AssertError(ValueError, f.seek, 10)
+        AssertError(ValueError, f.seek, 10, 10)
+        AssertError(ValueError, f.write, "abc")
+        AssertError(ValueError, f.writelines, ["abc","def"])
 
-	###
+    ###
 
 # The name of a temporary test data file that will be used for the following
 # file tests.
@@ -262,7 +262,7 @@ def test_read_size():
                        ("H\re\n\r\nllo", 1, ("H", "\r", "e", "\n", "\r", "\n", "l", "l", "o"), (1,2,3,4,5,6,7, 8, 9),
                                             ("H", "\r", "e", "\n", "\n", "l", "l", "o"), (1,2,3,4,6,7,8,9),
                                             ("H", "\n", "e", "\n", "\n", "l", "l", "o"), (1,2,3,4,6,7,8,9)),
-                       ("H\re\n\r\nllo", 2, ("H\r", "e\n", "\r\n", "ll", "o"), (2, 4, 6, 8, 9), 
+                       ("H\re\n\r\nllo", 2, ("H\r", "e\n", "\r\n", "ll", "o"), (2, 4, 6, 8, 9),
                                             ("H\r", "e\n", "\nl", "lo"), (2,4,7, 9),
                                             ("H\n", "e\n", "\nl", "lo"), (2,4,7, 9)))
 
@@ -486,7 +486,7 @@ def test_encoding():
             txt = f.read()
             f.close()
             AreEqual(txt, u'\u6211')
-        finally: 
+        finally:
             setenc(saved)
 
 if is_cli:

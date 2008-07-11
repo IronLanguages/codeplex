@@ -13,11 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
     public sealed class ExplicitConversionMethodAttribute : Attribute {
         public ExplicitConversionMethodAttribute() { }

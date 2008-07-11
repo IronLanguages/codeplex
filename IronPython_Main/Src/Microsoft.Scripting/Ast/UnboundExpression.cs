@@ -13,16 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundExpression : Expression {
         private readonly SymbolId _name;
 
-        internal UnboundExpression(SymbolId name)
-            : base(AstNodeType.Extension, typeof(object)) {
+        internal UnboundExpression(Annotations annotations, SymbolId name)
+            : base(annotations, ExpressionType.Extension, typeof(object)) {
             _name = name;
         }
 
@@ -48,8 +49,11 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static UnboundExpression Read(SymbolId name) {
+            return Read(name, Annotations.Empty);
+        }
+        public static UnboundExpression Read(SymbolId name, Annotations annotations) {
             ContractUtils.Requires(!name.IsInvalid && !name.IsEmpty, "name", "Invalid or empty name is not allowed");
-            return new UnboundExpression(name);
+            return new UnboundExpression(annotations, name);
         }
     }
 }

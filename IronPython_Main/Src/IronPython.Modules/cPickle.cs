@@ -17,22 +17,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Text;
 using System.Runtime.InteropServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using IronPython.Hosting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
@@ -429,7 +426,7 @@ namespace IronPython.Modules {
             private void Save(CodeContext/*!*/ context, object obj) {
                 if (_persist_id != null) {
                     if (!_persist_site.IsInitialized) {
-                        _persist_site.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 1));
+                        _persist_site.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 1));
                     }
                     string res = _persist_site.Invoke(context, _persist_id, obj);
                     if (res != null) {
@@ -1535,7 +1532,7 @@ namespace IronPython.Modules {
                 if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
 
                 if (!_pers_site.IsInitialized) {
-                    _pers_site.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 1));
+                    _pers_site.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 1));
                 }
                 _stack.append(_pers_site.Invoke(context, _pers_loader, _stack.pop()));
             }
@@ -1748,7 +1745,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadNoneValue(CodeContext/*!*/ context) {
-                _stack.append(NoneTypeOps.Instance);
+                _stack.append(null);
             }
 
             private void LoadObj(CodeContext/*!*/ context) {
@@ -1769,7 +1766,7 @@ namespace IronPython.Modules {
                 }
 
                 if (!_pers_site.IsInitialized) {
-                    _pers_site.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 1));
+                    _pers_site.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 1));
                 }
 
                 _stack.append(_pers_site.Invoke(context, _pers_loader, ReadLineNoNewline()));

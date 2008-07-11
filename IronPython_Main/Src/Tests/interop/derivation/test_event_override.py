@@ -12,7 +12,10 @@
 #
 #
 #####################################################################################
-    
+
+'''
+All bugs in this module are currently test blocking.
+'''
 
 from lib.assert_util import *
 skiptest("silverlight")
@@ -23,23 +26,59 @@ from Merlin.Testing import *
 from Merlin.Testing.TypeSample import *
 from Merlin.Testing.BaseClass import *
 
-# no way to continue???
+#--GLOBALS---------------------------------------------------------------------
+EVENT_COUNT = 0
 
-def xtest_simple():
-    class C(IEvent10):
-        def __init__(self):
-            self.act = None
-        def add_Act(self, value):
-            self.act = System.Delegate.Combine(self.act, value);
-        def remove_Act(self, value):
-            self.act = System.Delegate.Remove(self.act, value);
-
-        def call(self):
-            self.act(1)
+#--TEST CASES------------------------------------------------------------------
+@disabled("Dev10 438718")
+def test_sanity_interface_impl():
+    global EVENT_COUNT
+    EVENT_COUNT = 0
     
-    x = C()
-    def f(x, y): print x, y
+    class PySubclass(IEvent10):
+        def add_Act(self, value):
+            self.Act += value
+        def remove_Act(self, value):
+            self.Act -= value
+        def call(self):
+            self.Act(1, 2)
+    
+    x = PySubclass()
+    def f(x, y):
+        EVENT_COUNT += 1    
+        print x, y
+    
     x.add_Act(f)
     x.call()
+    AreEqual(EVENT_COUNT, 1)
+    x.remove_Act(f)
+    x.call()
+    AreEqual(EVENT_COUNT, 1)
 
+@disabled("Dev10 438724")
+def test_sanity_derived():
+    global EVENT_COUNT
+    EVENT_COUNT = 0
+    
+    class PySubclass(CEvent40):
+        def add_Act(self, value):
+            self.Act += value
+        def remove_Act(self, value):
+            self.Act -= value
+        def call(self):
+            self.Act(1, 2)
+    
+    x = PySubclass()
+    def f(x, y):
+        EVENT_COUNT += 1
+        print x, y
+    
+    x.add_Act(f)
+    x.call()
+    AreEqual(EVENT_COUNT, 1)
+    x.remove_Act(f)
+    x.call()
+    AreEqual(EVENT_COUNT, 1)
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

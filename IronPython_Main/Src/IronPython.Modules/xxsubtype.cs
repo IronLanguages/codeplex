@@ -13,15 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using IronPython.Runtime;
 using System.Diagnostics;
+using System.Scripting;
+using System.Scripting.Runtime;
+using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("xxsubtype", typeof(IronPython.Modules.xxsubtype))]
 namespace IronPython.Modules {

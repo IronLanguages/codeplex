@@ -16,17 +16,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Scripting.Runtime;
 using System.Text;
-
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Utils;
-using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("marshal", typeof(IronPython.Modules.PythonMarshal))]
 namespace IronPython.Modules {
@@ -74,7 +69,7 @@ namespace IronPython.Modules {
             return BytesToObject(bytes);
         }
 
-        public const string version = "1";
+        public const int version = 1;
         #endregion
 
         #region Implementation details

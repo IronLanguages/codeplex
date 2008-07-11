@@ -16,17 +16,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
 using System.Runtime.CompilerServices;
-
+using System.Scripting;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("dictproxy")]
@@ -45,8 +40,8 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.TypeError("cannot delete from dictproxy");
         }
 
-        public int __len__() {
-            return _dt.GetMemberNames(DefaultContext.Default).__len__();
+        public int __len__(CodeContext context) {
+            return _dt.GetMemberDictionary(context, false).Count;
         }
 
         public bool __contains__(object value) {
@@ -59,12 +54,12 @@ namespace IronPython.Runtime.Types {
         }
 
         public object keys(CodeContext context) {
-            return new List(_dt.GetMemberDictionary(context).Keys);
+            return new List(_dt.GetMemberDictionary(context, false).Keys);
         }
 
         public object values(CodeContext context) {
             List res = new List();
-            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)) {
+            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context, false)) {
                 PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
 
                 if (dts != null) {
@@ -79,7 +74,7 @@ namespace IronPython.Runtime.Types {
 
         public List items(CodeContext context) {
             List res = new List();
-            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)) {
+            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context, false)) {
                 PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
 
                 object val;
@@ -132,7 +127,7 @@ namespace IronPython.Runtime.Types {
         #region IEnumerable Members
 
         System.Collections.IEnumerator IEnumerable.GetEnumerator() {
-            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default).AsObjectKeyedDictionary());
+            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default, false).AsObjectKeyedDictionary());
         }
 
         #endregion
@@ -148,7 +143,7 @@ namespace IronPython.Runtime.Types {
         }
 
         IDictionaryEnumerator IDictionary.GetEnumerator() {
-            throw new NotImplementedException();
+            return new PythonDictionary.DictEnumerator(_dt.GetMemberDictionary(DefaultContext.Default, false).GetEnumerator());
         }
 
         bool IDictionary.IsFixedSize {
@@ -180,7 +175,7 @@ namespace IronPython.Runtime.Types {
         }
 
         int ICollection.Count {
-            get { return __len__();  }
+            get { return __len__(DefaultContext.Default); }
         }
 
         bool ICollection.IsSynchronized {

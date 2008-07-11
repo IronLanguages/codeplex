@@ -13,19 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using IronPython.Compiler;
-using IronPython.Hosting;
-using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using System.Threading;
 
 namespace IronPython.Runtime.Calls {
@@ -70,20 +60,20 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        internal static void CreateContexts(PythonContext/*!*/ context) {
+        internal static void CreateContexts(ScriptDomainManager manager, PythonContext/*!*/ context) {
             Interlocked.CompareExchange<CodeContext>(ref _default, CreateDefaultContext(context), null);
             Interlocked.CompareExchange<CodeContext>(ref _defaultCLS, CreateDefaultCLSContext(context), null);
-            Interlocked.CompareExchange<ActionBinder>(ref _defaultBinder, new PythonBinder(context, _default), null);
+            Interlocked.CompareExchange<ActionBinder>(ref _defaultBinder, new PythonBinder(manager, context, _default), null);
         }
 
         private static CodeContext/*!*/ CreateDefaultContext(PythonContext/*!*/ context) {
-            PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.NoBuiltins);
+            PythonModule globalMod = context.CreateModule(ModuleOptions.NoBuiltins);
             return new CodeContext(globalMod.Scope, context);
         }
 
 
         private static CodeContext/*!*/ CreateDefaultCLSContext(PythonContext/*!*/ context) {
-            PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.ShowClsMethods | ModuleOptions.NoBuiltins);
+            PythonModule globalMod = context.CreateModule(ModuleOptions.ShowClsMethods | ModuleOptions.NoBuiltins);
             return new CodeContext(globalMod.Scope, context);
         }
     }

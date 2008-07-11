@@ -16,20 +16,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.IO;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-
+using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Math;
+using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("array", typeof(IronPython.Modules.ArrayModule))]
 namespace IronPython.Modules {
@@ -758,7 +755,7 @@ namespace IronPython.Modules {
             public object __cmp__(object other) {
                 int res;
                 if (!TryCompare(other, out res)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 return RuntimeHelpers.Int32ToObject(res);
@@ -768,7 +765,7 @@ namespace IronPython.Modules {
             public static object operator >(PythonArray self, object other) {
                 int res;
                 if (!self.TryCompare(other, out res)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 return RuntimeHelpers.BooleanToObject(res > 0);
@@ -778,7 +775,7 @@ namespace IronPython.Modules {
             public static object operator <(PythonArray self, object other) {
                 int res;
                 if (!self.TryCompare(other, out res)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 return RuntimeHelpers.BooleanToObject(res < 0);
@@ -788,7 +785,7 @@ namespace IronPython.Modules {
             public static object operator >=(PythonArray self, object other) {
                 int res;
                 if (!self.TryCompare(other, out res)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 return RuntimeHelpers.BooleanToObject(res >= 0);
@@ -798,7 +795,7 @@ namespace IronPython.Modules {
             public static object operator <=(PythonArray self, object other) {
                 int res;
                 if (!self.TryCompare(other, out res)) {
-                    return PythonOps.NotImplemented;
+                    return NotImplementedType.Value;
                 }
 
                 return RuntimeHelpers.BooleanToObject(res <= 0);

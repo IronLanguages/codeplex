@@ -15,23 +15,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Threading;
-
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-
-[assembly: PythonExtensionType(typeof(object), typeof(ObjectOps))]
 namespace IronPython.Runtime.Operations {
-    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// Contains Python extension methods that are added to object
@@ -58,7 +52,7 @@ namespace IronPython.Runtime.Operations {
         /// Returns the hash code of the given object
         /// </summary>
         public static int __hash__(object self) {
-            if (self == null) return NoneTypeOps.HashCode;
+            if (self == null) return NoneTypeOps.NoneHashCode;
             return self.GetHashCode();
         }
 
@@ -120,6 +114,13 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Runs the pickle protocol
         /// </summary>
+        public static object __reduce_ex__(CodeContext/*!*/ context, object self) {
+            return __reduce_ex__(context, self, 0);
+        }
+
+        /// <summary>
+        /// Runs the pickle protocol
+        /// </summary>
         public static object __reduce_ex__(CodeContext/*!*/ context, object self, object protocol) {
             object objectReduce = PythonOps.GetBoundAttr(context, DynamicHelpers.GetPythonTypeFromType(typeof(object)), Symbols.Reduce);
             object myReduce;
@@ -145,7 +146,7 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static string __repr__(object self) {
             return String.Format("<{0} object at {1}>",
-                PythonTypeOps.GetName(DynamicHelpers.GetPythonType(self)),
+                DynamicHelpers.GetPythonType(self).Name,
                 PythonOps.HexId(self));
         }
 

@@ -14,18 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting;
-
+using System.Scripting.Runtime;
+using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("_codecs", typeof(IronPython.Modules.PythonCodecs))]
 namespace IronPython.Modules {

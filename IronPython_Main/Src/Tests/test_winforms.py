@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -32,13 +32,13 @@ import System.Windows.Forms as SWF
 # data binding helper classes
 
 class AgeQualifier(object):
-	def __get__(self, instance, ctx):
-		if instance.Age < 13: return 'young'
-		if instance.Age < 20: return 'teen'
-		if instance.Age < 30: return 'twenties'
-		if instance.Age < 40: return 'thirties'
-		if instance.Age < 50: return 'forties'
-		return 'old'  
+    def __get__(self, instance, ctx):
+        if instance.Age < 13: return 'young'
+        if instance.Age < 20: return 'teen'
+        if instance.Age < 30: return 'twenties'
+        if instance.Age < 40: return 'thirties'
+        if instance.Age < 50: return 'forties'
+        return 'old'
 
 SAMPLE_DATA = [('Joe', 23, 'twenties'),  ('Bob', 8, 'young'),  ('Thomas', 32, 'thirties'),  ('Patrick', 41, 'forties'),  ('Kathy', 19, 'teen'),  ('Sue', 77, 'old'),]
 
@@ -89,7 +89,7 @@ def test_databinding_auto():
         form.Close()
     th = System.Threading.Thread(System.Threading.ThreadStart(close_form))
     th.Start()
-    SWF.Application.Run(form) 
+    SWF.Application.Run(form)
     
 
 def test_databinding_manual():
@@ -126,7 +126,7 @@ def test_databinding_manual():
         form.Close()
     th = System.Threading.Thread(System.Threading.ThreadStart(close_form))
     th.Start()
-    SWF.Application.Run(form) 
+    SWF.Application.Run(form)
 
 def test_class_name():
     '''
@@ -176,7 +176,6 @@ def test_cp13405():
     example = PropertyExample(3)
     try:
         grid.SelectedObject = example
-        AssertUnreachable("CodePlex 13405 seems to have been fixed!  Remove me")
     except NotImplementedError, e:
         pass
 

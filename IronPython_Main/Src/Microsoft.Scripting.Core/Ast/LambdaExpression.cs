@@ -13,67 +13,44 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
-
+namespace System.Linq.Expressions {
+    //CONFORMING
     /// <summary>
-    /// This captures a block of code that should correspond to a .NET method body.  It takes
-    /// input through parameters and is expected to be fully bound.  This code can then be
-    /// generated in a variety of ways.  The variables can be kept as .NET locals or in a
-    /// 1st class environment object. This is the primary unit used for passing around
-    /// AST's in the DLR.
+    /// This captures a block of code that should correspond to a .NET method
+    /// body. It takes input through parameters and is expected to be fully
+    /// bound. This code can then be generated in a variety of ways. The
+    /// variables can be kept as .NET locals or hoisted into an object bound to
+    /// the delegate. This is the primary unit used for passing around
+    /// Expression Trees in LINQ and the DLR.
     /// </summary>
     public class LambdaExpression : Expression {
-        private readonly Type _returnType;
         private readonly string _name;
         private readonly Expression _body;
-        private readonly MethodInfo _scopeFactory;
-
         private readonly ReadOnlyCollection<ParameterExpression> _parameters;
-        private readonly ReadOnlyCollection<VariableExpression> _variables;
 
-        // TODO: Evaluate necessity...
-        #region Flags
-
-        private readonly bool _isGlobal;
-        private readonly bool _visibleScope;
-
-        private readonly bool _emitLocalDictionary;
-        private readonly bool _parameterArray;
-
-        #endregion
-
-        internal LambdaExpression(Annotations annotations, AstNodeType nodeType, Type delegateType, string name, Type returnType, MethodInfo scopeFactory,
-            Expression body, ReadOnlyCollection<ParameterExpression> parameters, ReadOnlyCollection<VariableExpression> variables,
-            bool global, bool visible, bool dictionary, bool parameterArray)
+        internal LambdaExpression(
+            Annotations annotations,
+            ExpressionType nodeType,
+            Type delegateType,
+            string name,
+            Expression body,
+            ReadOnlyCollection<ParameterExpression> parameters
+        )
             : base(annotations, nodeType, delegateType) {
 
-            Assert.NotNull(returnType);
+            Assert.NotNull(delegateType);
 
             _name = name;
-            _returnType = returnType;
-            _scopeFactory = scopeFactory;
             _body = body;
-
             _parameters = parameters;
-            _variables = variables;
-
-            _isGlobal = global;
-            _visibleScope = visible;
-            _emitLocalDictionary = dictionary;
-            _parameterArray = parameterArray;
-        }
-
-        public Type ReturnType {
-            get { return _returnType; }
         }
 
         public ReadOnlyCollection<ParameterExpression> Parameters {
@@ -84,220 +61,227 @@ namespace Microsoft.Scripting.Ast {
             get { return _name; }
         }
 
-        /// <summary>
-        /// Factory method used for local scope instantiation.
-        /// If null the default factory <see cref="Microsoft.Scripting.Runtime.RuntimeHelpers.CreateLocalScope{TTuple}"/> is used.
-        /// The factory must have the same signature as <see cref="Microsoft.Scripting.Runtime.RuntimeHelpers.CreateLocalScope{TTuple}"/>.
-        /// </summary>
-        public MethodInfo ScopeFactory {
-            get { return _scopeFactory; }
-        }
-
-        /// <summary>
-        /// True to force a function to have an environment and have all of its locals lifted
-        /// into this environment.  This provides access to local variables via a dictionary but
-        /// comes with the performance penality of not using the real stack for locals.
-        /// </summary>
-        public bool EmitLocalDictionary {
-            get { return _emitLocalDictionary; }
-        }
-
-        public bool IsGlobal {
-            get { return _isGlobal; }
-        }
-
-        internal bool ParameterArray {
-            get { return _parameterArray; }
-        }
-
-        internal bool IsVisible {
-            get { return _visibleScope; }
-        }
-
         public Expression Body {
             get { return _body; }
         }
 
-        public ReadOnlyCollection<VariableExpression> Variables {
-            get { return _variables; }
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            if (Parameters.Count == 1) {
+                Parameters[0].BuildString(builder);
+            } else {
+                builder.Append("(");
+                for (int i = 0, n = Parameters.Count; i < n; i++) {
+                    if (i > 0)
+                        builder.Append(", ");
+                    Parameters[i].BuildString(builder);
+                }
+                builder.Append(")");
+            }
+            builder.Append(" => ");
+            _body.BuildString(builder);
+        }
+
+        public Delegate Compile() {
+            return LambdaCompiler.CompileLambda(this);
         }
     }
 
+    //CONFORMING
+    public sealed class Expression<TDelegate> : LambdaExpression {
+        internal Expression(
+            Annotations annotations,
+            ExpressionType nodeType,
+            string name,
+            Expression body,
+            ReadOnlyCollection<ParameterExpression> parameters
+        )
+            : base(annotations, nodeType, typeof(TDelegate), name, body, parameters) {
+        }
+
+        public new TDelegate Compile() {
+            return LambdaCompiler.CompileLambda<TDelegate>(this);
+        }
+    }
+
+
     public partial class Expression {
-        public static LambdaExpression GlobalLambda(Type type, string name, Expression body, ParameterExpression[] parameters, VariableExpression[] variables) {
-            return Lambda(SourceSpan.None, type, name, typeof(object), (MethodInfo)null, body, parameters, variables, true, true, false, false);
+        //internal lambda factory that creates an instance of Expression<delegateType>
+        internal static LambdaExpression Lambda(
+                Annotations annotations,
+                ExpressionType nodeType,
+                Type delegateType,
+                string name,
+                Expression body,
+                ReadOnlyCollection<ParameterExpression> parameters
+        ) {
+            Type ot = typeof(Expression<>);
+            Type ct = ot.MakeGenericType(new Type[] { delegateType });
+            ConstructorInfo ctor = ct.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, ctorTypes, null);
+            return (LambdaExpression)ctor.Invoke(new object[] { annotations, nodeType, name, body, parameters });
         }
 
-        public static LambdaExpression Lambda(string name, Type returnType, Expression body, ParameterExpression[] parameters, VariableExpression[] variables) {
-            return Lambda(SourceSpan.None, name, returnType, (MethodInfo)null, body, parameters, variables, false, true, false);
+        //CONFORMING
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) {
+            return Lambda<TDelegate>(body, (IEnumerable<ParameterExpression>)parameters);
         }
 
-        public static LambdaExpression Lambda(Type delegateType, string name, Type returnType, Expression body, ParameterExpression[] parameters, VariableExpression[] variables) {
-            return Lambda(SourceSpan.None, delegateType, name, returnType, body, parameters, variables);
+        //CONFORMING
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) {
+            return Lambda<TDelegate>(body, "lambda_method", Annotations.Empty, parameters);
         }
 
-        public static LambdaExpression Lambda(SourceSpan span, Type delegateType, string name, Type returnType, Expression body, ParameterExpression[] parameters, VariableExpression[] variables) {
-            return Lambda(span, delegateType, name, returnType, (MethodInfo)null, body, parameters, variables, false, true, false, false);
-        }
-
-        public static LambdaExpression Lambda(
-            SourceSpan span, string name, Type returnType, MethodInfo scopeFactory,
-            Expression body, ParameterExpression[] parameters, VariableExpression[] variables,
-            bool global, bool visible, bool dictionary) {
-
-            ContractUtils.RequiresNotNull(name, "name");
-            ContractUtils.RequiresNotNull(returnType, "returnType");
+        //CONFORMING
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.RequiresNotNullItems(parameters, "parameters");
-            ContractUtils.RequiresNotNullItems(variables, "variables");
-
-            ValidateScopeFactory(scopeFactory, "scopeFactory");
-            
-            Type delegateType = GetDelegateTypeForSignature(parameters, returnType);
-            return new LambdaExpression(
-                Annotate(span), AstNodeType.Lambda, delegateType, name, returnType, scopeFactory, 
-                body, CollectionUtils.ToReadOnlyCollection(parameters), CollectionUtils.ToReadOnlyCollection(variables), 
-                global, visible, dictionary, false);
+            ReadOnlyCollection<ParameterExpression> parameterList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
+            return new Expression<TDelegate>(annotations, ExpressionType.Lambda, name, body, parameterList);
         }
 
-        public static LambdaExpression Lambda(
-            SourceSpan span, Type delegateType, string name, Type returnType, MethodInfo scopeFactory,
-            Expression body, ParameterExpression[] parameters, VariableExpression[] variables,
-            bool global, bool visible, bool dictionary, bool parameterArray) {
 
+        public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) {
+            return Lambda(body, (IEnumerable<ParameterExpression>)parameters);
+        }
+
+        public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters) {
+            return Lambda(body, "lambda_method", parameters);
+        }
+
+        //CONFORMING
+        public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) {
+            return Lambda(delegateType, body, "lambda_method", Annotations.Empty, parameters);
+        }
+
+        //CONFORMING
+        public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters) {
+            return Lambda(delegateType, body, "lambda_method", Annotations.Empty, parameters);
+        }
+
+        public static LambdaExpression Lambda(Expression body, string name, IEnumerable<ParameterExpression> parameters) {
+            return Lambda(body, name, Annotations.Empty, parameters);
+        }
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, string name, IEnumerable<ParameterExpression> parameters) {
+            return Lambda(delegateType, body, name, Annotations.Empty, parameters);
+        }
+
+
+        //CONFORMING
+        public static LambdaExpression Lambda(Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(name, "name");
-            ContractUtils.RequiresNotNull(delegateType, "delegateType");
-            ContractUtils.RequiresNotNull(returnType, "returnType");
             ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.RequiresNotNullItems(parameters, "parameters");
-            ContractUtils.RequiresNotNullItems(variables, "variables");
 
-            ValidateScopeFactory(scopeFactory, "scopeFactory");
-            
-            LambdaExpression lambda = new LambdaExpression(
-                Annotate(span), AstNodeType.Lambda, delegateType, name, returnType, scopeFactory,
-                body, CollectionUtils.ToReadOnlyCollection(parameters), CollectionUtils.ToReadOnlyCollection(variables), 
-                global, visible, dictionary, parameterArray);
+            ReadOnlyCollection<ParameterExpression> parameterList = CollectionUtils.ToReadOnlyCollection(parameters);
 
-            ValidateDelegateType(lambda, delegateType);
+            bool action = body.Type == typeof(void);
 
-            return lambda;
-        }
-
-        /// <summary>
-        /// Extracts the signature of the LambdaExpression as an array of Types
-        /// </summary>
-        internal static Type[] GetLambdaSignature(LambdaExpression lambda) {
-            Debug.Assert(lambda != null);
-
-            ReadOnlyCollection<ParameterExpression> parameters = lambda.Parameters;
-            Type[] result = new Type[parameters.Count];
-            for (int i = 0; i < parameters.Count; i++) {
-                result[i] = parameters[i].Type;
-            }
-            return result;
-        }
-
-        private static void ValidateScopeFactory(MethodInfo factory, string paramName) {
-            ContractUtils.Requires(IsValidScopeFactory(factory), paramName, "Factory must have signature compatible with " + 
-                "CodeContext Factory<TTuple>(TTuple, SymbolId[], CodeContext, bool) where TTuple : Tuple");
-        }
-    
-        private static bool IsValidScopeFactory(MethodInfo factory) {
-            if (factory == null) return true;
-            if (!factory.IsGenericMethod) return false;
-
-            Type[] typeParams = factory.GetGenericArguments();
-            if (typeParams.Length != 1) return false;
-
-            Type[] constraints = typeParams[0].GetGenericParameterConstraints();
-            if (constraints.Length != 1 || constraints[0] != typeof(Tuple)) return false;
-
-            if (!typeof(CodeContext).IsAssignableFrom(factory.ReturnType)) return false;
-
-            ParameterInfo[] ps = factory.GetParameters();
-            if (ps.Length != 4) return false;
-            if (ps[0].ParameterType != typeParams[0]) return false;
-            if (ps[1].ParameterType != typeof(SymbolId[])) return false;
-            if (ps[2].ParameterType != typeof(CodeContext)) return false;
-            if (ps[3].ParameterType != typeof(bool)) return false;
-
-            return true;
-        }
-
-        /// <summary>
-        /// Validates that the delegate type of the lambda
-        /// matches the lambda itself.
-        /// 
-        /// * Return types of the lambda and the delegate must be identical.
-        /// 
-        /// * Without parameter array on the delegate type, the signatures must
-        ///   match perfectly as to count and types of parameters.
-        ///   
-        /// * With parameter array on the delegate type, the common subset of
-        ///   parameters must match
-        /// </summary>
-        private static void ValidateDelegateType(LambdaExpression lambda, Type delegateType) {
-            ContractUtils.Requires(delegateType != typeof(Delegate), "type", "type must not be System.Delegate.");
-            ContractUtils.Requires(TypeUtils.CanAssign(typeof(Delegate), delegateType), "type", "Incorrect delegate type.");
-
-            MethodInfo mi = delegateType.GetMethod("Invoke");
-            ContractUtils.RequiresNotNull(mi, "Delegate must have an 'Invoke' method");
-
-            ContractUtils.Requires(mi.ReturnType == lambda.ReturnType, "type", "Delegate type doesn't match LambdaExpression");
-
-            ParameterInfo[] infos = mi.GetParameters();
-            ReadOnlyCollection<ParameterExpression> parameters = lambda.Parameters;
-
-            if (infos.Length > 0 && CompilerHelpers.IsParamArray(infos[infos.Length - 1])) {
-                ContractUtils.Requires(infos.Length - 1 <= parameters.Count, "Delegate and lambda parameter count mismatch");
-
-                // Parameter array case. The lambda may have more parameters than delegate,
-                // and can also have parameter array as its last parameter, however all of the
-                // parameters upto delegate's parameter array (excluding) must be identical
-
-                ValidateIdenticalParameters(infos, parameters, infos.Length - 1);
-            } else {
-                ContractUtils.Requires(infos.Length == parameters.Count, "Delegate and lambda parameter count mismatch");
-
-                // No parameter array. The lambda must have identical signature to that of the
-                // delegate, and it may not be marked as parameter array itself.
-                ValidateIdenticalParameters(infos, parameters, infos.Length);
-
-                ContractUtils.Requires(!lambda.ParameterArray, "lambda", "Parameter array delegate type required for parameter array lambda");
-            }
-        }
-
-        private static void ValidateIdenticalParameters(ParameterInfo[] infos, ReadOnlyCollection<ParameterExpression> parameters, int count) {
-            Debug.Assert(count <= infos.Length && count <= parameters.Count);
-            while (count-- > 0) {
-                ContractUtils.Requires(infos[count].ParameterType == parameters[count].Type, "type");
-            }
-        }
-
-        private static Type GetDelegateTypeForSignature(IList<ParameterExpression> parameters, Type returnType) {
-            ContractUtils.RequiresNotNull(returnType, "returnType");
-
-            bool action = returnType == typeof(void);
-
-            int paramCount = parameters == null ? 0 : parameters.Count;
+            int paramCount = parameterList.Count;
             Type[] typeArgs = new Type[paramCount + (action ? 0 : 1)];
             for (int i = 0; i < paramCount; i++) {
-                ContractUtils.RequiresNotNull(parameters[i], "parameters");
-                typeArgs[i] = parameters[i].Type;
+                ContractUtils.RequiresNotNull(parameterList[i], "parameter");
+                typeArgs[i] = parameterList[i].Type;
             }
 
-            Type type;
+            Type delegateType;
             if (action)
-                type = GetActionType(typeArgs);
+                delegateType = GetActionType(typeArgs);
             else {
-                typeArgs[paramCount] = returnType;
-                type = GetFuncType(typeArgs);
+                typeArgs[paramCount] = body.Type;
+                delegateType = GetFuncType(typeArgs);
             }
-            return type;
+
+            return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, parameterList);
         }
 
-        private static Type GetFuncType(params Type[] typeArgs) {
+
+        private static Type[] ctorTypes = new Type[] {
+            typeof(Annotations),        // annotations,
+            typeof(ExpressionType),     // nodeType,
+            typeof(string),             // name,
+            typeof(Expression),         // body,
+            typeof(ReadOnlyCollection<ParameterExpression>) // parameters) 
+        };
+
+        //CONFORMING
+        public static LambdaExpression Lambda(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(body, "body");
+            ReadOnlyCollection<ParameterExpression> paramList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ValidateLambdaArgs(delegateType, ref body, paramList);
+
+            return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, paramList);
+        }
+
+        //CONFORMING
+        private static void ValidateLambdaArgs(Type delegateType, ref Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(body, "body");
+
+            if (!TypeUtils.AreAssignable(typeof(Delegate), delegateType) || delegateType == typeof(Delegate)) {
+                throw Error.LambdaTypeMustBeDerivedFromSystemDelegate();
+            }
+            MethodInfo mi = delegateType.GetMethod("Invoke");
+            ParameterInfo[] pis = mi.GetParameters();
+            if (pis.Length > 0) {
+                if (pis.Length != parameters.Count) {
+                    throw Error.IncorrectNumberOfLambdaDeclarationParameters();
+                }
+                for (int i = 0, n = pis.Length; i < n; i++) {
+                    Expression pex = parameters[i];
+                    ParameterInfo pi = pis[i];
+                    ContractUtils.RequiresNotNull(pex, "parameters");
+                    Type pType = pi.ParameterType;
+                    if (pType.IsByRef || pex.Type.IsByRef) {
+                        throw Error.ExpressionMayNotContainByrefParameters();
+                    }
+                    if (!TypeUtils.AreReferenceAssignable(pex.Type, pType)) {
+                        throw Error.ParameterExpressionNotValidAsDelegate(pex.Type, pType);
+                    }
+                }
+            } else if (parameters.Count > 0) {
+                throw Error.IncorrectNumberOfLambdaDeclarationParameters();
+            }
+            if (mi.ReturnType != typeof(void) && !TypeUtils.AreReferenceAssignable(mi.ReturnType, body.Type)) {
+                //TODO: statement lambda may be autoquoted to Expression<void>. 
+                // cosider whether this is desirable.
+                if (TypeUtils.IsSameOrSubclass(typeof(Expression), mi.ReturnType) && TypeUtils.AreAssignable(mi.ReturnType, body.GetType())) {
+                    body = Expression.Quote(body);
+                } else {
+                    // We allow the body type to be void with non-void return statements, so
+                    // we can’t completely verify this here without walking the tree. Instead we validate
+                    // this condition in VariableBinder.
+                    // TODO: can the return statement design be improved to allow the check here?
+                    if (body.Type != typeof(void)) {
+                        throw Error.ExpressionTypeDoesNotMatchReturn(body.Type, mi.ReturnType);
+                    }
+                }
+            }
+        }
+
+
+        #region Generator
+
+        public static LambdaExpression Generator(Type delegateType, string name, Expression body, params ParameterExpression[] parameters) {
+            return Generator(delegateType, name, body, Annotations.Empty, parameters);
+        }
+
+        public static LambdaExpression Generator(Type delegateType, string name, Expression body, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(body, "body");
+            ReadOnlyCollection<ParameterExpression> paramList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ValidateLambdaArgs(delegateType, ref body, paramList);
+
+            return Lambda(annotations, ExpressionType.Generator, delegateType, name, body, paramList);
+        }
+
+        #endregion
+
+
+        //CONFORMING
+        // TODO: expand to 8 arguments
+        public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
             ContractUtils.Requires(typeArgs.Length > 0, "incorrect number of type arguments for Func.");
 
@@ -305,46 +289,47 @@ namespace Microsoft.Scripting.Ast {
 
             switch (typeArgs.Length) {
                 case 1:
-                    funcType = typeof(Utils.Function<>).MakeGenericType(typeArgs);
+                    funcType = typeof(Func<>).MakeGenericType(typeArgs);
                     break;
                 case 2:
-                    funcType = typeof(Utils.Function<,>).MakeGenericType(typeArgs);
+                    funcType = typeof(Func<,>).MakeGenericType(typeArgs);
                     break;
                 case 3:
-                    funcType = typeof(Utils.Function<,,>).MakeGenericType(typeArgs);
+                    funcType = typeof(Func<,,>).MakeGenericType(typeArgs);
                     break;
                 case 4:
-                    funcType = typeof(Utils.Function<,,,>).MakeGenericType(typeArgs);
+                    funcType = typeof(Func<,,,>).MakeGenericType(typeArgs);
                     break;
                 case 5:
-                    funcType = typeof(Utils.Function<,,,,>).MakeGenericType(typeArgs);
+                    funcType = typeof(Func<,,,,>).MakeGenericType(typeArgs);
                     break;
                 default:
                     throw new ArgumentException("incorrect number of type arguments for Func.", "typeArgs"); ;
             }
             return funcType;
         }
-
-        private static Type GetActionType(params Type[] typeArgs) {
+        //CONFORMING
+        // TODO: expand to 8 arguments
+        public static Type GetActionType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
 
             Type actionType;
 
             switch (typeArgs.Length) {
                 case 0:
-                    actionType = typeof(Utils.Action);
+                    actionType = typeof(Action);
                     break;
                 case 1:
-                    actionType = typeof(System.Action<>).MakeGenericType(typeArgs);
+                    actionType = typeof(Action<>).MakeGenericType(typeArgs);
                     break;
                 case 2:
-                    actionType = typeof(Utils.Action<,>).MakeGenericType(typeArgs);
+                    actionType = typeof(Action<,>).MakeGenericType(typeArgs);
                     break;
                 case 3:
-                    actionType = typeof(Utils.Action<,,>).MakeGenericType(typeArgs);
+                    actionType = typeof(Action<,,>).MakeGenericType(typeArgs);
                     break;
                 case 4:
-                    actionType = typeof(Utils.Action<,,,>).MakeGenericType(typeArgs);
+                    actionType = typeof(Action<,,,>).MakeGenericType(typeArgs);
                     break;
                 default:
                     throw new ArgumentException("incorrect number of type arguments for Action.", "typeArgs"); ;

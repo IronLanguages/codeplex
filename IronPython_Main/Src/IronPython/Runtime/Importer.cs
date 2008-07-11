@@ -16,27 +16,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using System.IO;
-using System.Text;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Compiler;
-using IronPython.Compiler.Generation;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
+using System.IO;
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
 using IronPython.Runtime.Calls;
-using IronPython.Hosting;
-using System.Threading;
 using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
     
@@ -337,8 +330,8 @@ namespace IronPython.Runtime {
             if (sourceUnit == null) {
                 throw PythonOps.SystemError("module source file not found");
             }
-
-            sourceUnit.Execute(scope);
+            
+            pc.GetScriptCode(sourceUnit, name, ModuleOptions.None).Run(scope);
         }
 
         /// <summary>
@@ -376,9 +369,6 @@ namespace IronPython.Runtime {
                 throw new NotImplementedException();
             }
 
-            // TODO: is this correct?
-            module.SetName(name);
-
             // should be a built-in module which we can reload.
             Debug.Assert(module.Scope.Dict is PythonDictionary);
             Debug.Assert(((PythonDictionary)module.Scope.Dict)._storage is ModuleDictionaryStorage);
@@ -406,8 +396,10 @@ namespace IronPython.Runtime {
         private static bool TryLoadMetaPathModule(CodeContext/*!*/ context, string fullName, List path, out object ret) {
             List metaPath = PythonContext.GetContext(context).GetSystemStateValue("meta_path") as List;
             if (metaPath != null) {
-                foreach (object importer in metaPath) {
-                    return FindAndLoadModuleFromImporter(context, importer, fullName, path, out ret);
+                foreach (object importer in (IEnumerable)metaPath) {
+                    if (FindAndLoadModuleFromImporter(context, importer, fullName, path, out ret)) {
+                        return true;
+                    }
                 }
             }
 
@@ -421,11 +413,13 @@ namespace IronPython.Runtime {
         /// First the find_module(fullName, path) is invoked to get a loader, then load_module(fullName) is invoked
         /// </summary>
         private static bool FindAndLoadModuleFromImporter(CodeContext/*!*/ context, object importer, string fullName, List path, out object ret) {
-            object loader;            
-            if (PythonTypeOps.TryInvokeTernaryOperator(context, importer, fullName, path, SymbolTable.StringToId("find_module"), out loader) && loader != null) {
-                if (PythonTypeOps.TryInvokeBinaryOperator(context, loader, fullName, SymbolTable.StringToId("load_module"), out ret) && ret != null) {
-                    return true;
-                }
+            object find_module = PythonOps.GetBoundAttr(context, importer, SymbolTable.StringToId("find_module"));
+
+            object loader = PythonOps.CallWithContext(context, find_module, fullName, path);
+            if (loader != null) {
+                object findMod = PythonOps.GetBoundAttr(context, loader, SymbolTable.StringToId("load_module"));
+                ret = PythonOps.CallWithContext(context, findMod, fullName);
+                return ret != null;
             }
 
             ret = null;
@@ -560,7 +554,16 @@ namespace IronPython.Runtime {
             PythonContext pc = PythonContext.GetContext(context);
             if (!pc.DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out ret)) {
                 try {
-                    ret = pc.DomainManager.UseModule(name);
+                    SourceUnit su = pc.DomainManager.Host.ResolveSourceFileUnit(name);
+
+                    if (GetFullPathAndValidateCase(context, Path.Combine(Path.GetDirectoryName(su.Path), name + Path.GetExtension(su.Path))) != null) {
+                        ScriptCode compiledCode = su.Compile();
+                        Scope scope = compiledCode.CreateScope();
+                        compiledCode.Run(scope);
+
+                        context.LanguageContext.DomainManager.Globals.SetName(SymbolTable.StringToId(name), scope);
+                        ret = scope;
+                    }
                 } catch (FileNotFoundException) {
                     return null;
                 } catch (AmbiguousFileNameException e) {
@@ -598,28 +601,6 @@ namespace IronPython.Runtime {
                 || module is BuiltinFunction;
         }
 
-        /// <summary>
-        /// Initializes the specified module and returns the user-exposable PythonModule.
-        /// </summary>
-        internal static void InitializeModule(PythonContext/*!*/ context, string/*!*/ fullName, PythonModule/*!*/ module, ScriptCode/*!*/ code, bool executeModule) {
-            Assert.NotNull(fullName, module, code);
-
-            //Put this in modules dict so we won't reload with circular imports
-            context.PublishModule(fullName, module);
-            bool success = false;
-            try {
-                if (executeModule) {
-                    code.Run(module.Scope);
-                }
-
-                success = true;
-            } finally {
-                if (!success) {
-                    context.SystemStateModules.Remove(fullName);
-                }
-            }
-        }
-
         private static string CreateFullName(string/*!*/ baseName, string name) {
             if (baseName == null || baseName.Length == 0 || baseName == "__main__") {
                 return name;
@@ -638,7 +619,7 @@ namespace IronPython.Runtime {
                 return null;
             }
 
-            foreach (object dirname in path) {
+            foreach (object dirname in (IEnumerable)path) {
                 string str = dirname as string;
 
                 if (str != null || (Converter.TryConvertToString(dirname, out str) && str != null)) {  // ignore non-string
@@ -682,7 +663,7 @@ namespace IronPython.Runtime {
         private static object FindImporterForPath(CodeContext/*!*/ context, string str) {
             List pathHooks = PythonContext.GetContext(context).GetSystemStateValue("path_hooks") as List;
 
-            foreach (object hook in pathHooks) {
+            foreach (object hook in (IEnumerable)pathHooks) {
                 try {
                     object handler = PythonCalls.Call(hook, str);
 
@@ -748,7 +729,7 @@ namespace IronPython.Runtime {
 
         private static PythonModule/*!*/ LoadFromSourceUnit(CodeContext/*!*/ context, SourceUnit/*!*/ sourceCode, string/*!*/ name, string/*!*/ path) {
             Assert.NotNull(sourceCode, name, path);
-            return PythonContext.GetContext(context).CompileModule(path, name, sourceCode, ModuleOptions.Initialize | ModuleOptions.Optimized | ModuleOptions.PublishModule, false);
+            return PythonContext.GetContext(context).CompileModule(path, name, sourceCode, ModuleOptions.Initialize | ModuleOptions.Optimized);
         }
     }
 }

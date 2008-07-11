@@ -13,19 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using IronPython.Runtime;
 using Microsoft.Scripting.Hosting;
-using IronPython.Hosting;
-
-[assembly: PythonExtensionTypeAttribute(typeof(ScriptScope), typeof(ScriptScopeOps))]
 
 namespace IronPython.Hosting {
     public static class ScriptScopeOps {

@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
+using System.Scripting;
 
 namespace ToyScript.Parser.Ast {
     class ToyNode {

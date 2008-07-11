@@ -14,21 +14,19 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-
+using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Math;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math; 
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -384,7 +382,7 @@ namespace IronPython.Modules {
             }
 
             public static date fromtimestamp(double timestamp) {
-                DateTime dt = new DateTime((long)(timestamp * 1e7));
+                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
                 return new date(dt.Year, dt.Month, dt.Day);
             }
 
@@ -535,8 +533,8 @@ namespace IronPython.Modules {
             }
 
             public string ctime() {
-                return _dateTime.ToString("ddd MMM ", CultureInfo.InvariantCulture) + 
-                    string.Format(CultureInfo.InvariantCulture, "{0,2}", _dateTime.Day) + 
+                return _dateTime.ToString("ddd MMM ", CultureInfo.InvariantCulture) +
+                    string.Format(CultureInfo.InvariantCulture, "{0,2}", _dateTime.Day) +
                     _dateTime.ToString(" HH:mm:ss yyyy", CultureInfo.InvariantCulture);
             }
 
@@ -585,7 +583,7 @@ namespace IronPython.Modules {
                         }
                     }
                     
-                    throw PythonOps.TypeError("can't compare datetime.date to {0}", PythonTypeOps.GetName(other));                    
+                    throw PythonOps.TypeError("can't compare datetime.date to {0}", PythonTypeOps.GetName(other));
                 }
 
                 return true;
@@ -593,30 +591,30 @@ namespace IronPython.Modules {
 
             [return: MaybeNotImplemented]
             public static object operator >(date self, object other) {
-                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+                if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
+                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <(date self, object other) {
-                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+                if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
+                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator >=(date self, object other) {
-                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+                if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
+                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <=(date self, object other) {
-                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+                if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
+                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
             }
 
             public bool __eq__(object other) {
@@ -701,7 +699,7 @@ namespace IronPython.Modules {
                     _lostMicroseconds = _lostMicroseconds % 1000;
                 }
             }
-            
+
             // other constructors, all class methods:
             public new static object today() {
                 return new datetime(DateTime.Now, 0, null);
@@ -720,7 +718,7 @@ namespace IronPython.Modules {
             }
 
             public static object fromtimestamp(double timestamp, [DefaultParameterValue(null)] tzinfo tz) {
-                DateTime dt = new DateTime((long)(timestamp * 1e7));
+                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
 
                 if (tz != null) {
                     dt = dt.ToUniversalTime();
@@ -732,7 +730,7 @@ namespace IronPython.Modules {
             }
 
             public static datetime utcfromtimestamp(double timestamp) {
-                DateTime dt = new DateTime((long)(timestamp * 1e7));
+                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
                 dt = dt = dt.ToUniversalTime();
                 return new datetime(dt, 0, null);
             }
@@ -1067,7 +1065,7 @@ namespace IronPython.Modules {
             internal int _lostMicroseconds;
             internal tzinfo _tz;
             private UnifiedTime _utcTime;
-            
+
             // class attributes:
             public static readonly time max = new time(23, 59, 59, 999999, null);
             public static readonly time min = new time(0, 0, 0, 0, null);

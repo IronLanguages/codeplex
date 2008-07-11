@@ -13,18 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-
 using System.Reflection;
-using System.Diagnostics;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 
-using Microsoft.Scripting;
-
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
     /// <summary>
     /// This helper type lets us build a fake ParameterInfo object with a specific type and name
     /// to pass along to methods that expect ParameterInfos.  This is currently found useful

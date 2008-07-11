@@ -14,28 +14,28 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using IronPython.Compiler;
-using System.IO;
-using System.Diagnostics;
 using System.Collections.Generic;
-
+using System.Diagnostics;
+using System.Scripting;
+using System.Scripting.Utils;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
 
     public sealed class PythonOptionsParser : OptionsParser {
         private PythonConsoleOptions _consoleOptions;
         private PythonEngineOptions _engineOptions;
+        private readonly ConsoleHostOptions/*!*/ _options;
+
+        public PythonOptionsParser(ConsoleHostOptions/*!*/ options) {
+            Debug.Assert(options != null);
+            
+            _options = options;
+        }
 
         public override ConsoleOptions ConsoleOptions { get { return _consoleOptions; } set { _consoleOptions = (PythonConsoleOptions)value; } } 
         public override EngineOptions EngineOptions { get { return _engineOptions; } set { _engineOptions = (PythonEngineOptions)value; } }
@@ -83,6 +83,12 @@ namespace IronPython.Hosting {
                         throw new InvalidOptionException(String.Format("The argument for the {0} option must be an integer.", arg));
 
                     _engineOptions.MaximumRecursion = max_rec;
+                    break;
+                case "-?":
+                    _options.RunAction = ConsoleHostOptions.Action.DisplayHelp;
+                    break;
+                case "-X:MTA":
+                    _options.IsMTA = true;
                     break;
 
                 case "-m":
@@ -153,7 +159,12 @@ namespace IronPython.Hosting {
         public override void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments) {
             string [,] standardOptions;
             base.GetHelp(out commandLine, out standardOptions, out environmentVariables, out comments);
-            
+#if !IRONPYTHON_WINDOW
+            commandLine = "Usage: ipy [options] [file.py|- [arguments]]";
+#else
+            commandLine = "Usage: ipyw [options] [file.py|- [arguments]]";
+#endif
+
             string [,] pythonOptions = new string[,] {
 #if !IRONPYTHON_WINDOW
                 { "-v",                     "Verbose (trace import statements) (also PYTHONVERBOSE=x)" },
@@ -169,6 +180,7 @@ namespace IronPython.Hosting {
                 { "-W arg",                 "Warning control (arg is action:message:category:module:lineno)" },
 
                 { "-X:MaxRecursion",        "Set the maximum recursion level" },
+                { "-X:MTA",                 "Run in multithreaded apartment" },
             };
 
             // Append the Python-specific options and the standard options

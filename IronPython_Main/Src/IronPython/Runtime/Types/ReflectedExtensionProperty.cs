@@ -14,14 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-
-using Utils = Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
+using Utils = System.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -29,8 +24,8 @@ namespace IronPython.Runtime.Types {
     /// instance property but the method implementing it is static.
     /// </summary>
     public class ReflectedExtensionProperty : ReflectedGetterSetter {
-        private MethodInfo _deleter;
-        private ExtensionPropertyInfo _extInfo;
+        private readonly MethodInfo _deleter;
+        private readonly ExtensionPropertyInfo/*!*/ _extInfo;
 
         public ReflectedExtensionProperty(ExtensionPropertyInfo info, NameType nt)
             : base(new MethodInfo[] { info.Getter }, new MethodInfo[] { info.Setter }, nt) {
@@ -44,14 +39,14 @@ namespace IronPython.Runtime.Types {
                 return false;
             }
 
-            value = CallGetter(context, instance, Utils.ArrayUtils.EmptyObjects);
+            value = CallGetter(context, null, instance, Utils.ArrayUtils.EmptyObjects);
             return true;
         }
 
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
             if (Setter.Length == 0 || instance == null) return false;
 
-            return CallSetter(context, instance, Utils.ArrayUtils.EmptyObjects, value);
+            return CallSetter(context, null, instance, Utils.ArrayUtils.EmptyObjects, value);
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
@@ -59,23 +54,23 @@ namespace IronPython.Runtime.Types {
                 return base.TryDeleteValue(context, instance, owner);
             }
 
-            MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { _deleter }).CallInstanceReflected(context, instance);
+            CallTarget(context, null, new MethodInfo[] { _deleter }, instance);
             return true;
         }
 
-        public override Type DeclaringType {
+        internal override Type DeclaringType {
             get {
                 return _extInfo.DeclaringType;
             }
         }
 
-        public ExtensionPropertyInfo ExtInfo {
+        internal ExtensionPropertyInfo ExtInfo {
             get {
                 return _extInfo;
             }
         }
 
-        public override string Name {
+        public override string __name__ {
             get {
                 return _extInfo.Name;
             }

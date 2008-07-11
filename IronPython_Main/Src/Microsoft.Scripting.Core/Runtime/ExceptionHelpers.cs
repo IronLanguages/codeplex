@@ -13,15 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// These are some generally useful helper methods for handling exceptions.
     /// </summary>
@@ -223,7 +220,7 @@ namespace Microsoft.Scripting.Runtime {
                 Type parentType = method.DeclaringType;
                 if (parentType != null) {
                     string typeName = parentType.FullName;
-                    if (typeName == "Microsoft.Scripting.Ast.LambdaExpression" && method.Name == "DoExecute") {
+                    if (typeName == "System.Linq.Expressions.LambdaExpression" && method.Name == "DoExecute") {
                         // Evaluated frame -- Replace with dynamic frame
                         Debug.Assert(dynamicFrames.Count > 0);
                         //if (dynamicFrames.Count == 0) continue;
@@ -234,7 +231,8 @@ namespace Microsoft.Scripting.Runtime {
                     }
                     if (typeName.StartsWith("System.Reflection.") ||
                         typeName.StartsWith("System.Runtime") ||
-                        typeName.StartsWith("Microsoft.Scripting")) {
+                        typeName.StartsWith("Microsoft.Scripting") ||       // TODO: This shouldn't be here!!
+                        typeName.StartsWith("System.Scripting")) {
                         continue;
                     }
                 }

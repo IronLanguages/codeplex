@@ -23,5 +23,6 @@ namespace IronPython.Runtime.Calls {
         KeywordDictionary = 0x08,
         Generator = 0x20,
         FutureDivision = 0x2000,
+        CanSetSysExcInfo = 0x4000,
     }
 }

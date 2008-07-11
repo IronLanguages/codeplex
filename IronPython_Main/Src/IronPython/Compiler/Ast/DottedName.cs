@@ -14,10 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
+using System.Scripting;
+using System.Text;
 
 namespace IronPython.Compiler.Ast {
     public class DottedName : Node {

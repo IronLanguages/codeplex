@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -314,8 +314,8 @@ AreEqual(l, ["called f", "called g"])
 # testing exec accepts \n eolns only
 def test_eolns():
     def f1(sep): exec 'x = 2$y=4$'.replace('$', sep)
-    def f2(sep): exec '''x = 3$y = 5$'''.replace('$', sep) 
-    def f3(sep): exec "exec '''x = 3$y = 5$'''".replace('$', sep) 
+    def f2(sep): exec '''x = 3$y = 5$'''.replace('$', sep)
+    def f3(sep): exec "exec '''x = 3$y = 5$'''".replace('$', sep)
 
     for x in [f1, f2, f3]:
         AssertError(SyntaxError, x, '\r\n')
@@ -329,8 +329,8 @@ def test_set_builtins():
     Assert('__builtins__' in g.keys())
 
 def test_builtins_type():
-	x, y = {}, {}
-	exec 'abc = 42' in x, y
-	AreEqual(type(x['__builtins__']), dict)
+    x, y = {}, {}
+    exec 'abc = 42' in x, y
+    AreEqual(type(x['__builtins__']), dict)
 
 run_test(__name__)

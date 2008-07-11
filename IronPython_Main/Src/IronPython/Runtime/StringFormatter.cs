@@ -14,17 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Globalization;
 using System.Collections;
-using System.Diagnostics;
-using Microsoft.Scripting.Math;
-
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Text;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
+using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -424,7 +423,7 @@ namespace IronPython.Runtime {
 
                 // One digit is displayed before the decimal point. Hence, we need one fewer than the precision after the decimal point
                 int fractionDigitsRequired = (_opts.Precision - 1);
-                string expForm = absV.ToString("E" + fractionDigitsRequired);
+                string expForm = absV.ToString("E" + fractionDigitsRequired, CultureInfo.InvariantCulture);
                 string mantissa = expForm.Substring(0, expForm.IndexOf('E')).TrimEnd(zero);
 
                 // We do -2 to ignore the digit before the decimal point and the decimal point itself

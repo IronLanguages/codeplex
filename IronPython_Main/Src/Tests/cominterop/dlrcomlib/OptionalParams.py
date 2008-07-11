@@ -29,11 +29,6 @@ com_type_name = "DlrComLibrary.OptionalParams"
 com_obj = getRCWFromProgID(com_type_name)
 
 #------------------------------------------------------------------------------
-if preferComDispatch:
-    print "Merlin 370679 - optional parameters are completely broken under -X:PreferComDispatch"
-    print "                skipping all tests!"
-    sys.exit(0)
-
 
 def test_basic_optional_params():
     com_obj.mSingleOptionalParam()
@@ -52,7 +47,7 @@ def test_neg_wrong_number_params():
                             (com_obj.mTwoOptionalParams, ["a", "b", "c", "d"]),
                             (com_obj.mOptionalParamWithDefaultValue, ()),
                             (com_obj.mOptionalParamWithDefaultValue, ["a", "b", "c"]), ]:
-        AssertError(SystemError, meth, runonly=preferComDispatch, bugid="369640", *params)        
+        AssertError(StandardError, meth, runonly=preferComDispatch, bugid="369640", *params)        
         AssertError(TypeError,   meth, skip=preferComDispatch, *params)
     
 def test_defaultvalue():   

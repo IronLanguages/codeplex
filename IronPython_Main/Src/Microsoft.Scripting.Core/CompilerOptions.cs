@@ -13,11 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     
     /// <summary>
     /// TODO - If this class is really this simple, do we need it at all?

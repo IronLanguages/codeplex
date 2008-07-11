@@ -16,12 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
-
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -42,14 +41,27 @@ namespace IronPython.Runtime {
     /// the buckets and then calls a static helper function to do the read from the bucket
     /// array to ensure that readers are not seeing multiple bucket arrays.
     /// </summary>
-    public class CommonDictionaryStorage : DictionaryStorage {
+    internal class CommonDictionaryStorage : DictionaryStorage {
         private Bucket[] _buckets;
         private int _count;
+        private const int InitialBucketSize = 7;
+        private const int ResizeMultiplier = 3;
+
+        class HashSite {
+            internal static DynamicSite<object, int> _HashSite = new DynamicSite<object, int>(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Dispose));
+        }
 
         /// <summary>
         /// Creates a new dictionary storage with no buckets
         /// </summary>
         public CommonDictionaryStorage() {
+        }
+
+        /// <summary>
+        /// Creates a new dictionary storage with no buckets
+        /// </summary>
+        public CommonDictionaryStorage(int count) {
+            _buckets = new Bucket[count + 1];
         }
 
         /// <summary>
@@ -66,30 +78,44 @@ namespace IronPython.Runtime {
         /// </summary>
         public override void Add(object key, object value) {
             lock (this) {
-                if (_buckets == null) {
-                    Initialize();
-                }
+                AddNoLock(key, value);
+            }
+        }
 
-                if (Add(_buckets, key, value)) {
-                    _count++;
+        public override void AddNoLock(object key, object value) {
+            if (_buckets == null) {
+                Initialize();
+            }
 
-                    if (_count >= _buckets.Length) {
-                        // grow the hash table
-                        Bucket[] newBuckets = new Bucket[_buckets.Length * 2];
+            if (Add(_buckets, key, value)) {
+                _count++;
 
-                        for (int i = 0; i < _buckets.Length; i++) {
-                            Bucket curBucket = _buckets[i];
-                            while (curBucket != null) {
-                                Add(newBuckets, curBucket.Key, curBucket.Value);
-
-                                curBucket = curBucket.Next;
-                            }
-                        }
-
-                        _buckets = newBuckets;
-                    }
+                if (_count >= _buckets.Length) {
+                    // grow the hash table
+                    EnsureSize(_buckets.Length * ResizeMultiplier);
                 }
             }
+        }
+
+        private void EnsureSize(int newSize) {
+            if (_buckets.Length >= newSize) {
+                return;
+            }
+
+            Bucket[] newBuckets = new Bucket[newSize];
+
+            for (int i = 0; i < _buckets.Length; i++) {
+                Bucket curBucket = _buckets[i];
+                while (curBucket != null) {
+                    Bucket next = curBucket.Next;
+
+                    AddWorker(newBuckets, curBucket.Key, curBucket.Value, curBucket.HashCode);
+
+                    curBucket = next;
+                }
+            }
+
+            _buckets = newBuckets;
         }
 
         /// <summary>
@@ -97,7 +123,7 @@ namespace IronPython.Runtime {
         /// must check if the buckets are empty first.
         /// </summary>
         private void Initialize() {
-            _buckets = new Bucket[8];
+            _buckets = new Bucket[InitialBucketSize];
         }
 
         /// <summary>
@@ -107,6 +133,10 @@ namespace IronPython.Runtime {
         private static bool Add(Bucket[] buckets, object key, object value) {
             int hc = Hash(key);
 
+            return AddWorker(buckets, key, value, hc);
+        }
+
+        private static bool AddWorker(Bucket[] buckets, object key, object value, int hc) {
             int index = hc % buckets.Length;
             Bucket prev = buckets[index];
             Bucket cur = prev;
@@ -116,6 +146,7 @@ namespace IronPython.Runtime {
                     cur.Value = value;
                     return false;
                 }
+
                 prev = cur;
                 cur = cur.Next;
             }
@@ -180,7 +211,6 @@ namespace IronPython.Runtime {
             int hc = Hash(key);
             Bucket bucket = buckets[hc % buckets.Length];
             while (bucket != null) {
-                //Console.WriteLine("{0} {1} {2} {3}", key, bucket.Key, hc, bucket.HashCode);
                 if (bucket.HashCode == hc && PythonOps.EqualRetBool(key, bucket.Key)) {
                     return true;
                 }
@@ -276,14 +306,65 @@ namespace IronPython.Runtime {
             }
         }
 
+        public override void CopyTo(DictionaryStorage/*!*/ into) {
+            Debug.Assert(into != null);
+
+            if (_buckets != null) {
+                using (new OrderedLocker(this, into)) {
+                    CommonDictionaryStorage commonInto = into as CommonDictionaryStorage;
+                    if (commonInto != null) {
+                        CommonCopyTo(commonInto);
+                    } else {
+                        UncommonCopyTo(into);
+                    }
+                }
+            }
+        }
+
+        private void CommonCopyTo(CommonDictionaryStorage into) {
+            if (into._buckets == null) {
+                into._buckets = new Bucket[Math.Max(_count, InitialBucketSize)];
+            } else {
+                int curSize = into._buckets.Length;
+                while (curSize < _count + into._count) {
+                    curSize *= ResizeMultiplier;
+                }
+                into.EnsureSize(curSize);
+            }
+            
+            for (int i = 0; i < _buckets.Length; i++) {
+                Bucket curBucket = _buckets[i];
+                while (curBucket != null) {
+                    if (AddWorker(into._buckets, curBucket.Key, curBucket.Value, curBucket.HashCode)) {
+                        into._count++;
+                    }
+                    curBucket = curBucket.Next;
+                }
+            }            
+        }
+
+        private void UncommonCopyTo(DictionaryStorage into) {
+            for (int i = 0; i < _buckets.Length; i++) {
+                Bucket curBucket = _buckets[i];
+                while (curBucket != null) {
+                    into.AddNoLock(curBucket.Key, curBucket.Value);
+
+                    curBucket = curBucket.Next;
+                }
+            }
+        }
+
         /// <summary>
         /// Helper to hash the given key w/ support for null.
         /// </summary>
         private static int Hash(object key) {
-            if (key == null) {
-                return NoneTypeOps.NoneHashCode & 0x7fffffff;
-            }
-            return PythonOps.Hash(key) & 0x7fffffff;
+            if (key is string) return key.GetHashCode() & 0x7fffffff;
+
+            return GeneralHash(key);
+        }
+
+        private static int GeneralHash(object key) {
+            return HashSite._HashSite.Invoke(DefaultContext.Default, key) & 0x7fffffff;
         }
 
         private class Bucket {

@@ -12,22 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System;
-using System.Reflection;
-using System.Diagnostics;
+
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
-
-[assembly: PythonExtensionType(typeof(Assembly), typeof(PythonAssemblyOps))]
 namespace IronPython.Runtime.Types {
     public static class PythonAssemblyOps {
         private static readonly Dictionary<Assembly, TopNamespaceTracker> assemblyMap = new Dictionary<Assembly, TopNamespaceTracker>();
@@ -52,7 +44,8 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public static List GetMemberNames(CodeContext/*!*/ context, Assembly self) {
-            List ret = DynamicHelpers.GetPythonTypeFromType(typeof(Assembly)).GetMemberNames(context);
+            Debug.Assert(self != null);
+            List ret = DynamicHelpers.GetPythonTypeFromType(self.GetType()).GetMemberNames(context);
 
             foreach (object o in GetReflectedAssembly(context, self).Keys) {
                 if (o is string) {
@@ -77,7 +70,11 @@ namespace IronPython.Runtime.Types {
                     return reflectedAssembly;
 
                 reflectedAssembly = new TopNamespaceTracker(context.LanguageContext.DomainManager);
-                reflectedAssembly.LoadAssembly(assem);
+                if (reflectedAssembly.LoadAssembly(assem)) {
+#if !SILVERLIGHT
+                    Microsoft.Scripting.Actions.ComDispatch.ComObjectWithTypeInfo.PublishComTypes(assem);
+#endif
+                }
                 assemblyMap[assem] = reflectedAssembly;
 
                 return reflectedAssembly;

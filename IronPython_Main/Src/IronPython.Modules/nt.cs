@@ -17,24 +17,20 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Security.Cryptography;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
-using System.ComponentModel;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -45,6 +41,33 @@ namespace IronPython.Modules {
             System.Environment.FailFast("IronPython os.abort");
         }
 
+        /// <summary>
+        /// Checks for the specific permissions, provided by the mode parameter, are available for the provided path.  Permissions can be:
+        /// 
+        /// F_OK: Check to see if the file exists
+        /// R_OK | W_OK | X_OK: Check for the specific permissions.  Only W_OK is respected.
+        /// </summary>
+        public static bool access(string path, int mode) {
+            if (path == null) throw PythonOps.TypeError("expected string, got None");
+
+            if (mode == F_OK) {
+                return File.Exists(path);
+            }
+
+            // match the behavior of the VC C Runtime
+            FileAttributes fa = File.GetAttributes(path);
+            if ((fa & FileAttributes.Directory) != 0) {
+                // directories have read & write access
+                return true;
+            }
+
+            if ((fa & FileAttributes.ReadOnly) != 0 && (mode & W_OK) != 0) {
+                // want to write but file is read-only
+                return false;
+            }
+
+            return true;
+        }
 
         public static void chdir([NotNull]string path) {
             if (String.IsNullOrEmpty(path)) {
@@ -60,12 +83,16 @@ namespace IronPython.Modules {
 
         public static void chmod(string path, int mode) {
             FileInfo fi = new FileInfo(path);
-            if ((mode & S_IREAD) != 0) fi.Attributes |= FileAttributes.ReadOnly;
-            else if ((mode & S_IWRITE) != 0) fi.Attributes &= ~(FileAttributes.ReadOnly);
+            if ((mode & S_IWRITE) != 0) {
+                fi.Attributes &= ~(FileAttributes.ReadOnly);
+            } else {
+                fi.Attributes |= FileAttributes.ReadOnly;
+            }
         }
 
         public static void close(CodeContext/*!*/ context, int fd) {
-            PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+            PythonContext pythonContext = PythonContext.GetContext(context);
+            PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
             pf.close();
         }
         
@@ -90,12 +117,23 @@ namespace IronPython.Modules {
         }
 
         public static object fdopen(CodeContext/*!*/ context, int fd, string mode, int bufsize) {
-            PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+            PythonContext pythonContext = PythonContext.GetContext(context);
+            PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
             return pf;
         }
 
         public static object fstat(CodeContext/*!*/ context, int fd) {
-            PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+            PythonContext pythonContext = PythonContext.GetContext(context);
+            PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
+            if (pf.IsConsole) {
+                stat_result result = new stat_result();
+                result.mode = 8192;
+                result.size = 0;
+                result.atime = 0;
+                result.mtime = 0;
+                result.ctime = 0;
+                return result;
+            }
             return lstat(pf.name);
         }
 
@@ -159,14 +197,14 @@ namespace IronPython.Modules {
 
         public static object open(CodeContext/*!*/ context, string filename, int flag, int mode) {
             try {
-                FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag));
+                FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag), FileShare.ReadWrite);
 
                 string mode2;
                 if (fs.CanRead && fs.CanWrite) mode2 = "w+";
                 else if (fs.CanWrite) mode2 = "w";
                 else mode2 = "r";
 
-                return PythonContext.GetContext(context).FileManager.AddToStrongMapping(PythonFile.Create(context, fs, filename, mode2, false));
+                return PythonContext.GetContext(context).FileManager.AddToStrongMapping(PythonFile.Create(context, fs, filename, mode2));
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -278,7 +316,8 @@ namespace IronPython.Modules {
 
         public static string read(CodeContext/*!*/ context, int fd, int buffersize) {
             try {
-                PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+                PythonContext pythonContext = PythonContext.GetContext(context);
+                PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
                 return pf.read();
             } catch (Exception e) {
                 throw ToPythonException(e);
@@ -449,9 +488,15 @@ namespace IronPython.Modules {
             public const int n_sequence_fields = 10;
             public const int n_unnamed_fields = 3;
 
-            internal BigInteger mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime;
+            internal BigInteger mode, ino, dev, nlink, size, atime, mtime, ctime;
+            internal int uid, gid;
 
             internal stat_result() {
+                uid = 0;
+                gid = 0;
+                ino = 0;
+                dev = 0;
+                nlink = 0;
             }
 
             public stat_result(ISequence statResult, [DefaultParameterValue(null)]object dict) {
@@ -465,33 +510,40 @@ namespace IronPython.Modules {
                 this.ino = Converter.ConvertToBigInteger(statResult[1]);
                 this.dev = Converter.ConvertToBigInteger(statResult[2]);
                 this.nlink = Converter.ConvertToBigInteger(statResult[3]);
-                this.uid = Converter.ConvertToBigInteger(statResult[4]);
-                this.gid = Converter.ConvertToBigInteger(statResult[5]);
+                this.uid = Converter.ConvertToInt32(statResult[4]);
+                this.gid = Converter.ConvertToInt32(statResult[5]);
                 this.size = Converter.ConvertToBigInteger(statResult[6]);
                 this.atime = Converter.ConvertToBigInteger(statResult[7]);
                 this.mtime = Converter.ConvertToBigInteger(statResult[8]);
                 this.ctime = Converter.ConvertToBigInteger(statResult[9]);
             }
 
+            private static object TryShrinkToInt(BigInteger value) {
+                if (Object.ReferenceEquals(value, null)) {
+                    return null;
+                }
+                return BigIntegerOps.__int__(value);
+            }
+
             public object st_atime {
                 get {
-                    return atime;
+                    return TryShrinkToInt(atime);
                 }
             }
 
             public object st_ctime {
                 get {
-                    return ctime;
+                    return TryShrinkToInt(ctime);
                 }
             }
 
             public object st_dev {
                 get {
-                    return dev;
+                    return TryShrinkToInt(dev);
                 }
             }
 
-            public object st_gid {
+            public int st_gid {
                 get {
                     return gid;
                 }
@@ -505,19 +557,19 @@ namespace IronPython.Modules {
 
             public object st_mode {
                 get {
-                    return mode;
+                    return TryShrinkToInt(mode);
                 }
             }
 
             public object st_mtime {
                 get {
-                    return mtime;
+                    return TryShrinkToInt(mtime);
                 }
             }
 
             public object st_nlink {
                 get {
-                    return nlink;
+                    return TryShrinkToInt(nlink);
                 }
             }
 
@@ -527,7 +579,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            public object st_uid {
+            public int st_uid {
                 get {
                     return uid;
                 }
@@ -535,6 +587,10 @@ namespace IronPython.Modules {
 
             public override string ToString() {
                 return MakeTuple().ToString();
+            }
+
+            public string/*!*/ __repr__() {
+                return ToString();
             }
 
             public PythonTuple __reduce__() {
@@ -575,12 +631,12 @@ namespace IronPython.Modules {
                 return MakeTuple().__getslice__(start, stop);
             }
 
-            int ISequence.__len__() {
+            public int __len__() {
                 return MakeTuple().__len__();
             }
 
-            bool ISequence.__contains__(object item) {
-                return MakeTuple().__contains__(item);
+            public bool __contains__(object item) {
+                return ((ICollection<object>)MakeTuple()).Contains(item);
             }
 
             #endregion
@@ -618,6 +674,11 @@ namespace IronPython.Modules {
             #endregion
         }
 
+        private static bool HasExecutableExtension(string path) {
+            string extension = Path.GetExtension(path).ToLowerInvariant();
+            return (extension == ".exe" || extension == ".dll" || extension == ".com" || extension == ".bat");
+        }
+
         [Documentation("stat(path) -> stat result\nGathers statistics about the specified file or directory")]
         public static object stat(string path) {
             if (path == null) throw PythonOps.TypeError("expected string, got NoneType");
@@ -625,18 +686,27 @@ namespace IronPython.Modules {
             stat_result sr = new stat_result();
 
             try {
-                sr.atime = (long)Directory.GetLastAccessTime(path).Subtract(DateTime.MinValue).TotalSeconds;
-                sr.ctime = (long)Directory.GetCreationTime(path).Subtract(DateTime.MinValue).TotalSeconds;
-                sr.mtime = (long)Directory.GetLastWriteTime(path).Subtract(DateTime.MinValue).TotalSeconds;
+                FileInfo fi = new FileInfo(path);
 
                 if (Directory.Exists(path)) {
-                    sr.mode = 0x4000;
+                    sr.size = 0;
+                    sr.mode = 0x4000 | S_IEXEC;
                 } else if (File.Exists(path)) {
-                    FileInfo fi = new FileInfo(path);
                     sr.size = fi.Length;
-                    sr.mode = 0x8000; //@TODO - Set other valid mode types (S_IFCHR, S_IFBLK, S_IFIFO, S_IFLNK, S_IFSOCK) (to the degree that they apply)
+                    sr.mode = 0x8000;
+                    if (HasExecutableExtension(path)) {
+                        sr.mode |= S_IEXEC;
+                    }
                 } else {
                     throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.ENOENT, "file does not exist: " + path);
+                }
+
+                sr.atime = (long)PythonTime.TicksToTimestamp(fi.LastAccessTime.Ticks);
+                sr.ctime = (long)PythonTime.TicksToTimestamp(fi.CreationTime.Ticks);
+                sr.mtime = (long)PythonTime.TicksToTimestamp(fi.LastWriteTime.Ticks);
+                sr.mode |= S_IREAD;
+                if ((fi.Attributes & FileAttributes.ReadOnly) == 0) {
+                    sr.mode |= S_IWRITE;
                 }
             } catch (ArgumentException) {
                 throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.EINVAL, "The path is invalid: " + path);
@@ -647,18 +717,32 @@ namespace IronPython.Modules {
             return sr;
         }
 
-        public static string tempnam() {
-            return tempnam(null);
+        [Documentation("system(command) -> int\nExecute the command (a string) in a subshell.")]
+        public static int system(string command) {
+            ProcessStartInfo psi = GetProcessInfo(command);
+            psi.CreateNoWindow = false;
+
+            Process process = Process.Start(psi);
+            if (process == null) {
+                return -1;
+            }
+            process.WaitForExit();
+            return process.ExitCode;
         }
 
-        public static string tempnam(string dir) {
-            return tempnam(null, null);
+        public static string tempnam(CodeContext/*!*/ context) {
+            return tempnam(context, null);
         }
 
-        public static string tempnam(string dir, string prefix) {
+        public static string tempnam(CodeContext/*!*/ context, string dir) {
+            return tempnam(context, null, null);
+        }
+
+        public static string tempnam(CodeContext/*!*/ context, string dir, string prefix) {
+            PythonOps.Warn(context, PythonExceptions.RuntimeWarning, "tempnam is a potential security risk to your program");
+
             try {
-                if (dir == null) dir = Path.GetTempPath();
-                else dir = Path.GetDirectoryName(dir);
+                dir = Path.GetTempPath(); // Reasonably consistent with CPython behavior under Windows
 
                 return Path.GetFullPath(Path.Combine(dir, prefix ?? String.Empty) + Path.GetRandomFileName());
             } catch (Exception e) {
@@ -688,7 +772,7 @@ namespace IronPython.Modules {
         }
 
         public static string tmpnam() {
-            return Path.GetTempPath();
+            return Path.GetTempFileName();
         }
 
         public static void unlink(string path) {
@@ -721,6 +805,18 @@ namespace IronPython.Modules {
             return PythonBinaryReader.PackDataIntoString(data, n);
         }
 
+        private static readonly object _umaskKey = new object();
+
+        public static int umask(CodeContext/*!*/ context, int mask) {
+            mask &= 0x180;
+            object oldMask = PythonContext.GetContext(context).GetSetModuleState(_umaskKey, mask);
+            if (oldMask == null) {
+                return 0;
+            } else {
+                return (int)oldMask;
+            }
+        }
+
         public static void utime(string path, PythonTuple times) {
             try {
                 FileInfo fi = new FileInfo(path);
@@ -728,8 +824,8 @@ namespace IronPython.Modules {
                     fi.LastAccessTime = DateTime.Now;
                     fi.LastWriteTime = DateTime.Now;
                 } else if (times.__len__() == 2) {
-                    DateTime atime = DateTime.MinValue.Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[0])));
-                    DateTime mtime = DateTime.MinValue.Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[1])));
+                    DateTime atime = new DateTime(PythonTime.TimestampToTicks(Converter.ConvertToDouble(times[0])));
+                    DateTime mtime = new DateTime(PythonTime.TimestampToTicks(Converter.ConvertToDouble(times[1])));
 
                     fi.LastAccessTime = atime;
                     fi.LastWriteTime = mtime;
@@ -752,7 +848,8 @@ namespace IronPython.Modules {
 
         public static void write(CodeContext/*!*/ context, int fd, string text) {
             try {
-                PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+                PythonContext pythonContext = PythonContext.GetContext(context);
+                PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
                 pf.write(text);
             } catch (Exception e) {
                 throw ToPythonException(e);
@@ -853,9 +950,16 @@ namespace IronPython.Modules {
         private const int ERROR_CANCELLED = 1223; // The function prompted the user for additional information, but the user canceled the request. 
         private const int ERROR_NOT_ENOUGH_MEMORY = 8; // There is not enough memory to perform the specified action. 
         private const int ERROR_SHARING_VIOLATION = 32; //A sharing violation occurred. 
+        private const int ERROR_ALREADY_EXISTS = 183;
 
-        private const int S_IWRITE = 0x80;
-        private const int S_IREAD = 0x100;
+        private const int S_IWRITE = 0x80 + 0x10 + 0x02; // owner / group / world
+        private const int S_IREAD = 0x100 + 0x20 + 0x04; // owner / group / world
+        private const int S_IEXEC = 0x40 + 0x08 + 0x01; // owner / group / world
+
+        public const int F_OK = 0;
+        public const int X_OK = 1;
+        public const int W_OK = 2;
+        public const int R_OK = 4;
 
         private static void addBase(string[] files, List ret) {
             foreach (string file in files) {
@@ -903,10 +1007,24 @@ namespace IronPython.Modules {
         }
 
         private static ProcessStartInfo GetProcessInfo(string command) {
+            // TODO: always run through cmd.exe ?
             command = command.Trim();
+            string baseCommand, args;
+            if (!TryGetExecutableCommand(command, out baseCommand, out args)) {
+                if (!TryGetShellCommand(command, out baseCommand, out args)) {
+                    throw PythonOps.WindowsError("The system can not find command '{0}'", command);
+                }
+            }
 
-            string baseCommand = command;
-            string args = string.Empty;
+            ProcessStartInfo psi = new ProcessStartInfo(baseCommand, args);
+            psi.UseShellExecute = false;
+
+            return psi;
+        }
+
+        private static bool TryGetExecutableCommand(string command, out string baseCommand, out string args) {
+            baseCommand = command;
+            args = String.Empty;
             int pos;
 
             if (command[0] == '\"') {
@@ -929,31 +1047,46 @@ namespace IronPython.Modules {
                     args = command.Substring(pos + 1);
                 }
             }
-
-            baseCommand = GetCommandFullPath(baseCommand);
-
-            ProcessStartInfo psi = new ProcessStartInfo(baseCommand, args);
-            psi.UseShellExecute = false;
-
-            return psi;
-        }
-
-        private static string GetCommandFullPath(string command) {
-            string fullpath = Path.GetFullPath(command);
-            if (File.Exists(fullpath)) return fullpath;
+            string fullpath = Path.GetFullPath(baseCommand);
+            if (File.Exists(fullpath)) {
+                baseCommand = fullpath;
+                return true;
+            }
 
             // TODO: need revisit
             string sysdir = System.Environment.GetFolderPath(System.Environment.SpecialFolder.System);
             foreach (string suffix in new string[] { string.Empty, ".com", ".exe", "cmd", ".bat" }) {
-                fullpath = Path.Combine(sysdir, command + suffix);
-                if (File.Exists(fullpath)) return fullpath;
+                fullpath = Path.Combine(sysdir, baseCommand + suffix);
+                if (File.Exists(fullpath)) {
+                    baseCommand = fullpath;
+                    return true;
+                }
             }
 
-            throw PythonOps.WindowsError("The system can not find command '{0}'", command);
+            return false;
+        }
+
+        private static bool TryGetShellCommand(string command, out string baseCommand, out string args) {
+            baseCommand = Environment.GetEnvironmentVariable("COMSPEC");
+            args = String.Empty;
+            if (baseCommand == null) {
+                baseCommand = Environment.GetEnvironmentVariable("SHELL");
+                if (baseCommand == null) {
+                    return false;
+                }
+                args = String.Format("-c \"{0}\"", command);
+            } else {
+                args = String.Format("/c {0}", command);
+            }
+            return true;
         }
 
         private static Exception DirectoryExists() {
-            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, PythonErrorNumber.EEXIST, "directory already exists");
+            PythonExceptions._WindowsError err = new PythonExceptions._WindowsError();
+            err.__init__(ERROR_ALREADY_EXISTS, "directory already exists");
+            err.errno = PythonErrorNumber.EEXIST;
+
+            return PythonExceptions.ToClr(err);
         }
 
         #endregion

@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -47,10 +47,10 @@ def test_sanity_re():
     
     #I IGNORECASE L LOCAL MMULTILINE S DOTALL U UNICODE X VERBOSE
     flags = ["I", "IGNORECASE",
-                 "L", "LOCALE", 
-                 "M", "MULTILINE", 
-                 "S", "DOTALL", 
-                 "U", "UNICODE", 
+                 "L", "LOCALE",
+                 "M", "MULTILINE",
+                 "S", "DOTALL",
+                 "U", "UNICODE",
                  "X", "VERBOSE"]
     
     for f in flags:
@@ -139,10 +139,10 @@ def test_sanity_re():
 def test_sanity_re_pattern():
     '''
     Basic sanity tests for the re module's Regular Expression
-    objects (i.e., Pattern in CPython).  Each method/member is 
+    objects (i.e., Pattern in CPython).  Each method/member is
     utilized at least once.
     '''
-    pattern = re.compile("(abc){1}")                
+    pattern = re.compile("(abc){1}")
     
     #match
     AreEqual(pattern.match(""), None)
@@ -205,7 +205,7 @@ def test_sanity_re_pattern():
     AreEqual(re.compile("").pattern, "")
     
 def test_groupindex_empty():
-    test_list = [   ".", "^", "$", "1*", "2+", "3?", "4*?", "5+?", "6??", "7{1}", "8{1,2}", 
+    test_list = [   ".", "^", "$", "1*", "2+", "3?", "4*?", "5+?", "6??", "7{1}", "8{1,2}",
                     "9{1,2}?", "[a-z]", "|", "(...)", "(?:abc)",
                     "\(\?P\<Blah\>abc\)", "(?#...)", "(?=...)", "(?!...)", "(?<=...)",
                     "(?<!...)", "\1", "\A", "\d"
@@ -302,7 +302,7 @@ def test_expand():
     AreEqual(re.match("(a)()", "ab").expand("blah\g<1>\g<2>\n\r\t\\\\"),'blaha\n\r\t\\')
     AreEqual(re.match("(a)()", "ab").expand(""),'')
 
-def test_sub():    
+def test_sub():
     x = '\n   #region Generated Foo\nblah\nblah#end region'
     a = re.compile("^([ \t]+)#region Generated Foo.*?#end region", re.MULTILINE|re.DOTALL)
     
@@ -310,7 +310,7 @@ def test_sub():
     AreEqual(a.sub("\\x12", x), "\n\\x12")      # should match, but shouldn't un-escape for \x
 
     #if optional count arg is 0 then all occurrences should be replaced
-    AreEqual('bbbb', re.sub("a","b","abab", 0)) 
+    AreEqual('bbbb', re.sub("a","b","abab", 0))
 
     AreEqual(re.sub(r'(?P<id>b)', '\g<id>\g<id>yadayada', 'bb'), 'bbyadayadabbyadayada')
     AreEqual(re.sub(r'(?P<id>b)', '\g<1>\g<id>yadayada', 'bb'), 'bbyadayadabbyadayada')
@@ -370,7 +370,7 @@ def test_regs():
     #CodePlex Work Item 6275
     #AreEqual(re.match('(baz)(bar)(m)', "bazbarmxyz").regs,
     #         ((0, 7), (0, 3), (3, 6), (6, 7)))
-    pass         
+    pass
              
 def test_endpos():
     AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").endpos, 8)
@@ -383,7 +383,7 @@ def test_re():
     Assert(hasattr(stuff.re, "sub"))
     
 def test_pos():
-    AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").pos, 0) 
+    AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").pos, 0)
  
 def test_startandend():
     m = re.match(r'(a)|(b)', 'b')
@@ -459,24 +459,24 @@ def test_escape():
     x = re.compile(r'[\\A-Z\.\+]')
     Assert(x.search('aaaA\\B\\Caaa'))
     
-# From the docs: "^" matches only at the start of the string, or in MULTILINE mode also immediately 
+# From the docs: "^" matches only at the start of the string, or in MULTILINE mode also immediately
 # following a newline.
-# bug 827 
+# bug 827
 #m = re.compile("a").match("ba", 1)  # succeed
-#AreEqual('a', m.group(0)) 
-#AreEqual(re.compile("^a").search("ba", 1), None)		# fails; 'a' not at start   
-#AreEqual(re.compile("^a").search("\na", 1), None)		# fails; 'a' not at start
-#m = re.compile("^a", re.M).search("\na", 1)				# succeed (multiline)
+#AreEqual('a', m.group(0))
+#AreEqual(re.compile("^a").search("ba", 1), None)   # fails; 'a' not at start
+#AreEqual(re.compile("^a").search("\na", 1), None)  # fails; 'a' not at start
+#m = re.compile("^a", re.M).search("\na", 1)        # succeed (multiline)
 #AreEqual('a', m.group(0))
 
 # bug 938
-#AreEqual(re.compile("^a", re.M).search("ba", 1), None)	# fails; no preceding \n
+#AreEqual(re.compile("^a", re.M).search("ba", 1), None) # fails; no preceding \n
 
 # findall
 def test_findall():
-    for (x, y, z) in ( 
-            ('\d+', '99 blahblahblah 183 blah 12 blah 7777 yada yada', ['99', '183', '12', '7777']), 
-            ('^\d+', '0blahblahblah blah blah yada yada1', ['0']), 
+    for (x, y, z) in (
+            ('\d+', '99 blahblahblah 183 blah 12 blah 7777 yada yada', ['99', '183', '12', '7777']),
+            ('^\d+', '0blahblahblah blah blah yada yada1', ['0']),
             ('^\d+', 'blahblahblah blah blah yada yada1', []),
             ("(\d+)|(\w+)", "x = 999y + 23", [('', 'x'), ('999', ''), ('', 'y'), ('23', '')]),
             ("(\d)(\d\d)(\d\d\d)", "123456789123456789", [('1', '23', '456'), ('7', '89', '123'), ('4', '56', '789')]),
@@ -494,13 +494,13 @@ def test_match_groups():
 
 def test_options():
     # coverage for ?iLmsux options in re.compile path
-    tests = [ ("t(?=s)", "atreftsadbeatwttta", ['t']), 
+    tests = [ ("t(?=s)", "atreftsadbeatwttta", ['t']),
               ("t(?!s)", "atreftsadbeatststs", ['t']) ]
 
     # native implementation does not handle extensions specified in this way
     if is_cli:
-        tests.extend([ 
-            ("(?i:foo)", "fooFoo FOO fOo fo oFO O\n\t\nFo ofO O", ['foo', 'Foo', 'FOO', 'fOo']), 
+        tests.extend([
+            ("(?i:foo)", "fooFoo FOO fOo fo oFO O\n\t\nFo ofO O", ['foo', 'Foo', 'FOO', 'fOo']),
             ("(?im:^foo)", "fooFoo FOO fOo\n\t\nFoo\nFOO", ['foo', 'Foo', 'FOO']), # ignorecase, multiline (matches at beginning of string and at each newline)
             ("(?s:foo.*bar)", "foo yadayadayada\nyadayadayada bar", ['foo yadayadayada\nyadayadayada bar']), # dotall (make "." match any chr, including a newline)
             ("(?x:baz  bar)", "bazbar foo bar      bazbar \n\n\tbazbar", ['bazbar', 'bazbar', 'bazbar']),  #verbose (ignore whitespace)
@@ -518,7 +518,7 @@ def test_bug858():
     Assert(l == ['989'])
 
 def test_finditer():
-    # finditer 
+    # finditer
     matches = re.finditer("baz","barbazbarbazbar")
     num = 0
     for m in matches:
@@ -652,26 +652,26 @@ def test_eol():
     AreEqual(r.search("<Z", 0), None)
     
 def test_lastindex():
-    for (pat, index) in [ 
-              ('(a)b', 1), ('((a)(b))', 1), ('((ab))', 1), 
-              ('(a)(b)', 2), 
-              ('(a)?ab', None), 
+    for (pat, index) in [
+              ('(a)b', 1), ('((a)(b))', 1), ('((ab))', 1),
+              ('(a)(b)', 2),
+              ('(a)?ab', None),
               ('(a)?b', 1),
             ]:
         AreEqual(re.match(pat, 'ab').lastindex, index)
         
-    for (pat, index) in [ 
-              ('(a)ab', 1), 
-              ('(a)(a)b', 2), 
+    for (pat, index) in [
+              ('(a)ab', 1),
+              ('(a)(a)b', 2),
               ('(a)(a)(b)', 3),
-              ('((a)a(b))', 1), 
-              ('((a)(a)(b))', 1), 
-              ('(a(a)(b))', 1), 
-              ('(a(a)?(b))', 1), 
-              ('(aa(a)?(b))', 1), 
-              ('(aa(b))', 1), 
-              ('(a(ab))', 1), 
-              ('(a)?ab', 1), 
+              ('((a)a(b))', 1),
+              ('((a)(a)(b))', 1),
+              ('(a(a)(b))', 1),
+              ('(a(a)?(b))', 1),
+              ('(aa(a)?(b))', 1),
+              ('(aa(b))', 1),
+              ('(a(ab))', 1),
+              ('(a)?ab', 1),
               ('a(a)?ab', None),
               ('a(a)?(a)?b', 1),
               ('a(a)?(a)?(b)', 3),
@@ -725,7 +725,7 @@ def test_cp15298():
         t1 = time.time()
         Assert(retval != None)
         if t1-t0 < tmin_string:
-            tmin_string = t1-t0    
+            tmin_string = t1-t0
 
     Assert(tmin_compiled<=tmin_string, "re.compile(...).match(...) is slower than re.match(..., ...)")
 

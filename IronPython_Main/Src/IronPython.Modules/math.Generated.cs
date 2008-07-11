@@ -14,7 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using IronPython.Runtime;
 
 namespace IronPython.Modules {
     public static partial class PythonMath {

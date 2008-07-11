@@ -13,22 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Diagnostics;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Marks a class in the assembly as being an extension type for another type.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1813:AvoidUnsealedAttributes")] // TODO: fix
     [AttributeUsage(AttributeTargets.Assembly, Inherited = false, AllowMultiple = true)]
-    public class ExtensionTypeAttribute : Attribute {
+    public sealed class ExtensionTypeAttribute : Attribute {
         private readonly Type _extensionType;
         private readonly Type _extends;
-        private static Dictionary<Type, Type> ExtensionTypeToType = new Dictionary<Type, Type>(10);
 
+        /// <summary>
+        /// Marks a type in the assembly as being an extension type for another type.
+        /// </summary>
+        /// <param name="extends">The type which is being extended</param>
+        /// <param name="extensionType">The type which provides the extension members.</param>
         public ExtensionTypeAttribute(Type extends, Type extensionType) {
             if (extends == null) {
                 throw new ArgumentNullException("extends");
@@ -41,50 +39,23 @@ namespace Microsoft.Scripting.Runtime {
             _extensionType = extensionType;
         }
 
+        /// <summary>
+        /// The type which contains extension members which are added to the type being extended.
+        /// </summary>
         public Type ExtensionType {
             get {
                 return _extensionType;
             }
         }
 
+        /// <summary>
+        /// The type which is being extended by the extension type.
+        /// </summary>
         public Type Extends {
             get {
                 return _extends;
             }
         }
-
-        public static bool IsExtensionType(Type t) {
-            lock (ExtensionTypeToType) {
-                return ExtensionTypeToType.ContainsKey(t);
-            }
-        }
-
-        public static Type GetExtendedTypeFromExtension(Type t) {
-            lock (ExtensionTypeToType) {
-                return ExtensionTypeToType[t];
-            }
-        }
-
-        public static void RegisterType(Type extendedType, Type extensionType) {
-            if (extensionType == null) return;
-            Debug.Assert(extensionType != null);
-
-            lock (ExtensionTypeToType) {
-                if (extendedType != null && extendedType.IsArray) {
-                    if (extendedType == typeof(Array)) {
-                        ExtensionTypeToType[extensionType] = extendedType;
-                    }
-                } else {
-                    Type curType = extensionType;
-                    do {
-                        //Debug.Assert(!ExtensionTypeToType.ContainsKey(curType));
-
-                        ExtensionTypeToType[curType] = extendedType;
-                        curType = curType.BaseType;
-                    } while (curType != typeof(object) && curType != null && !ExtensionTypeToType.ContainsKey(curType));
-                }
-            }
-        }        
     }
 
 }

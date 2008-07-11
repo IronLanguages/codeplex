@@ -15,14 +15,13 @@
 
 using System;
 using System.Diagnostics;
-using System.Reflection;
+using System.Scripting;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     // New in Pep342 for Python 2.5. Yield is an expression with a return value.
     //    x = yield z
@@ -53,10 +52,8 @@ namespace IronPython.Compiler.Ast {
                 throw PythonOps.SyntaxError(IronPython.Resources.MisplacedYield, ag.Context.SourceUnit, span, IronPython.Hosting.ErrorCodes.SyntaxError);
             }
 
-            Type tGenerator = typeof(IronPython.Runtime.PythonGenerator);
-
-            MSAst.Expression instance = Ast.GeneratorInstanceExpression(tGenerator);
-            Debug.Assert(instance.Type == tGenerator);
+            MSAst.Expression instance = ag.GeneratorParameter;
+            Debug.Assert(instance.Type == typeof(IronPython.Runtime.PythonGenerator));
 
             MSAst.Expression s2 = Ast.Call(
                 typeof(PythonOps).GetMethod("GeneratorCheckThrowableAndReturnSendValue"),
@@ -65,7 +62,7 @@ namespace IronPython.Compiler.Ast {
             return s2;
         }
 
-        internal override Microsoft.Scripting.Ast.Expression Transform(AstGenerator ag, Type type) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             // (yield z) becomes:
             // .comma (1) {
             //    .void ( .yield_statement (_expression) ),
@@ -73,7 +70,7 @@ namespace IronPython.Compiler.Ast {
             //  }
 
             return Ast.Comma(
-                Ast.Yield(Span, ag.Transform(_expression)),
+                AstUtils.Yield(ag.Transform(_expression), Span),
                 CreateCheckThrowExpression(ag, this.Span) // emits ($gen.CheckThrowable())
             );
         }

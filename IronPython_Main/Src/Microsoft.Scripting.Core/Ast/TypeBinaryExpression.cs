@@ -13,16 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Utils;
+using System.Scripting;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     public sealed class TypeBinaryExpression : Expression {
         private readonly Expression /*!*/ _expression;
         private readonly Type /*!*/ _typeOperand;
 
-        internal TypeBinaryExpression(AstNodeType nodeType, Expression /*!*/ expression, Type /*!*/ typeOperand)
-            : base(nodeType, typeof(bool)) {
+        internal TypeBinaryExpression(Annotations annotations, ExpressionType nodeType, Expression /*!*/ expression, Type /*!*/ typeOperand)
+            : base(annotations, nodeType, typeof(bool)) {
             _expression = expression;
             _typeOperand = typeOperand;
         }
@@ -34,6 +36,17 @@ namespace Microsoft.Scripting.Ast {
         public Type TypeOperand {
             get { return _typeOperand; }
         }
+
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            System.Diagnostics.Debug.Assert(this.NodeType == ExpressionType.TypeIs);
+            builder.Append("(");
+            _expression.BuildString(builder);
+            builder.Append(" Is ");
+            builder.Append(_typeOperand.Name);
+            builder.Append(")");
+        }
     }
 
     /// <summary>
@@ -41,15 +54,16 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public partial class Expression {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
+            return TypeIs(expression, type, Annotations.Empty);
+        }
+
+        //CONFORMING
+        public static TypeBinaryExpression TypeIs(Expression expression, Type type, Annotations annotations) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(!type.IsByRef, "type", "type must not be ByRef");
 
-            if (!type.IsVisible) {
-                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, type.FullName));
-            }
-
-            return new TypeBinaryExpression(AstNodeType.TypeIs, expression, type);
+            return new TypeBinaryExpression(annotations, ExpressionType.TypeIs, expression, type);
         }
     }
 }

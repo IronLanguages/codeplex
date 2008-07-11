@@ -13,33 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Compiler;
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
-
-    using Microsoft.Scripting.Generation;
-    using Microsoft.Scripting.Runtime;
 
     public sealed class PythonEngine {
         // Work around until tests are updated.
         public static ScriptEngine CurrentEngine = ScriptRuntime.Create().GetEngine("py");
     }
+
 }

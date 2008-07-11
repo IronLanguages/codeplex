@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace IronPython.Runtime {
     public sealed class KwCallInfo {
         private readonly object[] _args;

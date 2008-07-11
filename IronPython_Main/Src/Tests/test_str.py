@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -37,7 +37,7 @@ def test_none():
     AssertError(TypeError, 'abc'.replace, None, 'ef')
     AssertError(TypeError, 'abc'.replace, None, 'ef', 1)
 
-def test_add_mul(): 
+def test_add_mul():
     AssertError(TypeError, lambda: "a" + 3)
     AssertError(TypeError, lambda: 3 + "a")
 
@@ -62,9 +62,9 @@ def test_add_mul():
     AreEqual("", False * "a" )
 
 def test_startswith():
-    AreEqual("abcde".startswith('c', 2, 6), True) 
-    AreEqual("abc".startswith('c', 4, 6), False) 
-    AreEqual("abcde".startswith('cde', 2, 9), True) 
+    AreEqual("abcde".startswith('c', 2, 6), True)
+    AreEqual("abc".startswith('c', 4, 6), False)
+    AreEqual("abcde".startswith('cde', 2, 9), True)
     
     hw = "hello world"
     Assert(hw.startswith("hello"))
@@ -127,7 +127,7 @@ def test_codecs():
     else:
         print "CodePlex Work Item 12990"
         encodings = [ x for x in ip_supported_encodings if x.lower() != 'utf-16']
-	    
+        
     for encoding in encodings: Assert('abc'.encode(encoding).decode(encoding)=='abc', encoding + " failed!")
     
 def test_count():
@@ -158,17 +158,17 @@ def test_string_escape():
         else:
             AreEqual(chr(i).encode('string-escape'), repr(chr(i))[1:-1])
 
-@skip("silverlight") # not implemented exception on Silverlight 
+@skip("silverlight") # not implemented exception on Silverlight
 def test_encoding_backslashreplace():
                 # codec, input, output
     tests =   [ ('ascii',      u"a\xac\u1234\u20ac\u8000", "a\\xac\\u1234\\u20ac\\u8000"),
                 ('latin-1',    u"a\xac\u1234\u20ac\u8000", "a\xac\\u1234\\u20ac\\u8000"),
                 ('iso-8859-15', u"a\xac\u1234\u20ac\u8000", "a\xac\\u1234\xa4\\u8000") ]
     
-    for test in tests:        
+    for test in tests:
         AreEqual(test[1].encode(test[0], 'backslashreplace'), test[2])
 
-@skip("silverlight") # not implemented exception on Silverlight 
+@skip("silverlight") # not implemented exception on Silverlight
 def test_encoding_xmlcharrefreplace():
                 # codec, input, output
     tests =   [ ('ascii',      u"a\xac\u1234\u20ac\u8000", "a&#172;&#4660;&#8364;&#32768;"),
@@ -217,7 +217,7 @@ def test_str_subclass():
 
 @skip('win32')
 def test_str_char_hash():
-    import System 
+    import System
     #System.Char.Parse('a') is not available in Silverlight mscorlib
     if is_silverlight:
         a = 'a'.ToCharArray()[0]
@@ -266,10 +266,10 @@ def test_str_dict():
         if sys.platform=="win32":
             Assert(not temp_key in str.__dict__.keys())
         else:
-            Assert(temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")    
+            Assert(temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")
         
     for temp_key in missing_str_dict_keys:
-        Assert(temp_key in str.__dict__.keys())    
+        Assert(temp_key in str.__dict__.keys())
         
     class x(str): pass
     

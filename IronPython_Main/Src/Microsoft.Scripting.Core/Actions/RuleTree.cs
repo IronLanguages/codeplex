@@ -13,20 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// This uses linear search to find a rule.  Clearly that doesn't scale super well.
     /// We will address this in the future.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class RuleTree<T> {
+    internal class RuleTree<T> where T : class {
         private RuleTable _ruleTable = new RuleTable();
 
         internal static RuleTree<T> MakeRuleTree() {
@@ -39,7 +35,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Looks through the rule list, prunes invalid rules and returns rules that apply
         /// </summary>
-        internal Rule<T>[] FindApplicableRules(Type[] types) {
+        internal Rule<T>[] FindApplicableRules(Type[] types, T previousTarget) {
             //
             // 1. Get the rule list that would apply to the arguments at hand
             //
@@ -62,7 +58,9 @@ namespace Microsoft.Scripting.Actions {
                     // The validators on the rule are provided by the language binders
                     // and may be unsafe. TODO: FIX !!!
                     //
-                    if (!node.Value.IsValid) {
+                    if (!node.Value.IsValid && node.Value.RuleSet.GetTarget() != previousTarget) {
+                        // only remove if it's invalid and it's not our previous target.  If it's
+                        // our previous target we can still use it for templating.
                         LinkedListNode<Rule<T>> remove = node;
                         node = node.Next;
                         list.Remove(remove);

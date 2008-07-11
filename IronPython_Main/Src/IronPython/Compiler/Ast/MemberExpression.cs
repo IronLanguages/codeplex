@@ -14,13 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class MemberExpression : Expression {
         private readonly Expression _target;
@@ -44,10 +44,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.Action.GetMember(
+            return AstUtils.GetMember(
                 ag.Binder,
-                _name,
+                SymbolTable.IdToString(_name),
                 type,
+                Ast.CodeContext(),
                 ag.Transform(_target)
             );
         }
@@ -55,31 +56,34 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op == Operators.None) {
                 SourceSpan sspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
-                return Ast.Block(
+                return AstUtils.Block(
                     span,
-                    Ast.Action.SetMember(
+                    AstUtils.SetMember(
                         ag.Binder,
-                        _name,
+                        SymbolTable.IdToString(_name),
                         typeof(object),
+                        Ast.CodeContext(),
                         ag.Transform(_target),
                         right
                     )
                 );
             } else {
                 MSAst.VariableExpression temp = ag.MakeTempExpression("inplace");
-                return Ast.Block(
+                return AstUtils.Block(
                     new SourceSpan(Span.Start, span.End),
                     Ast.Assign(temp, ag.Transform(_target)),
-                    Ast.Action.SetMember(
+                    AstUtils.SetMember(
                         ag.Binder,
-                        _name,
+                        SymbolTable.IdToString(_name),
                         typeof(object),
+                        Ast.CodeContext(),
                         temp,
-                        Ast.Action.Operator(
+                        AstUtils.Operator(
                             ag.Binder,
                             op,
                             typeof(object),
-                            Ast.Action.GetMember(ag.Binder, _name, typeof(object), temp),
+                            Ast.CodeContext(),
+                            AstUtils.GetMember(ag.Binder, SymbolTable.IdToString(_name), typeof(object), Ast.CodeContext(), temp),
                             right
                         )
                     )
@@ -88,10 +92,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return Ast.Action.DeleteMember(
+            return AstUtils.DeleteMember(
                 Span,
                 ag.Binder,
-                _name,
+                SymbolTable.IdToString(_name),
+                Ast.CodeContext(),
                 ag.Transform(_target)
             );
         }

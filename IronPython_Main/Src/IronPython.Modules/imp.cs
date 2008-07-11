@@ -14,24 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.IO;
 using System.Diagnostics;
-
-using IronPython.Compiler;
-using IronPython.Compiler.Generation;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
-using IronPython.Hosting;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Utils;
-using System.Threading;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {
@@ -47,6 +37,7 @@ namespace IronPython.Modules {
         internal const int SearchError = 0;
         private static readonly object _lockCountKey = new object();
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             // set the lock count to zero on the 1st load, don't reset the lock count on reloads
             if (!context.HasModuleState(_lockCountKey)) {
@@ -59,7 +50,7 @@ namespace IronPython.Modules {
         }
 
         public static List get_suffixes() {
-            return PythonOps.MakeList(PythonOps.MakeTuple(".py", "U", PythonSource));
+            return List.FromArrayNoCopy(PythonOps.MakeTuple(".py", "U", PythonSource));
         }
 
         public static PythonTuple find_module(CodeContext/*!*/ context, string/*!*/ name) {
@@ -113,7 +104,9 @@ namespace IronPython.Modules {
         public static Scope/*!*/ new_module(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("new_module() argument 1 must be string, not None");
 
-            return PythonContext.GetContext(context).CreateModule(name).Scope;
+            Scope res = PythonContext.GetContext(context).CreateModule().Scope;
+            res.SetName(Symbols.Name, name);
+            return res;
         }
 
         public static bool lock_held(CodeContext/*!*/ context) {
@@ -203,8 +196,8 @@ namespace IronPython.Modules {
             // TODO: is this supposed to open PythonFile with Python-specific behavior?
             // we may need to insert additional layer to SourceUnit content provider if so
             PythonContext pc = PythonContext.GetContext(context);
-            SourceUnit codeUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, pathname, pc.DefaultEncoding, SourceCodeKind.File);
-            return pc.CompileAndInitializeModule(name, pathname, codeUnit);
+            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, pathname, pc.DefaultEncoding, SourceCodeKind.File);
+            return pc.CompileModule(pathname, name, sourceUnit, ModuleOptions.Initialize).Scope;
         }
 
         public static object load_source(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname, PythonFile/*!*/ file) {
@@ -275,7 +268,7 @@ namespace IronPython.Modules {
 
         private static Scope/*!*/ LoadPythonSource(PythonContext/*!*/ context, string/*!*/ name, PythonFile/*!*/ file, string/*!*/ fileName) {
             SourceUnit sourceUnit = context.CreateSnippet(file.read(), String.IsNullOrEmpty(fileName) ? null : fileName, SourceCodeKind.File);
-            return context.CompileAndInitializeModule(name, fileName, sourceUnit).Scope;
+            return context.CompileModule(fileName, name, sourceUnit, ModuleOptions.Initialize).Scope;
         }
 
 #if !SILVERLIGHT // files
@@ -283,9 +276,8 @@ namespace IronPython.Modules {
             
             string initPath = Path.Combine(path, "__init__.py");
             
-            SourceUnit codeUnit = 
-                context.CreateFileUnit(initPath, context.DefaultEncoding);
-            return context.CompileAndInitializeModule(moduleName, initPath, codeUnit).Scope;
+            SourceUnit sourceUnit =  context.CreateFileUnit(initPath, context.DefaultEncoding);
+            return context.CompileModule(initPath, moduleName, sourceUnit, ModuleOptions.Initialize).Scope;
         }
 #endif
 

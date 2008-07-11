@@ -13,17 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
 
     /// <summary>
     /// This holds a set of rules for a particular DynamicSite.  Any given
@@ -38,21 +34,32 @@ namespace Microsoft.Scripting.Actions {
     /// standard DynamicSite.UpdateBindingAndInvoke fallback call at the end.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class SmallRuleSet<T> : RuleSet<T> {
+    internal class SmallRuleSet<T> : RuleSet<T> where T : class {
+        private T _target;
         private const int MaxRules = 10;
-        private readonly IList<Rule<T>> _rules;
-        private DynamicMethod _monomorphicTemplate;
+        private readonly Rule<T>[] _rules;
 
-        internal SmallRuleSet(IList<Rule<T>> rules) {
-            this._rules = rules;
+        internal SmallRuleSet(Rule<T>[] rules) {
+            _rules = rules;
         }
 
-        public override RuleSet<T> AddRule(Rule<T> newRule) {
+        internal SmallRuleSet(T target, Rule<T>[] rules) {
+            _rules = rules;
+            _target = target;
+        }
+
+        public object ConstantPool {
+            get {
+                return ((Closure)(((Delegate)(Object)GetTarget()).Target)).Constants;
+            }
+        }
+
+        internal override RuleSet<T> AddRule(Rule<T> newRule) {
             // Can the rule become invalidated between its creation and
             // its insertion into the set?
             Debug.Assert(newRule.IsValid, "Adding an invalid rule");
 
-            IList<Rule<T>> newRules = new List<Rule<T>>();
+            List<Rule<T>> newRules = new List<Rule<T>>();
             newRules.Add(newRule);
             foreach (Rule<T> rule in _rules) {
                 if (rule.IsValid) {
@@ -64,86 +71,40 @@ namespace Microsoft.Scripting.Actions {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "RuleOverflow " + newRule.GetType().Name);
                 return EmptyRuleSet<T>.FixedInstance;
             } else {
-                return new SmallRuleSet<T>(newRules);
+                return new SmallRuleSet<T>(newRules.ToArray());
             }
         }
 
-        public override IList<Rule<T>> GetRules() {
+        internal override Rule<T>[] GetRules() {
             return _rules;
         }
 
-        public override bool HasMonomorphicTarget(T target) {
-            Debug.Assert(target != null);
-
-            foreach (Rule<T> rule in _rules) {
-                if (target.Equals(rule.MonomorphicRuleSet.RawTarget)) {
-                    return true;
-                }
+        internal override T GetTarget() {
+            if (_target == null) {
+                _target = MakeTarget();
             }
-            return false;
+            return _target;
         }
 
-
-        protected override T MakeTarget() {
-            if (_rules.Count == 1 && this != _rules[0].MonomorphicRuleSet) {
-                // use the monomorphic rule if we only have 1 rule.
-                return _rules[0].MonomorphicRuleSet.GetOrMakeTarget();
+        private T MakeTarget() {
+            if (_rules.Length == 1 && this != _rules[0].RuleSet) {
+                // Use the the rule's own set if we only have 1 rule
+                return _rules[0].RuleSet.GetTarget();
             }
 
-            PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "GenerateRule");
+            LambdaExpression stitched = Stitcher.Stitch<T>(_rules);
+            MethodInfo method;
+            T t = LambdaCompiler.CompileLambda<T>(stitched, !typeof(T).IsVisible, out method);
 
-            MethodInfo mi = typeof(T).GetMethod("Invoke");
-            LambdaCompiler cg = LambdaCompiler.CreateDynamicLambdaCompiler(
-                null,  // LambdaExpression
-                StubName,
-                mi.ReturnType,
-                ReflectionUtils.GetParameterTypes(mi.GetParameters()),
-                null    // SourceUnit
-            );
-
-            cg.ContextSlot = cg.GetLambdaArgumentSlot(1);
-
-            foreach (Rule<T> rule in _rules) {
-                rule.Emit(cg);
-            }
-            EmitNoMatch(cg);
-
-            if (_rules.Count == 1 &&
-                this == _rules[0].MonomorphicRuleSet &&
-                _rules[0].TemplateParameterCount > 0 &&
-                cg.IsDynamicMethod) {
-                _monomorphicTemplate = (DynamicMethod)cg.Method;
+            if (_rules.Length == 1) {
+                _rules[0].TemplateMethod = method;
             }
 
-            return (T)(object)cg.CreateDelegate(typeof(T));
+            return t;
         }
 
-        private static void EmitNoMatch(LambdaCompiler cg) {
-            int count = cg.GetLambdaArgumentSlotCount();
-
-            Slot site = cg.GetLambdaArgumentSlot(0);
-            Type real = typeof(CallSite<T>);
-            
-            site.EmitGet(cg.IL);
-            cg.IL.Emit(OpCodes.Castclass, real);
-
-            PropertyInfo update = real.GetProperty("Update");
-            cg.IL.EmitPropertyGet(update);
-            for (int i = 0; i < count; i++) {
-                cg.GetLambdaArgumentSlot(i).EmitGet(cg.IL);
-            }
-            cg.IL.Emit(OpCodes.Tailcall);
-            cg.IL.EmitCall(update.PropertyType.GetMethod("Invoke"));
-            cg.IL.Emit(OpCodes.Ret);
-            cg.Finish();
+        internal void SetRawTarget(T target) {
+            _target = target;
         }
-
-        internal DynamicMethod MonomorphicTemplate {
-            get {
-                return _monomorphicTemplate;
-            }
-        }
-
-        private const string StubName = "_stub_";
     }
 }

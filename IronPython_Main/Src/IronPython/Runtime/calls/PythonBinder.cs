@@ -18,58 +18,74 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Threading;
+using IronPython.Hosting;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Math;
+
+#if !SILVERLIGHT
+
+using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
+
+#endif
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using System.Threading;
-    using IronPython.Compiler.Generation;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-    public class PythonBinder : ActionBinder {
+    public class PythonBinder : DefaultBinder {
         private PythonContext/*!*/ _context;
         private SlotCache/*!*/ _typeMembers = new SlotCache();
         private SlotCache/*!*/ _resolvedMembers = new SlotCache();
+        private Dictionary<Type/*!*/, IList<Type/*!*/>/*!*/>/*!*/ _dlrExtensionTypes = MakeExtensionTypes();
+        private readonly OldGetMemberAction EmptyGetMemberAction;
 
         [MultiRuntimeAware]
-        private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
-        private readonly GetMemberAction EmptyGetMemberAction;
+        private static readonly Dictionary<Type/*!*/, ExtensionTypeInfo/*!*/>/*!*/ _sysTypes = MakeSystemTypes();
 
-        public PythonBinder(PythonContext/*!*/ pythonContext, CodeContext context)
-            : base(context) {
+        public PythonBinder(ScriptDomainManager manager, PythonContext/*!*/ pythonContext, CodeContext context)
+            : base(manager) {
             ContractUtils.RequiresNotNull(pythonContext, "pythonContext");
 
-            EmptyGetMemberAction = GetMemberAction.Make(this, String.Empty);
+            context.LanguageContext.DomainManager.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(DomainManager_AssemblyLoaded);
+            
+            foreach (Assembly asm in pythonContext.DomainManager.GetLoadedAssemblyList()) {
+                DomainManager_AssemblyLoaded(this, new AssemblyLoadedEventArgs(asm));
+            }
+
+            EmptyGetMemberAction = OldGetMemberAction.Make(this, String.Empty);
             _context = pythonContext;
         }
 
-        private RuleBuilder<T> MakeRuleWorker<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
+        private RuleBuilder<T> MakeRuleWorker<T>(CodeContext/*!*/ context, OldDynamicAction/*!*/ action, object[]/*!*/ args) where T : class {
             switch (action.Kind) {
                 case DynamicActionKind.DoOperation:
-                    return new PythonDoOperationBinderHelper<T>(context, (DoOperationAction)action).MakeRule(args);
+                    return new PythonDoOperationBinderHelper<T>(context, (OldDoOperationAction)action).MakeRule(args);
                 case DynamicActionKind.GetMember:
-                    return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeRule();
+                    return new PythonGetMemberBinderHelper<T>(context, (OldGetMemberAction)action, args).MakeRule();
                 case DynamicActionKind.SetMember:
-                    return new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                    return new SetMemberBinderHelper<T>(context, (OldSetMemberAction)action, args).MakeNewRule();
                 case DynamicActionKind.Call:
                     // if call fails Python will try and create an instance as it treats these two operations as the same.
-                    RuleBuilder<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
+                    RuleBuilder<T> rule = new PythonCallBinderHelper<T>(context, (OldCallAction)action, args).MakeRule();
                     if (rule == null) {
-                        rule = base.MakeRule<T>(context, action, args);
+                        object[] packed = ArrayUtils.Insert<object>(context, args);
+                        rule = base.MakeRule<T>(action, packed);
 
                         if (rule.IsError) {
                             // try CreateInstance...
-                            CreateInstanceAction createAct = PythonCallBinderHelper<T>.MakeCreateInstanceAction((CallAction)action);
-                            RuleBuilder<T> newRule = MakeRule<T>(context, createAct, args);
+                            OldCreateInstanceAction createAct = PythonCallBinderHelper<T>.MakeCreateInstanceAction((OldCallAction)action);
+                            RuleBuilder<T> newRule = MakeRule<T>(createAct, packed);
                             if (!newRule.IsError) {
                                 return newRule;
                             }
@@ -77,20 +93,23 @@ namespace IronPython.Runtime.Calls {
                     }
                     return rule;
                 case DynamicActionKind.ConvertTo:
-                    return new PythonConvertToBinderHelper<T>(context, (ConvertToAction)action, args).MakeRule();
+                    return new PythonConvertToBinderHelper<T>(context, (OldConvertToAction)action, args).MakeRule();
                 default:
                     return null;
             }
         }
 
-        protected override RuleBuilder<T> MakeRule<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
+        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction/*!*/ action, object[]/*!*/ args) {
+            object[] extracted;
+            CodeContext context = ExtractCodeContext(args, out extracted);
+
             RuleBuilder<T> rule = null;
             //
-            // Try IDynamicObject
+            // Try IOldDynamicObject
             //
-            IDynamicObject ido = args[0] as IDynamicObject;
+            IOldDynamicObject ido = extracted[0] as IOldDynamicObject;
             if (ido != null) {
-                rule = ido.GetRule<T>(action, context, args);
+                rule = ido.GetRule<T>(action, context, extracted);
                 if (rule != null) {
                     return rule;
                 }
@@ -99,7 +118,7 @@ namespace IronPython.Runtime.Calls {
             //
             // Try the Python rules
             //
-            rule = MakeRuleWorker<T>(context, action, args);
+            rule = MakeRuleWorker<T>(context, action, extracted);
             if (rule != null) {
                 return rule;
             }
@@ -107,10 +126,10 @@ namespace IronPython.Runtime.Calls {
             //
             // Fall back on DLR rules
             //
-            return base.MakeRule<T>(context, action, args);
+            return base.MakeRule<T>(action, args);
         }
 
-        public override Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType) {
+        public override Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType, ConversionResultKind kind, Expression context) {
             ContractUtils.RequiresNotNull(expr, "expr");
             ContractUtils.RequiresNotNull(toType, "toType");
 
@@ -129,8 +148,9 @@ namespace IronPython.Runtime.Calls {
             }
 
             Type visType = CompilerHelpers.GetVisibleType(toType);
-            return Ast.Action.ConvertTo(
-                ConvertToAction.Make(this, visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : ConversionResultKind.ExplicitCast),
+            return AstUtils.ConvertTo(
+                OldConvertToAction.Make(this, visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : kind),
+                context,
                 expr);
         }
 
@@ -207,13 +227,13 @@ namespace IronPython.Runtime.Calls {
             return ErrorInfo.FromException(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForTypeMismatch"),
-                    Ast.Constant(PythonTypeOps.GetName(toType)),
+                    Ast.Constant(DynamicHelpers.GetPythonTypeFromType(toType).Name),
                     Ast.ConvertHelper(value, typeof(object))
                )
             );
         }
 
-        public override ErrorInfo MakeStaticAssignFromDerivedTypeError(Type accessingType, MemberTracker info, Expression assignedValue) {
+        public override ErrorInfo MakeStaticAssignFromDerivedTypeError(Type accessingType, MemberTracker info, Expression assignedValue, Expression context) {
             return MakeMissingMemberError(accessingType, info.Name);
         }
         
@@ -234,7 +254,7 @@ namespace IronPython.Runtime.Calls {
         #region .NET member binding
 
         protected override string GetTypeName(Type t) {
-            return PythonTypeOps.GetName(t);
+            return DynamicHelpers.GetPythonTypeFromType(t).Name;
         }
 
         private MemberGroup GetInstanceOpsMethod(Type extends, params string[] names) {
@@ -246,12 +266,10 @@ namespace IronPython.Runtime.Calls {
             return new MemberGroup(trackers);
         }
 
-        public override MemberGroup/*!*/ GetMember(DynamicAction action, Type type, string name) {
+        public override MemberGroup/*!*/ GetMember(OldDynamicAction action, Type type, string name) {
             // avoid looking in IPythonObject's.  They don't add interesting members that their
             // base types don't provide and will only slow us down.
-            while (typeof(IPythonObject).IsAssignableFrom(type) && !type.IsDefined(typeof(DynamicBaseTypeAttribute), false)) {
-                type = type.BaseType;
-            }
+            type = PythonTypeOps.GetFinalSystemType(type);
 
             MemberGroup mg;
             if (!_resolvedMembers.TryGetCachedMember(type, name, action.Kind == DynamicActionKind.GetMember, out mg)) {
@@ -261,7 +279,7 @@ namespace IronPython.Runtime.Calls {
                     type,
                     name);
 
-                _resolvedMembers.CacheSlot(type, name, PythonTypeOps.GetSlot(mg), mg);
+                _resolvedMembers.CacheSlot(type, name, PythonTypeOps.GetSlot(mg, name), mg);
             }
 
             return mg ?? MemberGroup.EmptyGroup;
@@ -273,7 +291,7 @@ namespace IronPython.Runtime.Calls {
             return ErrorInfo.FromValueNoError(
                Ast.Call(
                    typeof(PythonOps).GetMethod("SlotTrySetValue"),
-                   Ast.CodeContext(),
+                   rule.Context,
                    Ast.RuntimeConstant(PythonTypeOps.GetReflectedEvent(ev)),
                    Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                    Ast.Null(typeof(PythonType)),
@@ -286,7 +304,7 @@ namespace IronPython.Runtime.Calls {
             return ErrorInfo.FromException(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                    Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type)), name))
+                    Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicHelpers.GetPythonTypeFromType(type).Name, name))
                 )
             );
         }
@@ -298,7 +316,7 @@ namespace IronPython.Runtime.Calls {
                     Ast.Constant(
                         String.Format("attribute '{0}' of '{1}' object is read-only",
                             name,
-                            PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type))
+                            DynamicHelpers.GetPythonTypeFromType(type).Name
                         )
                     )
                 )
@@ -312,7 +330,7 @@ namespace IronPython.Runtime.Calls {
                     Ast.Constant(
                         String.Format("cannot delete attribute '{0}' of builtin type '{1}'",
                             name,
-                            PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type))
+                            DynamicHelpers.GetPythonTypeFromType(type).Name
                         )
                     )
                 )
@@ -324,15 +342,12 @@ namespace IronPython.Runtime.Calls {
         internal IList<Type> GetExtensionTypesInternal(Type t) {
             List<Type> res = new List<Type>(base.GetExtensionTypes(t));
 
-            Type extType;
-            if (_extTypes.TryGetValue(t, out extType)) {
-                res.Add(extType);
-            }
+            AddExtensionTypes(t, res);
 
             return res.ToArray();
         }
 
-        protected override IList<Type> GetExtensionTypes(Type t) {
+        public override IList<Type> GetExtensionTypes(Type t) {
             List<Type> list = new List<Type>();
 
             // Python includes the types themselves so we can use extension properties w/ CodeContext
@@ -340,16 +355,36 @@ namespace IronPython.Runtime.Calls {
 
             list.AddRange(base.GetExtensionTypes(t));
 
-            Type extType;
-            if (_extTypes.TryGetValue(t, out extType)) {
-                list.Add(extType);
-            }
+            AddExtensionTypes(t, list);
 
             return list;
         }
 
-        internal static void RegisterType(Type extended, Type extension) {
-            _extTypes[extended] = extension;
+        private void AddExtensionTypes(Type t, List<Type> list) {
+            ExtensionTypeInfo extType;
+            if (_sysTypes.TryGetValue(t, out extType)) {
+                list.Add(extType.ExtensionType);
+            }
+        
+            IList<Type> userExtensions;
+            lock (_dlrExtensionTypes) {
+                if (_dlrExtensionTypes.TryGetValue(t, out userExtensions)) {                        
+                    list.AddRange(userExtensions);
+                }
+
+                if (t.IsGenericType) {
+                    // search for generic extensions, e.g. ListOfTOps<T> for List<T>,
+                    // we then make a new generic type out of the extension type.
+                    Type typeDef = t.GetGenericTypeDefinition();
+                    Type[] args = t.GetGenericArguments();
+
+                    if (_dlrExtensionTypes.TryGetValue(typeDef, out userExtensions)) {
+                        foreach (Type genExtType in userExtensions) {
+                            list.Add(genExtType.MakeGenericType(args));
+                        }
+                    }
+                }
+            }            
         }
 
         public override Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
@@ -383,7 +418,7 @@ namespace IronPython.Runtime.Calls {
                     MethodBase[] ctors = CompilerHelpers.GetConstructors(type);
                     object val;
                     if (PythonTypeOps.IsDefaultNew(ctors)) {
-                        if (PythonTypeCustomizer.IsPythonType(type)) {
+                        if (IsPythonType(type)) {
                             val = InstanceOps.New;
                         } else {
                             val = InstanceOps.NewCls;
@@ -394,7 +429,7 @@ namespace IronPython.Runtime.Calls {
 
                     return Ast.RuntimeConstant(val);
                 case TrackerTypes.Custom:
-                    return Ast.RuntimeConstant(((PythonCustomTracker)memberTracker).GetSlot());
+                    return Ast.RuntimeConstant(((PythonCustomTracker)memberTracker).GetSlot(), typeof(PythonTypeSlot));
             }
             return null;
         }
@@ -420,16 +455,16 @@ namespace IronPython.Runtime.Calls {
             if (!_typeMembers.TryGetCachedSlot(curType, strName, out slot)) {
                 MemberGroup mg = TypeInfo.GetMember(
                     this,
-                    GetMemberAction.Make(this, name),
+                    OldGetMemberAction.Make(this, name),
                     curType,
                     strName);
 
-                slot = PythonTypeOps.GetSlot(mg);
+                slot = PythonTypeOps.GetSlot(mg, SymbolTable.IdToString(name));
 
                 _typeMembers.CacheSlot(curType, strName, slot, mg);
             }
-            
-            if (slot != null && slot.IsVisible(context, type)) {
+
+            if (slot != null && (slot.IsAlwaysVisible || PythonOps.IsClsVisible(context))) {
                 return true;
             }
 
@@ -450,16 +485,16 @@ namespace IronPython.Runtime.Calls {
             if (!_resolvedMembers.TryGetCachedSlot(curType, strName, out slot)) {
                 MemberGroup mg = TypeInfo.GetMemberAll(
                     this,
-                    GetMemberAction.Make(this, strName),
+                    OldGetMemberAction.Make(this, strName),
                     curType,
                     strName);
 
-                slot = PythonTypeOps.GetSlot(mg);
+                slot = PythonTypeOps.GetSlot(mg, SymbolTable.IdToString(name));
 
                 _resolvedMembers.CacheSlot(curType, strName, slot, mg);
             }
 
-            if (slot != null && slot.IsVisible(context, owner)) {                
+            if (slot != null && (slot.IsAlwaysVisible || PythonOps.IsClsVisible(context))) {
                 return true;                
             }             
 
@@ -482,7 +517,7 @@ namespace IronPython.Runtime.Calls {
                     type.UnderlyingSystemType)) {
 
                     if (!members.ContainsKey(rm.Name)) {
-                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member), rm.Member);
+                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member, rm.Name), rm.Member);
                     }
                 }
 
@@ -493,7 +528,7 @@ namespace IronPython.Runtime.Calls {
                 PythonTypeSlot slot = kvp.Value;
                 string name = kvp.Key;
 
-                if (slot.IsVisible(context, type)) {
+                if (slot.IsAlwaysVisible || PythonOps.IsClsVisible(context)) {
                     memberNames[SymbolTable.StringToId(name)] = slot;
                 }
             }
@@ -515,7 +550,7 @@ namespace IronPython.Runtime.Calls {
                     type.UnderlyingSystemType)) {
 
                     if (!members.ContainsKey(rm.Name)) {
-                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member), rm.Member);
+                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member, rm.Name), rm.Member);
                     }
                 }
 
@@ -526,7 +561,7 @@ namespace IronPython.Runtime.Calls {
                 PythonTypeSlot slot = kvp.Value;
                 string name = kvp.Key;
 
-                if (slot.IsVisible(context, owner)) {
+                if (slot.IsAlwaysVisible || PythonOps.IsClsVisible(context)) {
                     memberNames[name] = name;
                 }
             }
@@ -612,6 +647,141 @@ namespace IronPython.Runtime.Calls {
         internal ScriptDomainManager/*!*/ DomainManager {
             get {
                 return _context.DomainManager;
+            }
+        }
+        
+        private class ExtensionTypeInfo {
+            public Type ExtensionType;
+            public string PythonName;
+            
+            public ExtensionTypeInfo(Type extensionType, string pythonName) {
+                ExtensionType = extensionType;
+                PythonName = pythonName;
+            }
+        }
+
+        internal static void AssertNotExtensionType(Type t) {
+            foreach (ExtensionTypeInfo typeinfo in _sysTypes.Values) {
+                Debug.Assert(typeinfo.ExtensionType != t);
+            }
+
+            Debug.Assert(t != typeof(InstanceOps));
+        }
+
+        /// <summary>
+        /// Creates the initial table of extension types.  These are standard extension that we apply
+        /// to well known .NET types to make working with them better.  Being added to this table does
+        /// not make a type a Python type though so that it's members are generally accessible w/o an
+        /// import clr and their type is not re-named.
+        /// </summary>
+        private static Dictionary<Type/*!*/, IList<Type/*!*/>/*!*/>/*!*/ MakeExtensionTypes() {
+            Dictionary<Type, IList<Type>> res = new Dictionary<Type, IList<Type>>();
+
+            res[typeof(DBNull)] = new Type[] { typeof(DBNullOps) };
+            res[typeof(List<>)] = new Type[] { typeof(ListOfTOps<>) };
+            res[typeof(Dictionary<,>)] = new Type[] { typeof(DictionaryOfTOps<,>) };
+            res[typeof(Array)] = new Type[] { typeof(ArrayOps) };
+            res[typeof(Assembly)] = new Type[] { typeof(PythonAssemblyOps) };
+            res[typeof(Enum)] = new Type[] { typeof(EnumOps) };
+            res[typeof(Delegate)] = new Type[] { typeof(DelegateOps) };
+
+            return res;
+        }
+
+        /// <summary>
+        /// Creates a table of standard .NET types which are also standard Python types.  These types have a standard
+        /// set of extension types which are shared between all runtimes.
+        /// </summary>
+        private static Dictionary<Type/*!*/, ExtensionTypeInfo/*!*/>/*!*/ MakeSystemTypes() {
+            Dictionary<Type/*!*/, ExtensionTypeInfo/*!*/> res = new Dictionary<Type, ExtensionTypeInfo>();
+    
+            // Native CLR types
+            res[typeof(object)] = new ExtensionTypeInfo(typeof(ObjectOps), "object");
+            res[typeof(string)] = new ExtensionTypeInfo(typeof(StringOps), "str");
+            res[typeof(int)] = new ExtensionTypeInfo(typeof(Int32Ops), "int");
+            res[typeof(bool)] = new ExtensionTypeInfo(typeof(BoolOps), "bool");
+            res[typeof(float)] = new ExtensionTypeInfo(typeof(SingleOps), "Single");
+            res[typeof(double)] = new ExtensionTypeInfo(typeof(DoubleOps), "float");
+            res[typeof(decimal)] = new ExtensionTypeInfo(typeof(DecimalOps), "decimal");
+            res[typeof(ValueType)] = new ExtensionTypeInfo(typeof(ValueType), "ValueType");   // just hiding it's methods in the inheritance hierarchy
+            res[typeof(Byte)] = new ExtensionTypeInfo(typeof(ByteOps), "Byte");
+            res[typeof(SByte)] = new ExtensionTypeInfo(typeof(SByteOps), "SByte");
+            res[typeof(Int16)] = new ExtensionTypeInfo(typeof(Int16Ops), "Int16");
+            res[typeof(UInt16)] = new ExtensionTypeInfo(typeof(UInt16Ops), "UInt16");
+            res[typeof(UInt32)] = new ExtensionTypeInfo(typeof(UInt32Ops), "UInt32");
+            res[typeof(Int64)] = new ExtensionTypeInfo(typeof(Int64Ops), "Int64");
+            res[typeof(UInt64)] = new ExtensionTypeInfo(typeof(UInt64Ops), "UInt64");
+            res[typeof(char)] = new ExtensionTypeInfo(typeof(CharOps), "Char");
+
+            // MS.Math types
+            res[typeof(BigInteger)] = new ExtensionTypeInfo(typeof(BigIntegerOps), "long");
+            res[typeof(Complex64)] = new ExtensionTypeInfo(typeof(ComplexOps), "complex");
+            
+            // DLR types
+            res[typeof(None)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
+            res[typeof(BaseSymbolDictionary)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
+            res[typeof(IAttributesCollection)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
+            res[typeof(NamespaceTracker)] = new ExtensionTypeInfo(typeof(ReflectedPackageOps), "namespace#");
+            res[typeof(TypeGroup)] = new ExtensionTypeInfo(typeof(TypeGroupOps), "type-collision");
+            res[typeof(TypeTracker)] = new ExtensionTypeInfo(typeof(TypeTrackerOps), "type-collision");
+            res[typeof(Scope)] = new ExtensionTypeInfo(typeof(ScopeOps), "module");
+            res[typeof(ScriptScope)] = new ExtensionTypeInfo(typeof(ScriptScopeOps), "module");
+#if !SILVERLIGHT
+            res[ComObject.ComObjectType] = new ExtensionTypeInfo(typeof(ComOps), ComObject.ComObjectType.Name);
+#endif
+
+            return res;
+        }
+
+        internal static string GetTypeNameInternal(Type t) {
+            ExtensionTypeInfo extInfo;
+            if (_sysTypes.TryGetValue(t, out extInfo)) {
+                return extInfo.PythonName;
+            }
+            
+            PythonSystemTypeAttribute[] attrs = (PythonSystemTypeAttribute[])t.GetCustomAttributes(typeof(PythonSystemTypeAttribute), false);
+            if(attrs.Length > 0 && attrs[0].Name != null) { 
+                return attrs[0].Name;
+            }
+            
+            return t.Name;
+        }        
+        
+        public static bool IsExtendedType(Type t) {
+            return _sysTypes.ContainsKey(t);
+        }
+
+        public static bool IsPythonType(Type t) {
+            return _sysTypes.ContainsKey(t) || t.IsDefined(typeof(PythonSystemTypeAttribute), false);
+        }
+
+        /// <summary>
+        /// Event handler for when our domain manager has an assembly loaded by the user hosting the script
+        /// runtime.  Here we can gather any information regarding extension methods.  
+        /// 
+        /// Currently DLR-style extension methods become immediately available w/o an explicit import step.
+        /// </summary>
+        private void DomainManager_AssemblyLoaded(object sender, AssemblyLoadedEventArgs e) {
+            Assembly asm = e.Assembly;
+
+            ExtensionTypeAttribute[] attrs = (ExtensionTypeAttribute[])asm.GetCustomAttributes(typeof(ExtensionTypeAttribute), true);
+
+            if (attrs.Length > 0) {
+                lock (_dlrExtensionTypes) {
+                    foreach (ExtensionTypeAttribute attr in attrs) {
+                        IList<Type> typeList;
+                        if (!_dlrExtensionTypes.TryGetValue(attr.Extends, out typeList)) {
+                            _dlrExtensionTypes[attr.Extends] = typeList = new List<Type>();
+                        } else if (typeList.IsReadOnly) {
+                            _dlrExtensionTypes[attr.Extends] = typeList = new List<Type>(typeList);
+                        }                        
+
+                        // don't add extension types twice even if we receive multiple assembly loads
+                        if (!typeList.Contains(attr.ExtensionType)) {
+                            typeList.Add(attr.ExtensionType);
+                        }
+                    }
+                }
             }
         }
 

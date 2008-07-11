@@ -14,15 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Diagnostics;
+using System.Scripting;
+using System.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Runtime;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class TryStatement : Statement {
         private SourceLocation _header;
@@ -114,13 +114,14 @@ namespace IronPython.Compiler.Ast {
                 //  }
                 result =
                     Ast.Block(
-                        Ast.Write(runElse, Ast.True()),
+                        Ast.Assign(runElse, Ast.True()),
                         Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated, we could choose to do this only for nested exception handlers.
                         Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
-                        Ast.Try(
-                            Span, _header, body
+                        AstUtils.Try(
+                            body, 
+                            Span, _header
                         ).Catch(exception.Type, exception,
-                            Ast.Write(runElse, Ast.False()),
+                            Ast.Assign(runElse, Ast.False()),
                             @catch,
                             Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
                         ),
@@ -138,22 +139,19 @@ namespace IronPython.Compiler.Ast {
                 //
 
                 MSAst.VariableExpression lineUpdated = ag.MakeTempExpression("$lineUpdated", typeof(bool));
-                result = Ast.TryCatch(
-                    Span, _header,
-                    Ast.Block(
-                        Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
-                        Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
-                        body
-                    ),
-                    Ast.Catch(
-                        exception.Type, 
-                        exception, 
+                result = AstUtils.Try(
                         Ast.Block(
-                            @catch,
-                            Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
-                        )
-                    ) 
-                );
+                            Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
+                            Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
+                            body
+                        ), 
+                        Span, _header
+                    ).Catch(exception.Type, exception,
+                        @catch,
+                        Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
+                    );
+
+                ag.FreeTemp(lineUpdated);
             } else {
                 result = body;
             }
@@ -180,27 +178,26 @@ namespace IronPython.Compiler.Ast {
                 //          from the finally block and leave the existing stack traces cleared.
                 //      3. Returning from the try block: Here we need to run the finally block and not update the
                 //          line numbers.
-                body = Ast.Try(
-                    Span, _header,
-                    // we use a filter to know when we have an exception and when control leaves normally (via
+                body = AstUtils.Try(// we use a filter to know when we have an exception and when control leaves normally (via
                     // either a return or the body completing successfully).
-                    Ast.Try(                        
+                    Ast.Try(
                         Ast.Assign(noNestedException, Ast.Constant(true)),
                         body
-                    ).Filter(       
+                    ).Filter(
                         typeof(Exception),
                         // condition is never true, just note the exception and let it propagate
-                        Ast.Equal(  
+                        Ast.Equal(
                             Ast.Assign(noNestedException, Ast.Constant(false)),
                             Ast.Constant(true)
                         ),
-                        Ast.Empty()                        
-                    )
+                        Ast.Empty()
+                    ), 
+                    Span, _header
                 ).Finally(
                     // if we had an exception save the line # that was last executing during the try
                     Ast.If(
                         Ast.Not(noNestedException),
-                        ag.GetLineNumberUpdateExpression()
+                        ag.GetLineNumberUpdateExpression(false)
                     ),
 
                     // clear the frames incase thae finally throws, and allow line number
@@ -284,7 +281,6 @@ namespace IronPython.Compiler.Ast {
                         }
 
                         ist = Ast.IfCondition(
-                            tsh.Span, tsh.Header,
                             Ast.NotEqual(
                                 Ast.Assign(converted, test),
                                 Ast.Null()
@@ -292,6 +288,7 @@ namespace IronPython.Compiler.Ast {
                             Ast.Block(
                                 tsh.Target.TransformSet(ag, SourceSpan.None, converted, Operators.None),
                                 GetTracebackHeader(
+                                    new SourceSpan(tsh.Start, tsh.Header),
                                     ag, 
                                     exception, 
                                     ag.Transform(tsh.Body)
@@ -308,12 +305,12 @@ namespace IronPython.Compiler.Ast {
                         //          <body>
                         //      }
                         ist = Ast.IfCondition(
-                            tsh.Span, tsh.Header,
                             Ast.NotEqual(
                                 test,
                                 Ast.Null()
                             ),
                             GetTracebackHeader(
+                                new SourceSpan(tsh.Start, tsh.Header),
                                 ag, 
                                 exception, 
                                 ag.Transform(tsh.Body)
@@ -336,10 +333,7 @@ namespace IronPython.Compiler.Ast {
                     //          <body>
                     //  }
 
-                    catchAll = Ast.Block(
-                        tsh.Span,
-                        GetTracebackHeader(ag, exception, ag.Transform(tsh.Body))
-                    );                   
+                    catchAll = GetTracebackHeader(new SourceSpan(tsh.Start, tsh.Header), ag, exception, ag.Transform(tsh.Body));
                 }
             }
 
@@ -359,7 +353,13 @@ namespace IronPython.Compiler.Ast {
                 Debug.Assert(catchAll != null);
                 body = catchAll;
             }
-            
+
+            if (converted != null) {
+                ag.FreeTemp(converted);
+            }
+            ag.FreeTemp(exception);
+            ag.FreeTemp(extracted);
+
             // Codegen becomes:
             //     extracted = PythonOps.SetCurrentException(exception)
             //      < dynamic exception analysis >
@@ -379,12 +379,13 @@ namespace IronPython.Compiler.Ast {
         /// <summary>
         /// Surrounds the body of an except block w/ the appropriate code for maintaining the traceback.
         /// </summary>
-        private static MSAst.Expression GetTracebackHeader(AstGenerator ag, MSAst.VariableExpression exception, MSAst.Expression body) {
+        private static MSAst.Expression GetTracebackHeader(SourceSpan span, AstGenerator ag, MSAst.VariableExpression exception, MSAst.Expression body) {
             // we are about to enter a except block.  We need to emit the line number update so we track
             // the line that the exception was thrown from.  We then need to build exc_info() so that
             // it's available.  Finally we clear the list of dynamic stack frames because they've all
             // been associated with this exception.
-            return Ast.Block(
+            return AstUtils.Block(
+                span,
                 ag.GetLineNumberUpdateExpression(false),    // pass false so if we take another exception we'll add it to the frame list
                 Ast.Call(
                     AstGenerator.GetHelperMethod("BuildExceptionInfo"),
@@ -413,6 +414,12 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return false;
+            }
         }
     }
 

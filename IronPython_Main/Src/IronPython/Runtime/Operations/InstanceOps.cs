@@ -14,21 +14,19 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Collections;
-using System.Reflection;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -88,7 +86,7 @@ namespace IronPython.Runtime.Operations {
         internal static BuiltinFunction New {
             get {
                 if (_New == null) {
-                    _New = (BuiltinFunction)PythonTypeOps.GetSlot(TypeInfo.GetExtensionMemberGroup(typeof(object), typeof(ObjectOps).GetMember("__new__")));
+                    _New = (BuiltinFunction)PythonTypeOps.GetSlot(TypeInfo.GetExtensionMemberGroup(typeof(object), typeof(ObjectOps).GetMember("__new__")), "__new__");
                 }
                 return _New;
             }
@@ -120,31 +118,23 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static object OverloadedNewBasic(CodeContext context, BuiltinFunction overloads\u00F8, PythonType type\u00F8, params object[] args\u00F8) {
+        public static object OverloadedNewBasic(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, BuiltinFunction overloads\u00F8, PythonType type\u00F8, params object[] args\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
             if (args\u00F8 == null) args\u00F8 = new object[1];
-            return overloads\u00F8.CallHelper(context, args\u00F8, ArrayUtils.EmptyStrings);
+            return overloads\u00F8.Call(context, storage, null, args\u00F8);
         }
 
         public static object OverloadedNewKW(CodeContext context, BuiltinFunction overloads\u00F8, PythonType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
-
-            object[] finalArgs;
-            string[] names;
-            GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out finalArgs, out names);
-
-            return overloads\u00F8.CallHelper(context, finalArgs, names, null);
+            
+            return overloads\u00F8.Call(context, null, null, ArrayUtils.EmptyObjects, kwargs\u00F8);
         }
 
         public static object OverloadedNewClsKW(CodeContext context, BuiltinFunction overloads\u00F8, PythonType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
             if (args\u00F8 == null) args\u00F8 = new object[1];
 
-            object[] finalArgs;
-            string[] names;
-            GetKeywordArgs(kwargs\u00F8, args\u00F8, out finalArgs, out names);
-
-            return overloads\u00F8.CallHelper(context, finalArgs, names, null);
+            return overloads\u00F8.Call(context, null, null, args\u00F8, kwargs\u00F8);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args\u00F8")]
@@ -275,7 +265,7 @@ namespace IronPython.Runtime.Operations {
         [return: MaybeNotImplemented]
         public static object ValueEqualsMethod<T>([NotNull]T x, object y) 
             where T : IValueEquality {
-            if (!(y is T)) return PythonOps.NotImplemented;
+            if (!(y is T)) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
@@ -283,7 +273,7 @@ namespace IronPython.Runtime.Operations {
         [return: MaybeNotImplemented]
         public static object ValueNotEqualsMethod<T>([NotNull]T x, object y) 
             where T : IValueEquality {
-            if (!(y is T)) return PythonOps.NotImplemented;
+            if (!(y is T)) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(!x.ValueEquals(y));
         }
@@ -291,7 +281,7 @@ namespace IronPython.Runtime.Operations {
         [return: MaybeNotImplemented]
         public static object ValueEqualsMethod<T>(object y, [NotNull]T x)
             where T : IValueEquality {
-            if (!(y is T)) return PythonOps.NotImplemented;
+            if (!(y is T)) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
@@ -299,7 +289,7 @@ namespace IronPython.Runtime.Operations {
         [return: MaybeNotImplemented]
         public static object ValueNotEqualsMethod<T>(object y, [NotNull]T x)
             where T : IValueEquality {
-            if (!(y is T)) return PythonOps.NotImplemented;
+            if (!(y is T)) return NotImplementedType.Value;
 
             return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
@@ -320,7 +310,74 @@ namespace IronPython.Runtime.Operations {
         public static bool NotEqualsMethod(object x, object y) {
             return !x.Equals(y);
         }
-        
+
+        /// <summary>
+        /// Provides the implementation of __enter__ for objects which implement IDisposable.
+        /// </summary>
+        public static object EnterMethod(IDisposable/*!*/ self) {
+            return self;
+        }
+
+        /// <summary>
+        /// Provides the implementation of __exit__ for objects which implement IDisposable.
+        /// </summary>
+        public static void ExitMethod(IDisposable/*!*/ self, object exc_type, object exc_value, object exc_back) {
+            self.Dispose();
+        }
+
+        /// <summary>
+        /// Implements __contains__ for types implementing IEnumerable of T.
+        /// </summary>
+        public static bool ContainsGenericMethod<T>(IEnumerable<T> enumerable, T value) {
+            foreach(T item in enumerable) {
+                if (PythonOps.EqualRetBool(item, value)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Implements __contains__ for types implementing IEnumerable
+        /// </summary>
+        public static bool ContainsMethod(IEnumerable enumerable, object value) {
+            IEnumerator ie = enumerable.GetEnumerator();
+            while (ie.MoveNext()) {
+                if (PythonOps.EqualRetBool(ie.Current, value)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Implements __contains__ for types implementing IEnumerable of T.
+        /// </summary>
+        public static bool ContainsGenericMethodIEnumerator<T>(IEnumerator<T> enumerator, T value) {
+            while (enumerator.MoveNext()) {
+                if (PythonOps.EqualRetBool(enumerator.Current, value)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Implements __contains__ for types implementing IEnumerable
+        /// </summary>
+        public static bool ContainsMethodIEnumerator(IEnumerator enumerator, object value) {
+            while (enumerator.MoveNext()) {
+                if (PythonOps.EqualRetBool(enumerator.Current, value)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static object GetMethod(CodeContext context, object self, object instance, [Optional]object typeContext) {
             PythonTypeSlot dts = self as PythonTypeSlot;
             PythonType dt = typeContext as PythonType;
@@ -359,7 +416,7 @@ namespace IronPython.Runtime.Operations {
             for (int i = 0; i < methods.Length; i++) {
                 methods[i] = typeof(InstanceOps).GetMethod(methodNames[i]);
             }
-            return BuiltinFunction.MakeMethod(name, methods, typeof(object), FunctionType.Function | FunctionType.AlwaysVisible | FunctionType.OpsFunction);
+            return BuiltinFunction.MakeMethod(name, methods, typeof(object), FunctionType.Function | FunctionType.AlwaysVisible);
         }
 
         private static void GetKeywordArgs(IAttributesCollection dict, object[] args, out object[] finalArgs, out string[] names) {

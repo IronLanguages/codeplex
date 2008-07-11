@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
+using System.Scripting;
 
 namespace IronPython.Compiler {
 

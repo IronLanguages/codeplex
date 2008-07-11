@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Threading;
 
 namespace IronPython.Runtime.Types {
-    public sealed class CustomOldClassDictionaryStorage : SymbolIdDictionaryStorage {
+    internal sealed class CustomOldClassDictionaryStorage : SymbolIdDictionaryStorage {
         private int _keyVersion;
         private SymbolId[] _extraKeys;
         private object[] _values;
@@ -44,6 +44,18 @@ namespace IronPython.Runtime.Types {
             }
 
             base.Add(key, value);
+        }
+
+        public override void AddNoLock(object key, object value) {
+            Debug.Assert(!(key is SymbolId));
+
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                _values[ikey] = value;
+                return;
+            }
+
+            base.AddNoLock(key, value);
         }
 
         public override void Add(SymbolId key, object value) {

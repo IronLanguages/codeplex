@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -138,7 +138,7 @@ def test_elapsed_event_args():
     Assert(COUNT > 0)
    
     #Let checkEventArgs take care of verification
-    AreEqual(EVENT_ERRORS, [])    
+    AreEqual(EVENT_ERRORS, [])
     
 
 def test_elapsed_event_handler():
@@ -152,14 +152,15 @@ def test_elapsed_event_handler():
     bad_list = [bad0, bad1, bad3]
     
     for bad_func in bad_list:
-        AssertError(TypeError, System.Timers.ElapsedEventHandler, bad0)
+        eeh = System.Timers.ElapsedEventHandler(bad_func)
+        AssertError(TypeError, eeh, "Sender", None)
 
     #################################
-    def good2(a, b): 
+    def good2(a, b):
         global COUNT
         COUNT = COUNT + 1
         
-    def goodDefault1(a, b=2): 
+    def goodDefault1(a, b=2):
         global COUNT
         COUNT = COUNT + 1
         
@@ -167,15 +168,15 @@ def test_elapsed_event_handler():
         global COUNT
         COUNT = COUNT + 1
         
-    def goodAny(*a, **b): 
+    def goodAny(*a, **b):
         global COUNT
         COUNT = COUNT + 1
         
     good_list = [good2, goodDefault1, goodDefault2, goodAny]
     
     for good_func in good_list:
-        timer_helper(num_handlers=0, 
-                     sleep_time=4, 
+        timer_helper(num_handlers=0,
+                     sleep_time=4,
                      event_handlers=[System.Timers.ElapsedEventHandler(good_func)])
         
     timer_helper(num_handlers=0, sleep_time=3, event_handlers=good_list)

@@ -13,19 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using System.Diagnostics;
-using System.Threading;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Ast;
-using System.Reflection.Emit;
 using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Scripting.Utils;
+using System.Threading;
 
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
 
     public sealed class Snippets {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
@@ -45,7 +39,6 @@ namespace Microsoft.Scripting.Generation {
         private string _snippetsDirectory;
         private string _snippetsFileName;
         private bool _saveSnippets;
-        private bool _ilDebug;
         
         /// <summary>
         /// Directory where snippet assembly will be saved if SaveSnippets is set.
@@ -78,18 +71,6 @@ namespace Microsoft.Scripting.Generation {
                 ContractUtils.Requires(!_optionsFrozen);
                 _saveSnippets = value; 
             }
-        }
-
-        /// <summary>
-        /// Write IL to a text file as it is generated.
-        /// This flag can be changed any time.
-        /// </summary>
-        public bool ILDebug {
-            get { return _ilDebug; }
-            set { _ilDebug = value; }
-        }
-
-        private Snippets() {
         }
 
         private AssemblyGen/*!*/ GetAssembly(bool emitSymbols, bool isUnsafe) {
@@ -188,14 +169,13 @@ namespace Microsoft.Scripting.Generation {
             ContractUtils.RequiresNotNull(returnType, "returnType");
             ContractUtils.RequiresNotNullItems(parameterTypes, "parameterTypes");
 
-            AssemblyGen assembly = GetAssembly(isDebuggable, false);
-
             if (_saveSnippets) {
+                AssemblyGen assembly = GetAssembly(isDebuggable, false);
                 TypeBuilder tb = assembly.DefinePublicType(methodName, typeof(object), false);
                 MethodBuilder mb = tb.DefineMethod(methodName, CompilerHelpers.PublicStatic, returnType, parameterTypes);
                 return new DynamicILGenType(tb, mb, mb.GetILGenerator());
             } else {
-                DynamicMethod dm = ReflectionUtils.CreateDynamicMethod(methodName, returnType, parameterTypes, assembly.ModuleBuilder);
+                DynamicMethod dm = ReflectionUtils.CreateDynamicMethod(methodName, returnType, parameterTypes);
                 return new DynamicILGenMethod(dm, dm.GetILGenerator());
             }
         }
@@ -204,26 +184,33 @@ namespace Microsoft.Scripting.Generation {
             return GetAssembly(false, false).DefinePublicType(name, parent, false);
         }
 
-        internal TypeGen/*!*/ DefineUnsafeType(string/*!*/ name, Type/*!*/ parent) {
-            return DefineType(name, parent, false, null, true);
+        public TypeBuilder/*!*/ DefineUnsafeType(string/*!*/ name, Type/*!*/ parent) {
+            return GetAssembly(false, true).DefinePublicType(name, parent, false);
         }
 
-        internal TypeGen/*!*/ DefineType(string/*!*/ name, Type/*!*/ parent, bool preserveName, SourceUnit source, bool isUnsafe) {
-            bool debugMode = source != null && source.LanguageContext.DomainManager.GlobalOptions.DebugMode;
-            bool emitSymbols = debugMode && source.HasPath;
+        internal TypeGen/*!*/ DefineUnsafeTypeGen(string/*!*/ name, Type/*!*/ parent) {
+            return DefineType(name, parent, false, true, false);
+        }
 
-            AssemblyGen ag = GetAssembly(emitSymbols, isUnsafe);
+        internal TypeGen/*!*/ DefineType(string/*!*/ name, Type/*!*/ parent, bool preserveName, bool isUnsafe, bool emitDebugSymbols) {
+            AssemblyGen ag = GetAssembly(emitDebugSymbols, isUnsafe);
             TypeBuilder tb = ag.DefinePublicType(name, parent, preserveName);
             return new TypeGen(ag, tb);
         }
 
         internal DynamicMethod CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
-            // We don't care which assembly we get, all we need is to tag the dynamic method on it
-            // and even that only sometimes ...
-            AssemblyGen assembly = GetAssembly(false, false);
             string uniqueName = name + "##" + Interlocked.Increment(ref _methodNameIndex);
+            return ReflectionUtils.CreateDynamicMethod(uniqueName, returnType, parameterTypes);
+        }
 
-            return ReflectionUtils.CreateDynamicMethod(uniqueName, returnType, parameterTypes, assembly.ModuleBuilder);
+        internal TypeBuilder DefineDelegateType(string name) {
+            AssemblyGen assembly = GetAssembly(false, false);
+            return assembly.DefineType(
+                name,
+                typeof(MulticastDelegate),
+                TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.AutoClass,
+                false
+            );
         }
     }
 }

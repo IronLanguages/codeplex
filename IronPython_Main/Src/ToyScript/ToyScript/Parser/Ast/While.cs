@@ -13,12 +13,11 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Expression;
 
     class While : Statement {
         private readonly Expression _test;
@@ -31,17 +30,13 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            return Ast.While(
-                Span,
-                _test.End,
-                Ast.Action.ConvertTo(
-                    tg.Binder,
-                    typeof(bool),
-                    ConversionResultKind.ExplicitCast,
-                    _test.Generate(tg)
-                ),
+            return AstUtils.While(
+                tg.ConvertTo(typeof(bool), _test.Generate(tg)),
                 _body.Generate(tg),
-                null
+                null,
+                null,
+                _test.End,
+                Span
             );
         }
     }

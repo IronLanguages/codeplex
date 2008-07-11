@@ -14,11 +14,10 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Math;
-using System.Collections;
 
 namespace IronPythonTest.BinderTest {
     public interface I { }

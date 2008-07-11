@@ -36,7 +36,7 @@ NOTES:
 from sys import argv
 import gc
 import nt
-from System.Diagnostics import Process
+from clr_helpers import Process
 
 CPY_DIR = argv[1]  #E.g., C:\Python25
 

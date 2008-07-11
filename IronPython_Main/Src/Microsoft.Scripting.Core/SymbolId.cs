@@ -13,15 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Text;
 using System.Runtime.Serialization;
-using System.Diagnostics;
+using System.Scripting.Utils;
 using System.Security.Permissions;
-using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     [Serializable]
     public struct SymbolId : ISerializable, IComparable, IComparable<SymbolId>, IEquatable<SymbolId> {
         private readonly int _id;

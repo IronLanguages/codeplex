@@ -13,25 +13,22 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     public sealed class TryStatementBuilder {
+        private readonly List<CatchBlock> _catchBlocks = new List<CatchBlock>();
         private Expression _try;
-        private List<CatchBlock> _catchBlocks;
-        private Expression _finally;
+        private Expression _finally, _fault;
         private bool _skipNext;
-        private SourceSpan _span;
-        private SourceLocation _header;
+        private Annotations _annotations;
 
-        internal TryStatementBuilder(SourceSpan span, SourceLocation bodyLocation, Expression body) {
+        internal TryStatementBuilder(Annotations annotations, Expression body) {
             ContractUtils.RequiresNotNull(body, "body");
 
             _try = body;
-            _header = bodyLocation;
-            _span = span;
+            _annotations = annotations;
         }
 
         public TryStatementBuilder Catch(Type type, Expression body) {
@@ -57,10 +54,6 @@ namespace Microsoft.Scripting.Ast {
 
             if (_finally != null) {
                 throw new InvalidOperationException("Finally already defined");
-            }
-
-            if (_catchBlocks == null) {
-                _catchBlocks = new List<CatchBlock>();
             }
 
             _catchBlocks.Add(Expression.Catch(type, holder, body));
@@ -89,11 +82,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(condition, "condition");
             ContractUtils.RequiresNotNull(body, "body");
 
-            if (_catchBlocks == null) {
-                _catchBlocks = new List<CatchBlock>();
-            }
-
-            _catchBlocks.Add(Expression.Catch(type, holder, Expression.IfThenElse(condition, body, Expression.Rethrow())));
+            _catchBlocks.Add(Expression.Catch(type, holder, body, condition));
             return this;
         }
 
@@ -116,9 +105,29 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(body, "body");
             if (_finally != null) {
                 throw new InvalidOperationException("Finally already defined");
+            } else if (_fault != null) {
+                throw new InvalidOperationException("can't have fault and finally");
             }
 
             _finally = body;
+            return this;
+        }
+
+        public TryStatementBuilder Fault(params Expression/*!*/[]/*!*/ body) {
+            ContractUtils.RequiresNotNullItems(body, "body");
+
+            if (_finally != null) {
+                throw new InvalidOperationException("can't have fault and finally");
+            } else if (_fault != null) {
+                throw new InvalidOperationException("Fault already defined");
+            }
+
+            if (body.Length == 1) {
+                _fault = body[0];
+            } else {
+                _fault = Expression.Block(body);
+            }
+
             return this;
         }
 
@@ -134,56 +143,63 @@ namespace Microsoft.Scripting.Ast {
         public static TryStatement ToStatement(TryStatementBuilder builder) {
             ContractUtils.RequiresNotNull(builder, "builder");
             return new TryStatement(
-                Expression.Annotate(builder._span, builder._header),
+                builder._annotations,
                 builder._try,
-                (builder._catchBlocks != null) ? CollectionUtils.ToReadOnlyCollection(builder._catchBlocks.ToArray()) : null,
-                builder._finally
+                CollectionUtils.ToReadOnlyCollection(builder._catchBlocks.ToArray()),
+                builder._finally,
+                builder._fault
             );
         }
     }
 
     public partial class Expression {
+        public static TryStatementBuilder Try(Annotations annotations, params Expression[] body) {
+            return new TryStatementBuilder(annotations, Expression.Block(body));
+        }
 
         public static TryStatementBuilder Try(params Expression[] body) {
-            return new TryStatementBuilder(SourceSpan.None, SourceLocation.None, Expression.Block(body));
+            return Try(Annotations.Empty, Expression.Block(body));
         }
 
         public static TryStatementBuilder Try(Expression body) {
-            return new TryStatementBuilder(SourceSpan.None, SourceLocation.None, body);
+            return new TryStatementBuilder(Annotations.Empty, body);
         }
 
-        public static TryStatementBuilder Try(SourceSpan statementSpan, SourceLocation bodyLocation, Expression body) {
-            return new TryStatementBuilder(statementSpan, bodyLocation, body);
+        public static TryStatement TryFault(Expression body, Expression fault) {
+            return TryFault(body, fault, Annotations.Empty);
         }
 
-        public static TryStatementBuilder Try(SourceSpan span, SourceLocation location, params Expression[] body) {
-            return new TryStatementBuilder(span, location, Expression.Block(body));
-        }
-
-        public static TryStatement TryCatch(SourceSpan span, SourceLocation header, Expression body, params CatchBlock[] handlers) {
-            return TryCatchFinally(span, header, body, handlers, null);
+        public static TryStatement TryFault(Expression body, Expression fault, Annotations annotations) {
+            return new TryStatement(
+                annotations,
+                body,
+                DefaultReadOnlyCollection<CatchBlock>.Empty,
+                null, // finally
+                fault
+            );
         }
 
         public static TryStatement TryFinally(Expression body, Expression @finally) {
-            return TryCatchFinally(SourceSpan.None, SourceLocation.None, body, null, @finally);
+            return TryCatchFinally(body, null, @finally, null);
         }
-
-        public static TryStatement TryFinally(SourceSpan span, SourceLocation header, Expression body, Expression @finally) {
-            return TryCatchFinally(span, header, body, null, @finally);
-        }
-
+        
         public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally) {
+                return TryCatchFinally(body, handlers, @finally, null);
+        }
+
+        public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally, Expression fault) {
+            return TryCatchFinally(body, handlers, @finally, fault, Annotations.Empty);
+        }
+
+        public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally, Expression fault, Annotations annotations) {
             return new TryStatement(
-                Annotate(SourceSpan.None, SourceLocation.None),
-                body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
+                annotations,
+                body,
+                CollectionUtils.ToReadOnlyCollection(handlers),
+                @finally,
+                fault
             );
         }
 
-        public static TryStatement TryCatchFinally(SourceSpan span, SourceLocation header, Expression body, CatchBlock[] handlers, Expression @finally) {
-            return new TryStatement(
-                Annotate(span, header),
-                body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
-            );
-        }
     }
 }

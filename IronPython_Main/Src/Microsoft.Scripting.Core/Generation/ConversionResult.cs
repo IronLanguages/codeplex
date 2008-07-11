@@ -13,10 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
     /// <summary>
     /// Represents information about a failure to convert an argument from one
     /// type to another.

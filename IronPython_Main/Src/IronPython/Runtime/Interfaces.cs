@@ -13,16 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
+using System.Scripting.Runtime;
 
 namespace IronPython.Runtime {
 
@@ -32,7 +23,6 @@ namespace IronPython.Runtime {
 
     public interface ISequence {
         int __len__();
-        bool __contains__(object value);
 
         object this[int index] {
             get;

@@ -98,8 +98,8 @@ else:
         if not rowan_root:
             rowan_root = sys.prefix
             if is_cli:
-                if System.IO.Directory.Exists(path_combine(rowan_root, 'Src')):
-                    basePyDir = 'Src'
+                if System.IO.Directory.Exists(path_combine(rowan_root, r'..\..\Src')):
+                    basePyDir = r'..\..\Src'
 
         # get some directories and files
         ip_root             = path_combine(rowan_root, basePyDir)

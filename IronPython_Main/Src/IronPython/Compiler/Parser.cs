@@ -14,19 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.IO;
-using System.Diagnostics;
 using System.Collections.Generic;
-
-using IronPython.Runtime;
-using IronPython.Hosting;
-using IronPython.Runtime.Operations;
-
+using System.Diagnostics;
+using System.IO;
+using System.Scripting;
+using System.Scripting.Utils;
 using IronPython.Compiler.Ast;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Utils;
+using IronPython.Hosting;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting.Compilers;
 
 namespace IronPython.Compiler {
 
@@ -67,7 +64,7 @@ namespace IronPython.Compiler {
             ContractUtils.RequiresNotNull(errorSink, "errorSink");
             ContractUtils.RequiresNotNull(parserSink, "parserSink");
 
-            tokenizer.Errors = new TokenizerErrorSink(this);
+            tokenizer.ErrorSink = new TokenizerErrorSink(this);
 
             _tokenizer = tokenizer;
             _errors = errorSink;
@@ -404,7 +401,7 @@ namespace IronPython.Compiler {
             Statement[] stmts = l.ToArray();
 
             SuiteStatement ret = new SuiteStatement(stmts);
-            ret.SetLoc(SourceLocation.MinValue, GetEnd());
+            ret.SetLoc(_sourceUnit.MakeLocation(SourceLocation.MinValue), GetEnd());
             return new PythonAst(ret, makeModule, _languageFeatures, false);
         }
 
@@ -1877,9 +1874,14 @@ namespace IronPython.Compiler {
 
         private Expression FinishUnaryNegate() {
             // Special case to ensure that System.Int32.MinValue is an int and not a BigInteger
-            if (PeekToken().Kind == TokenKind.Constant && _tokenizer.TokenStringEquals("2147483648")) {
-                NextToken();
-                return new ConstantExpression(-2147483648);
+            if (PeekToken().Kind == TokenKind.Constant) {
+                string tokenString;
+                if (_tokenizer.TryGetTokenString(10, out tokenString)) {
+                    if (tokenString.Equals("2147483648") || tokenString.Equals("0x80000000") || tokenString.Equals("0X80000000")) {
+                        NextToken();
+                        return new ConstantExpression(-2147483648);
+                    }
+                }
             }
 
             return new UnaryExpression(PythonOperator.Negate, ParseFactor());
@@ -2021,7 +2023,7 @@ namespace IronPython.Compiler {
                 if (MaybeEat(TokenKind.Dot)) {
                     SourceLocation start = GetStart();
                     Eat(TokenKind.Dot); Eat(TokenKind.Dot);
-                    e = new ConstantExpression(PythonOps.Ellipsis);
+                    e = new ConstantExpression(Ellipsis.Value);
                     e.SetLoc(start, GetEnd());
                 } else if (MaybeEat(TokenKind.Colon)) {
                     e = FinishSlice(null, GetStart());

@@ -13,18 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
+using System.Scripting.Utils;
+using System.Text;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     public sealed class ConditionalExpression : Expression {
         private readonly Expression/*!*/ _test;
         private readonly Expression/*!*/ _true;
         private readonly Expression/*!*/ _false;
 
         internal ConditionalExpression(Annotations annotations, Expression/*!*/ test, Expression/*!*/ ifTrue, Expression/*!*/ ifFalse, Type/*!*/ type)
-            : base(annotations, AstNodeType.Conditional, type) {
+            : base(annotations, ExpressionType.Conditional, type) {
             _test = test;
             _true = ifTrue;
             _false = ifFalse;
@@ -41,24 +41,37 @@ namespace Microsoft.Scripting.Ast {
         public Expression IfFalse {
             get { return _false; }
         }
+
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            builder.Append("IIF(");
+            _test.BuildString(builder);
+            builder.Append(", ");
+            _true.BuildString(builder);
+            builder.Append(", ");
+            _false.BuildString(builder);
+            builder.Append(")");
+        }
     }
 
     public partial class Expression {
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) {
-            return Condition(Annotations.Empty, test, ifTrue, ifFalse);
+            return Condition(test, ifTrue, ifFalse, Annotations.Empty);
         }
 
-        public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression ifTrue, Expression ifFalse) {
-            return Condition(Annotate(span), test, ifTrue, ifFalse);
-        }
-
-        public static ConditionalExpression Condition(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse) {
+        //CONFORMING
+        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Annotations annotations) {
             ContractUtils.RequiresNotNull(test, "test");
             ContractUtils.RequiresNotNull(ifTrue, "ifTrue");
             ContractUtils.RequiresNotNull(ifFalse, "ifFalse");
 
-            ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be bool");
-            ContractUtils.Requires(ifTrue.Type == ifFalse.Type, "ifTrue", "Types must match");
+            if (test.Type != typeof(bool))
+                throw Error.ArgumentMustBeBoolean();
+
+            if (ifTrue.Type != ifFalse.Type){
+                throw Error.ArgumentTypesMustMatch();
+            }
 
             return new ConditionalExpression(annotations, test, ifTrue, ifFalse, ifTrue.Type);
         }

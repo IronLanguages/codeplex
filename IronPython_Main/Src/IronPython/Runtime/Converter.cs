@@ -18,17 +18,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
 
@@ -81,7 +81,7 @@ namespace IronPython.Runtime {
         }
 
         private static DynamicSite<object, T> MakeConvertSite<T>(ConversionResultKind kind) {
-            return DynamicSite<object, T>.Create(ConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(T), kind));
+            return DynamicSite<object, T>.Create(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(T), kind));
         }
 
         private static DynamicSite<object, object> MakeImplicitTrySite<T>() {
@@ -93,7 +93,7 @@ namespace IronPython.Runtime {
         }
 
         private static DynamicSite<object, object> MakeTrySite<T>(ConversionResultKind kind) {
-            return DynamicSite<object, object>.Create(ConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(T), kind));
+            return DynamicSite<object, object>.Create(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(T), kind));
         }
 
         #endregion
@@ -275,7 +275,7 @@ namespace IronPython.Runtime {
             DynamicSite<object, object> site;
             lock (_siteDict) {
                 if (!_siteDict.TryGetValue(to, out site)) {
-                    _siteDict[to] = site = DynamicSite<object, object>.Create(ConvertToAction.Make(DefaultContext.DefaultPythonBinder, to, ConversionResultKind.ExplicitCast));
+                    _siteDict[to] = site = DynamicSite<object, object>.Create(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, to, ConversionResultKind.ExplicitCast));
                 }
             }
 
@@ -423,10 +423,8 @@ namespace IronPython.Runtime {
         private static readonly Type IListOfTType = typeof(System.Collections.Generic.IList<>);
         private static readonly Type ListOfTType = typeof(System.Collections.Generic.List<>);
         private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<,>);
-        private static readonly Type ListWrapperForIListType = typeof(ListWrapperForIList<>);
         private static readonly Type IEnumerableOfTType = typeof(System.Collections.Generic.IEnumerable<>);
         private static readonly Type IEnumerableOfTWrapperType = typeof(IEnumerableOfTWrapper<>);
-        private static readonly Type DictWrapperForIDictType = typeof(DictWrapperForIDict<,>);
         private static readonly Type IListOfObjectType = typeof(System.Collections.Generic.IList<object>);
         private static readonly Type IEnumerableOfObjectType = typeof(IEnumerable<object>);
         private static readonly Type IDictionaryOfObjectType = typeof(System.Collections.Generic.IDictionary<object, object>);
@@ -479,7 +477,7 @@ namespace IronPython.Runtime {
 
         public static object ConvertToDelegate(object value, Type to) {
             if (value == null) return null;
-            return RuntimeHelpers.GetDelegate(value, to);
+            return BinderOps.GetDelegate(DefaultContext.DefaultCLS, value, to);
         }
 
 

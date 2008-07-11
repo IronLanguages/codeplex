@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -62,7 +62,7 @@ else:
 def f3(): exec(code)
 
 always_true()
-try: 
+try:
     import sys
     save = sys.path[:]
     if is_silverlight==False:
@@ -77,7 +77,7 @@ try:
             always_true()
 
 
-    ## test import from file    
+    ## test import from file
     for code in (code0, code2):
         if is_silverlight:
             break
@@ -89,7 +89,7 @@ try:
         reloaded_temp_future = reload(temp_future)
         always_true()
     
-finally: 
+finally:
     sys.path = save
     if is_silverlight==False:
         delete_files(tempfile)

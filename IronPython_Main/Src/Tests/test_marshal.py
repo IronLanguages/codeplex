@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -25,23 +25,23 @@ if is_silverlight==False:
 # a couple of lines are disabled due to 1032
 
 def test_functionality():
-    objects = [ None, 
-                True, False, 
-                '', 'a', 'abc', 
-                -3, 0, 10, 
-                254, -255, 256, 257, 
-                65534, 65535, -65536,                
+    objects = [ None,
+                True, False,
+                '', 'a', 'abc',
+                -3, 0, 10,
+                254, -255, 256, 257,
+                65534, 65535, -65536,
                 3.1415926,
                 
-                0L, 
+                0L,
                 -1234567890123456789,
-                [], 
+                [],
                 [ [] ], [ [], [] ],
                 ['abc'], [1, 2],
-                tuple(), 
+                tuple(),
                 (), ( (), (), ),
                 (1,), (1,2,3),
-                {}, 
+                {},
                 { 'abc' : {} },
                 {1:2}, {1:2, 4:'4', 5:None},
                 0+1j, 2-3.23j,
@@ -56,20 +56,20 @@ def test_functionality():
     if is_cli or is_silverlight:
         import System
         objects.extend(
-            [ 
+            [
             System.Single.Parse('-2345678'),
-            System.Int64.Parse('2345678'), 
+            System.Int64.Parse('2345678'),
             
             ])
 
     # dumps / loads
-    for x in objects: 
+    for x in objects:
         s = marshal.dumps(x)
-        x2 = marshal.loads(s)        
+        x2 = marshal.loads(s)
         AreEqual(x, x2)
         
         s2 = marshal.dumps(x2)
-        AreEqual(s, s2)  
+        AreEqual(s, s2)
 
     # dump / load
     for x in objects:
@@ -82,7 +82,7 @@ def test_functionality():
         
         f = file(tfn, 'rb')
         x2 = marshal.load(f)
-        f.close()        
+        f.close()
         AreEqual(x, x2)
     
 def test_buffer():
@@ -114,4 +114,4 @@ def test_negative():
     class my: pass
     AssertError(ValueError, marshal.dumps, my())  ## unmarshallable object
     
-run_test(__name__)    
+run_test(__name__)

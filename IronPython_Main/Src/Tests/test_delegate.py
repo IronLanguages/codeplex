@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -70,9 +70,9 @@ def Handler(self, args):
 
 # check the methods w/ object sender, EventArgs sigs first...
 glblSelf = 0
-for x in [(IronPythonTest.DelegateTest.StaticEvent, IronPythonTest.DelegateTest.FireStatic), 
-           (dlgTst.Event, dlgTst.FireInstance), 
-           (IronPythonTest.DelegateTest.StaticGenericEvent, IronPythonTest.DelegateTest.FireGenericStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticEvent, IronPythonTest.DelegateTest.FireStatic),
+           (dlgTst.Event, dlgTst.FireInstance),
+           (IronPythonTest.DelegateTest.StaticGenericEvent, IronPythonTest.DelegateTest.FireGenericStatic),
            (dlgTst.GenericEvent, dlgTst.FireGeneric)]:
     event, fire = x[0], x[1]
     
@@ -95,7 +95,7 @@ def ParamsHandler(self, args):
     AreEqual(tuple(args), tuple(range(glblArgs)))
     handlerCalled = True
 
-for x in [(IronPythonTest.DelegateTest.StaticParamsEvent, IronPythonTest.DelegateTest.FireParamsStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticParamsEvent, IronPythonTest.DelegateTest.FireParamsStatic),
            (dlgTst.ParamsEvent, dlgTst.FireParams)]:
     event, fire = x[0], x[1]
     
@@ -124,7 +124,7 @@ def BigParamsHandler(self, a, b, c, d, args):
     AreEqual(d, 4)
     handlerCalled = True
 
-for x in [(IronPythonTest.DelegateTest.StaticBigParamsEvent, IronPythonTest.DelegateTest.FireBigParamsStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticBigParamsEvent, IronPythonTest.DelegateTest.FireBigParamsStatic),
            (dlgTst.BigParamsEvent, dlgTst.FireBigParams)]:
     event, fire = x[0], x[1]
     
@@ -140,7 +140,7 @@ for x in [(IronPythonTest.DelegateTest.StaticBigParamsEvent, IronPythonTest.Dele
         
         AreEqual(handlerCalled, True)
 
-    event -= BigParamsHandler        
+    event -= BigParamsHandler
 
 # out param
 def OutHandler(sender, ret):
@@ -151,7 +151,7 @@ def OutHandler(sender, ret):
 
     ret.Value = 23
     
-for x in [(IronPythonTest.DelegateTest.StaticOutEvent, IronPythonTest.DelegateTest.FireOutStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticOutEvent, IronPythonTest.DelegateTest.FireOutStatic),
            (dlgTst.OutEvent, dlgTst.FireOut)]:
     event, fire = x[0], x[1]
     
@@ -177,7 +177,7 @@ def RefHandler(sender, refArg):
     
     refArg.Value = 23
     
-for x in [(IronPythonTest.DelegateTest.StaticRefEvent, IronPythonTest.DelegateTest.FireRefStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticRefEvent, IronPythonTest.DelegateTest.FireRefStatic),
            (dlgTst.RefEvent, dlgTst.FireRef)]:
     event, fire = x[0], x[1]
     
@@ -204,7 +204,7 @@ def OutHandler(sender, ret):
     
     return "23"
     
-for x in [(IronPythonTest.DelegateTest.StaticOutReturnEvent, IronPythonTest.DelegateTest.FireOutReturnStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticOutReturnEvent, IronPythonTest.DelegateTest.FireOutReturnStatic),
            (dlgTst.OutReturnEvent, dlgTst.FireOutReturn)]:
     event, fire = x[0], x[1]
     
@@ -231,7 +231,7 @@ def RefHandler(sender, refArg):
     refArg.Value = 42
     return 23
     
-for x in [(IronPythonTest.DelegateTest.StaticRefReturnEvent, IronPythonTest.DelegateTest.FireRefReturnStatic), 
+for x in [(IronPythonTest.DelegateTest.StaticRefReturnEvent, IronPythonTest.DelegateTest.FireRefReturnStatic),
            (dlgTst.RefReturnEvent, dlgTst.FireRefReturn)]:
     event, fire = x[0], x[1]
     
@@ -311,10 +311,10 @@ if not is_silverlight:
 if not is_silverlight:
     # parameterized w/ self & extra arg, should throw
     try:
-        t = Thread(ParameterizedThreadStart(foo.baz))
+        pts = ParameterizedThreadStart(foo.baz)
+        pts("Hello")
         AssertUnreachable()
     except TypeError: pass
-
 
 # SuperDelegate Tests
 
@@ -555,7 +555,7 @@ def test_event_handler_add_removal_sequence():
 
     RunSequence(ls)
 
-# verify delegates are calling 
+# verify delegates are calling
 
 myfuncCalled = False
 passedarg = None
@@ -574,13 +574,13 @@ def test_handler_get_invoked():
             global myfuncCalled
             myfuncCalled = True
         def myotherfunc(self, arg):
-            global myfuncCalled,passedarg 
+            global myfuncCalled,passedarg
             myfuncCalled = True
             passedarg = arg
 
     class myoldclass:
         def myfunc(self):
-            global myfuncCalled 
+            global myfuncCalled
             myfuncCalled = True
         def myotherfunc(self, arg):
             global myfuncCalled, passedarg
@@ -623,11 +623,11 @@ def test_error_message():
     def func(a, b, c, d, e): pass
     import System
     try:
-        a = Thread.__new__.Overloads[(ThreadStart)](System.Threading.Thread, func)
+        ts =  ThreadStart(func)
+        ts()
         AssertUnreachable()
-    except TypeError, e:
-        Assert(e.message.find('(expected 0 args, target takes 5)') != -1, e.message)
-
+    except TypeError:
+        pass
 
 called = False
 def test_python_code_as_event_handler():
@@ -649,7 +649,7 @@ def test_python_code_as_event_handler():
     AreEqual(called, True)
 
     called = False
-    def myhandler(*args): 
+    def myhandler(*args):
         global called
         called = True
         AreEqual(args[0], 'abc')
@@ -709,17 +709,17 @@ def test_event_lifetime():
         # wire up an event w/ a circular reference
         # back to the object, ensure the event
         # is delivered
-        def foo(): 
+        def foo():
             global called
             called += 1
-            
+
         foo.abc = a
         a.InstanceTest += foo
         
         a.CallInstance()
         AreEqual(called, 1)
         
-        ret_val = _weakref.ref(foo)       
+        ret_val = _weakref.ref(foo)
         #Assert(hasattr(ret_val, "abc")) #BUG
         keep_alive(foo)
         
@@ -733,7 +733,7 @@ def test_event_lifetime():
         AreEqual(called, 2)
         
         return ret_val
-    
+
     func_ref = test_runner()
 
     # now all references are dead, the function should be collectible
@@ -756,7 +756,7 @@ def test_reflected_event_ops():
     AreEqual(str(IronPythonTest.Events.StaticTest.Event),
              "<event# StaticTest on Events>")
     
-    #__set__, __delete__    
+    #__set__, __delete__
     t_list = [  IronPythonTest.Events.StaticTest.Event,
                 IronPythonTest.Events().InstanceTest.Event,
                 ]
@@ -768,16 +768,16 @@ def test_reflected_event_ops():
                         inst, val)
                                 
             AssertError(AttributeError,
-                        stuff.__delete__, 
+                        stuff.__delete__,
                         inst)
                     
-    AssertError(AttributeError,  
+    AssertError(AttributeError,
                 IronPythonTest.Events.StaticTest.Event.__set__,
                 None, IronPythonTest.Events().InstanceTest)
                 
-    AssertError(AttributeError,  
+    AssertError(AttributeError,
                 IronPythonTest.Events.StaticTest.Event.__delete__,
-                IronPythonTest.Events().InstanceTest)                                   
+                IronPythonTest.Events().InstanceTest)
                     
     for stuff in [ None, 1, "abc"]:
         #Just ensure it doesn't throw

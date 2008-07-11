@@ -14,21 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections;
-using System.Threading;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
+using System.Scripting.Runtime;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
-[assembly: PythonExtensionType(typeof(bool), typeof(BoolOps))]
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
 
@@ -89,7 +77,7 @@ namespace IronPython.Runtime.Operations {
             return Int32Ops.ExclusiveOr(x ? 1 : 0, y);
         }
 
-        public static string __repr__(bool self) {
+        public static string/*!*/ __repr__(bool self) {
             return self ? "True" : "False";
         }
 

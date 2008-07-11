@@ -16,21 +16,14 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace IronPython.Runtime {
 
     /// <summary>
     /// Marks a member as being hidden from Python code.
     /// </summary>
-    [AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Event | AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     internal class PythonHiddenAttribute : Attribute {
     }
     
@@ -44,49 +37,7 @@ namespace IronPython.Runtime {
     public class MaybeNotImplementedAttribute : Attribute {
     }
 
-    /// <summary>
-    /// PythonVersionAttribute is used to decorate methods in the engine with the
-    /// Python version starting with which they are present
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
-    public class PythonVersionAttribute : Attribute {
-
-        private readonly Version version;
-
-        /// <summary>
-        /// Creates a new PythonVersionAttribute that specifies the minimum Python version required for
-        /// a feature to be exposed.
-        /// </summary>
-        public PythonVersionAttribute(int major, int minor) {
-            this.version = new Version(major, minor);
-        }
-
-        /// <summary>
-        /// Gets the minimum version for which this feature can be applied
-        /// </summary>
-        public Version Version {
-            get { return version; }
-        }
-
-        public int Major {
-            get {
-                return version.Major;
-            }
-        }
-
-        public int Minor {
-            get {
-                return version.Minor;
-            }
-        }
-
-        public static bool HasVersion25(ICustomAttributeProvider provider) {
-            Debug.Assert(provider != null);
-            
-            object[] attribute = provider.GetCustomAttributes(typeof(PythonVersionAttribute), false);
-            return attribute.Length == 1 && ((PythonVersionAttribute)attribute[0]).Version == new Version(2, 5);
-        }
-    }
+    
 
     /// <summary>
     /// New version of PythonTypeAttribute.  Marks a type as being a PythonType for purposes of member lookup,

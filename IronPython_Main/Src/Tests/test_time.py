@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -36,7 +36,7 @@ def test_strftime():
 
 def test_strptime():
     import time
-    d = time.strptime("July 3, 2006 At 0724 GMT", "%B %d, %Y At %H%M GMT") 
+    d = time.strptime("July 3, 2006 At 0724 GMT", "%B %d, %Y At %H%M GMT")
     AreEqual(d[0], 2006)
     AreEqual(d[1], 7)
     AreEqual(d[2], 3)
@@ -58,10 +58,10 @@ def test_strptime():
     
 #Skip under silverlight because we cannot determine whether the AMD processor bug applies
 #here or not.
-@skip("silverlight")
+@skip("silverlight win32")
 def test_sleep():
-    #The QueryPerformanceCounter() system  call is broken in XP and 2K3 (see 
-    #http://channel9.msdn.com/ShowPost.aspx?PostID=156175) for 
+    #The QueryPerformanceCounter() system  call is broken in XP and 2K3 (see
+    #http://channel9.msdn.com/ShowPost.aspx?PostID=156175) for
     #certain AMD64 multi-proc machines.
     #This means that randomly y can end up being less than x.
     if get_environ_variable("PROCESSOR_REVISION")=="0508" and get_environ_variable("PROCESSOR_LEVEL")=="15":

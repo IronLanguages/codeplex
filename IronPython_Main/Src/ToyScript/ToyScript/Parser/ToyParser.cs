@@ -15,19 +15,16 @@
 
 using System;
 using System.Collections.Generic;
-
-using ToyScript.Runtime;
+using System.Scripting;
 using ToyScript.Parser.Ast;
-
-using Microsoft.Scripting;
 
 namespace ToyScript.Parser {
     class ToyParser {
         private ToyTokenizer _tokenizer;
         private Token _nextToken;
 
-        public ToyParser(string text) {
-            _tokenizer = new ToyTokenizer(text);
+        public ToyParser(SourceUnit source) {
+            _tokenizer = new ToyTokenizer(source);
             _nextToken = _tokenizer.Next();
         }
 

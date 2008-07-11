@@ -16,15 +16,15 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Runtime;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using System.Security;
 
 [assembly: PythonModule("sys", typeof(IronPython.Runtime.SysModule))]
 namespace IronPython.Runtime {
@@ -34,6 +34,18 @@ namespace IronPython.Runtime {
         public static readonly string byteorder = BitConverter.IsLittleEndian ? "little" : "big";
         // builtin_module_names is set by PythonContext and updated on reload
         public const string copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
+
+        static SysModule() {
+#if SILVERLIGHT
+            prefix = String.Empty;
+#else
+            try {
+                prefix = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            } catch (SecurityException) {
+                prefix = String.Empty;
+            }
+#endif
+        }
 
         public static void displayhook(object value) {
             throw PythonOps.NotImplementedError("IronPython does not support sys.displayhook");
@@ -113,13 +125,7 @@ namespace IronPython.Runtime {
         public const string platform = "cli";
 #endif
 
-        // default to location of IronPython.dll, host can override by calling ScriptEngine.InitializeModules
-        // In Silverlight the 1 host always sets this
-#if SILVERLIGHT
-        public const string prefix = "";
-#else
-        public static readonly string prefix = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-#endif
+        public static readonly string prefix;
 
         // ps1 and ps2 are set by PythonContext and only on the initial load
 
@@ -156,6 +162,7 @@ namespace IronPython.Runtime {
 
         public const string winver = "2.5";
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             dict[SymbolTable.StringToId("stdin")] = dict[SymbolTable.StringToId("__stdin__")];
             dict[SymbolTable.StringToId("stdout")] = dict[SymbolTable.StringToId("__stdout__")];

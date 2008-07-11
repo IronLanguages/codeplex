@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     public abstract class Statement : Node {

@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
+#if SILVERLIGHT // only needed in SL, see SharedIO
 
-namespace Microsoft.Scripting.Utils {
-    public abstract class TextStreamBase : Stream {
+using System.IO;
+using System.Text;
+
+namespace System.Scripting.Utils {
+    internal abstract class TextStreamBase : Stream {
 
         private readonly bool _buffered;
 
@@ -92,7 +92,7 @@ namespace Microsoft.Scripting.Utils {
         #endregion
     }
 
-    public sealed class TextStream : TextStreamBase {
+    internal sealed class TextStream : TextStreamBase {
 
         private readonly TextReader _reader;
         private readonly TextWriter _writer;
@@ -110,7 +110,7 @@ namespace Microsoft.Scripting.Utils {
             get { return _writer; }
         }
 
-        public TextStream(TextReader/*!*/ reader, Encoding/*!*/ encoding)
+        internal TextStream(TextReader/*!*/ reader, Encoding/*!*/ encoding)
             : base(true) {
             ContractUtils.RequiresNotNull(reader, "reader");
             ContractUtils.RequiresNotNull(encoding, "encoding");
@@ -119,11 +119,11 @@ namespace Microsoft.Scripting.Utils {
             _encoding = encoding;
         }
 
-        public TextStream(TextWriter/*!*/ writer)
+        internal TextStream(TextWriter/*!*/ writer)
             : this(writer, writer.Encoding, true) {
         }
 
-        public TextStream(TextWriter/*!*/ writer, Encoding/*!*/ encoding, bool buffered)
+        internal TextStream(TextWriter/*!*/ writer, Encoding/*!*/ encoding, bool buffered)
             : base(buffered) {
             ContractUtils.RequiresNotNull(writer, "writer");
             ContractUtils.RequiresNotNull(encoding, "encoding");
@@ -135,3 +135,5 @@ namespace Microsoft.Scripting.Utils {
 
 
 }
+
+#endif

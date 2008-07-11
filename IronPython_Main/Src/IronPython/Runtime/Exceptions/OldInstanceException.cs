@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using IronPython.Runtime.Types;
 using System.Runtime.Serialization;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Exceptions {
     [Serializable]

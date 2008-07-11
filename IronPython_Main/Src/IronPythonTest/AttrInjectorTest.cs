@@ -15,25 +15,17 @@
 
 #if !SILVERLIGHT // XML
 
-using System;
-using System.Xml;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Xml;
 using IronPython.Runtime;
-using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: ExtensionType(typeof(XmlElement), typeof(IronPythonTest.AttrInjectorTest.SimpleXmlAttrInjector))]
 namespace IronPythonTest {
     public class AttrInjectorTest {
-        static AttrInjectorTest() {
-            Microsoft.Scripting.Runtime.RuntimeHelpers.RegisterAssembly(Assembly.GetExecutingAssembly());
-        }
-
         public static object LoadXml(string text) {
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(text);
@@ -74,7 +66,7 @@ namespace IronPythonTest {
                     }
                 }
 
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
             }
 
         }

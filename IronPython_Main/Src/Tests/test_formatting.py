@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -84,7 +84,7 @@ AreEqual(str(x), "2.46912e-017")
 
 ######################################################################################
 
-values = [ 
+values = [
           # 6 significant digits near the decimal point
 
           (123456, "123456"),
@@ -161,17 +161,17 @@ AreEqual("%0.3f" % 10.8, "10.800")
 
 # oldstyle class
 class A:
-	def __str__(self):
-		return "str"
-	def __repr__(self):
-		return "repr"
+    def __str__(self):
+        return "str"
+    def __repr__(self):
+        return "repr"
 
 class B(object):
-	def __str__(self):
-		return "str"
-	def __repr__(self):
-		return "repr"
-		
+    def __str__(self):
+        return "str"
+    def __repr__(self):
+        return "repr"
+        
 a = A()
 AreEqual("%s" % a, "str")
 AreEqual("%r" % a, "repr")
@@ -181,16 +181,16 @@ b = B()
 # /BUG
 AreEqual("%r" % b, "repr")
 
-# if str() returns Unicode, so should 
+# if str() returns Unicode, so should
 # test character
 AreEqual("%c" % 23, chr(23))
-AssertError(OverflowError, (lambda: "%c" % -1) ) 
+AssertError(OverflowError, (lambda: "%c" % -1) )
 AreEqual("%c" % unicode('x'), unicode('x'))
 try:
     AreEqual("%c" % 65535, u'\uffff')
 except OverflowError:
-	pass
-	
+    pass
+    
 # test %i, %u, not covered in test_format
 AreEqual('%i' % 23, '23')
 AreEqual('%i' % 23.9,  '23')
@@ -232,7 +232,7 @@ AreEqual("%-5s" % 'abc', 'abc  ')
  
 
 #
-# Test named inputs with nested () 
+# Test named inputs with nested ()
 #
 
 # Success cases
@@ -260,13 +260,13 @@ AreEqual(s, '70')
 # Error cases
 
 # ensure we properly count number of expected closing ')'
-def Error1():   
+def Error1():
   return '%(a))s' % { 'a' : 10, 'a)' : 20 }
 
 AssertError(ValueError, Error1)
 
 # Incomplete format key, not enough closing ')'
-def Error2():   
+def Error2():
   return '%((a)s' % { 'a' : 10, '(a' : 20 }
 
 AssertError(ValueError, Error2)

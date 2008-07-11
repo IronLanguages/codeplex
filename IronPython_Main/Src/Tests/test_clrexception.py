@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -24,27 +24,27 @@ import System.Collections.Generic
 # See exception mapping in the IP Wiki at http://channel9.msdn.com/wiki/default.aspx/IronPython.ExceptionModel
 
 def clr_to_py_positive(clrExcep, pyExcep, excepMsg = None, msg = "CLR exception not mapped to specified Python exception"):
-	try:
-		raise clrExcep(excepMsg)
-	except pyExcep:
-		Assert(True)
-	except:
-		Assert(False, msg)
+    try:
+        raise clrExcep(excepMsg)
+    except pyExcep:
+        Assert(True)
+    except:
+        Assert(False, msg)
 
 def py_to_clr_positive(pyExcep, clrExcep, msg = "Python exception not mapped to specified CLR exception"):
-	try:
-		raise pyExcep
-	except clrExcep:
-		Assert(True)
-	except:
-		Assert(False, msg)
+    try:
+        raise pyExcep
+    except clrExcep:
+        Assert(True)
+    except:
+        Assert(False, msg)
 
 def py_to_clr_positive_with_args(pyExcep, clrExcep, args, msg = "Python exception not mapped to specified CLR exception"):
     try:
         raise pyExcep(*args)
     except clrExcep:
         Assert(True)
-    except Exception, e: 
+    except Exception, e:
         print e
         Assert(False, msg)
 

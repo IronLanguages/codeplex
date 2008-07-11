@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -17,42 +17,69 @@
 # test assert
 #
 from lib.assert_util import *
-skiptest("win32")
-
-import System.Environment
+if is_cli: import System
 
 def test_positive():
-	ok = True
-	try:
-		assert True, 'this should always pass'
-	except AssertionError:
-		ok = False
-	Assert(ok)
-		
-def test_negative():
-	ok = False
-	try:
-		assert False, 'this should never pass'
-	except AssertionError:
-		ok = True
-	Assert(ok)
-		
-def test_doesnt_fail_on_curly():
-	"""Ensures that asserting a string with a curly brace doesn't choke up the
-	string formatter."""
+    try:
+        assert True
+    except AssertionError, e:
+        raise "Should have been no exception!"
 
-	ok = False
-	try:
-		assert False, '}'
-	except AssertionError:
-		ok = True
-	Assert(ok)
+    try:
+        assert True, 'this should always pass'
+    except AssertionError, e:
+        raise "Should have been no exception!"
+        
+def test_negative():
+    ok = False
+    try:
+        assert False
+    except AssertionError, e:
+        ok = True
+        AreEqual(str(e), "")
+    Assert(ok)
+    
+    ok = False
+    try:
+        assert False
+    except AssertionError, e:
+        ok = True
+        AreEqual(str(e), "")
+    Assert(ok)
+    
+    ok = False
+    try:
+        assert False, 'this should never pass'
+    except AssertionError, e:
+        ok = True
+        AreEqual(str(e), "this should never pass")
+    Assert(ok)
+    
+    ok = False
+    try:
+        assert None, 'this should never pass'
+    except AssertionError, e:
+        ok = True
+        AreEqual(str(e), "this should never pass")
+    Assert(ok)
+        
+def test_doesnt_fail_on_curly():
+    """Ensures that asserting a string with a curly brace doesn't choke up the
+    string formatter."""
+
+    ok = False
+    try:
+        assert False, '}'
+    except AssertionError:
+        ok = True
+    Assert(ok)
   
   
+#--Main------------------------------------------------------------------------
 if is_silverlight:
-    run_test(__name__, noOutputPlease=True)    
-elif '-O' in System.Environment.GetCommandLineArgs():
+    run_test(__name__, noOutputPlease=True)
+elif is_cli and '-O' in System.Environment.GetCommandLineArgs():
     from lib.process_util import *
     AreEqual(0, launch_ironpython_changing_extensions(__file__, remove=["-O"]))
 else:
-    run_test(__name__, noOutputPlease=True)
+    run_test(__name__)

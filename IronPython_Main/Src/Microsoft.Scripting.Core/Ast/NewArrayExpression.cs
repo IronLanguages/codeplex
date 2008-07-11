@@ -13,38 +13,72 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Scripting.Utils;
+using System.Text;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     public sealed class NewArrayExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
 
-        internal NewArrayExpression(AstNodeType nodeType, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(nodeType, type) {
+        internal NewArrayExpression(Annotations annotations, ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions)
+            : base(annotations, nodeType, type) {
             _expressions = expressions;
         }
+
 
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }
+        internal override void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+
+            switch (this.NodeType) {
+                case ExpressionType.NewArrayBounds:
+                    builder.Append("new ");
+                    builder.Append(this.Type.ToString());
+                    builder.Append("(");
+                    for (int i = 0, n = _expressions.Count; i < n; i++) {
+                        if (i > 0) builder.Append(", ");
+                        _expressions[i].BuildString(builder);
+                    }
+                    builder.Append(")");
+                    break;
+                case ExpressionType.NewArrayInit:
+                    builder.Append("new ");
+                    builder.Append("[] {");
+                    for (int i = 0, n = _expressions.Count; i < n; i++) {
+                        if (i > 0) builder.Append(", ");
+                        _expressions[i].BuildString(builder);
+                    }
+                    builder.Append("}");
+                    break;
+            }
+        }
+
     }
 
     /// <summary>
     /// Factory methods.
     /// </summary>
     public partial class Expression {
+
+        #region NewArrayInit
+
+        //CONFORMING
         /// <summary>
         /// Creates a new array expression of the specified type from the provided initializers.
         /// </summary>
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
-        public static NewArrayExpression NewArray(Type type, params Expression[] initializers) {
-            return NewArray(type, (IList<Expression>)initializers);
+        public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) {
+            return NewArrayInit(type, Annotations.Empty, (IEnumerable<Expression>)initializers);
+        }
+
+        public static NewArrayExpression NewArrayInit(Type type, Annotations annotations, params Expression[] initializers) {
+            return NewArrayInit(type, annotations, (IEnumerable<Expression>)initializers);
         }
 
         /// <summary>
@@ -52,56 +86,116 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
-        public static NewArrayExpression NewArray(Type type, IList<Expression> initializers) {
+        public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) {
+            return NewArrayInit(type, Annotations.Empty, initializers);
+        }
+
+        //CONFORMING
+        public static NewArrayExpression NewArrayInit(Type type, Annotations annotations, IEnumerable<Expression> initializers) {
+            ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(type.IsArray, "type", "Not an array type");
-            ContractUtils.RequiresNotNullItems(initializers, "initializers");
-
-            Type element = type.GetElementType();
-            foreach (Expression expression in initializers) {
-                ContractUtils.Requires(TypeUtils.CanAssign(element, expression.Type), "initializers");
+            if (type.Equals(typeof(void))) {
+                throw Error.ArgumentCannotBeOfTypeVoid();
             }
 
-            return new NewArrayExpression(AstNodeType.NewArrayExpression, type, CollectionUtils.ToReadOnlyCollection(initializers));
-        }
+            ReadOnlyCollection<Expression> initializerList = CollectionUtils.ToReadOnlyCollection(initializers);
 
-        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) {
-            return NewArrayBounds(type, (IList<Expression>)bounds);
-        }
+            Expression[] newList = null;
+            for (int i = 0, n = initializerList.Count; i < n; i++) {
+                Expression expr = initializerList[i];
+                ContractUtils.RequiresNotNull(expr, "initializers");
 
-        public static NewArrayExpression NewArrayBounds(Type type, IList<Expression> bounds) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(type.IsArray, "type", "Not an array type");
-            ContractUtils.Requires(bounds.Count > 0, "bounds", "Bounds count cannot be less than 1");
-            ContractUtils.Requires(type.GetArrayRank() == bounds.Count, "bounds", "Bounds count must match the rank");
-
-            ReadOnlyCollection<Expression> boundsList = CollectionUtils.ToReadOnlyCollection(bounds);
-            for (int i = 0, n = boundsList.Count; i < n; i++) {
-                Expression e = boundsList[i];
-                ContractUtils.RequiresNotNull(e, "bounds");
-                ContractUtils.Requires(TypeUtils.CanAssign(typeof(int), e.Type), "bounds", "Bounds must be ints.");
-            }
-            return new NewArrayExpression(AstNodeType.NewArrayBounds, type, CollectionUtils.ToReadOnlyCollection(bounds));
-        }
-        
-        public static NewArrayExpression NewArrayHelper(Type type, IList<Expression> initializers) {
-            ContractUtils.RequiresNotNullItems(initializers, "initializers");
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(type.IsArray, "type", "Not an array type");
-
-            Type element = type.GetElementType();
-            Expression[] clone = null;
-            for (int i = 0; i < initializers.Count; i++) {
-                Expression initializer = initializers[i];
-                if (!TypeUtils.CanAssign(element, initializer.Type)) {
-                    if (clone == null) {
-                        clone = new Expression[initializers.Count];
+                if (!TypeUtils.AreReferenceAssignable(type, expr.Type)) {
+                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && TypeUtils.AreAssignable(type, expr.GetType())) {
+                        expr = Expression.Quote(expr);
+                    } else {
+                        throw Error.ExpressionTypeCannotInitializeArrayType(expr.Type, type);
+                    }
+                    if (newList == null) {
+                        newList = new Expression[initializerList.Count];
                         for (int j = 0; j < i; j++) {
-                            clone[j] = initializers[j];
+                            newList[j] = initializerList[j];
                         }
                     }
-                    initializer = Expression.Convert(initializer, element);
+                }
+                if (newList != null) {
+                    newList[i] = expr;
+                }
+            }
+            if (newList != null) {
+                initializerList = new ReadOnlyCollection<Expression>(newList);
+            }
+
+            return new NewArrayExpression(annotations, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
+        }
+
+        #endregion
+
+        #region NewArrayBounds
+
+        //CONFORMING
+        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) {
+            return NewArrayBounds(type, (IEnumerable<Expression>)bounds);
+        }
+
+        public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) {
+            return NewArrayBounds(type, Annotations.Empty, bounds);
+        }
+        //CONFORMING
+        public static NewArrayExpression NewArrayBounds(Type type, Annotations annotations, IEnumerable<Expression> bounds) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(bounds, "bounds");
+
+            if (type.Equals(typeof(void))) {
+                throw Error.ArgumentCannotBeOfTypeVoid();
+            }
+
+            ReadOnlyCollection<Expression> boundsList = CollectionUtils.ToReadOnlyCollection(bounds);
+
+            int dimensions = boundsList.Count;
+            ContractUtils.Requires(dimensions > 0, "bounds", "Bounds count cannot be less than 1");
+
+            for (int i = 0; i < dimensions; i++) {
+                Expression expr = boundsList[i];
+                ContractUtils.RequiresNotNull(expr, "bounds");
+                if (!TypeUtils.IsInteger(expr.Type)) {
+                    throw Error.ArgumentMustBeInteger();
+                }
+            }
+
+            return new NewArrayExpression(annotations, ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), CollectionUtils.ToReadOnlyCollection(bounds));
+        }
+
+        #endregion
+
+        public static NewArrayExpression NewArrayHelper(Type type, IEnumerable<Expression> initializers) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(initializers, "initializers");
+
+            if (type.Equals(typeof(void))) {
+                throw Error.ArgumentCannotBeOfTypeVoid();
+            }
+
+            ReadOnlyCollection<Expression> initializerList = CollectionUtils.ToReadOnlyCollection(initializers);
+
+            Expression[] clone = null;
+            for (int i = 0; i < initializerList.Count; i++) {
+                Expression initializer = initializerList[i];
+                ContractUtils.RequiresNotNull(initializer, "initializers");
+
+                if (!TypeUtils.AreReferenceAssignable(type, initializer.Type)) {
+                    if (clone == null) {
+                        clone = new Expression[initializerList.Count];
+                        for (int j = 0; j < i; j++) {
+                            clone[j] = initializerList[j];
+                        }
+                    }
+                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && TypeUtils.AreAssignable(type, initializer.GetType())) {
+                        initializer = Expression.Quote(initializer);
+                    } else {
+                        initializer = Expression.Convert(initializer, type);
+                    }
+
                 }
                 if (clone != null) {
                     clone[i] = initializer;
@@ -109,9 +203,11 @@ namespace Microsoft.Scripting.Ast {
             }
 
             if (clone != null) {
-                initializers = clone;
+                initializerList = new ReadOnlyCollection<Expression>(clone);
             }
-            return NewArray(type, initializers);
+
+            return new NewArrayExpression(Annotations.Empty, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
         }
+
     }
 }

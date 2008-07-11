@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// Represents extension method.
     /// </summary>

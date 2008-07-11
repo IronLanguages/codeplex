@@ -13,16 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Runtime.Serialization;
+using System.Scripting.Utils;
 using System.Security.Permissions;
-using System.Text;
 
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+namespace System.Scripting {
 
-namespace Microsoft.Scripting {
+    // TODO: move to Microsoft.Scripting !!!
     [Serializable]
     public class SyntaxErrorException : Exception {
         private SourceSpan _span;
@@ -31,7 +28,6 @@ namespace Microsoft.Scripting {
         private SourceUnit _sourceUnit;
 
         private Severity _severity;
-        private int _mappedLine;
         private int _errorCode;
 
         public SyntaxErrorException() : base() { }
@@ -50,7 +46,6 @@ namespace Microsoft.Scripting {
             _sourceUnit = sourceUnit;
             _severity = severity;
             _errorCode = errorCode;
-            _mappedLine = -1; // lazy
         }
 
 #if !SILVERLIGHT
@@ -65,7 +60,6 @@ namespace Microsoft.Scripting {
             info.AddValue("Span", _span);
             info.AddValue("SourceUnit", _sourceUnit);
             info.AddValue("Severity", _severity);
-            info.AddValue("MappedLine", _mappedLine);
             info.AddValue("ErrorCode", _errorCode);
         }
 #endif
@@ -86,12 +80,7 @@ namespace Microsoft.Scripting {
         }
 
         public int Line {
-            get {
-                if (_mappedLine == -1) {
-                    _mappedLine = (_sourceUnit != null) ? _sourceUnit.MapLine(_span.Start.Line) : _span.Start.Line;
-                }
-                return _mappedLine;
-            }
+            get { return _span.Start.Line; }
         }
 
         public int Column {
@@ -102,11 +91,13 @@ namespace Microsoft.Scripting {
             get { return _errorCode; }
         }
 
+        // TODO: fix
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetSymbolDocumentName() {
-            return (_sourceUnit != null) ? _sourceUnit.GetSymbolDocument(_span.Start.Line) : null;
+            return _sourceUnit != null ? _sourceUnit.Path : null;
         }
 
+        // TODO: fix
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCodeLine() {
             return (_sourceUnit != null && Line > 0) ? _sourceUnit.GetCodeLine(Line) : null;

@@ -14,9 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections.Generic;
-using Microsoft.Scripting;
 
 namespace IronPythonTest {
     public delegate void ParamsDelegate(object sender, params object[] args);

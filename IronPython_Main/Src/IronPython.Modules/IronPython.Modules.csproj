@@ -11,6 +11,7 @@
     <RootNamespace>IronPython.Modules</RootNamespace>
     <AssemblyName>IronPython.Modules</AssemblyName>
     <OldToolsVersion>2.0</OldToolsVersion>
+    <WarningsNotAsErrors>618</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -40,7 +41,7 @@
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
     <OutputPath>..\..\Bin\Silverlight Release</OutputPath>
@@ -51,7 +52,7 @@
     <ErrorReport>prompt</ErrorReport>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" '$(SilverlightBuild)' != 'true' " />
@@ -66,17 +67,19 @@
     <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.Core.dll</HintPath>
+      <Aliases>systemcore</Aliases>
     </Reference>
     <Reference Include="System.Data" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
+    <Compile Include="..\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
     <Compile Include="array.cs" />
     <Compile Include="binascii.cs" />
     <Compile Include="ClrModule.cs" />
+    <Compile Include="cmath.cs" />
     <Compile Include="codecs.cs" />
     <Compile Include="collections.cs" />
     <Compile Include="copy_reg.cs" />
@@ -108,10 +111,12 @@
     <Compile Include="_functools.cs" />
     <Compile Include="_random.cs" />
     <Compile Include="_sre.cs" />
+    <Compile Include="_ssl.cs" />
     <Compile Include="_weakref.cs" />
     <Compile Include="..\AssemblyVersion.cs">
       <Link>Properties\AssemblyVersion.cs</Link>
     </Compile>
+    <Compile Include="_winreg.cs" />
     <Compile Include="_weakref.Generated.cs" />
   </ItemGroup>
   <ItemGroup>

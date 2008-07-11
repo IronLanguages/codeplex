@@ -14,10 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class BackQuoteExpression : Expression {
         private readonly Expression _expression;

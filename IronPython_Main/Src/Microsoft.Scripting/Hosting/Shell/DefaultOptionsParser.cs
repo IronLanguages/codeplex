@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
     internal class DefaultOptionsParser : OptionsParser {

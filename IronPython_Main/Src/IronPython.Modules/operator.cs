@@ -16,19 +16,20 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
 namespace IronPython.Modules {
     public static class PythonOperator {
+        private static DynamicSite<object, object, bool> _InSite;
+
         public class attrgetter {
             private readonly object[] _names;
             public attrgetter(params object[] attrs) {
@@ -307,15 +308,19 @@ namespace IronPython.Modules {
             return PythonSites.Add(a, b);
         }
 
-        public static object contains(object a, object b) {
-            return PythonOps.In(b, a);
+        public static bool contains(object a, object b) {
+            if (!_InSite.IsInitialized) {
+                _InSite.EnsureInitialized(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Contains));
+            }
+
+            return _InSite.Invoke(DefaultContext.Default, b, a);
         }
 
-        public static object __contains__(object a, object b) {
-            return PythonOps.In(b, a);
+        public static bool __contains__(object a, object b) {
+            return contains(a, b);
         }
 
-        public static object countOf(object a, object b) {
+        public static int countOf(object a, object b) {
             System.Collections.IEnumerator e = PythonOps.GetEnumerator(a);
             int count = 0;
             while (e.MoveNext()) {
@@ -358,7 +363,7 @@ namespace IronPython.Modules {
             return PythonOps.GetIndex(a, MakeSlice(b, c));
         }
 
-        public static object indexOf(object a, object b) {
+        public static int indexOf(object a, object b) {
             System.Collections.IEnumerator e = PythonOps.GetEnumerator(a);
             int index = 0;
             while (e.MoveNext()) {
@@ -451,43 +456,43 @@ namespace IronPython.Modules {
         }
 
         private static readonly DynamicSite<object, object, object> _iadd =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceAdd));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceAdd));
 
         private static readonly DynamicSite<object, object, object> _iand =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceBitwiseAnd));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceBitwiseAnd));
 
         private static readonly DynamicSite<object, object, object> _idiv =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceDivide));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceDivide));
 
         private static readonly DynamicSite<object, object, object> _ilshift =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceLeftShift));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceLeftShift));
 
         private static readonly DynamicSite<object, object, object> _imod =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceMod));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceMod));
 
         private static readonly DynamicSite<object, object, object> _imul =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceMultiply));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceMultiply));
 
         private static readonly DynamicSite<object, object, object> _ior =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceBitwiseOr));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceBitwiseOr));
 
         private static readonly DynamicSite<object, object, object> _ipow =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlacePower));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlacePower));
 
         private static readonly DynamicSite<object, object, object> _irshift =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceRightShift));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceRightShift));
 
         private static readonly DynamicSite<object, object, object> _isub =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceSubtract));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceSubtract));
 
         private static readonly DynamicSite<object, object, object> _itruediv =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceTrueDivide));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceTrueDivide));
 
         private static readonly DynamicSite<object, object, object> _ifloordiv =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceFloorDivide));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceFloorDivide));
 
         private static readonly DynamicSite<object, object, object> _ixor =
-            DynamicSite<object, object, object>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceExclusiveOr));
+            DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.InPlaceExclusiveOr));
 
         public static object iadd(object a, object b) {
             return _iadd.Invoke(DefaultContext.Default, a, b);

@@ -15,19 +15,13 @@
 
 using System;
 using System.Reflection;
-using Microsoft.Scripting;
-
-using ToyScript.Runtime;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 
 namespace ToyScript {
     public static class ToyHelpers {
         public static void Print(CodeContext context, object o) {
             context.LanguageContext.DomainManager.SharedIO.OutputWriter.WriteLine(o ?? "<null>");
-        }
-
-        public static Type DateTime {
-            get { return typeof(DateTime); }
         }
 
         public static object Import(CodeContext context, string name) {

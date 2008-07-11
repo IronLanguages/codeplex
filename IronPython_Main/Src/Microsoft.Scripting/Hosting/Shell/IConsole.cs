@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.IO;
 
 namespace Microsoft.Scripting.Hosting.Shell {

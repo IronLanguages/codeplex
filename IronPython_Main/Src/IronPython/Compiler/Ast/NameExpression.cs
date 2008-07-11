@@ -14,14 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using System.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class NameExpression : Expression {
         private readonly SymbolId _name;
@@ -74,7 +73,7 @@ namespace IronPython.Compiler.Ast {
             Type vt = variable != null ? variable.Type : typeof(object);
 
             if (op != Operators.None) {
-                right = Ast.Action.Operator(ag.Binder, op, vt, Transform(ag, vt),  right);
+                right = AstUtils.Operator(ag.Binder, op, vt, Ast.CodeContext(), Transform(ag, vt),  right);
             }
 
             if (variable != null) {
@@ -84,13 +83,13 @@ namespace IronPython.Compiler.Ast {
             }
 
             SourceSpan aspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
-            return Ast.Block(aspan, assignment);
+            return AstUtils.Block(aspan, assignment);
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            MSAst.Expression variable;
-            if ((variable = _reference.Variable) != null) {
-                MSAst.Expression del = Ast.Delete(Span, variable);
+            MSAst.Expression variable = _reference.Variable;
+            if (variable != null && !ag.Block.Global) {
+                MSAst.Expression del = AstUtils.Delete(variable, Span);
                 if (!_assigned) {
                     del = Ast.Block(
                         Transform(ag, variable.Type),
@@ -99,7 +98,7 @@ namespace IronPython.Compiler.Ast {
                 }
                 return del;
             } else {
-                return AstUtils.Delete(Span, _name);
+                return AstUtils.Delete(_name, Span);
             }
         }
 
@@ -107,6 +106,12 @@ namespace IronPython.Compiler.Ast {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return !Assigned;
+            }
         }
     }
 }

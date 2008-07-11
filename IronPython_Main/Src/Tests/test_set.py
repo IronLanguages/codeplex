@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -30,7 +30,7 @@ s1 = [2, 4, 5]
 s2 = [4, 7, 9, 10]
 s3 = [2, 4, 5, 6]
 
-def test_equality(): 
+def test_equality():
     for x in (set, frozenset, myset, myfrozenset):
         for y in (set, frozenset, myset, myfrozenset):
             AreEqual(x(s1), y(s1))
@@ -49,7 +49,7 @@ def test_sanity():
         
         # membership
         AreEqual(4 in xs1, True)
-        AreEqual(6 in xs1, False)    
+        AreEqual(6 in xs1, False)
         
         # relation with another of the same type
         AreEqual(xs1.issubset(xs2), False)
@@ -109,11 +109,11 @@ def test_ops():
                 exec "x1   %s= t2(s3)" % op
                 AreEqual(x1, t1(exp2))
                 
-                x1 = t1(s1)            
+                x1 = t1(s1)
                 exec "y = x1 %s t2(s2)" % op
                 AreEqual(y, t1(exp1))
 
-                x1 = t1(s1)            
+                x1 = t1(s1)
                 exec "y = x1 %s t2(s3)" % op
                 AreEqual(y, t1(exp2))
 

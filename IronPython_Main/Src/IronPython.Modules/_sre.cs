@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
 using IronPython.Runtime;
+
 #if !SILVERLIGHT    // System.Text.RegularExpressions
 [assembly: PythonModule("_sre", typeof(IronPython.Modules.PythonSRegEx))]
 namespace IronPython.Modules {

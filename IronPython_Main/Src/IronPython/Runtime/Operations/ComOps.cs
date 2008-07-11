@@ -17,14 +17,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Actions.ComDispatch;
-using System.Runtime.CompilerServices;
-using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
 
 namespace IronPython.Runtime.Operations {
     public static class ComOps {

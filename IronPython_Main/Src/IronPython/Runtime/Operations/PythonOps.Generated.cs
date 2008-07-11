@@ -13,18 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; 
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
+using System;
 using IronPython.Runtime.Exceptions;
-
-using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonOps {
@@ -100,10 +90,6 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception SyntaxWarning(string format, params object[] args) {
             return new SyntaxWarningException(string.Format(format, args));
-        }
-
-        public static Exception OverflowWarning(string format, params object[] args) {
-            return new OverflowWarningException(string.Format(format, args));
         }
 
         public static Exception UnicodeWarning(string format, params object[] args) {

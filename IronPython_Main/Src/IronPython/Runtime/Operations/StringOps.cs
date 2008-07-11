@@ -20,19 +20,15 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Math;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute; 
 
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-[assembly: PythonExtensionType(typeof(string), typeof(StringOps), DerivationType=typeof(ExtensibleString))]
 namespace IronPython.Runtime.Operations {
     /// <summary>
     /// ExtensibleString is the base class that is used for types the user defines
@@ -61,28 +57,28 @@ namespace IronPython.Runtime.Operations {
         public static object operator >(ExtensibleString self, object other) {
             object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) > 0;
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
         public static object operator <(ExtensibleString self, object other) {
             object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) < 0;
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
         public static object operator >=(ExtensibleString self, object other) {
             object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) >= 0;
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
         public static object operator <=(ExtensibleString self, object other) {
             object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) <= 0;
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
         
         #endregion
@@ -92,13 +88,13 @@ namespace IronPython.Runtime.Operations {
             if (other is string || other is ExtensibleString)
                 return RuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [return: MaybeNotImplemented]
         public object __ne__(object other) {
             object res = __eq__(other);
-            if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
+            if (res != NotImplementedType.Value) return PythonOps.Not(res);
 
             return res;
         }
@@ -172,31 +168,31 @@ namespace IronPython.Runtime.Operations {
             }
             if (x is string) {
                 // check ascii
-                string s = (string)x;
-                for (int i = 0; i < s.Length; i++) {
-                    if (s[i] > '\x80')
-                        return StringOps.__new__(
-                            context,
-                            (PythonType)DynamicHelpers.GetPythonTypeFromType(typeof(String)),
-                            s,
-                            null,
-                            "strict"
-                            );
-                }
-                return s;
+                return CheckAsciiString(context, (string)x);
             }
 
-            object value;
-            if (PythonTypeOps.TryInvokeUnaryOperator(context, x, Symbols.String, out value)) {
-                if (value is string || value is Extensible<string>) {
-                    return value;
-                }
-
-                throw PythonOps.TypeError("expected str, got {0} from __str__", DynamicHelpers.GetPythonType(value).Name);
+            // we don't invoke PythonOps.StringRepr here because we want to return the 
+            // Extensible<string> directly back if that's what we received from __str__.
+            object value = PythonContext.InvokeUnaryOperator(context, UnaryOperators.String, x);
+            if (value is string || value is Extensible<string>) {
+                return value;
             }
 
-            // all objects should have __str__, at least we'll pick it up from object.
-            throw new InvalidOperationException("__str__ not defined");
+            throw PythonOps.TypeError("expected str, got {0} from __str__", DynamicHelpers.GetPythonType(value).Name);
+        }
+
+        private static object CheckAsciiString(CodeContext context, string s) {
+            for (int i = 0; i < s.Length; i++) {
+                if (s[i] > '\x80')
+                    return StringOps.__new__(
+                        context,
+                        (PythonType)DynamicHelpers.GetPythonTypeFromType(typeof(String)),
+                        s,
+                        null,
+                        "strict"
+                        );
+            }
+            return s;
         }
 
         #region Python Constructors
@@ -214,6 +210,87 @@ namespace IronPython.Runtime.Operations {
         public static object __new__(CodeContext/*!*/ context, PythonType cls, object @object) {
             if (cls == TypeCache.String) {
                 return FastNew(context, @object);
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, [NotNull]string @object) {
+            if (cls == TypeCache.String) {
+                return CheckAsciiString(context, @object);
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, [NotNull]ExtensibleString @object) {
+            if (cls == TypeCache.String) {
+                return FastNew(context, @object);
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, char @object) {
+            if (cls == TypeCache.String) {
+                return CheckAsciiString(context, RuntimeHelpers.CharToString(@object));
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, [NotNull]BigInteger @object) {
+            if (cls == TypeCache.String) {
+                return @object.ToString();
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, [NotNull]Extensible<BigInteger> @object) {
+            if (cls == TypeCache.String) {
+                return FastNew(context, @object);
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, int @object) {
+            if (cls == TypeCache.String) {
+                return @object.ToString();
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, bool @object) {
+            if (cls == TypeCache.String) {
+                return @object.ToString();
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, double @object) {
+            if (cls == TypeCache.String) {
+                return DoubleOps.__str__(@object);
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, float @object) {
+            if (cls == TypeCache.String) {
+                return SingleOps.__str__(@object);
             } else {
                 return cls.CreateInstance(context, @object);
             }
@@ -571,12 +648,12 @@ namespace IronPython.Runtime.Operations {
             IEnumerator seq = PythonOps.GetEnumerator(sequence);
             if (!seq.MoveNext()) return "";
 
-            StringBuilder ret = new StringBuilder();
             // check if we have just a sequnce of just one value - if so just
             // return that value.
             object curVal = seq.Current;
             if (!seq.MoveNext()) return Converter.ConvertToString(curVal);
 
+            StringBuilder ret = new StringBuilder();
             AppendJoin(curVal, 0, ret);
 
             int index = 1;
@@ -589,6 +666,26 @@ namespace IronPython.Runtime.Operations {
             } while (seq.MoveNext());
 
             return ret.ToString();
+        }
+
+        public static string join(string/*!*/ self, [NotNull]List/*!*/ sequence) {
+            if (sequence.__len__() == 0) return String.Empty;
+
+            lock (sequence) {
+                if (sequence.__len__() == 1) {
+                    return Converter.ConvertToString(sequence[0]);
+                }
+
+                StringBuilder ret = new StringBuilder();
+
+                AppendJoin(sequence._data[0], 0, ret);
+                for (int i = 1; i < sequence._size; i++) {
+                    ret.Append(self);
+                    AppendJoin(sequence._data[i], i, ret);
+                }
+
+                return ret.ToString();
+            }
         }
 
         public static string ljust(string self, int width) {
@@ -915,18 +1012,26 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static string translate(string self, string table, string deletechars) {
-            if (table == null) throw PythonOps.TypeError("expected string, got NoneType");
-            if (table.Length != 256)
+            if (table == null) {
+                throw PythonOps.TypeError("expected string, got NoneType");
+            } else if (table.Length != 256) {
                 throw PythonOps.ValueError("translation table must be 256 characters long");
-            if (self.Length == 0) return self;
-            StringBuilder ret = new StringBuilder();
-            for (int i = 0, idx = 0; i < self.Length; i++) {
+            } else if (self.Length == 0) {
+                return self;
+            }
+
+            // List<char> is about 2/3rds as expensive as StringBuilder appending individual 
+            // char's so we use that instead of a StringBuilder
+            List<char> res = new List<char>();
+            for (int i = 0; i < self.Length; i++) {
                 if (deletechars == null || !deletechars.Contains(Char.ToString(self[i]))) {
-                    idx = (int)self[i];
-                    if (idx >= 0 && idx < 256) ret.Append(table[idx]);
+                    int idx = (int)self[i];
+                    if (idx >= 0 && idx < 256) {
+                        res.Add(table[idx]);
+                    }
                 }
             }
-            return ret.ToString();
+            return new String(res.ToArray());
         }
 
         public static string upper(string self) {
@@ -974,7 +1079,7 @@ namespace IronPython.Runtime.Operations {
                 return new StringFormatter(es.Value, self).Format();
             }
 
-            return PythonOps.NotImplemented;
+            return NotImplementedType.Value;
         }
 
         [SpecialName]
@@ -1067,7 +1172,7 @@ namespace IronPython.Runtime.Operations {
             } else if (obj is char && self.Length == 1) {
                 return (int)(self[0] - (char)obj);
             } else {
-                return PythonOps.NotImplemented;
+                return NotImplementedType.Value;
             }
 
             int ret = string.CompareOrdinal(self, otherStr);
@@ -1205,7 +1310,7 @@ namespace IronPython.Runtime.Operations {
             string strVal;
 
             if ((strVal = value as string) != null) {
-                sb.Append(strVal.ToString());
+                sb.Append(strVal);
             } else if (Converter.TryConvertToString(value, out strVal) && strVal != null) {
                 sb.Append(strVal);
             } else {
@@ -2215,6 +2320,8 @@ namespace IronPython.Runtime.Operations {
 #endif
         #endregion
 
-
+        public static string/*!*/ __repr__(string/*!*/ self) {
+            return StringOps.Quote(self);
+        }
     }
 }

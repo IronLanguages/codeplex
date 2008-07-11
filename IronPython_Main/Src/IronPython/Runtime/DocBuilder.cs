@@ -14,22 +14,17 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using System.Reflection;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.IO;
-
-using System.Xml;
 using System.Xml.XPath;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
+using System.Xml;
 
 namespace IronPython.Runtime {
     static class DocBuilder {
@@ -336,7 +331,7 @@ namespace IronPython.Runtime {
                 type = type.GetElementType();
             }
 
-            return PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type));
+            return DynamicHelpers.GetPythonTypeFromType(type).Name;
         }
 
 #if !SILVERLIGHT // XML doc

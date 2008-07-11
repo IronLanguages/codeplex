@@ -13,18 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Scripting.Utils;
 using System.Threading;
-using System.Diagnostics;
-using System.Reflection;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
-using System.Runtime.CompilerServices;
 
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
 
     /// <summary>
     /// Represents a context of execution.  A context of execution has a set of variables
@@ -60,10 +53,7 @@ namespace Microsoft.Scripting.Runtime {
         // TODO: remove
         private ScopeAttributeDictionary _attrs;
         private ContextSensitiveScope _contextScopes;
-        private IDictionary<Expression, object> _temps; // can hold ParameterExpression, VariableExpression
         private bool _isVisible;
-        private SourceLocation _sourceLocation;
-        private CompilerContext _compilerContext;
         
         /// <summary>
         /// Creates a new top-level scope with a new empty dictionary.  The scope
@@ -131,67 +121,6 @@ namespace Microsoft.Scripting.Runtime {
             get {
                 return _isVisible;
             }
-        }
-
-        public SourceLocation SourceLocation {
-            get {
-                return _sourceLocation;
-            }
-            set {
-                if (value != SourceLocation.Invalid && value != SourceLocation.None) {
-                    _sourceLocation = value;
-                }
-            }
-        }
-
-        public CompilerContext CompilerContext {
-            get {
-                return _compilerContext;
-            }
-            internal set {
-                _compilerContext = value;
-            }
-        }
-
-        
-        /// <summary>
-        /// Gets the current container for temporary variables. These might need to be nested in a manner
-        /// different than the Scope objects, so separate functions exist for pushing and popping them relative
-        /// to the current scope.
-        /// </summary>
-        internal IDictionary<Ast.Expression, object> TemporaryStorage {
-            get {
-                if (_temps == null) {
-                    _temps = new Dictionary<Expression, object>();
-                }
-                return _temps;
-            }
-        }
-        
-        /// <summary>
-        /// Create a context for keeping track of allocated temporary variables inside of TemporaryStorage.
-        /// When this function is called, the variables given by paramVars will be set to the values given by paramValues;
-        /// when the returned object is disposed of, the supplied paramVars and tempVars variables will be removed from temporary storage.
-        /// </summary>
-        internal CodeContext GetTemporaryVariableContext(CodeContext context, ParameterExpression[] paramVars, object[] paramValues) {
-            Debug.Assert(paramVars.Length == paramValues.Length);
-
-            Scope scope = CloneForTemporaries();
-            context = new CodeContext(scope, context.LanguageContext);
-            
-            for (int i = 0; i < paramValues.Length; i++) {
-                scope.TemporaryStorage[paramVars[i]] = paramValues[i];
-            }
-
-            return context;
-        }
-
-        private Scope CloneForTemporaries() {
-            Scope s = new Scope(_parent, _dict, _isVisible);
-            s._attrs = _attrs;
-            s._contextScopes = _contextScopes;
-            s._extensions = _extensions;
-            return s;
         }
 
         /// <summary>

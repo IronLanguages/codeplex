@@ -13,19 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// A TypeCollision is used when we have a collsion between
     /// two types with the same name.  Currently this is only possible w/ generic

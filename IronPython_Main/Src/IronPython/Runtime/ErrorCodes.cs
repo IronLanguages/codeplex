@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-
 namespace IronPython.Hosting {
     public static class ErrorCodes {
         // The error flags

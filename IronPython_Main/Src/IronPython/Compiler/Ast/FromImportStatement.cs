@@ -14,11 +14,12 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class FromImportStatement : Statement {
         private static readonly SymbolId[] _star = new SymbolId[1];
@@ -66,11 +67,11 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {            
             if (_names == _star) {
                 // from a[.b] import *
-                return Ast.Call(
-                    Span,
-                    AstGenerator.GetHelperMethod("ImportStar"),
-                    Ast.CodeContext(),
-                    Ast.Constant(_root.MakeString()),
+                return AstUtils.Call(
+                    AstGenerator.GetHelperMethod("ImportStar"), 
+                    Span, 
+                    Ast.CodeContext(), 
+                    Ast.Constant(_root.MakeString()), 
                     Ast.Constant(GetLevel())
                 );
             } else {
@@ -87,36 +88,36 @@ namespace IronPython.Compiler.Ast {
 
                 // module = PythonOps.ImportWithNames(<context>, _root, make_array(_names))
                 statements.Add(
-                    Ast.Assign(
-                        _root.Span,
-                        module,
+                    AstUtils.Assign(
+                        module, 
                         Ast.Call(
                             AstGenerator.GetHelperMethod("ImportWithNames"),
                             Ast.CodeContext(),
                             Ast.Constant(_root.MakeString()),
-                            Ast.NewArray(typeof(string[]), names),
+                            Ast.NewArrayInit(typeof(string), names),
                             Ast.Constant(GetLevel())
-                        )
+                        ), 
+                        _root.Span
                     )
                 );
 
                 // now load all the names being imported and assign the variables
                 for (int i = 0; i < names.Length; i++) {
                     statements.Add(
-                        Ast.Assign(
-                            Span,
-                            _variables[i].Variable,
+                        AstUtils.Assign(
+                            _variables[i].Variable, 
                             Ast.Call(
                                 AstGenerator.GetHelperMethod("ImportFrom"),
                                 Ast.CodeContext(),
                                 module,
                                 names[i]
-                            )
+                            ), 
+                            Span
                         )
                     );
                 }
 
-                return Ast.Block(Span, statements.ToArray());
+                return AstUtils.Block(Span, statements.ToArray());
             }
         }
 

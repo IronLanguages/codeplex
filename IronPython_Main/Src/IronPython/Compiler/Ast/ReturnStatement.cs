@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System;    
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class ReturnStatement : Statement {
         private readonly Expression _expression;
@@ -48,9 +48,9 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Return(
-                Span,
-                ag.TransformOrConstantNull(_expression, typeof(object))
+            return AstUtils.Return(
+                ag.TransformOrConstantNull(_expression, typeof(object)), 
+                Span
             );
         }
 
@@ -61,6 +61,16 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                if (_expression == null) {
+                    return false;
+                }
+
+                return _expression.CanThrow;
+            }
         }
     }
 }

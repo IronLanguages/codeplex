@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
 

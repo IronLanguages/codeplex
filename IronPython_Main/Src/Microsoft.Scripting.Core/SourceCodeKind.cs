@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System.ComponentModel;
-using Microsoft.Scripting;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
 
     /// <summary>
     /// Defines a kind of the source code. The parser sets its initial state accordingly.
@@ -52,9 +51,9 @@ namespace Microsoft.Scripting {
     }
 }
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public static partial class EnumBounds {
-        internal static bool IsValid(/*this*/ SourceCodeKind value) {
+        public static bool IsValid(/*this*/ SourceCodeKind value) {
             return value > SourceCodeKind.Unspecified && value <= SourceCodeKind.InteractiveCode;
         }
     }

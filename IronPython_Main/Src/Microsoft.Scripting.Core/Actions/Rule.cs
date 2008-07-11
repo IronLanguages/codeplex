@@ -13,64 +13,81 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Threading;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
+using System.Collections.ObjectModel;
+using System.Reflection;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
-    internal class Rule {
+namespace System.Scripting.Actions {
+    public class Rule<T> where T : class {
+        /// <summary>
+        /// The rule set that includes only this rule.
+        /// </summary>
+        private readonly SmallRuleSet<T> _mySet;
+
+        /// <summary>
+        /// The parameters to the rule
+        /// </summary>
+        private readonly ReadOnlyCollection<ParameterExpression> _parameters;
+
+        /// <summary>
+        /// The binding expression tree
+        /// </summary>
         private readonly Expression _binding;
-        private readonly Function<bool>[] _validators;              // the list of validates which indicate when the rule is no longer valid
-        private readonly object[] _template;                        // the templated parameters for this rule 
 
-        // TODO revisit these fields and their uses when LambdaExpression moves down
-        private readonly ParameterExpression[] _parameters;             // TODO: Remove me when we can refer to params as expressions
-        internal AnalyzedRule _analyzed;                                // TODO: Remove me when the above 2 are gone
+        /// <summary>
+        /// The validator to indicate when the rule is no longer valid
+        /// </summary>
+        private readonly Func<bool> _validator;
 
-        internal Rule(Expression binding, Function<bool>[] validators, object[] template, ParameterExpression[] parameters) {
+        /// <summary>
+        /// Template data - null for methods which aren't templated.  Non-null for methods which
+        /// have been templated.  The same template data is shared across all templated rules with
+        /// the same target method.
+        /// </summary>
+        private readonly TemplateData<T> _template;
+
+        public Rule(Expression binding, Func<bool> validator, ReadOnlyCollection<ParameterExpression> parameters) {
+            ValidateRuleParameters(typeof(T), parameters);
+
             _binding = binding;
-            _validators = validators;
-            _template = template;
+            _validator = validator;
             _parameters = parameters;
+            _mySet = new SmallRuleSet<T>(new Rule<T>[] { this });
         }
 
-        internal Expression Binding {
-            get { return _binding; }
+        internal Rule(Expression binding, Func<bool> validator, T target, TemplateData<T> template, ReadOnlyCollection<ParameterExpression> parameters) {
+            ValidateRuleParameters(typeof(T), parameters);
+
+            _binding = binding;
+            _validator = validator;
+            _parameters = parameters;
+            _mySet = new SmallRuleSet<T>(target, new Rule<T>[] { this });
+            _template = template;
         }
 
-        internal Function<bool>[] Validators {
+        /// <summary>
+        /// Each rule holds onto an immutable RuleSet that contains this rule only.
+        /// This should heavily optimize monomorphic call sites.
+        /// </summary>
+        internal SmallRuleSet<T> RuleSet {
             get {
-                return _validators;
-            }
-        }
-
-        internal object[] Template {
-            get {
-                return _template;
-            }
-        }
-
-        internal int TemplateParameterCount {
-            get {
-                if (_template == null) return 0;
-                return _template.Length;
+                return _mySet;
             }
         }
 
         /// <summary>
         /// Gets the logical parameters to the dynamic site in the form of Variables.
         /// </summary>
-        internal ParameterExpression[] Parameters {
+        public ReadOnlyCollection<ParameterExpression> Parameters {
             get { return _parameters; }
         }
-    }
 
-    internal class Rule<T> : Rule {
-        private SmallRuleSet<T> _monomorphicRuleSet;
-
-        internal Rule(Expression binding, Function<bool>[] validators, object[] template, ParameterExpression[] parameters)
-            : base(binding, validators, template, parameters) {
+        /// <summary>
+        /// The expression representing the bound operation
+        /// </summary>
+        public Expression Binding {
+            get { return _binding; }
         }
 
         /// <summary>
@@ -80,56 +97,82 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public bool IsValid {
             get {
-                if (Validators == null) return true;
+                return _validator != null ? _validator() : true;
+            }
+        }
 
-                foreach (Function<bool> v in Validators) {
-                    if (!v()) return false;
-                }
-                return true;
+        internal Func<bool> Validator {
+            get {
+                return _validator;
+            }
+        }
+
+        internal TemplateData<T> Template {
+            get {
+                return _template;
             }
         }
 
         /// <summary>
-        /// Each rule holds onto an immutable RuleSet that contains this rule only.
-        /// This should heavily optimize monomorphic call sites.
+        /// Gets or sets the method which is used for templating. If the rule is
+        /// not templated then this is a nop (and returns null for the getter).
+        /// 
+        /// The method is tracked here independently from the delegate for the
+        /// common case of the method being a DynamicMethod.  In order to re-bind
+        /// the existing DynamicMethod to a new set of templated parameters we need
+        /// to have the original method.
         /// </summary>
-        internal SmallRuleSet<T> MonomorphicRuleSet {
+        internal MethodInfo TemplateMethod {
             get {
-                if (_monomorphicRuleSet == null) {
-                    _monomorphicRuleSet = new SmallRuleSet<T>(new Rule<T>[] { this });
+                if (_template != null) {
+                    return _template.Method;
                 }
-                return _monomorphicRuleSet;
+                return null;
+            }
+            set {
+                if (_template != null) {
+                    _template.Method = value;
+                }
             }
         }
 
-        private static Type ReturnType {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        private string Dump {
             get {
-                return typeof(T).GetMethod("Invoke").ReturnType;
+                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                    ExpressionWriter.Dump(_binding, "Rule", writer);
+                    return writer.ToString();
+                }
             }
         }
 
-        // First parameter is site, second is code context
-        private const int FirstParameterIndex = 2;
-        internal void EnsureAnalyzed() {
-            if (_analyzed == null) {
-                AnalyzedRule ar = RuleBinder.Bind(this, ReturnType, FirstParameterIndex);
-                Interlocked.CompareExchange<AnalyzedRule>(ref _analyzed, ar, null);
+        private static void ValidateRuleParameters(Type target, ReadOnlyCollection<ParameterExpression> parameters) {
+            ContractUtils.RequiresNotNull(parameters, "parameters");
+            ContractUtils.Requires(typeof(Delegate).IsAssignableFrom(target), "target");
+            MethodInfo invoke = target.GetMethod("Invoke");
+            ParameterInfo[] pinfos = invoke.GetParameters();
+            ContractUtils.Requires(pinfos.Length > 0 && pinfos[0].ParameterType == typeof(CallSite), "target");
+            ContractUtils.Requires(pinfos.Length - 1 == parameters.Count);
+
+            for (int i = 1; i < pinfos.Length; i++) {
+                ParameterExpression parameter = parameters[i - 1];
+                ContractUtils.RequiresNotNull(parameter, "parameters");
+                Type type = pinfos[i].ParameterType;
+                if (parameter.IsByRef) {
+                    type = type.GetElementType();
+                }
+                ContractUtils.Requires(type == parameter.Type, "parameters");
             }
         }
+    }
 
-        internal void Emit(LambdaCompiler cg) {
-            // Need to make sure we aren't generating into two different CodeGens at the same time
-            lock (this) {
-                // First, finish binding my variable references
-                EnsureAnalyzed();
-
-                LambdaInfo top = _analyzed.Top;
-                Compiler tc = new Compiler(_analyzed);
-
-                cg.InitializeRule(tc, top);
-                cg.CreateReferenceSlots();
-                cg.EmitExpression(Binding);
-            }
-        }
+    /// <summary>
+    /// Data used for tracking templating information in a rule.
+    /// 
+    /// Currently we just track the method so we can retarget to
+    /// new constant pools.
+    /// </summary>
+    internal class TemplateData<T> where T : class {
+        internal MethodInfo Method;
     }
 }

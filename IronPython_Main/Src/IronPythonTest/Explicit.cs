@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace IronPythonTest {
 
     public interface IExplicitTest1 {
@@ -37,6 +33,18 @@ namespace IronPythonTest {
 
     public interface IExplicitTest4 {
         int M(int i);
+    }
+
+    public interface IExplicitTest5 {
+        string A();
+    }
+
+    public interface IExplicitTest6 {
+        string B();
+    }
+
+    public interface IExplicitTest7 {
+        string A();
     }
 
     public class ExplicitTest : IExplicitTest1, IExplicitTest2 {
@@ -76,6 +84,50 @@ namespace IronPythonTest {
         int IExplicitTest4.M(int i) {
             return 4;
         }
+        #endregion
+    }
+
+    public class ExplicitTestNoConflict : IExplicitTest5, IExplicitTest6 {
+        #region IExplicitTest5 Members
+
+        string IExplicitTest5.A() {
+            return "A";
+        }
+
+        #endregion
+
+        #region IExplicitTest6 Members
+
+        string IExplicitTest6.B() {
+            return "B";
+        }
+
+        #endregion
+    }
+
+    public class ExplicitTestOneConflict : IExplicitTest5, IExplicitTest6, IExplicitTest7 {
+        #region IExplicitTest5 Members
+
+        string IExplicitTest5.A() {
+            return "A";
+        }
+
+        #endregion
+
+        #region IExplicitTest6 Members
+
+        string IExplicitTest6.B() {
+            return "B";
+        }
+
+        #endregion
+
+        #region IExplicitTest7 Members
+
+        string IExplicitTest7.A() {
+            return "A7";
+        }
+
         #endregion
     }
 }

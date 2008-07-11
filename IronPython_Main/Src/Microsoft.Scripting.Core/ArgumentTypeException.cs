@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.Serialization;
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     [Serializable]
     public class ArgumentTypeException : Exception {
         public ArgumentTypeException()

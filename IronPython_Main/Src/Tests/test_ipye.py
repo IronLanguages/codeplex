@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -32,13 +32,13 @@ import IronPython
 import IronPythonTest
 
 et = IronPythonTest.EngineTest()
-multipleexecskips = [ "ScenarioXGC"]
+multipleexecskips = [ ]
 for s in dir(et):
     if s.startswith("Scenario"):
-		if s in multipleexecskips:
-			exec '@skip("multiple_execute") \ndef test_Engine_%s(): getattr(et, "%s")()' % (s, s)
-		else :
-			exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
+        if s in multipleexecskips:
+            exec '@skip("multiple_execute") \ndef test_Engine_%s(): getattr(et, "%s")()' % (s, s)
+        else :
+            exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
 
 #Rowan Work Item 312902
 @disabled("The ProfileDrivenCompilation feature is removed from DLR")
@@ -93,8 +93,8 @@ def test_formatexception():
         
         AssertError(TypeError, pe.FormatException, None)
     
-        exc_string = pe.FormatException(System.Exception("first", 
-                                                        System.Exception("second", 
+        exc_string = pe.FormatException(System.Exception("first",
+                                                        System.Exception("second",
                                                                          System.Exception())))
         AreEqual(exc_string, 'Traceback (most recent call last):\r\nException: first')
         exc_string = pe.FormatException(c())
@@ -113,8 +113,8 @@ def test_formatexception_showclrexceptions():
 
         pe.Options.ShowClrExceptions = True
     
-        exc_string = pe.FormatException(System.Exception("first", 
-                                                        System.Exception("second", 
+        exc_string = pe.FormatException(System.Exception("first",
+                                                        System.Exception("second",
                                                                          System.Exception())))
         AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
         exc_string = pe.FormatException(c())
@@ -129,10 +129,10 @@ def test_formatexception_showclrexceptions():
 
 
 @disabled("CodePlex 6710")
-def test_formatexception_exceptiondetail():       
+def test_formatexception_exceptiondetail():
     '''
     Expected return values need to be updated before this test can be re-enabled.
-    ''' 
+    '''
     try:
         import Microsoft.Scripting
         se = Microsoft.Scripting.Hosting.ScriptRuntime.Create()

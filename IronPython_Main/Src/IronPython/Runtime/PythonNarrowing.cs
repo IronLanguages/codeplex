@@ -13,10 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Generation;
+using System.Scripting.Generation;
 
 namespace IronPython.Runtime {
     /// <summary>

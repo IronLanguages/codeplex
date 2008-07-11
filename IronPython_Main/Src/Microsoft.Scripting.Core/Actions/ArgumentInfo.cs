@@ -13,15 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Ast;
-using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// TODO: Alternatively, it should be sufficient to remember indices for this, list, dict and block.
     /// </summary>
@@ -79,6 +75,14 @@ namespace Microsoft.Scripting.Actions {
 
         public override string ToString() {
             return _name == SymbolId.Empty ? _kind.ToString() : _kind.ToString() + ":" + SymbolTable.IdToString(_name);
+        }
+
+        internal Expression CreateExpression() {
+            return Expression.New(
+                typeof(ArgumentInfo).GetConstructor(new Type[] { typeof(ArgumentKind), typeof(SymbolId) }),
+                Expression.Constant(_kind),
+                Expression.Constant(_name)
+            );
         }
     }
 }

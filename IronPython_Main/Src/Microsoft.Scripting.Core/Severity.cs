@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting {
+namespace System.Scripting {
     public enum Severity {
         Ignore,
         Warning,

@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-
-namespace Microsoft.Scripting.Runtime {
+namespace System.Scripting.Runtime {
     /// <summary>
     /// Represents an ops-extension method which is added as an operator.
     /// 

@@ -14,11 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class ConditionalExpression : Expression {
         private readonly Expression _testExpr;

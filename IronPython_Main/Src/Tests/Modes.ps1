@@ -196,6 +196,44 @@ function test-pymodes($pyexe)
 			show-failure "Failed: $expected"; 
 		}
 	}
+	if ($stuff.Contains("-?"))
+		{
+			show-failure "Failed: should not have found '-?'"; 
+		}
+	
+	#------------------------------------------------------------------------------
+	## -?
+	echo ""
+	echo "Testing -? ..."
+	
+	#Just a simple sanity check will suffice as there are differences in output
+	#between CPython and IronPython
+	
+	$stuff = pyexe -?
+	$stuff = [string]$stuff
+	
+	$expected_stuff = "-c cmd", "-V ", "-h "
+
+	foreach ($expected in $expected_stuff)
+	{
+		if (!$stuff.Contains($expected))
+		{
+			show-failure "Failed: $expected"; 
+		}
+	}
+	if ($stuff.Contains("-?"))
+		{
+			show-failure "Failed: should not have found '-?'"; 
+		}
+	
+	#-? compared to -h
+	$stuff_h = pyexe -h
+	$stuff_q = pyexe -?
+	#CodePlex 16979
+	#if($stuff_h.Count -ne $stuff_q.Count) {
+	#	show-failure "Failed: results of '-h' and '-?' should be the same."; 
+	#}
+	
 	
 	#------------------------------------------------------------------------------
 	## -O
@@ -496,7 +534,7 @@ function test-dlrmodes($dlrexe)
 	#------------------------------------------------------------------------------
 	echo "The following modes already have sufficient coverage in other tests:"
 	echo "    -X:AutoIndent (test_superconsole.py)"
-	echo "    -X:TupleBasedOptimizedScopes ('M1' RunTests.py option)"
+	echo "    -X:LightweightScopes ('M1' RunTests.py option)"
 	echo "    -X:PrivateBinding (test_privateBinding.py)"
 	echo "    -X:SaveAssmeblies ('M2' RunTests.py option...need verification)"
 	echo "    -X:TabCompletion (test_superconsole.py)"
@@ -504,7 +542,7 @@ function test-dlrmodes($dlrexe)
 
 	#------------------------------------------------------------------------------
 	echo "The following modes are (or will soon be) undocumented and will not be tested:"
-	echo "    -X:ILDebug"
+	echo "    -X:DumpIL"
 	echo "    -X:PassExceptions"
 	echo ""
 	
@@ -512,7 +550,6 @@ function test-dlrmodes($dlrexe)
 	echo "The following modes are or will soon be removed and will not be tested:"
 	echo "    -X:ColorfulConsole (likely to be merged)"
 	echo "    -X:Frames (probably gone)"
-	echo "    -X:NoOptimize"
 	echo ""
 
 	#------------------------------------------------------------------------------
@@ -635,7 +672,7 @@ function test-relatedpy($pyexe)
 	hello-helper $pyexe "-X:Interpret" -O -OO
 	
 	echo "Testing compatible IronPython modes together ..."
-	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:TupleBasedOptimizedScopes" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:StaticMethods" "-X:TabCompletion"
+	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:LightweightScopes" "-X:DumpIL" "-X:MaxRecursion" 5 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
 }
 	
 ###############################################################################

@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Expression;
-    using Microsoft.Scripting.Runtime;
 
     class Binary : Expression {
         private readonly Operator _op;
@@ -36,26 +34,24 @@ namespace ToyScript.Parser.Ast {
             MSAst.Expression left = _left.Generate(tg);
             MSAst.Expression right = _right.Generate(tg);
 
-            Operators op;
             switch (_op) {
                 // Binary
-                case Operator.Add: op = Operators.Add; break;
-                case Operator.Subtract: op = Operators.Subtract; break;
-                case Operator.Multiply: op = Operators.Multiply; break;
-                case Operator.Divide: op = Operators.Divide; break;
+                case Operator.Add: return tg.Add(left, right);
+                case Operator.Subtract: return tg.Subtract(left, right);
+                case Operator.Multiply: return tg.Multiply(left, right);
+                case Operator.Divide: return tg.Divide(left, right);
 
                 // Comparisons
-                case Operator.LessThan: op = Operators.LessThan; break;
-                case Operator.LessThanOrEqual: op = Operators.LessThanOrEqual; break;
-                case Operator.GreaterThan: op = Operators.GreaterThan; break;
-                case Operator.GreaterThanOrEqual: op = Operators.GreaterThanOrEqual; break;
-                case Operator.Equals: op = Operators.Equals; break;
-                case Operator.NotEquals: op = Operators.NotEquals; break;
+                case Operator.LessThan: return tg.LessThan(left, right);
+                case Operator.LessThanOrEqual: return tg.LessThanOrEqual(left, right);
+                case Operator.GreaterThan: return tg.GreaterThan(left, right);
+                case Operator.GreaterThanOrEqual: return tg.GreaterThanOrEqual(left, right);
+                case Operator.Equals: return tg.Equal(left, right);
+                case Operator.NotEquals: return tg.NotEqual(left, right);
 
                 default:
                     throw new System.InvalidOperationException();
             }
-            return Ast.Action.Operator(tg.Binder, op, typeof(object), left, right);
         }
     }
 }

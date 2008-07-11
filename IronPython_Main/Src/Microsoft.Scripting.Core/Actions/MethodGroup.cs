@@ -13,17 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.Diagnostics;
-
-using Microsoft.Scripting.Ast;
 using System.Reflection;
+using System.Linq.Expressions;
+using System.Threading;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// MethodGroup's represent a unique collection of method's.  Typically this
     /// unique set is all the methods which are overloaded by the same name including
@@ -86,8 +83,8 @@ namespace Microsoft.Scripting.Actions {
             return methods;
         }
 
-        public override Expression GetValue(ActionBinder binder, Type type) {
-            return base.GetValue(binder, type);
+        public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
+            return base.GetValue(context, binder, type);
         }
 
         public override MemberTracker BindToInstance(Expression instance) {
@@ -98,7 +95,7 @@ namespace Microsoft.Scripting.Actions {
             return this;
         }
 
-        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
             return binder.ReturnMemberTracker(type, BindToInstance(instance));
         }
 

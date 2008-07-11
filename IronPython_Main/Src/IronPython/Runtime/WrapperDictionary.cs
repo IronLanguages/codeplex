@@ -13,17 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Types;
+using System.Scripting;
 
 namespace IronPython.Runtime {
-    public class WrapperDictionaryStorage : DictionaryStorage {
+    internal class WrapperDictionaryStorage : DictionaryStorage {
         private IAttributesCollection/*!*/ _data;
 
         public WrapperDictionaryStorage(IAttributesCollection/*!*/ data) {

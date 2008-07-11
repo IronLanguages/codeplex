@@ -13,26 +13,23 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
-using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
 
     public delegate void EmitArrayHelper(int index);
 
     public class ILGen {
         private readonly ILGenerator _ilg;
         private readonly TypeGen _tg;
-        private readonly List<Slot> _freeSlots = new List<Slot>();
+        private readonly KeyedQueue<Type, LocalBuilder> _freeLocals = new KeyedQueue<Type, LocalBuilder>();
 
         #region Constructor
 
@@ -62,7 +59,7 @@ namespace Microsoft.Scripting.Generation {
         /// Begins an exception block for a filtered exception.
         /// </summary>
         public virtual void BeginExceptFilterBlock() {
-            _ilg.BeginExceptionBlock();
+            _ilg.BeginExceptFilterBlock();
         }
 
         /// <summary>
@@ -300,12 +297,22 @@ namespace Microsoft.Scripting.Generation {
 
         #endregion
 
-        #region Simple Macros
+        #region Simple helpers
 
         [Conditional("DEBUG")]
         internal void EmitDebugWriteLine(string message) {
             EmitString(message);
             EmitCall(typeof(Debug), "WriteLine", new Type[] { typeof(string) });
+        }
+
+        internal void Emit(OpCode opcode, MethodBase methodBase) {
+            Debug.Assert(methodBase is MethodInfo || methodBase is ConstructorInfo);
+
+            if (methodBase.MemberType == MemberTypes.Constructor) {
+                Emit(opcode, (ConstructorInfo)methodBase);
+            } else {
+                Emit(opcode, (MethodInfo)methodBase);
+            }
         }
 
         #endregion
@@ -342,9 +349,19 @@ namespace Microsoft.Scripting.Generation {
             ContractUtils.Requires(index >= 0, "index");
 
             if (index <= Byte.MaxValue) {
-                Emit(OpCodes.Ldarga_S, index);
+                Emit(OpCodes.Ldarga_S, (byte)index);
             } else {
-                this.Emit(OpCodes.Ldarga, index);
+                Emit(OpCodes.Ldarga, index);
+            }
+        }
+
+        public void EmitStoreArg(int index) {
+            ContractUtils.Requires(index >= 0, "index");
+
+            if (index <= Byte.MaxValue) {
+                Emit(OpCodes.Starg_S, (byte)index);
+            } else {
+                Emit(OpCodes.Starg, index);
             }
         }
 
@@ -411,37 +428,51 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        /// <summary>
-        /// Emits the Ldelem* instruction for the appropriate type
-        /// </summary>
-        /// <param name="type"></param>
+        // Emits the Ldelem* instruction for the appropriate type
+        //CONFORMING
         public void EmitLoadElement(Type type) {
             ContractUtils.RequiresNotNull(type, "type");
 
-            if (type.IsValueType) {
-                if (type == typeof(System.SByte)) {
-                    Emit(OpCodes.Ldelem_I1);
-                } else if (type == typeof(System.Int16)) {
-                    Emit(OpCodes.Ldelem_I2);
-                } else if (type == typeof(System.Int32)) {
-                    Emit(OpCodes.Ldelem_I4);
-                } else if (type == typeof(System.Int64) || type == typeof(System.UInt64)) {
-                    Emit(OpCodes.Ldelem_I8);
-                } else if (type == typeof(System.Single)) {
-                    Emit(OpCodes.Ldelem_R4);
-                } else if (type == typeof(System.Double)) {
-                    Emit(OpCodes.Ldelem_R8);
-                } else if (type == typeof(System.Byte)) {
-                    Emit(OpCodes.Ldelem_U1);
-                } else if (type == typeof(System.UInt16)) {
-                    Emit(OpCodes.Ldelem_U2);
-                } else if (type == typeof(System.UInt32)) {
-                    Emit(OpCodes.Ldelem_U4);
-                } else {
-                    Emit(OpCodes.Ldelem, type);
-                }
-            } else {
+            if (!type.IsValueType) {
                 Emit(OpCodes.Ldelem_Ref);
+            } else if (type.IsEnum) {
+                Emit(OpCodes.Ldelem, type);
+            } else {
+                switch (Type.GetTypeCode(type)) {
+                    case TypeCode.Boolean:
+                    case TypeCode.SByte:
+                        Emit(OpCodes.Ldelem_I1);
+                        break;
+                    case TypeCode.Byte:
+                        Emit(OpCodes.Ldelem_U1);
+                        break;
+                    case TypeCode.Int16:
+                        Emit(OpCodes.Ldelem_I2);
+                        break;
+                    case TypeCode.Char:
+                    case TypeCode.UInt16:
+                        Emit(OpCodes.Ldelem_U2);
+                        break;
+                    case TypeCode.Int32:
+                        Emit(OpCodes.Ldelem_I4);
+                        break;
+                    case TypeCode.UInt32:
+                        Emit(OpCodes.Ldelem_U4);
+                        break;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        Emit(OpCodes.Ldelem_I8);
+                        break;
+                    case TypeCode.Single:
+                        Emit(OpCodes.Ldelem_R4);
+                        break;
+                    case TypeCode.Double:
+                        Emit(OpCodes.Ldelem_R8);
+                        break;
+                    default:
+                        Emit(OpCodes.Ldelem, type);
+                        break;
+                }
             }
         }
 
@@ -451,35 +482,47 @@ namespace Microsoft.Scripting.Generation {
         public void EmitStoreElement(Type type) {
             ContractUtils.RequiresNotNull(type, "type");
 
-            if (type.IsValueType) {
-                if (type == typeof(int) || type == typeof(uint)) {
-                    Emit(OpCodes.Stelem_I4);
-                } else if (type == typeof(short) || type == typeof(ushort)) {
+            if (type.IsEnum) {
+                Emit(OpCodes.Stelem, type);
+                return;
+            }
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Boolean:
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                    Emit(OpCodes.Stelem_I1);
+                    break;
+                case TypeCode.Char:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
                     Emit(OpCodes.Stelem_I2);
-                } else if (type == typeof(long) || type == typeof(ulong)) {
+                    break;
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                    Emit(OpCodes.Stelem_I4);
+                    break;
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
                     Emit(OpCodes.Stelem_I8);
-                } else if (type == typeof(char)) {
-                    Emit(OpCodes.Stelem_I2);
-                } else if (type == typeof(bool)) {
-                    Emit(OpCodes.Stelem_I4);
-                } else if (type == typeof(float)) {
+                    break;
+                case TypeCode.Single:
                     Emit(OpCodes.Stelem_R4);
-                } else if (type == typeof(double)) {
+                    break;
+                case TypeCode.Double:
                     Emit(OpCodes.Stelem_R8);
-                } else {
-                    Emit(OpCodes.Stelem, type);
-                }
-            } else {
-                Emit(OpCodes.Stelem_Ref);
+                    break;
+                default:
+                    if (type.IsValueType) {
+                        Emit(OpCodes.Stelem, type);
+                    } else {
+                        Emit(OpCodes.Stelem_Ref);
+                    }
+                    break;
             }
         }
 
         public void EmitType(Type type) {
             ContractUtils.RequiresNotNull(type, "type");
-
-            if (!(type is TypeBuilder) && !type.IsGenericParameter && !type.IsVisible) {
-                throw new InvalidOperationException("Cannot emit type");
-            }
 
             Emit(OpCodes.Ldtoken, type);
             EmitCall(typeof(Type), "GetTypeFromHandle");
@@ -617,10 +660,6 @@ namespace Microsoft.Scripting.Generation {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(name, "name");
 
-            if (!type.IsVisible) {
-                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, type.FullName));
-            }
-
             MethodInfo mi = type.GetMethod(name);
             ContractUtils.Requires(mi != null, "type", "Type doesn't have a method with a given name.");
 
@@ -721,7 +760,7 @@ namespace Microsoft.Scripting.Generation {
                     break;
                 default:
                     if (value >= -128 && value <= 127) {
-                        Emit(OpCodes.Ldc_I4_S, (byte)value);
+                        Emit(OpCodes.Ldc_I4_S, (sbyte)value);
                     } else {
                         Emit(OpCodes.Ldc_I4, value);
                     }
@@ -755,95 +794,132 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private void EmitSimpleConstant(object value) {
-            if (!TryEmitConstant(value)) {
+            if (!TryEmitConstant(value, value == null ? typeof(object) : value.GetType())) {
                 throw new ArgumentException(String.Format("Cannot emit constant {0} ({1})", value, value.GetType()));
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public bool TryEmitConstant(object value) {
-            string strVal;
-            string[] sa;
-            MethodInfo methodInfo;
-            Type type;
-
+        //CONFORMING
+        //
+        // Note: we support emitting a lot more things as IL constants than
+        // Linq does
+        internal bool TryEmitConstant(object value, Type type) {
             if (value == null) {
-                EmitNull();
-            } else if (value is int) {
-                EmitInt((int)value);
-            } else if (value is double) {
-                EmitDouble((double)value);
-            } else if (value is float) {
-                EmitSingle((float)value);
-            } else if (value is long) {
-                EmitLong((long)value);
-            } else if ((strVal = value as string) != null) {
-                EmitString(strVal);
-            } else if (value is bool) {
-                EmitBoolean((bool)value);
-            } else if ((sa = value as string[]) != null) {
-                EmitArray(sa);
-            } else if (value is Missing) {
-                Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
-            } else if (value.GetType().IsEnum) {
-                EmitEnum(value);
-            } else if (value is uint) {
-                EmitUInt((uint)value);
-            } else if (value is char) {
-                EmitChar((char)value);
-            } else if (value is byte) {
-                EmitByte((byte)value);
-            } else if (value is sbyte) {
-                EmitSByte((sbyte)value);
-            } else if (value is short) {
-                EmitShort((short)value);
-            } else if (value is ushort) {
-                EmitUShort((ushort)value);
-            } else if (value is ulong) {
-                EmitULong((ulong)value);
-            } else if (value is decimal) {
-                EmitDecimal((decimal)value);
-            } else if ((type = value as Type) != null) {
-                EmitType(type);
-            } else if (value is RuntimeTypeHandle) {
-                RuntimeTypeHandle rth = (RuntimeTypeHandle)value;
-                if (!rth.Equals(default(RuntimeTypeHandle))) {
-                    Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle((RuntimeTypeHandle)value));
-                } else {
-                    return false; //EmitConstant(new RuntimeConstant(value));
-                }
-            } else if ((methodInfo = value as MethodInfo) != null) {
-                Emit(OpCodes.Ldtoken, methodInfo);
-                EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
-            } else if (value is RuntimeMethodHandle) {
-                RuntimeMethodHandle rmh = (RuntimeMethodHandle)value;
-                if (rmh != default(RuntimeMethodHandle)) {
-                    Emit(OpCodes.Ldtoken, (MethodInfo)MethodBase.GetMethodFromHandle((RuntimeMethodHandle)value));
-                } else {
-                    return false; //EmitConstant(new RuntimeConstant(value));
-                }
-            } else {
-                return false; // EmitConstant(new RuntimeConstant(value));
+                // Smarter than the Linq implementation which uses the initobj
+                // pattern for all value types (works, but requires a local and
+                // more IL)
+                EmitDefault(type);
+                return true;
             }
 
-            return true;
-        }
+            // Handle the easy cases
+            if (TryEmitILConstant(value, type)) {
+                return true;
+            }
 
-        internal void EmitConstant(object value) {
-            Debug.Assert(!(value is CompilerConstant));
-
-            Type type;
+            // Check for a few more types that we support emitting as constants
+            // TODO: remove SymbolId constants from the compiler
             if (value is SymbolId) {
                 EmitSymbolId((SymbolId)value);
-            } else if ((type = value as Type) != null) {
-                EmitType(type);
-            } else {
-                EmitSimpleConstant(value);
+                return true;
+            }
+
+            if (value is Missing) {
+                Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
+                return true;
+            }
+
+            if (value is RuntimeTypeHandle) {
+                RuntimeTypeHandle rth = (RuntimeTypeHandle)value;
+                if (!rth.Equals(default(RuntimeTypeHandle))) {
+                    Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle(rth));
+                    return true;
+                }
+            }
+
+            Type t = value as Type;
+            if (t != null && (t is TypeBuilder || t.IsGenericParameter || t.IsVisible)) {
+                // can only ldtoken on a visible type
+                EmitType(t);
+                return true;
+            }
+
+            if (value is RuntimeMethodHandle) {
+                RuntimeMethodHandle rmh = (RuntimeMethodHandle)value;
+                if (rmh != default(RuntimeMethodHandle)) {
+                    Emit(OpCodes.Ldtoken, MethodBase.GetMethodFromHandle(rmh));
+                    return true;
+                }
+            }
+
+            // can't ldtoken on a DynamicMethod
+            MethodBase mb = value as MethodBase;
+            if (mb != null && !(mb is DynamicMethod)) {
+                Emit(OpCodes.Ldtoken, mb);
+                EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+                type = TypeUtils.GetConstantType(type);
+                if (type != typeof(MethodBase)) {
+                    Emit(OpCodes.Castclass, type);
+                }
+                return true;
+            }
+
+            return false;
+        }
+
+        //CONFORMING
+        private bool TryEmitILConstant(object value, Type type) {
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Boolean:
+                    EmitBoolean((bool)value);
+                    return true;
+                case TypeCode.SByte:
+                    EmitSByte((sbyte)value);
+                    return true;
+                case TypeCode.Int16:
+                    EmitShort((short)value);
+                    return true;
+                case TypeCode.Int32:
+                    EmitInt((int)value);
+                    return true;
+                case TypeCode.Int64:
+                    EmitLong((long)value);
+                    return true;
+                case TypeCode.Single:
+                    EmitSingle((float)value);
+                    return true;
+                case TypeCode.Double:
+                    EmitDouble((double)value);
+                    return true;
+                case TypeCode.Char:
+                    EmitChar((char)value);
+                    return true;
+                case TypeCode.Byte:
+                    EmitByte((byte)value);
+                    return true;
+                case TypeCode.UInt16:
+                    EmitUShort((ushort)value);
+                    return true;
+                case TypeCode.UInt32:
+                    EmitUInt((uint)value);
+                    return true;
+                case TypeCode.UInt64:
+                    EmitULong((ulong)value);
+                    return true;
+                case TypeCode.Decimal:
+                    EmitDecimal((decimal)value);
+                    return true;
+                case TypeCode.String:
+                    EmitString((string)value);
+                    return true;
+                default:
+                    return false;
             }
         }
 
         #endregion
 
+        // TODO: deprecate in favor of the Linq versions
         #region Conversions
 
         public void EmitImplicitCast(Type from, Type to) {
@@ -928,9 +1004,6 @@ namespace Microsoft.Scripting.Generation {
                 if (implicitOnly) {
                     return false;
                 }
-                if (!to.IsVisible) {
-                    throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, to.FullName));
-                }
                 Emit(OpCodes.Castclass, to);
                 return true;
             }
@@ -956,22 +1029,22 @@ namespace Microsoft.Scripting.Generation {
         public bool EmitNumericCast(Type from, Type to, bool implicitOnly) {
             TypeCode fc = Type.GetTypeCode(from);
             TypeCode tc = Type.GetTypeCode(to);
-            int fx, fy, tx, ty;
+            int fromx, fromy, tox, toy;
 
-            if (!TypeUtils.GetNumericConversionOrder(fc, out fx, out fy) ||
-                !TypeUtils.GetNumericConversionOrder(tc, out tx, out ty)) {
+            if (!TypeUtils.GetNumericConversionOrder(fc, out fromx, out fromy) ||
+                !TypeUtils.GetNumericConversionOrder(tc, out tox, out toy)) {
                 // numeric <-> non-numeric
                 return false;
             }
 
-            bool isImplicit = TypeUtils.IsImplicitlyConvertible(fx, fy, tx, ty);
+            bool isImplicit = TypeUtils.IsImplicitlyConvertible(fromx, fromy, tox, toy);
 
             if (implicitOnly && !isImplicit) {
                 return false;
             }
 
             // IL conversion instruction also needed for floating point -> integer:
-            if (!isImplicit || ty == 2 || tx == 2) {
+            if (!isImplicit || toy == 2 || tox == 2) {
                 switch (tc) {
                     case TypeCode.SByte:
                         Emit(OpCodes.Conv_I1);
@@ -1012,7 +1085,13 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
-        /// Boxes the value of the stack. No-op for reference types.
+        /// Boxes the value of the stack. No-op for reference types. Void is
+        /// converted to a null reference. For almost all value types this
+        /// method will box them in the standard way. Int32 and Boolean are
+        /// handled with optimized conversions that reuse the same object for
+        /// small values. For Int32 this is purely a performance optimization.
+        /// For Boolean this is use to ensure that True and False are always
+        /// the same objects.
         /// </summary>
         public void EmitBoxing(Type type) {
             ContractUtils.RequiresNotNull(type, "type");
@@ -1020,10 +1099,324 @@ namespace Microsoft.Scripting.Generation {
             if (type.IsValueType) {
                 if (type == typeof(void)) {
                     Emit(OpCodes.Ldnull);
+                } else if (type == typeof(int)) {
+                    EmitCall(typeof(RuntimeHelpers), "Int32ToObject");
+                } else if (type == typeof(bool)) {
+                    EmitCall(typeof(RuntimeHelpers), "BooleanToObject");
                 } else {
                     Emit(OpCodes.Box, type);
                 }
             }
+        }
+
+        #endregion
+
+        #region Linq Conversions
+
+        //CONFORMING
+        // (plus support for None, Void conversions)
+        internal void EmitConvertToType(Type typeFrom, Type typeTo, bool isChecked) {
+            typeFrom = TypeUtils.GetNonNoneType(typeFrom);
+
+            if (typeFrom == typeTo) {
+                return;
+            }
+
+            // void -> non-void: default(T)
+            if (typeFrom == typeof(void)) {
+                EmitDefault(typeTo);
+                return;
+            }
+
+            // non-void -> void: pop
+            if (typeTo == typeof(void)) {
+                Emit(OpCodes.Pop);
+                return;
+            }
+
+            bool isTypeFromNullable = TypeUtils.IsNullableType(typeFrom);
+            bool isTypeToNullable = TypeUtils.IsNullableType(typeTo);
+
+            Type nnExprType = TypeUtils.GetNonNullableType(typeFrom);
+            Type nnType = TypeUtils.GetNonNullableType(typeTo);
+
+            if (typeFrom.IsInterface || // interface cast
+               typeTo.IsInterface ||
+               typeFrom == typeof(object) || // boxing cast
+               typeTo == typeof(object)) {
+                EmitCastToType(typeFrom, typeTo);
+            } else if (isTypeFromNullable || isTypeToNullable) {
+                EmitNullableConversion(typeFrom, typeTo, isChecked);
+            } else if (!(TypeUtils.IsConvertible(typeFrom) && TypeUtils.IsConvertible(typeTo)) // primitive runtime conversion
+                       &&
+                       (nnExprType.IsAssignableFrom(nnType) || // down cast
+                       nnType.IsAssignableFrom(nnExprType))) // up cast
+            {
+                EmitCastToType(typeFrom, typeTo);
+            } else if (typeFrom.IsArray && typeTo.IsArray) {
+                // See DevDiv Bugs #94657.
+                EmitCastToType(typeFrom, typeTo);
+            } else {
+                EmitNumericConversion(typeFrom, typeTo, isChecked);
+            }
+        }
+
+        //CONFORMING
+        private void EmitCastToType(Type typeFrom, Type typeTo) {
+            if (!typeFrom.IsValueType && typeTo.IsValueType) {
+                Emit(OpCodes.Unbox_Any, typeTo);
+            } else if (typeFrom.IsValueType && !typeTo.IsValueType) {
+                EmitBoxing(typeFrom);
+                if (typeTo != typeof(object)) {
+                    Emit(OpCodes.Castclass, typeTo);
+                }
+            } else if (!typeFrom.IsValueType && !typeTo.IsValueType) {
+                Emit(OpCodes.Castclass, typeTo);
+            } else {
+                throw Error.InvalidCast(typeFrom, typeTo);
+            }
+        }
+
+        //CONFORMING
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        private void EmitNumericConversion(Type typeFrom, Type typeTo, bool isChecked) {
+            bool isFromUnsigned = TypeUtils.IsUnsigned(typeFrom);
+            bool isFromFloatingPoint = TypeUtils.IsFloatingPoint(typeFrom);
+            if (typeTo == typeof(Single)) {
+                if (isFromUnsigned)
+                    Emit(OpCodes.Conv_R_Un);
+                Emit(OpCodes.Conv_R4);
+            } else if (typeTo == typeof(Double)) {
+                if (isFromUnsigned)
+                    Emit(OpCodes.Conv_R_Un);
+                Emit(OpCodes.Conv_R8);
+            } else {
+                TypeCode tc = Type.GetTypeCode(typeTo);
+                if (isChecked) {
+                    if (isFromUnsigned) {
+                        switch (tc) {
+                            case TypeCode.SByte:
+                                Emit(OpCodes.Conv_Ovf_I1_Un);
+                                break;
+                            case TypeCode.Int16:
+                                Emit(OpCodes.Conv_Ovf_I2_Un);
+                                break;
+                            case TypeCode.Int32:
+                                Emit(OpCodes.Conv_Ovf_I4_Un);
+                                break;
+                            case TypeCode.Int64:
+                                Emit(OpCodes.Conv_Ovf_I8_Un);
+                                break;
+                            case TypeCode.Byte:
+                                Emit(OpCodes.Conv_Ovf_U1_Un);
+                                break;
+                            case TypeCode.UInt16:
+                            case TypeCode.Char:
+                                Emit(OpCodes.Conv_Ovf_U2_Un);
+                                break;
+                            case TypeCode.UInt32:
+                                Emit(OpCodes.Conv_Ovf_U4_Un);
+                                break;
+                            case TypeCode.UInt64:
+                                Emit(OpCodes.Conv_Ovf_U8_Un);
+                                break;
+                            default:
+                                throw Error.UnhandledConvert(typeTo);
+                        }
+                    } else {
+                        switch (tc) {
+                            case TypeCode.SByte:
+                                Emit(OpCodes.Conv_Ovf_I1);
+                                break;
+                            case TypeCode.Int16:
+                                Emit(OpCodes.Conv_Ovf_I2);
+                                break;
+                            case TypeCode.Int32:
+                                Emit(OpCodes.Conv_Ovf_I4);
+                                break;
+                            case TypeCode.Int64:
+                                Emit(OpCodes.Conv_Ovf_I8);
+                                break;
+                            case TypeCode.Byte:
+                                Emit(OpCodes.Conv_Ovf_U1);
+                                break;
+                            case TypeCode.UInt16:
+                            case TypeCode.Char:
+                                Emit(OpCodes.Conv_Ovf_U2);
+                                break;
+                            case TypeCode.UInt32:
+                                Emit(OpCodes.Conv_Ovf_U4);
+                                break;
+                            case TypeCode.UInt64:
+                                Emit(OpCodes.Conv_Ovf_U8);
+                                break;
+                            default:
+                                throw Error.UnhandledConvert(typeTo);
+                        }
+                    }
+                } else {
+                    if (isFromUnsigned) {
+                        switch (tc) {
+                            case TypeCode.SByte:
+                            case TypeCode.Byte:
+                                Emit(OpCodes.Conv_U1);
+                                break;
+                            case TypeCode.Int16:
+                            case TypeCode.UInt16:
+                            case TypeCode.Char:
+                                Emit(OpCodes.Conv_U2);
+                                break;
+                            case TypeCode.Int32:
+                            case TypeCode.UInt32:
+                                Emit(OpCodes.Conv_U4);
+                                break;
+                            case TypeCode.Int64:
+                            case TypeCode.UInt64:
+                                Emit(OpCodes.Conv_U8);
+                                break;
+                            default:
+                                throw Error.UnhandledConvert(typeTo);
+                        }
+                    } else {
+                        switch (tc) {
+                            case TypeCode.SByte:
+                            case TypeCode.Byte:
+                                Emit(OpCodes.Conv_I1);
+                                break;
+                            case TypeCode.Int16:
+                            case TypeCode.UInt16:
+                            case TypeCode.Char:
+                                Emit(OpCodes.Conv_I2);
+                                break;
+                            case TypeCode.Int32:
+                            case TypeCode.UInt32:
+                                Emit(OpCodes.Conv_I4);
+                                break;
+                            case TypeCode.Int64:
+                            case TypeCode.UInt64:
+                                Emit(OpCodes.Conv_I8);
+                                break;
+                            default:
+                                throw Error.UnhandledConvert(typeTo);
+                        }
+                    }
+                }
+            }
+        }
+
+        //CONFORMING
+        private void EmitNullableToNullableConversion(Type typeFrom, Type typeTo, bool isChecked) {
+            Debug.Assert(TypeUtils.IsNullableType(typeFrom));
+            Debug.Assert(TypeUtils.IsNullableType(typeTo));
+            Label labIfNull = default(Label);
+            Label labEnd = default(Label);
+            LocalBuilder locFrom = null;
+            LocalBuilder locTo = null;
+            locFrom = DeclareLocal(typeFrom);
+            Emit(OpCodes.Stloc, locFrom);
+            locTo = DeclareLocal(typeTo);
+            // test for null
+            Emit(OpCodes.Ldloca, locFrom);
+            EmitHasValue(typeFrom);
+            labIfNull = DefineLabel();
+            Emit(OpCodes.Brfalse_S, labIfNull);
+            Emit(OpCodes.Ldloca, locFrom);
+            EmitGetValueOrDefault(typeFrom);
+            Type nnTypeFrom = TypeUtils.GetNonNullableType(typeFrom);
+            Type nnTypeTo = TypeUtils.GetNonNullableType(typeTo);
+            EmitConvertToType(nnTypeFrom, nnTypeTo, isChecked);
+            // construct result type
+            ConstructorInfo ci = typeTo.GetConstructor(new Type[] { nnTypeTo });
+            Emit(OpCodes.Newobj, ci);
+            Emit(OpCodes.Stloc, locTo);
+            labEnd = DefineLabel();
+            Emit(OpCodes.Br_S, labEnd);
+            // if null then create a default one
+            MarkLabel(labIfNull);
+            Emit(OpCodes.Ldloca, locTo);
+            Emit(OpCodes.Initobj, typeTo);
+            MarkLabel(labEnd);
+            Emit(OpCodes.Ldloc, locTo);
+        }
+
+        //CONFORMING
+        private void EmitNonNullableToNullableConversion(Type typeFrom, Type typeTo, bool isChecked) {
+            Debug.Assert(!TypeUtils.IsNullableType(typeFrom));
+            Debug.Assert(TypeUtils.IsNullableType(typeTo));
+            LocalBuilder locTo = null;
+            locTo = DeclareLocal(typeTo);
+            Type nnTypeTo = TypeUtils.GetNonNullableType(typeTo);
+            EmitConvertToType(typeFrom, nnTypeTo, isChecked);
+            ConstructorInfo ci = typeTo.GetConstructor(new Type[] { nnTypeTo });
+            Emit(OpCodes.Newobj, ci);
+            Emit(OpCodes.Stloc, locTo);
+            Emit(OpCodes.Ldloc, locTo);
+        }
+
+        //CONFORMING
+        private void EmitNullableToNonNullableConversion(Type typeFrom, Type typeTo, bool isChecked) {
+            Debug.Assert(TypeUtils.IsNullableType(typeFrom));
+            Debug.Assert(!TypeUtils.IsNullableType(typeTo));
+            if (typeTo.IsValueType)
+                EmitNullableToNonNullableStructConversion(typeFrom, typeTo, isChecked);
+            else
+                EmitNullableToReferenceConversion(typeFrom);
+        }
+
+        //CONFORMING
+        private void EmitNullableToNonNullableStructConversion(Type typeFrom, Type typeTo, bool isChecked) {
+            Debug.Assert(TypeUtils.IsNullableType(typeFrom));
+            Debug.Assert(!TypeUtils.IsNullableType(typeTo));
+            Debug.Assert(typeTo.IsValueType);
+            LocalBuilder locFrom = null;
+            locFrom = DeclareLocal(typeFrom);
+            Emit(OpCodes.Stloc, locFrom);
+            Emit(OpCodes.Ldloca, locFrom);
+            EmitGetValue(typeFrom);
+            Type nnTypeFrom = TypeUtils.GetNonNullableType(typeFrom);
+            EmitConvertToType(nnTypeFrom, typeTo, isChecked);
+        }
+
+        //CONFORMING
+        private void EmitNullableToReferenceConversion(Type typeFrom) {
+            Debug.Assert(TypeUtils.IsNullableType(typeFrom));
+            // We've got a conversion from nullable to Object, ValueType, Enum, etc.  Just box it so that
+            // we get the nullable semantics.  
+            Emit(OpCodes.Box, typeFrom);
+        }
+
+        //CONFORMING
+        private void EmitNullableConversion(Type typeFrom, Type typeTo, bool isChecked) {
+            bool isTypeFromNullable = TypeUtils.IsNullableType(typeFrom);
+            bool isTypeToNullable = TypeUtils.IsNullableType(typeTo);
+            Debug.Assert(isTypeFromNullable || isTypeToNullable);
+            if (isTypeFromNullable && isTypeToNullable)
+                EmitNullableToNullableConversion(typeFrom, typeTo, isChecked);
+            else if (isTypeFromNullable)
+                EmitNullableToNonNullableConversion(typeFrom, typeTo, isChecked);
+            else
+                EmitNonNullableToNullableConversion(typeFrom, typeTo, isChecked);
+        }
+
+        //CONFORMING
+        internal void EmitHasValue(Type nullableType) {
+            MethodInfo mi = nullableType.GetMethod("get_HasValue", BindingFlags.Instance | BindingFlags.Public);
+            Debug.Assert(nullableType.IsValueType);
+            Emit(OpCodes.Call, mi);
+        }
+
+        //CONFORMING
+        internal void EmitGetValue(Type nullableType) {
+            MethodInfo mi = nullableType.GetMethod("get_Value", BindingFlags.Instance | BindingFlags.Public);
+            Debug.Assert(nullableType.IsValueType);
+            Emit(OpCodes.Call, mi);
+        }
+
+        //CONFORMING
+        internal void EmitGetValueOrDefault(Type nullableType) {
+            MethodInfo mi = nullableType.GetMethod("GetValueOrDefault", System.Type.EmptyTypes);
+            Debug.Assert(nullableType.IsValueType);
+            Emit(OpCodes.Call, mi);
         }
 
         #endregion
@@ -1075,7 +1468,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public void EmitArray(Type arrayType) {
             ContractUtils.RequiresNotNull(arrayType, "arrayType");
-            ContractUtils.Requires(arrayType.IsArray, "arrayType", "arryaType must be an array type");
+            ContractUtils.Requires(arrayType.IsArray, "arrayType", "arrayType must be an array type");
 
             int rank = arrayType.GetArrayRank();
             if (rank == 1) {
@@ -1092,40 +1485,6 @@ namespace Microsoft.Scripting.Generation {
         #endregion
 
         #region Support for emitting constants
-
-        public void EmitEnum(object value) {
-            ContractUtils.Requires(value != null, "value");
-            ContractUtils.Requires(value.GetType().IsEnum, "value");
-
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int32:
-                    EmitInt((int)value);
-                    break;
-                case TypeCode.Int64:
-                    EmitLong((long)value);
-                    break;
-                case TypeCode.Int16:
-                    EmitShort((short)value);
-                    break;
-                case TypeCode.UInt32:
-                    EmitUInt((uint)value);
-                    break;
-                case TypeCode.UInt64:
-                    EmitULong((ulong)value);
-                    break;
-                case TypeCode.SByte:
-                    EmitSByte((sbyte)value);
-                    break;
-                case TypeCode.UInt16:
-                    EmitUShort((ushort)value);
-                    break;
-                case TypeCode.Byte:
-                    EmitByte((byte)value);
-                    break;
-                default:
-                    throw new NotImplementedException(ResourceUtils.GetString(ResourceUtils.NotImplemented_EnumEmit, value.GetType(), value));
-            }
-        }
 
         public void EmitDecimal(decimal value) {
             if (Decimal.Truncate(value) == value) {
@@ -1153,6 +1512,73 @@ namespace Microsoft.Scripting.Generation {
             EmitBoolean((bits[3] & 0x80000000) != 0);
             EmitByte((byte)(bits[3] >> 16));
             EmitNew(typeof(decimal).GetConstructor(new Type[] { typeof(int), typeof(int), typeof(int), typeof(bool), typeof(byte) }));
+        }
+
+        /// <summary>
+        /// Emits default(T)
+        /// Semantics match C# compiler behavior
+        /// </summary>
+        internal void EmitDefault(Type type) {
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Object:
+                case TypeCode.DateTime:
+                    if (type.IsValueType) {
+                        // Type.GetTypeCode on an enum returns the underlying
+                        // integer TypeCode, so we won't get here.
+                        Debug.Assert(!type.IsEnum);
+
+                        // This is the IL for default(T) if T is a generic type
+                        // parameter, so it should work for any type. It's also
+                        // the standard pattern for structs.
+                        LocalBuilder lb = GetLocal(type);
+                        Emit(OpCodes.Ldloca, lb);
+                        Emit(OpCodes.Initobj, type);
+                        Emit(OpCodes.Ldloc, lb);
+                        FreeLocal(lb);
+                    } else {
+                        Emit(OpCodes.Ldnull);
+                    }
+                    break;
+
+                case TypeCode.Empty:
+                case TypeCode.String:
+                case TypeCode.DBNull:
+                    Emit(OpCodes.Ldnull);
+                    break;
+
+                case TypeCode.Boolean:
+                case TypeCode.Char:
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                    Emit(OpCodes.Ldc_I4_0);
+                    break;
+
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                    Emit(OpCodes.Ldc_I4_0);
+                    Emit(OpCodes.Conv_I8);
+                    break;
+
+                case TypeCode.Single:
+                    Emit(OpCodes.Ldc_R4, default(Single));
+                    break;
+
+                case TypeCode.Double:
+                    Emit(OpCodes.Ldc_R8, default(Double));
+                    break;
+
+                case TypeCode.Decimal:
+                    Emit(OpCodes.Ldc_I4_0);
+                    Emit(OpCodes.Newobj, typeof(Decimal).GetConstructor(new Type[] { typeof(int) }));
+                    break;
+
+                default:
+                    throw Assert.Unreachable;
+            }
         }
 
         public void EmitMissingValue(Type type) {
@@ -1224,82 +1650,29 @@ namespace Microsoft.Scripting.Generation {
         }
 
         internal void EmitUninitialized() {
-            EmitFieldGet(typeof(Microsoft.Scripting.Runtime.Uninitialized), "Instance");
+            EmitFieldGet(typeof(System.Scripting.Runtime.Uninitialized), "Instance");
         }
 
-        #endregion
-
-        #region Tuples
-
-        // TOOD: Should the tuple support be here?
-
-        public void EmitTuple(Type tupleType, int count, EmitArrayHelper emit) {
-            EmitTuple(tupleType, 0, count, emit);
-        }
-
-        private void EmitTuple(Type tupleType, int start, int end, EmitArrayHelper emit) {
-            int size = end - start;
-
-            if (size > Tuple.MaxSize) {
-                int multiplier = 1;
-                while (size > Tuple.MaxSize) {
-                    size = (size + Tuple.MaxSize - 1) / Tuple.MaxSize;
-                    multiplier *= Tuple.MaxSize;
-                }
-                for (int i = 0; i < size; i++) {
-                    int newStart = start + (i * multiplier);
-                    int newEnd = System.Math.Min(end, start + ((i + 1) * multiplier));
-
-                    PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", i));
-                    Debug.Assert(pi != null);
-                    EmitTuple(pi.PropertyType, newStart, newEnd, emit);
-                }
-            } else {
-                for (int i = start; i < end; i++) {
-                    emit(i);
-                }
-            }
-
-            // fill in emptys with null.
-            Type[] genArgs = tupleType.GetGenericArguments();
-            for (int i = size; i < genArgs.Length; i++) {
-                EmitNull();
-            }
-
-            EmitTupleNew(tupleType);
-        }
-
-        private void EmitTupleNew(Type tupleType) {
-            ConstructorInfo[] cis = tupleType.GetConstructors();
-            foreach (ConstructorInfo ci in cis) {
-                if (ci.GetParameters().Length != 0) {
-                    EmitNew(ci);
-                    break;
-                }
-            }
-        }
         #endregion
 
         #region LocalTemps
 
-        internal Slot GetLocalTmp(Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
+        internal LocalBuilder GetLocal(Type type) {
+            Debug.Assert(type != null);
 
-            for (int i = 0; i < _freeSlots.Count; i++) {
-                Slot slot = _freeSlots[i];
-                if (slot.Type == type) {
-                    _freeSlots.RemoveAt(i);
-                    return slot;
-                }
+            LocalBuilder local;
+            if (_freeLocals.TryDequeue(type, out local)) {
+                Debug.Assert(type == local.LocalType);
+                return local;
             }
 
-            return new LocalSlot(DeclareLocal(type), this);
+            return DeclareLocal(type);
         }
 
-        internal void FreeLocalTmp(Slot slot) {
-            if (slot != null) {
-                Debug.Assert(!_freeSlots.Contains(slot));
-                _freeSlots.Add(slot);
+        // TODO: make "local" a ref param and null it out
+        internal void FreeLocal(LocalBuilder local) {
+            if (local != null) {
+                _freeLocals.Enqueue(local.LocalType, local);
             }
         }
 
@@ -1322,4 +1695,41 @@ namespace Microsoft.Scripting.Generation {
         #endregion
 
     }
+}
+
+namespace System.Scripting.Runtime {
+
+    public static partial class RuntimeHelpers {
+        private const int MIN_CACHE = -100;
+        private const int MAX_CACHE = 1000;
+        private static readonly object[] cache = MakeCache();
+
+        /// <summary> Singleton boxed instance of True.  We should never box additional instances. </summary>
+        public static readonly object True = true;
+        /// <summary> Singleton boxed instance of False  We should never box additional instances. </summary>
+        public static readonly object False = false;
+
+        private static object[] MakeCache() {
+            object[] result = new object[MAX_CACHE - MIN_CACHE];
+
+            for (int i = 0; i < result.Length; i++) {
+                result[i] = (object)(i + MIN_CACHE);
+            }
+
+            return result;
+        }
+
+        public static object BooleanToObject(bool value) {
+            return value ? True : False;
+        }
+
+        public static object Int32ToObject(Int32 value) {
+            // caches improves pystone by ~5-10% on MS .Net 1.1, this is a very integer intense app
+            if (value < MAX_CACHE && value >= MIN_CACHE) {
+                return cache[value - MIN_CACHE];
+            }
+            return (object)value;
+        }
+    }
+
 }

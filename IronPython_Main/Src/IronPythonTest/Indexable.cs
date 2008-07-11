@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace IronPythonTest {
     public class Tuple {
@@ -542,6 +541,44 @@ namespace IronPythonTest {
                 keys += pair.Key;
                 values += pair.Value;
             }
+        }
+    }
+
+    public class CSharpEnumerable {
+        public IEnumerable<int> GetEnumerableOfInt() {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+        }
+
+        public IEnumerable<object> GetEnumerableOfObject() {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+        }
+
+        public IEnumerable GetEnumerable() {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+        }
+
+        public IEnumerator<int> GetEnumeratorOfInt() {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+        }
+
+        public IEnumerator<object> GetEnumeratorOfObject() {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+        }
+
+        public IEnumerator GetEnumerator() {
+            yield return 1;
+            yield return 2;
+            yield return 3;
         }
     }
     

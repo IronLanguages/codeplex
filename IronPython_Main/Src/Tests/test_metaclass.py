@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -26,8 +26,8 @@ class New(object):
 
 def g_f_modify(new_base=None, new_name=None):
     def f_modify(name, bases, dict):
-        if new_name: 
-            name = new_name 
+        if new_name:
+            name = new_name
         if new_base:
             bases = new_base + bases
             
@@ -39,17 +39,17 @@ def g_f_modify(new_base=None, new_name=None):
 def g_c_modify(new_base=None, new_name=None):
     class c_modify(type):
         def __new__(cls, name, bases, dict):
-            if new_name: 
-                name = new_name 
+            if new_name:
+                name = new_name
             if new_base:
                 bases = new_base + bases
                 
             dict['version'] = 2.4
             return super(c_modify, cls).__new__(cls, name, bases, dict)
             
-    return c_modify 
+    return c_modify
 
-# Modifying the class dictionary prior to the class being created. 
+# Modifying the class dictionary prior to the class being created.
 def test_modify():
     def _check(T):
         x = T()
@@ -58,7 +58,7 @@ def test_modify():
         AreEqual(x.__class__.__name__, "D")
     
     for f in [ g_f_modify, g_c_modify ]:
-        class C(object): 
+        class C(object):
             __metaclass__ = f((New,), "D")
         _check(C)
         
@@ -66,7 +66,7 @@ def test_modify():
             __metaclass__ = f((New,), "D")
         _check(C)
         
-        class C(object): 
+        class C(object):
             __metaclass__ = f((Old,), "D")
         _check(C)
 
@@ -82,9 +82,9 @@ class dash_attributes(type):
             new_key = key[0].lower()
             
             for x in key[1:]:
-                if not x.islower(): 
+                if not x.islower():
                     new_key += "_" + x.lower()
-                else: 
+                else:
                     new_key += x
                 
             new_dict[new_key] = val
@@ -114,10 +114,10 @@ def test_basic():
     try_metaclass(dash_attributes)
     try_metaclass(sub_type1)
     
-    ## subclassing    
+    ## subclassing
     class C1(object):
         __metaclass__ = g_c_modify()
-    class C2: 
+    class C2:
         __metaclass__ = g_f_modify()
 
     # not defining __metaclass__
@@ -128,12 +128,12 @@ def test_basic():
         AreEqual(D().version, 2.4)
     
     # redefining __metaclass__
-    try: 
+    try:
         class D(C1): __metaclass__ = dash_attributes
     except TypeError: pass
     else: Fail("metaclass conflict expected")
     
-    class D(C2): 
+    class D(C2):
         __metaclass__ = dash_attributes
         def StartSomethingToday(self): pass
         
@@ -153,11 +153,11 @@ def test_find_metaclass():
     global __metaclass__
     __metaclass__ = lambda *args: 100
 
-    class C1: 
+    class C1:
         def __metaclass__(*args): return 200
     AreEqual(C1, 200)
 
-    class C2(object): 
+    class C2(object):
         def __metaclass__(*args): return 200
     AreEqual(C2, 200)
     
@@ -167,19 +167,19 @@ def test_find_metaclass():
     class D2(object): pass
     AreEqual(D2.__class__, type)
 
-    # base order: how to see the effect of the order???    
+    # base order: how to see the effect of the order???
     for x in [
-                A1, 
+                A1,
                 #A2,        # bug 364991
              ]:
         for y in [B1, B2]:
             class E(x, y):
                 def PythonMethod(self): pass
-            Assert(hasattr(E, "python_method"))    
+            Assert(hasattr(E, "python_method"))
 
             class E(y, x):
                 def PythonMethod(self): pass
-            Assert(hasattr(E, "python_method"))    
+            Assert(hasattr(E, "python_method"))
     
     del __metaclass__
     
@@ -208,7 +208,7 @@ class sub_type3(sub_type2): # subclass
         flag += 100
         return super(sub_type3, cls).__new__(cls, name, bases, dict)
         
-def test_conflict(): 
+def test_conflict():
     global flag
     
     class C1(object): pass
@@ -243,7 +243,7 @@ def test_conflict():
         class D(C2, C1, C3): pass
     
     for f in [
-            f1, 
+            f1,
             #f2,   # bug 364991
             f3,
         ]:
@@ -251,14 +251,14 @@ def test_conflict():
         
 def test_bad_choices():
     def create(x):
-        class C(object): 
+        class C(object):
             __metaclass__ = x
     
     for x in [
                 #None,   # bug 364967
                 1,
                 [],
-                lambda name, bases, dict, extra: 1, 
+                lambda name, bases, dict, extra: 1,
                 lambda name, bases: 1,
                 Old,
                 New,
@@ -267,16 +267,16 @@ def test_bad_choices():
 
 # copied from test_class.py
 def test_metaclass_call_override():
-	"""overriding __call__ on a metaclass should work"""
-	class mytype(type):
-		def __call__(self, *args):
-			return args
-	
-	class myclass(object):
-		__metaclass__ = mytype
-		
-	AreEqual(myclass(1,2,3), (1,2,3))        
-	
+    """overriding __call__ on a metaclass should work"""
+    class mytype(type):
+        def __call__(self, *args):
+            return args
+    
+    class myclass(object):
+        __metaclass__ = mytype
+        
+    AreEqual(myclass(1,2,3), (1,2,3))
+    
 def test_metaclass():
     global __metaclass__, recvArgs
     
@@ -327,6 +327,6 @@ def test_metaclass():
     AreEqual(recvArgs, ('foo', (), {'__module__' : __name__}))  # note no __metaclass__ becauses its not in our dict
     
     # clean up __metaclass__ for other tests
-    del(__metaclass__)	
+    del(__metaclass__)
     
 run_test(__name__)

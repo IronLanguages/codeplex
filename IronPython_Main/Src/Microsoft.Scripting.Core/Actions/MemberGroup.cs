@@ -13,14 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
     /// <summary>
     /// MemberGroups are a collection of MemberTrackers which are commonly produced
     /// on-demand to talk about the available members.  They can consist of a mix of

@@ -15,10 +15,9 @@
 
 using System;
 using System.Diagnostics;
-
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
+using System.Scripting;
+using System.Scripting.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     internal class PythonVariable {

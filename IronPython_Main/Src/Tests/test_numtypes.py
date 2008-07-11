@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -43,11 +43,11 @@ biops_math_sub = [
     
 biops_math_mul = [
     ("mul", mul),
-    ]    
+    ]
     
 biops_math_div = [
     ("div", div),
-    ] 
+    ]
 #------------------------------------------------------------------------------
 
 biops_math_floordiv = [
@@ -74,7 +74,7 @@ biops_bool_simple = [
     ("and", and_),
     ("or", or_),
     ("xor", xor),
-    ]    
+    ]
 
 biops_bool_shift = [
     ("lshift", lshift),
@@ -129,7 +129,7 @@ def get_values(values, itypes, ftypes):
         clr.append(mylong(py))
         all.append( (py, clr) )
 
-        py  = float(v)        
+        py  = float(v)
         clr = get_clr_values(sv, ftypes)
         clr.append(myfloat(py))
         all.append( (py, clr) )
@@ -343,7 +343,7 @@ if is_cli or is_silverlight:
 
 
 RUN_ALL = False
-if len(sys.argv)<=1 or __name__ != '__main__': 
+if len(sys.argv)<=1 or __name__ != '__main__':
     RUN_ALL = True
 elif not sys.argv[1] in [str(x) for x in range(1, 12)]: raise Exception("Bad params!")
 
@@ -381,7 +381,7 @@ if RUN_ALL or sys.argv[1] == '6':
     @skip('win32')
     def test_validate_biops_math_div():
         total = validate_binary_ops(all, biops_math_div)
-        print total, "tests ran."                        
+        print total, "tests ran."
 #------------------------------------------------------------------------------
 if RUN_ALL or sys.argv[1] == '7':
     @skip('win32')
@@ -405,7 +405,7 @@ if RUN_ALL or sys.argv[1] == '10':
     @skip('win32')
     def test_validate_biops_math_pow():
         total = validate_binary_ops(all, biops_math_pow)
-        print total, "tests ran."                        
+        print total, "tests ran."
         
 #------------------------------------------------------------------------------
 if RUN_ALL or sys.argv[1] == '11':

@@ -16,26 +16,23 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.IO;
-using System.Diagnostics;
-using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
-
-using IronPython.Runtime.Types;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
 using IronPython.Runtime;
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 
 #if !SILVERLIGHT
-using Microsoft.Scripting.Actions.ComDispatch;
+using ComTypeLibInfo = Microsoft.Scripting.Actions.ComDispatch.ComTypeLibInfo;
+using ComTypeLibDesc = Microsoft.Scripting.Actions.ComDispatch.ComTypeLibDesc;
+using ComObjectWithTypeInfo = Microsoft.Scripting.Actions.ComDispatch.ComObjectWithTypeInfo;
 #endif
 
 [assembly: PythonModule("clr", typeof(IronPython.Modules.ClrModule))]
@@ -47,6 +44,7 @@ namespace IronPython.Modules {
     public static class ClrModule {
         public static readonly object _referencesKey = new object();
 
+        [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             if (!context.HasModuleState(_referencesKey)) {
                 ReferencesList rl = new ReferencesList();
@@ -63,6 +61,10 @@ namespace IronPython.Modules {
             return context.LanguageContext.DomainManager;
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters can be an already loaded
+Assembly object, a full assembly name, or a partial assembly name. After the
+load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public static void AddReference(CodeContext/*!*/ context, params object[] references) {
             if (references == null) throw new ArgumentTypeException("Expected string or Assembly, got NoneType");
             if (references.Length == 0) throw new ArgumentException("Expected at least one name, got none");
@@ -73,6 +75,12 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  One or more assembly names can
+be provided.  The assembly is searched for in the directories specified in 
+sys.path and dependencies will be loaded from sys.path as well.  The assembly 
+name should be the filename on disk without a directory specifier and 
+optionally including the .EXE or .DLL extension. After the load the assemblies 
+namespaces and top-level types will be available via import Namespace.")]
         public static void AddReferenceToFile(CodeContext/*!*/ context, params string[] files) {
             if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (files.Length == 0) throw new ArgumentException("Expected at least one name, got none");
@@ -83,6 +91,9 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters are an assembly name. 
+After the load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public static void AddReferenceByName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
@@ -127,6 +138,9 @@ namespace IronPython.Modules {
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters are a partial assembly name. 
+After the load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public static void AddReferenceByPartialName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
@@ -137,6 +151,9 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters are a full path to an. 
+assembly on disk. After the load the assemblies namespaces and top-level types 
+will be available via import Namespace.")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFile")]
         public static Assembly/*!*/ LoadAssemblyFromFileWithPath(string/*!*/ file) {
             if (file == null) throw new ArgumentTypeException("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
@@ -144,6 +161,9 @@ namespace IronPython.Modules {
             return Assembly.LoadFile(file);
         }
 
+        [Documentation(@"Loads an assembly from the specified filename and returns the assembly
+object.  Namespaces or types in the assembly can be accessed directly from 
+the assembly object.")]
         public static Assembly/*!*/ LoadAssemblyFromFile(CodeContext/*!*/ context, string/*!*/ file) {
             if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (file.Length == 0) throw new ArgumentException("assembly name must not be empty string");
@@ -156,6 +176,9 @@ namespace IronPython.Modules {
             return context.LanguageContext.LoadAssemblyFromFile(file);
         }
 
+        [Documentation(@"Loads an assembly from the specified partial assembly name and returns the 
+assembly object.  Namespaces or types in the assembly can be accessed directly 
+from the assembly object.")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadWithPartialName")]
         public static Assembly/*!*/ LoadAssemblyByPartialName(string/*!*/ name) {
             if (name == null) {
@@ -168,6 +191,9 @@ namespace IronPython.Modules {
         }
 #endif
 
+        [Documentation(@"Loads an assembly from the specified assembly name and returns the assembly
+object.  Namespaces or types in the assembly can be accessed directly from 
+the assembly object.")]
         public static Assembly/*!*/ LoadAssemblyByName(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) {
                 throw new ArgumentTypeException("LoadAssemblyByName: arg 1 must be a string");
@@ -212,9 +238,9 @@ namespace IronPython.Modules {
         }
 
         public static CommandDispatcher SetCommandDispatcher(CodeContext/*!*/ context, CommandDispatcher dispatcher) {
-            ContractUtils.RequiresNotNull(context, "context"); 
-            
-            return context.LanguageContext.DomainManager.SetCommandDispatcher(dispatcher);
+            ContractUtils.RequiresNotNull(context, "context");
+
+            return ((PythonContext)context.LanguageContext).GetSetCommandDispatcher(dispatcher);
         }
 
         #endregion
@@ -240,6 +266,10 @@ namespace IronPython.Modules {
         private static void AddReference(CodeContext/*!*/ context, Assembly assembly) {
             // Load the assembly into IronPython
             if (context.LanguageContext.DomainManager.LoadAssembly(assembly)) {
+#if !SILVERLIGHT // ComObject
+                ComObjectWithTypeInfo.PublishComTypes(assembly);
+#endif
+
                 // Add it to the references tuple if we
                 // loaded a new assembly.
                 ReferencesList rl = (ReferencesList)PythonContext.GetContext(context).GetModuleState(_referencesKey);
@@ -247,6 +277,8 @@ namespace IronPython.Modules {
                     rl.Add(assembly);
                 }
             }
+
+            LoadScriptCode(PythonContext.GetContext(context), assembly);            
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
@@ -362,6 +394,11 @@ namespace IronPython.Modules {
         #region Runtime Type Checking support
 #if !SILVERLIGHT // files, paths
 
+        [Documentation(@"Adds a reference to a .NET assembly.  One or more assembly names can
+be provided which are fully qualified names to the file on disk.  The 
+directory is added to sys.path and AddReferenceToFile is then called. After the 
+load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public static void AddReferenceToFileAndPath(CodeContext/*!*/ context, params string[] files) {
             if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
             ContractUtils.RequiresNotNull(context, "context");
@@ -412,7 +449,7 @@ namespace IronPython.Modules {
         public static PythonType StrongBox {
             get {
                 if (_strongBoxType == null) {
-                    _strongBoxType = DynamicHelpers.GetPythonTypeFromType(typeof(Microsoft.Scripting.Utils.StrongBox<>));
+                    _strongBoxType = DynamicHelpers.GetPythonTypeFromType(typeof(StrongBox<>));
                 }
                 return _strongBoxType;
             }
@@ -615,5 +652,82 @@ namespace IronPython.Modules {
             return DynamicHelpers.GetPythonTypeFromType(t);
         }
 
+        /// <summary>
+        /// Provides a helper for compiling a group of modules into a single assembly.  The assembly can later be
+        /// reloaded using the LoadModules API.
+        /// </summary>
+        public static void CompileModules(CodeContext/*!*/ context, string/*!*/ assemblyName, params string/*!*/[]/*!*/ filenames) {
+            ContractUtils.RequiresNotNull(assemblyName, "assemblyName");
+            ContractUtils.RequiresNotNullItems(filenames, "filenames");
+
+            PythonContext pc = PythonContext.GetContext(context);
+
+            List<ScriptCode> code = new List<ScriptCode>();
+            foreach (string filename in filenames) {
+                SourceUnit su = pc.DomainManager.Host.TryGetSourceFileUnit(pc, filename, pc.DefaultEncoding, SourceCodeKind.File);
+                if (su == null) {
+                    throw PythonOps.IOError("Couldn't find file for compilation: {0}", filename);
+                }
+
+                ScriptCode sc = PythonContext.GetContext(context).GetScriptCode(su, Path.GetFileNameWithoutExtension(filename), ModuleOptions.Initialize);
+
+                code.Add(sc);
+            }
+
+            ScriptCode.SaveToAssembly(assemblyName, code.ToArray());
+        }
+
+        /// <summary>
+        /// Provides a helper for reloading a set of compiled modules.  A list of assembly names is provided which
+        /// includes the compiled modules.  
+        /// 
+        /// After reloading the modules are available via import.  The available modules will not be run until the
+        /// user explicitly imports them for the first time.
+        /// </summary>
+        public static void LoadModules(CodeContext/*!*/ context, params string/*!*/[]/*!*/ filenames) {
+            ContractUtils.RequiresNotNullItems(filenames, "filenames");
+
+            PythonContext pc = PythonContext.GetContext(context);
+
+            foreach (string filename in filenames) {
+                Assembly asm = LoadAssemblyByName(context, filename);
+                LoadScriptCode(pc, asm);
+            }
+        }
+
+        private static void LoadScriptCode(PythonContext/*!*/ pc, Assembly/*!*/ asm) {
+            EnsureMetaPathLoader(pc);
+
+            ScriptCode[] codes = ScriptCode.LoadFromAssembly(pc.DomainManager, asm);
+
+            foreach (ScriptCode sc in codes) {
+                pc.GetCompiledLoader().AddScriptCode(sc);
+            }
+        }
+
+        /// <summary>
+        /// Ensures that we have a CompiledLoader installed on sys.meta_path so that we can load compiled modules.
+        /// </summary>
+        private static void EnsureMetaPathLoader(PythonContext pc) {
+            SymbolId meta_path = SymbolTable.StringToId("meta_path");
+            object path;
+            List lstPath;
+
+            if (!pc.SystemState.Dict.TryGetValue(meta_path, out path) || ((lstPath = path as List) == null)) {
+                pc.SystemState.Dict[meta_path] = lstPath = new List();
+            }
+
+            bool haveLoader = false;
+            foreach (object o in lstPath) {
+                if (o is PythonContext.CompiledLoader) {
+                    haveLoader = true;
+                    break;
+                }
+            }
+
+            if (!haveLoader) {
+                lstPath.append(pc.GetCompiledLoader());
+            }
+        }
     }
 }

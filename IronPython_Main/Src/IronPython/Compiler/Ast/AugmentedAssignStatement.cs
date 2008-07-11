@@ -13,10 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Diagnostics;
-using MSAst = Microsoft.Scripting.Ast;
-using Operators = Microsoft.Scripting.Runtime.Operators;
+using MSAst = System.Linq.Expressions;
+using Operators = System.Scripting.Runtime.Operators;
 
 namespace IronPython.Compiler.Ast {
     public class AugmentedAssignStatement : Statement {

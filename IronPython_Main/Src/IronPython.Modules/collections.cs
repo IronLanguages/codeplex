@@ -16,17 +16,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using System.Text;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {
@@ -331,7 +331,7 @@ namespace IronPython.Modules {
 
                     return PythonTuple.MakeTuple(
                         DynamicHelpers.GetPythonTypeFromType(GetType()),
-                        PythonTuple.MakeTuple(new List(items)),
+                        PythonTuple.MakeTuple(List.FromArrayNoCopy(items)),
                         null
                     );
                 }
@@ -541,22 +541,34 @@ namespace IronPython.Modules {
             #region ICodeFormattable Members
 
             public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-                StringBuilder sb = new StringBuilder();
-                sb.Append("deque([");
-                string comma = "";
-
-                lock (_lockObj) {
-                    WalkDeque(delegate(int index) {
-                        sb.Append(comma);
-                        sb.Append(PythonOps.StringRepr(_data[index]));
-                        comma = ", ";
-                        return true;
-                    });
+                List<object> infinite = PythonOps.GetAndCheckInfinite(this);
+                if (infinite == null) {
+                    return "[...]";
                 }
 
-                sb.Append("])");
+                int infiniteIndex = infinite.Count;
+                infinite.Add(this);
+                try {
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append("deque([");
+                    string comma = "";
 
-                return sb.ToString();
+                    lock (_lockObj) {
+                        WalkDeque(delegate(int index) {
+                            sb.Append(comma);
+                            sb.Append(PythonOps.StringRepr(_data[index]));
+                            comma = ", ";
+                            return true;
+                        });
+                    }
+
+                    sb.Append("])");
+
+                    return sb.ToString();
+                } finally {
+                    System.Diagnostics.Debug.Assert(infiniteIndex == infinite.Count - 1);
+                    infinite.RemoveAt(infiniteIndex);
+                }
             }
 
             #endregion
@@ -582,7 +594,7 @@ namespace IronPython.Modules {
             [return: MaybeNotImplemented]
             public static object operator >(deque self, object other) {
                 deque otherDeque = other as deque;
-                if (otherDeque == null) return PythonOps.NotImplemented;
+                if (otherDeque == null) return NotImplementedType.Value;
 
                 return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) > 0);
             }
@@ -591,7 +603,7 @@ namespace IronPython.Modules {
             [return: MaybeNotImplemented]
             public static object operator <(deque self, object other) {
                 deque otherDeque = other as deque;
-                if (otherDeque == null) return PythonOps.NotImplemented;
+                if (otherDeque == null) return NotImplementedType.Value;
 
                 return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) < 0);
             }
@@ -600,7 +612,7 @@ namespace IronPython.Modules {
             [return: MaybeNotImplemented]
             public static object operator >=(deque self, object other) {
                 deque otherDeque = other as deque;
-                if (otherDeque == null) return PythonOps.NotImplemented;
+                if (otherDeque == null) return NotImplementedType.Value;
 
                 return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) >= 0);
             }
@@ -609,7 +621,7 @@ namespace IronPython.Modules {
             [return: MaybeNotImplemented]
             public static object operator <=(deque self, object other) {
                 deque otherDeque = other as deque;
-                if (otherDeque == null) return PythonOps.NotImplemented;
+                if (otherDeque == null) return NotImplementedType.Value;
 
                 return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) <= 0);
             }
@@ -676,7 +688,7 @@ namespace IronPython.Modules {
                 if (factory == null) throw PythonOps.KeyError(key);
 
                 if (!_missingSite.IsInitialized) {
-                    _missingSite.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 0));
+                    _missingSite.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 0));
                 }
 
                 // get the default value, store it in the dictionary and return it

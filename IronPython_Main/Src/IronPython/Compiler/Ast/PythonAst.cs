@@ -16,22 +16,21 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-
+using System.Scripting;
+using System.Scripting.Utils;
+using Microsoft.Scripting.Compilers;
 using IronPython.Runtime;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using Microsoft.Scripting.Utils;
+    using Ast = System.Linq.Expressions.Expression;
 
     public class PythonAst : ScopeStatement {
         private readonly Statement _body;
         private readonly bool _isModule;
         private readonly bool _printExpressions;
         private readonly PythonLanguageFeatures _languageFeatures;
-        private PythonVariable _docVariable;
+        private PythonVariable _docVariable, _nameVariable, _fileVariable;
 
         /// <summary>
         /// The globals that free variables in the functions bind to,
@@ -94,6 +93,16 @@ namespace IronPython.Compiler.Ast {
             set { _docVariable = value; }
         }
 
+        internal PythonVariable NameVariable {
+            get { return _nameVariable; }
+            set { _nameVariable = value; }
+        }
+
+        internal PythonVariable FileVariable {
+            get { return _fileVariable; }
+            set { _fileVariable = value; }
+        }
+        
         internal override bool IsGlobal {
             get { return true; }
         }
@@ -142,7 +151,7 @@ namespace IronPython.Compiler.Ast {
             return EnsureVariable(name);
         }
 
-        internal MSAst.LambdaExpression TransformToAst(CompilerContext context) {
+        internal MSAst.LambdaExpression/*!*/ TransformToAst(CompilerContext context) {
             // Create the ast generator
             // Use the PrintExpression value for the body (global level code)
             PythonCompilerOptions pco = context.Options as PythonCompilerOptions;
@@ -155,14 +164,42 @@ namespace IronPython.Compiler.Ast {
                 name = context.SourceUnit.Path;
             }
 
-            AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);            
+            MSAst.Annotations annotations = MSAst.Expression.Annotate(_body.Span, context.SourceUnit.Information);
+            AstGenerator ag = new AstGenerator(context, annotations, name, false, _printExpressions);            
             ag.Block.Global = true;
 
             ag.Block.Body = Ast.Block(
+                Ast.Call(
+                    AstGenerator.GetHelperMethod("FlowLanguageFeatures"),
+                    Ast.CodeContext(),
+                    Ast.Constant(_languageFeatures)
+                ),
                 Ast.Assign(ag.LineNumberExpression, Ast.Constant(0)),
                 Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
                 ag.WrapScopeStatements(Transform(ag))
             );
+            if (_isModule) {
+                Debug.Assert(pco.ModuleName != null);
+
+                ag.Block.Body = Ast.Block(
+                    Ast.Assign(_fileVariable.Variable, Ast.Constant(name)),
+                    Ast.Assign(_nameVariable.Variable, Ast.Constant(pco.ModuleName)),
+                    ag.Block.Body
+                );
+
+                if ((pco.Module & ModuleOptions.Initialize) != 0) {
+                    // TODO: Should be try/fault
+                    ag.Block.Body = Ast.Try(
+                        Ast.Call(AstGenerator.GetHelperMethod("PublishModule"), Ast.CodeContext(), Ast.Constant(pco.ModuleName)),
+                        ag.Block.Body
+                    ).Catch(
+                        typeof(Exception),
+                        Ast.Call(AstGenerator.GetHelperMethod("RemoveModule"), Ast.CodeContext(), Ast.Constant(pco.ModuleName)),
+                        Ast.Rethrow()
+                    );
+                }
+            }
+
             return ag.Block.MakeLambda();
         }
 

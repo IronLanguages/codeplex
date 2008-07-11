@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -69,7 +69,7 @@ def test_open():
     AssertError(TypeError, open, [])
     AssertError(TypeError, open, 1)
 
-def test_compile():    
+def test_compile():
     def max(a,b):
         if a>b: return a
         else: return b
@@ -233,7 +233,7 @@ def test_eval_dicts():
     global global_value
     value_a = 13
     value_b = 17
-    global_value = 23    
+    global_value = 23
     def eval_using_locals():
         value_a = 3
         value_b = 7
@@ -246,11 +246,11 @@ def test_eval_dicts():
     
     Assert(eval_using_locals())
     
-    if is_cli or is_silverlight: 
+    if is_cli or is_silverlight:
         if System.BitConverter.IsLittleEndian == True:
             Assert(sys.byteorder == "little")
         else:
-            Assert(sys.byteorder == "big") 
+            Assert(sys.byteorder == "big")
     
     
     sortedDir = 3
@@ -263,7 +263,7 @@ def test_getattr():
     class C1:
         def __init__(self):
             self.field = C1
-        def method(self): 
+        def method(self):
             return "method"
         def __getattr__(self, attrname):
             if attrname == "lambda":
@@ -273,10 +273,10 @@ def test_getattr():
             else:
                 raise AttributeError, attrname
     
-    class C2(object):             
+    class C2(object):
         def __init__(self):
             self.field = C1
-        def method(self): 
+        def method(self):
             return "method"
         def __getattr__(self, attrname):
             if attrname == "lambda":
@@ -299,7 +299,7 @@ def test_getattr():
         for attrname in ('field', 'method', '__init__', '__getattr__', 'lambda', '__doc__', '__module__'):
             AreEqual(hasattr(o, attrname), True)
     
-        for attrname in ("myassert", "anything", "else"): 
+        for attrname in ("myassert", "anything", "else"):
             AreEqual(hasattr(o,attrname), False)
     
     getattrhelper(C1)
@@ -310,12 +310,12 @@ def test_getattr():
 def test_inheritance_ctor():
     global flag
     flag = 0
-    def myinit(self): 
+    def myinit(self):
         global flag
         flag = flag + 1
     
     cnt = 0
-    for bt in (tuple, dict, list, str, set, frozenset, int, float, complex):  
+    for bt in (tuple, dict, list, str, set, frozenset, int, float, complex):
         nt = type("derived", (bt,), dict())
         inst = nt()
         AreEqual(type(inst), nt)
@@ -339,7 +339,7 @@ def test_subclassing_builtins():
     f = MyFile('temporary.deleteme','w')
     AreEqual(f.myfield, 0)
     f.close()
-    import nt   
+    import nt
     nt.unlink('temporary.deleteme')
     
     
@@ -357,17 +357,17 @@ def test_extensible_types_hashing():
         
         AreEqual(hash(foo(y)), hash(y))
         
-        if x != str: 
+        if x != str:
             AreEqual(-foo(y), -y)
             AreEqual(+foo(y), +y)
             
-            if x != complex and x != float: 
+            if x != complex and x != float:
                 AreEqual(~foo(y), ~y)
     
     
 
 
-# can use kw-args w/ file    
+# can use kw-args w/ file
 @skip("silverlight")
 def test_kwargs_file():
     f = file(name='temporary.deleteme', mode='w')
@@ -394,51 +394,51 @@ def test_issubclass():
 
 @skip('win32')
 def test_cli_subclasses():
-	import clr
-	
-	Assert(issubclass(int, int))
-	Assert(not issubclass(str, int))
-	Assert(not issubclass(int, (str, str)))
-	Assert(issubclass(int, (str, int)))
-	
-	Assert(str(None) == "None")
-	Assert(issubclass(type(None),type(None)))
-	Assert(str(type(None)) == "<type 'NoneType'>")
-	Assert(str(1) == "1")
-	Assert('__str__' in dir(None))
-	
-	def tryAssignToNoneAttr():
-		None.__doc__ = "Nothing!"
-	
-	def tryAssignToNoneNotAttr():
-		None.notanattribute = "";
-	
-	AssertError(AttributeError, tryAssignToNoneAttr)
-	AssertError(AttributeError, tryAssignToNoneNotAttr)
-	v = None.__doc__
-	v = None.__new__
-	v = None.__hash__
-	AreEqual("<type 'NoneType'>", str(type(None)))
-	
-	import sys
-	AreEqual(str(sys), "<module 'sys' (built-in)>")
-	
-	import time
-	import toimport
-	
-	m = [type(sys), type(time), type(toimport)]
-	for i in m:
-		for j in m:
-			Assert(issubclass(i,j))
-	
-	AssertError(TypeError, type, None, None, None) # arg 1 must be string
-	AssertError(TypeError, type, "NewType", None, None) # arg 2 must be tuple
-	AssertError(TypeError, type, "NewType", (), None) # arg 3 must be dict
-	
-	
-	def splitTest():
-		"string".split('')
-	AssertError(ValueError, splitTest)
+    import clr
+    
+    Assert(issubclass(int, int))
+    Assert(not issubclass(str, int))
+    Assert(not issubclass(int, (str, str)))
+    Assert(issubclass(int, (str, int)))
+    
+    Assert(str(None) == "None")
+    Assert(issubclass(type(None),type(None)))
+    Assert(str(type(None)) == "<type 'NoneType'>")
+    Assert(str(1) == "1")
+    Assert('__str__' in dir(None))
+    
+    def tryAssignToNoneAttr():
+        None.__doc__ = "Nothing!"
+    
+    def tryAssignToNoneNotAttr():
+        None.notanattribute = "";
+    
+    AssertError(AttributeError, tryAssignToNoneAttr)
+    AssertError(AttributeError, tryAssignToNoneNotAttr)
+    v = None.__doc__
+    v = None.__new__
+    v = None.__hash__
+    AreEqual("<type 'NoneType'>", str(type(None)))
+    
+    import sys
+    AreEqual(str(sys), "<module 'sys' (built-in)>")
+    
+    import time
+    import toimport
+    
+    m = [type(sys), type(time), type(toimport)]
+    for i in m:
+        for j in m:
+            Assert(issubclass(i,j))
+    
+    AssertError(TypeError, type, None, None, None) # arg 1 must be string
+    AssertError(TypeError, type, "NewType", None, None) # arg 2 must be tuple
+    AssertError(TypeError, type, "NewType", (), None) # arg 3 must be dict
+    
+    
+    def splitTest():
+        "string".split('')
+    AssertError(ValueError, splitTest)
 
 #####################################################################################
 # IronPython does not allow extending System.Int64 and System.Boolean. So we have
@@ -446,132 +446,132 @@ def test_cli_subclasses():
 
 @skip('win32')
 def test_primitive_inheritance():
-	import System
-	
-	def InheritFromType(t):
-		class InheritedType(t): pass
-		return InheritedType
-	
-	AssertError(TypeError, InheritFromType, System.Int64)
-	AssertError(TypeError, InheritFromType, System.Boolean)
-	
-	# isinstance
-	
-	Assert(isinstance(System.Int64(), System.Int64) == True)
-	Assert(isinstance(System.Boolean(), System.Boolean) == True)
-	
-	Assert(isinstance(1, System.Int64) == False)
-	Assert(isinstance(1, System.Boolean) == False)
-	
-	class userClass(object): pass
-	Assert(isinstance(userClass(), System.Int64) == False)
-	Assert(isinstance(userClass(), System.Boolean) == False)
-	
-	# issubclass
-	
-	Assert(issubclass(System.Int64, System.Int64) == True)
-	Assert(issubclass(System.Boolean, System.Boolean) == True)
-	
-	Assert(issubclass(type(1), System.Int64) == False)
-	Assert(issubclass(type(1), System.Boolean) == False)
-	
-	Assert(issubclass(userClass, System.Int64) == False)
-	Assert(issubclass(userClass, System.Boolean) == False)
+    import System
+    
+    def InheritFromType(t):
+        class InheritedType(t): pass
+        return InheritedType
+    
+    AssertError(TypeError, InheritFromType, System.Int64)
+    AssertError(TypeError, InheritFromType, System.Boolean)
+    
+    # isinstance
+    
+    Assert(isinstance(System.Int64(), System.Int64) == True)
+    Assert(isinstance(System.Boolean(), System.Boolean) == True)
+    
+    Assert(isinstance(1, System.Int64) == False)
+    Assert(isinstance(1, System.Boolean) == False)
+    
+    class userClass(object): pass
+    Assert(isinstance(userClass(), System.Int64) == False)
+    Assert(isinstance(userClass(), System.Boolean) == False)
+    
+    # issubclass
+    
+    Assert(issubclass(System.Int64, System.Int64) == True)
+    Assert(issubclass(System.Boolean, System.Boolean) == True)
+    
+    Assert(issubclass(type(1), System.Int64) == False)
+    Assert(issubclass(type(1), System.Boolean) == False)
+    
+    Assert(issubclass(userClass, System.Int64) == False)
+    Assert(issubclass(userClass, System.Boolean) == False)
 
 #####################################################################################
 
 @skip('win32')
 def test_cli_types():
-	import System
-	arrayMapping = {'b': System.SByte, 'h': System.Int16, 'H': System.UInt16, 'i': System.Int32,
-					'I': System.UInt32, 'l': System.Int64, 'L': System.UInt64, 'f': System.Single, 'd': System.Double }
-					
-	def tryConstructValues(validate, *args):
-		for x in arrayMapping.keys():
-			# construct from DynamicType
-			y = System.Array[arrayMapping[x]](*args)
-			if not is_silverlight: #BUG DDB #76340
-			    AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
-			validate(y, *args)
-	
-			# construct from CLR type
-			if not is_silverlight: #BUG DDB #76340
-			    y = System.Array[y.GetType().GetElementType()](*args)
-			    AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
-			    validate(y, *args)
-				
-	
-	def tryConstructSize(validate, *args):
-		for x in arrayMapping.keys():
-			# construct from DynamicType
-			y = System.Array.CreateInstance(arrayMapping[x], *args)
-			
-			if not is_silverlight: #BUG DDB #76340
-			    AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
-			validate(y, *args)
-		
-			# construct from CLR type
-			if not is_silverlight: #BUG DDB #76340
-			    y = System.Array.CreateInstance(y.GetType().GetElementType(), *args)
-			    AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
-			    validate(y, *args)
-				
-	
-	def validateLen(res, *args):
-		AreEqual(len(res), *args)
-	
-	def validateVals(res, *args): 
-		len(res) == len(args)
-		for x in range(len(args[0])):
-			try:
-				lhs = int(res[x])
-				rhs = int(args[0][x])
-			except:
-				lhs = float(res[x])
-				rhs = float(args[0][x])
-			AreEqual(lhs, rhs)
-	
-	def validateValsIter(res, *args): 
-		len(res) == len(args)    
-		for x in range(len(args)):
-			print int(res[x]), args[0][x]
-			AreEqual(int(res[x]), int(args[0][x]))
-		
-		
-	class MyList(object):
-		def __len__(self): 
-			return 4
-		def __iter__(self):
-			yield 3
-			yield 4
-			yield 5
-			yield 6
-	
-	def validateValsIter(res, *args): 
-		compList = MyList()
-		len(res) == len(args)    
-		index = 0
-		for x in compList:
-			try:
-				lhs = int(res[index])
-				rhs = int(x)
-			except Exception, e:
-				lhs = float(res[index])
-				rhs = float(x)
-			
-			AreEqual(lhs, rhs)
-			index += 1
-		
-		
-			
-	tryConstructSize(validateLen, 0)
-	tryConstructSize(validateLen, 1)
-	tryConstructSize(validateLen, 20)
-	
-	tryConstructValues(validateVals, (3,4,5,6))
-	tryConstructValues(validateVals, [3,4,5,6])
-	
-	tryConstructValues(validateValsIter, MyList())
+    import System
+    arrayMapping = {'b': System.SByte, 'h': System.Int16, 'H': System.UInt16, 'i': System.Int32,
+                    'I': System.UInt32, 'l': System.Int64, 'L': System.UInt64, 'f': System.Single, 'd': System.Double }
+                    
+    def tryConstructValues(validate, *args):
+        for x in arrayMapping.keys():
+            # construct from DynamicType
+            y = System.Array[arrayMapping[x]](*args)
+            if not is_silverlight: #BUG DDB #76340
+                AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
+            validate(y, *args)
+    
+            # construct from CLR type
+            if not is_silverlight: #BUG DDB #76340
+                y = System.Array[y.GetType().GetElementType()](*args)
+                AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
+                validate(y, *args)
+                
+    
+    def tryConstructSize(validate, *args):
+        for x in arrayMapping.keys():
+            # construct from DynamicType
+            y = System.Array.CreateInstance(arrayMapping[x], *args)
+            
+            if not is_silverlight: #BUG DDB #76340
+                AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
+            validate(y, *args)
+        
+            # construct from CLR type
+            if not is_silverlight: #BUG DDB #76340
+                y = System.Array.CreateInstance(y.GetType().GetElementType(), *args)
+                AreEqual(y.GetType().GetElementType(), arrayMapping[x]().GetType())
+                validate(y, *args)
+                
+    
+    def validateLen(res, *args):
+        AreEqual(len(res), *args)
+    
+    def validateVals(res, *args):
+        len(res) == len(args)
+        for x in range(len(args[0])):
+            try:
+                lhs = int(res[x])
+                rhs = int(args[0][x])
+            except:
+                lhs = float(res[x])
+                rhs = float(args[0][x])
+            AreEqual(lhs, rhs)
+    
+    def validateValsIter(res, *args):
+        len(res) == len(args)
+        for x in range(len(args)):
+            print int(res[x]), args[0][x]
+            AreEqual(int(res[x]), int(args[0][x]))
+        
+        
+    class MyList(object):
+        def __len__(self):
+            return 4
+        def __iter__(self):
+            yield 3
+            yield 4
+            yield 5
+            yield 6
+    
+    def validateValsIter(res, *args):
+        compList = MyList()
+        len(res) == len(args)
+        index = 0
+        for x in compList:
+            try:
+                lhs = int(res[index])
+                rhs = int(x)
+            except Exception, e:
+                lhs = float(res[index])
+                rhs = float(x)
+            
+            AreEqual(lhs, rhs)
+            index += 1
+        
+        
+            
+    tryConstructSize(validateLen, 0)
+    tryConstructSize(validateLen, 1)
+    tryConstructSize(validateLen, 20)
+    
+    tryConstructValues(validateVals, (3,4,5,6))
+    tryConstructValues(validateVals, [3,4,5,6])
+    
+    tryConstructValues(validateValsIter, MyList())
 
 
 #############################################
@@ -584,7 +584,7 @@ def test_metaclass_ctor_init():
     metaInit = False
     instInit = False
     class MetaType(type):
-        def someFunction(cls): 
+        def someFunction(cls):
             return "called someFunction"
         def __init__(cls, name, bases, dct):
             global metaInit
@@ -649,92 +649,92 @@ def test_oldclass_compare():
     
     AreEqual(cmp(a,b) == 0, False)
 
-#################################################################    
+#################################################################
 # check that unhashable types cannot be hashed by Python
 # However, they should be hashable using System.Object.GetHashCode
 
 @skip('win32', 'silverlight') # TODO: _weakref support in SL
 def test_unhashable_types():
-	import System
-	class OldUserClass:
-		def foo(): pass
-	import _weakref
-	import collections
-	
-	AssertError(TypeError, hash, slice(None))
-	hashcode = System.Object.GetHashCode(slice(None))
-	
-	# weakproxy
-	AssertError(TypeError, hash, _weakref.proxy(OldUserClass()))
-	hashcode = System.Object.GetHashCode(_weakref.proxy(OldUserClass()))
-	
-	# weakcallableproxy
-	AssertError(TypeError, hash, _weakref.proxy(OldUserClass().foo))
-	hashcode = System.Object.GetHashCode(_weakref.proxy(OldUserClass().foo))
-	
-	AssertError(TypeError, hash, collections.deque())
-	hashcode = System.Object.GetHashCode(collections.deque())
-	
-	AssertError(TypeError, hash, dict())
-	hashcode = System.Object.GetHashCode(dict())
-	
-	AssertError(TypeError, hash, list())
-	hashcode = System.Object.GetHashCode(list())
-	
-	AssertError(TypeError, hash, set())
-	hashcode = System.Object.GetHashCode(set())
+    import System
+    class OldUserClass:
+        def foo(): pass
+    import _weakref
+    import collections
+    
+    AssertError(TypeError, hash, slice(None))
+    hashcode = System.Object.GetHashCode(slice(None))
+    
+    # weakproxy
+    AssertError(TypeError, hash, _weakref.proxy(OldUserClass()))
+    hashcode = System.Object.GetHashCode(_weakref.proxy(OldUserClass()))
+    
+    # weakcallableproxy
+    AssertError(TypeError, hash, _weakref.proxy(OldUserClass().foo))
+    hashcode = System.Object.GetHashCode(_weakref.proxy(OldUserClass().foo))
+    
+    AssertError(TypeError, hash, collections.deque())
+    hashcode = System.Object.GetHashCode(collections.deque())
+    
+    AssertError(TypeError, hash, dict())
+    hashcode = System.Object.GetHashCode(dict())
+    
+    AssertError(TypeError, hash, list())
+    hashcode = System.Object.GetHashCode(list())
+    
+    AssertError(TypeError, hash, set())
+    hashcode = System.Object.GetHashCode(set())
 
-#################################################################    
+#################################################################
 # Check that attributes of built-in types cannot be deleted
 
 @skip('win32')
 def test_builtin_attributes():
-	import System
-	def AssignMethodOfBuiltin():
-		def mylen(): pass
-		l = list()
-		l.len = mylen
-	AssertError(AttributeError, AssignMethodOfBuiltin)
-	
-	def DeleteMethodOfBuiltin():
-		l = list()
-		del l.len
-	AssertError(AttributeError, DeleteMethodOfBuiltin)
-	
-	def SetAttrOfBuiltin():
-		l = list()
-		l.attr = 1
-	AssertError(AttributeError, SetAttrOfBuiltin)
-	
-	def SetDictElementOfBuiltin():
-		l = list()
-		l.__dict__["attr"] = 1
-	AssertError(AttributeError, SetDictElementOfBuiltin)
-	
-	def SetAttrOfCLIType():
-		d = System.DateTime()
-		d.attr = 1
-	AssertError(AttributeError, SetAttrOfCLIType)
-	
-	def SetDictElementOfCLIType():
-		d = System.DateTime()
-		d.__dict__["attr"] = 1
-	AssertError(AttributeError, SetDictElementOfCLIType)
-	
-	AssertErrorWithMessage(TypeError, "vars() argument must have __dict__ attribute", vars, list())
-	AssertErrorWithMessage(TypeError, "vars() argument must have __dict__ attribute", vars, System.DateTime())
+    import System
+    def AssignMethodOfBuiltin():
+        def mylen(): pass
+        l = list()
+        l.len = mylen
+    AssertError(AttributeError, AssignMethodOfBuiltin)
+    
+    def DeleteMethodOfBuiltin():
+        l = list()
+        del l.len
+    AssertError(AttributeError, DeleteMethodOfBuiltin)
+    
+    def SetAttrOfBuiltin():
+        l = list()
+        l.attr = 1
+    AssertError(AttributeError, SetAttrOfBuiltin)
+    
+    def SetDictElementOfBuiltin():
+        l = list()
+        l.__dict__["attr"] = 1
+    AssertError(AttributeError, SetDictElementOfBuiltin)
+    
+    def SetAttrOfCLIType():
+        d = System.DateTime()
+        d.attr = 1
+    AssertError(AttributeError, SetAttrOfCLIType)
+    
+    def SetDictElementOfCLIType():
+        d = System.DateTime()
+        d.__dict__["attr"] = 1
+    AssertError(AttributeError, SetDictElementOfCLIType)
+    
+    AssertErrorWithMessage(TypeError, "vars() argument must have __dict__ attribute", vars, list())
+    AssertErrorWithMessage(TypeError, "vars() argument must have __dict__ attribute", vars, System.DateTime())
 
-#################################################################    
+#################################################################
 # verify a class w/ explicit interface implementation gets
 # it's interfaces shown
 
 @skip('win32')
 def test_explicit_interface_impl():
-	import System
-	AreEqual(System.IConvertible.ToDouble('32', None), 32.0)
+    import System
+    AreEqual(System.IConvertible.ToDouble('32', None), 32.0)
 
 
-#################################################################    
+#################################################################
 # Value types are now immutable (at least through attribute sets)
 
 @skip('win32')
@@ -786,7 +786,7 @@ def test_immutable_Valuetypes():
     AreEqual(clr.GetPythonType(clr.GetClrType(int)), int)
 
 
-    # verify we can't create *Ops classes    
+    # verify we can't create *Ops classes
     from IronPython.Runtime.Operations import DoubleOps
     AssertError(TypeError, DoubleOps)
         
@@ -932,10 +932,10 @@ def test_metaclass_order():
     
     metaCalled = []
         
-    class B: 
+    class B:
         __metaclass__ = DerivedMeta
         
-    AreEqual(metaCalled, [DerivedMeta])    
+    AreEqual(metaCalled, [DerivedMeta])
     
     metaCalled = []
     class C(A,B): pass
@@ -1046,7 +1046,7 @@ def test_base_access():
 
 
 def test_tuple_new():
-    # TypeError: tuple.__new__(str): str is not a subtype of tuple 
+    # TypeError: tuple.__new__(str): str is not a subtype of tuple
     #!!!AssertError(TypeError, tuple.__new__, str)
     #!!!AssertError(TypeError, tuple.__new__, str, 'abc')
     pass

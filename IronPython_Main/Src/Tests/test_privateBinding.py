@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -42,8 +42,8 @@ def test_Common():
     AreEqual("_ClsPart__privateMethod" in dir(ClsPart), privateBinding)
     pass
 
-if not privateBinding: 
-    def test_NormalBinding():    
+if not privateBinding:
+    def test_NormalBinding():
         try:
             # no public types in namespace, shouldn't be able to get namespace
             from IronPython.Compiler import Generation
@@ -54,7 +54,7 @@ if not privateBinding:
         import IronPython.Runtime
         AssertError(AttributeError, lambda: IronPython.Runtime.SetHelpers)
         
-else: 
+else:
     def test_PrivateBinding():
         # entirely internal namespace
         ### need new entirely internal namespace !!!
@@ -62,8 +62,8 @@ else:
         #x = Generation.Namespace(None)
         
         # mixed namespace
-        import Microsoft.Scripting
-        x = Microsoft.Scripting.Actions.TopNamespaceTracker
+        import System.Scripting
+        x = System.Scripting.Actions.TopNamespaceTracker
         
         clsPart._ClsPart__privateField = 1
         AreEqual(clsPart._ClsPart__privateField, 1)
@@ -98,7 +98,7 @@ else:
         AreEqual("_InternalClsPart__Method" in dir(InternalClsPart), True)
 
     @skip("silverlight") # no winforms
-    def test_override_createparams():        
+    def test_override_createparams():
         """verify we can override the CreateParams property and get the expected value from the base class"""
     
         clr.AddReference("System.Windows.Forms")

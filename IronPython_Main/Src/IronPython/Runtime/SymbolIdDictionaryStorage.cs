@@ -15,43 +15,49 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting;
 using System.Threading;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
 namespace IronPython.Runtime {
-    public class SymbolIdDictionaryStorage : DictionaryStorage {
+    internal class SymbolIdDictionaryStorage : DictionaryStorage {
         private Dictionary<SymbolId, object> _data;
 
         public SymbolIdDictionaryStorage() {
         }
 
+        public SymbolIdDictionaryStorage(int count) {
+            _data = new Dictionary<SymbolId, object>(count);
+        }
+
         public override void Add(object key, object value) {
             Debug.Assert(!(key is SymbolId));
 
+            lock (this) {
+                AddNoLock(key, value);
+            }
+        }
+
+        public override void AddNoLock(object key, object value) {
             EnsureData();
 
-            lock (_data) {
-                string strKey = key as string;
-                if (strKey != null) {
-                    _data[SymbolTable.StringToId(strKey)] = value;
-                } else {
-                    GetObjectDictionary()[key] = value;
-                }
+            string strKey = key as string;
+            if (strKey != null) {
+                _data[SymbolTable.StringToId(strKey)] = value;
+            } else {
+                GetObjectDictionary()[key] = value;
             }
         }
 
         public override void Add(SymbolId key, object value) {
             EnsureData();
 
-            lock(_data) _data[key] = value;
+            lock (this) _data[key] = value;
         }
 
         public override bool Contains(object key) {
             if (_data == null) return false;
 
-            lock (_data) {
+            lock (this) {
                 string strKey = key as string;
                 if (strKey != null) {
                     return _data.ContainsKey(SymbolTable.StringToId(strKey));
@@ -69,7 +75,7 @@ namespace IronPython.Runtime {
         public override bool Contains(SymbolId key) {
             if (_data == null) return false;
 
-            lock (_data) {
+            lock (this) {
                 return _data.ContainsKey(key);
             }
         }
@@ -77,7 +83,7 @@ namespace IronPython.Runtime {
         public override bool Remove(object key) {
             if (_data == null) return false;
 
-            lock (_data) {
+            lock (this) {
                 string strKey = key as string;
                 if (strKey != null) {
                     return _data.Remove(SymbolTable.StringToId(strKey));
@@ -94,7 +100,7 @@ namespace IronPython.Runtime {
 
         public override bool TryGetValue(object key, out object value) {
             if (_data != null) {
-                lock (_data) {
+                lock (this) {
                     string strKey = key as string;
                     if (strKey != null) {
                         return _data.TryGetValue(SymbolTable.StringToId(strKey), out value);
@@ -118,7 +124,7 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            lock (_data) {
+            lock (this) {
                 return _data.TryGetValue(key, out value);
             }
         }
@@ -127,7 +133,7 @@ namespace IronPython.Runtime {
             get {
                 if (_data == null) return 0;
 
-                lock (_data) {
+                lock (this) {
                     if (_data == null) return 0;
 
                     int count = _data.Count;
@@ -149,7 +155,7 @@ namespace IronPython.Runtime {
             List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>();
 
             if (_data != null) {
-                lock (_data) {
+                lock (this) {
                     foreach (KeyValuePair<SymbolId, object> kvp in _data) {
                         if (kvp.Key == SymbolId.Empty) continue;
 

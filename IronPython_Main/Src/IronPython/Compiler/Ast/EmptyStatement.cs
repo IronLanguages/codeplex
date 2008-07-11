@@ -13,23 +13,29 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Ast;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class EmptyStatement : Statement {
         public EmptyStatement() {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            return Ast.Empty(Span);
+            return AstUtils.Empty(Span);
         }
 
         public override void Walk(PythonWalker walker) {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+
+        internal override bool CanThrow {
+            get {
+                return false;
+            }
         }
     }
 }

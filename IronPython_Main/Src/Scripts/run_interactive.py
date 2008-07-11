@@ -17,12 +17,14 @@ import sys
 import clr
 
 sys.path.append(sys.exec_prefix)
+clr.AddReference("Microsoft.Scripting.dll")
 clr.AddReference("Microsoft.Scripting.Core.dll")
 clr.AddReference("IronPython.dll")
 clr.AddReference("IronPython.Modules.dll")
 
-from Microsoft.Scripting import CompilerContext, SourceCodeKind, ErrorSink
+from System.Scripting import SourceCodeKind, ErrorSink
 from Microsoft.Scripting.Hosting import ScriptRuntime, HostingHelpers
+from Microsoft.Scripting.Compilers import CompilerContext
 from IronPython import PythonEngineOptions
 from IronPython.Runtime import PythonContext, ModuleOptions, Symbols
 from IronPython.Compiler import Parser, PythonCompilerOptions
@@ -52,9 +54,11 @@ class FileConsole(object):
         self.context.SystemState.Dict["executable"] = executable
         self.context.SystemState.Dict["exec_prefix"] = self.context.SystemState.Dict["prefix"] = prefix
         
-        module = self.context.CreateModule("__main__", ModuleOptions.PublishModule)
+        module = self.context.CreateModule(ModuleOptions.ModuleBuiltins)
+        self.context.PublishModule("__main__", module)
         module.Scope.SetName(Symbols.Doc, None)
         module.Scope.SetName(Symbols.File, fileName)
+        module.Scope.SetName(Symbols.Name, "__main__")
         self.mainScope = self.engine.CreateScope(module.Scope.Dict)
         
     def InitializePath(self):

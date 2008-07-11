@@ -18,23 +18,27 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using System.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
+using IronPython.Compiler;
+using IronPython.Compiler.Generation;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Expression;
-    using IronPython.Compiler.Generation;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Represents a PythonType.  Instances of PythonType are created via PythonTypeBuilder.  
@@ -43,7 +47,7 @@ namespace IronPython.Runtime.Types {
     [DebuggerDisplay("PythonType: {Name}")]
 #endif
     [PythonSystemType("type")]
-    public class PythonType : IMembersList, IDynamicObject, IWeakReferenceable {
+    public class PythonType : IMembersList, IOldDynamicObject, IWeakReferenceable, ICodeFormattable {
         private readonly Type/*!*/ _underlyingSystemType;   // the underlying CLI system type for this type
         private string _name;                               // the name of the type
         private Dictionary<SymbolId, PythonTypeSlot> _dict; // type-level slots & attributes
@@ -65,9 +69,6 @@ namespace IronPython.Runtime.Types {
         private DynamicSite<object, string, object> _getattributeSite;
         private DynamicSite<object, object, string, object, object> _setattrSite;
 
-        // fields that should go away
-        private Type _extensionType;                        // a type that can be extended but acts like the underlying system type
-        
         [MultiRuntimeAware]
         private static int MasterVersion = 1;
         private static readonly Dictionary<Type, PythonType> _pythonTypes = new Dictionary<Type, PythonType>();
@@ -107,6 +108,7 @@ namespace IronPython.Runtime.Types {
             _underlyingSystemType = baseType.UnderlyingSystemType;
 
             IsSystemType = baseType.IsSystemType;
+            IsPythonType = baseType.IsPythonType;
             Name = name;
             _bases = new List<PythonType>(1);
             _bases.Add(baseType);
@@ -331,11 +333,20 @@ namespace IronPython.Runtime.Types {
             return type.Name;
         }
 
-        public string __repr__(CodeContext/*!*/ context) {
-            string name = PythonTypeOps.GetName(this);
+        [SpecialName, PropertyMethod, WrapperDescriptor]
+        public static void Set__name__(PythonType type, string name) {
+            if (type.IsSystemType) {
+                throw PythonOps.TypeError("can't set attributes of built-in/extension type '{0}'", type.Name);
+            }
+
+            type.Name = name;
+        }
+
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
+            string name = Name;
 
             if (IsSystemType) {
-                if (PythonTypeOps.IsRuntimeAssembly(UnderlyingSystemType.Assembly) || PythonTypeCustomizer.IsPythonType(UnderlyingSystemType)) {
+                if (PythonTypeOps.IsRuntimeAssembly(UnderlyingSystemType.Assembly) || IsPythonType) {
                     string module = Get__module__(context, this);
                     if (module != "__builtin__") {
                         return string.Format("<type '{0}.{1}'>", module, Name);
@@ -401,9 +412,6 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         internal string Name {
             get {
-                if (_name == null) {
-                    _name = PythonTypeOps.GetName(_underlyingSystemType);
-                }
                 return _name;
             }
             set {
@@ -469,7 +477,7 @@ namespace IronPython.Runtime.Types {
 
             if (!_ctorSite.IsInitialized) {
                 _ctorSite.EnsureInitialized(
-                    CallAction.Make(PythonContext.GetContext(context).Binder, new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+                    OldCallAction.Make(PythonContext.GetContext(context).Binder, new CallSignature(new ArgumentInfo(ArgumentKind.List))));
             }
 
             return _ctorSite.Invoke(context, _ctor, args);            
@@ -499,17 +507,26 @@ namespace IronPython.Runtime.Types {
 
         /// <summary>
         /// Gets the extension type for this type.  The extension type provides
-        /// extra methods that logically appear on this type.
+        /// a .NET type which can be inherited from to extend sealed classes
+        /// or value types which Python allows inheritance from.
         /// </summary>
         internal Type/*!*/ ExtensionType {
             get {
-                if (_extensionType == null) {
-                    return _underlyingSystemType;
+                if (!_underlyingSystemType.IsEnum) {
+                    switch (Type.GetTypeCode(_underlyingSystemType)) {
+                        case TypeCode.String: return typeof(ExtensibleString);
+                        case TypeCode.Int32: return typeof(Extensible<int>);
+                        case TypeCode.Double: return typeof(Extensible<double>);
+                        case TypeCode.Object:
+                            if (_underlyingSystemType == typeof(BigInteger)) {
+                                return typeof(Extensible<BigInteger>);
+                            } else if (_underlyingSystemType == typeof(Complex64)) {
+                                return typeof(ExtensibleComplex);
+                            }
+                            break;
+                    }
                 }
-                return _extensionType;
-            }
-            set {
-                _extensionType = value;
+                return _underlyingSystemType;
             }
         }
 
@@ -925,7 +942,7 @@ namespace IronPython.Runtime.Types {
             object getattr;
             if (TryResolveNonObjectSlot(context, instance, Symbols.GetAttribute, out getattr)) {
                 if (!_getattributeSite.IsInitialized) {
-                    _getattributeSite.EnsureInitialized(CallAction.Make(PythonContext.GetContext(context).Binder, 1));
+                    _getattributeSite.EnsureInitialized(OldCallAction.Make(PythonContext.GetContext(context).Binder, 1));
                 }
                 
                 value = _getattributeSite.Invoke(context, getattr, SymbolTable.IdToString(name));
@@ -958,7 +975,7 @@ namespace IronPython.Runtime.Types {
                 object getattr;
                 if (TryResolveNonObjectSlot(context, instance, Symbols.GetBoundAttr, out getattr)) {
                     if (!_getattributeSite.IsInitialized) {
-                        _getattributeSite.EnsureInitialized(CallAction.Make(PythonContext.GetContext(context).Binder, 1));
+                        _getattributeSite.EnsureInitialized(OldCallAction.Make(PythonContext.GetContext(context).Binder, 1));
                     }
                     value = _getattributeSite.Invoke(context, getattr, SymbolTable.IdToString(name));
                     return true;
@@ -1012,7 +1029,7 @@ namespace IronPython.Runtime.Types {
             object setattr;
             if (TryResolveNonObjectSlot(context, instance, Symbols.SetAttr, out setattr)) {
                 if (!_setattrSite.IsInitialized) {
-                    _setattrSite.EnsureInitialized(CallAction.Make(PythonContext.GetContext(context).Binder, 4));
+                    _setattrSite.EnsureInitialized(OldCallAction.Make(PythonContext.GetContext(context).Binder, 4));
                 }
                 _setattrSite.Invoke(context, setattr, instance, SymbolTable.IdToString(name), value);
                 return true;
@@ -1059,7 +1076,7 @@ namespace IronPython.Runtime.Types {
                 object delattr;
                 if (TryResolveNonObjectSlot(context, instance, Symbols.DelAttr, out delattr)) {
                     if (!_getattributeSite.IsInitialized) {
-                        _getattributeSite.EnsureInitialized(CallAction.Make(PythonContext.GetContext(context).Binder, 1));
+                        _getattributeSite.EnsureInitialized(OldCallAction.Make(PythonContext.GetContext(context).Binder, 1));
                     }
                     _getattributeSite.Invoke(context, delattr, SymbolTable.IdToString(name));
                     return true;
@@ -1142,7 +1159,7 @@ namespace IronPython.Runtime.Types {
                 object dir;
                 if (TryResolveNonObjectSlot(context, self, SymbolTable.StringToId("__dir__"), out dir)) {
                     if (!_dirSite.IsInitialized) {
-                        _dirSite.EnsureInitialized(CallAction.Make(PythonContext.GetContext(context).Binder, 0));
+                        _dirSite.EnsureInitialized(OldCallAction.Make(PythonContext.GetContext(context).Binder, 0));
                     }
                     return new List(_dirSite.Invoke(context, dir));
                 }
@@ -1160,8 +1177,7 @@ namespace IronPython.Runtime.Types {
             foreach (KeyValuePair<SymbolId, PythonTypeSlot> kvp in dt._dict) {
                 if (keys.ContainsKey(SymbolTable.IdToString(kvp.Key))) continue;
 
-                if (kvp.Value.IsVisible(context, this))
-                    keys[SymbolTable.IdToString(kvp.Key)] = SymbolTable.IdToString(kvp.Key);
+                keys[SymbolTable.IdToString(kvp.Key)] = SymbolTable.IdToString(kvp.Key);
             }
         }
 
@@ -1183,22 +1199,29 @@ namespace IronPython.Runtime.Types {
         }
 
         internal IAttributesCollection GetMemberDictionary(CodeContext context) {
+            return GetMemberDictionary(context, true);
+        }
+
+        internal IAttributesCollection GetMemberDictionary(CodeContext context, bool excludeDict) {
             IAttributesCollection iac = PythonDictionary.MakeSymbolDictionary();
             if (IsSystemType) {
                 PythonBinder.GetBinder(context).LookupMembers(context, this, iac);
             } else {
                 foreach (SymbolId x in _dict.Keys) {
-                    if (x.ToString() == "__dict__") continue;
+                    if (excludeDict && x.ToString() == "__dict__") {
+                        continue;
+                    }
 
                     PythonTypeSlot dts;
                     if (TryLookupSlot(context, x, out dts)) {
                         //??? why check for DTVS?
                         object val;
                         if (dts.TryGetValue(context, null, this, out val)) {
-                            if (dts is PythonTypeValueSlot)
+                            if ((dts is PythonTypeValueSlot) || (dts is PythonTypeUserDescriptorSlot)) {
                                 iac[x] = val;
-                            else
+                            } else {
                                 iac[x] = dts;
+                            }
                         }
                     }
                 }
@@ -1354,9 +1377,8 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         private void InitializeSystemType() {
             IsSystemType = true;
-            if (_underlyingSystemType.IsDefined(typeof(PythonSystemTypeAttribute), false)) {
-                IsPythonType = true;
-            }
+            IsPythonType = PythonBinder.IsPythonType(_underlyingSystemType);
+            _name = NameConverter.GetTypeName(_underlyingSystemType);
             AddSystemBases();
         }
 
@@ -1387,6 +1409,10 @@ namespace IronPython.Runtime.Types {
                     }
                     curType = curType.BaseType;
                 }
+
+                if (!IsPythonType) {
+                    AddSystemInterfaces(mro);
+                }
             } else if (_underlyingSystemType.IsInterface) {
                 foreach (Type i in _underlyingSystemType.GetInterfaces()) {
                     PythonType it = DynamicHelpers.GetPythonTypeFromType(i);
@@ -1395,6 +1421,70 @@ namespace IronPython.Runtime.Types {
                 }
             }
             _resolutionOrder = mro;
+        }
+
+        private void AddSystemInterfaces(List<PythonType> mro) {
+            if (_underlyingSystemType.IsArray) {
+                return;
+            } 
+
+            Type[] interfaces = _underlyingSystemType.GetInterfaces();
+            Dictionary<string, Type> methodMap = new Dictionary<string, Type>();
+            bool hasExplicitIface = false;
+            List<Type> nonCollidingInterfaces = new List<Type>(interfaces);
+            
+            foreach (Type iface in interfaces) {
+                InterfaceMapping mapping = _underlyingSystemType.GetInterfaceMap(iface);
+                
+                // grab all the interface methods which would hide other members
+                for (int i = 0; i < mapping.TargetMethods.Length; i++) {
+                    MethodInfo target = mapping.TargetMethods[i];
+                    MethodInfo iTarget = mapping.InterfaceMethods[i];
+
+                    if (!target.IsPrivate) {
+                        methodMap[target.Name] = null;
+                    } else {
+                        hasExplicitIface = true;
+                    }
+                }
+
+                if (hasExplicitIface) {
+                    for (int i = 0; i < mapping.TargetMethods.Length; i++) {
+                        MethodInfo target = mapping.TargetMethods[i];
+                        MethodInfo iTarget = mapping.InterfaceMethods[i];
+
+                        // any methods which aren't explicit are picked up at the appropriate
+                        // time earlier in the MRO so they can be ignored
+                        if (target.IsPrivate) {
+                            hasExplicitIface = true;
+
+                            Type existing;
+                            if (methodMap.TryGetValue(iTarget.Name, out existing)) {
+                                if (existing != null) {
+                                    // collision, multiple interfaces implement the same name, and
+                                    // we're not hidden by another method.  remove both interfaces, 
+                                    // but leave so future interfaces get removed
+                                    nonCollidingInterfaces.Remove(iface);
+                                    nonCollidingInterfaces.Remove(methodMap[iTarget.Name]);
+                                    break;
+                                }
+                            } else {
+                                // no collisions so far...
+                                methodMap[iTarget.Name] = iface;
+                            }
+                        } 
+                    }
+                }
+            }
+
+            if (hasExplicitIface) {
+                // add any non-colliding interfaces into the MRO
+                foreach (Type t in nonCollidingInterfaces) {
+                    Debug.Assert(t.IsInterface);
+
+                    mro.Add(DynamicHelpers.GetPythonTypeFromType(t));
+                }
+            }
         }
 
         /// <summary>
@@ -1528,30 +1618,28 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
-        LanguageContext IDynamicObject.LanguageContext {
-            get { return null; }
-        }
-
-        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        // GetRule is hidden instead of explicit so that subclasses can dispatch to the base GetRule implementation
+        [PythonHidden] 
+        public RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
             switch(action.Kind) {
                 case DynamicActionKind.CreateInstance: return MakeCreateInstanceAction<T>(action, context, args);
-                case DynamicActionKind.GetMember: return MakeGetMemberRule<T>(context, (GetMemberAction)action);
-                case DynamicActionKind.SetMember: return MakeSetMemberRule<T>((SetMemberAction)action, context, args);
-                case DynamicActionKind.DeleteMember: return MakeDeleteMemberRule<T>((DeleteMemberAction)action, context);
+                case DynamicActionKind.GetMember: return MakeGetMemberRule<T>(context, (OldGetMemberAction)action);
+                case DynamicActionKind.SetMember: return MakeSetMemberRule<T>((OldSetMemberAction)action, context, args);
+                case DynamicActionKind.DeleteMember: return MakeDeleteMemberRule<T>((OldDeleteMemberAction)action, context);
             }
 
             return null;
         }
 
 
-        private RuleBuilder<T> MakeCreateInstanceAction<T>(DynamicAction action, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeCreateInstanceAction<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
             if (IsSystemType) {
                 MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
                 RuleBuilder<T> rule;
                 if (ctors.Length > 0) {
-                    rule = new CallBinderHelper<T, CallAction>(context, (CallAction)action, args, ctors).MakeRule();
+                    rule = new CallBinderHelper<T, OldCallAction>(context, (OldCallAction)action, args, ctors).MakeRule();
                 } else {
                     rule = new RuleBuilder<T>();
                     rule.Target =
@@ -1572,7 +1660,7 @@ namespace IronPython.Runtime.Types {
                 // calling NonDefaultNew(context, type, args)
                 Expression call = Ast.ComplexCallHelper(
                     typeof(InstanceOps).GetMethod("NonDefaultNew"),
-                    ArrayUtils.Insert<Expression>((Expression)Ast.CodeContext(),
+                    ArrayUtils.Insert<Expression>(rule.Context,
                                        Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                        ArrayUtils.RemoveFirst(rule.Parameters))
                 );
@@ -1582,9 +1670,24 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private RuleBuilder<T> MakeGetMemberRule<T>(CodeContext/*!*/ context, GetMemberAction action) {
+        private RuleBuilder<T> MakeGetMemberRule<T>(CodeContext/*!*/ context, OldGetMemberAction action) where T : class {
             Expression body = null;
             RuleBuilder<T> rule = new RuleBuilder<T>();
+
+            if (action.Name == Symbols.Dict || 
+                action.Name == Symbols.Class || 
+                action.Name == Symbols.Bases ||
+                action.Name == Symbols.Name) {
+                // __dict__/__class__/__bases__/__name__ are always looked up from the type so
+                // we can generate a more general rule that works across multiple types.
+                rule.Test = MakeMetaTypeTest<T>(rule, rule.Parameters[0]);
+                rule.Target = MakeMetaTypeRule<T>(context, rule, action);
+                return rule;
+            }
+
+            // normal attribute, need to check the type version
+            rule.Test = MakeTypeTest(rule.Parameters[0]);
+
             VariableExpression tmp = rule.GetTemporary(typeof(object), "result");
 
             foreach (PythonType pt in this._resolutionOrder) {
@@ -1604,9 +1707,9 @@ namespace IronPython.Runtime.Types {
                                 typeof(PythonOps).GetMethod("OldClassTryLookupOneSlot"),
                                 Ast.RuntimeConstant(pt.OldClass),
                                 Ast.Constant(action.Name),
-                                Ast.Read(tmp)
+                                tmp
                             ),
-                            rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp))
+                            rule.MakeReturn(context.LanguageContext.Binder, tmp)
                         )
                     );
                 } else if (pt.TryLookupSlot(context, action.Name, out pts)) {
@@ -1615,32 +1718,31 @@ namespace IronPython.Runtime.Types {
                         body,
                         Ast.If(
                             Ast.Call(
-                                typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
-                                Ast.CodeContext(),
-                                Ast.RuntimeConstant(pts),
+                                TypeInfo._PythonOps.SlotTryGetBoundValue,
+                                rule.Context,
+                                Ast.RuntimeConstant(pts, typeof(PythonTypeSlot)),
                                 Ast.Null(),
                                 Ast.RuntimeConstant(this),
-                                Ast.Read(tmp)
+                                tmp
                             ),
-                            rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp))
+                            rule.MakeReturn(context.LanguageContext.Binder, tmp)
                         )
                     );
                 }
             }
 
-            rule.Target = body;
-            rule.Test = MakeTypeTest(rule.Parameters[0]);
+            rule.Target = body;            
             return rule;
         }
 
-        private RuleBuilder<T> MakeSetMemberRule<T>(SetMemberAction action, CodeContext context, params object[] args) {
+        private RuleBuilder<T> MakeSetMemberRule<T>(OldSetMemberAction action, CodeContext context, params object[] args) where T : class {
             RuleBuilder<T> rule;
 
             if (IsSystemType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
                 args = (object[])args.Clone();
                 args[0] = tt;
-                rule = new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                rule = new SetMemberBinderHelper<T>(context, (OldSetMemberAction)action, args).MakeNewRule();
                 rule.Test = MakeSystemTypeTest(rule.Parameters[0]);
                 return rule;
             }
@@ -1652,7 +1754,7 @@ namespace IronPython.Runtime.Types {
                 context.LanguageContext.Binder,
                 Ast.Call(
                     typeof(PythonOps).GetMethod("PythonTypeSetCustomMember"),
-                    Ast.CodeContext(),
+                    rule.Context,
                     Ast.ConvertHelper(
                         rule.Parameters[0],
                         typeof(PythonType)
@@ -1668,12 +1770,12 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private RuleBuilder<T> MakeDeleteMemberRule<T>(DeleteMemberAction action, CodeContext context) {
+        private RuleBuilder<T> MakeDeleteMemberRule<T>(OldDeleteMemberAction action, CodeContext context) where T : class {
             RuleBuilder<T> rule;
 
             if (IsSystemType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
-                rule = new DeleteMemberBinderHelper<T>(context, (DeleteMemberAction)action, new object[] { tt }).MakeRule();
+                rule = new DeleteMemberBinderHelper<T>(context, (OldDeleteMemberAction)action, new object[] { tt }).MakeRule();
                 rule.Test = MakeSystemTypeTest(rule.Parameters[0]);
             } else {
                 rule = new RuleBuilder<T>();
@@ -1682,7 +1784,7 @@ namespace IronPython.Runtime.Types {
                     context.LanguageContext.Binder,
                     Ast.Call(
                         typeof(PythonOps).GetMethod("PythonTypeDeleteCustomMember"),
-                        Ast.CodeContext(),
+                        rule.Context,
                         Ast.ConvertHelper(
                             rule.Parameters[0],
                             typeof(PythonType)
@@ -1721,6 +1823,26 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
+        /// Makes a type test to test that the provided expression is this specific type
+        /// at the current version.
+        /// </summary>
+        private Expression MakeMetaTypeTest<T>(RuleBuilder<T> builder, Expression type) where T : class {
+            Expression res = builder.MakeTypeTest(GetType(), type);
+            PythonType metaType = DynamicHelpers.GetPythonType(this);
+            if (!DynamicHelpers.GetPythonType(this).IsSystemType) {
+                res = Ast.AndAlso(res,
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CheckTypeVersion"),
+                            type,
+                            Ast.Constant(metaType._version)
+                        )
+                    );
+            }
+
+            return res;
+        }
+
+        /// <summary>
         /// Makes a generic test to verify that the type is a user type.
         /// </summary>
         private static BinaryExpression MakeUserTypeTest(Expression type) {
@@ -1750,24 +1872,99 @@ namespace IronPython.Runtime.Types {
             return Ast.Equal(type, Ast.RuntimeConstant(this));
         }
 
-        private Expression MakeSystemTypeGetMemberRule<T>(CodeContext/*!*/ context, Type type, RuleBuilder<T> rule, GetMemberAction action) {
-            ActionBinder ab = PythonContext.GetContext(context).Binder; // TODO: Our binder or callers?
+        private Expression MakeSystemTypeGetMemberRule<T>(CodeContext/*!*/ context, Type type, RuleBuilder<T> rule, OldGetMemberAction action) where T : class {
+            ActionBinder ab = PythonContext.GetContext(context).Binder;
             string name = SymbolTable.IdToString(action.Name);
+            
             MemberGroup mg = ab.GetMember(action, type, name);
 
             if (mg.Count > 0) {
                 return GetTrackerOrError<T>(context, action, rule, ab, name, mg);
-            } else {
-                // need to lookup on type
-                mg = ab.GetMember(action, typeof(PythonType), name); // TODO: meta type?
+            }
+            
+            // need to lookup on type
+            return MakeMetaTypeRule<T>(context, rule, action);
+        }
 
-                if (mg.Count > 0) {
-                    return GetBoundTrackerOrError<T>(rule, ab, name, mg);
-                } else if (action.IsNoThrow) {
-                    return MakeNoThrowRule<T>(rule, ab);
-                } 
+        private Expression MakeMetaTypeRule<T>(CodeContext context, RuleBuilder<T> rule, OldGetMemberAction action) where T : class {
+            ActionBinder ab = PythonContext.GetContext(context).Binder;
+            string name = SymbolTable.IdToString(action.Name);
+            MemberGroup mg = ab.GetMember(action, typeof(PythonType), name); // TODO: meta type?
+
+            PythonType metaType = DynamicHelpers.GetPythonType(this);
+            PythonTypeSlot pts;
+
+            foreach (PythonType pt in metaType._resolutionOrder) {
+                if (pt.IsSystemType) {
+                    // need to lookup on type
+                    mg = ab.GetMember(action, typeof(PythonType), name);
+
+                    if (mg.Count > 0) {
+                        return GetBoundTrackerOrError<T>(rule, ab, name, mg);                       
+                    }
+                } else if (pt.OldClass != null) {
+                    // mixed new-style/old-style class, just call our version of __getattribute__
+                    // and let it sort it out at runtime.
+                    return rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        Ast.Call(
+                            Ast.ConvertHelper(
+                                rule.Parameters[0],
+                                typeof(PythonType)
+                            ),
+                            typeof(PythonType).GetMethod("__getattribute__"),
+                            rule.Context,
+                            Ast.Constant(name)
+                        )                        
+                    );
+                } else if (pt.TryLookupSlot(context, action.Name, out pts)) {
+                    // user defined new style class, see if we have a slot.
+                    Expression tmp = rule.GetTemporary(typeof(object), "slotRes");
+                    return Ast.If(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
+                            rule.Context,
+                            Ast.RuntimeConstant(pts, typeof(PythonTypeSlot)),
+                            rule.Parameters[0],
+                            Ast.RuntimeConstant(metaType),
+                            tmp
+                        ),
+                        rule.MakeReturn(
+                            context.LanguageContext.Binder,
+                            tmp
+                        )
+                    );
+                }
             }
 
+            // the member doesn't exist anywhere in the type hierarchy, see if
+            // we define __getattr__ on our meta type.
+            if (metaType.TryResolveSlot(context, Symbols.GetBoundAttr, out pts)) {
+                Expression tmp = rule.GetTemporary(typeof(object), "slotRes");
+                return Ast.If(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
+                        rule.Context,
+                        Ast.RuntimeConstant(pts, typeof(PythonTypeSlot)),
+                        rule.Parameters[0],
+                        Ast.RuntimeConstant(metaType),
+                        tmp
+                    ),
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        AstUtils.Call(
+                            context.LanguageContext.Binder,
+                            typeof(object),
+                            rule.Context,
+                            tmp,
+                            Ast.RuntimeConstant(name)
+                        )
+                    )
+                );
+            } else if (action.IsNoThrow) {
+                return MakeNoThrowRule<T>(rule, ab);
+            } 
+            
             ErrorInfo ei;
             if (context.LanguageContext is PythonContext) {
                 ei = ErrorInfo.FromException(
@@ -1784,17 +1981,17 @@ namespace IronPython.Runtime.Types {
             return ei.MakeErrorForRule(rule, ab);
         }
 
-        private static Expression MakeNoThrowRule<T>(RuleBuilder<T> rule, ActionBinder ab) {
-            return rule.MakeReturn(ab, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
+        private static Expression MakeNoThrowRule<T>(RuleBuilder<T> rule, ActionBinder ab) where T : class {
+            return rule.MakeReturn(ab, Ast.Field(null, typeof(OperationFailed).GetField("Value")));
         }
 
-        private Expression GetBoundTrackerOrError<T>(RuleBuilder<T> rule, ActionBinder ab, string name, MemberGroup mg) {
+        private Expression GetBoundTrackerOrError<T>(RuleBuilder<T> rule, ActionBinder ab, string name, MemberGroup mg) where T : class {
             MemberTracker tracker = GetTracker(ab, name, mg);
             Expression target = null;
 
             if (tracker != null) {
                 tracker = tracker.BindToInstance(Ast.ConvertHelper(rule.Parameters[0], typeof(PythonType)));
-                target = tracker.GetValue(ab, UnderlyingSystemType);
+                target = tracker.GetValue(rule.Context, ab, UnderlyingSystemType);
             }            
 
             if (target == null) {
@@ -1806,7 +2003,7 @@ namespace IronPython.Runtime.Types {
             return target;
         }
 
-        private Expression GetTrackerOrError<T>(CodeContext/*!*/ context, GetMemberAction action, RuleBuilder<T> rule, ActionBinder ab, string name, MemberGroup mg) {
+        private Expression GetTrackerOrError<T>(CodeContext/*!*/ context, OldGetMemberAction action, RuleBuilder<T> rule, ActionBinder ab, string name, MemberGroup mg) where T : class {
             MemberTracker mt = GetTracker(ab, name, mg);
             
             if (mt != null && mt.MemberType == TrackerTypes.Property) {
@@ -1823,17 +2020,17 @@ namespace IronPython.Runtime.Types {
             if (mt != null) {
                 // unfortunately we need to bind using the PythonType for class methods, not the .NET type, so
                 // we have a special case here for that.
-                ClassMethodTracker cmt = mt as ClassMethodTracker;
+                PythonCustomTracker cmt = mt as PythonCustomTracker;
                 if (cmt != null) {
-                    target = cmt.GetBoundPythonValue(ab, this);
+                    target = cmt.GetBoundPythonValue(rule, ab, this);
                 } else {
-                    target = mt.GetValue(ab, UnderlyingSystemType);
+                    target = mt.GetValue(rule.Context, ab, UnderlyingSystemType);
                 }
             }
 
             if (target != null) {
-                if (PythonTypeCustomizer.SystemTypes.ContainsKey(UnderlyingSystemType) &&
-                    !PythonTypeOps.GetSlot(mg).IsAlwaysVisible) {
+                if (IsPythonType &&
+                    !PythonTypeOps.GetSlot(mg, name).IsAlwaysVisible) {
                     Expression error;
 
                     if (action.IsNoThrow) {
@@ -1845,7 +2042,7 @@ namespace IronPython.Runtime.Types {
                     target = Ast.IfThenElse(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("IsClsVisible"),
-                                    Ast.CodeContext()
+                                    rule.Context
                                 ),
                                 rule.MakeReturn(ab, target),
                                 error
@@ -1860,7 +2057,7 @@ namespace IronPython.Runtime.Types {
             return target;
         }
 
-        private static Expression MakeGetErrorTarget<T>(GetMemberAction action, RuleBuilder<T> rule, ActionBinder ab, MemberGroup mg) {
+        private static Expression MakeGetErrorTarget<T>(OldGetMemberAction action, RuleBuilder<T> rule, ActionBinder ab, MemberGroup mg) where T : class {
             if (action.IsNoThrow) {
                 return MakeNoThrowRule<T>(rule, ab);
             } else if (mg.Count == 1) {
@@ -1887,15 +2084,8 @@ namespace IronPython.Runtime.Types {
                         Ast.Constant(sb.ToString()));
         }
 
-        private Expression GetTrackerExpression(ActionBinder binder, string name, MemberGroup mg) {
-            MemberTracker mt = GetTracker(binder, name, mg);
-            if (mt != null) {
-                return mt.GetValue(binder, UnderlyingSystemType);
-            }
-            return null;
-        }
-
         private MemberTracker GetTracker(ActionBinder binder, string name, MemberGroup mg) {
+            mg = PythonTypeOps.FilterNewSlots(mg);
             TrackerTypes mt = PythonTypeOps.GetMemberType(mg);
             MemberTracker tracker;
 

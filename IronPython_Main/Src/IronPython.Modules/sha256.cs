@@ -14,14 +14,9 @@
  * ***************************************************************************/
 
 using System;
+using System.Scripting.Runtime;
 using System.Security.Cryptography;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime;
-using IronPython.Runtime.Operations;
 
 //!!! This is pretty inefficient. We should probably use hasher.TransformBlock instead of
 //!!! hanging onto all of the bytes.

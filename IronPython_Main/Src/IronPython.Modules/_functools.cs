@@ -13,17 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 
 [assembly: PythonModule("_functools", typeof(IronPython.Modules.FunctionTools))]
 namespace IronPython.Modules {
@@ -165,7 +163,7 @@ namespace IronPython.Modules {
             /// <summary>
             /// Operator method to set arbitrary members on the partial object.
             /// </summary>
-            [SpecialName, PythonHidden]
+            [SpecialName]
             public void SetMemberAfter(CodeContext/*!*/ context, string name, object value) {
                 EnsureDict();
 
@@ -175,7 +173,7 @@ namespace IronPython.Modules {
             /// <summary>
             /// Operator method to get additional arbitrary members defined on the partial object.
             /// </summary>
-            [SpecialName, PythonHidden]
+            [SpecialName]
             public object GetBoundMember(CodeContext/*!*/ context, string name) {
                 object value;
                 if (_dict != null && _dict.TryGetValue(SymbolTable.StringToId(name), out value)) {
@@ -187,7 +185,7 @@ namespace IronPython.Modules {
             /// <summary>
             /// Operator method to delete arbitrary members defined in the partial object.
             /// </summary>
-            [SpecialName, PythonHidden]
+            [SpecialName]
             public bool DeleteMember(CodeContext/*!*/ context, string name) {
                 switch (name) {
                     case "__dict__":

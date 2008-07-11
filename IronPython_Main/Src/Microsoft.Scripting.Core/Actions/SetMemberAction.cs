@@ -13,26 +13,46 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace System.Scripting.Actions {
+    public abstract class SetMemberAction : StandardAction {
+        private readonly string _name;
+        private readonly bool _caseInsensitive;
 
-    public class SetMemberAction : MemberAction {
-        public static SetMemberAction Make(ActionBinder binder, string name) {
-            return Make(binder, SymbolTable.StringToId(name));
+        protected SetMemberAction(string name, bool caseInsensitive)
+            : base(StandardActionKind.SetMember) {
+            ContractUtils.RequiresNotNull(name, "name");
+
+            _name = name;
+            _caseInsensitive = caseInsensitive;
         }
 
-        public static SetMemberAction Make(ActionBinder binder, SymbolId name) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return new SetMemberAction(binder, name);
+        public string Name {
+            get {
+                return _name;
+            }
         }
 
-        private SetMemberAction(ActionBinder binder, SymbolId name)
-            : base(binder, name) {
+        public bool CaseInsensitive {
+            get {
+                return _caseInsensitive;
+            }
         }
 
-        public override DynamicActionKind Kind {
-            get { return DynamicActionKind.SetMember; }
+        public sealed override MetaObject Bind(MetaObject[] args) {
+            ContractUtils.RequiresNotNullItems(args, "args");
+            ContractUtils.Requires(args.Length > 0);
+            return args[0].SetMember(this, args);
+        }
+
+        public override int GetHashCode() {
+            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0);
+        }
+
+        public override bool Equals(object obj) {
+            SetMemberAction sa = obj as SetMemberAction;
+            return sa != null && sa._name == _name && sa._caseInsensitive == _caseInsensitive;
         }
     }
 }

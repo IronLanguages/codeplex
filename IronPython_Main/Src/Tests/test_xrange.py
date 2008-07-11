@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -14,14 +14,14 @@
 #####################################################################################
 
 ##
-## Test range and xrange 
+## Test range and xrange
 ##
 ## * sbs_builtin\test_xrange covers many xrange corner cases
 ##
 
 from lib.assert_util import *
 
-def test_range(): 
+def test_range():
     Assert(range(10) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     Assert(range(0) == [])
     Assert(range(-10) == [])
@@ -44,10 +44,10 @@ def _xrange_eqv_range(r, o):
     Assert(len(r) == len(o))
     for i in range(len(r)):
         Assert(r[i]==o[i])
-        if (1 - i) == len(r): 
+        if (1 - i) == len(r):
             AssertError(IndexError, lambda: r[1-i])
             AssertError(IndexError, lambda: o[1-i])
-        else: 
+        else:
             Assert(r[1-i] == o[1-i])
 
 def test_xrange_based_on_range():
@@ -89,6 +89,7 @@ def test_xrange_coverage():
     AssertError(TypeError, lambda: xrange(4) + 4)
     AssertError(TypeError, lambda: xrange(4) * 4)
     AssertError(TypeError, lambda: xrange(4)[:2])
+    AssertError(TypeError, lambda: xrange(4)[1:2:3])
 
 
 run_test(__name__)

@@ -16,23 +16,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
 using System.Threading;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute; 
 
 namespace IronPython.Runtime {
 
@@ -41,31 +39,46 @@ namespace IronPython.Runtime {
         internal int _size;
         internal volatile object[] _data;
 
-        public void __init__(CodeContext context) {
+        public void __init__() {
             _data = new object[8];
             _size = 0;
         }
 
-        public void __init__(CodeContext context, object sequence) {
-            ICollection items = sequence as ICollection;
-            object len;
+        public void __init__([NotNull] IEnumerable enumerable) {
+            __init__();
 
-            if (items != null) {
-                if (this == items) {
-                    // list.__init__(l, l) resets l
-                    _size = 0;
-                    return;
-                }
-                _data = new object[items.Count];
-                int i = 0;
-                foreach (object item in items) {
-                    _data[i++] = item;
-                }
-                _size = i; 
+            foreach (object o in enumerable) {
+                AddNoLock(o);
+            }
+        }
+
+        public void __init__([NotNull] ICollection sequence) {
+            if (this == sequence) {
+                // list.__init__(l, l) resets l
+                _size = 0;
                 return;
             }
 
+            _data = new object[sequence.Count];
+            int i = 0;
+            foreach (object item in sequence) {
+                _data[i++] = item;
+            }
+            _size = i;
+        }
+
+        public void __init__([NotNull] string sequence) {
+            _data = new object[sequence.Length];
+            _size = sequence.Length;
+
+            for (int i = 0; i < sequence.Length; i++) {
+                _data[i] = RuntimeHelpers.CharToString(sequence[i]);
+            }
+        }
+
+        public void __init__(CodeContext context, object sequence) {
             try {
+                object len;
                 if (PythonTypeOps.TryInvokeUnaryOperator(context, sequence, Symbols.Length, out len)) {
                     int ilen = Converter.ConvertToInt32(len);
                     _data = new object[ilen];
@@ -88,18 +101,34 @@ namespace IronPython.Runtime {
             while (e.MoveNext()) AddNoLock(e.Current);
         }
 
-        internal List(int capacity) { 
-            _data = new object[capacity]; 
-            _size = 0; 
+        internal List(int capacity) {
+            if (capacity == 0) {
+                _data = ArrayUtils.EmptyObjects;
+            } else {
+                _data = new object[capacity];
+            }
         }
 
-        //!!! do we need to copy
         private List(params object[] items) {
             _data = items; 
             _size = _data.Length; 
-        } 
+        }
 
-        public List() : this(20) { }  //!!! figure out the right default size
+        public List()
+            : this(0) {
+        }
+
+#if ALLOC_DEBUG
+        private static int total, totalSize, cnt, growthCnt, growthSize;
+        ~List() {
+            total += _data.Length;
+            totalSize += _size;
+            cnt++;
+
+            Console.Error.WriteLine("List: allocated {0} used {1} total wasted {2} - grand total wasted {3}", _data.Length, _size, total-totalSize, growthSize + total - totalSize);
+            Console.Error.WriteLine("       Growing {0} {1} avg {2}", growthCnt, growthSize, growthSize / growthCnt);
+        }
+#endif
 
         internal List(object sequence) {
             ICollection items = sequence as ICollection;
@@ -135,11 +164,19 @@ namespace IronPython.Runtime {
             _size = i;
         }
 
+        /// <summary>
+        /// Creates a new list with the data in the array and a size
+        /// the same as the length of the array.  The array is held
+        /// onto and may be mutated in the future by the list.
+        /// </summary>
+        /// <param name="items"></param>
+        internal static List FromArrayNoCopy(params object[] data) {
+            return new List(data);
+        }
+
         internal object[] GetObjectArray() {
             lock (this) {
-                object[] ret = new object[_size];
-                Array.Copy(_data, 0, ret, 0, _size);
-                return ret;
+                return ArrayOps.CopyArray(_data, _size);
             }
         }
 
@@ -148,9 +185,8 @@ namespace IronPython.Runtime {
         public static List operator +([NotNull]List l1, [NotNull]List l2) {
             object[] them = l2.GetObjectArray();
             lock (l1) {
-                object[] ret = new object[l1._size + them.Length];
+                object[] ret = ArrayOps.CopyArray(l1._data, l1._size + them.Length);
 
-                Array.Copy(l1._data, 0, ret, 0, l1._size);
                 Array.Copy(them, 0, ret, l1._size, them.Length);
 
                 return new List(ret);
@@ -182,11 +218,8 @@ namespace IronPython.Runtime {
                 n = self._size;
                 //??? is this useful optimization
                 //???if (n == 1) return new List(Array.ArrayList.Repeat(this[0], count));
-
                 newCount = n * count;
-                ret = new object[newCount];
-
-                Array.Copy(self._data, 0, ret, 0, n);
+                ret = ArrayOps.CopyArray(self._data, newCount);                
             }
 
             // this should be extremely fast for large count as it uses the same algoithim as efficient integer powers
@@ -491,11 +524,20 @@ namespace IronPython.Runtime {
         internal void EnsureSize(int needed) {
             if (_data.Length >= needed) return;
 
-            int newSize = Math.Max(_size * 2, 4);
+            if (_data.Length == 0) {
+                // free growth, we wasted nothing
+                _data = new object[4];
+                return;
+            }
+
+            int newSize = Math.Max(_size * 3, 10);
             while (newSize < needed) newSize *= 2;
-            object[] newData = new object[newSize];
-            _data.CopyTo(newData, 0);
-            _data = newData;
+#if ALLOC_DEBUG
+            growthCnt++;
+            growthSize += _size;
+            Console.Error.WriteLine("Growing {3} {0} {1} avg {2}", growthCnt, growthSize, growthSize/growthCnt, newSize - _size);
+#endif
+            _data = ArrayOps.CopyArray(_data, newSize);
         }
 
         public void append(object item) {
@@ -665,7 +707,7 @@ namespace IronPython.Runtime {
 
         private class DefaultPythonComparer : IComparer {
             public static readonly DefaultPythonComparer Instance = new DefaultPythonComparer();
-            private DynamicSite<object, object, int> site = DynamicSite<object, object, int>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Compare));
+            private DynamicSite<object, object, int> site = DynamicSite<object, object, int>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Compare));
             public DefaultPythonComparer() { }
 
             public int Compare(object x, object y) {
@@ -876,22 +918,9 @@ namespace IronPython.Runtime {
         }
 
         internal int CompareToWorker(List l) {
-            // we need to lock both objects (or copy all of one's data w/ it's lock held, and
-            // then compare, which is bad).  Therefore we have a strong order for locking on 
-            // the lists
-            int result;
-            if (this.GetHashCode() < l.GetHashCode()) {
-                lock (this) lock (l) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
-            } else if (this.GetHashCode() != l.GetHashCode()) {
-                lock (l) lock (this) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
-            } else {
-                // rare, but possible.  We need a second opinion
-                if (IdDispenser.GetId(this) < IdDispenser.GetId(l))
-                    lock (this) lock (l) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
-                else
-                    lock (l) lock (this) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
+            using (new OrderedLocker(this, l)) {
+                return PythonOps.CompareArrays(_data, _size, l._data, l._size);
             }
-            return result;
         }
 
         #region IList Members
@@ -1022,14 +1051,26 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            StringBuilder buf = new StringBuilder();
-            buf.Append("[");
-            for (int i = 0; i < _size; i++) {
-                if (i > 0) buf.Append(", ");
-                buf.Append(PythonOps.StringRepr(_data[i]));
+            List<object> infinite = PythonOps.GetAndCheckInfinite(this);
+            if (infinite == null) {
+                return "[...]";
             }
-            buf.Append("]");
-            return buf.ToString();
+
+            int index = infinite.Count;
+            infinite.Add(this);
+            try {
+                StringBuilder buf = new StringBuilder();
+                buf.Append("[");
+                for (int i = 0; i < _size; i++) {
+                    if (i > 0) buf.Append(", ");
+                    buf.Append(PythonOps.StringRepr(_data[i]));
+                }
+                buf.Append("]");
+                return buf.ToString();
+            } finally {
+                System.Diagnostics.Debug.Assert(index == infinite.Count - 1);
+                infinite.RemoveAt(index);
+            }
         }
 
         #endregion
@@ -1134,7 +1175,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator > (List self, object other) {
             List l = other as List;
-            if (l == null) return PythonOps.NotImplemented;
+            if (l == null) return NotImplementedType.Value;
 
             return self.CompareTo(l) > 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
         }
@@ -1142,7 +1183,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator <(List self, object other) {
             List l = other as List;
-            if (l == null) return PythonOps.NotImplemented;
+            if (l == null) return NotImplementedType.Value;
 
             return self.CompareTo(l) < 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
         }
@@ -1150,7 +1191,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator >=(List self, object other) {
             List l = other as List;
-            if (l == null) return PythonOps.NotImplemented;
+            if (l == null) return NotImplementedType.Value;
 
             return self.CompareTo(l) >= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
         }
@@ -1158,7 +1199,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         public static object operator <=(List self, object other) {
             List l = other as List;
-            if (l == null) return PythonOps.NotImplemented;
+            if (l == null) return NotImplementedType.Value;
 
             return self.CompareTo(l) <= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
         }
@@ -1167,31 +1208,30 @@ namespace IronPython.Runtime {
     }
 
     public class listiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
-        private int index = -1;
-        private List l;
-        private bool sinkState = false;
+        private int _index = -1;
+        private List _list;
+        private bool _iterating = true;
 
-        public listiterator(List l) { this.l = l; }
+        public listiterator(List l) { _list = l; }
 
         #region IEnumerator Members
 
         public void Reset() {
-            index = -1;
+            _index = -1;
         }
 
         public object Current {
             get {
-                return l._data[index];
+                return _list._data[_index];
             }
         }
 
         public bool MoveNext() {
-            if (sinkState) return false;
-
-            index++;
-            bool hit = index > l._size - 1;
-            if (hit) sinkState = true;
-            return !hit;
+            if (_iterating) {
+                _index++;
+                _iterating = _index <= _list._size - 1;
+            }
+            return _iterating;
         }
 
         public object __iter__() {
@@ -1224,6 +1264,51 @@ namespace IronPython.Runtime {
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
             return this;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// we need to lock both objects (or copy all of one's data w/ it's lock held, and
+    /// then compare, which is bad).  Therefore we have a strong order for locking on 
+    /// the two objects based upon the hash code or object identity in case of a collision
+    /// </summary>
+    public class OrderedLocker : IDisposable {
+        private readonly object _one, _two;
+
+        public OrderedLocker(object/*!*/ one, object/*!*/ two) {
+            Debug.Assert(one != null); Debug.Assert(two != null);
+
+            _one = one;
+            _two = two;
+
+            int hc1 = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_one);
+            int hc2 = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_two);
+
+            if (hc1 < hc2) {
+                Monitor.Enter(_one);
+                Monitor.Enter(_two);
+            } else if (hc1 != hc2) {
+                Monitor.Enter(_two); 
+                Monitor.Enter(_one);
+            } else {
+                // rare, but possible.  We need a second opinion
+                if (IdDispenser.GetId(_one) < IdDispenser.GetId(_two)) {
+                    Monitor.Enter(_one);
+                    Monitor.Enter(_two);
+                } else {
+                    Monitor.Enter(_two);
+                    Monitor.Enter(_one);
+                }
+            }
+        }
+
+        #region IDisposable Members
+
+        public void Dispose() {
+            Monitor.Exit(_one);
+            Monitor.Exit(_two);
         }
 
         #endregion

@@ -13,30 +13,31 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
+using System.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
+    //CONFORMING
     /// <summary>
     /// Summary description for Expr.
     /// </summary>
     public abstract partial class Expression {
-        private readonly AstNodeType _nodeType;
+        private readonly ExpressionType _nodeType;
         private readonly Type _type;
-        private readonly DynamicAction _bindingInfo;
+        private readonly CallSiteBinder _binder;
         private readonly Annotations/*!*/ _annotations;
 
-        protected Expression(AstNodeType nodeType, Type type)
+        protected Expression(ExpressionType nodeType, Type type)
             : this(Annotations.Empty, nodeType, type) {
         }
 
-        protected Expression(Annotations annotations, AstNodeType nodeType, Type type)
+        protected Expression(Annotations annotations, ExpressionType nodeType, Type type)
             : this(annotations, nodeType, type, null) {
         }
 
-        protected Expression(Annotations annotations, AstNodeType nodeType, Type type, DynamicAction bindingInfo) {
+        protected Expression(Annotations annotations, ExpressionType nodeType, Type type, CallSiteBinder bindingInfo) {
             ContractUtils.RequiresNotNull(annotations, "annotations");
 
             // We should also enforce that subtrees of a bound node are also bound.
@@ -46,13 +47,15 @@ namespace Microsoft.Scripting.Ast {
             _annotations = annotations;
             _nodeType = nodeType;
             _type = type;
-            _bindingInfo = bindingInfo;
+            _binder = bindingInfo;
         }
 
-        public AstNodeType NodeType {
+        //CONFORMING
+        public ExpressionType NodeType {
             get { return _nodeType; }
         }
 
+        //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")]
         public Type Type {
             get { return _type; }
@@ -62,8 +65,8 @@ namespace Microsoft.Scripting.Ast {
         /// Information that can be used to bind this tree,
         /// either statically or dynamically
         /// </summary>
-        public DynamicAction BindingInfo {
-            get { return _bindingInfo; }
+        public CallSiteBinder BindingInfo {
+            get { return _binder; }
         }
 
         /// <summary>
@@ -78,19 +81,11 @@ namespace Microsoft.Scripting.Ast {
         /// Type is not null and BindingInfo is not null
         /// </summary>
         public bool IsDynamic {
-            get { return _type != null && _bindingInfo != null; }
+            get { return _type != null && _binder != null; }
         }
 
         public Annotations/*!*/ Annotations {
             get { return _annotations; }
-        }
-
-        internal SourceLocation Start {
-            get { return _annotations.Get<SourceSpan>().Start; }
-        }
-
-        internal SourceLocation End {
-            get { return _annotations.Get<SourceSpan>().End; }
         }
 
         /// <summary>
@@ -112,16 +107,31 @@ namespace Microsoft.Scripting.Ast {
             return this;
         }
 
-#if DEBUG
-        public string Dump {
+        //CONFORMING
+        public override string ToString() {
+            StringBuilder builder = new StringBuilder();
+            this.BuildString(builder);
+            return builder.ToString();
+        }
+
+        //CONFORMING
+        internal virtual void BuildString(StringBuilder builder) {
+            ContractUtils.RequiresNotNull(builder, "builder");
+            builder.Append("[");
+            builder.Append(_nodeType.ToString());
+            builder.Append("]");
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        private string Dump {
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
-                    AstWriter.Dump(this, GetType().Name, writer);
+                    ExpressionWriter.Dump(this, GetType().Name, writer);
                     return writer.ToString();
                 }
             }
         }
-#endif
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1724:TypeNamesShouldNotMatchNamespaces")] // TODO: fix
@@ -149,11 +159,15 @@ namespace Microsoft.Scripting.Ast {
 
         /// <summary>
         /// Reduces the expression to a known node type (i.e. not an Extension node)
-        /// or simply returns the expression if it is already a known type
+        /// or simply returns the expression if it is already a known type.
         /// </summary>
-        internal static Expression ReduceToKnown(Expression node) {
-            while (node.NodeType == AstNodeType.Extension) {
-                ContractUtils.Requires(node.IsReducible, "node", "node must be reducible");
+        public static Expression ReduceToKnown(Expression node) {
+            ContractUtils.RequiresNotNull(node, "node");
+
+            while (node.NodeType == ExpressionType.Extension) {
+                if (!node.IsReducible) {
+                    throw new ArgumentException("node must be reducible: " + node.GetType().Name, "node");
+                }
 
                 Expression newNode = node.Reduce();
 

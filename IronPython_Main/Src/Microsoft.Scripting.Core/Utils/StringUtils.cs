@@ -13,12 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Globalization;
+using System.Text;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
     public static class StringUtils {
 
         public static Encoding DefaultEncoding {

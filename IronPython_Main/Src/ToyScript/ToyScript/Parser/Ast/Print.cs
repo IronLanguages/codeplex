@@ -13,11 +13,12 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Expression;
+    using Ast = System.Linq.Expressions.Expression;
 
     class Print : Statement {
         private readonly Expression _expression;
@@ -28,10 +29,10 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            return Ast.Call(
-                Span,
-                typeof(ToyHelpers).GetMethod("Print"),
-                Ast.CodeContext(),
+            return AstUtils.Call(
+                typeof(ToyHelpers).GetMethod("Print"), 
+                Span, 
+                Ast.CodeContext(), 
                 Ast.ConvertHelper(
                     _expression.Generate(tg),
                     typeof(object)

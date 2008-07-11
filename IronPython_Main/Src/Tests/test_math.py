@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -16,268 +16,281 @@
 from lib.assert_util import *
 if is_cli or is_silverlight:
     from System import Int64, Byte, Int16
-  
-Assert("pypypypypy" == 5 * "py")
-Assert("pypypypypy" == "py" * 5)
-Assert("pypypypy" == 2 * "py" * 2)
 
-Assert(['py', 'py', 'py'] == ['py'] * 3)
-Assert(['py', 'py', 'py'] == 3 * ['py'])
-
-Assert(['py', 'py', 'py', 'py', 'py', 'py', 'py', 'py', 'py'] == 3 * ['py'] * 3)
-
-Assert(3782452410 > 0)
-
-# Complex tests
-Assert((2+4j)/(1+1j) == (3+1j))
-Assert((2+10j)/4.0 == (0.5+2.5j))
-AreEqual(1j ** 2, (-1.0+0j))
-AreEqual(pow(1j, 2), (-1.0+0j))
-AreEqual(1+0j, 1)
-AreEqual(1+0j, 1.0)
-AreEqual(1+0j, 1L)
-AreEqual((1+1j)/1L, (1+1j))
-AreEqual((1j) + 1L, (1+1j))
-
-if is_cli or is_silverlight: AreEqual((1j) + Int64(), 1j)
-
-AssertError(TypeError, (lambda:(1+1j)+[]))
-
-AreEqual( (12j//5j), (2+0j))
-AreEqual( (12.0+0j) // (5.0+0j), (2+0j) )
-AreEqual( (12+0j) // (0+3j), 0j)
-AreEqual( (0+12j) // (3+0j), 0j)
-AssertError(TypeError, (lambda:2j // "astring"))
-AssertError(ZeroDivisionError, (lambda:3.0 // (0j)))
-AreEqual ( 3.0 // (2j), 0j)
-AreEqual( 12 // (3j), 0j)
-AreEqual( 25 % (5+3j), (10-9j))
-
-AreEqual((12+3j)/3L, (4+1j))
-AreEqual(3j - 5L, -5+3j)
-if is_cli or is_silverlight: AreEqual(3j - Int64(), 3j)
-AssertError(TypeError, (lambda:3j-[]))
-if is_cli or is_silverlight: AreEqual(pow(5j, Int64()), (1+0j))
-AreEqual(pow(5j, 0L), (1+0j))
-AssertError(TypeError, (lambda:pow(5j, [])))
-if is_cli or is_silverlight: AreEqual(5j * Int64(), 0)
-AreEqual(5j * 3L, 15j)
-AssertError(TypeError, (lambda:(5j*[])))
-
-AreEqual(pow(2, 1000000000, 2147483647 + 10), 511677409)
-AreEqual(pow(2, 2147483647*2147483647, 2147483647*2147483647), 297528129805479806)
-
-for i in range(-100, 100, 7):
-    l = long(i)
-    Assert(type(i) == int)
-    Assert(type(l) == long)
-    for exp in [1, 17, 2863, 234857, 1435435, 234636554, 2147483647]:
-        lexp = long(exp)
-        Assert(type(exp) == int)
-        Assert(type(lexp) == long)
-        for mod in [-7, -5293, -2147483647, 7, 5293, 23745, 232474276, 534634665, 2147483647]:
-            lmod = long(mod)
-            Assert(type(mod) == int)
-            Assert(type(lmod) == long)
-
-            ir = pow(i, exp, mod)
-            lr = pow(l, lexp, lmod)
-
-            AreEqual(ir, lr)
-            
-            for zero in [0, 0L]:
-                ir = pow(i, zero, mod)
-                lr = pow(l, zero, lmod)
-                
-                if mod > 0:
-                    AreEqual(ir, 1)
-                    AreEqual(lr, 1)
-                else:
-                    AreEqual(ir, mod+1)
-                    AreEqual(lr, mod+1)
-        AssertError(ValueError, pow, i, exp, 0)
-        AssertError(ValueError, pow, l, lexp, 0L)
-
+def test_nonnumeric_multiply():
+    Assert("pypypypypy" == 5 * "py")
+    Assert("pypypypypy" == "py" * 5)
+    Assert("pypypypy" == 2 * "py" * 2)
     
-    for exp in [0, 0L]:
-        for mod in [-1,1,-1L,1L]:
-            ir = pow(i, exp, mod)
-            lr = pow(l, exp, mod)
-            AreEqual(ir, 0)
-            AreEqual(lr, 0)
+    Assert(['py', 'py', 'py'] == ['py'] * 3)
+    Assert(['py', 'py', 'py'] == 3 * ['py'])
+    
+    Assert(['py', 'py', 'py', 'py', 'py', 'py', 'py', 'py', 'py'] == 3 * ['py'] * 3)
 
-class powtest:
-    def __pow__(self, exp, mod = None):
-        return ("powtest.__pow__", exp, mod)
-    def __rpow__(self, exp):
-        return ("powtest.__rpow__", exp)
 
-AreEqual(pow(powtest(), 1, 2), ("powtest.__pow__", 1, 2))
-AreEqual(pow(powtest(), 3), ("powtest.__pow__", 3, None))
-AreEqual(powtest() ** 4, ("powtest.__pow__", 4, None))
-AreEqual(5 ** powtest(), ("powtest.__rpow__", 5))
-AreEqual(pow(7, powtest()), ("powtest.__rpow__", 7))
-AssertError(TypeError, pow, 1, powtest(), 7)
+def test_misc():
+    Assert(3782452410 > 0)
 
-# Extensible Float tests
-class XFloat(float): pass
+def test_complex():
+    # Complex tests
+    Assert((2+4j)/(1+1j) == (3+1j))
+    Assert((2+10j)/4.0 == (0.5+2.5j))
+    AreEqual(1j ** 2, (-1.0+0j))
+    AreEqual(pow(1j, 2), (-1.0+0j))
+    AreEqual(1+0j, 1)
+    AreEqual(1+0j, 1.0)
+    AreEqual(1+0j, 1L)
+    AreEqual((1+1j)/1L, (1+1j))
+    AreEqual((1j) + 1L, (1+1j))
 
-AreEqual(XFloat(3.14), 3.14)
-Assert(XFloat(3.14) < 4.0)
-Assert(XFloat(3.14) > 3.0)
-Assert(XFloat(3.14) < XFloat(4.0))
-Assert(XFloat(3.14) > XFloat(3.0))
+    if is_cli or is_silverlight: AreEqual((1j) + Int64(), 1j)
 
-Assert(0xabcdef01 + (0xabcdef01<<32)+(0xabcdef01<<64) == 0xabcdef01abcdef01abcdef01)
+    AssertError(TypeError, (lambda:(1+1j)+[]))
 
-Assert(round(-5.5489) == (-6.0))
-Assert(round(5.5519) == (6.0))
-Assert(round(-5.5) == (-6.0))
-Assert(round(-5.0) == (-5.0))
+def test_floor_divide():
+    AreEqual( (12j//5j), (2+0j))
+    AreEqual( (12.0+0j) // (5.0+0j), (2+0j) )
+    AreEqual( (12+0j) // (0+3j), 0j)
+    AreEqual( (0+12j) // (3+0j), 0j)
+    AssertError(TypeError, (lambda:2j // "astring"))
+    AssertError(ZeroDivisionError, (lambda:3.0 // (0j)))
+    AreEqual ( 3.0 // (2j), 0j)
+    AreEqual( 12 // (3j), 0j)
+    AreEqual( 25 % (5+3j), (10-9j))
 
-Assert(round(-4.5) == (-5.0))
-Assert(round(-2.5) == (-3.0))
-Assert(round(-0.5) == (-1.0))
-Assert(round(0.5) == (1.0))
-Assert(round(2.5) == (3.0))
-Assert(round(4.5) == (5.0))
-	
-Assert(round(-4.0) == (-4.0))
-Assert(round(-3.5) == (-4.0))
-Assert(round(-3.0) == (-3.0))
-Assert(round(-2.0) == (-2.0))
-Assert(round(-1.5) == (-2.0))
-Assert(round(-1.0) == (-1.0))
-Assert(round(0.0) == (0.0))
-Assert(round(1.0) == (1.0))
-Assert(round(1.5) == (2.0))
-Assert(round(2.0) == (2.0))
-Assert(round(3.0) == (3.0))
-Assert(round(3.5) == (4.0))
-Assert(round(4.0) == (4.0))
-Assert(round(5.0) == (5.0))
+def test_more_complex():
+    AreEqual((12+3j)/3L, (4+1j))
+    AreEqual(3j - 5L, -5+3j)
+    if is_cli or is_silverlight: AreEqual(3j - Int64(), 3j)
+    AssertError(TypeError, (lambda:3j-[]))
+    if is_cli or is_silverlight: AreEqual(pow(5j, Int64()), (1+0j))
+    AreEqual(pow(5j, 0L), (1+0j))
+    AssertError(TypeError, (lambda:pow(5j, [])))
+    if is_cli or is_silverlight: AreEqual(5j * Int64(), 0)
+    AreEqual(5j * 3L, 15j)
+    AssertError(TypeError, (lambda:(5j*[])))
 
-# two parameter round overload
-Assert(round(-4.0, 0) == (-4.0))
-Assert(round(-3.5, 0) == (-4.0))
-Assert(round(-3.0, 0) == (-3.0))
-Assert(round(-2.0, 0) == (-2.0))
-Assert(round(-1.5, 0) == (-2.0))
-Assert(round(-1.0, 0) == (-1.0))
-Assert(round(0.0, 0) == (0.0))
-Assert(round(1.0, 0) == (1.0))
-Assert(round(1.5, 0) == (2.0))
-Assert(round(2.0, 0) == (2.0))
-Assert(round(3.0, 0) == (3.0))
-Assert(round(3.5, 0) == (4.0))
-Assert(round(4.0, 0) == (4.0))
-Assert(round(5.0, 0) == (5.0))
-Assert(round(123.41526375, 1) == 123.4)
-Assert(round(123.41526375, 2) == 123.42)
-Assert(round(123.41526375, 3) == 123.415)
-Assert(round(123.41526375, 4) == 123.4153)
-Assert(round(123.41526375, 5) == 123.41526)
-Assert(round(123.41526375, 6) == 123.415264)
-Assert(round(123.41526375, 7) == 123.4152638)
-Assert(round(-123.41526375, 1) == -123.4)
-Assert(round(-123.41526375, 2) == -123.42)
-Assert(round(-123.41526375, 3) == -123.415)
-Assert(round(-123.41526375, 4) == -123.4153)
-Assert(round(-123.41526375, 5) == -123.41526)
-Assert(round(-123.41526375, 6) == -123.415264)
-Assert(round(-123.41526375, 7) == -123.4152638)
-for i in xrange(8, 307):
-    # Note: We can't do exact equality here due to the inexact nature of IEEE
-    # double precision floats when multiplied and later divided by huge powers of 10.
-    # Neither CPython nor IronPython mantain exact equality for precisions >= 17
-    if i < 17:
-        Assert(round(123.41526375, i) == 123.41526375)
-        Assert(round(-123.41526375, i) == -123.41526375)
-    else:
-        Assert(abs(round(123.41526375, i) - 123.41526375) < 0.0000000001)	
-        Assert(abs(round(-123.41526375, i) - -123.41526375) < 0.0000000001)	
-		
-Assert(round(7182930456.0, -1) == 7182930460.0)
-Assert(round(7182930456.0, -2) == 7182930500.0)
-Assert(round(7182930456.0, -3) == 7182930000.0)
-Assert(round(7182930456.0, -4) == 7182930000.0)
-Assert(round(7182930456.0, -5) == 7182900000.0)
-Assert(round(7182930456.0, -6) == 7183000000.0)
-Assert(round(7182930456.0, -7) == 7180000000.0)
-Assert(round(7182930456.0, -8) == 7200000000.0)
-Assert(round(7182930456.0, -9) == 7000000000.0)
-Assert(round(7182930456.0, -10) == 10000000000.0)
-Assert(round(7182930456.0, -11) == 0.0)
-Assert(round(-7182930456.0, -1) == -7182930460.0)
-Assert(round(-7182930456.0, -2) == -7182930500.0)
-Assert(round(-7182930456.0, -3) == -7182930000.0)
-Assert(round(-7182930456.0, -4) == -7182930000.0)
-Assert(round(-7182930456.0, -5) == -7182900000.0)
-Assert(round(-7182930456.0, -6) == -7183000000.0)
-Assert(round(-7182930456.0, -7) == -7180000000.0)
-Assert(round(-7182930456.0, -8) == -7200000000.0)
-Assert(round(-7182930456.0, -9) == -7000000000.0)
-Assert(round(-7182930456.0, -10) == -10000000000.0)
-Assert(round(-7182930456.0, -11) == 0.0)
-for i in xrange(-12, -309, -1):
-	Assert(round(7182930456.0, i) == 0.0)
-	Assert(round(-7182930456.0, i) == 0.0)
+def test_pow():
+    AreEqual(pow(2, 1000000000, 2147483647 + 10), 511677409)
+    AreEqual(pow(2, 2147483647*2147483647, 2147483647*2147483647), 297528129805479806)
+    nums = [3, 2.3, (2+1j), (2-1j), 1j, (-1j), 1]
+    for x in nums:
+        for y in nums:
+            z = x ** y
 
-x = ('a', 'b', 'c')
-y = x
-y *= 3
-z = x
-z += x
-z += x
-Assert(y == z)
+def test_mod_pow():
+    for i in range(-100, 100, 7):
+        l = long(i)
+        Assert(type(i) == int)
+        Assert(type(l) == long)
+        for exp in [1, 17, 2863, 234857, 1435435, 234636554, 2147483647]:
+            lexp = long(exp)
+            Assert(type(exp) == int)
+            Assert(type(lexp) == long)
+            for mod in [-7, -5293, -2147483647, 7, 5293, 23745, 232474276, 534634665, 2147483647]:
+                lmod = long(mod)
+                Assert(type(mod) == int)
+                Assert(type(lmod) == long)
+    
+                ir = pow(i, exp, mod)
+                lr = pow(l, lexp, lmod)
+    
+                AreEqual(ir, lr)
+                
+                for zero in [0, 0L]:
+                    ir = pow(i, zero, mod)
+                    lr = pow(l, zero, lmod)
+                    
+                    if mod > 0:
+                        AreEqual(ir, 1)
+                        AreEqual(lr, 1)
+                    else:
+                        AreEqual(ir, mod+1)
+                        AreEqual(lr, mod+1)
+            AssertError(ValueError, pow, i, exp, 0)
+            AssertError(ValueError, pow, l, lexp, 0L)
+    
+        
+        for exp in [0, 0L]:
+            for mod in [-1,1,-1L,1L]:
+                ir = pow(i, exp, mod)
+                lr = pow(l, exp, mod)
+                AreEqual(ir, 0)
+                AreEqual(lr, 0)
 
-Assert(1 << 32 == 4294967296L)
-Assert(2 << 32 == (1 << 32) << 1)
-Assert(((1 << 16) << 16) << 16 == 1 << 48)
-Assert(((1 << 16) << 16) << 16 == 281474976710656L)
+def test_user_ops():
+    class powtest:
+        def __pow__(self, exp, mod = None):
+            return ("powtest.__pow__", exp, mod)
+        def __rpow__(self, exp):
+            return ("powtest.__rpow__", exp)
+    
+    AreEqual(pow(powtest(), 1, 2), ("powtest.__pow__", 1, 2))
+    AreEqual(pow(powtest(), 3), ("powtest.__pow__", 3, None))
+    AreEqual(powtest() ** 4, ("powtest.__pow__", 4, None))
+    AreEqual(5 ** powtest(), ("powtest.__rpow__", 5))
+    AreEqual(pow(7, powtest()), ("powtest.__rpow__", 7))
+    AssertError(TypeError, pow, 1, powtest(), 7)
+    
+    # Extensible Float tests
+    class XFloat(float): pass
+    
+    AreEqual(XFloat(3.14), 3.14)
+    Assert(XFloat(3.14) < 4.0)
+    Assert(XFloat(3.14) > 3.0)
+    Assert(XFloat(3.14) < XFloat(4.0))
+    Assert(XFloat(3.14) > XFloat(3.0))
+    
+    Assert(0xabcdef01 + (0xabcdef01<<32)+(0xabcdef01<<64) == 0xabcdef01abcdef01abcdef01)
 
-for i in [1, 10, 42, 1000000000, 34141235135135135, 13523525234523452345235235234523, 100000000000000000000000000000000000000]:
-    Assert(~i == -i - 1)
+def test_rounding():
+    Assert(round(-5.5489) == (-6.0))
+    Assert(round(5.5519) == (6.0))
+    Assert(round(-5.5) == (-6.0))
+    Assert(round(-5.0) == (-5.0))
+    
+    Assert(round(-4.5) == (-5.0))
+    Assert(round(-2.5) == (-3.0))
+    Assert(round(-0.5) == (-1.0))
+    Assert(round(0.5) == (1.0))
+    Assert(round(2.5) == (3.0))
+    Assert(round(4.5) == (5.0))
+        
+    Assert(round(-4.0) == (-4.0))
+    Assert(round(-3.5) == (-4.0))
+    Assert(round(-3.0) == (-3.0))
+    Assert(round(-2.0) == (-2.0))
+    Assert(round(-1.5) == (-2.0))
+    Assert(round(-1.0) == (-1.0))
+    Assert(round(0.0) == (0.0))
+    Assert(round(1.0) == (1.0))
+    Assert(round(1.5) == (2.0))
+    Assert(round(2.0) == (2.0))
+    Assert(round(3.0) == (3.0))
+    Assert(round(3.5) == (4.0))
+    Assert(round(4.0) == (4.0))
+    Assert(round(5.0) == (5.0))
+    
+    # two parameter round overload
+    Assert(round(-4.0, 0) == (-4.0))
+    Assert(round(-3.5, 0) == (-4.0))
+    Assert(round(-3.0, 0) == (-3.0))
+    Assert(round(-2.0, 0) == (-2.0))
+    Assert(round(-1.5, 0) == (-2.0))
+    Assert(round(-1.0, 0) == (-1.0))
+    Assert(round(0.0, 0) == (0.0))
+    Assert(round(1.0, 0) == (1.0))
+    Assert(round(1.5, 0) == (2.0))
+    Assert(round(2.0, 0) == (2.0))
+    Assert(round(3.0, 0) == (3.0))
+    Assert(round(3.5, 0) == (4.0))
+    Assert(round(4.0, 0) == (4.0))
+    Assert(round(5.0, 0) == (5.0))
+    Assert(round(123.41526375, 1) == 123.4)
+    Assert(round(123.41526375, 2) == 123.42)
+    Assert(round(123.41526375, 3) == 123.415)
+    Assert(round(123.41526375, 4) == 123.4153)
+    Assert(round(123.41526375, 5) == 123.41526)
+    Assert(round(123.41526375, 6) == 123.415264)
+    Assert(round(123.41526375, 7) == 123.4152638)
+    Assert(round(-123.41526375, 1) == -123.4)
+    Assert(round(-123.41526375, 2) == -123.42)
+    Assert(round(-123.41526375, 3) == -123.415)
+    Assert(round(-123.41526375, 4) == -123.4153)
+    Assert(round(-123.41526375, 5) == -123.41526)
+    Assert(round(-123.41526375, 6) == -123.415264)
+    Assert(round(-123.41526375, 7) == -123.4152638)
+    for i in xrange(8, 307):
+        # Note: We can't do exact equality here due to the inexact nature of IEEE
+        # double precision floats when multiplied and later divided by huge powers of 10.
+        # Neither CPython nor IronPython mantain exact equality for precisions >= 17
+        if i < 17:
+            Assert(round(123.41526375, i) == 123.41526375)
+            Assert(round(-123.41526375, i) == -123.41526375)
+        else:
+            Assert(abs(round(123.41526375, i) - 123.41526375) < 0.0000000001)
+            Assert(abs(round(-123.41526375, i) - -123.41526375) < 0.0000000001)
+            
+    Assert(round(7182930456.0, -1) == 7182930460.0)
+    Assert(round(7182930456.0, -2) == 7182930500.0)
+    Assert(round(7182930456.0, -3) == 7182930000.0)
+    Assert(round(7182930456.0, -4) == 7182930000.0)
+    Assert(round(7182930456.0, -5) == 7182900000.0)
+    Assert(round(7182930456.0, -6) == 7183000000.0)
+    Assert(round(7182930456.0, -7) == 7180000000.0)
+    Assert(round(7182930456.0, -8) == 7200000000.0)
+    Assert(round(7182930456.0, -9) == 7000000000.0)
+    Assert(round(7182930456.0, -10) == 10000000000.0)
+    Assert(round(7182930456.0, -11) == 0.0)
+    Assert(round(-7182930456.0, -1) == -7182930460.0)
+    Assert(round(-7182930456.0, -2) == -7182930500.0)
+    Assert(round(-7182930456.0, -3) == -7182930000.0)
+    Assert(round(-7182930456.0, -4) == -7182930000.0)
+    Assert(round(-7182930456.0, -5) == -7182900000.0)
+    Assert(round(-7182930456.0, -6) == -7183000000.0)
+    Assert(round(-7182930456.0, -7) == -7180000000.0)
+    Assert(round(-7182930456.0, -8) == -7200000000.0)
+    Assert(round(-7182930456.0, -9) == -7000000000.0)
+    Assert(round(-7182930456.0, -10) == -10000000000.0)
+    Assert(round(-7182930456.0, -11) == 0.0)
+    for i in xrange(-12, -309, -1):
+        Assert(round(7182930456.0, i) == 0.0)
+        Assert(round(-7182930456.0, i) == 0.0)
 
-Assert(7 ** 5 == 7*7*7*7*7)
-Assert(7L ** 5L == 7L*7L*7L*7L*7L)
-Assert(7 ** 5L == 7*7*7*7*7)
-Assert(7L ** 5 == 7L*7L*7L*7L*7L)
-Assert(1 ** 735293857239475 == 1)
-Assert(0 ** 735293857239475 == 0)
+def test_other():
+    x = ('a', 'b', 'c')
+    y = x
+    y *= 3
+    z = x
+    z += x
+    z += x
+    Assert(y == z)
+    
+    Assert(1 << 32 == 4294967296L)
+    Assert(2 << 32 == (1 << 32) << 1)
+    Assert(((1 << 16) << 16) << 16 == 1 << 48)
+    Assert(((1 << 16) << 16) << 16 == 281474976710656L)
+    
+    for i in [1, 10, 42, 1000000000, 34141235135135135, 13523525234523452345235235234523, 100000000000000000000000000000000000000]:
+        Assert(~i == -i - 1)
+    
+    Assert(7 ** 5 == 7*7*7*7*7)
+    Assert(7L ** 5L == 7L*7L*7L*7L*7L)
+    Assert(7 ** 5L == 7*7*7*7*7)
+    Assert(7L ** 5 == 7L*7L*7L*7L*7L)
+    Assert(1 ** 735293857239475 == 1)
+    Assert(0 ** 735293857239475 == 0)
+    
+    # cpython tries to compute this, takes a long time to finish
+    if is_cli or is_silverlight:
+        AssertError(ValueError, (lambda: 10 ** 735293857239475))
 
-# cpython tries to compute this, takes a long time to finish
-if is_cli or is_silverlight:
-    AssertError(ValueError, (lambda: 10 ** 735293857239475))
+    Assert(2 ** 3.0 == 8.0)
+    Assert(2.0 ** 3 == 8.0)
+    Assert(4 ** 0.5 == 2.0)
 
-Assert(2 ** 3.0 == 8.0)
-Assert(2.0 ** 3 == 8.0)
-Assert(4 ** 0.5 == 2.0)
+def test_divmod():
+    AreEqual(7.1//2.1, 3.0)
+    AreEqual(divmod(5.0, 2), (2.0,1.0))
+    AreEqual(divmod(5,2), (2,1))
+    AreEqual(divmod(-5,2), (-3,1))
 
-nums = [3, 2.3, (2+1j), (2-1j), 1j, (-1j), 1]
-for x in nums:
-    for y in nums:
-        z = x ** y
+def test_boolean():
+    AreEqual(True | False, True)
+    AreEqual(True | 4, 5)
+    AreEqual(True & 3, 1)
+    AreEqual(True + 3, 4)
+    AreEqual(True - 10, -9)
+    AreEqual(True * 8, 8)
+    AreEqual(True / 3, 0)
+    AreEqual(True ** 5, 1)
+    AreEqual(True % 2, 1)
+    AreEqual(True << 4, 1 << 4)
+    AreEqual(True >> 2, 0)
+    AreEqual(True ^ 3, 2)
 
-AreEqual(7.1//2.1, 3.0)
-AreEqual(divmod(5.0, 2), (2.0,1.0))
-AreEqual(divmod(5,2), (2,1))
-AreEqual(divmod(-5,2), (-3,1))
-
-AreEqual(True | False, True)
-AreEqual(True | 4, 5)
-AreEqual(True & 3, 1)
-AreEqual(True + 3, 4)
-AreEqual(True - 10, -9)
-AreEqual(True * 8, 8)
-AreEqual(True / 3, 0)
-AreEqual(True ** 5, 1)
-AreEqual(True % 2, 1)
-AreEqual(True << 4, 1 << 4)
-AreEqual(True >> 2, 0)
-AreEqual(True ^ 3, 2)
-
-if is_cli or is_silverlight: 
+@skip("win32")
+def test_byte():
     a = Byte()
     AreEqual(type(a), Byte)
     AreEqual(a, 0)
@@ -296,27 +309,29 @@ if is_cli or is_silverlight:
     AreEqual(c, 256)
     AreEqual(type(c), Int16)
 
-Assert(not (20 == False))
-Assert(not (20 == None))
-Assert(not (False == 20))
-Assert(not (None == 20))
-Assert(not (20 == 'a'))
-Assert(not ('a' == 20))
-Assert(not (2.5 == None))
-Assert(not (20 == (2,3)))
+def test_negated_comparisons():
+    Assert(not (20 == False))
+    Assert(not (20 == None))
+    Assert(not (False == 20))
+    Assert(not (None == 20))
+    Assert(not (20 == 'a'))
+    Assert(not ('a' == 20))
+    Assert(not (2.5 == None))
+    Assert(not (20 == (2,3)))
+    
+    AreEqual(long(1234793454934), 1234793454934)
+    AreEqual(4 ** -2, 0.0625)
+    AreEqual(4L ** -2, 0.0625)
 
-AreEqual(long(1234793454934), 1234793454934)
-AreEqual(4 ** -2, 0.0625)
-AreEqual(4L ** -2, 0.0625)
-
-AssertError(ZeroDivisionError, (lambda: (0 ** -1)))
-AssertError(ZeroDivisionError, (lambda: (0.0 ** -1)))
-AssertError(ZeroDivisionError, (lambda: (0 ** -1.0)))
-AssertError(ZeroDivisionError, (lambda: (0.0 ** -1.0)))
-AssertError(ZeroDivisionError, (lambda: (False ** -1)))
-AssertError(ZeroDivisionError, (lambda: (0L ** -(2 ** 65))))
-AssertError(ZeroDivisionError, (lambda: (0j ** -1)))
-AssertError(ZeroDivisionError, (lambda: (0j ** 1j)))
+def test_zero_division():
+    AssertError(ZeroDivisionError, (lambda: (0 ** -1)))
+    AssertError(ZeroDivisionError, (lambda: (0.0 ** -1)))
+    AssertError(ZeroDivisionError, (lambda: (0 ** -1.0)))
+    AssertError(ZeroDivisionError, (lambda: (0.0 ** -1.0)))
+    AssertError(ZeroDivisionError, (lambda: (False ** -1)))
+    AssertError(ZeroDivisionError, (lambda: (0L ** -(2 ** 65))))
+    AssertError(ZeroDivisionError, (lambda: (0j ** -1)))
+    AssertError(ZeroDivisionError, (lambda: (0j ** 1j)))
 
 def test_extensible_math():
     operators = ['__add__', '__sub__', '__pow__', '__mul__', '__div__', '__floordiv__', '__truediv__', '__mod__']
@@ -326,13 +341,13 @@ def test_extensible_math():
     for baseType in [(int, (100,2)), (long, (100L, 2L)), (float, (100.0, 2.0))]:
     # (complex, (100+0j, 2+0j)) - cpython doesn't call reverse ops for complex ?
         class prototype(baseType[0]):
-            for op in operators:                
-                exec '''def %s(self, other): 
+            for op in operators:
+                exec '''def %s(self, other):
     global opCalled
     opCalled.append('%s')
     return super(self.__class__, self).%s(other)
 
-def %s(self, other): 
+def %s(self, other):
     global opCalled
     opCalled.append('%s')
     return super(self.__class__, self).%s(other)''' % (op, op, op, op[:2] + 'r' + op[2:], op[:2] + 'r' + op[2:], op[:2] + 'r' + op[2:])
@@ -363,5 +378,32 @@ def %s(self, other):
                 opCalled = []
                 
 
-                        
-test_extensible_math()
+def test_nan():
+    x  = 1e66666
+    Assert(x==x)
+    Assert(x<=x)
+    Assert(x>=x)
+    Assert(not x!=x)
+    Assert(not x<x)
+    Assert(not x>x)
+    AreEqual(cmp(x, x), 0)
+    
+    y = x/x
+    AreEqual(y == y, False)
+    AreEqual(y >= y, False)
+    AreEqual(y <= y, False)
+    AreEqual(y != y, True)
+    AreEqual(y > y, False)
+    AreEqual(y < y, False)
+    AreEqual(cmp(y, y), 0)
+    
+    Assert(not x==y)
+    Assert(x!=y)
+    Assert(not x>=y)
+    Assert(not x<=y)
+    Assert(not x<y)
+    Assert(not x>y)
+    #CodePlex 16304
+    #AreEqual(cmp(x, y), 1)
+               
+run_test(__name__)

@@ -13,9 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using System.Scripting;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     class PythonReference {

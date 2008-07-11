@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -49,7 +49,7 @@ def outputRedirectStop():
     
     #close fake stdout/stderr
     STDOUT_TEMP.close()
-    if STDOUT_TEMP!=STDERR_TEMP: 
+    if STDOUT_TEMP!=STDERR_TEMP:
         STDERR_TEMP.close()
 
     #restore output streams
@@ -74,7 +74,7 @@ yak = "yak"
 # Ensure that tabbing after 'ident.' cycles through the available options
 ######################################################################################################
 
-class C: 
+class C:
     'Cdoc'
     pass
 

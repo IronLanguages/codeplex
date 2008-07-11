@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Expression;
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class PrintStatement : Statement {
         private readonly Expression _dest;
@@ -48,16 +48,16 @@ namespace IronPython.Compiler.Ast {
 
             if (_expressions.Length == 0) {
                 if (destination != null) {
-                    return Ast.Call(
-                        Span,
-                        AstGenerator.GetHelperMethod("PrintNewlineWithDest"),
-                        Ast.CodeContext(),
+                    return AstUtils.Call(
+                        AstGenerator.GetHelperMethod("PrintNewlineWithDest"), 
+                        Span, 
+                        Ast.CodeContext(), 
                         destination
                     );
                 } else {
-                    return Ast.Call(
-                        Span,
-                        AstGenerator.GetHelperMethod("PrintNewline"),
+                    return AstUtils.Call(
+                        AstGenerator.GetHelperMethod("PrintNewline"), 
+                        Span, 
                         Ast.CodeContext()
                     );
                 }
@@ -98,7 +98,7 @@ namespace IronPython.Compiler.Ast {
                     statements.Add(mce);
                 }
 
-                return Ast.Block(Span, statements.ToArray());
+                return AstUtils.Block(Span, statements.ToArray());
             }
         }
 

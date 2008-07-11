@@ -2,10 +2,10 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
-# copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
-# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# This source code is subject to terms and conditions of the Microsoft Public License. A
+# copy of the license can be found in the License.html file at the root of this distribution. If
+# you cannot locate the  Microsoft Public License, please send an email to
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
 # by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
@@ -19,7 +19,7 @@
 
 '''
 TODO - essentially all the tests currently here are barebones sanity checks
-to ensure a minimal level of functionality exists. In other words, there are 
+to ensure a minimal level of functionality exists. In other words, there are
 many special cases that are not being covered *yet*.
 
 Disabled Silverlight tests are due to Rowan #304084
@@ -283,7 +283,7 @@ def test_utf_16_le_encode():
     AreEqual(new_str, 'a\x00b\x00c\x00')
     AreEqual(size, 3)
 
-@skip('silverlight')        
+@skip('silverlight')
 def test_utf_16_le_str_encode():
     for x in ('utf_16_le', 'UTF-16LE', 'utf-16le'):
         AreEqual('abc'.encode(x), 'a\x00b\x00c\x00')
@@ -358,7 +358,7 @@ def test_misc_encodings():
 def test_file_encodings():
     '''
     Once this gets fixed, we should use *.py files in the correct encoding instead
-    of dynamically generating ASCII files.  Also, need variations on the encoding 
+    of dynamically generating ASCII files.  Also, need variations on the encoding
     names.
     '''
     
@@ -372,16 +372,16 @@ def test_file_encodings():
         #positive cases
         for coding in ip_supported_encodings:
             temp_mod_name = "test_encoding_" + coding.replace("-", "_")
-            f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py", 
+            f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py",
                     "w")
             f.write("# coding: %s" % (coding))
             f.close()
-            __import__(temp_mod_name)    
+            __import__(temp_mod_name)
             nt.remove(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py")
             
     finally:
         #cleanup
-        sys.path.remove(nt.getcwd() + "\\tmp_encodings")           
+        sys.path.remove(nt.getcwd() + "\\tmp_encodings")
 
 @skip("silverlight", "multiple_execute")
 def test_file_encodings_negative():
@@ -399,14 +399,14 @@ def test_file_encodings_negative():
     except:
         pass
              
-    try:           
-        #negative case               
+    try:
+        #negative case
         f = open(nt.getcwd() + "\\tmp_encodings\\" + "bad_encoding.py", "w")
         f.write("# coding: bad")
-        f.close() 
+        f.close()
         AssertError(SyntaxError, __import__, "bad_encoding")
     finally:
         #cleanup
-        sys.path.remove(nt.getcwd() + "\\tmp_encodings")               
+        sys.path.remove(nt.getcwd() + "\\tmp_encodings")
     
 run_test(__name__)

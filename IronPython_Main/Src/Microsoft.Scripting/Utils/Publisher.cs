@@ -15,9 +15,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-
+using System.Scripting;
 using System.Threading;
 
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Utils")]
@@ -35,7 +34,7 @@ namespace Microsoft.Scripting.Utils {
         private readonly Dictionary<TKey, PublishInfo<TValue>> data = new Dictionary<TKey, PublishInfo<TValue>>();
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")] // TODO: fix
-        public TValue GetOrCreateValue(TKey key, Function<TValue> create) {
+        public TValue GetOrCreateValue(TKey key, Func<TValue> create) {
             lock (data) {
                 PublishInfo<TValue> pubValue;
                 if (data.TryGetValue(key, out pubValue)) {

@@ -13,26 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
 
-namespace Microsoft.Scripting.Generation {
+namespace System.Scripting.Generation {
     internal class TypeGen {
         private readonly AssemblyGen/*!*/ _myAssembly;
         private readonly TypeBuilder/*!*/ _myType;
 
-        private FieldBuilder _contextField;
         private ILGen _initGen;                        // The IL generator for the .cctor()
-        private readonly Dictionary<object, Slot>/*!*/ _constants = new Dictionary<object, Slot>();
-        private readonly Dictionary<SymbolId, Slot>/*!*/ _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
+        private readonly Dictionary<SymbolId, FieldBuilder>/*!*/ _indirectSymbolIds = new Dictionary<SymbolId, FieldBuilder>();
 
         /// <summary>
         /// Gets the Compiler associated with the Type Initializer (cctor) creating it if necessary.
@@ -52,10 +46,6 @@ namespace Microsoft.Scripting.Generation {
 
         internal TypeBuilder/*!*/ TypeBuilder {
             get { return _myType; }
-        }
-
-        internal FieldBuilder ContextField {
-            get { return _contextField; }
         }
 
         internal TypeGen(AssemblyGen/*!*/ myAssembly, TypeBuilder/*!*/ myType) {
@@ -79,22 +69,12 @@ namespace Microsoft.Scripting.Generation {
             return ret;
         }
 
-
-        internal void AddCodeContextField() {
-            _contextField = _myType.DefineField(CodeContext.ContextFieldName,
-                typeof(CodeContext),
-                FieldAttributes.Public | FieldAttributes.Static
-            );
+        internal FieldBuilder AddStaticField(Type fieldType, string name) {
+            return _myType.DefineField(name, fieldType, FieldAttributes.Public | FieldAttributes.Static);
         }
 
-        internal Slot AddStaticField(Type fieldType, string name) {
-            FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public | FieldAttributes.Static);
-            return new StaticFieldSlot(fb);
-        }
-
-        internal Slot AddStaticField(Type fieldType, FieldAttributes attributes, string name) {
-            FieldBuilder fb = _myType.DefineField(name, fieldType, attributes | FieldAttributes.Static);
-            return new StaticFieldSlot(fb);
+        internal FieldBuilder AddStaticField(Type fieldType, FieldAttributes attributes, string name) {
+            return _myType.DefineField(name, fieldType, attributes | FieldAttributes.Static);
         }
 
         internal ILGen DefineExplicitInterfaceImplementation(MethodInfo/*!*/ baseMethod) {
@@ -126,67 +106,24 @@ namespace Microsoft.Scripting.Generation {
             return new ILGen(mb.GetILGenerator(), this);
         }
 
-        /// <summary>
-        /// Constants
-        /// </summary>
-        internal Slot GetOrMakeConstant(object value) {
-            Debug.Assert(!(value is CompilerConstant));
+        internal void EmitIndirectedSymbol(ILGen cg, SymbolId id) {            
+            if (id == SymbolId.Empty) {
+                cg.EmitFieldGet(typeof(SymbolId).GetField("Empty"));
+            } else {
+                FieldBuilder value;
+                if (!_indirectSymbolIds.TryGetValue(id, out value)) {
+                    // create field, emit fix-up...
 
-            Slot ret;
-            if (_constants.TryGetValue(value, out ret)) {
-                return ret;
+                    value = AddStaticField(typeof(SymbolId), FieldAttributes.Public, "symbol_" + SymbolTable.IdToString(id));
+                    ILGen init = TypeInitializer;
+                    if (_indirectSymbolIds.Count == 0) {
+                        init.EmitType(_myType);
+                        init.EmitCall(typeof(RuntimeHelpers), "InitializeSymbols");
+                    }
+                    _indirectSymbolIds[id] = value;
+                }
+                cg.Emit(OpCodes.Ldsfld, value);
             }
-
-            Type type = value.GetType();
-
-            // Create a name like "c$3.141592$712"
-            string name = value.ToString();
-            if (name.Length > 20) {
-                name = name.Substring(0, 20);
-            }
-            name = "c$" + name + "$" + _constants.Count;
-
-            FieldBuilder fb = _myType.DefineField(name, type, FieldAttributes.Static | FieldAttributes.InitOnly);
-            ret = new StaticFieldSlot(fb);
-
-            TypeInitializer.EmitConstant(value);
-            _initGen.EmitFieldSet(fb);
-
-            _constants[value] = ret;
-            return ret;
-        }
-
-        internal Slot GetOrMakeCompilerConstant(CompilerConstant value) {
-            Slot ret;
-            if (_constants.TryGetValue(value, out ret)) {
-                return ret;
-            }
-
-            string name = "c$" + value.Name + "$" + _constants.Count;
-
-            FieldBuilder fb = _myType.DefineField(name, value.Type, FieldAttributes.Static | FieldAttributes.InitOnly);
-            ret = new StaticFieldSlot(fb);
-
-            value.EmitCreation(TypeInitializer);
-            _initGen.EmitFieldSet(fb);
-
-            _constants[value] = ret;
-            return ret;
-        }
-
-        internal void EmitIndirectedSymbol(ILGen cg, SymbolId id) {
-            Slot value;
-            if (!_indirectSymbolIds.TryGetValue(id, out value)) {
-                // create field, emit fix-up...
-
-                value = AddStaticField(typeof(SymbolId), FieldAttributes.Private, "symbol_" + SymbolTable.IdToString(id));
-                ILGen init = TypeInitializer;
-                init.EmitString((string)SymbolTable.IdToString(id));
-                init.EmitCall(typeof(SymbolTable), "StringToId");
-                value.EmitSet(init);
-                _indirectSymbolIds[id] = value;
-            }
-            value.EmitGet(cg);       
         }
     }
 }

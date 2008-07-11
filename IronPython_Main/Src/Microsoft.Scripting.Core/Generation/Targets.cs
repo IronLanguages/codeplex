@@ -13,15 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection.Emit;
+using System.Linq.Expressions;
 
-using Microsoft.Scripting.Ast;
-
-namespace Microsoft.Scripting.Generation {
-    public enum TargetBlockType {
+namespace System.Scripting.Generation {
+    internal enum TargetBlockType {
         Normal,
         Try,
         Finally,
@@ -30,16 +26,16 @@ namespace Microsoft.Scripting.Generation {
         LoopInFinally
     }
 
-    internal class Targets {
+    internal sealed class Targets {
         private readonly Label? _breakLabel;
         private readonly Label? _continueLabel;
-        private readonly Slot _finallyReturns;
+        private readonly LocalBuilder _finallyReturns;
         private readonly LabelTarget _label;
         private readonly TargetBlockType _blockType;
 
         private Label? _leaveLabel;
 
-        internal Targets(Label? breakLabel, Label? continueLabel, TargetBlockType blockType, Slot finallyReturns, LabelTarget label) {
+        internal Targets(Label? breakLabel, Label? continueLabel, TargetBlockType blockType, LocalBuilder finallyReturns, LabelTarget label) {
             _breakLabel = breakLabel;
             _continueLabel = continueLabel;
             _blockType = blockType;
@@ -59,7 +55,7 @@ namespace Microsoft.Scripting.Generation {
             get { return _continueLabel; }
         }
 
-        internal Slot FinallyReturns {
+        internal LocalBuilder FinallyReturns {
             get { return _finallyReturns; }
         }
 

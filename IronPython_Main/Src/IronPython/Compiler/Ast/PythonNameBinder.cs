@@ -14,13 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Diagnostics;
+using System.Scripting;
+using System.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Compilers;
 
 /*
  * The name binding:
@@ -407,7 +409,8 @@ namespace IronPython.Compiler.Ast {
         // PythonAst
         public override bool Walk(PythonAst node) {
             if (node.Module) {
-                DefineName(Symbols.Name);
+                node.NameVariable = DefineName(Symbols.Name);
+                node.FileVariable = DefineName(Symbols.File);
                 if (node.Body.Documentation != null) {
                     node.DocVariable = DefineName(Symbols.Doc);
                 }
