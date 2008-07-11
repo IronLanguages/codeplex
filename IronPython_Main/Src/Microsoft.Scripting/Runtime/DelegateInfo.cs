@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -25,6 +26,7 @@ namespace Microsoft.Scripting.Runtime {
     internal sealed class DelegateInfo {
         private readonly MethodInfo _method;
         private readonly object[] _constants;
+        private WeakDictionary<object, WeakReference> _constantMap = new WeakDictionary<object, WeakReference>();
 
         internal DelegateInfo(MethodInfo method, object[] constants) {
             Assert.NotNull(method, constants);
@@ -36,11 +38,34 @@ namespace Microsoft.Scripting.Runtime {
         internal Delegate CreateDelegate(Type delegateType, object target) {
             Assert.NotNull(delegateType, target);
 
-            object[] clone = (object[])_constants.Clone();
+            // to enable:
+            // function x() { }
+            // someClass.someEvent += delegateType(x) 
+            // someClass.someEvent -= delegateType(x) 
+            //
+            // we need to avoid re-creating the object array because they won't
+            // be compare equal when removing the delegate if they're difference 
+            // instances.  Therefore we use a weak hashtable to get back the
+            // original object array.  The values also need to be weak to avoid
+            // creating a circular reference from the constants target back to the
+            // target.  This is fine because as long as the delegate is referenced
+            // the object array will stay alive.  Once the delegate is gone it's not
+            // wired up anywhere and -= will never be used again.
 
-            Debug.Assert(clone[0] == DelegateSignatureInfo.TargetPlaceHolder);
+            object[] clone;            
+            lock (_constantMap) {
+                WeakReference cloneRef;
 
-            clone[0] = target;
+                if (!_constantMap.TryGetValue(target, out cloneRef) || 
+                    (clone = (object[])cloneRef.Target) == null) {
+                    _constantMap[target] = new WeakReference(clone = (object[])_constants.Clone());
+
+                    Debug.Assert(clone[0] == DelegateSignatureInfo.TargetPlaceHolder);
+
+                    clone[0] = target;
+                }
+            }
+
             return ReflectionUtils.CreateDelegate(_method, delegateType, clone);
         }
     }

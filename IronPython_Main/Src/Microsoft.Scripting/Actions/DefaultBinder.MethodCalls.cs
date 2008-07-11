@@ -267,6 +267,36 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
+        /// <summary>
+        /// Performs binding against a set of overloaded methods using the specified arguments and the specified
+        /// instance argument.  The arguments are consumed as specified by the CallSignature object.
+        /// </summary>
+        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="targets">The methods to be called</param>
+        /// <param name="args">The arguments for the call</param>
+        /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
+        /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
+        /// <param name="instance">The instance which will be provided for dispatching to an instance method.</param>
+        /// <param name="maxLevel">The maximum narrowing level for arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>
+        /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
+        /// <param name="target">The resulting binding target which can be used for producing error information.</param>
+        /// <param name="name">The name of the method or null to use the name from targets.</param>
+        /// <returns>A meta object which results from the call.</returns>
+        public MetaObject/*!*/ CallInstanceMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, MetaObject/*!*/ instance, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+            return CallWorker(
+                context,
+                targets,
+                ArrayUtils.Insert(instance, args),
+                signature,
+                CallTypes.ImplicitInstance,
+                restrictions,
+                minLevel,
+                maxLevel,
+                name,
+                out target
+            );
+        }
+        
         private MetaObject/*!*/ CallWorker(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, CallTypes callType, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name) {
             BindingTarget dummy;
             return CallWorker(context, targets, args, signature, callType, restrictions, minLevel, maxLevel, name, out dummy);

@@ -19,8 +19,8 @@ using System.Diagnostics;
 
 namespace System.Scripting.Com {
 
-    public class DispPropertyPut : DispCallable {
-        public DispPropertyPut(IDispatchObject dispatch, ComMethodDesc methodDesc)
+    public sealed class DispPropertyPut : DispCallable {
+        internal DispPropertyPut(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {
             Debug.Assert(methodDesc.IsPropertyPut);
         }
@@ -29,7 +29,7 @@ namespace System.Scripting.Com {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1043:UseIntegralOrStringArgumentForIndexers")]
         public object this[params object[] args] {
             get {
-                return UnoptimizedInvoke(SymbolId.EmptySymbols, args); 
+                return ComRuntimeHelpers.UnoptimizedInvoke(ComMethodDesc, DispatchObject, new string[0], args); 
             }
         }
     }

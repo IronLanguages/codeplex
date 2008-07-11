@@ -69,18 +69,16 @@ namespace System.Linq.Expressions {
         private Dictionary<YieldStatement, YieldTarget> _yieldTargets;
         private readonly Stack<ExceptionBlock> _tryBlocks = new Stack<ExceptionBlock>();
         private readonly List<YieldTarget> _topTargets = new List<YieldTarget>();
-        private int _temps;
-
+        
         private YieldLabelBuilder() {
         }
 
-        internal static GeneratorInfo BuildYieldTargets(LambdaExpression gle, out int tempsNeeded) {
+        internal static GeneratorInfo BuildYieldTargets(LambdaExpression gle) {
             Debug.Assert(gle.NodeType == ExpressionType.Generator);
             YieldLabelBuilder ylb = new YieldLabelBuilder();
             ylb.VisitNode(gle.Body);
 
             // Populate results into the GeneratorInfo
-            tempsNeeded = ylb._temps;
             return new GeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets);
         }
 
@@ -112,10 +110,10 @@ namespace System.Linq.Expressions {
                 }
             }
 
-            if (node.FinallyStatement != null || node.FaultStatement != null) {
+            if (node.Finally != null || node.Fault != null) {
                 block.State = ExceptionBlock.TryStatementState.Finally;
-                VisitNode(node.FinallyStatement);
-                VisitNode(node.FaultStatement);
+                VisitNode(node.Finally);
+                VisitNode(node.Fault);
             }
 
             Debug.Assert((object)block == (object)_tryBlocks.Peek());
@@ -126,8 +124,6 @@ namespace System.Linq.Expressions {
                 _tryInfos = new Dictionary<TryStatement, TryStatementInfo>();
             }
             _tryInfos[node] = tsi;
-
-            _temps += (node.FinallyStatement ?? node.FaultStatement) != null ? 1 : 0;
 
             return node;
         }

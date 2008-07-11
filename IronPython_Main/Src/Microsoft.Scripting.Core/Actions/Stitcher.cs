@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Linq.Expressions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
 
@@ -55,7 +56,7 @@ namespace System.Scripting.Actions {
             if (length == 1) {
                 // only one rule, use its parameters and don't stitch..
                 Rule<T> rule = rules[0];
-                lp = AddCallSiteParameter(parameters, rule.Parameters);
+                lp = ArrayUtils.ToArray(rule.Parameters);
                 body[0] = rule.Binding;
             } else {
                 // Many rules, stitch them together on a new set of parameters
@@ -91,27 +92,10 @@ namespace System.Scripting.Actions {
         private Expression StitchRule(ReadOnlyCollection<ParameterExpression> parameters, Expression expression) {
             _map.Clear();
             for (int i = 0; i < parameters.Count; i++) {
-                Debug.Assert(parameters[i].Type == _lp[i + 1].Type);
-                _map[parameters[i]] = _lp[i + 1];
+                Debug.Assert(parameters[i].Type == _lp[i].Type);
+                _map[parameters[i]] = _lp[i];
             }
             return VisitNode(expression);
-        }
-
-        private static ParameterExpression[] AddCallSiteParameter(ParameterInfo[] pis, ReadOnlyCollection<ParameterExpression> expressions) {
-            Debug.Assert(pis.Length > 0 && pis.Length - 1 == expressions.Count);
-
-            ParameterExpression[] vars = new ParameterExpression[pis.Length];
-            vars[0] = Expression.Parameter(pis[0].ParameterType, "$arg0");
-
-            for (int i = 1; i < vars.Length; i++) {
-                Debug.Assert(pis[i].ParameterType.IsByRef
-                    ? pis[i].ParameterType.GetElementType() == expressions[i - 1].Type
-                    : pis[i].ParameterType == expressions[i - 1].Type);
-
-                vars[i] = expressions[i - 1];
-            }
-
-            return vars;
         }
 
         private static ParameterExpression[] MakeParameters(ParameterInfo[] pis) {

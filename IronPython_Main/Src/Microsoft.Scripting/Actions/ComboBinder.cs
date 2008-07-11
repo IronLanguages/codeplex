@@ -45,15 +45,29 @@ namespace Microsoft.Scripting.Actions {
 
         public override MetaObject/*!*/ Bind(params MetaObject/*!*/[]/*!*/ args) {
             List<MetaObject> results = new List<MetaObject>(_metaBinders.Length);
-            MetaObject res = null;
+            List<Expression> steps = new List<Expression>();
+            List<VariableExpression> temps = new List<VariableExpression>();
+            Restrictions restrictions = Restrictions.Empty;
 
             for (int i = 0; i < _metaBinders.Length; i++) {
                 BinderMappingInfo curBinder = _metaBinders[i];
 
-                results.Add(res = curBinder.Binder.Bind(GetArguments(args, results, i)));
+                MetaObject next = curBinder.Binder.Bind(GetArguments(args, results, i));                
+                VariableExpression tmp = Expression.Variable(next.Expression.Type, "comboTemp" + i.ToString());
+                temps.Add(tmp);
+                
+                steps.Add(Expression.Assign(tmp, next.Expression));
+                results.Add(new MetaObject(tmp, next.Restrictions));
+                restrictions = restrictions.Merge(next.Restrictions);
             }
 
-            return res;
+            return new MetaObject(
+                Expression.Scope(
+                    Expression.Comma(steps.ToArray()),
+                    temps.ToArray()
+                ),
+                restrictions
+            );
         }
 
         private MetaObject/*!*/[]/*!*/ GetArguments(MetaObject/*!*/[]/*!*/ args, IList<MetaObject/*!*/>/*!*/ results, int metaBinderIndex) {

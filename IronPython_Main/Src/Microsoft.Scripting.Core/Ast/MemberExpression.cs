@@ -214,7 +214,7 @@ namespace System.Linq.Expressions {
 
             if (!isStatic) {
                 ContractUtils.RequiresNotNull(expression, "expression");
-                if (!TypeUtils.AreReferenceAssignable(property.DeclaringType, expression.Type)) {
+                if (!TypeUtils.IsValidInstanceType(property, expression.Type)) {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);
                 }
             }

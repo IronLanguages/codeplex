@@ -26,7 +26,7 @@ using System.Scripting.Utils;
 using System.Threading;
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Actions;
@@ -140,6 +140,9 @@ namespace IronPython.Runtime.Types {
             public static readonly MethodInfo/*!*/ TryGetvalue = typeof(IAttributesCollection).GetMethod("TryGetValue");
         }
 
+        public static class _PythonGenerator {
+            public static readonly ConstructorInfo Ctor = typeof(PythonGenerator).GetConstructor(new Type[] { typeof(CodeContext) });
+        }
 
         #endregion
 
@@ -752,6 +755,20 @@ namespace IronPython.Runtime.Types {
                 value = PythonTypeOps.GetDocumentation(owner.UnderlyingSystemType);
                 return true;
             }
+
+            internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
+                IPythonObject obj = instance as IPythonObject;
+                if (obj == null || !obj.HasDictionary) {
+                    string name = owner.Name;
+                    if (obj != null) {
+                        name = obj.PythonType.Name;
+                    }
+                    throw PythonOps.AttributeErrorForReadonlyAttribute(name, Symbols.Doc);
+                }
+
+                UserTypeOps.GetDictionary(obj)[Symbols.Doc] = value;
+                return true;
+            }
         }
 
         private static MemberGroup/*!*/ DocResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
@@ -1316,6 +1333,11 @@ namespace IronPython.Runtime.Types {
             return (op >= Operators.ReverseAdd && op <= Operators.ReverseExclusiveOr);
         }
 
+        internal static bool IsReverseOperator(string op) {
+            // TODO: Should determine reverse some other way or Python should be recognizing reverse operators some other way.
+            return op.StartsWith("Reverse");
+        }
+        
         /// <summary>
         /// If an operator is a reverisble operator (e.g. addition) then we need to filter down to just the forward/reverse
         /// versions of the .NET method.  For example consider:

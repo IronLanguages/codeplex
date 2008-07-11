@@ -24,7 +24,7 @@ using System.Scripting.Actions;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;

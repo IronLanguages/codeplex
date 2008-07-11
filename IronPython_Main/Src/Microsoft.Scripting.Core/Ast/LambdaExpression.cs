@@ -135,7 +135,7 @@ namespace System.Linq.Expressions {
         //CONFORMING
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(body, "body");
-            ReadOnlyCollection<ParameterExpression> parameterList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
             ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
             return new Expression<TDelegate>(annotations, ExpressionType.Lambda, name, body, parameterList);
         }
@@ -173,7 +173,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(body, "body");
 
-            ReadOnlyCollection<ParameterExpression> parameterList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
 
             bool action = body.Type == typeof(void);
 
@@ -208,7 +208,7 @@ namespace System.Linq.Expressions {
         public static LambdaExpression Lambda(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
             ContractUtils.RequiresNotNull(body, "body");
-            ReadOnlyCollection<ParameterExpression> paramList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
             return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, paramList);
@@ -260,17 +260,36 @@ namespace System.Linq.Expressions {
             }
         }
 
-
+        // TODO: review factories
         #region Generator
 
-        public static LambdaExpression Generator(Type delegateType, string name, Expression body, params ParameterExpression[] parameters) {
-            return Generator(delegateType, name, body, Annotations.Empty, parameters);
+        public static Expression<TDelegate> Generator<TDelegate>(Expression body, params ParameterExpression[] parameters) {
+            return Generator<TDelegate>(body, null, Annotations.Empty, parameters);
         }
 
-        public static LambdaExpression Generator(Type delegateType, string name, Expression body, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+        public static Expression<TDelegate> Generator<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) {
+            return Generator<TDelegate>(body, name, Annotations.Empty, parameters);
+        }
+
+        public static Expression<TDelegate> Generator<TDelegate>(Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+            ContractUtils.RequiresNotNull(body, "body");
+            ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
+            ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
+            return new Expression<TDelegate>(annotations, ExpressionType.Generator, name, body, parameterList);
+        }
+
+        public static LambdaExpression Generator(Type delegateType, Expression body, params ParameterExpression[] parameters) {
+            return Generator(delegateType, body, null, Annotations.Empty, parameters);
+        }
+
+        public static LambdaExpression Generator(Type delegateType, Expression body, string name, params ParameterExpression[] parameters) {
+            return Generator(delegateType, body, name, Annotations.Empty, parameters);
+        }
+
+        public static LambdaExpression Generator(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
             ContractUtils.RequiresNotNull(body, "body");
-            ReadOnlyCollection<ParameterExpression> paramList = CollectionUtils.ToReadOnlyCollection(parameters);
+            ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
             return Lambda(annotations, ExpressionType.Generator, delegateType, name, body, paramList);
@@ -304,7 +323,7 @@ namespace System.Linq.Expressions {
                     funcType = typeof(Func<,,,,>).MakeGenericType(typeArgs);
                     break;
                 default:
-                    throw new ArgumentException("incorrect number of type arguments for Func.", "typeArgs"); ;
+                    throw Error.IncorrectNumberOfTypeArgsForFunc();
             }
             return funcType;
         }
@@ -332,7 +351,7 @@ namespace System.Linq.Expressions {
                     actionType = typeof(Action<,,,>).MakeGenericType(typeArgs);
                     break;
                 default:
-                    throw new ArgumentException("incorrect number of type arguments for Action.", "typeArgs"); ;
+                    throw Error.IncorrectNumberOfTypeArgsForAction();
             }
             return actionType;
         }

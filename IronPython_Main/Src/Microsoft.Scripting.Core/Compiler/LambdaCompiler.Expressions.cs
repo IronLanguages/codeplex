@@ -38,7 +38,7 @@ namespace System.Linq.Expressions {
             Debug.Assert(node != null);
 
             if (node.IsDynamic) {
-                throw new InvalidOperationException("Dynamic expression not reduced");
+                throw Error.DynamicNotReduced();
             }
 
             bool startEmitted = emitDebugMarkers && EmitExpressionStart(node);
@@ -167,17 +167,12 @@ namespace System.Linq.Expressions {
             lc.EmitMethodCall(node.Object, node.Method, node.Arguments);
         }
 
+        //CONFORMING
         private void EmitMethodCall(Expression obj, MethodInfo method, ReadOnlyCollection<Expression> args) {
             // Emit instance, if calling an instance method
             Type objectType = null;
             if (!method.IsStatic) {
-                objectType = obj.Type;
-
-                if (objectType.IsValueType) {
-                    EmitAddress(obj, objectType);
-                } else {
-                    EmitExpression(obj);
-                }
+                EmitInstance(obj, objectType = obj.Type);
             }
 
             EmitMethodCall(method, args, objectType);
@@ -332,7 +327,7 @@ namespace System.Linq.Expressions {
             }
 
             if (_boundConstants == null) {
-                throw new InvalidOperationException("Runtime constants require a bound delegate");
+                throw Error.RtConstRequiresBundDelegate();
             }
 
             type = TypeUtils.GetConstantType(type);
@@ -519,7 +514,7 @@ namespace System.Linq.Expressions {
                     EmitVariableAssignment(node, emitAs);
                     return;
                 default:
-                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
+                    throw Error.InvalidLvalue(node.Expression.NodeType);
             }
         }
 
@@ -569,7 +564,7 @@ namespace System.Linq.Expressions {
                     _ilg.EmitPropertySet((PropertyInfo)lvalue.Member);
                     break;
                 default:
-                    throw new InvalidOperationException("Invalid member type: " + lvalue.Member.MemberType);
+                    throw Error.InvalidMemberType(lvalue.Member.MemberType);
             }
 
             if (emitAs != EmitAs.Void) {
@@ -583,13 +578,16 @@ namespace System.Linq.Expressions {
             MemberExpression node = (MemberExpression)expr;
 
             // emit "this", if any
-            lc.EmitInstance(node.Expression, node.Member.DeclaringType);
+            Type instanceType = null;
+            if (node.Expression != null) {
+                lc.EmitInstance(node.Expression, instanceType = node.Expression.Type);
+            }
 
-            lc.EmitMemberGet(node.Member);
+            lc.EmitMemberGet(node.Member, instanceType);
         }
 
         // assumes instance is already on the stack
-        private void EmitMemberGet(MemberInfo member) {
+        private void EmitMemberGet(MemberInfo member, Type objectType) {
             switch (member.MemberType) {
                 case MemberTypes.Field:
                     FieldInfo fi = (FieldInfo)member;
@@ -601,7 +599,13 @@ namespace System.Linq.Expressions {
                     break;
                 case MemberTypes.Property:
                     MethodInfo mi = ((PropertyInfo)member).GetGetMethod(true);
-                    _ilg.Emit(UseVirtual(mi) ? OpCodes.Callvirt : OpCodes.Call, mi);
+                    // Emit the actual call
+                    OpCode callOp = UseVirtual(mi) ? OpCodes.Callvirt : OpCodes.Call;
+                    if (callOp == OpCodes.Callvirt && objectType.IsValueType) {
+                        // This automatically boxes value types if necessary.
+                        _ilg.Emit(OpCodes.Constrained, objectType);
+                    }
+                    _ilg.Emit(callOp, mi);
                     break;
                 default:
                     throw Assert.Unreachable;
@@ -644,38 +648,37 @@ namespace System.Linq.Expressions {
 
         private static void EmitScopeExpression(LambdaCompiler lc, Expression expr) {
             ScopeExpression node = (ScopeExpression)expr;
-            CompilerScope saved = lc._scope;
 
-            lc._scope = lc._compiler.GetCompilerScope(node);
-            if (lc._scope == null) {
-                lc._scope = saved;
+            // If we merged the scope, just emit the body
+            if (lc._scope.MergedScopes.Count > 0) {
+                expr = lc._scope.MergedScopes.Dequeue();
+                Debug.Assert(node == expr);
 
-                // we merged scope, just emit the body and be done with it
                 lc.EmitExpression(node.Body);
                 return;
             }
 
-            // push scope
-            lc._scope.Enter(lc);
+            // bind & push scope
+            lc._scope = VariableBinder.Bind(lc._scope, expr);
+            lc._scope.EnterScope(lc);
 
             // emit body
             lc.EmitExpression(node.Body);
 
             // pop scope
-            lc._scope.Exit();
-            lc._scope = saved;
+            lc._scope = lc._scope.Parent;
         }
 
         private static void EmitActionExpression(LambdaCompiler lc, Expression expr) {
-            throw new InvalidOperationException("Action expression should have been reduced");
+            throw Error.ActionNotReduced();
         }
 
         private static void EmitDeleteExpression(LambdaCompiler lc, Expression expr) {
-            throw new InvalidOperationException("Delete expression should have been reduced");
+            throw Error.DeleteNotReduced();
         }
 
         private static void EmitExtensionExpression(LambdaCompiler lc, Expression expr) {
-            throw new InvalidOperationException("Extension expression should have been reduced");
+            throw Error.ExtensionNotReduced();
         }
 
         #region ListInit, MemberInit
@@ -733,9 +736,9 @@ namespace System.Linq.Expressions {
                 throw Error.CannotAutoInitializeValueTypeMemberThroughProperty(binding.Member);
             }
             if (type.IsValueType) {
-                EmitMemberAddress(binding.Member);
+                EmitMemberAddress(binding.Member, binding.Member.DeclaringType);
             } else {
-                EmitMemberGet(binding.Member);
+                EmitMemberGet(binding.Member, binding.Member.DeclaringType);
             }
             if (binding.Bindings.Count == 0) {
                 _ilg.Emit(OpCodes.Pop);
@@ -750,9 +753,9 @@ namespace System.Linq.Expressions {
                 throw Error.CannotAutoInitializeValueTypeElementThroughProperty(binding.Member);
             }
             if (type.IsValueType) {
-                EmitMemberAddress(binding.Member);
+                EmitMemberAddress(binding.Member, binding.Member.DeclaringType);
             } else {
-                EmitMemberGet(binding.Member);
+                EmitMemberGet(binding.Member, binding.Member.DeclaringType);
             }
             EmitListInit(binding.Initializers, false, type);
         }
@@ -864,7 +867,7 @@ namespace System.Linq.Expressions {
                             VariableExpression v = paramList[i];
                             Expression arg = argList[i];
                             if (TypeUtils.IsNullableType(arg.Type)) {
-                                _scope.AddLocal(_ilg, v);
+                                _scope.AddLocal(this, v);
                                 EmitAddress(arg, arg.Type);
                                 _ilg.Emit(OpCodes.Dup);
                                 _ilg.EmitHasValue(arg.Type);
@@ -874,7 +877,7 @@ namespace System.Linq.Expressions {
                                 _ilg.EmitGetValueOrDefault(arg.Type);
                                 _scope.EmitSet(v);
                             } else {
-                                _scope.AddLocal(_ilg, v);
+                                _scope.AddLocal(this, v);
                                 EmitExpression(arg);
                                 if (!arg.Type.IsValueType) {
                                     _ilg.Emit(OpCodes.Dup);
@@ -913,7 +916,7 @@ namespace System.Linq.Expressions {
                                     _ilg.Emit(OpCodes.Ldc_I4_0);
                                     break;
                                 default:
-                                    throw new InvalidOperationException("Unknown Lift Type");
+                                    throw Error.UnknownLiftType(nodeType);
                             }
                         }
                         _ilg.MarkLabel(exit);
@@ -938,7 +941,7 @@ namespace System.Linq.Expressions {
                         for (int i = 0, n = paramList.Count; i < n; i++) {
                             VariableExpression v = paramList[i];
                             Expression arg = argList[i];
-                            _scope.AddLocal(_ilg, v);
+                            _scope.AddLocal(this, v);
                             if (TypeUtils.IsNullableType(arg.Type)) {
                                 EmitAddress(arg, arg.Type);
                                 _ilg.Emit(OpCodes.Dup);

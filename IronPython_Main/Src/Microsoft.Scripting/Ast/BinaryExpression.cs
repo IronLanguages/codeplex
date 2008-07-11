@@ -91,7 +91,7 @@ namespace Microsoft.Scripting.Ast {
         public static Expression Coalesce(LambdaBuilder builder, Expression left, Expression right) {
             VariableExpression temp;
             Expression result = Coalesce(left, right, out temp);
-            builder.AddTemp(temp);
+            builder.AddHiddenVariable(temp);
             return result;
         }
 
@@ -104,7 +104,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(isTrue, "isTrue");
             VariableExpression temp;
             Expression result = CoalesceTrue(left, right, isTrue, out temp);
-            builder.AddTemp(temp);
+            builder.AddHiddenVariable(temp);
             return result;
         }
 
@@ -117,7 +117,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(isTrue, "isTrue");
             VariableExpression temp;
             Expression result = CoalesceFalse(left, right, isTrue, out temp);
-            builder.AddTemp(temp);
+            builder.AddHiddenVariable(temp);
             return result;
         }
 

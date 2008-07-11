@@ -21,9 +21,10 @@ using System.Scripting;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
 
@@ -159,7 +160,9 @@ namespace IronPython.Runtime.Types {
 
             [SpecialName]
             public object InPlaceAdd(CodeContext/*!*/ context, object func) {
-                Assert.NotNull(func);
+                if (func == null) {
+                    throw PythonOps.TypeError("event addition expected callable object, got None");
+                }
 
                 MethodInfo add = _event.Info.GetAddMethod(true);
                 if (add.IsStatic) {
@@ -203,7 +206,10 @@ namespace IronPython.Runtime.Types {
 
             [SpecialName]
             public object InPlaceSubtract(CodeContext/*!*/ context, object func) {
-                Assert.NotNull(context, func);
+                Assert.NotNull(context);
+                if (func == null) {
+                    throw PythonOps.TypeError("event subtraction expected callable object, got None");
+                }
 
                 MethodInfo remove = _event.Info.GetRemoveMethod(true);
                 if (remove.IsStatic) {

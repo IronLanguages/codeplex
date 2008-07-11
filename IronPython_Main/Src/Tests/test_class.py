@@ -15,6 +15,7 @@
 
 from lib.assert_util import *
 from lib.type_util import *
+import sys
 
 ############################################################
 def test_common_attributes():
@@ -178,7 +179,14 @@ def test_getattr():
     del foo.__getattribute__
     AssertError(AttributeError, getattr, foo(), 'x')
 
-    
+    # check getattr when the property raises
+    class C(object):
+        def throw(self):
+            raise AttributeError
+        foo = property(throw)
+
+    AreEqual(getattr(C(), 'foo', 'abc'), 'abc')
+
 def count_elem(d,n):
     count = 0
     for e in d:
@@ -262,7 +270,6 @@ def test_misc():
     
     AreEqual(c.z(), "D.z")
 
-    import sys
     class C:
         def m(self):
             return "IronPython"
@@ -464,7 +471,6 @@ def test_exec_namespace():
 ############################################################
 def test_module_name():
     global __name__
-    import sys
     
     mod = sys.modules[__name__]
     name = __name__
@@ -1816,6 +1822,11 @@ def test_dictproxy_access():
         int.__dict__[0] = 0
         
     AssertError(TypeError, f)
+    
+    AreEqual(int.__dict__.get(0, 'abc'), 'abc')
+    AreEqual(int.__dict__.get('__new__'), int.__new__)
+    
+    AreEqual(int.__dict__.copy(), dict(int.__dict__))
 
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals
@@ -2238,6 +2249,16 @@ def test_mixed_newstyle_oldstyle_init():
     class full(bar, baz, ns): pass
     a = full()
     AreEqual(a.x, 4)
+
+def test_mixed_newstyle_oldstyle_new():
+    class S:
+        pass
+    
+    class P(S, object):
+        def __new__(cls, *a, **kw):
+            return object.__new__(cls)
+    
+    AreEqual(type(P()), P)
 
 def test_getattr_exceptions():
     """verify the original exception propagates out"""
@@ -2915,5 +2936,129 @@ def test_special_type_attributes():
     AreEqual(x.__bases__, (object, ))
     AreEqual(x.__name__, 'x')
 
+
+def test_issubclass():
+    # first argument doesn't need to be new-style or old-style class if it defines __bases__
+    class C(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (object, )
+            return object.__getattribute__(self, name)
+    
+    class S(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (x, )
+            return C.__getattribute__(self, name)
+    
+    x = C()
+    AreEqual(issubclass(S(), x), True)
+    AreEqual(issubclass(S(), (x, )), True)
+
+    # if arg 1 doesn't have __bases__ a TypeError is raised
+    class S(object):
+        pass 
+    
+    x = C()
+    AssertErrorWithMessage(TypeError, "issubclass() arg 1 must be a class", issubclass, S(), x)
+    AssertErrorWithMessage(TypeError, "issubclass() arg 1 must be a class", issubclass, S(), (x, ))
+   
+    # arg 1 __bases__ must be a tuple
+    for arg1 in [[2, 3, 4], 23, 'abc']:
+        class S(object):
+            def __getattribute__(self, name):
+                if name == "__bases__": return arg1
+                return C.__getattribute__(self, name)
+        AssertErrorWithMessage(TypeError, "issubclass() arg 1 must be a class", issubclass, S(), x)
+        AssertErrorWithMessage(TypeError, "issubclass() arg 1 must be a class", issubclass, S(), (x, ))
+
+
+    # recursively check members returned from __bases__
+    class S(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (y, )
+            return C.__getattribute__(self, name)
+    
+    class A(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (x, )
+            return C.__getattribute__(self, name)
+    
+    y = A()
+    AreEqual(issubclass(S(), x), True)
+    AreEqual(issubclass(S(), (x, )), True)
+    
+    # but ignore members that don't have __bases__ themselves, don't raise a TypeError
+    class S(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (123, )
+            return C.__getattribute__(self, name)
+    
+    AreEqual(issubclass(S(), x), False)
+    AreEqual(issubclass(S(), (x, )), False)
+
+    # if __bases__ returns a type we should fallback into subclass(type, typeinfo)
+    class C(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (int, )
+            return object.__getattribute__(self, name)
+
+    AreEqual(issubclass(C(), object), True)
+    AreEqual(issubclass(C(), (object, )), True)
+    
+    # if __bases__ returns an old-class we should fallback into subclass(oc, typeinfo)
+    class OC1: pass
+    
+    class OC2(OC1): pass
+    
+    class C(object):
+        def __getattribute__(self, name):
+            if name == "__bases__": return (OC2, )
+            return object.__getattribute__(self, name)
+
+    AreEqual(issubclass(C(), OC1), True)
+    AreEqual(issubclass(C(), (OC1, )), True)
+    
+    # raising an exception from __bases__ propagates out
+    
+    class C(object):
+        def getbases(self):
+        	raise RuntimeError
+        __bases__ = property(getbases)
+
+    class S(C): pass
+
+    AssertError(RuntimeError, issubclass, C(), S())
+
+    reclimit = sys.getrecursionlimit()
+    if reclimit == sys.maxint:
+        sys.setrecursionlimit(1001)
+        
+    # Make sure that calling isinstance with a deeply nested tuple for its
+    # argument will raise RuntimeError eventually.
+    def blowstack(fxn, arg, compare_to):
+        tuple_arg = (compare_to,)
+        for cnt in xrange(sys.getrecursionlimit()+5):
+            tuple_arg = (tuple_arg,)
+            fxn(arg, tuple_arg)
+    
+    AssertError(RuntimeError, blowstack, issubclass, str, str)
+
+    sys.setrecursionlimit(reclimit)
+
+def test_isinstance_recursion():
+    reclimit = sys.getrecursionlimit()
+    if reclimit == sys.maxint:
+        sys.setrecursionlimit(1001)
+
+    # Make sure that calling isinstance with a deeply nested tuple for its
+    # argument will raise RuntimeError eventually.
+    def blowstack(fxn, arg, compare_to):
+        tuple_arg = (compare_to,)
+        for cnt in xrange(sys.getrecursionlimit()+5):
+            tuple_arg = (tuple_arg,)
+            fxn(arg, tuple_arg)
+    
+    AssertError(RuntimeError, blowstack, isinstance, '', str)
+
+    sys.setrecursionlimit(reclimit)
 
 run_test(__name__)

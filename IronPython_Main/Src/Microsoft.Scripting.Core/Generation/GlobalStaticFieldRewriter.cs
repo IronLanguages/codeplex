@@ -48,6 +48,22 @@ namespace System.Scripting.Generation {
             _typeGen = typeGen;
         }
 
+        protected override Expression Visit(LambdaExpression node) {
+            // only run this for top lambda
+            if (_contextField == null) {
+                // Optimization: use the static field codecontext rather than
+                // the argument. It's faster for the nested functions that
+                // would otherwise need to close over the context argument.
+                _contextField = _typeGen.TypeBuilder.DefineField(
+                    CodeContext.ContextFieldName,
+                    typeof(CodeContext),
+                    FieldAttributes.Public | FieldAttributes.Static
+                );
+                Context = Expression.Field(null, _contextField);
+            }
+            return base.Visit(node);
+        }
+
         protected override Expression MakeWrapper(GlobalVariableExpression variable) {
             Debug.Assert(!_fields.ContainsKey(variable));
 
@@ -91,30 +107,18 @@ namespace System.Scripting.Generation {
         private static bool CanEmitConstant(object value, Type type) {
             if (value == null ||
                 CanEmitILConstant(type) ||
-                value is SymbolId ||
-                value is Missing ||
-                value is string[] ||
-                value is MethodBase && !(value is DynamicMethod)) {
+                value is SymbolId) {
                 return true;
-            }
-
-            if (value is RuntimeTypeHandle) {
-                RuntimeTypeHandle rth = (RuntimeTypeHandle)value;
-                if (!rth.Equals(default(RuntimeTypeHandle))) {
-                    return true;
-                }
             }
 
             Type t = value as Type;
-            if (t != null && (t is TypeBuilder || t.IsGenericParameter || t.IsVisible)) {
+            if (t != null && ILGen.ShouldLdtoken(t)) {
                 return true;
             }
 
-            if (value is RuntimeMethodHandle) {
-                RuntimeMethodHandle rmh = (RuntimeMethodHandle)value;
-                if (rmh != default(RuntimeMethodHandle)) {
-                    return true;
-                }
+            MethodBase mb = value as MethodBase;
+            if (mb != null && ILGen.ShouldLdtoken(mb)) {
+                return true;
             }
 
             return false;
@@ -182,14 +186,6 @@ namespace System.Scripting.Generation {
         #endregion
 
         internal void EmitDictionary() {
-            // TODO: Force all dictionaries to share same object data (for multi-module)
-
-            _contextField = _typeGen.TypeBuilder.DefineField(
-                CodeContext.ContextFieldName,
-                typeof(CodeContext),
-                FieldAttributes.Public | FieldAttributes.Static
-            );
-
             MakeGetMethod();
             MakeSetMethod();
             MakeRawKeysMethod();

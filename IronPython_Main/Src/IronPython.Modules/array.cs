@@ -85,7 +85,7 @@ namespace IronPython.Modules {
             public static PythonArray operator +(PythonArray self, PythonArray other) {
                 if (self.typecode != other.typecode) throw PythonOps.TypeError("cannot add different typecodes");
 
-                PythonArray res = new PythonArray(new string(self.typecode, 1), Type.Missing);
+                PythonArray res = new PythonArray(self.typecode, Type.Missing);
                 foreach (object o in self) {
                     res.append(o);
                 }
@@ -112,19 +112,35 @@ namespace IronPython.Modules {
             }
 
             public static PythonArray operator *(PythonArray array, int value) {
-                PythonArray data = new PythonArray(new string(array.typecode, 1), Type.Missing);
+                PythonArray data = new PythonArray(array.typecode, Type.Missing);
                 for (int i = 0; i < value; i++) {
                     data.extend(array);
                 }
                 return data;
             }
 
+            public static PythonArray operator *(PythonArray array, BigInteger value) {
+                int intValue;
+                if (!value.AsInt32(out intValue)) {
+                    throw PythonOps.OverflowError("cannot fit 'long' into an index-sized integer");
+                }
+                return array * intValue;
+            }
+
             public static PythonArray operator *(int value, PythonArray array) {
-                PythonArray data = new PythonArray(new string(array.typecode, 1), Type.Missing);
+                PythonArray data = new PythonArray(array.typecode, Type.Missing);
                 for (int i = 0; i < value; i++) {
                     data.extend(array);
                 }
                 return data;
+            }
+
+            public static PythonArray operator *(BigInteger value, PythonArray array) {
+                int intValue;
+                if (!value.AsInt32(out intValue)) {
+                    throw PythonOps.OverflowError("cannot fit 'long' into an index-sized integer");
+                }
+                return intValue * array;
             }
 
             public void append(object iterable) {
@@ -164,6 +180,12 @@ namespace IronPython.Modules {
                 PythonArray pa = iterable as PythonArray;
                 if (pa != null && typecode != pa.typecode) {
                     throw PythonOps.TypeError("cannot extend with different typecode");
+                }
+
+                string buf = iterable as string;
+                if (buf != null && _typeCode != 'u') {
+                    fromstring(buf);
+                    return;
                 }
 
                 IEnumerator ie = PythonOps.GetEnumerator(iterable);
@@ -234,7 +256,7 @@ namespace IronPython.Modules {
 
             public int itemsize {
                 get {
-                    return Marshal.SizeOf(_data.StorageType);
+                    return PythonStruct.GetNativeSize(_typeCode);
                 }
             }
 
@@ -267,7 +289,7 @@ namespace IronPython.Modules {
             public virtual object this[int index] {
                 get {
                     object val = _data.GetData(PythonOps.FixIndex(index, _data.Length));
-                    switch (typecode) {
+                    switch (_typeCode) {
                         case 'b': return (int)(sbyte)val;
                         case 'B': return (int)(byte)val;
                         case 'c':
@@ -399,11 +421,14 @@ namespace IronPython.Modules {
                     } else {
                         int start, stop, step;
                         index.indices(_data.Length, out start, out stop, out step);
+                        if (stop < start) {
+                            stop = start;
+                        }
 
                         // replace between start & stop w/ values
                         IEnumerator ie = PythonOps.GetEnumerator(value);
 
-                        ArrayData newData = CreateData(typecode);
+                        ArrayData newData = CreateData(_typeCode);
                         for (int i = 0; i < start; i++) {
                             newData.Append(_data.GetData(i));
                         }
@@ -427,6 +452,34 @@ namespace IronPython.Modules {
 
             public void __setslice__(object start, object stop, object value) {
                 this[new Slice(start, stop)] = value;
+            }
+
+            public PythonTuple __reduce__() {
+                return PythonOps.MakeTuple(
+                    DynamicHelpers.GetPythonType(this),
+                    PythonOps.MakeTuple(
+                        typecode,
+                        StringOps.FromByteArray(ToByteArray())
+                    ),
+                    null
+                );
+            }
+
+            public PythonArray __copy__() {
+                return new PythonArray(typecode, this);
+            }
+
+            public PythonArray __deepcopy__() {
+                // we only have simple data so this is the same as a copy
+                return __copy__();
+            }
+
+            public PythonTuple __reduce_ex__(int version) {
+                return __reduce__();
+            }
+
+            public PythonTuple __reduce_ex__() {
+                return __reduce__();
             }
 
             private void SliceAssign(int index, object value) {
@@ -471,8 +524,8 @@ namespace IronPython.Modules {
                 tofile(f);
             }
 
-            public char typecode {
-                get { return _typeCode; }
+            public string/*!*/ typecode {
+                get { return RuntimeHelpers.CharToString(_typeCode); }
             }
 
             private abstract class ArrayData {
@@ -491,11 +544,11 @@ namespace IronPython.Modules {
                 public abstract void Clear();
             }
 
-            private Stream ToStream() {
+            private MemoryStream ToStream() {
                 MemoryStream ms = new MemoryStream();
                 BinaryWriter bw = new BinaryWriter(ms);
                 for (int i = 0; i < _data.Length; i++) {
-                    switch (typecode) {
+                    switch (_typeCode) {
                         case 'c': bw.Write((byte)(char)_data.GetData(i)); break;
                         case 'b': bw.Write((sbyte)_data.GetData(i)); break;
                         case 'B': bw.Write((byte)_data.GetData(i)); break;
@@ -511,7 +564,11 @@ namespace IronPython.Modules {
                     }
                 }
                 ms.Seek(0, SeekOrigin.Begin);
-                return ms;
+                return ms;                
+            }
+
+            private byte[] ToByteArray() {
+                return ToStream().ToArray();
             }
 
             private void FromStream(Stream ms) {
@@ -519,7 +576,7 @@ namespace IronPython.Modules {
 
                 for (int i = 0; i < ms.Length / itemsize; i++) {
                     object value;
-                    switch (typecode) {
+                    switch (_typeCode) {
                         case 'c': value = (char)br.ReadByte(); break;
                         case 'b': value = (sbyte)br.ReadByte(); break;
                         case 'B': value = br.ReadByte(); break;
@@ -681,20 +738,24 @@ namespace IronPython.Modules {
                 if (_data.Length == 0) {
                     return res + ")";
                 }
+
                 StringBuilder sb = new StringBuilder(res);
-                if (typecode == 'c') sb.Append(", '");
-                else sb.Append(", [");
-
-                for (int i = 0; i < _data.Length; i++) {
-                    if (typecode == 'c') sb.Append((char)_data.GetData(i));
-                    else {
-                        sb.Append(PythonOps.Repr(this[i]).ToString());
-                        sb.Append(", ");
+                if (_typeCode == 'c') {
+                    sb.Append(", '");
+                    for (int i = 0; i < _data.Length; i++) {
+                        sb.Append((char)_data.GetData(i));
                     }
+                    sb.Append("')");
+                } else {
+                    sb.Append(", [");
+                    for (int i = 0; i < _data.Length; i++) {
+                        if (i > 0) {
+                            sb.Append(", ");
+                        }
+                        sb.Append(PythonOps.Repr(this[i]).ToString());
+                    }
+                    sb.Append("])");
                 }
-
-                if (typecode == 'c') sb.Append("')");
-                else sb.Append("])");
 
                 return sb.ToString();
             }

@@ -105,6 +105,7 @@ namespace System.Scripting.Generation {
 
         protected Expression Context {
             get { return _context; }
+            set { _context = value; }
         }
 
         private Expression Rewrite(CodeContextScopeExpression ccs) {
@@ -128,7 +129,7 @@ namespace System.Scripting.Generation {
                 if (node == n2) {
                     return;
                 }
-                throw new ArgumentException("global/top-level local variable names must be unique");
+                throw Error.GlobalsMustBeUnique();
             }
 
             varsByName.Add(node.Name, node);

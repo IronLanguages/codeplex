@@ -111,7 +111,7 @@ namespace System.Linq.Expressions {
             _catchYieldsFlags[handler] = true;
             _yieldInCatch = true;
 
-            if (_ts.FinallyStatement != null || _ts.FaultStatement != null) {
+            if (_ts.Finally != null || _ts.Fault != null) {
                 AddYieldTarget(ref _catchYields, label, index);
                 return EnsureTopTarget();
             } else {

@@ -22,7 +22,7 @@ using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using IronPython.Compiler.Generation;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;

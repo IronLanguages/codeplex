@@ -652,7 +652,7 @@ def test_stat_result():
     statResult = [0,1,2,3,4,5,6,7,8,]
     AssertError(TypeError,nt.stat_result,statResult)
     
-    # BUG 8755,the length of the sequence is more than 10
+    # BUG 17300, this should not produce an error
     # statResult = ["a","b","c","y","r","a","a","b","d","r","f"]
     # AssertError(TypeError,nt.stat_result,statResult)
 

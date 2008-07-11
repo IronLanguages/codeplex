@@ -38,24 +38,6 @@ namespace System.Linq.Expressions {
             }
         }
 
-        protected override Expression Visit(LocalScopeExpression node) {
-            ReadOnlyCollection<Expression> newVars = VisitNodes(node.Variables);
-            if (newVars != null) {
-                if (node.IsClosure) {
-                    node = Expression.AllVariables(
-                        node.Annotations,
-                        newVars
-                    );
-                } else {
-                    node = Expression.LiftedVariables(
-                        node.Annotations,
-                        newVars
-                    );
-                }
-            }
-            return base.Visit(node);
-        }
-
         protected override Expression VisitExtension(Expression node) {
             if (node.IsReducible) {
                 return VisitNode(Expression.ReduceToKnown(node));

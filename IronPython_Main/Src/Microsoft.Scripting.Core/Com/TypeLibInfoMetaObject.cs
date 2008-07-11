@@ -38,7 +38,7 @@ namespace System.Scripting.Com {
                 name != "VersionMajor" &&
                 name != "VersionMinor") {
 
-                return action.Fallback(RestrictThisToType(args));
+                return action.Fallback(args);
             }
 
             return new MetaObject(

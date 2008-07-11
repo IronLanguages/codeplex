@@ -15,7 +15,7 @@
 
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Operations {

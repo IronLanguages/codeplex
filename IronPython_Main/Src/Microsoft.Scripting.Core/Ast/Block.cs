@@ -50,7 +50,7 @@ namespace System.Linq.Expressions {
         }
 
         public static Block Block(Annotations annotations, IEnumerable<Expression> expressions) {
-            ReadOnlyCollection<Expression> expressionList = CollectionUtils.ToReadOnlyCollection(expressions);
+            ReadOnlyCollection<Expression> expressionList = expressions.ToReadOnly();
             ContractUtils.RequiresNotNullItems(expressionList, "expressions");
 
             return new Block(annotations, expressionList, typeof(void));
@@ -72,7 +72,7 @@ namespace System.Linq.Expressions {
         }
 
         public static Block Comma(Annotations annotations, IEnumerable<Expression> expressions) {
-            ReadOnlyCollection<Expression> expressionList = CollectionUtils.ToReadOnlyCollection(expressions);
+            ReadOnlyCollection<Expression> expressionList = expressions.ToReadOnly();
 
             ContractUtils.RequiresNotEmpty(expressionList, "expressions");
             ContractUtils.RequiresNotNullItems(expressionList, "expressions");

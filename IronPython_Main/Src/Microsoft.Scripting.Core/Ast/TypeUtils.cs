@@ -19,6 +19,7 @@ using System.Reflection;
 namespace System.Scripting.Utils {
 
     internal static class TypeUtils {
+        private const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
         // TODO: this helper is needed to dynamically load ExtensionAttribute 
         // until we can get the type statically via typeof(ExtensionAttribute)
@@ -209,6 +210,35 @@ namespace System.Scripting.Utils {
                 || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.ICollection<>))
                 && dest.GetGenericArguments()[0] == src.GetElementType()) {
                 return true;
+            }
+            return false;
+        }
+        //CONFORMING
+        // Checks if the type is a valid target for an instance call
+        internal static bool IsValidInstanceType(MemberInfo member, Type instanceType) {
+            Type targetType = member.DeclaringType;
+            if (AreReferenceAssignable(targetType, instanceType)) {
+                return true;
+            }
+            if (instanceType.IsValueType) {
+                if (AreReferenceAssignable(targetType, typeof(System.Object))) {
+                    return true;
+                }
+                if (AreReferenceAssignable(targetType, typeof(System.ValueType))) {
+                    return true;
+                }
+                if (instanceType.IsEnum && AreReferenceAssignable(targetType, typeof(System.Enum))) {
+                    return true;
+                }
+                // A call to an interface implemented by a struct is legal whether the struct has
+                // been boxed or not.
+                if (targetType.IsInterface) {
+                    foreach (Type interfaceType in instanceType.GetInterfaces()) {
+                        if (AreReferenceAssignable(targetType, interfaceType)) {
+                            return true;
+                        }
+                    }
+                }
             }
             return false;
         }
@@ -620,6 +650,26 @@ namespace System.Scripting.Utils {
 
             // else return the original type
             return type;
+        }
+
+        /// <summary>
+        /// Searches for an operator method on the type. The method must have
+        /// the specified signature, no generic arguments, and have the
+        /// SpecialName bit set. Also searches inherited operator methods.
+        /// 
+        /// NOTE: This was designed to satisfy the needs of op_True and
+        /// op_False, because we have to do runtime lookup for those. It may
+        /// not work right for unary operators in general.
+        /// </summary>
+        internal static MethodInfo GetBooleanOperator(Type type, string name) {
+            do {
+                MethodInfo result = type.GetMethod(name, AnyStatic, null, new Type[] { type }, null);
+                if (result != null && result.IsSpecialName && !result.ContainsGenericParameters) {
+                    return result;
+                }
+                type = type.BaseType;               
+            } while (type != null);
+            return null;
         }
     }
 }

@@ -53,9 +53,11 @@ namespace IronPython.Runtime.Operations {
             }
 
             if (real != null) {
-                if (real is string)
+                if (real is string) {
                     real2 = LiteralParser.ParseComplex64((string)real);
-                else if (real is Complex64) {
+                } else if (real is Extensible<string>) {
+                    real2 = LiteralParser.ParseComplex64(((Extensible<string>)real).Value);
+                } else if (real is Complex64) {
                     if (imag == null && cls == TypeCache.Complex64) return real;
                     else real2 = (Complex64)real;
                 } else {

@@ -212,6 +212,10 @@ namespace IronPython.Runtime {
 
         // Convert a byte array into a string by casting each byte into a character.
         internal static String PackDataIntoString(byte[] data, int count) {
+            if (count == 1) {
+                return RuntimeHelpers.CharToString((char)data[0]);
+            }
+
             StringBuilder sb = new StringBuilder(count);
             for (int i = 0; i < count; i++)
                 sb.Append((char)data[i]);
@@ -296,6 +300,18 @@ namespace IronPython.Runtime {
 
         // Read at most size characters and return the result as a string.
         public override String Read(int size) {
+            if (size == 1) {
+                int c = Read();
+                if (c == -1) {
+                    return String.Empty;
+                }
+
+                if (c == '\r' && Peek() == '\n') {
+                    c = Read();
+                }
+                return RuntimeHelpers.CharToString((char)c);
+            }
+
             StringBuilder sb = new StringBuilder(size);
             while (size-- > 0) {
                 int c = Read();
@@ -420,6 +436,15 @@ namespace IronPython.Runtime {
 
         // Read at most size characters and return the result as a string.
         public override String Read(int size) {
+            if (size == 1) {
+                int c = _reader.Read();
+                if (c == -1) {
+                    return String.Empty;
+                }
+                if (c == '\r') c = '\n';
+                return RuntimeHelpers.CharToString((char)c);
+            }
+
             StringBuilder sb = new StringBuilder(size);
             while (size-- > 0) {
                 int c = _reader.Read();
@@ -502,6 +527,15 @@ namespace IronPython.Runtime {
 
         // Read at most size characters and return the result as a string.
         public override String Read(int size) {
+            if (size == 1) {
+                int c = _reader.Read();
+                if (c == -1) {
+                    return String.Empty;
+                }
+
+                return RuntimeHelpers.CharToString((char)c);
+            }
+
             StringBuilder sb = new StringBuilder(size);
             while (size-- > 0) {
                 int c = _reader.Read();
@@ -599,6 +633,15 @@ namespace IronPython.Runtime {
 
         // Read at most size characters and return the result as a string.
         public override String Read(int size) {
+            if (size == 1) {
+                int c = ReadChar();
+                if (c == -1) {
+                    return String.Empty;
+                }
+
+                return RuntimeHelpers.CharToString((char)c);
+            }
+
             StringBuilder sb = new StringBuilder(size);
             while (size-- > 0) {
                 int c = ReadChar();
@@ -1122,20 +1165,25 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         protected virtual void Dispose(bool disposing) {
-            if (!_isOpen) return;
+            lock (this) {
+                if (!_isOpen) {
+                    return;
+                }
 
-            if (disposing) {
-                flush();
+                if (disposing) {
+                    FlushWorker();
+                }
+
                 if (!IsConsole) {
                     _stream.Close();
                 }
-            }
 
-            _isOpen = false;
+                _isOpen = false;
 
-            PythonFileManager myManager = _context.RawFileManager;
-            if (myManager != null) {
-                myManager.Remove(this);
+                PythonFileManager myManager = _context.RawFileManager;
+                if (myManager != null) {
+                    myManager.Remove(this);
+                }
             }
         }
 
@@ -1158,6 +1206,12 @@ namespace IronPython.Runtime {
         }
 
         public virtual void flush() {
+            lock (this) {
+                FlushWorker();
+            }
+        }
+
+        private void FlushWorker() {
             ThrowIfClosed();
             if (_writer != null) {
                 _writer.Flush();
@@ -1245,25 +1299,29 @@ namespace IronPython.Runtime {
 
             // flush before saving our position to ensure it's accurate.
             flush();
-            SavePositionPreSeek();
 
-            SeekOrigin origin;
-            switch (whence) {
-                default:
-                case 0:
-                    origin = SeekOrigin.Begin;
-                    break;
-                case 1:
-                    origin = SeekOrigin.Current;
-                    break;
-                case 2:
-                    origin = SeekOrigin.End;
-                    break;
-            }
-            long newPos = _stream.Seek(offset, origin);
-            if (_reader != null) {
-                _reader.DiscardBufferedData();
-                _reader.Position = newPos;
+            lock (this) {
+                SavePositionPreSeek();
+
+                SeekOrigin origin;
+                switch (whence) {
+                    default:
+                    case 0:
+                        origin = SeekOrigin.Begin;
+                        break;
+                    case 1:
+                        origin = SeekOrigin.Current;
+                        break;
+                    case 2:
+                        origin = SeekOrigin.End;
+                        break;
+                }
+            
+                long newPos = _stream.Seek(offset, origin);
+                if (_reader != null) {
+                    _reader.DiscardBufferedData();
+                    _reader.Position = newPos;
+                }
             }
         }
 
@@ -1310,25 +1368,31 @@ namespace IronPython.Runtime {
                 throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 22, "Invalid argument");
             }
 
-            FileStream fs = _stream as FileStream;
-            if (fs != null) {
-                if (_mode.Contains("w")) {
-                    fs.SetLength(size);
+            lock (this) {
+                FileStream fs = _stream as FileStream;
+                if (fs != null) {
+                    if (_mode.Contains("w")) {
+                        fs.SetLength(size);
+                    } else {
+                        throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 13, "Permission denied");
+                    }
                 } else {
-                    throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 13, "Permission denied");
+                    throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 9, "Bad file descriptor");
                 }
-            } else {
-                throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 9, "Bad file descriptor");
             }
         }
 
         public virtual void write(string s) {
-            PythonStreamWriter writer = GetWriter();
-            int bytesWritten = _writer.Write(s);
+            lock (this) {
+                PythonStreamWriter writer = GetWriter();
+                int bytesWritten = _writer.Write(s);
+                if (!IsConsole && _reader != null && _stream.CanSeek) {
+                    _reader.Position += bytesWritten;
+                }
+            }
+            
             if (IsConsole) {
                 flush();
-            } else if (_reader != null && _stream.CanSeek) {
-                _reader.Position += bytesWritten;
             }
         }
 
@@ -1391,8 +1455,10 @@ namespace IronPython.Runtime {
 
             if (IsConsole) {
                 // update reader if redirected:
-                if (!ReferenceEquals(_io.InputReader, _reader.TextReader)) {
-                    _reader = CreateConsoleReader();
+                lock (this) {
+                    if (!ReferenceEquals(_io.InputReader, _reader.TextReader)) {
+                        _reader = CreateConsoleReader();
+                    }
                 }
             }
 
@@ -1407,19 +1473,20 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError("Can not write to " + _name);
             }
 
-            if (IsConsole) {
-                // update writer if redirected:
-                TextWriter currentWriter = _io.GetWriter(_consoleStreamType);
+            lock (this) {
+                if (IsConsole) {
+                    // update writer if redirected:
+                    TextWriter currentWriter = _io.GetWriter(_consoleStreamType);
 
-                if (!ReferenceEquals(currentWriter, _writer.TextWriter)) {
-                    _writer.Flush();
-                    _writer = CreateTextWriter(currentWriter);
+                    if (!ReferenceEquals(currentWriter, _writer.TextWriter)) {
+                        _writer.Flush();
+                        _writer = CreateTextWriter(currentWriter);
+                    }
+                } else if (_reseekPosition != null) {
+                    _stream.Seek(_reseekPosition.Value, SeekOrigin.Begin);
+                    _reader.Position = _reseekPosition.Value;
+                    _reseekPosition = null;
                 }
-
-            } else if (_reseekPosition != null) {
-                _stream.Seek(_reseekPosition.Value, SeekOrigin.Begin);
-                _reader.Position = _reseekPosition.Value;
-                _reseekPosition = null;
             }
 
             return _writer;

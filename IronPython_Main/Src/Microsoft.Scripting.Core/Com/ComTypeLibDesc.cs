@@ -84,7 +84,7 @@ namespace System.Scripting.Com {
         /// <returns>ComTypeLibDesc object</returns>
         public static ComTypeLibInfo CreateFromObject(object rcw) {
             if (Marshal.IsComObject(rcw) == false) {
-                throw new ArgumentException("COM object is expected");
+                throw Error.ComObjectExpected();
             }
 
             ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(rcw as IDispatch, true);

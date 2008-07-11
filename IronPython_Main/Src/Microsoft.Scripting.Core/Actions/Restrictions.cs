@@ -241,7 +241,13 @@ namespace System.Scripting.Actions {
         }
 
         private static Expression CreateInstanceRestriction(Expression expression, object value) {
-            return Expression.Equal(expression, Expression.Constant(value));
+            return Expression.Equal(
+                expression, 
+                Expression.Property(
+                    Expression.Constant(new WeakReference(value)),
+                    typeof(WeakReference).GetProperty("Target")
+                )
+            );
         }
     }
 }

@@ -19,12 +19,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
@@ -656,7 +657,7 @@ import Namespace.")]
         /// Provides a helper for compiling a group of modules into a single assembly.  The assembly can later be
         /// reloaded using the LoadModules API.
         /// </summary>
-        public static void CompileModules(CodeContext/*!*/ context, string/*!*/ assemblyName, params string/*!*/[]/*!*/ filenames) {
+        public static void CompileModules(CodeContext/*!*/ context, string/*!*/ assemblyName, [ParamDictionary]IAttributesCollection kwArgs, params string/*!*/[]/*!*/ filenames) {
             ContractUtils.RequiresNotNull(assemblyName, "assemblyName");
             ContractUtils.RequiresNotNullItems(filenames, "filenames");
 
@@ -669,9 +670,29 @@ import Namespace.")]
                     throw PythonOps.IOError("Couldn't find file for compilation: {0}", filename);
                 }
 
-                ScriptCode sc = PythonContext.GetContext(context).GetScriptCode(su, Path.GetFileNameWithoutExtension(filename), ModuleOptions.Initialize);
+                ScriptCode sc;
+
+                if (Path.GetFileName(filename) == "__init__.py") {
+                    string dirName = Path.GetDirectoryName(filename);
+                    sc = PythonContext.GetContext(context).GetScriptCode(su, dirName, ModuleOptions.Initialize);
+                } else {
+                    sc = PythonContext.GetContext(context).GetScriptCode(su, Path.GetFileNameWithoutExtension(filename), ModuleOptions.Initialize);
+                }
 
                 code.Add(sc);
+            }
+
+            object mainModule;
+            if (kwArgs != null && kwArgs.TryGetValue(SymbolTable.StringToId("mainModule"), out mainModule)) {
+                string strModule = mainModule as string;
+                if(strModule != null) {
+                    SourceUnit su = pc.DomainManager.Host.TryGetSourceFileUnit(pc, strModule, pc.DefaultEncoding, SourceCodeKind.File);
+                    if (su == null) {
+                        throw PythonOps.IOError("Couldn't find main file for compilation: {0}", strModule);
+                    }
+
+                    code.Add(PythonContext.GetContext(context).GetScriptCode(su, "__main__", ModuleOptions.Initialize));
+                }
             }
 
             ScriptCode.SaveToAssembly(assemblyName, code.ToArray());
@@ -696,37 +717,10 @@ import Namespace.")]
         }
 
         private static void LoadScriptCode(PythonContext/*!*/ pc, Assembly/*!*/ asm) {
-            EnsureMetaPathLoader(pc);
-
             ScriptCode[] codes = ScriptCode.LoadFromAssembly(pc.DomainManager, asm);
 
             foreach (ScriptCode sc in codes) {
                 pc.GetCompiledLoader().AddScriptCode(sc);
-            }
-        }
-
-        /// <summary>
-        /// Ensures that we have a CompiledLoader installed on sys.meta_path so that we can load compiled modules.
-        /// </summary>
-        private static void EnsureMetaPathLoader(PythonContext pc) {
-            SymbolId meta_path = SymbolTable.StringToId("meta_path");
-            object path;
-            List lstPath;
-
-            if (!pc.SystemState.Dict.TryGetValue(meta_path, out path) || ((lstPath = path as List) == null)) {
-                pc.SystemState.Dict[meta_path] = lstPath = new List();
-            }
-
-            bool haveLoader = false;
-            foreach (object o in lstPath) {
-                if (o is PythonContext.CompiledLoader) {
-                    haveLoader = true;
-                    break;
-                }
-            }
-
-            if (!haveLoader) {
-                lstPath.append(pc.GetCompiledLoader());
             }
         }
     }

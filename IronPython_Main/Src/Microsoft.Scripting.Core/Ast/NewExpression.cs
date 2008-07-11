@@ -107,18 +107,18 @@ namespace System.Linq.Expressions {
     public partial class Expression {
         //CONFORMING
         public static NewExpression New(ConstructorInfo/*!*/ constructor) {
-            return New(constructor, CollectionUtils.ToReadOnlyCollection((IEnumerable<Expression>)null));
+            return New(constructor, (IEnumerable<Expression>)null);
         }
         
         //CONFORMING
         public static NewExpression New(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {
-            return New(constructor, CollectionUtils.ToReadOnlyCollection(arguments));
+            return New(constructor, (IEnumerable<Expression>)arguments);
         }
 
         //CONFORMING
         public static NewExpression New(ConstructorInfo/*!*/ constructor, IEnumerable<Expression/*!*/>/*!*/ arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
-            ReadOnlyCollection<Expression> argList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor.DeclaringType, constructor, ref argList);
             return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, null);
         }
@@ -126,15 +126,15 @@ namespace System.Linq.Expressions {
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, IEnumerable<MemberInfo> members) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
-            ReadOnlyCollection<MemberInfo> memberList = CollectionUtils.ToReadOnlyCollection(members);
-            ReadOnlyCollection<Expression> argList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<MemberInfo> memberList = members.ToReadOnly();
+            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor, ref argList, memberList);
             return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, null, memberList);
         }
 
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, params MemberInfo[] members) {
-            return New(constructor, arguments, CollectionUtils.ToReadOnlyCollection(members));
+            return New(constructor, arguments, members.ToReadOnly());
         }
 
         //CONFORMING
@@ -151,8 +151,7 @@ namespace System.Linq.Expressions {
                 }
                 return New(ci);
             }
-            ReadOnlyCollection<Expression> argsList = CollectionUtils.ToReadOnlyCollection((IEnumerable<Expression>)null);
-            return new NewExpression(Annotations.Empty, type, null, argsList, null);
+            return new NewExpression(Annotations.Empty, type, null, DefaultReadOnlyCollection<Expression>.Empty, null);
         }
 
 
@@ -303,7 +302,7 @@ namespace System.Linq.Expressions {
         public static NewExpression New(Type result, CallSiteBinder bindingInfo, IList<Expression/*!*/>/*!*/ arguments) {
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
-            return new NewExpression(Annotations.Empty, result, null, CollectionUtils.ToReadOnlyCollection(arguments), bindingInfo);
+            return new NewExpression(Annotations.Empty, result, null, arguments.ToReadOnly(), bindingInfo);
         }
 
         public static NewExpression SimpleNewHelper(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {

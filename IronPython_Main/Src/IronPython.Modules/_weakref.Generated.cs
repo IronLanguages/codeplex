@@ -66,13 +66,6 @@ namespace IronPython.Modules {
             [SlotField] public static PythonTypeSlot __xor__ = new SlotWrapper(Symbols.OperatorExclusiveOr, ProxyType);
             [SlotField] public static PythonTypeSlot __rxor__ = new SlotWrapper(Symbols.OperatorReverseExclusiveOr, ProxyType);
             [SlotField] public static PythonTypeSlot __ixor__ = new SlotWrapper(Symbols.OperatorInPlaceExclusiveOr, ProxyType);
-            [SlotField] public static PythonTypeSlot __lt__ = new SlotWrapper(Symbols.OperatorLessThan, ProxyType);
-            [SlotField] public static PythonTypeSlot __gt__ = new SlotWrapper(Symbols.OperatorGreaterThan, ProxyType);
-            [SlotField] public static PythonTypeSlot __le__ = new SlotWrapper(Symbols.OperatorLessThanOrEqual, ProxyType);
-            [SlotField] public static PythonTypeSlot __ge__ = new SlotWrapper(Symbols.OperatorGreaterThanOrEqual, ProxyType);
-            [SlotField] public static PythonTypeSlot __eq__ = new SlotWrapper(Symbols.OperatorEquals, ProxyType);
-            [SlotField] public static PythonTypeSlot __ne__ = new SlotWrapper(Symbols.OperatorNotEquals, ProxyType);
-            [SlotField] public static PythonTypeSlot __lg__ = new SlotWrapper(Symbols.OperatorLessThanGreaterThan, ProxyType);
 
             // *** END GENERATED CODE ***
 
@@ -135,13 +128,6 @@ namespace IronPython.Modules {
             [SlotField] public static PythonTypeSlot __xor__ = new SlotWrapper(Symbols.OperatorExclusiveOr, CallableProxyType);
             [SlotField] public static PythonTypeSlot __rxor__ = new SlotWrapper(Symbols.OperatorReverseExclusiveOr, CallableProxyType);
             [SlotField] public static PythonTypeSlot __ixor__ = new SlotWrapper(Symbols.OperatorInPlaceExclusiveOr, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __lt__ = new SlotWrapper(Symbols.OperatorLessThan, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __gt__ = new SlotWrapper(Symbols.OperatorGreaterThan, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __le__ = new SlotWrapper(Symbols.OperatorLessThanOrEqual, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __ge__ = new SlotWrapper(Symbols.OperatorGreaterThanOrEqual, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __eq__ = new SlotWrapper(Symbols.OperatorEquals, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __ne__ = new SlotWrapper(Symbols.OperatorNotEquals, CallableProxyType);
-            [SlotField] public static PythonTypeSlot __lg__ = new SlotWrapper(Symbols.OperatorLessThanGreaterThan, CallableProxyType);
 
             // *** END GENERATED CODE ***
 

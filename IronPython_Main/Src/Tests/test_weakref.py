@@ -153,5 +153,27 @@ def test_cp14632():
     #Assert(not x==3)
     AssertError(ReferenceError, lambda: x==y)
 
-
+def test_equals():
+    global called
+    class C:
+        for method, op in [('__eq__', '=='), ('__gt__', '>'), ('__lt__', '<'), ('__ge__', '>='), ('__le__', '<='), ('__ne__', '!=')]:
+            exec """
+def %s(self, *args, **kwargs):
+    global called
+    called = '%s'
+    return True
+""" % (method, op)
+    
+    a = C()
+    x = _weakref.proxy(a)
+    for op in ('==', '>', '<', '>=', '<=', '!='):
+        AreEqual(eval('a ' + op + ' 3'), True);  AreEqual(called, op); called = None
+        if op == '==' or op == '!=':
+            AreEqual(eval('x ' + op + ' 3'), op == '!='); AreEqual(called, None)
+            AreEqual(eval('3 ' + op + ' x'), op == '!='); AreEqual(called, None)
+        else:
+            res1, res2 = eval('x ' + op + ' 3'), eval('3 ' + op + ' x')
+            AreEqual(called, None)
+            Assert((res1 == True and res2 == False) or (res1 == False and res2 == True))
+        
 run_test(__name__)

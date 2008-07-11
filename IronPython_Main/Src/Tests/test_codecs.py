@@ -351,8 +351,9 @@ def test_misc_encodings():
         # codec not available on silverlight
         AreEqual('abc'.encode('utf-16'), '\xff\xfea\x00b\x00c\x00')
         AreEqual('abc'.encode('utf-16-be'), '\x00a\x00b\x00c')
-    AreEqual('abc'.encode('unicode-escape'), 'abc')
-    AreEqual('abc\u1234'.encode('unicode-escape'), 'abc\\\\u1234')
+    for unicode_escape in ['unicode-escape', 'unicode escape']:
+        AreEqual('abc'.encode('unicode-escape'), 'abc')
+        AreEqual('abc\u1234'.encode('unicode-escape'), 'abc\\\\u1234')
 
 @skip("silverlight")
 def test_file_encodings():

@@ -23,6 +23,7 @@ using System.Runtime.InteropServices;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -97,11 +98,11 @@ namespace System.Scripting.Com {
 
             ComTypes.IConnectionPointContainer cpc = rcw as ComTypes.IConnectionPointContainer;
             if (cpc == null)
-                throw new ArgumentException("COM object does not support events");
+                throw Error.COMObjectDoesNotSupportEvents();
 
             cpc.FindConnectionPoint(ref _sourceIid, out _connectionPoint);
             if (_connectionPoint == null)
-                throw new ArgumentException("COM object does not support specified source interface");
+                throw Error.COMObjectDoesNotSupportSourceInterface();
 
             // Read the comments for ComEventSinkProxy about why we need it
             ComEventSinkProxy proxy = new ComEventSinkProxy(this, _sourceIid);
@@ -169,7 +170,7 @@ namespace System.Scripting.Com {
 
                 ComEventSinkMethod sinkEntry = FindSinkMethod(name);
                 if (sinkEntry == null)
-                    throw new InvalidOperationException("removing not registered handler");
+                    throw Error.RemovingUnregisteredHandler();
 
                 // Remove the delegate from multicast delegate chain.
                 // We will need to find the delegate that corresponds

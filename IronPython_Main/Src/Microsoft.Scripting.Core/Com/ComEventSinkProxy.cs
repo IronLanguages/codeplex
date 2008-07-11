@@ -22,6 +22,7 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.Remoting.Proxies;
 using System.Security.Permissions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -80,9 +81,7 @@ namespace System.Scripting.Com {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)] // to match the base method
         public override IMessage Invoke(IMessage msg) {
-            if (msg == null) {
-                throw new ArgumentNullException("msg");
-            }
+            ContractUtils.RequiresNotNull(msg, "msg");
 
             //Only know how to handle method calls (property and fields accessors count as methods)
             IMethodCallMessage methodCallMessage = msg as IMethodCallMessage;

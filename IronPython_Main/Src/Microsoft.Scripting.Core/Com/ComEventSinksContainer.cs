@@ -17,6 +17,7 @@
 
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -45,7 +46,7 @@ namespace System.Scripting.Com {
 
                 ComEventSinksContainer comEventSinks = new ComEventSinksContainer();
                 if (!Marshal.SetComObjectData(rcw, _ComObjectEventSinksKey, comEventSinks)) {
-                    throw new COMException("Marshal.SetComObjectData failed");
+                    throw Error.SetComObjectDataFailed();
                 }
 
                 return comEventSinks;

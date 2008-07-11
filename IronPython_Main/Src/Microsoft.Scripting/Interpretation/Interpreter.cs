@@ -1349,8 +1349,8 @@ namespace Microsoft.Scripting.Interpretation {
                     }
                 }
             } finally {
-                if (node.FinallyStatement != null || ((rethrow || catchFaulted) && node.FaultStatement != null)) {
-                    Expression faultOrFinally = node.FinallyStatement ?? node.FaultStatement;
+                if (node.Finally != null || ((rethrow || catchFaulted) && node.Fault != null)) {
+                    Expression faultOrFinally = node.Finally ?? node.Fault;
 
                     object result;
                     if (InterpretAndCheckFlow(state, faultOrFinally, out result) &&

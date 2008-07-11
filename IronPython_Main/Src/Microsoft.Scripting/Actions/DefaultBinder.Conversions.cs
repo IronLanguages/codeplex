@@ -16,8 +16,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
@@ -35,17 +35,17 @@ namespace Microsoft.Scripting.Actions {
             ContractUtils.RequiresNotNull(toType, "toType");
             ContractUtils.RequiresNotNull(arg, "arg");
 
-            Type knownType = arg.RuntimeType;
+            Type knownType = arg.LimitType;
 
             // try all the conversions - first look for conversions against the expression type,
             // these can be done w/o any additional tests.  Then look for conversions against the 
             // restricted type.
-            Restrictions typeRestrictions = arg.Restrictions.Merge(Restrictions.TypeRestriction(arg.Expression, arg.RuntimeType));
+            Restrictions typeRestrictions = arg.Restrictions.Merge(Restrictions.TypeRestriction(arg.Expression, arg.LimitType));
 
             return
                 TryConvertToObject(toType, arg.Expression.Type, arg) ??
                 TryAllConversions(toType, kind, arg.Expression.Type, arg.Restrictions, arg) ??
-                TryAllConversions(toType, kind, arg.RuntimeType, typeRestrictions, arg) ??
+                TryAllConversions(toType, kind, arg.LimitType, typeRestrictions, arg) ??
                 TryExtraConversions(toType, typeRestrictions, arg) ??
                 MakeErrorTarget(toType, kind, typeRestrictions, arg);
         }
@@ -281,7 +281,7 @@ namespace Microsoft.Scripting.Actions {
                 case ConversionResultKind.ImplicitTry:
                 case ConversionResultKind.ExplicitTry:
                     target = new MetaObject(
-                        CompilerHelpers.GetTryConvertReturnValue(toType),
+                        GetTryConvertReturnValue(toType),
                         restrictions
                     );
                     break;
@@ -470,7 +470,7 @@ namespace Microsoft.Scripting.Actions {
                                     valueType
                                 )
                             ),
-                            CompilerHelpers.GetTryConvertReturnValue(toType)
+                            GetTryConvertReturnValue(toType)
                         ),
                         tmp
                     ),

@@ -25,8 +25,6 @@ namespace System.Linq.Expressions {
         private Annotations _annotations;
 
         internal TryStatementBuilder(Annotations annotations, Expression body) {
-            ContractUtils.RequiresNotNull(body, "body");
-
             _try = body;
             _annotations = annotations;
         }
@@ -53,7 +51,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(body, "body");
 
             if (_finally != null) {
-                throw new InvalidOperationException("Finally already defined");
+                throw Error.FinallyAlreadyDefined();
             }
 
             _catchBlocks.Add(Expression.Catch(type, holder, body));
@@ -104,9 +102,9 @@ namespace System.Linq.Expressions {
 
             ContractUtils.RequiresNotNull(body, "body");
             if (_finally != null) {
-                throw new InvalidOperationException("Finally already defined");
+                throw Error.FinallyAlreadyDefined();
             } else if (_fault != null) {
-                throw new InvalidOperationException("can't have fault and finally");
+                throw Error.CannotHaveFaultAndFinally();
             }
 
             _finally = body;
@@ -117,9 +115,9 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNullItems(body, "body");
 
             if (_finally != null) {
-                throw new InvalidOperationException("can't have fault and finally");
+                throw Error.CannotHaveFaultAndFinally();
             } else if (_fault != null) {
-                throw new InvalidOperationException("Fault already defined");
+                throw Error.FaultAlreadyDefined();
             }
 
             if (body.Length == 1) {
@@ -131,6 +129,7 @@ namespace System.Linq.Expressions {
             return this;
         }
 
+        [Obsolete("track the skip flag in the calling code")]
         public TryStatementBuilder SkipIf(bool condition) {
             _skipNext = condition;
             return this;
@@ -142,18 +141,20 @@ namespace System.Linq.Expressions {
 
         public static TryStatement ToStatement(TryStatementBuilder builder) {
             ContractUtils.RequiresNotNull(builder, "builder");
-            return new TryStatement(
-                builder._annotations,
+            return Expression.MakeTry(
                 builder._try,
-                CollectionUtils.ToReadOnlyCollection(builder._catchBlocks.ToArray()),
                 builder._finally,
-                builder._fault
+                builder._fault,
+                builder._annotations,
+                builder._catchBlocks
             );
         }
     }
 
     public partial class Expression {
         public static TryStatementBuilder Try(Annotations annotations, params Expression[] body) {
+            ContractUtils.RequiresNotNull(annotations, "annotations");
+            ContractUtils.RequiresNotNull(body, "body");
             return new TryStatementBuilder(annotations, Expression.Block(body));
         }
 
@@ -162,44 +163,8 @@ namespace System.Linq.Expressions {
         }
 
         public static TryStatementBuilder Try(Expression body) {
+            ContractUtils.RequiresNotNull(body, "body");
             return new TryStatementBuilder(Annotations.Empty, body);
         }
-
-        public static TryStatement TryFault(Expression body, Expression fault) {
-            return TryFault(body, fault, Annotations.Empty);
-        }
-
-        public static TryStatement TryFault(Expression body, Expression fault, Annotations annotations) {
-            return new TryStatement(
-                annotations,
-                body,
-                DefaultReadOnlyCollection<CatchBlock>.Empty,
-                null, // finally
-                fault
-            );
-        }
-
-        public static TryStatement TryFinally(Expression body, Expression @finally) {
-            return TryCatchFinally(body, null, @finally, null);
-        }
-        
-        public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally) {
-                return TryCatchFinally(body, handlers, @finally, null);
-        }
-
-        public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally, Expression fault) {
-            return TryCatchFinally(body, handlers, @finally, fault, Annotations.Empty);
-        }
-
-        public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally, Expression fault, Annotations annotations) {
-            return new TryStatement(
-                annotations,
-                body,
-                CollectionUtils.ToReadOnlyCollection(handlers),
-                @finally,
-                fault
-            );
-        }
-
     }
 }

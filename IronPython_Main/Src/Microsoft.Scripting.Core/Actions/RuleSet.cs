@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 
+using System.Linq.Expressions;
+
 namespace System.Scripting.Actions {
 
     /// <summary>
@@ -28,7 +30,7 @@ namespace System.Scripting.Actions {
         }
 
         internal virtual T GetTarget() {
-            throw new InvalidOperationException("Empty rule set doesn't have target");
+            throw Error.EmptyRuleSetTarget();
         }
     }
 }

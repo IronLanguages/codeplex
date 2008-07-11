@@ -150,10 +150,9 @@ def call_truncate(i):
     i.truncate(20)
     AreEqual(i.tell(), 20)
     AreEqual(i.getvalue(), "Line 1\nLine 2\nLine 3")
-    # CodePlex Work Item 8567
-    #i.truncate(30)
-    #AreEqual(i.tell(), 20)
-    #AreEqual(i.getvalue(), "Line 1\nLine 2\nLine 3")
+    i.truncate(30)
+    AreEqual(i.tell(), 20)
+    AreEqual(i.getvalue(), "Line 1\nLine 2\nLine 3")
     i.reset()
     AreEqual(i.tell(), 0)
     AreEqual(i.read(6), "Line 1")
@@ -277,9 +276,8 @@ def test_empty():
     i = init_emptyStringI()
     i.truncate(0)
     AreEqual(i.tell(), 0)
-    # CodePlex Work Item 8567
-    #i.truncate(1)
-    #AreEqual(i.tell(), 0)
+    i.truncate(1)
+    AreEqual(i.tell(), 0)
     i.close()
     AssertError(ValueError, i.truncate)
     

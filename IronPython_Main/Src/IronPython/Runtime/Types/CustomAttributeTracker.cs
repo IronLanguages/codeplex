@@ -77,6 +77,15 @@ namespace IronPython.Runtime.Types {
             );
         }
 
+        public Expression GetBoundPythonValue(Expression context, ActionBinder binder, PythonType accessing) {
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("SlotGetValue"),
+                context,
+                Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
+                Ast.Null(),
+                Ast.Constant(accessing)
+            );
+        }
     }
 
     /// <summary>

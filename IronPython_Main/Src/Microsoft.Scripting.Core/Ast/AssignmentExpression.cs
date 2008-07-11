@@ -183,7 +183,7 @@ namespace System.Linq.Expressions {
                     break;
             }
 
-            throw new ArgumentException("left side of assignment is not an assignable node type", "left");
+            throw Error.LhsUnassignable();
         }
     }
 }

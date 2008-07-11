@@ -37,6 +37,8 @@ def test_main(level='full'):
         'generate_comdispatch',
         'generate_tree',
         'generate_resource_constants',
+        # TODO: uncomment when we have whole Core sources in Snap/test
+        # 'generate_exception_factory',
         ]
     #Merlin 277482
     import System

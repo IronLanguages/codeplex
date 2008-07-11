@@ -47,7 +47,7 @@ namespace ToyScript.Parser {
         }
 
         public MSAst.ParameterExpression CreateParameter(string name) {
-            MSAst.ParameterExpression variable = _block.CreateParameter(name, typeof(object));
+            MSAst.ParameterExpression variable = _block.Parameter(typeof(object), name);
             _variables[name] = variable;
             return variable;
         }
@@ -61,7 +61,7 @@ namespace ToyScript.Parser {
             if (_variables.TryGetValue(name, out variable)) {
                 return variable;
             }
-            variable = _block.CreateLocalVariable(SymbolTable.StringToId(name), type);
+            variable = _block.Variable(type, name);
             _variables[name] = variable;
             return variable;
         }
@@ -79,8 +79,8 @@ namespace ToyScript.Parser {
             }
         }
 
-        public MSAst.VariableExpression CreateTemporaryVariable(string name, Type type) {
-            return _block.CreateTemporaryVariable(SymbolTable.StringToId(name), type);
+        public MSAst.VariableExpression HiddenVariable(Type type, string name) {
+            return _block.HiddenVariable(type, name);
         }
 
         public MSAst.LambdaExpression FinishScope(MSAst.Expression body, Type lambdaType) {

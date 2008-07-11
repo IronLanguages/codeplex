@@ -62,7 +62,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static InvocationExpression Invoke(Expression expression, params Expression[] arguments) {
-            return Invoke(expression, CollectionUtils.ToReadOnlyCollection(arguments));
+            return Invoke(expression, arguments.ToReadOnly());
         }
 
         //CONFORMING
@@ -87,7 +87,7 @@ namespace System.Linq.Expressions {
             MethodInfo mi = delegateType.GetMethod("Invoke");
             ParameterInfo[] pis = mi.GetParameters();
 
-            ReadOnlyCollection<Expression> argList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             if (argList.Count != pis.Length) {
                 throw Error.IncorrectNumberOfLambdaArguments();
             }
@@ -152,7 +152,7 @@ namespace System.Linq.Expressions {
                 );
             }
 
-            return new InvocationExpression(annotations, expression, returnType, bindingInfo, CollectionUtils.ToReadOnlyCollection(arguments));
+            return new InvocationExpression(annotations, expression, returnType, bindingInfo, arguments.ToReadOnly());
         }
 
         public static InvocationExpression Invoke(Annotations annotations, Type returnType, Expression expression, CallSiteBinder binder, params Expression[] arguments) {
@@ -160,7 +160,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(binder, "binder");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
 
-            return new InvocationExpression(annotations, expression, returnType, binder, CollectionUtils.ToReadOnlyCollection(arguments));
+            return new InvocationExpression(annotations, expression, returnType, binder, arguments.ToReadOnly());
         }
     }
 }

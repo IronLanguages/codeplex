@@ -18,6 +18,7 @@
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Com {
 
@@ -146,10 +147,7 @@ namespace System.Scripting.Com {
         }
 
         private int Dummy() {
-            int dummy = _typeUnion._unionTypes._byref.GetHashCode() ^ 
-                _typeUnion._unionTypes._bstr.GetHashCode() ^
-                _typeUnion._unionTypes._record.GetHashCode();
-            throw new InvalidOperationException("This method exists only to keep the compiler happy" + dummy);
+            throw Error.MethodShouldNotBeCalled();
         }
 
         #endregion
@@ -239,8 +237,8 @@ namespace System.Scripting.Com {
                         IntPtr variantPtr = ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this);
                         return Marshal.GetObjectForNativeVariant(variantPtr);
                     }
-                    catch (Exception ex) {
-                        throw new NotImplementedException("Variant.ToObject cannot handle" + VariantType, ex);
+                    catch (Exception) {
+                        throw Error.VariantToObjectNYI(VariantType);
                     }
             }
         }
@@ -741,7 +739,7 @@ namespace System.Scripting.Com {
                 #endregion
 
                 default:
-                    throw new NotImplementedException("Variant.GetAccessor cannot handle" + varType);
+                    throw Error.VariantGetAccessorNYI(varType);
             }
         }
 
@@ -775,7 +773,7 @@ namespace System.Scripting.Com {
                 case VarEnum.VT_BSTR: return typeof(Variant).GetMethod("SetAsByrefBstr");
 
                 default:
-                    throw new NotImplementedException("Variant.GetAccessor cannot handle" + varType);
+                    throw Error.VariantGetAccessorNYI(varType);
             }
         }
 

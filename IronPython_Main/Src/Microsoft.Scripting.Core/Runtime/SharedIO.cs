@@ -17,6 +17,7 @@ using System.IO;
 using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Runtime {
     public sealed class SharedIO {
@@ -201,7 +202,7 @@ namespace System.Scripting.Runtime {
                 case ConsoleStreamType.Output: return OutputStream;
                 case ConsoleStreamType.ErrorOutput: return ErrorStream;
             }
-            throw new ArgumentException("Invalid argument value", "type");
+            throw Error.InvalidStreamType(type);
         }
 
         public TextWriter/*!*/ GetWriter(ConsoleStreamType type) {
@@ -209,7 +210,7 @@ namespace System.Scripting.Runtime {
                 case ConsoleStreamType.Output: return OutputWriter;
                 case ConsoleStreamType.ErrorOutput: return ErrorWriter;
             }
-            throw new ArgumentException("Invalid argument value", "type");
+            throw Error.InvalidStreamType(type);
         }
 
         public Encoding/*!*/ GetEncoding(ConsoleStreamType type) {
@@ -218,7 +219,7 @@ namespace System.Scripting.Runtime {
                 case ConsoleStreamType.Output: return OutputEncoding;
                 case ConsoleStreamType.ErrorOutput: return ErrorEncoding;
             }
-            throw new ArgumentException("Invalid argument value", "type");
+            throw Error.InvalidStreamType(type);
         }
 
         public TextReader/*!*/ GetReader(out Encoding/*!*/ encoding) {

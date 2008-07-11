@@ -71,7 +71,7 @@ namespace System.Linq.Expressions {
                 }
             }
 
-            throw new InvalidOperationException("Statement not on the stack");
+            throw Error.StatementNotOnStack();
         }
 
         private void EmitBreak() {

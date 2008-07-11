@@ -22,6 +22,8 @@ from lib.assert_util import *
 if not sys.platform=="win32":
     import System
 
+import array
+
 @skip("win32")
 def test_sanity():
     # 1-dimension array
@@ -48,12 +50,12 @@ def test_sanity():
     # 2-dimension array
     array4 = System.Array.CreateInstance(int, 2, 2)
     array4[0, 1] = 1
-    AreEqual(repr(array4), "<2 dimensional Array[int] at 0x000000000000002B>")
+    Assert(repr(array4).startswith("<2 dimensional Array[int] at"), "bad repr for 2-dimensional array")
 
     # 3-dimension array
     array5 = System.Array.CreateInstance(object, 2, 2, 2)
     array5[0, 1, 1] = int
-    AreEqual(repr(array5), "<3 dimensional Array[object] at 0x000000000000002C>")
+    Assert(repr(array5).startswith("<3 dimensional Array[object] at "), "bad repr for 3-dimensional array")
 
     ## index access
     AssertError(TypeError, lambda : array5['s'])
@@ -234,7 +236,6 @@ def test_array_type():
     type_helper(str, "abc")
 
 def test_array_array_I():
-    import array
     for x in [  0, 1, 2,
                 (2**8)-2, (2**8)-1, (2**8), (2**8)+1, (2**8)+2,
                 (2**16)-2, (2**16)-1, (2**16), (2**16)+1, (2**16)+2,
@@ -250,5 +251,39 @@ def test_array_array_I():
         
     for x in [  (2**32), (2**32)+1, (2**32)+2 ]:
         AssertError(OverflowError, array.array, 'I', [x])
+
+def test_array_array_c():
+    a = array.array('c', "stuff")
+    a[1:0] = a
+    b = array.array('c', "stuff"[:1] + "stuff" + "stuff"[1:])
+    AreEqual(a, b)
+
+def test_array_array_L():
+    a = array.array('L', "\x12\x34\x45\x67")
+    AreEqual(1, len(a))
+    AreEqual(1732588562, a[0])
+
+def test_array_array_B():
+    a = array.array('B', [0]) * 2L
+    AreEqual(2, len(a))
+    AreEqual("array('B', [0, 0])", str(a))
+
+def test_array_typecode():
+    x = array.array('i')
+    AreEqual(type(x.typecode), str)
+
+def test_reduce():
+    x = array.array('i', [1,2,3])
+    AreEqual(repr(x.__reduce_ex__(1)), "(<type 'array.array'>, ('i', '\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x03\\x00\\x00\\x00'), None)")
+    AreEqual(repr(x.__reduce_ex__()), "(<type 'array.array'>, ('i', '\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x03\\x00\\x00\\x00'), None)")
+    AreEqual(repr(x.__reduce__()), "(<type 'array.array'>, ('i', '\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x03\\x00\\x00\\x00'), None)")
+
+def test_copy():
+    x = array.array('i', [1,2,3])
+    y = x.__copy__()
+    Assert(id(x) != id(y), "copy should copy")
     
+    y = x.__deepcopy__()
+    Assert(id(x) != id(y), "copy should copy")
+
 run_test(__name__)

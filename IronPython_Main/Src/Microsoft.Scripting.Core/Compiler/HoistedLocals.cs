@@ -28,7 +28,8 @@ namespace System.Linq.Expressions {
     //      Func<string> OuterMethod(Closure closure, string s)
     //      {
     //          object[] locals = new object[1];
-    //          locals[0] = s;
+    //          locals[0] = new StrongBox<string>();
+    //          ((StrongBox<string>)locals[0]).Value = s;
     //          return ((DynamicMethod)closure.Constants[0]).CreateDelegate(typeof(Func<string>), new Closure(null, locals));
     //      }
     //      
@@ -37,7 +38,7 @@ namespace System.Linq.Expressions {
     //      string InnerMethod(Closure closure)
     //      {
     //          object[] locals = closure.Locals;
-    //          return (string)locals[0];
+    //          return ((StrongBox<string>)locals[0]).Value;
     //      }
     //
     // This class tracks that "s" was hoisted into a closure, as the 0th
@@ -55,19 +56,21 @@ namespace System.Linq.Expressions {
     internal sealed class HoistedLocals {
 
         // The parent locals, if any
-        private readonly HoistedLocals _parent;
+        internal readonly HoistedLocals Parent;
 
         // A mapping of hoisted variables to their indexes in the array
-        private readonly ReadOnlyDictionary<Expression, int> _indexes;
+        internal readonly ReadOnlyDictionary<Expression, int> Indexes;
 
         // The variables, in the order they appear in the array
-        private readonly ReadOnlyCollection<Expression> _vars;
+        internal readonly ReadOnlyCollection<Expression> Variables;
 
-        internal HoistedLocals(HoistedLocals parent, ReadOnlyCollection<Expression> vars) {
+        // A virtual variable for accessing this locals array
+        internal readonly VariableExpression SelfVariable;
+
+        internal HoistedLocals(HoistedLocals parent, VariableExpression selfVar, ReadOnlyCollection<Expression> vars) {
             if (parent != null) {
                 // Add the parent locals array as the 0th element in the array
-                Expression parentVar = Expression.Variable(typeof(object[]), "$parentEnv");
-                vars = new ReadOnlyCollection<Expression>(ArrayUtils.Insert(parentVar, vars));
+                vars = new ReadOnlyCollection<Expression>(ArrayUtils.Insert(parent.SelfVariable, vars));
             }
 
             Dictionary<Expression, int> indexes = new Dictionary<Expression, int>(vars.Count);
@@ -75,25 +78,14 @@ namespace System.Linq.Expressions {
                 indexes.Add(vars[i], i);
             }
 
-            _vars = vars;
-            _indexes = new ReadOnlyDictionary<Expression,int>(indexes);
-            _parent = parent;
+            Parent = parent;
+            SelfVariable = selfVar;
+            Variables = vars;
+            Indexes = new ReadOnlyDictionary<Expression, int>(indexes);
         }
 
-        internal HoistedLocals Parent {
-            get { return _parent; }
-        }
-
-        internal Expression ParentVariable {
-            get { return _parent != null ? _vars[0] : null; }
-        }
-
-        internal ReadOnlyCollection<Expression> Variables {
-            get { return _vars; }
-        }
-
-        internal ReadOnlyDictionary<Expression, int> Indexes {
-            get { return _indexes; }
+        internal VariableExpression ParentVariable {
+            get { return Parent != null ? Parent.SelfVariable : null; }
         }
 
         internal static object[] GetParent(object[] locals) {

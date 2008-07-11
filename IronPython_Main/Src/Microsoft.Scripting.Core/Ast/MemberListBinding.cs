@@ -51,7 +51,7 @@ namespace System.Linq.Expressions {
         public static MemberListBinding ListBind(MemberInfo member, params ElementInit[] initializers) {
             ContractUtils.RequiresNotNull(member, "member");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            return ListBind(member, CollectionUtils.ToReadOnlyCollection(initializers));
+            return ListBind(member, initializers.ToReadOnly());
         }
         //CONFORMING
         public static MemberListBinding ListBind(MemberInfo member, IEnumerable<ElementInit> initializers) {
@@ -59,7 +59,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(initializers, "initializers");
             Type memberType;
             ValidateGettableFieldOrPropertyMember(member, out memberType);
-            ReadOnlyCollection<ElementInit> initList = CollectionUtils.ToReadOnlyCollection(initializers);
+            ReadOnlyCollection<ElementInit> initList = initializers.ToReadOnly();
             ValidateListInitArgs(memberType, initList);
             return new MemberListBinding(member, initList);
         }
@@ -67,7 +67,7 @@ namespace System.Linq.Expressions {
         public static MemberListBinding ListBind(MethodInfo propertyAccessor, params ElementInit[] initializers) {
             ContractUtils.RequiresNotNull(propertyAccessor, "propertyAccessor");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            return ListBind(propertyAccessor, CollectionUtils.ToReadOnlyCollection(initializers));
+            return ListBind(propertyAccessor, initializers.ToReadOnly());
         }
         //CONFORMING
         public static MemberListBinding ListBind(MethodInfo propertyAccessor, IEnumerable<ElementInit> initializers) {

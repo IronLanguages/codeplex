@@ -60,15 +60,15 @@ namespace System.Linq.Expressions {
     /// TODO: move to Microsoft.Scripting !!!
     /// </summary>
     public partial class Expression {
-        public static GlobalVariableExpression Global(Type type, string name) {
-            return Global(type, name, false, Annotations.Empty);
+        public static GlobalVariableExpression GlobalVariable(Type type, string name) {
+            return GlobalVariable(type, name, false, Annotations.Empty);
         }
 
-        public static GlobalVariableExpression Global(Type type, string name, bool local) {
-            return Global(type, name, local, Annotations.Empty);
+        public static GlobalVariableExpression GlobalVariable(Type type, string name, bool local) {
+            return GlobalVariable(type, name, local, Annotations.Empty);
         }
 
-        public static GlobalVariableExpression Global(Type type, string name, bool local, Annotations annotations) {
+        public static GlobalVariableExpression GlobalVariable(Type type, string name, bool local, Annotations annotations) {
             return new GlobalVariableExpression(annotations, GetNonVoidType(type), name, local);
         }
     }

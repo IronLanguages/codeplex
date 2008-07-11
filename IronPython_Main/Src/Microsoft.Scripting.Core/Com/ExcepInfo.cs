@@ -16,6 +16,7 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
@@ -63,8 +64,8 @@ namespace System.Scripting.Com {
             pfnDeferredFillIn = IntPtr.Zero;
             pvReserved = IntPtr.Zero;
             scode = 0;
-            
-            throw new InvalidOperationException("This method exists only to keep the compiler happy");
+
+            throw Error.MethodShouldNotBeCalled();
         }
         
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]

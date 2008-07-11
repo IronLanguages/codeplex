@@ -17,6 +17,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Scripting.Actions;
@@ -100,6 +101,9 @@ namespace System.Scripting.Runtime {
             // create the initial default scope
             _scopeWrapper = new ScopeAttributesWrapper(this);
             _globals = new Scope(_scopeWrapper);
+
+            // Dynamic languages still prefer type info over com IDispatch
+            _options.PreferComDispatchOverTypeInfo = false;
         }
        
         #region Language Registration
@@ -191,7 +195,7 @@ namespace System.Scripting.Runtime {
                     for (int i = 0; i < identifiers.Length; i++) {
                         LanguageRegistration desc;
                         if (_languageIds.TryGetValue(identifiers[i], out desc) && !ReferenceEquals(desc, singleton_desc)) {
-                            throw new InvalidOperationException("Conflicting Ids");
+                            throw Error.ConflictingIds();
                         }
                     }
                 }
@@ -224,7 +228,9 @@ namespace System.Scripting.Runtime {
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
         public LanguageContext/*!*/ GetLanguageContext(Type/*!*/ type) {
             ContractUtils.RequiresNotNull(type, "type");
-            if (!type.IsSubclassOf(typeof(LanguageContext))) throw new ArgumentException("Invalid type - should be subclass of LanguageContext"); // TODO
+            if (!type.IsSubclassOf(typeof(LanguageContext))) {
+                throw Error.ShouldBeSubclassOfLangContext(); // TODO
+            }
 
             LanguageRegistration desc = null;
             
@@ -253,7 +259,7 @@ namespace System.Scripting.Runtime {
 
         internal string[] GetLanguageIdentifiers(Type type, bool extensionsOnly) {
             if (type != null && !type.IsSubclassOf(typeof(LanguageContext))) {
-                throw new ArgumentException("Invalid type - should be subclass of LanguageContext"); // TODO
+                throw Error.ShouldBeSubclassOfLangContext(); // TODO
             }
 
             bool get_all = type == null;

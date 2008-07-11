@@ -17,7 +17,7 @@ using System;
 using System.Globalization;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
@@ -97,6 +97,13 @@ namespace IronPython.Runtime.Operations {
 
             Extensible<string> es = o as Extensible<string>;
             if (es != null) {
+                // __int__ takes precedence, call it if it's available...
+                object value;
+                if (PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, es, Symbols.ConvertToInt, out value)) {
+                    return value;
+                }
+
+                // otherwise call __new__ on the string value
                 return __new__(null, es.Value, 10);
             }
 

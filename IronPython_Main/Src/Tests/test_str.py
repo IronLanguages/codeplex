@@ -125,8 +125,7 @@ def test_codecs():
     if is_silverlight:
         encodings = [ 'ascii', 'utf-8', 'utf-16-le', 'raw-unicode-escape']
     else:
-        print "CodePlex Work Item 12990"
-        encodings = [ x for x in ip_supported_encodings if x.lower() != 'utf-16']
+        encodings = [ x for x in ip_supported_encodings]
         
     for encoding in encodings: Assert('abc'.encode(encoding).decode(encoding)=='abc', encoding + " failed!")
     
@@ -181,7 +180,6 @@ def test_encode_decode():
     AreEqual('abc'.encode(), 'abc')
     AreEqual('abc'.decode(), 'abc')
 
-@disabled("CodePlex Work Item 2290")
 def test_encode_decode():
     AssertError(TypeError, 'abc'.encode, None)
     AssertError(TypeError, 'abc'.decode, None)
@@ -285,5 +283,30 @@ def test_formatting_userdict():
             elif key == 'bar': return 23
             raise KeyError, key
     AreEqual('%(abc)s %(bar)s' % (mydict()), '42 23')
+    
+def test_str_to_numeric():
+    class substring(str):
+        def __int__(self): return 1
+        def __long__(self): return 1L
+        def __complex__(self): return 1j
+        def __float__(self): return 1.0
+    
+    v = substring("123")
+    
+    
+    AreEqual(long(v), 1L)
+    AreEqual(int(v), 1)
+    AreEqual(complex(v), 123+0j)
+    AreEqual(float(v), 123.0)
+    
+    class substring(str): pass
+    
+    v = substring("123")
+    
+    AreEqual(long(v), 123L)
+    AreEqual(int(v), 123)
+    AreEqual(complex(v), 123+0j)
+    AreEqual(float(v), 123.0)
+
 
 run_test(__name__)

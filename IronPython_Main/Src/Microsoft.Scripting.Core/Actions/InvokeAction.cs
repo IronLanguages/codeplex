@@ -29,7 +29,7 @@ namespace System.Scripting.Actions {
 
         protected InvokeAction(IEnumerable<Argument> arguments)
             : base(StandardActionKind.Invoke) {
-            _arguments = CollectionUtils.ToReadOnlyCollection(arguments);
+            _arguments = arguments.ToReadOnly();
         }
 
         public ReadOnlyCollection<Argument> Arguments {

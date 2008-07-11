@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Scripting.Utils;
 
 namespace System.Scripting.Runtime {
@@ -52,116 +52,31 @@ namespace System.Scripting.Runtime {
             _indexes = indexes;
         }
 
-        private System.Runtime.CompilerServices.IStrongBox GetVariable(int i) {
-            long index = _indexes[i];
-
-            // walk up the parent chain to find the real environment
-            object[] result = _data;
-            for (int parents = (int)(index >> 32); parents > 0; parents--) {
-                result = HoistedLocals.GetParent(result);
-            }
-
-            // Get the variable storage
-            return (System.Runtime.CompilerServices.IStrongBox)result[(int)index];
+        public int Count {
+            get { return _indexes.Length; }
         }
-
-        #region ILocalVariables Members
 
         public ReadOnlyCollection<string> Names {
             get { return _names; }
         }
 
-        #endregion
-
-        #region IList<object> Members
-
-        public int IndexOf(object item) {
-            int i = 0;
-            foreach (object element in this) {
-                if (object.Equals(element, item)) {
-                    return i;
-                }
-                i++;
-            }
-            return -1;
-        }
-
-        public void Insert(int index, object item) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public void RemoveAt(int index) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public object this[int index] {
+        public IStrongBox this[int index] {
             get {
-                ContractUtils.RequiresArrayIndex(this, index, "index");
-                return GetVariable(index).Value;
-            }
-            set {
-                ContractUtils.RequiresArrayIndex(this, index, "index");
-                GetVariable(index).Value = value;
-            }
-        }
+                // We lookup the closure using two ints:
+                // 1. The high dword is the number of parents to go up
+                // 2. The low dword is the index into that array
+                long closureKey = _indexes[index];
 
-        #endregion
+                // walk up the parent chain to find the real environment
+                object[] result = _data;
+                for (int parents = (int)(closureKey >> 32); parents > 0; parents--) {
+                    result = HoistedLocals.GetParent(result);
+                }
 
-        #region ICollection<object> Members
-
-        public void Add(object item) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public void Clear() {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        public bool Contains(object item) {
-            return IndexOf(item) >= 0;
-        }
-
-        public void CopyTo(object[] array, int arrayIndex) {
-            ContractUtils.RequiresNotNull(array, "array");
-            ContractUtils.RequiresArrayRange(array, arrayIndex, Count, "arrayIndex", "array");
-
-            foreach (object value in this) {
-                array[arrayIndex++] = value;
+                // Return the variable storage
+                return (IStrongBox)result[(int)closureKey];
             }
         }
-
-        public int Count {
-            get { return _indexes.Length; }
-        }
-
-        public bool IsReadOnly {
-            get { return false; }
-        }
-
-        public bool Remove(object item) {
-            throw new NotSupportedException("variables cannot be added/removed");
-        }
-
-        #endregion
-
-        #region IEnumerable<object> Members
-
-        public IEnumerator<object> GetEnumerator() {
-            for (int i = 0, count = Count; i < count; i++) {
-                yield return GetVariable(i).Value;
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable Members
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
-            return GetEnumerator();
-        }
-
-        #endregion
-
     }
     
     public static partial class RuntimeHelpers {

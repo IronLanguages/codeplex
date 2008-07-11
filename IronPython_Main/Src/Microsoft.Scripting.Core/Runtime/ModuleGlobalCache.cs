@@ -15,6 +15,7 @@
 
 using System.Diagnostics;
 using System.Scripting.Utils;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Runtime {
     /// <summary>
@@ -60,7 +61,7 @@ namespace System.Scripting.Runtime {
                 return _value;
             }
             set {
-                if (_value == NotCaching) throw new ArgumentException("cannot change non-caching value");
+                if (_value == NotCaching) throw Error.CannotChangeNonCachingValue();
                 _value = value;
             }
         }

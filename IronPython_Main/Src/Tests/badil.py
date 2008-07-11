@@ -21,7 +21,7 @@ clr.AddReference("Microsoft.Scripting")
 clr.AddReference("IronPython")
 
 from System.Scripting.Generation import Snippets
-from IronPython.Runtime.Calls import CallTarget0
+from IronPython.Compiler import CallTarget0
 
 paramTypes = System.Array[System.Type]([])
 

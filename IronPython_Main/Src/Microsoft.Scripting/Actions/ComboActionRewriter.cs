@@ -103,6 +103,18 @@ namespace Microsoft.Scripting.Actions {
             return base.Visit(node);
         }
 
+        protected override Expression VisitExtension(Expression node) {
+            CodeContextScopeExpression contextScope = node as CodeContextScopeExpression;
+            if (contextScope != null) {
+                Expression body = VisitNode(contextScope.Body);
+
+                if (body != contextScope.Body) {
+                    node = CodeContextScopeExpression.CodeContextScope(body, contextScope.NewContext);
+                }
+            }
+            return node;
+        }
+
         /// <summary>
         /// A reducable node which we use to generate the combo dynamic sites.  Each time we encounter
         /// a dynamic site we replace it with a ComboDynamicSiteExpression.  When a child of a dynamic site
@@ -232,14 +244,14 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
             binders.Add(new BinderMappingInfo(metaBinder, myInfo));
-            
             // TODO: Remove any duplicate inputs (e.g. locals being fed in multiple times)
             return new ComboDynamicSiteExpression(node.Type, binders, inputs.ToArray());
         }
 
         private bool IsSideEffectFree(Expression rewritten) {
             if (rewritten is ParameterExpression ||
-                rewritten is VariableExpression) {
+                rewritten is VariableExpression ||
+                rewritten is GlobalVariableExpression) {
                 return true;
             }
 
@@ -252,6 +264,21 @@ namespace Microsoft.Scripting.Actions {
                 if (be.Method == null && !be.IsDynamic && IsSideEffectFree(be.Left) && IsSideEffectFree(be.Right)) {
                     return true;
                 }
+            }
+
+            MethodCallExpression mc = rewritten as MethodCallExpression;
+            if (mc != null && mc.Method != null) {
+                return mc.Method.IsDefined(typeof(NoSideEffectsAttribute), false);
+            }
+
+            ConditionalExpression ce = rewritten as ConditionalExpression;
+            if (ce != null) {
+                return IsSideEffectFree(ce.Test) && IsSideEffectFree(ce.IfTrue) && IsSideEffectFree(ce.IfFalse);
+            }
+
+            MemberExpression me = rewritten as MemberExpression;
+            if (me != null && me.Member is System.Reflection.FieldInfo) {
+                return false;
             }
 
             return false;

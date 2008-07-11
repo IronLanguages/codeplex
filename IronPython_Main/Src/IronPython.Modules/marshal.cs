@@ -28,22 +28,20 @@ namespace IronPython.Modules {
     public static class PythonMarshal {
 
         #region Public marshal APIs
-        public static void dump(object value, object file) {
+        public static void dump(object value, PythonFile/*!*/ file) {
             dump(value, file, null);
         }
 
-        public static void dump(object value, object file, object version) {
-            PythonFile pf = file as PythonFile;
-            if (pf == null) throw PythonOps.TypeErrorForBadInstance("expected file, found '{0}'", file);
+        public static void dump(object value, PythonFile/*!*/ file, object version) {
+            if (file == null) throw PythonOps.TypeError("expected file, found None");
 
-            pf.write(dumps(value, version));
+            file.write(dumps(value, version));
         }
 
-        public static object load(object file) {
-            PythonFile pf = file as PythonFile;
-            if (pf == null) throw PythonOps.TypeErrorForBadInstance("expected file, found '{0}'", file);
+        public static object load(PythonFile/*!*/ file) {
+            if (file == null) throw PythonOps.TypeError("expected file, found None");
 
-            return loads(pf.read());
+            return BytesToObject(FileEnumerator(file));
         }
 
         public static object dumps(object value) {
@@ -60,13 +58,7 @@ namespace IronPython.Modules {
         }
 
         public static object loads(string @string) {
-            string strParam = @string;
-
-            byte[] bytes = new byte[strParam.Length];
-            for (int i = 0; i < strParam.Length; i++) {
-                bytes[i] = (byte)strParam[i];
-            }
-            return BytesToObject(bytes);
+            return BytesToObject(StringEnumerator(@string));
         }
 
         public const int version = 1;
@@ -80,9 +72,26 @@ namespace IronPython.Modules {
             return mw.GetBytes();
         }
 
-        private static object BytesToObject(byte[] bytes) {
+        private static object BytesToObject(IEnumerator<byte> bytes) {
             MarshalReader mr = new MarshalReader(bytes);
             return mr.ReadObject();
+        }
+
+        private static IEnumerator<byte> FileEnumerator(PythonFile/*!*/ file) {
+            for (; ; ) {
+                string data = file.read(1);
+                if (data.Length == 0) {
+                    yield break;
+                }
+
+                yield return (byte)data[0];
+            }
+        }
+
+        private static IEnumerator<byte> StringEnumerator(string/*!*/ str) {
+            for (int i = 0; i < str.Length; i++) {
+                yield return (byte)str[i];
+            }
         }
 
         /*********************************************************
@@ -348,45 +357,49 @@ namespace IronPython.Modules {
                 return _bytes.ToArray();
             }
         }
-
+        
         private class MarshalReader {
-            byte[] _myBytes;
-            int _curIndex;
-            Stack<ProcStack> _stack;
-            object _result;
+            private IEnumerator<byte> _myBytes;
+            private Stack<ProcStack> _stack;
+            private object _result;
 
-            public MarshalReader(byte[] bytes) {
+            public MarshalReader(IEnumerator<byte> bytes) {
                 _myBytes = bytes;
             }
 
             public object ReadObject() {
-                while (_curIndex < _myBytes.Length) {
+                while (_myBytes.MoveNext()) {
+                    byte cur = _myBytes.Current;
                     object res;
-                    if (_myBytes[_curIndex] == '(') {
-                        PushStack(StackType.Tuple);
-                    } else if (_myBytes[_curIndex] == '[') {
-                        PushStack(StackType.List);
-                    } else if (_myBytes[_curIndex] == '{') {
-                        PushStack(StackType.Dict);
-                    } else if (_myBytes[_curIndex] == '<') {
-                        PushStack(StackType.Set);
-                    } else if (_myBytes[_curIndex] == '>') {
-                        PushStack(StackType.FrozenSet);
-                        /*} else if (myBytes[curIndex] == 'c') {*/
-                    } else {
-                        res = YieldSimple();
-                        if (_stack == null) {
-                            return res;
-                        }
-
-                        do {
-                            res = UpdateStack(res);
-                        } while (res != null && _stack.Count > 0);
-
-                        if (_stack.Count == 0) {
+                    switch ((char)cur) {
+                        case '(': PushStack(StackType.Tuple); break;
+                        case '[': PushStack(StackType.List); break;
+                        case '{': PushStack(StackType.Dict); break;
+                        case '<': PushStack(StackType.Set); break;
+                        case '>': PushStack(StackType.FrozenSet); break;
+                        case '0':
+                            // end of dictionary
+                            if (_stack == null || _stack.Count == 0) {
+                                throw PythonOps.ValueError("bad marshal data");
+                            }
+                            _stack.Peek().StackCount = 0;
                             break;
-                        }
-                        continue;
+                        // case 'c': break;
+                        default:
+                            res = YieldSimple();
+                            if (_stack == null) {
+                                return res;
+                            }
+
+                            do {
+                                res = UpdateStack(res);
+                            } while (res != null && _stack.Count > 0);
+
+                            if (_stack.Count == 0) {
+                                return _result;
+                            }
+
+                            continue;
                     }
 
                     // handle empty lists/tuples...
@@ -418,20 +431,12 @@ namespace IronPython.Modules {
 
             private void PushStack(StackType type) {
                 ProcStack newStack = new ProcStack();
-                newStack.StackType = type;
-                _curIndex++;
+                newStack.StackType = type;                
 
                 switch (type) {
                     case StackType.Dict:
                         newStack.StackObj = new PythonDictionary();
-
-                        if (_curIndex == _myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
-
-                        if (_myBytes[_curIndex] == '0')
-                            newStack.StackCount = 0;
-                        else 
-                            newStack.StackCount = -1;
-
+                        newStack.StackCount = -1;
                         break;
                     case StackType.List:
                         newStack.StackObj = new List();
@@ -467,15 +472,6 @@ namespace IronPython.Modules {
                         } else {
                             curStack.HaveKey = true;
                             curStack.Key = res;
-                        }
-
-                        if (_curIndex == _myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
-                        if (_myBytes[_curIndex] == '0') {
-                            _stack.Pop();
-                            if (_stack.Count == 0) {
-                                _result = od;
-                            }
-                            return od;
                         }
                         break;
                     case StackType.Tuple:
@@ -550,7 +546,7 @@ namespace IronPython.Modules {
 
             private object YieldSimple() {
                 object res;
-                switch ((char)_myBytes[_curIndex++]) {
+                switch ((char)_myBytes.Current) {
                     // simple ops to be read in
                     case 'i': res = ReadInt(); break;
                     case 'l': res = ReadBigInteger(); break;
@@ -568,30 +564,35 @@ namespace IronPython.Modules {
                 }
                 return res;
             }
+            
+            private byte[] ReadBytes(int len) {
+                byte[] bytes = new byte[len];
+                for (int i = 0; i < len; i++) {
+                    if (!_myBytes.MoveNext()) {
+                        throw PythonOps.ValueError("bad marshal data");
+                    }
+                    bytes[i] = _myBytes.Current;
+                }
+
+                return bytes;
+            }
 
             private int ReadInt32() {
-                if (_curIndex + 3 >= _myBytes.Length) throw PythonOps.ValueError("bad marshal data");
+                byte[] intBytes = ReadBytes(4);
 
-                int res = _myBytes[_curIndex] |
-                    (_myBytes[_curIndex + 1] << 8) |
-                    (_myBytes[_curIndex + 2] << 16) |
-                    (_myBytes[_curIndex + 3] << 24);
+                int res = intBytes[0] |
+                    (intBytes[1] << 8) |
+                    (intBytes[2] << 16) |
+                    (intBytes[3] << 24);
 
-                _curIndex += 4;
                 return res;
             }
 
             private double ReadFloatStr() {
-                if (_curIndex >= _myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
+                MoveNext();
 
+                string str = DecodeString(PythonAsciiEncoding.Instance, ReadBytes(_myBytes.Current));
 
-                int len = _myBytes[_curIndex];
-                _curIndex++;
-                if ((_curIndex + len) > _myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
-
-                string str = PythonAsciiEncoding.Instance.GetString(_myBytes, _curIndex, len);
-
-                _curIndex += len;
                 double res = 0;
 #if !SILVERLIGHT        // Double.Parse
                 double.TryParse(str, out res);
@@ -601,27 +602,38 @@ namespace IronPython.Modules {
                 return res;
             }
 
+            private void MoveNext() {
+                if (!_myBytes.MoveNext()) {
+                    throw PythonOps.EofError("EOF read where object expected");
+                }
+            }
+
+            private string DecodeString(Encoding enc, byte[] bytes) {
+                return enc.GetString(bytes, 0, bytes.Length);
+            }
+
             object ReadInt() {
                 // bytes not present are treated as being -1
                 byte b1, b2, b3, b4;
 
-                switch (_myBytes.Length - _curIndex) {
-                    case 0: b1 = 255; b2 = 255; b3 = 255; b4 = 255; break;
-                    case 1: b1 = _myBytes[_curIndex]; b2 = 255; b3 = 255; b4 = 255; break;
-                    case 2: b1 = _myBytes[_curIndex]; b2 = _myBytes[_curIndex + 1]; b3 = 255; b4 = 255; break;
-                    case 3: b1 = _myBytes[_curIndex]; b2 = _myBytes[_curIndex + 1]; b3 = _myBytes[_curIndex + 2]; b4 = 255; break;
-                    default:
-                        b1 = _myBytes[_curIndex];
-                        b2 = _myBytes[_curIndex + 1];
-                        b3 = _myBytes[_curIndex + 2];
-                        b4 = _myBytes[_curIndex + 3];
-                        break;
-                }
-
-                _curIndex += 4;
+                b1 = ReadIntPart();
+                b2 = ReadIntPart();
+                b3 = ReadIntPart();
+                b4 = ReadIntPart();
+                
                 byte[] bytes = new byte[] { b1, b2, b3, b4 };
                 return RuntimeHelpers.Int32ToObject(BitConverter.ToInt32(bytes, 0));
                 //return Ops.int2object(b1 | (b2 << 8) | (b3 << 16) | (b4 << 24));
+            }
+
+            private byte ReadIntPart() {
+                byte b;
+                if (_myBytes.MoveNext()) {
+                    b = _myBytes.Current;
+                } else {
+                    b = 255;
+                }
+                return b;
             }
 
             object ReadFloat() {
@@ -629,23 +641,11 @@ namespace IronPython.Modules {
             }
 
             private object ReadAsciiString() {
-                int len = ReadInt32();
-                if (len + _curIndex > _myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
-
-                string res = PythonAsciiEncoding.Instance.GetString(_myBytes, _curIndex, len);
-
-                _curIndex += len;
-                return res;
+                return DecodeString(PythonAsciiEncoding.Instance, ReadBytes(ReadInt32()));
             }
 
             private object ReadUnicodeString() {
-                int len = ReadInt32();
-                if (len + _curIndex > _myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
-
-                string res = Encoding.UTF8.GetString(_myBytes, _curIndex, len);
-
-                _curIndex += len;
-                return res;
+                return DecodeString(Encoding.UTF8, ReadBytes(ReadInt32()));                
             }
 
             private object ReadComplex() {
@@ -656,23 +656,15 @@ namespace IronPython.Modules {
             }
 
             private object ReadBuffer() {
-                int len = ReadInt32();
-
-                if (len + _curIndex > _myBytes.Length) throw PythonOps.ValueError("bad marshal data");
-
-                string res = Encoding.UTF8.GetString(_myBytes, _curIndex, len);
-
-                _curIndex += len;
-
-                return res;
+                return DecodeString(Encoding.UTF8, ReadBytes(ReadInt32()));
             }
 
             private object ReadLong() {
-                if (_curIndex + 8 > _myBytes.Length) throw PythonOps.ValueError("bad marshal data");
+                byte[] bytes = ReadBytes(8);
 
                 long res = 0;
                 for (int i = 0; i < 8; i++) {
-                    res |= (((long)_myBytes[_curIndex++]) << (i * 8));
+                    res |= (((long)bytes[i]) << (i * 8));
                 }
 
                 return res;
@@ -687,13 +679,13 @@ namespace IronPython.Modules {
                 }
                 int len = encodingSize * 2;
 
-                if (len + _curIndex > _myBytes.Length) throw PythonOps.ValueError("bad marshal data");
+                byte[] bytes = ReadBytes(len);
 
                 // first read the values in shorts so we can work
                 // with them as 15-bit bytes easier...
                 short[] shData = new short[encodingSize];
                 for (int i = 0; i < shData.Length; i++) {
-                    shData[i] = (short)(_myBytes[_curIndex + i * 2] | (_myBytes[_curIndex + 1 + i * 2] << 8));
+                    shData[i] = (short)(bytes[i * 2] | (bytes[1 + i * 2] << 8));
                 }
 
                 // then convert the short's into BigInteger's 32-bit 
@@ -729,7 +721,6 @@ namespace IronPython.Modules {
                         bitWriteIndex += bitReadIndex;
                     }
                 }
-                _curIndex += len;
 
                 // and finally pass the data onto the big integer.
                 return new BigInteger(sign, numData);

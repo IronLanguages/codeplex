@@ -22,7 +22,7 @@ using System.Reflection;
 using System.Scripting;
 using System.Scripting.Generation;
 using System.Scripting.Utils;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {

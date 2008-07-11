@@ -52,7 +52,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(action, "action");
             ContractUtils.RequiresNotNull(resultType, "result");
 
-            ReadOnlyCollection<Expression> args = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> args = arguments.ToReadOnly();
             ContractUtils.RequiresNotNullItems(args, "arguments");
 
             return new ActionExpression(annotations, action, args, resultType);

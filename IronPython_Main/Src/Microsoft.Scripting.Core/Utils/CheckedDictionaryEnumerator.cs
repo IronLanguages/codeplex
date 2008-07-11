@@ -15,6 +15,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Utils {
     /// <summary>
@@ -26,9 +27,9 @@ namespace System.Scripting.Utils {
 
         private void CheckEnumeratorState() {
             if (_enumeratorState == EnumeratorState.NotStarted)
-                throw new InvalidOperationException("Enumeration has not started. Call MoveNext.");
+                throw Error.EnumerationNotStarted();
             else if (_enumeratorState == EnumeratorState.Ended)
-                throw new InvalidOperationException("Enumeration already finished.");
+                throw Error.EnumerationFinished();
         }
 
         #region IDictionaryEnumerator Members
@@ -57,7 +58,7 @@ namespace System.Scripting.Utils {
         #region IEnumerator Members
         public bool MoveNext() {
             if (_enumeratorState == EnumeratorState.Ended)
-                throw new InvalidOperationException("Enumeration already finished.");
+                throw Error.EnumerationFinished();
 
             bool result = DoMoveNext();
             if (result)

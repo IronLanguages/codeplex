@@ -32,15 +32,26 @@ namespace IronPythonTest {
         }
         public static event EventTestDelegate StaticTest;
         public event EventTestDelegate InstanceTest;
+        public event OtherEvent InstanceOther;
 
         public static event OtherEvent OtherStaticTest;
 
         public void CallInstance() {
-            InstanceTest();
+            if (InstanceTest != null) {
+                InstanceTest();
+            }
         }
 
         public static void CallStatic() {
-            StaticTest();
+            if (StaticTest != null) {
+                StaticTest();
+            }
+        }
+
+        public void CallOtherInstance(object sender, EventArgs args) {            
+            if (InstanceOther != null) {
+                InstanceOther(sender, args);
+            }
         }
 
         public static void CallOtherStatic(object sender, EventArgs args) {
@@ -54,12 +65,22 @@ namespace IronPythonTest {
             set { _marker = value; }
         }
 
+        public static bool StaticMarker = false;
+
         public void SetMarker() {
             _marker = true;
         }
 
+        public static void StaticSetMarker() {
+            StaticMarker = true;
+        }
+
         public void AddSetMarkerDelegateToInstanceTest() {
             InstanceTest += new EventTestDelegate(this.SetMarker);
+        }
+
+        public static void AddSetMarkerDelegateToStaticTest() {
+            StaticTest += new EventTestDelegate(StaticSetMarker);
         }
     }
 }

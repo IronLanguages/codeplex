@@ -1003,7 +1003,7 @@ namespace IronPython.Compiler {
             string encName = line.Substring(encodingStart, encodingEnd - encodingStart);
 
             // and we have the magic ending as well...
-            return StringOps.TryGetEncoding(defaultEncoding, encName, out enc);
+            return StringOps.TryGetEncoding(encName, out enc);
         }
 
         private void ReportSyntaxError(SourceSpan span, string message, int errorCode) {

@@ -102,10 +102,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MetaObject/*!*/ MakeGetMemberTarget(GetMemberInfo/*!*/ getMemInfo, MetaObject/*!*/ target) {            
-            Type type = target.RuntimeType;
+            Type type = target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
-            target = target.Restrict(target.RuntimeType);
+            target = target.Restrict(target.LimitType);
 
             // needed for GetMember call until DynamicAction goes away
             OldDynamicAction act = OldGetMemberAction.Make(
@@ -138,6 +138,14 @@ namespace Microsoft.Scripting.Actions {
                 members = GetMember(act, type, getMemInfo.Name);
             }
 
+            if (members.Count == 0) {
+                if (typeof(TypeTracker).IsAssignableFrom(type)) {
+                    // ensure we don't have a non-generic type, and if we do report an error now.  This matches
+                    // the rule version of the default binder but should probably be removed long term
+                    Type x = ((TypeTracker)target.Value).Type;
+                }
+            }
+
             Expression propSelf = self;
             // if lookup failed try the strong-box type if available.
             if (members.Count == 0 && typeof(IStrongBox).IsAssignableFrom(type)) {
@@ -161,7 +169,7 @@ namespace Microsoft.Scripting.Actions {
 
         private void MakeBodyHelper(GetMemberInfo/*!*/ getMemInfo, Expression self, Expression propSelf, Type/*!*/ type, MemberGroup/*!*/ members) {
             if (self != null) {
-                MakeOperatorGetMemberBody(getMemInfo, self, type, "GetCustomMember");
+                MakeOperatorGetMemberBody(getMemInfo, propSelf, type, "GetCustomMember");
             }
 
             Expression error;
@@ -194,7 +202,7 @@ namespace Microsoft.Scripting.Actions {
                 case TrackerTypes.All:
                     // no members were found
                     if (self != null) {
-                        MakeOperatorGetMemberBody(getMemInfo, self, type, "GetBoundMember");
+                        MakeOperatorGetMemberBody(getMemInfo, propSelf, type, "GetBoundMember");
                     }
 
                     MakeMissingMemberRuleForGet(getMemInfo, type);
@@ -245,7 +253,7 @@ namespace Microsoft.Scripting.Actions {
                             MakeCallExpression(
                                 getMemInfo.CodeContext,
                                 getMem, 
-                                instance, 
+                                Ast.ConvertHelper(instance, type),
                                 Ast.Constant(getMemInfo.Name)
                             )
                         ),

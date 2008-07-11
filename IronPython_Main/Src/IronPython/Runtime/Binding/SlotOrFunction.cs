@@ -1,0 +1,300 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Public License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Public License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
+
+using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Types;
+
+namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
+      
+    /// <summary>
+    /// Provides an abstraction for calling something which might be a builtin function or
+    /// might be some arbitrary user defined slot.  If the object is a builtin function the
+    /// call will go directly to the underlying .NET method.  If the object is an arbitrary
+    /// callable object we will setup a nested dynamic site for performing the additional
+    /// dispatch.
+    /// 
+    /// TODO: Wwe could probably do a specific binding to the object if it's another IDyanmicObject.
+    /// </summary>
+    sealed class SlotOrFunction {
+        private readonly BindingTarget _function;
+        private readonly MetaObject/*!*/ _target;
+        public static readonly SlotOrFunction/*!*/ Empty = new SlotOrFunction(new MetaObject(Ast.Empty(), Restrictions.Empty));
+
+        private SlotOrFunction() {
+        }
+
+        public SlotOrFunction(BindingTarget/*!*/ function, MetaObject/*!*/ target) {
+            _target = target;
+            _function = function;
+        }
+
+        public SlotOrFunction(MetaObject/*!*/ target) {
+            _target = target;
+        }
+
+        public NarrowingLevel NarrowingLevel {
+            get {
+                if (_function != null) {
+                    return _function.NarrowingLevel;
+                }
+
+                return NarrowingLevel.None;
+            }
+        }
+
+        public Type/*!*/ ReturnType {
+            get {
+                return _target.LimitType;
+            }
+        }
+
+        public bool MaybeNotImplemented {
+            get {
+                if (_function != null) {
+                    MethodInfo mi = _function.Method as MethodInfo;
+                    if (mi != null) {
+                        return mi.ReturnTypeCustomAttributes.IsDefined(typeof(MaybeNotImplementedAttribute), false);
+                    }
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        public bool Success {
+            get {
+                if (_function != null) {
+                    return _function.Success;
+                }
+
+                return this != Empty;
+            }
+        }
+
+        public MetaObject/*!*/ Target {
+            get {
+                return _target;
+            }
+        }
+
+        /// <summary>
+        /// Combines two methods, which came from two different binary types, selecting the method which has the best
+        /// set of conversions (the conversions which result in the least narrowing).
+        /// </summary>
+        public static bool GetCombinedTargets(SlotOrFunction fCand, SlotOrFunction rCand, out SlotOrFunction fTarget, out SlotOrFunction rTarget) {
+            fTarget = rTarget = Empty;
+
+            if (fCand.Success) {
+                if (rCand.Success) {
+                    if (fCand.NarrowingLevel <= rCand.NarrowingLevel) {
+                        fTarget = fCand;
+                        rTarget = rCand;
+                    } else {
+                        fTarget = Empty;
+                        rTarget = rCand;
+                    }
+                } else {
+                    fTarget = fCand;
+                }
+            } else if (rCand.Success) {
+                rTarget = rCand;
+            } else {
+                return false;
+            }
+
+            return true;
+        }
+
+        public static SlotOrFunction/*!*/ GetSlotOrFunction(BinderState/*!*/ state, SymbolId op, params MetaObject[] types) {
+            PythonTypeSlot slot;
+            SlotOrFunction res;
+            if (TryGetBinder(state, types, op, SymbolId.Empty, out res)) {
+                if (res != null) {                    
+                    return res;
+                }
+            } else if (DynamicHelpers.GetPythonType(types[0].Value).TryResolveSlot(state.Context, op, out slot)) {
+                VariableExpression tmp = Ast.Variable(typeof(object), "slotVal");
+
+                Expression[] args = new Expression[types.Length - 1];
+                for (int i = 1; i < types.Length; i++) {
+                    args[i - 1] = types[i].Expression;
+                }
+                return new SlotOrFunction(
+                    new MetaObject(
+                        Ast.Scope(
+                            Ast.Comma(
+                                MetaPythonObject.MakeTryGetTypeMember(
+                                    state,
+                                    slot,
+                                    tmp,
+                                    types[0].Expression,
+                                    Ast.Call(
+                                        typeof(DynamicHelpers).GetMethod("GetPythonType"),
+                                        types[0].Expression
+                                    )
+                                ),
+                                Ast.ActionExpression(
+                                    new InvokeBinder(
+                                        state,
+                                        new CallSignature(args.Length)
+                                    ),
+                                    typeof(object),
+                                    ArrayUtils.Insert<Expression>(
+                                        tmp,
+                                        args
+                                    )
+                                )
+                            ),
+                            tmp
+                        ),                        
+                        Restrictions.Combine(types).Merge(Restrictions.TypeRestriction(types[0].Expression, types[0].LimitType))
+                    )
+                );
+            }
+
+            return SlotOrFunction.Empty;
+        }
+
+        /// <summary>
+        /// Trys to geta MethodBinder associated the slot for the specified type.
+        /// 
+        /// If a method is found the binder is set and true is returned.
+        /// If nothing is found binder is null and true is returned.
+        /// If something other than a method is found false is returned.
+        /// 
+        /// TODO: Remove rop
+        /// </summary>
+        internal static bool TryGetBinder(BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res) {
+            MetaObject xType = types[0];
+
+            BuiltinFunction xBf;
+            if (!BindingHelpers.TryGetStaticFunction(state, op, xType, out xBf)) {
+                res = SlotOrFunction.Empty;
+                return false;
+            }
+
+            BindingTarget bt;
+            MetaObject binder;
+            MetaObject yType = null;
+            BuiltinFunction yBf = null;
+
+            if (types.Length > 1) {
+                yType = types[1];
+                if (!BindingHelpers.IsSubclassOf(xType, yType) && !BindingHelpers.TryGetStaticFunction(state, rop, yType, out yBf)) {
+                    res = SlotOrFunction.Empty;
+                    return false;
+                }
+            }
+
+            if (yBf == xBf) {
+                yBf = null;
+            } else if (yBf != null && BindingHelpers.IsSubclassOf(yType, xType)) {
+                xBf = null;
+            }
+
+            if (xBf == null) {
+                if (yBf == null) {
+                    binder = null;
+                    bt = null;
+                } else {
+                    binder = state.Binder.CallMethod(
+                        Ast.Constant(state.Context),
+                        yBf.Targets,
+                        types,
+                        new CallSignature(types.Length),
+                        Restrictions.Empty,
+                        PythonNarrowing.None,
+                        PythonNarrowing.BinaryOperator,
+                        out bt
+                    );
+                }
+            } else {
+                if (yBf == null) {
+                    binder = state.Binder.CallMethod(
+                        Ast.Constant(state.Context),
+                        xBf.Targets,
+                        types,
+                        new CallSignature(types.Length),
+                        Restrictions.Empty,
+                        PythonNarrowing.None,
+                        PythonNarrowing.BinaryOperator,
+                        out bt
+                    );
+                } else {
+                    List<MethodBase> targets = new List<MethodBase>();
+                    targets.AddRange(xBf.Targets);
+                    foreach (MethodBase mb in yBf.Targets) {
+                        if (!ContainsMethodSignature(targets, mb)) targets.Add(mb);
+                    }
+
+                    binder = state.Binder.CallMethod(
+                        Ast.Constant(state.Context),
+                        targets.ToArray(),
+                        types,
+                        new CallSignature(types.Length),
+                        Restrictions.Empty,
+                        PythonNarrowing.None,
+                        PythonNarrowing.BinaryOperator,
+                        out bt
+                    );
+                }
+            }
+
+            if (binder != null) {
+                res = new SlotOrFunction(bt, binder);
+            } else {
+                res = SlotOrFunction.Empty;
+            }
+
+            Debug.Assert(res != null);
+            return true;
+        }
+
+        private static bool ContainsMethodSignature(IList<MethodBase/*!*/>/*!*/ existing, MethodBase/*!*/ check) {
+            ParameterInfo[] pis = check.GetParameters();
+            foreach (MethodBase mb in existing) {
+                if (MatchesMethodSignature(pis, mb)) return true;
+            }
+            return false;
+        }
+
+        private static bool MatchesMethodSignature(ParameterInfo/*!*/[]/*!*/ pis, MethodBase/*!*/ mb) {
+            ParameterInfo[] pis1 = mb.GetParameters();
+            if (pis.Length == pis1.Length) {
+                for (int i = 0; i < pis.Length; i++) {
+                    if (pis[i].ParameterType != pis1[i].ParameterType) return false;
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+}
+

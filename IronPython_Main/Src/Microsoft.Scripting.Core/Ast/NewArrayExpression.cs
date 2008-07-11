@@ -98,7 +98,7 @@ namespace System.Linq.Expressions {
                 throw Error.ArgumentCannotBeOfTypeVoid();
             }
 
-            ReadOnlyCollection<Expression> initializerList = CollectionUtils.ToReadOnlyCollection(initializers);
+            ReadOnlyCollection<Expression> initializerList = initializers.ToReadOnly();
 
             Expression[] newList = null;
             for (int i = 0, n = initializerList.Count; i < n; i++) {
@@ -150,7 +150,7 @@ namespace System.Linq.Expressions {
                 throw Error.ArgumentCannotBeOfTypeVoid();
             }
 
-            ReadOnlyCollection<Expression> boundsList = CollectionUtils.ToReadOnlyCollection(bounds);
+            ReadOnlyCollection<Expression> boundsList = bounds.ToReadOnly();
 
             int dimensions = boundsList.Count;
             ContractUtils.Requires(dimensions > 0, "bounds", "Bounds count cannot be less than 1");
@@ -163,7 +163,7 @@ namespace System.Linq.Expressions {
                 }
             }
 
-            return new NewArrayExpression(annotations, ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), CollectionUtils.ToReadOnlyCollection(bounds));
+            return new NewArrayExpression(annotations, ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), bounds.ToReadOnly());
         }
 
         #endregion
@@ -176,7 +176,7 @@ namespace System.Linq.Expressions {
                 throw Error.ArgumentCannotBeOfTypeVoid();
             }
 
-            ReadOnlyCollection<Expression> initializerList = CollectionUtils.ToReadOnlyCollection(initializers);
+            ReadOnlyCollection<Expression> initializerList = initializers.ToReadOnly();
 
             Expression[] clone = null;
             for (int i = 0; i < initializerList.Count; i++) {

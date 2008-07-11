@@ -19,7 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Scripting;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
 

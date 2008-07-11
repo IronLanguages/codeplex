@@ -124,7 +124,7 @@ namespace System.Linq.Expressions {
     public partial class Expression {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
         public static IndexedPropertyExpression Property(Expression instance, PropertyInfo property, params Expression[] arguments) {
-            return Property(instance, property, CollectionUtils.ToReadOnlyCollection(arguments));
+            return Property(instance, property, arguments.ToReadOnly());
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
@@ -144,7 +144,7 @@ namespace System.Linq.Expressions {
 
 
         public static IndexedPropertyExpression Property(Expression instance, MethodInfo getter, MethodInfo setter, params Expression[] arguments) {
-            return Property(instance, getter, setter, CollectionUtils.ToReadOnlyCollection(arguments));
+            return Property(instance, getter, setter, arguments.ToReadOnly());
         }
 
         public static IndexedPropertyExpression Property(Expression instance, MethodInfo getter, MethodInfo setter, IEnumerable<Expression> arguments) {
@@ -154,7 +154,7 @@ namespace System.Linq.Expressions {
         public static IndexedPropertyExpression Property(Expression instance, MethodInfo getter, MethodInfo setter, IEnumerable<Expression> arguments, Annotations annotations) {
             ContractUtils.Requires(!(getter == null && setter == null), "getter", "No getter or setter specified");
 
-            ReadOnlyCollection<Expression> argList = CollectionUtils.ToReadOnlyCollection(arguments);
+            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
 
             // type of property is the type returned by the getter or the type of the last parameter of the setter
             // if both getter and setter specified, all their parameter types should match 

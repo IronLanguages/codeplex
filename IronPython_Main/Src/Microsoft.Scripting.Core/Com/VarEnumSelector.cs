@@ -17,11 +17,10 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -146,7 +145,7 @@ namespace System.Scripting.Com {
                     return typeof(CurrencyWrapper);
 
                 default:
-                    throw new NotImplementedException("GetManagedMarshalType got unexpected VarEnum " + varEnum);
+                    throw Error.UnexpectedVarEnum(varEnum);
             }
         }
 
@@ -243,8 +242,8 @@ namespace System.Scripting.Com {
                 typeNames += typeName;
             }
 
-            string message = String.Format("There are valid conversions from {0} to {1}", argumentType.Name, typeNames);
-            throw new AmbiguousMatchException(message);
+
+            throw Error.AmbiguousConversion(argumentType.Name, typeNames);
         }
 
         // We do not use NarrowingLevel.All as it can potentially return degenerate conversions.

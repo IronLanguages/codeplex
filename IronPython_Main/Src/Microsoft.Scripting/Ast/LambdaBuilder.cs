@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
 using System.Linq.Expressions;
@@ -37,8 +38,7 @@ namespace Microsoft.Scripting.Ast {
     public class LambdaBuilder {
         private readonly List<VariableExpression> _locals = new List<VariableExpression>();
         private List<ParameterExpression> _params = new List<ParameterExpression>();
-        private readonly List<Expression> _visibleLocals = new List<Expression>();
-        private readonly List<Expression> _visibleParams = new List<Expression>();
+        private readonly List<KeyValuePair<Expression, bool>> _visibleVars = new List<KeyValuePair<Expression, bool>>();
         private Annotations _annotations;
         private string _name;
         private Type _returnType;
@@ -194,11 +194,26 @@ namespace Microsoft.Scripting.Ast {
         /// however custom ordering is possible via direct access to
         /// Parameters collection.
         /// </summary>
-        public ParameterExpression CreateParameter(string name, Type type) {
+        public ParameterExpression Parameter(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");            
             ParameterExpression result = Expression.Parameter(type, name);
             _params.Add(result);
-            _visibleParams.Add(result);
+            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, false));
+            return result;
+        }
+
+        /// <summary>
+        /// Creates a parameter on the lambda with a given name and type.
+        /// 
+        /// Parameters maintain the order in which they are created,
+        /// however custom ordering is possible via direct access to
+        /// Parameters collection.
+        /// </summary>
+        public ParameterExpression ClosedOverParameter(Type type, string name) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ParameterExpression result = Expression.Parameter(type, name);
+            _params.Add(result);
+            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, true));
             return result;
         }
 
@@ -211,7 +226,6 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public void AddParameters(params ParameterExpression[] parameters) {
             _params.AddRange(parameters);
-            _visibleParams.AddRange(parameters);
         }
 
         /// <summary>
@@ -235,53 +249,54 @@ namespace Microsoft.Scripting.Ast {
         /// created, the builder validates that it is still the last (since the caller can modify
         /// the order of parameters explicitly by maniuplating the parameter list)
         /// </summary>
-        public ParameterExpression CreateParamsArray(string name, Type type) {
+        public ParameterExpression CreateParamsArray(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(type.IsArray, "type");
             ContractUtils.Requires(type.GetArrayRank() == 1, "type");
             ContractUtils.Requires(_paramsArray == null, "type", "Already have parameter array");
 
-            return _paramsArray = CreateParameter(name, type);
-        }
-
-        /// <summary>
-        /// Creates a global variable with specified name and type.
-        /// TODO: remove
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public Expression CreateGlobalVariable(string name, Type type) {
-            return Expression.Global(type, name);
+            return _paramsArray = Parameter(type, name);
         }
 
         /// <summary>
         /// Creates a local variable with specified name and type.
+        /// TODO: simplify by pushing logic into callers
         /// </summary>
-        public Expression CreateLocalVariable(string name, Type type) {
+        public Expression ClosedOverVariable(Type type, string name) {
             if (_global) {
                 // special treatment of lambdas marked as global
-                return Expression.Global(type, name, true);
+                return Expression.GlobalVariable(type, name, true);
             }
 
             VariableExpression result = Expression.Variable(type, name);
             _locals.Add(result);
-            _visibleLocals.Add(result);
+            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, true));
+            return result;
+        }
+
+        /// <summary>
+        /// Creates a local variable with specified name and type.
+        /// TODO: simplify by pushing logic into callers
+        /// </summary>
+        public Expression Variable(Type type, string name) {
+            if (_global) {
+                // special treatment of lambdas marked as global
+                return Expression.GlobalVariable(type, name, true);
+            }
+
+            VariableExpression result = Expression.Variable(type, name);
+            _locals.Add(result);
+            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, false));
             return result;
         }
 
         /// <summary>
         /// Creates a temporary variable with specified name and type.
         /// </summary>
-        public VariableExpression CreateTemporaryVariable(string name, Type type) {
+        public VariableExpression HiddenVariable(Type type, string name) {
             VariableExpression result = Expression.Variable(type, name);
             _locals.Add(result);
             return result;
-        }
-
-        /// <summary>
-        /// Creates a temporary variable with specified name and type.
-        /// </summary>
-        public VariableExpression Temporary(Type type, string name) {
-            return CreateTemporaryVariable(name, type);
         }
 
         /// <summary>
@@ -289,7 +304,7 @@ namespace Microsoft.Scripting.Ast {
         /// by the builder. This is useful in cases where the variable is
         /// created outside of the builder.
         /// </summary>
-        public void AddTemp(VariableExpression temp) {
+        public void AddHiddenVariable(VariableExpression temp) {
             ContractUtils.RequiresNotNull(temp, "temp");
             _locals.Add(temp);
         }
@@ -352,9 +367,9 @@ namespace Microsoft.Scripting.Ast {
             EnsureSignature(lambdaType);
             
             LambdaExpression lambda = Expression.Generator(
-                lambdaType, 
+                lambdaType,
+                MakeBody(),
                 _name, 
-                MakeBody(), 
                 _annotations, 
                 _params
             );
@@ -387,7 +402,7 @@ namespace Microsoft.Scripting.Ast {
             ParameterInfo[] delegateParams = delegateType.GetMethod("Invoke").GetParameters();
 
             bool delegateHasParamarray = delegateParams.Length > 0 && delegateParams[delegateParams.Length - 1].IsDefined(typeof(ParamArrayAttribute), false);
-            bool lambdaHasParamarray = this.ParamsArray != null;
+            bool lambdaHasParamarray = ParamsArray != null;
 
             if (lambdaHasParamarray && !delegateHasParamarray) {
                 throw new ArgumentException("paramarray lambdas must have paramarray delegate type");
@@ -502,8 +517,13 @@ namespace Microsoft.Scripting.Ast {
             _locals.AddRange(backingVars);
             _params = newParams;
 
-            _visibleParams.Clear();
-            _visibleParams.AddRange(paramMapping.Values);
+            for (int i = 0; i < _visibleVars.Count; i++) {
+                ParameterExpression p = _visibleVars[i].Key as ParameterExpression;
+                Expression v;
+                if (p != null && paramMapping.TryGetValue(p, out v)) {
+                    _visibleVars[i] = new KeyValuePair<Expression, bool>(v, _visibleVars[i].Value);
+                }
+            }
         }
 
 
@@ -530,27 +550,34 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        private bool EmitDictionary {
+            get { return _dictionary || ScriptDomainManager.Options.Frames; }
+        }
 
         private Expression MakeBody() {
             Expression body = _body;
 
             // wrap a CodeContext scope if needed
             if (!_global && !DoNotAddContext) {
-                List<Expression> vars = new List<Expression>(_visibleParams);
-                vars.AddRange(_visibleLocals);
 
-                bool emitDictionary = _dictionary || ScriptDomainManager.Options.Frames;
-                Expression localScope = emitDictionary ? Expression.AllVariables(vars) : Expression.LiftedVariables(vars);
+                List<Expression> vars = new List<Expression>(_visibleVars.Count);
+                foreach (KeyValuePair<Expression, bool> v in _visibleVars) {
+                    if (EmitDictionary || v.Value) {
+                        vars.Add(v.Key);
+                    }
+                }
 
-                body = Expression.CodeContextScope(
-                    body,
-                    Expression.Call(
-                        typeof(RuntimeOps).GetMethod("CreateNestedCodeContext"),
-                        localScope,
-                        Expression.CodeContext(),
-                        Expression.Constant(_visible)
-                    )
-                );
+                if (vars.Count > 0) {
+                    body = Expression.CodeContextScope(
+                        body,
+                        Expression.Call(
+                            typeof(RuntimeOps).GetMethod("CreateNestedCodeContext"),
+                            Expression.AllVariables(vars),
+                            Expression.CodeContext(),
+                            Expression.Constant(_visible)
+                        )
+                    );
+                }
             }
 
             // wrap a scope if needed
@@ -605,30 +632,6 @@ namespace Microsoft.Scripting.Ast {
                 (ps[1].ParameterType == typeof(CodeContext)) &&
                 (ps[2].ParameterType == typeof(bool));
         }
-
-        #region OBSOLETE API
-
-        public ParameterExpression CreateParameter(/*REMOVE*/SymbolId name, Type type) {
-            return CreateParameter(SymbolTable.IdToString(name), type);
-        }
-
-        public ParameterExpression CreataParamsArray(/*REMOVE*/SymbolId name, Type type) {
-            return CreateParamsArray(SymbolTable.IdToString(name), type);
-        }
-
-        public Expression CreateGlobalVariable(/*REMOVE*/SymbolId name, Type type) {
-            return CreateGlobalVariable(SymbolTable.IdToString(name), type);
-        }
-
-        public Expression CreateLocalVariable(/*REMOVE*/SymbolId name, Type type) {
-            return CreateLocalVariable(SymbolTable.IdToString(name), type);
-        }
-
-        public VariableExpression CreateTemporaryVariable(/*REMOVE*/SymbolId name, Type type) {
-            return CreateTemporaryVariable(SymbolTable.IdToString(name), type);
-        }
-
-        #endregion
     }
 
     public static partial class Utils {
@@ -662,11 +665,7 @@ namespace Microsoft.Scripting.Ast {
 namespace Microsoft.Scripting.Runtime {
     public static partial class RuntimeOps {
         public static CodeContext CreateNestedCodeContext(ILocalVariables locals, CodeContext context, bool visible) {
-            if (locals.Count == 0 && context.Scope.IsVisible == visible) {
-                // performance: just reuse old context if this scope has no variables.
-                return context;
-            }
-
+            Debug.Assert(locals.Count != 0);
             return new CodeContext(new Scope(context.Scope, new LocalsDictionary(locals), visible), context.LanguageContext, context);
         }
 

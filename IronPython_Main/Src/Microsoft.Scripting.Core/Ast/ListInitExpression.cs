@@ -60,7 +60,7 @@ namespace System.Linq.Expressions {
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<Expression> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ReadOnlyCollection<Expression> initializerlist = CollectionUtils.ToReadOnlyCollection(initializers);
+            ReadOnlyCollection<Expression> initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }
@@ -83,7 +83,7 @@ namespace System.Linq.Expressions {
             }
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ReadOnlyCollection<Expression> initializerlist = CollectionUtils.ToReadOnlyCollection(initializers);
+            ReadOnlyCollection<Expression> initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }
@@ -97,13 +97,13 @@ namespace System.Linq.Expressions {
         public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            return ListInit(newExpression, CollectionUtils.ToReadOnlyCollection(initializers));
+            return ListInit(newExpression, initializers.ToReadOnly());
         }
         //CONFORMING
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ReadOnlyCollection<ElementInit> initializerlist = CollectionUtils.ToReadOnlyCollection(initializers);
+            ReadOnlyCollection<ElementInit> initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }

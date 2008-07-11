@@ -561,8 +561,8 @@ namespace System.Linq.Expressions {
         }
 
         private static bool Compare(VariableInfo varInfo, TryStatement left, TryStatement right) {
-            if ((left.FinallyStatement == null && right.FinallyStatement != null) ||
-                (left.FinallyStatement != null && right.FinallyStatement == null)) {
+            if ((left.Finally == null && right.Finally != null) ||
+                (left.Finally != null && right.Finally == null)) {
                 return false;
             }
 

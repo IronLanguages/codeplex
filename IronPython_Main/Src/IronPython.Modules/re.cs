@@ -236,7 +236,8 @@ namespace IronPython.Modules {
             internal RE_Pattern(object pattern, int flags, bool compiled) {
                 _pre = PreParseRegex(ValidatePattern(pattern));
                 try {
-                    RegexOptions opts = FlagsToOption(flags) | _pre.Options;
+                    flags |= OptionToFlags(_pre.Options);
+                    RegexOptions opts = FlagsToOption(flags);
 #if SILVERLIGHT
                     this._re = new Regex(_pre.Pattern, opts);
 #else
@@ -805,6 +806,26 @@ namespace IronPython.Modules {
             return opts;
         }
 
+        private static int OptionToFlags(RegexOptions options) {
+            int flags = 0;
+            if ((options & RegexOptions.IgnoreCase) != 0) {
+                flags |= IGNORECASE;
+            }
+            if ((options & RegexOptions.Multiline) != 0) {
+                flags |= MULTILINE;
+            }
+            if ((options & RegexOptions.CultureInvariant) == 0) {
+                flags |= LOCALE;
+            }
+            if ((options & RegexOptions.Singleline) != 0) {
+                flags |= DOTALL;
+            }
+            if ((options & RegexOptions.IgnorePatternWhitespace) != 0) {
+                flags |= VERBOSE;
+            }
+            return flags;
+        }
+
         internal class ParsedRegex {
             public ParsedRegex(string pattern) {
                 this.UserPattern = pattern;
@@ -879,18 +900,16 @@ namespace IronPython.Modules {
                                 }
                                 break;
                             case 'i': res.Options |= RegexOptions.IgnoreCase; break;
-                            case 'L': res.Options &= ~(RegexOptions.CultureInvariant); break;
+                            case 'L':
+                                res.Options &= ~(RegexOptions.CultureInvariant);
+                                RemoveOption(ref pattern, ref nameIndex);
+                                break;
                             case 'm': res.Options |= RegexOptions.Multiline; break;
                             case 's': res.Options |= RegexOptions.Singleline; break;
                             case 'u':
                                 // specify unicode; not relevant and not valid under .NET as we're always unicode
                                 // -- so the option needs to be removed
-                                if (pattern[nameIndex - 1] == '?' && nameIndex < (pattern.Length - 1) && pattern[nameIndex + 1] == ')') {
-                                    pattern = pattern.Remove(nameIndex-2, 4);
-                                    nameIndex -= 3;
-                                } else {
-                                    pattern = pattern.Remove(nameIndex--, 1);
-                                }
+                                RemoveOption(ref pattern, ref nameIndex);
                                 break;
                             case 'x': res.Options |= RegexOptions.IgnorePatternWhitespace; break;
                             case ':': break; // non-capturing
@@ -977,6 +996,15 @@ namespace IronPython.Modules {
             return res;
         }
 
+        private static void RemoveOption(ref string pattern, ref int nameIndex) {
+            if (pattern[nameIndex - 1] == '?' && nameIndex < (pattern.Length - 1) && pattern[nameIndex + 1] == ')') {
+                pattern = pattern.Remove(nameIndex - 2, 4);
+                nameIndex -= 2;
+            } else {
+                pattern = pattern.Remove(nameIndex--, 1);
+            }
+        }
+
         private static string GetRandomString() {
             return r.Next(Int32.MaxValue / 2, Int32.MaxValue).ToString();
         }
@@ -997,7 +1025,6 @@ namespace IronPython.Modules {
                                 case 't': sb.Append('\t'); break;
                                 case '\\': sb.Append('\\'); break;
                                 case '\'': sb.Append('\''); break;
-                                case '"': sb.Append('"'); break;
                                 case 'b': sb.Append('\b'); break;
                                 case 'g':
                                     //  \g<#>, \g<name> need to be substituted by the groups they 

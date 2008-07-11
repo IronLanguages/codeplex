@@ -116,7 +116,7 @@ namespace System.Scripting.Generation {
                     } else if (!type.IsValueType) {
                         return null;
                     } else {
-                        throw new ArgumentException(String.Format("Cannot create default value for type {0}", type));
+                        throw Error.CantCreateDefaultTypeFor(type);
                     }
                 case TypeCode.Empty:
                 case TypeCode.DBNull:
@@ -427,7 +427,7 @@ namespace System.Scripting.Generation {
             MethodInfo mi = TryGetCallableMethod(method);
             if (mi == null) {
                 if (!ScriptDomainManager.Options.PrivateBinding) {
-                    throw new InvalidOperationException(String.Format("{0}.{1} has no publiclly visible method", method.DeclaringType, method.Name));
+                    throw Error.NoCallableMethods(method.DeclaringType, method.Name);
                 }
             }
             return mi;

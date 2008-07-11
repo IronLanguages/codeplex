@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Runtime {
 
@@ -44,7 +45,7 @@ namespace System.Scripting.Runtime {
         #region IValueEquality Members
 
         public int GetValueHashCode() {
-            throw new ArgumentTypeException("dictionaries are not hashable"); 
+            throw Error.DictionaryNotHashable(); 
         }
 
         public virtual bool ValueEquals(object other) {

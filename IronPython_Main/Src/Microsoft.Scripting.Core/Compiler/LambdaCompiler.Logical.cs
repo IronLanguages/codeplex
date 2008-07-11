@@ -173,7 +173,6 @@ namespace System.Linq.Expressions {
             _ilg.Emit(OpCodes.Ldnull);
             _ilg.Emit(OpCodes.Ceq);
             _ilg.Emit(OpCodes.Brfalse, labNotNull);
-            _ilg.Emit(OpCodes.Pop);
             EmitExpression(b.Right);
             _ilg.Emit(OpCodes.Br, labEnd);
 
@@ -253,10 +252,9 @@ namespace System.Linq.Expressions {
             //try false on left
             _ilg.Emit(OpCodes.Ldloca, locLeft);
             _ilg.EmitGetValueOrDefault(type);
-            Type[] types = new Type[] { nnType };
-            MethodInfo opTrue = nnType.GetMethod("op_False",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
-            _ilg.Emit(OpCodes.Call, opTrue);
+            MethodInfo opFalse = TypeUtils.GetBooleanOperator(b.Method.DeclaringType, "op_False");
+            Debug.Assert(opFalse != null, "factory should check that the method exists");
+            _ilg.Emit(OpCodes.Call, opFalse);
             _ilg.Emit(OpCodes.Brtrue, labExit);
 
             //load right 
@@ -275,14 +273,13 @@ namespace System.Linq.Expressions {
             _ilg.Emit(OpCodes.Ldloca, locRight);
             _ilg.EmitGetValueOrDefault(type);
             _ilg.Emit(OpCodes.Stloc, locNNRight);
-            types = new Type[] { nnType, nnType };
-            MethodInfo opAnd = nnType.GetMethod("op_BitwiseAnd",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
+            Debug.Assert(b.Method.Name == "op_BitwiseAnd");
             _ilg.Emit(OpCodes.Ldloc, locNNLeft);
             _ilg.Emit(OpCodes.Ldloc, locNNRight);
-            _ilg.Emit(OpCodes.Call, opAnd);
-            if (opAnd.ReturnType != type)
-                _ilg.EmitConvertToType(opAnd.ReturnType, type, true);
+            _ilg.Emit(OpCodes.Call, b.Method);
+            if (b.Method.ReturnType != type) {
+                _ilg.EmitConvertToType(b.Method.ReturnType, type, true);
+            }
             _ilg.Emit(OpCodes.Stloc, locLeft);
             _ilg.Emit(OpCodes.Br, labExit);
 
@@ -361,10 +358,8 @@ namespace System.Linq.Expressions {
             Label labEnd = _ilg.DefineLabel();
             EmitExpression(b.Left);
             _ilg.Emit(OpCodes.Dup);
-            Type type = b.Method.GetParameters()[0].ParameterType;
-            Type[] types = new Type[] { type };
-            MethodInfo opFalse = type.GetMethod("op_False",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
+            MethodInfo opFalse = TypeUtils.GetBooleanOperator(b.Method.DeclaringType, "op_False");
+            Debug.Assert(opFalse != null, "factory should check that the method exists");
             _ilg.Emit(OpCodes.Call, opFalse);
             _ilg.Emit(OpCodes.Brtrue, labEnd);
             EmitExpression(b.Right);
@@ -431,9 +426,8 @@ namespace System.Linq.Expressions {
             _ilg.Emit(OpCodes.Brfalse, labReturnRight);
             _ilg.Emit(OpCodes.Ldloca, locLeft);
             _ilg.EmitGetValueOrDefault(type);
-            Type[] types = new Type[] { nnType };
-            MethodInfo opTrue = nnType.GetMethod("op_True",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
+            MethodInfo opTrue = TypeUtils.GetBooleanOperator(b.Method.DeclaringType, "op_True");
+            Debug.Assert(opTrue != null, "factory should check that the method exists");
             _ilg.Emit(OpCodes.Call, opTrue);
             _ilg.Emit(OpCodes.Brtrue, labExit);
 
@@ -453,14 +447,12 @@ namespace System.Linq.Expressions {
             _ilg.Emit(OpCodes.Ldloca, locRight);
             _ilg.EmitGetValueOrDefault(type);
             _ilg.Emit(OpCodes.Stloc, locNNRight);
-            types = new Type[] { nnType, nnType };
-            MethodInfo opAnd = nnType.GetMethod("op_BitwiseOr",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
             _ilg.Emit(OpCodes.Ldloc, locNNLeft);
             _ilg.Emit(OpCodes.Ldloc, locNNRight);
-            _ilg.Emit(OpCodes.Call, opAnd);
-            if (opAnd.ReturnType != type) {
-                _ilg.EmitConvertToType(opAnd.ReturnType, type, true);
+            Debug.Assert(b.Method.Name == "op_BitwiseOr");
+            _ilg.Emit(OpCodes.Call, b.Method);
+            if (b.Method.ReturnType != type) {
+                _ilg.EmitConvertToType(b.Method.ReturnType, type, true);
             }
             _ilg.Emit(OpCodes.Stloc, locLeft);
             _ilg.Emit(OpCodes.Br, labExit);
@@ -549,10 +541,8 @@ namespace System.Linq.Expressions {
             Label labEnd = _ilg.DefineLabel();
             EmitExpression(b.Left);
             _ilg.Emit(OpCodes.Dup);
-            Type type = b.Method.GetParameters()[0].ParameterType;
-            Type[] types = new Type[] { type };
-            MethodInfo opTrue = type.GetMethod("op_True",
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, types, null);
+            MethodInfo opTrue = TypeUtils.GetBooleanOperator(b.Method.DeclaringType, "op_True");
+            Debug.Assert(opTrue != null, "factory should check that the method exists");
             _ilg.Emit(OpCodes.Call, opTrue);
             _ilg.Emit(OpCodes.Brtrue, labEnd);
             EmitExpression(b.Right);

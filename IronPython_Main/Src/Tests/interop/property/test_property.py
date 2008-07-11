@@ -161,16 +161,12 @@ def test_basic():
         
         # instance.StaticProperty
         a, b, c = 21, SimpleStruct(32), SimpleClass(43)
-        
-        def r1(): x.StaticInt32Property
-        def r2(): x.StaticSimpleStructProperty
-        def r3(): x.StaticSimpleClassProperty
-        
-        for r in [r1, r2, r3]:
-            AssertErrorWithMatch(AttributeError, 
-                "static property '.*' of '.*' can only be read through a type, not an instance", 
-                r)
 
+        # can read static properties through instances...
+        AreEqual(x.StaticInt32Property, 1234)
+        AreEqual(type(x.StaticSimpleStructProperty), SimpleStruct)
+        AreEqual(type(x.StaticSimpleClassProperty), SimpleClass)
+        
         def w1(): x.StaticInt32Property = a
         def w2(): x.StaticSimpleStructProperty = b
         def w3(): x.StaticSimpleClassProperty = c

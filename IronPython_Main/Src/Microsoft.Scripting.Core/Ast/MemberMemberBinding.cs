@@ -50,13 +50,13 @@ namespace System.Linq.Expressions {
         public static MemberMemberBinding MemberBind(MemberInfo member, params MemberBinding[] bindings) {
             ContractUtils.RequiresNotNull(member, "member");
             ContractUtils.RequiresNotNull(bindings, "bindings");
-            return MemberBind(member, CollectionUtils.ToReadOnlyCollection(bindings));
+            return MemberBind(member, bindings.ToReadOnly());
         }
         //CONFORMING
         public static MemberMemberBinding MemberBind(MemberInfo member, IEnumerable<MemberBinding> bindings) {
             ContractUtils.RequiresNotNull(member, "member");
             ContractUtils.RequiresNotNull(bindings, "bindings");
-            ReadOnlyCollection<MemberBinding> roBindings = CollectionUtils.ToReadOnlyCollection(bindings);
+            ReadOnlyCollection<MemberBinding> roBindings = bindings.ToReadOnly();
             Type memberType;
             ValidateGettableFieldOrPropertyMember(member, out memberType);
             ValidateMemberInitArgs(memberType, roBindings);

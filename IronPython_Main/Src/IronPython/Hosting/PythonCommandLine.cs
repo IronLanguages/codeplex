@@ -25,6 +25,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Hosting.Shell;
+using System.Collections.Generic;
 
 namespace IronPython.Hosting {
 
@@ -433,5 +434,17 @@ namespace IronPython.Hosting {
         }
 
         #endregion
+
+        public override IList<string> GetGlobals(string name) {
+            IList<string> res = base.GetGlobals(name);
+            foreach (SymbolId builtinName in PythonContext.BuiltinModuleInstance.Keys) {
+                string strName = SymbolTable.IdToString(builtinName);
+                if (strName.StartsWith(name)) {
+                    res.Add(strName);
+                }
+            }
+
+            return res;
+        }
     }
 }

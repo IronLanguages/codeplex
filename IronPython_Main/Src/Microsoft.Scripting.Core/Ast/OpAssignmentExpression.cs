@@ -251,7 +251,7 @@ namespace System.Linq.Expressions {
                     break;
 
                 default:
-                    throw new ArgumentException("Invalid operation", "op");
+                    throw Error.InvalidOperation("op");
             }
 
             if (method != null) {

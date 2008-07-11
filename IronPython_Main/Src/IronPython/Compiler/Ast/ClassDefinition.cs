@@ -144,7 +144,7 @@ namespace IronPython.Compiler.Ast {
                 )
             );
 
-            MSAst.LambdaExpression lambda = body.Block.MakeLambda(typeof(IronPython.Runtime.Calls.CallTarget0));
+            MSAst.LambdaExpression lambda = body.Block.MakeLambda(typeof(IronPython.Compiler.CallTarget0));
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
                 Ast.CodeContext(),

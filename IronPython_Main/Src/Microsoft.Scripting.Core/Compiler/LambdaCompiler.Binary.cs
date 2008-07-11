@@ -372,9 +372,7 @@ namespace System.Linq.Expressions {
         private void EmitLiftedRelational(ExpressionType op, Type leftType, Type rightType, Type resultType, bool liftedToNull) {
             Debug.Assert(TypeUtils.IsNullableType(leftType));
 
-            Label labIfLiftToNull = _ilg.DefineLabel();
-            Label labIfNotLisftToNull = _ilg.DefineLabel();
-            Label labEnd = _ilg.DefineLabel();
+            Label shortCircuit = _ilg.DefineLabel();
             LocalBuilder locLeft = _ilg.GetLocal(leftType);
             LocalBuilder locRight = _ilg.GetLocal(rightType);
 
@@ -394,11 +392,7 @@ namespace System.Linq.Expressions {
                 _ilg.Emit(OpCodes.Ceq);
                 _ilg.Emit(OpCodes.And);
                 _ilg.Emit(OpCodes.Dup);
-                if (liftedToNull) {
-                    _ilg.Emit(OpCodes.Brtrue_S, labIfLiftToNull);
-                } else {
-                    _ilg.Emit(OpCodes.Brtrue_S, labIfNotLisftToNull);
-                }
+                _ilg.Emit(OpCodes.Brtrue_S, shortCircuit);
                 _ilg.Emit(OpCodes.Pop);
 
                 // test for either is null -> false
@@ -409,11 +403,7 @@ namespace System.Linq.Expressions {
                 _ilg.Emit(OpCodes.And);
 
                 _ilg.Emit(OpCodes.Dup);
-                if (liftedToNull) {
-                    _ilg.Emit(OpCodes.Brfalse_S, labIfLiftToNull);
-                } else {
-                    _ilg.Emit(OpCodes.Brfalse_S, labIfNotLisftToNull);
-                }
+                _ilg.Emit(OpCodes.Brfalse_S, shortCircuit);
                 _ilg.Emit(OpCodes.Pop);
             } else if (op == ExpressionType.NotEqual) {
                 // test for both null -> false
@@ -423,11 +413,7 @@ namespace System.Linq.Expressions {
                 _ilg.EmitHasValue(rightType);
                 _ilg.Emit(OpCodes.Or);
                 _ilg.Emit(OpCodes.Dup);
-                if (liftedToNull) {
-                    _ilg.Emit(OpCodes.Brfalse_S, labIfLiftToNull);
-                } else {
-                    _ilg.Emit(OpCodes.Brfalse_S, labIfNotLisftToNull);
-                }
+                _ilg.Emit(OpCodes.Brfalse_S, shortCircuit);
                 _ilg.Emit(OpCodes.Pop);
 
                 // test for either is null -> true
@@ -441,11 +427,7 @@ namespace System.Linq.Expressions {
                 _ilg.Emit(OpCodes.Ceq);
                 _ilg.Emit(OpCodes.Or);
                 _ilg.Emit(OpCodes.Dup);
-                if (liftedToNull) {
-                    _ilg.Emit(OpCodes.Brtrue_S, labIfLiftToNull);
-                } else {
-                    _ilg.Emit(OpCodes.Brtrue_S, labIfNotLisftToNull);
-                }
+                _ilg.Emit(OpCodes.Brtrue_S, shortCircuit);
                 _ilg.Emit(OpCodes.Pop);
             } else {
                 // test for either is null -> false
@@ -455,11 +437,7 @@ namespace System.Linq.Expressions {
                 _ilg.EmitHasValue(rightType);
                 _ilg.Emit(OpCodes.And);
                 _ilg.Emit(OpCodes.Dup);
-                if (liftedToNull) {
-                    _ilg.Emit(OpCodes.Brfalse_S, labIfLiftToNull);
-                } else {
-                    _ilg.Emit(OpCodes.Brfalse_S, labIfNotLisftToNull);
-                }
+                _ilg.Emit(OpCodes.Brfalse_S, shortCircuit);
                 _ilg.Emit(OpCodes.Pop);
             }
 
@@ -481,18 +459,23 @@ namespace System.Linq.Expressions {
                 false
             );
 
-            _ilg.MarkLabel(labIfNotLisftToNull);
+            if (!liftedToNull) {
+                _ilg.MarkLabel(shortCircuit);
+            }
+
             if (resultType != TypeUtils.GetNonNullableType(resultType)) {
                 _ilg.EmitConvertToType(TypeUtils.GetNonNullableType(resultType), resultType, true);
             }
-            _ilg.Emit(OpCodes.Br, labEnd);
 
-            _ilg.MarkLabel(labIfLiftToNull);
-            _ilg.Emit(OpCodes.Pop);
-            _ilg.Emit(OpCodes.Ldnull);
-            _ilg.Emit(OpCodes.Unbox_Any, resultType);
-
-            _ilg.MarkLabel(labEnd);
+            if (liftedToNull) {
+                Label labEnd = _ilg.DefineLabel();
+                _ilg.Emit(OpCodes.Br, labEnd);
+                _ilg.MarkLabel(shortCircuit);
+                _ilg.Emit(OpCodes.Pop);
+                _ilg.Emit(OpCodes.Ldnull);
+                _ilg.Emit(OpCodes.Unbox_Any, resultType);
+                _ilg.MarkLabel(labEnd);
+            }
         }
 
         //CONFORMING

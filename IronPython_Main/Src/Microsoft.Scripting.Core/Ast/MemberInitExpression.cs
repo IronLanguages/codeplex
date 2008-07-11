@@ -59,13 +59,13 @@ namespace System.Linq.Expressions {
         public static MemberInitExpression MemberInit(NewExpression newExpression, params MemberBinding[] bindings) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(bindings, "bindings");
-            return MemberInit(newExpression, CollectionUtils.ToReadOnlyCollection(bindings));
+            return MemberInit(newExpression, bindings.ToReadOnly());
         }
         //CONFORMING
         public static MemberInitExpression MemberInit(NewExpression newExpression, IEnumerable<MemberBinding> bindings) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(bindings, "bindings");
-            ReadOnlyCollection<MemberBinding> roBindings = CollectionUtils.ToReadOnlyCollection(bindings);
+            ReadOnlyCollection<MemberBinding> roBindings = bindings.ToReadOnly();
             ValidateMemberInitArgs(newExpression.Type, roBindings);
             return new MemberInitExpression(newExpression, roBindings);
         }

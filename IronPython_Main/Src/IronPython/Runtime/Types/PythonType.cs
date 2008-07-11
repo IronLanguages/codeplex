@@ -29,7 +29,7 @@ using System.Text;
 using System.Threading;
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Runtime.Calls;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -666,6 +666,12 @@ namespace IronPython.Runtime.Types {
                 // TODO: This is un-ideal, we should lock on something private.
                 return this;
             }
+        }
+
+        internal bool IsHiddenMember(string name) {
+            PythonTypeSlot dummySlot;
+            return !TryResolveSlot(DefaultContext.Default, SymbolTable.StringToId(name), out dummySlot) &&
+                    TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(name), out dummySlot);
         }
 
         #endregion

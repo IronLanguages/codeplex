@@ -1221,12 +1221,7 @@ namespace IronPython.Runtime.Operations {
             return ReprEncode(s, (char)0, ref isUnicode);
         }
 
-        internal static bool TryGetEncoding(Encoding defaultEncoding, string name, out Encoding encoding) {
-            if (name == null) {
-                encoding = defaultEncoding;
-                return true;
-            }
-
+        internal static bool TryGetEncoding(string name, out Encoding encoding) {
 #if SILVERLIGHT // EncodingInfo
             switch (NormalizeEncodingName(name)) {
                 case "us_ascii":
@@ -1390,42 +1385,37 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static string NormalizeEncodingName(string name) {
-            return name.ToLower().Replace('-', '_');
+            return name.ToLower().Replace('-', '_').Replace(' ', '_');
         }
 
         private static string RawDecode(CodeContext/*!*/ context, string s, object encodingType, string errors) {
             PythonContext pc = PythonContext.GetContext(context);
 
-            string encoding = null;
-            if (encodingType == Missing.Value) {
-                encoding = pc.GetDefaultEncodingName();
-            } else {
-                encoding = encodingType as string;
-                if (encoding == null) {
-                    if (encodingType != null)
-                        throw PythonOps.TypeError("decode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
+            string encoding = encodingType as string;
+            if (encoding == null) {
+                if (encodingType == Missing.Value) {
                     encoding = pc.GetDefaultEncodingName();
+                } else {
+                    throw PythonOps.TypeError("decode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
                 }
             }
 
-            if (encoding != null) {
-                string normalizedName = NormalizeEncodingName(encoding);
-                if ("raw_unicode_escape" == normalizedName) {
-                    return LiteralParser.ParseString(s, true, true);
-                } else if ("unicode_escape" == normalizedName) {
-                    return LiteralParser.ParseString(s, false, true);
-                } else if ("string_escape" == normalizedName) {
-                    return LiteralParser.ParseString(s, false, false);
-                }
+            string normalizedName = NormalizeEncodingName(encoding);
+            if ("raw_unicode_escape" == normalizedName) {
+                return LiteralParser.ParseString(s, true, true);
+            } else if ("unicode_escape" == normalizedName) {
+                return LiteralParser.ParseString(s, false, true);
+            } else if ("string_escape" == normalizedName) {
+                return LiteralParser.ParseString(s, false, false);
             }
 
-            Encoding e = pc.DefaultEncoding;
-            if (encoding == null || TryGetEncoding(e, encoding, out e)) {
+            Encoding e;
+            if (TryGetEncoding(encoding, out e)) {
 #if !SILVERLIGHT // DecoderFallback
                 // CLR's encoder exceptions have a 1-1 mapping w/ Python's encoder exceptions
                 // so we just clone the encoding & set the fallback to throw in strict mode.
                 e = (Encoding)e.Clone();
-
+                
                 switch (errors) {
                     case "backslashreplace":
                     case "xmlcharrefreplace":
@@ -1438,8 +1428,11 @@ namespace IronPython.Runtime.Operations {
                         break;
                 }
 #endif
+
                 byte[] bytes = ToByteArray(s);
-                return e.GetString(bytes, 0, bytes.Length);
+                int start = GetStartingOffset(e, bytes);
+
+                return e.GetString(bytes, start, bytes.Length - start);
             }
 
             // look for user-registered codecs
@@ -1451,33 +1444,49 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.LookupError("unknown encoding: {0}", encoding);
         }
 
+        /// <summary>
+        /// Gets the starting offset checking to see if the incoming bytes already include a preamble.
+        /// </summary>
+        private static int GetStartingOffset(Encoding e, byte[] bytes) {
+            byte[] preamble = e.GetPreamble();
+            int start = 0;
+            if (bytes.Length >= preamble.Length) {
+                bool differ = false;
+                for (int i = 0; i < preamble.Length; i++) {
+                    if (bytes[i] != preamble[i]) {
+                        differ = true;
+                    }
+                }
+
+                if (!differ) {
+                    start = preamble.Length;
+                }
+            }
+            return start;
+        }
+
         private static string RawEncode(CodeContext/*!*/ context, string s, object encodingType, string errors) {
             PythonContext pc = PythonContext.GetContext(context);
 
-            string encoding = null;
-            if (encodingType == Missing.Value) {
-                encoding = PythonContext.GetContext(context).GetDefaultEncodingName();
-            } else {
-                encoding = encodingType as string;
-                if (encoding == null) {
-                    if (encodingType != null)
-                        throw PythonOps.TypeError("encode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
-                    encoding = pc.GetDefaultEncodingName();
+            string encoding = encodingType as string;
+            if (encoding == null) {
+                if (encodingType == Missing.Value) {
+                    encoding = PythonContext.GetContext(context).GetDefaultEncodingName();
+                } else {
+                    throw PythonOps.TypeError("encode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
                 }
             }
-
-            if (encoding != null) {
-                string normalizedName = NormalizeEncodingName(encoding);
-                if ("raw_unicode_escape" == normalizedName) {
-                    return RawUnicodeEscapeEncode(s);
-                } else if ("unicode_escape" == normalizedName || "string_escape" == normalizedName) {
-                    bool dummy = false;
-                    return ReprEncode(s, '\'', ref dummy);
-                }
+            string normalizedName = NormalizeEncodingName(encoding);
+            
+            if ("raw_unicode_escape" == normalizedName) {
+                return RawUnicodeEscapeEncode(s);
+            } else if ("unicode_escape" == normalizedName || "string_escape" == normalizedName) {
+                bool dummy = false;
+                return ReprEncode(s, '\'', ref dummy);
             }
 
-            Encoding e = pc.DefaultEncoding;
-            if (encoding == null || TryGetEncoding(e, encoding, out e)) {
+            Encoding e;
+            if (TryGetEncoding(encoding, out e)) {
 #if !SILVERLIGHT
                 // CLR's encoder exceptions have a 1-1 mapping w/ Python's encoder exceptions
                 // so we just clone the encoding & set the fallback to throw in strict mode
@@ -2278,12 +2287,18 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
-
-                string res = _raw ? RawUnicodeEscapeEncode(new string(chars, charIndex, charCount)) : null;
-                for (int i = 0; i < res.Length; i++) {
-                    bytes[i + byteIndex] = (byte)res[i];
+                if (_raw) {
+                    string res = RawUnicodeEscapeEncode(new string(chars, charIndex, charCount));
+                    for (int i = 0; i < res.Length; i++) {
+                        bytes[i + byteIndex] = _raw ? (byte)res[i] : (byte)chars[i];
+                    }
+                    return res.Length;
+                } else {                    
+                    for (int i = 0; i < charCount; i++) {
+                        bytes[i + byteIndex] = (byte)chars[i + charIndex];
+                    }
+                    return charCount;
                 }
-                return res.Length;                
             }
 
             public override int GetCharCount(byte[] bytes, int index, int count) {

@@ -16,9 +16,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -79,7 +78,7 @@ namespace System.Scripting.Actions {
                     }
                 }
             }
-            throw new InvalidCastException(String.Format("Cannot convert {0} to {1}", obj != null ? obj.GetType().Name : "(null)", toType.Name));
+            throw Error.InvalidCast(obj != null ? obj.GetType().Name : "(null)", toType.Name);
         }
         
         /// <summary>
