@@ -27,8 +27,8 @@ namespace System.Scripting.Runtime {
         private NullTextContentProvider() {
         }
 
-        public override TextReader/*!*/ GetReader() {
+        public override TextReader GetReader() {
             return TextReader.Null;
         }
-    }  
+    }
 }

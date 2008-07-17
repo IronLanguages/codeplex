@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Runtime {
     /// </summary>
     internal sealed class InvariantContext : LanguageContext {
         // friend: ScriptDomainManager
-        internal InvariantContext(ScriptDomainManager/*!*/ manager)
+        internal InvariantContext(ScriptDomainManager manager)
             : base(manager) {
             // TODO: use InvariantBinder
             Binder = new DefaultActionBinder(manager, Type.EmptyTypes);

@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Scripting.Utils;
+using System.Linq.Expressions;
 
 namespace System.Scripting {
     /// <summary>
@@ -40,9 +41,13 @@ namespace System.Scripting {
 
         private static void ValidateLocations(SourceLocation start, SourceLocation end) {
             if (start.IsValid && end.IsValid) {
-                ContractUtils.Requires(start <= end, "Start and End must be well ordered");
+                if (start > end) {
+                    throw Error.StartEndMustBeOrdered();
+                }
             } else {
-                ContractUtils.Requires(!start.IsValid && !end.IsValid, "Start and End must both be valid or both invalid");
+                if (start.IsValid || end.IsValid) {
+                    throw Error.StartEndCanOnlyBothBeInvalid();
+                }
             }
         }
 

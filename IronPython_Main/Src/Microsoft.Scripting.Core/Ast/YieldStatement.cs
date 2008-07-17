@@ -17,9 +17,9 @@ using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
     public sealed class YieldStatement : Expression {
-        private readonly Expression /*!*/ _expr;
+        private readonly Expression _expr;
 
-        internal YieldStatement(Annotations annotations, Expression /*!*/ expression)
+        internal YieldStatement(Annotations annotations, Expression expression)
             : base(annotations, ExpressionType.YieldStatement, typeof(void)) {
             _expr = expression;
         }

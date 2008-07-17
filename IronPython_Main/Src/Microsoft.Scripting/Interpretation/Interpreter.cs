@@ -17,10 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Interpretation {
     public static partial class Interpreter {
 
         // The ReflectiveCaller cache
-        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller>/*!*/ _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
+        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
 
         #region Entry points
 
@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         #endregion
 
-        private static object Interpret(InterpreterState/*!*/ state, Expression/*!*/ expr) {
+        private static object Interpret(InterpreterState state, Expression expr) {
             int kind = (int)expr.NodeType;
             Debug.Assert(kind < _Interpreters.Length);
 

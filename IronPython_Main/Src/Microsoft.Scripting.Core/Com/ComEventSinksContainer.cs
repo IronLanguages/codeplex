@@ -16,8 +16,8 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 
 namespace System.Scripting.Com {
     /// <summary>

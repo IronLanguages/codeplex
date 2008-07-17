@@ -19,7 +19,7 @@ using System.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Interpretation {
     public class InterpretedScriptCode : ScriptCode {
-        public InterpretedScriptCode(LambdaExpression/*!*/ code, SourceUnit/*!*/ sourceUnit)
+        public InterpretedScriptCode(LambdaExpression code, SourceUnit sourceUnit)
             : base(code, sourceUnit) {
         }
 
@@ -27,8 +27,8 @@ namespace Microsoft.Scripting.Interpretation {
             // nop
         }
 
-        protected override object InvokeTarget(LambdaExpression/*!*/ code, Scope/*!*/ scope) {
-            return Interpreter.TopLevelExecute(code, scope, LanguageContext);            
+        protected override object InvokeTarget(LambdaExpression code, Scope scope) {
+            return Interpreter.TopLevelExecute(code, scope, LanguageContext);
         }
     }
 }

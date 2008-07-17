@@ -153,7 +153,7 @@ namespace System.Linq.Expressions {
             ReadOnlyCollection<Expression> boundsList = bounds.ToReadOnly();
 
             int dimensions = boundsList.Count;
-            ContractUtils.Requires(dimensions > 0, "bounds", "Bounds count cannot be less than 1");
+            ContractUtils.Requires(dimensions > 0, "bounds", Strings.BoundsCannotBeLessThanOne);
 
             for (int i = 0; i < dimensions; i++) {
                 Expression expr = boundsList[i];

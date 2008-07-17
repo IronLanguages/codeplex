@@ -35,6 +35,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// </summary>
         internal abstract Expression ToExpression(MethodBinderContext context, IList<Expression> parameters);
 
+        internal virtual VariableExpression[] TemporaryVariables {
+            get {
+                return new VariableExpression[0];
+            }
+        }
+
         /// <summary>
         /// Returns the type required for the argument or null if the ArgBuilder
         /// does not consume a type.

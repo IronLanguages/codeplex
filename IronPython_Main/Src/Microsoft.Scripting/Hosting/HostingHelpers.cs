@@ -30,32 +30,32 @@ namespace Microsoft.Scripting.Hosting {
     /// </summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static class HostingHelpers {
-        public static ScriptDomainManager/*!*/ GetDomainManager(ScriptRuntime/*!*/ runtime) {
+        public static ScriptDomainManager GetDomainManager(ScriptRuntime runtime) {
             ContractUtils.RequiresNotNull(runtime, "runtime");
             return runtime.Manager;
         }
 
-        public static LanguageContext/*!*/ GetLanguageContext(ScriptEngine/*!*/ engine) {
+        public static LanguageContext GetLanguageContext(ScriptEngine engine) {
             ContractUtils.RequiresNotNull(engine, "engine");
             return engine.LanguageContext;
         }
 
-        public static SourceUnit/*!*/ GetSourceUnit(ScriptSource/*!*/ scriptSource) {
+        public static SourceUnit GetSourceUnit(ScriptSource scriptSource) {
             ContractUtils.RequiresNotNull(scriptSource, "scriptSource");
             return scriptSource.SourceUnit;
         }
 
-        public static ScriptCode/*!*/ GetScriptCode(CompiledCode/*!*/ compiledCode) {
+        public static ScriptCode GetScriptCode(CompiledCode compiledCode) {
             ContractUtils.RequiresNotNull(compiledCode, "compiledCode");
             return compiledCode.ScriptCode;
         }
 
-        public static SharedIO/*!*/ GetSharedIO(ScriptIO/*!*/ io) {
+        public static SharedIO GetSharedIO(ScriptIO io) {
             ContractUtils.RequiresNotNull(io, "io");
             return io.SharedIO;
         }
 
-        public static Scope/*!*/ GetScope(ScriptScope/*!*/ scriptScope) {
+        public static Scope GetScope(ScriptScope scriptScope) {
             ContractUtils.RequiresNotNull(scriptScope, "scriptScope");
             return scriptScope.Scope;
         }

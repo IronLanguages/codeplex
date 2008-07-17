@@ -14,10 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Generation;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
@@ -25,18 +25,18 @@ namespace Microsoft.Scripting.Generation {
     /// Helper class for emitting calls via the MethodBinder.
     /// </summary>
     class MethodBinderContext {
-        private readonly ActionBinder/*!*/ _actionBinder;
+        private readonly ActionBinder _actionBinder;
         private readonly Expression _context;
-        private List<VariableExpression/*!*/> _temps;
+        private List<VariableExpression> _temps;
 
-        internal MethodBinderContext(ActionBinder/*!*/ actionBinder, Expression/*!*/ codeContext) {
+        internal MethodBinderContext(ActionBinder actionBinder, Expression codeContext) {
             Assert.NotNull(actionBinder, codeContext);
 
             _actionBinder = actionBinder;
             _context = codeContext;
         }
 
-        internal ActionBinder/*!*/ Binder {
+        internal ActionBinder Binder {
             get {
                 return _actionBinder;
             }
@@ -48,13 +48,13 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal Expression ConvertExpression(Expression/*!*/ expr, Type/*!*/ type) {
+        internal Expression ConvertExpression(Expression expr, Type type) {
             Assert.NotNull(expr, type);
 
             return _actionBinder.ConvertExpression(expr, type, ConversionResultKind.ExplicitCast, ContextExpression);
         }
 
-        internal VariableExpression/*!*/ GetTemporary(Type/*!*/ type, string/*!*/ name) {
+        internal VariableExpression GetTemporary(Type type, string name) {
             Assert.NotNull(type, name);
 
             if (_temps == null) {
@@ -66,13 +66,13 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal bool CanConvert(Type/*!*/ fromType, Type/*!*/ toType, NarrowingLevel level) {
+        internal bool CanConvert(Type fromType, Type toType, NarrowingLevel level) {
             Assert.NotNull(fromType, toType);
 
             return _actionBinder.CanConvertFrom(fromType, toType, level);
         }
 
-        internal List<VariableExpression/*!*/> Temps {
+        internal List<VariableExpression> Temps {
             get {
                 return _temps;
             }

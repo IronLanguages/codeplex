@@ -35,8 +35,8 @@ namespace ToyScript.Binders {
             return new GetMemberBinder(name);
         }
 
-        public static CallSiteBinder New(CallSignature signature) {
-            return new NewBinder(signature);
+        public static CallSiteBinder New() {
+            return new NewBinder();
         }
 
         public static CallSiteBinder Operation(Operators op) {

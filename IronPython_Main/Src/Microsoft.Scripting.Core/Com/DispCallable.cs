@@ -34,12 +34,12 @@ namespace System.Scripting.Com {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return String.Format("<bound dispmethod {0}>", _methodDesc.Name);
         }
 
-        public IDispatchObject DispatchObject { 
-            get { return _dispatch; } 
+        public IDispatchObject DispatchObject {
+            get { return _dispatch; }
         }
 
         public ComMethodDesc ComMethodDesc {

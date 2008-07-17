@@ -21,8 +21,8 @@ namespace System.Linq.Expressions {
     /// break and continue statements will jump to the end of body
     /// </summary>
     public sealed class LabeledStatement : Expression {
-        private readonly Expression/*!*/ _expression;
-        private readonly LabelTarget/*!*/ _label;
+        private readonly Expression _expression;
+        private readonly LabelTarget _label;
 
         internal LabeledStatement(Annotations annotations, LabelTarget label, Expression expression)
             : base(annotations, ExpressionType.LabeledStatement, typeof(void)) {

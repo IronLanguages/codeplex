@@ -53,7 +53,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return base.ToString() + _signature.ToString();
         }
 
@@ -63,7 +63,7 @@ namespace System.Scripting.Actions {
                 CreateActionBinderReadExpression(),
                 Expression.Constant(Name),
                 Signature.CreateExpression()
-            );            
+            );
         }
 
         #region IEquatable<OldInvokeMemberAction> Members

@@ -42,14 +42,14 @@ namespace System.Scripting.Actions {
 
         public override Type PropertyType {
             get { return _propInfo.PropertyType; }
-        }        
+        }
 
         public override MethodInfo GetGetMethod() {
             return _propInfo.GetGetMethod();
         }
 
         public override MethodInfo GetSetMethod() {
-            return _propInfo.GetSetMethod();            
+            return _propInfo.GetSetMethod();
         }
 
         public override MethodInfo GetGetMethod(bool privateMembers) {
@@ -59,11 +59,11 @@ namespace System.Scripting.Actions {
         public override MethodInfo GetSetMethod(bool privateMembers) {
             return _propInfo.GetSetMethod(privateMembers);
         }
-        
+
         public override ParameterInfo[] GetIndexParameters() {
             return _propInfo.GetIndexParameters();
         }
-        
+
         public PropertyInfo Property {
             get {
                 return _propInfo;
@@ -71,7 +71,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return _propInfo.ToString();
         }
     }

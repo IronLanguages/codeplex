@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 namespace System.Scripting {
-    
+
     /// <summary>
     /// TODO - If this class is really this simple, do we need it at all?
     /// </summary>
@@ -28,7 +28,7 @@ namespace System.Scripting {
         }
 
         // TODO - Make this an abstract DeepCopy method and add a DefaultCompilerOptions
-        public virtual object/*!*/ Clone() {
+        public virtual object Clone() {
             return base.MemberwiseClone();
         }
     }

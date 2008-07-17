@@ -26,9 +26,9 @@ namespace System.Linq.Expressions {
     ///     (future) IndexedPropertyExpression
     /// </summary>
     public sealed class DeleteExpression : Expression {
-        private readonly Expression /*!*/ _expression;
+        private readonly Expression _expression;
 
-        internal DeleteExpression(Annotations annotations, Expression/*!*/ expression, CallSiteBinder bindingInfo)
+        internal DeleteExpression(Annotations annotations, Expression expression, CallSiteBinder bindingInfo)
             : base(annotations, ExpressionType.Delete, typeof(object), bindingInfo) { // TODO: typeof(void) ?
             if (IsBound) {
                 RequiresBound(expression, "expression");

@@ -23,7 +23,7 @@ namespace System.Scripting.Generation {
 
     public sealed class Snippets {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public static readonly Snippets/*!*/ Shared = new Snippets();
+        public static readonly Snippets Shared = new Snippets();
 
         private int _methodNameIndex;
 
@@ -39,7 +39,7 @@ namespace System.Scripting.Generation {
         private string _snippetsDirectory;
         private string _snippetsFileName;
         private bool _saveSnippets;
-        
+
         /// <summary>
         /// Directory where snippet assembly will be saved if SaveSnippets is set.
         /// </summary>
@@ -69,27 +69,27 @@ namespace System.Scripting.Generation {
             get { return _saveSnippets; }
             set {
                 ContractUtils.Requires(!_optionsFrozen);
-                _saveSnippets = value; 
+                _saveSnippets = value;
             }
         }
 
-        private AssemblyGen/*!*/ GetAssembly(bool emitSymbols, bool isUnsafe) {
+        private AssemblyGen GetAssembly(bool emitSymbols, bool isUnsafe) {
             _optionsFrozen = true;
 
             // If snippetst are not to be saved, we can merge unsafe and safe IL.
-            
+
             if (isUnsafe && _saveSnippets) {
-                return (emitSymbols) ? 
+                return (emitSymbols) ?
                     GetOrCreateAssembly(emitSymbols, isUnsafe, ref _unsafeDebugAssembly) :
                     GetOrCreateAssembly(emitSymbols, isUnsafe, ref _unsafeAssembly);
             } else {
-                return (emitSymbols) ? 
+                return (emitSymbols) ?
                     GetOrCreateAssembly(emitSymbols, isUnsafe, ref _debugAssembly) :
                     GetOrCreateAssembly(emitSymbols, isUnsafe, ref _assembly);
             }
         }
 
-        private AssemblyGen/*!*/ GetOrCreateAssembly(bool emitSymbols, bool isUnsafe, ref AssemblyGen assembly) {
+        private AssemblyGen GetOrCreateAssembly(bool emitSymbols, bool isUnsafe, ref AssemblyGen assembly) {
             if (assembly == null) {
                 string suffix = (emitSymbols) ? ".debug" : "" + (isUnsafe ? ".unsafe" : "");
                 Interlocked.CompareExchange(ref assembly, CreateNewAssembly(suffix, emitSymbols), null);
@@ -97,7 +97,7 @@ namespace System.Scripting.Generation {
             return assembly;
         }
 
-        private AssemblyGen CreateNewAssembly(string/*!*/ nameSuffix, bool emitSymbols) {
+        private AssemblyGen CreateNewAssembly(string nameSuffix, bool emitSymbols) {
             string dir;
 
             if (_saveSnippets) {
@@ -111,7 +111,7 @@ namespace System.Scripting.Generation {
             return new AssemblyGen(new AssemblyName(name), dir, ".dll", emitSymbols);
         }
 
-        internal string/*!*/ GetMethodILDumpFile(MethodBase/*!*/ method) {
+        internal string GetMethodILDumpFile(MethodBase method) {
             string fullName = ((method.DeclaringType != null) ? method.DeclaringType.Name + "." : "") + method.Name;
 
             if (fullName.Length > 100) {
@@ -162,7 +162,7 @@ namespace System.Scripting.Generation {
             _optionsFrozen = false;
         }
 
-        public DynamicILGen/*!*/ CreateDynamicMethod(string/*!*/ methodName, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes,
+        public DynamicILGen CreateDynamicMethod(string methodName, Type returnType, Type[] parameterTypes,
             bool isDebuggable) {
 
             ContractUtils.RequiresNotEmpty(methodName, "methodName");
@@ -180,19 +180,19 @@ namespace System.Scripting.Generation {
             }
         }
 
-        public TypeBuilder/*!*/ DefinePublicType(string  name, Type/*!*/ parent) {
+        public TypeBuilder DefinePublicType(string name, Type parent) {
             return GetAssembly(false, false).DefinePublicType(name, parent, false);
         }
 
-        public TypeBuilder/*!*/ DefineUnsafeType(string/*!*/ name, Type/*!*/ parent) {
+        public TypeBuilder DefineUnsafeType(string name, Type parent) {
             return GetAssembly(false, true).DefinePublicType(name, parent, false);
         }
 
-        internal TypeGen/*!*/ DefineUnsafeTypeGen(string/*!*/ name, Type/*!*/ parent) {
+        internal TypeGen DefineUnsafeTypeGen(string name, Type parent) {
             return DefineType(name, parent, false, true, false);
         }
 
-        internal TypeGen/*!*/ DefineType(string/*!*/ name, Type/*!*/ parent, bool preserveName, bool isUnsafe, bool emitDebugSymbols) {
+        internal TypeGen DefineType(string name, Type parent, bool preserveName, bool isUnsafe, bool emitDebugSymbols) {
             AssemblyGen ag = GetAssembly(emitDebugSymbols, isUnsafe);
             TypeBuilder tb = ag.DefinePublicType(name, parent, preserveName);
             return new TypeGen(ag, tb);

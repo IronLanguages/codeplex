@@ -26,7 +26,7 @@ namespace System.Scripting.Runtime {
         /// <summary>
         /// Abstracts system operations that are used by DLR and could potentially be platform specific.
         /// </summary>
-        public abstract PlatformAdaptationLayer/*!*/ PlatformAdaptationLayer { get; }
+        public abstract PlatformAdaptationLayer PlatformAdaptationLayer { get; }
 
         /// <summary>
         /// Gets SourceUnit corresponding to a source file on a specifed path.
@@ -35,7 +35,7 @@ namespace System.Scripting.Runtime {
         /// </summary>
         /// <exception cref="ArgumentNullException">Engine, path or encoding is a <c>null</c> reference.</exception>
         /// <returns>Null, if the source file doesn't exist.</returns>
-        public abstract SourceUnit TryGetSourceFileUnit(LanguageContext/*!*/ langauge, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind);
+        public abstract SourceUnit TryGetSourceFileUnit(LanguageContext langauge, string path, Encoding encoding, SourceCodeKind kind);
 
         // TODO: fix when this moves up:
         //<exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
@@ -45,6 +45,6 @@ namespace System.Scripting.Runtime {
         /// <exception cref="FileNotFoundException">No file matches the specified name.</exception>
         /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
         /// <exception cref="ArgumentException">Name is not valid.</exception>
-        public abstract SourceUnit/*!*/ ResolveSourceFileUnit(string/*!*/ name);
+        public abstract SourceUnit ResolveSourceFileUnit(string name);
     }
 }

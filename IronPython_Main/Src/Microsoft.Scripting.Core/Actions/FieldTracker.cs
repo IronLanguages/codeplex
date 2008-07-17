@@ -80,7 +80,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return _field.ToString();
         }
 

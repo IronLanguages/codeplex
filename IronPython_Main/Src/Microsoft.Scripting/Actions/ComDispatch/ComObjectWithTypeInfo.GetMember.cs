@@ -16,8 +16,8 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Reflection;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
@@ -30,8 +30,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             private readonly Type _comType;
 
-            internal GetMemberBinder(CodeContext context, Type comType, OldGetMemberAction action, object[] args)
-                : base(context, action, args) {
+            internal GetMemberBinder(CodeContext context, Type comType, OldGetMemberAction action)
+                : base(context, action) {
 
                 _comType = comType;
             }

@@ -22,14 +22,14 @@ using System.Text;
 namespace System.Linq.Expressions {
     //CONFORMING
     public sealed class UnaryExpression : Expression {
-        private readonly Expression /*!*/ _operand;
+        private readonly Expression _operand;
         private readonly MethodInfo _method;
 
-        internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression/*!*/ expression, Type/*!*/ type, MethodInfo method)
+        internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type type, MethodInfo method)
             : this(annotations, nodeType, expression, type, method, null) {
         }
 
-        internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression/*!*/ expression, Type type, MethodInfo method, CallSiteBinder bindingInfo)
+        internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type type, MethodInfo method, CallSiteBinder bindingInfo)
             : base(annotations, nodeType, type, bindingInfo) {
             if (IsBound) {
                 RequiresBound(expression, "expression");
@@ -444,7 +444,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == Operators.Negate, "bindingInfo", "operation kind must match node type");
+            ContractUtils.Requires(bindingInfo.Operation == Operators.Negate, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
             return new UnaryExpression(annotations, ExpressionType.Negate, expression, result, null, bindingInfo);
         }
@@ -453,7 +453,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == Operators.Not, "bindingInfo", "operation kind must match node type");
+            ContractUtils.Requires(bindingInfo.Operation == Operators.Not, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
             return new UnaryExpression(annotations, ExpressionType.Not, expression, result, null, bindingInfo);
         }
@@ -462,7 +462,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == Operators.OnesComplement, "bindingInfo", "operation kind must match node type");
+            ContractUtils.Requires(bindingInfo.Operation == Operators.OnesComplement, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
             return new UnaryExpression(annotations, ExpressionType.OnesComplement, expression, result, null, bindingInfo);
         }

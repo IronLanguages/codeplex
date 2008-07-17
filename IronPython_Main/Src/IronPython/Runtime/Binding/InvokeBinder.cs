@@ -91,7 +91,7 @@ namespace IronPython.Runtime.Binding {
         class CreateFallback : CreateAction {
             private readonly InvokeBinder/*!*/ _fallback;
             public CreateFallback(InvokeBinder realFallback, CallSignature signature)
-                : base(signature) {
+                : base(BindingHelpers.GetArguments(signature)) {
                 _fallback = realFallback;
             }
 

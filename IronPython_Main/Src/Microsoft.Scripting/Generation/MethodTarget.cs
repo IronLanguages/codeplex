@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
             //argBuilders.TrimExcess();
         }
 
-        public MethodBase/*!*/ Method {
+        public MethodBase Method {
             get { return _method; }
         }
 
@@ -62,13 +62,13 @@ namespace Microsoft.Scripting.Generation {
             get { return _parameterCount; }
         }
 
-        public Type/*!*/ ReturnType {
+        public Type ReturnType {
             get {
                 return _returnBuilder.ReturnType;
             }
         }
 
-        public Type/*!*/[]/*!*/ GetParameterTypes() {
+        public Type[] GetParameterTypes() {
             List<Type> res = new List<Type>(_argBuilders.Count);
             for (int i = 0; i < _argBuilders.Count; i++) {
                 Type t = _argBuilders[i].Type;
@@ -99,11 +99,11 @@ namespace Microsoft.Scripting.Generation {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
         }
 
-        internal Expression MakeExpression(RuleBuilder/*!*/ rule, IList<Expression/*!*/>/*!*/ parameters) {
+        internal Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters) {
             Assert.NotNullItems(parameters);
             Debug.Assert(rule != null);
 
@@ -113,7 +113,7 @@ namespace Microsoft.Scripting.Generation {
             );
         }
 
-        internal Expression MakeExpression(Expression/*!*/ contextExpression, IList<Expression/*!*/>/*!*/ parameters) {
+        internal Expression MakeExpression(Expression contextExpression, IList<Expression> parameters) {
             Assert.NotNullItems(parameters);
             Debug.Assert(contextExpression != null);
 
@@ -229,7 +229,7 @@ namespace Microsoft.Scripting.Generation {
 
             return MakeExpression(rule, args);
         }
-        
+
         private static int FindMaxPriority(IList<ArgBuilder> abs, int ceiling) {
             int max = 0;
             foreach (ArgBuilder ab in abs) {

@@ -33,7 +33,7 @@ namespace System.Scripting.Actions {
             return typeof(CallSite<>).MakeGenericType(new Type[] { MakeDynamicSiteTargetType(types) });
         }
 
-        public static Type MakeDynamicSiteTargetType(Type/*!*/[] types) {
+        public static Type MakeDynamicSiteTargetType(Type[] types) {
             ContractUtils.Requires(types != null && types.Length >= 1, "types");
 
             switch (types.Length) {

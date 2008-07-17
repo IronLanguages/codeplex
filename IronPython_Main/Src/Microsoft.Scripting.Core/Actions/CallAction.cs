@@ -63,12 +63,12 @@ namespace System.Scripting.Actions {
         [Confined]
         public override bool Equals(object obj) {
             CallAction ca = obj as CallAction;
-            return ca != null && ca._name == _name && ca._caseInsensitive == _caseInsensitive && CollectionUtils.Equal(ca._arguments, _arguments);
+            return ca != null && ca._name == _name && ca._caseInsensitive == _caseInsensitive && ca._arguments.ListEquals(_arguments);
         }
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28 ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0) ^ CollectionUtils.GetHashCode(_arguments));
+            return ((int)Kind << 28 ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0) ^ _arguments.ListHashCode());
         }
     }
 }

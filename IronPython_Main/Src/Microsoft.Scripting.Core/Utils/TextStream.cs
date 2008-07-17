@@ -27,7 +27,7 @@ namespace System.Scripting.Utils {
             _buffered = buffered;
         }
 
-        public abstract Encoding/*!*/ Encoding { get; }
+        public abstract Encoding  Encoding { get; }
         public abstract TextReader Reader { get; }
         public abstract TextWriter Writer { get; }
 
@@ -48,7 +48,7 @@ namespace System.Scripting.Utils {
             Writer.Flush();
         }
 
-        public sealed override int Read(byte[]/*!*/ buffer, int offset, int count) {
+        public sealed override int Read(byte[]  buffer, int offset, int count) {
             if (!CanRead) throw new InvalidOperationException();
             ContractUtils.RequiresArrayRange(buffer, offset, count, "offset", "count");
 
@@ -57,14 +57,14 @@ namespace System.Scripting.Utils {
             return Encoding.GetBytes(charBuffer, 0, realCount, buffer, offset);
         }
 
-        public sealed override void Write(byte[]/*!*/ buffer, int offset, int count) {
+        public sealed override void Write(byte[]  buffer, int offset, int count) {
             ContractUtils.RequiresArrayRange(buffer, offset, count, "offset", "count");
             char[] charBuffer = Encoding.GetChars(buffer, offset, count);
             Writer.Write(charBuffer, 0, charBuffer.Length);
             if (!_buffered) Writer.Flush();
         }
 
-        #region Invalid Operations
+#region Invalid Operations
 
         public sealed override long Length {
             get {
@@ -96,7 +96,7 @@ namespace System.Scripting.Utils {
 
         private readonly TextReader _reader;
         private readonly TextWriter _writer;
-        private readonly Encoding/*!*/ _encoding;
+        private readonly Encoding  _encoding;
 
         public override Encoding Encoding {
             get { return _encoding; }
@@ -110,7 +110,7 @@ namespace System.Scripting.Utils {
             get { return _writer; }
         }
 
-        internal TextStream(TextReader/*!*/ reader, Encoding/*!*/ encoding)
+        internal TextStream(TextReader  reader, Encoding  encoding)
             : base(true) {
             ContractUtils.RequiresNotNull(reader, "reader");
             ContractUtils.RequiresNotNull(encoding, "encoding");
@@ -119,11 +119,11 @@ namespace System.Scripting.Utils {
             _encoding = encoding;
         }
 
-        internal TextStream(TextWriter/*!*/ writer)
+        internal TextStream(TextWriter  writer)
             : this(writer, writer.Encoding, true) {
         }
 
-        internal TextStream(TextWriter/*!*/ writer, Encoding/*!*/ encoding, bool buffered)
+        internal TextStream(TextWriter  writer, Encoding  encoding, bool buffered)
             : base(buffered) {
             ContractUtils.RequiresNotNull(writer, "writer");
             ContractUtils.RequiresNotNull(encoding, "encoding");

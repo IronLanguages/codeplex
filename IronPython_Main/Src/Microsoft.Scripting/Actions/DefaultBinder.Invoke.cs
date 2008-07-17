@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Actions {
         /// Additional meta objects are the parameters for the call as specified by the CallSignature in the CallAction.
         /// </param>
         /// <returns>A MetaObject representing the call or the error.</returns>
-        public MetaObject/*!*/ Call(CallSignature/*!*/ signature, params MetaObject/*!*/[]/*!*/ args) {            
+        public MetaObject Call(CallSignature signature, params MetaObject[] args) {
             return Call(signature, Ast.Null(typeof(CodeContext)), args);
         }
 
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="codeContext">Provides an expression which will be provided as the CodeContext if the target object
         /// receives CodeContext as a parameter.</param>
         /// <returns>A MetaObject representing the call or the error.</returns>
-        public MetaObject/*!*/ Call(CallSignature/*!*/ signature, Expression/*!*/ codeContext, params MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject Call(CallSignature signature, Expression codeContext, params MetaObject[] args) {
             ContractUtils.RequiresNotNullItems(args, "args");
             ContractUtils.RequiresNotNull(codeContext, "codeContext");
 
@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Method Call Rule
 
-        private MetaObject MakeMetaMethodCall(CallSignature signature, Expression/*!*/ codeContext, TargetInfo/*!*/ targetInfo) {
+        private MetaObject MakeMetaMethodCall(CallSignature signature, Expression codeContext, TargetInfo targetInfo) {
             Restrictions restrictions = Restrictions.Combine(targetInfo.Arguments).Merge(targetInfo.Restrictions);
             if (targetInfo.Instance != null) {
                 restrictions = targetInfo.Instance.Restrictions.Merge(restrictions);
@@ -80,20 +80,20 @@ namespace Microsoft.Scripting.Actions {
 
             if (targetInfo.Instance != null) {
                 return CallInstanceMethod(
-                    codeContext, 
-                    targetInfo.Targets, 
-                    targetInfo.Instance, 
-                    targetInfo.Arguments, 
-                    signature, 
+                    codeContext,
+                    targetInfo.Targets,
+                    targetInfo.Instance,
+                    targetInfo.Arguments,
+                    signature,
                     restrictions
                 );
             }
 
             return CallMethod(
-                codeContext, 
-                targetInfo.Targets, 
-                targetInfo.Arguments, 
-                signature, 
+                codeContext,
+                targetInfo.Targets,
+                targetInfo.Arguments,
+                signature,
                 restrictions);
         }
 
@@ -109,7 +109,7 @@ namespace Microsoft.Scripting.Actions {
         /// If this object is a BoundMemberTracker we bind to the methods with the bound instance.
         /// If the underlying type has defined an operator Call method we'll bind to that method.
         /// </summary>
-        private TargetInfo GetTargetInfo(CallSignature signature, MetaObject/*!*/[]/*!*/ args) {
+        private TargetInfo GetTargetInfo(CallSignature signature, MetaObject[] args) {
             Debug.Assert(args[0].HasValue);
             object target = args[0].Value;
 
@@ -124,7 +124,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Binds to the methods in a method group.
         /// </summary>
-        private static TargetInfo TryGetMethodGroupTargets(MetaObject/*!*/[]/*!*/ args, MethodGroup mthgrp) {
+        private static TargetInfo TryGetMethodGroupTargets(MetaObject[] args, MethodGroup mthgrp) {
             if (mthgrp != null) {
                 List<MethodBase> foundTargets = new List<MethodBase>();
 
@@ -142,7 +142,7 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// TODO: We should really only have either MemberGroup or MethodGroup, not both.
         /// </summary>
-        private static TargetInfo TryGetMemberGroupTargets(MetaObject/*!*/[]/*!*/ args, MemberGroup mg) {
+        private static TargetInfo TryGetMemberGroupTargets(MetaObject[] args, MemberGroup mg) {
             if (mg != null) {
                 MethodBase[] targets;
                 List<MethodInfo> foundTargets = new List<MethodInfo>();
@@ -161,7 +161,7 @@ namespace Microsoft.Scripting.Actions {
         /// Binds to the BoundMemberTracker and uses the instance in the tracker and restricts
         /// based upon the object instance type.
         /// </summary>
-        private TargetInfo TryGetBoundMemberTargets(MetaObject/*!*/[]/*!*/ args, BoundMemberTracker bmt) {
+        private TargetInfo TryGetBoundMemberTargets(MetaObject[] args, BoundMemberTracker bmt) {
             MetaObject self = args[0];
             if (bmt != null) {
                 Debug.Assert(bmt.Instance == null); // should be null for trackers that leak to user code
@@ -211,7 +211,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Binds to the Invoke method on a delegate if this is a delegate type.
         /// </summary>
-        private static TargetInfo TryGetDelegateTargets(MetaObject/*!*/[]/*!*/ args, Delegate d) {
+        private static TargetInfo TryGetDelegateTargets(MetaObject[] args, Delegate d) {
             if (d != null) {
                 return new TargetInfo(args[0], ArrayUtils.RemoveFirst(args), d.GetType().GetMethod("Invoke"));
             }
@@ -221,7 +221,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Attempts to bind to an operator Call method.
         /// </summary>
-        private TargetInfo TryGetOperatorTargets(MetaObject/*!*/[]/*!*/ args, object target, CallSignature signature) {
+        private TargetInfo TryGetOperatorTargets(MetaObject[] args, object target, CallSignature signature) {
             MetaObject self = args[0];
             MethodBase[] targets;
 
@@ -274,15 +274,15 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         class TargetInfo {
             public readonly MetaObject Instance;
-            public readonly MetaObject/*!*/[]/*!*/ Arguments;
-            public readonly MethodBase/*!*/[]/*!*/ Targets;
-            public readonly Restrictions/*!*/ Restrictions;
+            public readonly MetaObject[] Arguments;
+            public readonly MethodBase[] Targets;
+            public readonly Restrictions Restrictions;
 
-            public TargetInfo(MetaObject instance, MetaObject/*!*/[]/*!*/ arguments, params MethodBase/*!*/[]/*!*/args) :
+            public TargetInfo(MetaObject instance, MetaObject[] arguments, params MethodBase[] args) :
                 this(instance, arguments, Restrictions.Empty, args) {
             }
 
-            public TargetInfo(MetaObject instance, MetaObject/*!*/[]/*!*/ arguments, Restrictions restrictions, params MethodBase/*!*/[]/*!*/targets) {
+            public TargetInfo(MetaObject instance, MetaObject[] arguments, Restrictions restrictions, params MethodBase[] targets) {
                 Assert.NotNullItems(targets);
                 Assert.NotNull(restrictions);
 

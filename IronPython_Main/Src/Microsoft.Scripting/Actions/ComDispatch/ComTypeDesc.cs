@@ -18,7 +18,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.ComTypes;
-using System.Scripting;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -28,12 +27,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private string _typeName;
         private string _documentation;
         private Guid _guid;
-        private Dictionary<SymbolId, ComMethodDesc> _funcs;
-        private Dictionary<SymbolId, ComEventDesc> _events;
+        private Dictionary<string, ComMethodDesc> _funcs;
+        private Dictionary<string, ComMethodDesc> _puts;
+        private Dictionary<string, ComEventDesc> _events;
         private ComMethodDesc _getItem;
         private ComMethodDesc _setItem;
         private readonly ComTypeLibDesc _typeLibDesc;
-        private static readonly Dictionary<SymbolId, ComEventDesc> _EmptyEventsDict = new Dictionary<SymbolId, ComEventDesc>();
+        private static readonly Dictionary<string, ComEventDesc> _EmptyEventsDict = new Dictionary<string, ComEventDesc>();
 
         protected ComTypeDesc(ITypeInfo typeInfo, ComType memberType, ComTypeLibDesc typeLibDesc) : base(memberType) {
             if (typeInfo != null) {
@@ -60,25 +60,27 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         internal static ComTypeDesc CreateEmptyTypeDesc() {
             ComTypeDesc typeDesc = new ComTypeDesc(null, ComType.Interface, null);
-            typeDesc._funcs = new Dictionary<SymbolId, ComMethodDesc>();
+            typeDesc._funcs = new Dictionary<string, ComMethodDesc>();
             typeDesc._events = _EmptyEventsDict;
 
             return typeDesc;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
-        internal static Dictionary<SymbolId, ComEventDesc> EmptyEvents {
+        internal static Dictionary<string, ComEventDesc> EmptyEvents {
             get { return _EmptyEventsDict; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
-        internal Dictionary<SymbolId, ComMethodDesc> Funcs {
+        internal Dictionary<string, ComMethodDesc> Funcs {
             get { return _funcs; }
             set { _funcs = value; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
-        internal Dictionary<SymbolId, ComEventDesc> Events {
+        internal Dictionary<string, ComMethodDesc> Puts {
+            get { return _puts; }
+            set { _puts = value; }
+        }
+
+        internal Dictionary<string, ComEventDesc> Events {
             get { return _events; }
             set { _events = value; }
         }

@@ -66,27 +66,27 @@ namespace System.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        public static ScopeExpression Scope(Expression/*!*/ body, params VariableExpression[] variables) {
+        public static ScopeExpression Scope(Expression body, params VariableExpression[] variables) {
             return Scope(body, null, Annotations.Empty, (IEnumerable<VariableExpression>)variables);
         }
 
-        public static ScopeExpression Scope(Expression/*!*/ body, IEnumerable<VariableExpression> variables) {
+        public static ScopeExpression Scope(Expression body, IEnumerable<VariableExpression> variables) {
             return Scope(body, null, Annotations.Empty, variables);
         }
 
-        public static ScopeExpression Scope(Expression/*!*/ body, string name, params VariableExpression[] variables) {
+        public static ScopeExpression Scope(Expression body, string name, params VariableExpression[] variables) {
             return Scope(body, name, Annotations.Empty, (IEnumerable<VariableExpression>)variables);
         }
 
-        public static ScopeExpression Scope(Expression/*!*/ body, string name, IEnumerable<VariableExpression> variables) {
+        public static ScopeExpression Scope(Expression body, string name, IEnumerable<VariableExpression> variables) {
             return Scope(body, name, Annotations.Empty, variables);
         }
 
-        public static ScopeExpression Scope(Expression/*!*/ body, string name, Annotations annotations, params VariableExpression[] variables) {
+        public static ScopeExpression Scope(Expression body, string name, Annotations annotations, params VariableExpression[] variables) {
             return Scope(body, name, annotations, (IEnumerable<VariableExpression>)variables);
         }
 
-        public static ScopeExpression Scope(Expression/*!*/ body, string name, Annotations annotations, IEnumerable<VariableExpression> variables) {
+        public static ScopeExpression Scope(Expression body, string name, Annotations annotations, IEnumerable<VariableExpression> variables) {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(annotations, "annotations");
 

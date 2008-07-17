@@ -65,12 +65,12 @@ namespace System.Scripting.Utils {
             }
 
             [Pure]
-            public IEnumerator<TSuper>/*!*/ GetEnumerator() {
+            public IEnumerator<TSuper> GetEnumerator() {
                 return CollectionUtils.ToCovariant<T, TSuper>(_enumerable.GetEnumerator());
             }
 
             [Pure]
-            IEnumerator/*!*/ IEnumerable.GetEnumerator() {
+            IEnumerator IEnumerable.GetEnumerator() {
                 return GetEnumerator();
             }
         }
@@ -146,28 +146,29 @@ namespace System.Scripting.Utils {
             }
         }
 
-        internal static int GetHashCode<T>(IEnumerable<T> list) {
+        internal static int ListHashCode<T>(this IEnumerable<T> list) {
+            var cmp = EqualityComparer<T>.Default;
             int h = 6551;
             foreach (T t in list) {
-                h ^= (h << 5) ^ t.GetHashCode();
+                h ^= (h << 5) ^ cmp.GetHashCode(t);
             }
             return h;
         }
 
-        internal static bool Equal<T>(ICollection<T> first, ICollection<T> second) {
+        internal static bool ListEquals<T>(this ICollection<T> first, ICollection<T> second) {
             if (first.Count != second.Count) {
                 return false;
             }
-            IEnumerator<T> f = first.GetEnumerator();
-            IEnumerator<T> s = second.GetEnumerator();
+            var cmp = EqualityComparer<T>.Default;
+            var f = first.GetEnumerator();
+            var s = second.GetEnumerator();
             while (f.MoveNext()) {
                 s.MoveNext();
 
-                if (!object.Equals(f.Current, s.Current)) {
+                if (!cmp.Equals(f.Current, s.Current)) {
                     return false;
                 }
             }
-
             return true;
         }
     }

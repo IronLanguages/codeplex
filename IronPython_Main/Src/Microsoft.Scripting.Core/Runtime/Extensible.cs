@@ -37,7 +37,7 @@ namespace System.Scripting.Runtime {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return _value.ToString();
         }
 

@@ -15,9 +15,9 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Interpretation {
         /// Input are two arrays - regular arguments passed into the generated delegate,
         /// and (if the delegate had params array), the parameter array, separately.
         /// </summary>
-        internal static object InterpretLambda(InterpreterState/*!*/ parentState, LambdaExpression/*!*/ lambda, object[]/*!*/ args) {
+        internal static object InterpretLambda(InterpreterState parentState, LambdaExpression lambda, object[] args) {
             ContractUtils.Requires(parentState != null, "parent");
             ContractUtils.Requires(lambda != null, "lambda");
             ContractUtils.Requires(args != null, "args");        // was allocated by the generated delegate
@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Interpretation {
             return ReflectionUtils.CreateDelegate(method, lambda.Type, new LambdaInvoker(lambda, state));
         }
 
-        private static bool HasByRefParameter(LambdaExpression/*!*/ lambda) {
+        private static bool HasByRefParameter(LambdaExpression lambda) {
             for (int i = 0; i < lambda.Parameters.Count; i++) {
                 if (lambda.Parameters[i].IsByRef) {
                     return true;
@@ -95,7 +95,7 @@ namespace Microsoft.Scripting.Interpretation {
             return false;
         }
 
-        private static Type/*!*/[]/*!*/ GetSignature(LambdaExpression/*!*/ lambda) {
+        private static Type[] GetSignature(LambdaExpression lambda) {
             Type[] result = new Type[1 + lambda.Parameters.Count];
             for (int i = 0; i < lambda.Parameters.Count; i++) {
                 result[i] = lambda.Parameters[i].Type;

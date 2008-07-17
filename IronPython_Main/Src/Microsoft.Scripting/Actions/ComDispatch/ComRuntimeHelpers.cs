@@ -30,19 +30,19 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
     public static class ComRuntimeHelpers {
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#"), CLSCompliant(false)]
-        public static void CheckThrowException(int hresult, ref ExcepInfo excepInfo, uint argErr, DispCallable dispCallable) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#")]
+        [CLSCompliant(false)]
+        public static void CheckThrowException(int hresult, ref ExcepInfo excepInfo, uint argErr, string message) {
             if (ComHresults.IsSuccess(hresult)) {
                 return;
             }
-
-            string genericMessage = "Error while invoking " + dispCallable.ComMethodDesc.Name;
 
             switch (hresult) {
                 case ComHresults.DISP_E_BADPARAMCOUNT:
                     // The number of elements provided to DISPPARAMS is different from the number of arguments 
                     // accepted by the method or property.
-                    throw new TargetParameterCountException(genericMessage);
+                    throw new TargetParameterCountException(message);
 
                 case ComHresults.DISP_E_BADVARTYPE:
                     //One of the arguments in rgvarg is not a valid variant type.
@@ -56,15 +56,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 case ComHresults.DISP_E_MEMBERNOTFOUND:
                     // The requested member does not exist, or the call to Invoke tried to set the value of a 
                     // read-only property.
-                    throw new MissingMemberException(genericMessage);
+                    throw new MissingMemberException(message);
 
                 case ComHresults.DISP_E_NONAMEDARGS:
                     // This implementation of IDispatch does not support named arguments.
-                    throw new ArgumentException(genericMessage + ". Named arguments are not supported");
+                    throw new ArgumentException(message + ". Named arguments are not supported");
 
                 case ComHresults.DISP_E_OVERFLOW:
                     // One of the arguments in rgvarg could not be coerced to the specified type.
-                    throw new OverflowException(genericMessage);
+                    throw new OverflowException(message);
 
                 case ComHresults.DISP_E_PARAMNOTFOUND:
                     // One of the parameter DISPIDs does not correspond to a parameter on the method. In this case, 
@@ -74,8 +74,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 case ComHresults.DISP_E_TYPEMISMATCH:
                     // One or more of the arguments could not be coerced. The index within rgvarg of the first 
                     // parameter with the incorrect type is returned in the puArgErr parameter.
-                    string message = String.Format("Could not convert argument {0} for call to {1}", argErr, dispCallable.ComMethodDesc.Name);
-                    throw new ArgumentTypeException(message);
+                    throw new ArgumentTypeException(String.Format("Could not convert argument {0} for call to {1}", argErr, message));
 
                 case ComHresults.DISP_E_UNKNOWNINTERFACE:
                     // The interface identifier passed in riid is not IID_NULL.
@@ -88,7 +87,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
                 case ComHresults.DISP_E_PARAMNOTOPTIONAL:
                     // A required parameter was omitted.
-                    throw new ArgumentException(genericMessage + ". A required parameter was omitted.");
+                    throw new ArgumentException(message + ". A required parameter was omitted.");
             }
 
             Marshal.ThrowExceptionForHR(hresult);
@@ -108,9 +107,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return rgNames[0];
         }
 
-        internal static SymbolId GetSymbolIdOfMethod(ComTypes.ITypeInfo typeInfo, int memid, string prefix) {
-            string name = GetNameOfMethod(typeInfo, memid);
-            return SymbolTable.StringToId(prefix + name);
+        internal static string GetNameOfMethod(ComTypes.ITypeInfo typeInfo, int memid, string prefix) {
+            return prefix + GetNameOfMethod(typeInfo, memid);
         }
 
         internal static string GetNameOfLib(ComTypes.ITypeLib typeLib) {

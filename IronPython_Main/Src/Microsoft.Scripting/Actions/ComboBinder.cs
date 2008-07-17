@@ -13,15 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -31,19 +27,19 @@ namespace Microsoft.Scripting.Actions {
     /// just processes the list to create the resulting code.
     /// </summary>
     public class ComboBinder : MetaAction {
-        private readonly BinderMappingInfo/*!*/[]/*!*/ _metaBinders;
+        private readonly BinderMappingInfo[] _metaBinders;
 
-        public ComboBinder(params BinderMappingInfo/*!*/[]/*!*/ binders)
+        public ComboBinder(params BinderMappingInfo[] binders)
             : this((ICollection<BinderMappingInfo>)binders) {
         }
 
-        public ComboBinder(ICollection<BinderMappingInfo/*!*/>/*!*/ binders) {
+        public ComboBinder(ICollection<BinderMappingInfo> binders) {
             Assert.NotNullItems(binders);
 
             _metaBinders = ArrayUtils.ToArray(binders);
         }
 
-        public override MetaObject/*!*/ Bind(params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject Bind(params MetaObject[] args) {
             List<MetaObject> results = new List<MetaObject>(_metaBinders.Length);
             List<Expression> steps = new List<Expression>();
             List<VariableExpression> temps = new List<VariableExpression>();
@@ -52,10 +48,10 @@ namespace Microsoft.Scripting.Actions {
             for (int i = 0; i < _metaBinders.Length; i++) {
                 BinderMappingInfo curBinder = _metaBinders[i];
 
-                MetaObject next = curBinder.Binder.Bind(GetArguments(args, results, i));                
+                MetaObject next = curBinder.Binder.Bind(GetArguments(args, results, i));
                 VariableExpression tmp = Expression.Variable(next.Expression.Type, "comboTemp" + i.ToString());
                 temps.Add(tmp);
-                
+
                 steps.Add(Expression.Assign(tmp, next.Expression));
                 results.Add(new MetaObject(tmp, next.Restrictions));
                 restrictions = restrictions.Merge(next.Restrictions);
@@ -70,7 +66,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private MetaObject/*!*/[]/*!*/ GetArguments(MetaObject/*!*/[]/*!*/ args, IList<MetaObject/*!*/>/*!*/ results, int metaBinderIndex) {
+        private MetaObject[] GetArguments(MetaObject[] args, IList<MetaObject> results, int metaBinderIndex) {
             BinderMappingInfo indices = _metaBinders[metaBinderIndex];
 
             MetaObject[] res = new MetaObject[indices.MappingInfo.Count];
@@ -96,7 +92,7 @@ namespace Microsoft.Scripting.Actions {
             return res;
         }
 
-        public override object/*!*/ HashCookie {
+        public override object HashCookie {
             get { return this; }
         }
 
@@ -158,15 +154,15 @@ namespace Microsoft.Scripting.Actions {
             _fixedInput = fixedInput;
         }
 
-        public static ParameterMappingInfo/*!*/ Parameter(int index) {
+        public static ParameterMappingInfo Parameter(int index) {
             return new ParameterMappingInfo(index, -1, null);
         }
 
-        public static ParameterMappingInfo/*!*/ Action(int index) {
+        public static ParameterMappingInfo Action(int index) {
             return new ParameterMappingInfo(-1, index, null);
         }
 
-        public static ParameterMappingInfo/*!*/ Fixed(ConstantExpression/*!*/ e) {
+        public static ParameterMappingInfo Fixed(ConstantExpression e) {
             return new ParameterMappingInfo(-1, -1, e);
         }
 
@@ -258,14 +254,14 @@ namespace Microsoft.Scripting.Actions {
     /// meta-binder and the mapping of parameters, sub-sites, and constants into the binding.
     /// </summary>
     public class BinderMappingInfo {
-        public MetaAction/*!*/ Binder;
-        public IList<ParameterMappingInfo/*!*/>/*!*/ MappingInfo;
+        public MetaAction Binder;
+        public IList<ParameterMappingInfo> MappingInfo;
 
         public BinderMappingInfo(MetaAction binder, IList<ParameterMappingInfo> mappingInfo) {
             Binder = binder;
             MappingInfo = mappingInfo;
         }
-        
+
         public BinderMappingInfo(MetaAction binder, params ParameterMappingInfo[] mappingInfos)
             : this(binder, (IList<ParameterMappingInfo>)mappingInfos) {
         }

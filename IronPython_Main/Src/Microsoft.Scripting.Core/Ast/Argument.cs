@@ -84,7 +84,7 @@ namespace System.Linq.Expressions {
 
     public partial class Expression {
         public static PositionalArgument PositionalArg(int position) {
-            ContractUtils.Requires(position >= 0, "position", "must be >= 0");
+            ContractUtils.Requires(position >= 0, "position", Strings.MustBePositive);
             return new PositionalArgument(position);
         }
         public static NamedArgument NamedArg(string name) {

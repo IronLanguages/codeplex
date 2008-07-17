@@ -24,14 +24,14 @@ namespace System.Scripting {
     public sealed class SourceUnit {
         private readonly SourceCodeKind _kind;
         private readonly string _path;
-        private readonly LanguageContext/*!*/ _language;
-        private readonly TextContentProvider/*!*/ _contentProvider;
+        private readonly LanguageContext _language;
+        private readonly TextContentProvider _contentProvider;
 
         private bool _disableLineFeedLineSeparator;
 
-        // content dependent properties:
-        // SourceUnit is serializable => updated properties are not transmitted back to the host unless the unit is passed by-ref
-        private SourceCodeProperties? _codeProperties;
+        // SourceUnit is serializable => updated parse result is transmitted
+        // back to the host unless the unit is passed by-ref
+        private ScriptCodeParseResult? _parseResult;
         private KeyValuePair<int, int>[] _lineMap;
 
         /// <summary>
@@ -58,26 +58,26 @@ namespace System.Scripting {
         /// <summary>
         /// LanguageContext of the language of the unit.
         /// </summary>
-        public LanguageContext/*!*/ LanguageContext {
+        public LanguageContext LanguageContext {
             get { return _language; }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public SourceCodeProperties GetCodeProperties() {
+        public ScriptCodeParseResult GetCodeProperties() {
             return GetCodeProperties(_language.GetCompilerOptions());
         }
 
-        public SourceCodeProperties GetCodeProperties(CompilerOptions/*!*/ options) {
+        public ScriptCodeParseResult GetCodeProperties(CompilerOptions options) {
             ContractUtils.RequiresNotNull(options, "options");
 
             _language.CompileSourceCode(this, options, ErrorSink.Null);
-            return _codeProperties ?? SourceCodeProperties.None;
+            return _parseResult ?? ScriptCodeParseResult.Complete;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")] // TODO: fix
-        public SourceCodeProperties? CodeProperties {
-            get { return _codeProperties; }
-            set { _codeProperties = value; }
+        public ScriptCodeParseResult? CodeProperties {
+            get { return _parseResult; }
+            set { _parseResult = value; }
         }
 
         // TODO: remove, used by Python only
@@ -86,7 +86,7 @@ namespace System.Scripting {
             set { _disableLineFeedLineSeparator = value; }
         }
 
-        internal SourceUnit(LanguageContext/*!*/ context, TextContentProvider/*!*/ contentProvider, string path, SourceCodeKind kind) {
+        internal SourceUnit(LanguageContext context, TextContentProvider contentProvider, string path, SourceCodeKind kind) {
             Assert.NotNull(context, contentProvider);
             Debug.Assert(path == null || path.Length > 0);
             Debug.Assert(context.CanCreateSourceCode);
@@ -98,15 +98,15 @@ namespace System.Scripting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public SourceUnitReader/*!*/ GetReader() {
+        public SourceUnitReader GetReader() {
             return new SourceUnitReader(this, _contentProvider.GetReader());
         }
-        
+
         /// <summary>
         /// Reads specified range of lines (or less) from the source unit. 
         /// Line numbers starts with 1.
         /// </summary>
-        public string/*!*/[]/*!*/ GetCodeLines(int start, int count) {
+        public string[] GetCodeLines(int start, int count) {
             ContractUtils.Requires(start > 0, "start");
             ContractUtils.Requires(count > 0, "count");
 
@@ -132,7 +132,7 @@ namespace System.Scripting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public string/*!*/ GetCode() {
+        public string GetCode() {
             using (SourceUnitReader reader = GetReader()) {
                 return reader.ReadToEnd();
             }
@@ -147,7 +147,7 @@ namespace System.Scripting {
             return new SourceLocation(loc.Index, MapLine(loc.Line), loc.Column);
         }
 
-        private int MapLine(int line) {
+        public int MapLine(int line) {
             if (_lineMap != null) {
                 int match = BinarySearch(_lineMap, line);
                 int delta = line - _lineMap[match].Key;
@@ -197,7 +197,7 @@ namespace System.Scripting {
             return Compile(ErrorSink.Default);
         }
 
-        public ScriptCode Compile(ErrorSink/*!*/ errorSink) {
+        public ScriptCode Compile(ErrorSink errorSink) {
             return Compile(_language.GetCompilerOptions(), errorSink);
         }
 
@@ -205,20 +205,20 @@ namespace System.Scripting {
         /// Errors are reported to the specified sink. 
         /// Returns <c>null</c> if the parser cannot compile the code due to error(s).
         /// </summary>
-        public ScriptCode Compile(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
+        public ScriptCode Compile(CompilerOptions options, ErrorSink errorSink) {
             ContractUtils.RequiresNotNull(errorSink, "errorSink");
             ContractUtils.RequiresNotNull(options, "options");
 
             return _language.CompileSourceCode(this, options, errorSink);
         }
 
-        public object Execute(Scope/*!*/ scope) {
+        public object Execute(Scope scope) {
             return Execute(scope, ErrorSink.Default);
         }
 
-        public object Execute(Scope/*!*/ scope, ErrorSink/*!*/ errorSink) {
+        public object Execute(Scope scope, ErrorSink errorSink) {
             ContractUtils.RequiresNotNull(scope, "scope");
-            
+
             ScriptCode compiledCode = Compile(_language.GetCompilerOptions(scope), errorSink);
 
             if (compiledCode == null) {
@@ -234,18 +234,18 @@ namespace System.Scripting {
         public object Execute() {
             return Compile().Run();
         }
-        
+
         /// <summary>
         /// Executes in an optimized scope.
         /// </summary>
-        public object Execute(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
+        public object Execute(CompilerOptions options, ErrorSink errorSink) {
             return Compile(options, errorSink).Run();
         }
 
         public int ExecuteProgram() {
             return _language.ExecuteProgram(this);
         }
-        
+
         #endregion
 
         public void SetLineMapping(KeyValuePair<int, int>[] lineMap) {

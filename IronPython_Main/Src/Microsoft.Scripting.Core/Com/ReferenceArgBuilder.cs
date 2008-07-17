@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using CompilerServices = System.Runtime.CompilerServices;
 
 namespace System.Scripting.Com {

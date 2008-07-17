@@ -15,9 +15,9 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
 
@@ -119,21 +119,21 @@ namespace System.Scripting.Utils {
         }
 
         /// <exception cref="InvalidImplementationException">The type failed to instantiate.</exception>
-        public static T/*!*/ CreateInstance<T>(Type actualType, params object[] args) {
+        public static T CreateInstance<T>(Type actualType, params object[] args) {
             Type type = typeof(T);
 
             Debug.Assert(type.IsAssignableFrom(actualType));
 
             try {
                 return (T)Activator.CreateInstance(actualType, args);
-            } catch (TargetInvocationException e) {
-                throw new InvalidImplementationException(ResourceUtils.GetString(ResourceUtils.InvalidCtorImplementation, actualType), e.InnerException);
-            } catch (Exception e) {
-                throw new InvalidImplementationException(ResourceUtils.GetString(ResourceUtils.InvalidCtorImplementation, actualType), e);
+            } catch (TargetInvocationException) {
+                throw Error.InvalidCtorImplementation(actualType);
+            } catch (Exception) {
+                throw Error.InvalidCtorImplementation(actualType);
             }
         }
 
-        internal static DynamicMethod CreateDynamicMethod(string/*!*/ name, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes) {
+        internal static DynamicMethod CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
 #if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
             return new DynamicMethod(name, returnType, parameterTypes);
 #else
@@ -217,7 +217,7 @@ namespace System.Scripting.Utils {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
             MethodInfo invokeMethod = delegateType.GetMethod("Invoke");
-            ContractUtils.Requires(invokeMethod != null, "delegateType", "Invalid delegate type (Invoke method not found).");
+            ContractUtils.Requires(invokeMethod != null, "delegateType", Strings.InvalidDelegate);
 
             parameterInfos = invokeMethod.GetParameters();
             returnInfo = invokeMethod.ReturnParameter;

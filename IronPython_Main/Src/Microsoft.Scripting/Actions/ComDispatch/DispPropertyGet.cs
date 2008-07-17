@@ -16,7 +16,6 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
-using System.Scripting;
 using System.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -30,7 +29,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1043:UseIntegralOrStringArgumentForIndexers")]
         public object this[CodeContext context, params object[] args] {
             get {
-                return UnoptimizedInvoke(context, SymbolId.EmptySymbols, args); 
+                return UnoptimizedInvoke(context, new string[0], args); 
             }
         }
     }

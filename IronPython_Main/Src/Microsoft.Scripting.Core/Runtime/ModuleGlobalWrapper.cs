@@ -42,7 +42,7 @@ namespace System.Scripting.Runtime {
 
         public object CurrentValue {
             get {
-                if (_value != Uninitialized.Instance) return _value;                
+                if (_value != Uninitialized.Instance) return _value;
 
                 return GetCachedValue();
             }
@@ -99,11 +99,11 @@ namespace System.Scripting.Runtime {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return String.Format("ModuleGlobal: {0} Value: {1} ({2})",
                 _name,
                 _value,
                 RawValue == Uninitialized.Instance ? "Module Local" : "Global");
         }
-    }  
+    }
 }

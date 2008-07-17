@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using System.Reflection;
 using System.Threading;
 
 namespace Microsoft.Scripting.Interpretation {
@@ -25,8 +25,8 @@ namespace Microsoft.Scripting.Interpretation {
     /// allow it being called, and then resume interpretation.
     /// </summary>
     public class LambdaInvoker {
-        private readonly LambdaExpression/*!*/ _lambda;
-        private readonly InterpreterState/*!*/ _state;
+        private readonly LambdaExpression _lambda;
+        private readonly InterpreterState _state;
 
         internal LambdaInvoker(LambdaExpression lambda, InterpreterState state) {
             Assert.NotNull(lambda, state);
@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Interpretation {
         private static MethodInfo _invoke6;
         private static MethodInfo _invoke7;
 
-        internal static MethodInfo/*!*/ GetInvokeMethod() {
+        internal static MethodInfo GetInvokeMethod() {
             return GetMethod(ref _invoke, "Invoke");
         }
 
@@ -71,7 +71,7 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
-        private static MethodInfo/*!*/ GetMethod(ref MethodInfo method, string/*!*/ name) {
+        private static MethodInfo GetMethod(ref MethodInfo method, string name) {
             if (method == null) {
                 Interlocked.CompareExchange(ref method, typeof(LambdaInvoker).GetMethod(name), null);
             }
@@ -85,7 +85,7 @@ namespace Microsoft.Scripting.Interpretation {
         public TResult Invoke0<TResult>() {
             return (TResult)Interpreter.InterpretLambda(_state, _lambda, ArrayUtils.EmptyObjects);
         }
-        
+
         public TResult Invoke1<T1, TResult>(T1 arg1) {
             return (TResult)Interpreter.InterpretLambda(_state, _lambda, new object[] { arg1 });
         }
@@ -116,9 +116,9 @@ namespace Microsoft.Scripting.Interpretation {
     }
 
     internal class GeneratorLambdaInvoker {
-        private readonly LambdaExpression/*!*/ _lambda;
-        private readonly InterpreterState/*!*/ _state;
-        
+        private readonly LambdaExpression _lambda;
+        private readonly InterpreterState _state;
+
         public GeneratorLambdaInvoker(LambdaExpression lambda, InterpreterState state) {
             _lambda = lambda;
             _state = state;
@@ -136,7 +136,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return true;
             }
 
-            ret = null;            
+            ret = null;
             return false;
         }
     }

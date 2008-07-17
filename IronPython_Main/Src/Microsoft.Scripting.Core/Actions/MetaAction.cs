@@ -72,7 +72,7 @@ namespace System.Scripting.Actions {
             );
         }
 
-        private Expression/*!*/ AddReturn(Expression/*!*/ body, Type/*!*/ retType) {
+        private Expression AddReturn(Expression body, Type retType) {
             switch (body.NodeType) {
                 case ExpressionType.Scope:
                     ScopeExpression se = (ScopeExpression)body;
@@ -119,11 +119,11 @@ namespace System.Scripting.Actions {
             return false;
         }
 
-        private static Type/*!*/ GetReturnType(Type/*!*/ dlgType) {
+        private static Type GetReturnType(Type dlgType) {
             return dlgType.GetMethod("Invoke").ReturnType;
         }
 
-        private Expression GetMetaObjectRule(MetaObject/*!*/ binding, Type/*!*/ retType, Expression/*!*/ siteExpr) {
+        private Expression GetMetaObjectRule(MetaObject binding, Type retType, Expression siteExpr) {
             Debug.Assert(binding != null);
 
             ActionSelfRewriter rewriter = new ActionSelfRewriter(

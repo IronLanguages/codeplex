@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Actions {
         private readonly MethodBase[] _targets;
         private readonly NarrowingLevel _maxLevel;                  // the maximum narrowing level allowed
 
-        public CallBinderHelper(CodeContext/*!*/ context, TAction/*!*/ action, object[]/*!*/ args)
+        public CallBinderHelper(CodeContext context, TAction action, object[] args)
             : base(context, action) {
             ContractUtils.RequiresNotEmpty(args, "args");
 
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 // we can't call this object
                 MakeCannotCallRule(t);
-            }            
+            }
 
             // if we produced an ActionOnCall rule we don't replace the test w/ our own.
             if (_rule.Test == null) {
@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private static object[] RemoveExplicitInstanceArgument(TAction action, object [] args) {
+        private static object[] RemoveExplicitInstanceArgument(TAction action, object[] args) {
             //If an instance is explicitly passed in as an argument, ignore it.
             //Calls that need an instance will pick it up from the bound objects 
             //passed in or the rule. CallType can differentiate between the type 
@@ -180,7 +180,7 @@ namespace Microsoft.Scripting.Actions {
                         break;
                     }
                 }
-                
+
                 _test = Ast.AndAlso(_test, MakeNecessaryTests(_rule, testTypesWithoutInstance.ToArray(), exprArgsWithoutInstance));
             }
 
@@ -248,7 +248,7 @@ namespace Microsoft.Scripting.Actions {
         #endregion
 
         #region Target acquisition
-         
+
         protected virtual MethodBase[] GetTargetMethods() {
             if (_targets != null) return _targets;
 
@@ -293,16 +293,16 @@ namespace Microsoft.Scripting.Actions {
             MethodBase[] targets;
             _instance = Ast.Convert(
                 Ast.Property(
-                    Ast.Convert(Rule.Parameters[0], typeof(BoundMemberTracker)), 
+                    Ast.Convert(Rule.Parameters[0], typeof(BoundMemberTracker)),
                     typeof(BoundMemberTracker).GetProperty("ObjectInstance")
                 ),
                 bmt.BoundTo.DeclaringType
             );
             _test = Ast.AndAlso(
-                _test, 
+                _test,
                 Ast.Equal(
                     Ast.Property(
-                        Ast.Convert(Rule.Parameters[0], typeof(BoundMemberTracker)), 
+                        Ast.Convert(Rule.Parameters[0], typeof(BoundMemberTracker)),
                         typeof(BoundMemberTracker).GetProperty("BoundTo")
                     ),
                     Ast.Constant(bmt.BoundTo)
@@ -317,7 +317,7 @@ namespace Microsoft.Scripting.Actions {
                         typeof(BoundMemberTracker).GetProperty("ObjectInstance")
                     )
                 )
-            );                    
+            );
             switch (bmt.BoundTo.MemberType) {
                 case TrackerTypes.MethodGroup:
                     targets = ((MethodGroup)bmt.BoundTo).GetMethodBases();
@@ -358,7 +358,7 @@ namespace Microsoft.Scripting.Actions {
                 targets = callTargets.ToArray();
                 _instance = Ast.Convert(_rule.Parameters[0], CompilerHelpers.GetType(Callable));
             }
-            
+
             return targets;
         }
 
@@ -395,9 +395,9 @@ namespace Microsoft.Scripting.Actions {
             int index = 0;
             while (dictEnum.MoveNext()) {
                 string name = dictEnum.Entry.Key as string;
-                if(name == null) {
+                if (name == null) {
                     throw new ArgumentTypeException(String.Format("expected string for dictionary argument got {0}", dictEnum.Entry.Key));
-                }                
+                }
                 names[index++] = name;
             }
 
@@ -553,7 +553,7 @@ namespace Microsoft.Scripting.Actions {
             set {
                 _test = value;
             }
-        }        
-        #endregion          
+        }
+        #endregion
     }
 }

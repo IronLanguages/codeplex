@@ -32,15 +32,18 @@ namespace System.Scripting {
     /// </summary>
     public class ScriptCode {
         private readonly LambdaExpression _code;
-        private readonly SourceUnit/*!*/ _sourceUnit;
+        private readonly SourceUnit _sourceUnit;
         private DlrMainCallTarget _target;
 
-        public ScriptCode(LambdaExpression/*!*/ code, SourceUnit/*!*/ sourceUnit)
+        public ScriptCode(LambdaExpression code, SourceUnit sourceUnit)
             : this(code, null, sourceUnit) {
         }
 
-        public ScriptCode(LambdaExpression code, DlrMainCallTarget target, SourceUnit/*!*/ sourceUnit) {
-            ContractUtils.Requires(code != null || target != null, "Either code or target must be specified.");
+        public ScriptCode(LambdaExpression code, DlrMainCallTarget target, SourceUnit sourceUnit) {
+            if (code == null && target == null) {
+                throw Error.MustHaveCodeOrTarget();
+            }
+
             ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
 
             _code = code;
@@ -48,7 +51,7 @@ namespace System.Scripting {
             _target = target;
         }
 
-        public LanguageContext/*!*/ LanguageContext {
+        public LanguageContext LanguageContext {
             get { return _sourceUnit.LanguageContext; }
         }
 
@@ -56,7 +59,7 @@ namespace System.Scripting {
             get { return _target; }
         }
 
-        public SourceUnit/*!*/ SourceUnit {
+        public SourceUnit SourceUnit {
             get { return _sourceUnit; }
         }
 
@@ -64,7 +67,7 @@ namespace System.Scripting {
             get { return _code; }
         }
 
-        public virtual Scope/*!*/ CreateScope() {
+        public virtual Scope CreateScope() {
             return new Scope();
         }
 
@@ -72,7 +75,7 @@ namespace System.Scripting {
             EnsureTarget(_code);
         }
 
-        public object Run(Scope/*!*/ scope) {
+        public object Run(Scope scope) {
             return InvokeTarget(_code, scope);
         }
 
@@ -80,18 +83,18 @@ namespace System.Scripting {
             return Run(CreateScope());
         }
 
-        protected virtual object InvokeTarget(LambdaExpression/*!*/ code, Scope/*!*/ scope) {
+        protected virtual object InvokeTarget(LambdaExpression code, Scope scope) {
             return EnsureTarget(code)(scope, LanguageContext);
         }
 
-        private DlrMainCallTarget/*!*/ EnsureTarget(LambdaExpression/*!*/ code) {
+        private DlrMainCallTarget EnsureTarget(LambdaExpression code) {
             if (_target == null) {
                 Interlocked.CompareExchange(ref _target, Compile<DlrMainCallTarget>(code, SourceUnit.EmitDebugSymbols), null);
             }
             return _target;
         }
-        
-        internal void CompileToDisk(TypeGen/*!*/ typeGen) {
+
+        internal void CompileToDisk(TypeGen typeGen) {
             if (_code == null) {
                 throw Error.NoCodeToCompile();
             }
@@ -113,12 +116,12 @@ namespace System.Scripting {
             LambdaCompiler.CompileLambda(lambda, typeGen, mb, _sourceUnit.EmitDebugSymbols);
         }
 
-        public static ScriptCode/*!*/ Load(MethodInfo/*!*/ method, LanguageContext/*!*/ language) {
+        public static ScriptCode Load(MethodInfo method, LanguageContext language) {
             SourceUnit su = new SourceUnit(language, NullTextContentProvider.Null, method.Name, SourceCodeKind.File);
             return new ScriptCode(null, (DlrMainCallTarget)Delegate.CreateDelegate(typeof(DlrMainCallTarget), method), su);
         }
 
-        protected virtual LambdaExpression/*!*/ PrepareCodeForSave(MethodBuilder/*!*/ builder) {
+        protected virtual LambdaExpression PrepareCodeForSave(MethodBuilder builder) {
             return new ToDiskRewriter().RewriteLambda(_code);
         }
 
@@ -131,7 +134,7 @@ namespace System.Scripting {
         /// 
         /// The DLR determines the internal format of the ScriptCode and the DLR can feel free to rev this as appropriate.  
         /// </summary>
-        public static void SaveToAssembly(string/*!*/ assemblyName, params ScriptCode/*!*/[]/*!*/ codes) {
+        public static void SaveToAssembly(string assemblyName, params ScriptCode[] codes) {
             ContractUtils.RequiresNotNull(assemblyName, "assemblyName");
             ContractUtils.RequiresNotNullItems(codes, "codes");
 
@@ -168,7 +171,7 @@ namespace System.Scripting {
         /// If the LanguageContext or the version of the DLR the language was compiled against is unavailable a 
         /// TypeLoadException will be raised unless policy has been applied by the administrator to redirect bindings.
         /// </summary>
-        public static ScriptCode/*!*/[]/*!*/ LoadFromAssembly(ScriptDomainManager/*!*/ runtime, Assembly/*!*/ assembly) {
+        public static ScriptCode[] LoadFromAssembly(ScriptDomainManager runtime, Assembly assembly) {
             ContractUtils.RequiresNotNull(runtime, "runtime");
             ContractUtils.RequiresNotNull(assembly, "assembly");
 
@@ -205,11 +208,11 @@ namespace System.Scripting {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return String.Format("ScriptCode '{0}' from {1}", SourceUnit.Path, LanguageContext.DisplayName);
         }
-        
-        public static T/*!*/ Compile<T>(LambdaExpression/*!*/ code, bool emitDebugSymbols) {
+
+        public static T Compile<T>(LambdaExpression code, bool emitDebugSymbols) {
             ContractUtils.RequiresNotNull(code, "code");
             return LambdaCompiler.CompileLambda<T>(code, emitDebugSymbols);
         }

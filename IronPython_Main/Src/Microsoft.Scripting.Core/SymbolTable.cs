@@ -16,6 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting.Utils;
+using System.Linq.Expressions;
 
 namespace System.Scripting {
     public static class SymbolTable {
@@ -51,7 +52,7 @@ namespace System.Scripting {
 
                         // Throw if we've exhausted the number of casings.
                         if (unchecked(((uint)res & 0x00FFFFFF) == 0x00FFFFFF)) {
-                            throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantAddCasing, field));
+                            throw Error.CantAddCasing(field);
                         }
 
                         int invariantRes = res + 0x01000000;
@@ -66,7 +67,7 @@ namespace System.Scripting {
                         // This is a whole new identifier.
 
                         if (_nextCaseInsensitiveId == int.MaxValue) {
-                            throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantAddIdentifier, field));
+                            throw Error.CantAddIdentifier(field);
                         }
 
                         // register new id...

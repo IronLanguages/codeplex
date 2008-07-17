@@ -46,27 +46,27 @@ namespace Microsoft.Scripting.Actions {
     }
 
     public class BinderHelper<T, TAction> : BinderHelper
-        where T : class 
+        where T : class
         where TAction : OldDynamicAction {
 
-        private readonly CodeContext/*!*/ _context;
-        private readonly TAction/*!*/ _action;
-        
-        public BinderHelper(CodeContext/*!*/ context, TAction/*!*/ action) {
+        private readonly CodeContext _context;
+        private readonly TAction _action;
+
+        public BinderHelper(CodeContext context, TAction action) {
             ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.RequiresNotNull(action, "action");
 
             _context = context;
             _action = action;
-        }        
+        }
 
-        protected CodeContext/*!*/ Context {
+        protected CodeContext Context {
             get {
                 return _context;
             }
         }
 
-        protected TAction/*!*/ Action {
+        protected TAction Action {
             get {
                 return _action;
             }
@@ -120,7 +120,7 @@ namespace Microsoft.Scripting.Actions {
                         }
                         break;
 
-                    case ArgumentKind.Dictionary: 
+                    case ArgumentKind.Dictionary:
                         // caller needs to process these...
                         break;
 
@@ -130,11 +130,11 @@ namespace Microsoft.Scripting.Actions {
             }
             return res.ToArray();
         }
-        
+
         internal MethodInfo GetMethod(Type type, string name) {
             // declaring type takes precedence
             MethodInfo mi = type.GetMethod(name);
-            if(mi != null) {
+            if (mi != null) {
                 return mi;
             }
 
@@ -180,7 +180,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        public static Expression MakeNecessaryTests(RuleBuilder rule, IList<Type[]> necessaryTests, Expression [] arguments) {
+        public static Expression MakeNecessaryTests(RuleBuilder rule, IList<Type[]> necessaryTests, Expression[] arguments) {
             if (necessaryTests.Count == 0) {
                 return Ast.Constant(true);
             }

@@ -20,10 +20,10 @@ using System.Text;
 namespace System.Linq.Expressions {
     //CONFORMING
     public sealed class TypeBinaryExpression : Expression {
-        private readonly Expression /*!*/ _expression;
-        private readonly Type /*!*/ _typeOperand;
+        private readonly Expression _expression;
+        private readonly Type _typeOperand;
 
-        internal TypeBinaryExpression(Annotations annotations, ExpressionType nodeType, Expression /*!*/ expression, Type /*!*/ typeOperand)
+        internal TypeBinaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type typeOperand)
             : base(annotations, nodeType, typeof(bool)) {
             _expression = expression;
             _typeOperand = typeOperand;
@@ -61,7 +61,7 @@ namespace System.Linq.Expressions {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type, Annotations annotations) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(!type.IsByRef, "type", "type must not be ByRef");
+            ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
 
             return new TypeBinaryExpression(annotations, ExpressionType.TypeIs, expression, type);
         }

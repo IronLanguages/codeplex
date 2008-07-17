@@ -25,17 +25,17 @@ namespace Microsoft.Scripting.Hosting {
     /// </summary>
     public abstract class ErrorListener
 #if !SILVERLIGHT
- : MarshalByRefObject
+         : MarshalByRefObject
 #endif
- {
+    {
         protected ErrorListener() {
         }
 
-        internal void ReportError(ScriptSource source, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
+        internal void ReportError(ScriptSource source, string message, SourceSpan span, int errorCode, Severity severity) {
             ErrorReported(source, message, span, errorCode, severity);
         }
 
-        public abstract void ErrorReported(ScriptSource source, string/*!*/ message, SourceSpan span, int errorCode, Severity severity);
+        public abstract void ErrorReported(ScriptSource source, string message, SourceSpan span, int errorCode, Severity severity);
 
 #if !SILVERLIGHT
         // TODO: Figure out what is the right lifetime

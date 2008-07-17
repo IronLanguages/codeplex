@@ -16,7 +16,6 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 
@@ -39,8 +38,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         #region IMembersList Members
 
-        public override IList<SymbolId> GetMemberNames(CodeContext context) {
-            return new List<SymbolId>();
+        public override IList<string> GetMemberNames(CodeContext context) {
+            return new string[0];
         }
 
         #endregion

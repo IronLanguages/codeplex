@@ -23,32 +23,32 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
     public class BasicConsole : IConsole, IDisposable {
 
-        private TextWriter/*!*/ _output;
-        private TextWriter/*!*/ _errorOutput;
+        private TextWriter _output;
+        private TextWriter _errorOutput;
         private AutoResetEvent _ctrlCEvent;
         private Thread _creatingThread;
 
-        public TextWriter/*!*/ Output {
+        public TextWriter Output {
             get { return _output; }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
-                _output = value; 
+                _output = value;
             }
         }
 
-        public TextWriter/*!*/ ErrorOutput {
+        public TextWriter ErrorOutput {
             get { return _errorOutput; }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
-                _errorOutput = value; 
+                _errorOutput = value;
             }
         }
-        
+
         protected AutoResetEvent CtrlCEvent {
             get { return _ctrlCEvent; }
             set { _ctrlCEvent = value; }
         }
-        
+
         protected Thread CreatingThread {
             get { return _creatingThread; }
             set { _creatingThread = value; }
@@ -123,7 +123,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 #else
                 if (_ctrlCEvent != null && _ctrlCEvent.WaitOne(100, false))
 #endif
-                {
+ {
                     // received ctrl-C
                     return "";
                 } else {

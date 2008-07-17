@@ -24,17 +24,17 @@ namespace Microsoft.Scripting.Hosting {
     /// <summary>
     /// Hosting API counterpart for <see cref="ScriptCode"/>.
     /// </summary>
-    public sealed class CompiledCode 
-#if !SILVERLIGHT 
+    public sealed class CompiledCode
+#if !SILVERLIGHT
         : MarshalByRefObject 
 #endif
     {
-        private readonly ScriptEngine/*!*/ _engine;
-        private readonly ScriptCode/*!*/ _code;
+        private readonly ScriptEngine _engine;
+        private readonly ScriptCode _code;
 
-        internal ScriptCode/*!*/ ScriptCode { get { return _code; } }
-        
-        internal CompiledCode(ScriptEngine/*!*/ engine, ScriptCode/*!*/ code) {
+        internal ScriptCode ScriptCode { get { return _code; } }
+
+        internal CompiledCode(ScriptEngine engine, ScriptCode code) {
             Assert.NotNull(engine);
             Assert.NotNull(code);
 
@@ -45,8 +45,8 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Engine that compiled this code.
         /// </summary>
-        public ScriptEngine/*!*/ Engine { 
-            get { return _engine; } 
+        public ScriptEngine Engine {
+            get { return _engine; }
         }
 
         /// <summary>
@@ -59,13 +59,13 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Execute code within a given scope and returns the result.
         /// </summary>
-        public object Execute(ScriptScope/*!*/ scope) {
+        public object Execute(ScriptScope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
             return _code.Run(scope.Scope);
         }
 
 #if !SILVERLIGHT
-        public ObjectHandle/*!*/ ExecuteAndWrap(ScriptScope/*!*/ scope) {
+        public ObjectHandle ExecuteAndWrap(ScriptScope scope) {
             return new ObjectHandle(Execute(scope));
         }
 

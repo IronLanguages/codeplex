@@ -17,9 +17,9 @@ using System.Linq.Expressions;
 
 namespace Microsoft.Scripting.Interpretation {
     internal class EvaluationAddress {
-        private readonly Expression/*!*/ _expr;
+        private readonly Expression _expr;
 
-        internal EvaluationAddress(Expression /*!*/ expression) {
+        internal EvaluationAddress(Expression expression) {
             _expr = expression;
         }
 

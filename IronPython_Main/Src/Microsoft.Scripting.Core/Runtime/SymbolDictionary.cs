@@ -100,7 +100,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        ICollection<object>/*!*/ IDictionary<object, object>.Keys {
+        ICollection<object> IDictionary<object, object>.Keys {
             get {
                 // data.Keys is typed as ICollection<SymbolId>. Hence, we cannot return as a ICollection<object>.
                 // Instead, we need to copy the data to a List<object>
@@ -149,7 +149,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        ICollection<object>/*!*/ IDictionary<object, object>.Values {
+        ICollection<object> IDictionary<object, object>.Values {
             get {
                 // Are there any object-keys? If not we can use a fast-path
                 lock (this) {
@@ -233,7 +233,7 @@ namespace System.Scripting.Runtime {
             return false;
         }
 
-        public void CopyTo(KeyValuePair<object, object>[]/*!*/ array, int arrayIndex) {
+        public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
             ContractUtils.RequiresNotNull(array, "array");
 
             lock (this) {
@@ -281,7 +281,7 @@ namespace System.Scripting.Runtime {
         #region IEnumerable<KeyValuePair<object,object>> Members
 
         [Pure]
-        IEnumerator<KeyValuePair<object, object>>/*!*/ IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
             lock (this) {
                 foreach (KeyValuePair<SymbolId, object> o in _data) {
                     if (o.Key == BaseSymbolDictionary.ObjectKeys) continue;
@@ -302,7 +302,7 @@ namespace System.Scripting.Runtime {
         #region IEnumerable Members
 
         [Pure]
-        public System.Collections.IEnumerator/*!*/ GetEnumerator() {
+        public System.Collections.IEnumerator GetEnumerator() {
             foreach (KeyValuePair<SymbolId, object> o in _data) {
                 if (o.Key == BaseSymbolDictionary.ObjectKeys) continue;
                 yield return SymbolTable.IdToString(o.Key);
@@ -385,17 +385,17 @@ namespace System.Scripting.Runtime {
 
         #region IDictionary Members
 
-        void IDictionary.Add(object/*!*/ key, object value) {
+        void IDictionary.Add(object key, object value) {
             AsObjectKeyedDictionary().Add(key, value);
         }
 
         [Pure]
-        public bool Contains(object/*!*/ key) {
+        public bool Contains(object key) {
             lock (this) return AsObjectKeyedDictionary().ContainsKey(key);
         }
 
         [Pure]
-        IDictionaryEnumerator/*!*/ IDictionary.GetEnumerator() {
+        IDictionaryEnumerator IDictionary.GetEnumerator() {
             Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();
             if (objData == null) return new TransformDictionaryEnumerator(_data);
 
@@ -412,7 +412,7 @@ namespace System.Scripting.Runtime {
             get { return false; }
         }
 
-        ICollection/*!*/ IDictionary.Keys {
+        ICollection IDictionary.Keys {
             get {
                 // data.Keys is typed as ICollection<SymbolId>. Hence, we cannot return as a ICollection.
                 // Instead, we need to copy the data to a List.
@@ -432,7 +432,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        void IDictionary.Remove(object/*!*/ key) {
+        void IDictionary.Remove(object key) {
             Debug.Assert(!(key is SymbolId));
             string strKey = key as string;
             lock (this) {
@@ -446,7 +446,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        ICollection/*!*/ IDictionary.Values {
+        ICollection IDictionary.Values {
             get {
                 List<object> res = new List<object>();
 
@@ -464,7 +464,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        object IDictionary.this[object/*!*/ key] {
+        object IDictionary.this[object key] {
             get { return AsObjectKeyedDictionary()[key]; }
             set { AsObjectKeyedDictionary()[key] = value; }
         }
@@ -488,7 +488,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public object/*!*/ SyncRoot {
+        public object SyncRoot {
             get {
                 // TODO: We should really lock on something else...
                 return this;

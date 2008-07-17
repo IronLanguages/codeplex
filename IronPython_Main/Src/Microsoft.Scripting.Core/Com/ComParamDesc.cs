@@ -16,10 +16,9 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using System.Linq.Expressions;
-
 using Marshal = System.Runtime.InteropServices.Marshal;
 using VarEnum = System.Runtime.InteropServices.VarEnum;
 

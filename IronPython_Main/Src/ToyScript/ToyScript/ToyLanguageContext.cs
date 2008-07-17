@@ -31,12 +31,12 @@ namespace ToyScript {
 
             switch (sourceUnit.Kind) {
                 case SourceCodeKind.InteractiveCode:
-                    sourceUnit.CodeProperties = SourceCodeProperties.None;
+                    sourceUnit.CodeProperties = ScriptCodeParseResult.Complete;
                     ast = ToyGenerator.Generate(this, tp.ParseInteractiveStatement(), sourceUnit);
                     break;
 
                 default:
-                    sourceUnit.CodeProperties = SourceCodeProperties.None;
+                    sourceUnit.CodeProperties = ScriptCodeParseResult.Complete;
                     ast = ToyGenerator.Generate(this, tp.ParseFile(), sourceUnit);
                     break;
             }

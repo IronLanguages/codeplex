@@ -165,6 +165,7 @@ def test_one_handler():
 TWO_IDENT_HANDLERS_COUNT = 0
 TWO_IDENT_HANDLERS_VAL = None
 
+@disabled("bug 427041")
 @skip("multiple_execute")
 def test_two_ident_handlers():
     

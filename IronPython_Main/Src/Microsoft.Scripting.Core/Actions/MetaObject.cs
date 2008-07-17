@@ -19,12 +19,12 @@ using System.Scripting.Generation;
 
 namespace System.Scripting.Actions {
     public class MetaObject {
-        private readonly Expression/*!*/ _expression;
-        private readonly Restrictions/*!*/ _restrictions;
+        private readonly Expression _expression;
+        private readonly Restrictions _restrictions;
         private readonly object _value;
         private readonly bool _hasValue;
 
-        public MetaObject(Expression/*!*/ expression, Restrictions/*!*/ restrictions) {
+        public MetaObject(Expression expression, Restrictions restrictions) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(restrictions, "restrictions");
 
@@ -32,19 +32,19 @@ namespace System.Scripting.Actions {
             _restrictions = restrictions;
         }
 
-        public MetaObject(Expression/*!*/ expression, Restrictions/*!*/ restrictions, object value)
+        public MetaObject(Expression expression, Restrictions restrictions, object value)
             : this(expression, restrictions) {
             _value = value;
             _hasValue = true;
         }
 
-        public virtual Expression/*!*/ Expression {
+        public virtual Expression Expression {
             get {
                 return _expression;
             }
         }
 
-        public Restrictions/*!*/ Restrictions {
+        public Restrictions Restrictions {
             get {
                 return _restrictions;
             }
@@ -108,7 +108,7 @@ namespace System.Scripting.Actions {
             }
         }
 
-        public virtual MetaObject/*!*/ Restrict(Type/*!*/ type) {
+        public virtual MetaObject Restrict(Type type) {
             if (type == Expression.Type && CompilerHelpers.IsSealed(type)) {
                 return this;
             }
@@ -214,7 +214,7 @@ namespace System.Scripting.Actions {
 
         // Internal helpers
 
-        internal static Type/*!*/[]/*!*/ GetTypes(MetaObject/*!*/[]/*!*/ objects) {
+        internal static Type[] GetTypes(MetaObject[] objects) {
             Type[] res = new Type[objects.Length];
             for (int i = 0; i < objects.Length; i++) {
                 res[i] = objects[i].RuntimeType ?? objects[i].Expression.Type;
@@ -223,7 +223,7 @@ namespace System.Scripting.Actions {
             return res;
         }
 
-        public static Expression/*!*/[]/*!*/ GetExpressions(MetaObject/*!*/[]/*!*/ objects) {
+        public static Expression[] GetExpressions(MetaObject[] objects) {
             Expression[] res = new Expression[objects.Length];
             for (int i = 0; i < objects.Length; i++) {
                 res[i] = objects[i].Expression;

@@ -49,11 +49,11 @@ namespace System.Scripting {
         }
 
 #if !SILVERLIGHT
-        protected SyntaxErrorException(SerializationInfo info, StreamingContext context) 
+        protected SyntaxErrorException(SerializationInfo info, StreamingContext context)
             : base(info, context) { }
 
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
-        public override void GetObjectData(SerializationInfo/*!*/ info, StreamingContext context) {
+        public override void GetObjectData(SerializationInfo info, StreamingContext context) {
             ContractUtils.RequiresNotNull(info, "info");
 
             base.GetObjectData(info, context);

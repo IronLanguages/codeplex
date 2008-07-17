@@ -107,16 +107,19 @@ namespace System.Linq.Expressions {
         // MakeTry: the one factory that creates TryStatement
         public static TryStatement MakeTry(Expression body, Expression @finally, Expression fault, Annotations annotations, IEnumerable<CatchBlock> handlers) {
             ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.Requires(@finally == null || fault == null, "cannot have finally and fault");
+
+            if (@finally != null && fault != null) {
+                throw Error.CannotHaveFinallyAndFault();
+            }
+            
             ContractUtils.RequiresNotNull(annotations, "annotations");
 
             var @catch = handlers.ToReadOnly();
             ContractUtils.RequiresNotNullItems(@catch, "handlers");
 
-            ContractUtils.Requires(
-                @catch.Count > 0 || @finally != null || fault != null,
-                "try must have at least one catch, finally, or fault clause"
-            );
+            if (@catch.Count == 0 && @finally == null && fault == null){
+                throw Error.TryMustHaveCatchFinallyOrFault();
+            }
 
             return new TryStatement(
                 annotations,

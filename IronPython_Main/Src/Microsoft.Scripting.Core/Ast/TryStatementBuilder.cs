@@ -111,7 +111,7 @@ namespace System.Linq.Expressions {
             return this;
         }
 
-        public TryStatementBuilder Fault(params Expression/*!*/[]/*!*/ body) {
+        public TryStatementBuilder Fault(params Expression[] body) {
             ContractUtils.RequiresNotNullItems(body, "body");
 
             if (_finally != null) {

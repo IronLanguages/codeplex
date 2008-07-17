@@ -441,11 +441,11 @@ namespace IronPython.Compiler {
         /// Parse one or more lines of interactive input
         /// </summary>
         /// <returns>null if input is not yet valid but could be with more lines</returns>
-        public PythonAst ParseInteractiveCode(out SourceCodeProperties properties) {
+        public PythonAst ParseInteractiveCode(out ScriptCodeParseResult properties) {
             bool parsingMultiLineCmpdStmt;
             bool isEmptyStmt = false;
 
-            properties = SourceCodeProperties.None;
+            properties = ScriptCodeParseResult.Complete;
 
 
             StartParsing();
@@ -453,9 +453,9 @@ namespace IronPython.Compiler {
 
             if (_errorCode == 0) {
                 if (isEmptyStmt) {
-                    properties = SourceCodeProperties.IsEmpty;
+                    properties = ScriptCodeParseResult.Empty;
                 } else if (parsingMultiLineCmpdStmt) {
-                    properties = SourceCodeProperties.IsIncompleteStatement;
+                    properties = ScriptCodeParseResult.IncompleteStatement;
                 }
 
                 if (isEmptyStmt) {
@@ -466,21 +466,21 @@ namespace IronPython.Compiler {
             } else {
                 if ((_errorCode & ErrorCodes.IncompleteMask) != 0) {
                     if ((_errorCode & ErrorCodes.IncompleteToken) != 0) {
-                        properties = SourceCodeProperties.IsIncompleteToken;
+                        properties = ScriptCodeParseResult.IncompleteToken;
                         return null;
                     }
 
                     if ((_errorCode & ErrorCodes.IncompleteStatement) != 0) {
                         if (parsingMultiLineCmpdStmt) {
-                            properties = SourceCodeProperties.IsIncompleteStatement;
+                            properties = ScriptCodeParseResult.IncompleteStatement;
                         } else {
-                            properties = SourceCodeProperties.IsIncompleteToken;
+                            properties = ScriptCodeParseResult.IncompleteToken;
                         }
                         return null;
                     }
                 }
 
-                properties = SourceCodeProperties.IsInvalid;
+                properties = ScriptCodeParseResult.Invalid;
                 return null;
             }
         }

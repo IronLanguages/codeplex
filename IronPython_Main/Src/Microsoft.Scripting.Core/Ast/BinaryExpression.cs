@@ -25,32 +25,32 @@ using System.Scripting.Actions;
 namespace System.Linq.Expressions {
     //CONFORMING
     public sealed class BinaryExpression : Expression {
-        private readonly Expression/*!*/ _left;
-        private readonly Expression/*!*/ _right;
+        private readonly Expression _left;
+        private readonly Expression _right;
         private readonly MethodInfo _method;
         private readonly LambdaExpression _conversion;
 
-        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression/*!*/ left, Expression/*!*/ right, Type type)
+        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type)
             : this(annotations, nodeType, left, right, type, null, null, null) {
         }
-        
-        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression/*!*/ left, Expression/*!*/ right, Type type, MethodInfo method)
+
+        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type, MethodInfo method)
             : this(annotations, nodeType, left, right, type, method, null, null) {
         }
 
-        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression/*!*/ left, Expression/*!*/ right, Type type, CallSiteBinder bindingInfo)
+        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type, CallSiteBinder bindingInfo)
             : this(annotations, nodeType, left, right, type, null, null, bindingInfo) {
         }
 
-        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression/*!*/ left, Expression/*!*/ right, Type type, LambdaExpression conversion)
+        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type, LambdaExpression conversion)
             : this(annotations, nodeType, left, right, type, null, conversion, null) {
         }
 
-        internal BinaryExpression(Annotations annotations, 
-                                  ExpressionType nodeType, 
-                                  Expression/*!*/ left, 
-                                  Expression/*!*/ right, 
-                                  Type type, 
+        internal BinaryExpression(Annotations annotations,
+                                  ExpressionType nodeType,
+                                  Expression left,
+                                  Expression right,
+                                  Type type,
                                   MethodInfo method,
                                   LambdaExpression conversion,
                                   CallSiteBinder bindingInfo)
@@ -65,7 +65,7 @@ namespace System.Linq.Expressions {
             _method = method;
             _conversion = conversion;
         }
-        
+
         public Expression Right {
             get { return _right; }
         }
@@ -81,7 +81,7 @@ namespace System.Linq.Expressions {
         public LambdaExpression Conversion {
             get { return _conversion; }
         }
-        
+
         public bool IsLifted {
             get {
                 if (this.NodeType == ExpressionType.Coalesce) {
@@ -94,7 +94,7 @@ namespace System.Linq.Expressions {
                 return leftIsNullable;
             }
         }
-        
+
         public bool IsLiftedToNull {
             get {
                 return this.IsLifted && TypeUtils.IsNullableType(this.Type);
@@ -274,9 +274,9 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         private static bool IsLiftingConditionalLogicalOperator(Type left, Type right, MethodInfo method, ExpressionType binaryType) {
-            return TypeUtils.IsNullableType(right) && 
-                    TypeUtils.IsNullableType(left) && 
-                    method == null && 
+            return TypeUtils.IsNullableType(right) &&
+                    TypeUtils.IsNullableType(left) &&
+                    method == null &&
                     (binaryType == ExpressionType.AndAlso || binaryType == ExpressionType.OrElse);
         }
 
@@ -642,7 +642,7 @@ namespace System.Linq.Expressions {
         #endregion
 
         #region Coalescing Expressions
-                      
+
         //CONFORMING
         public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) {
             if (conversion == null) {
@@ -676,7 +676,7 @@ namespace System.Linq.Expressions {
             // from the erased or unerased type of the left hand side.
             if (!ParameterIsAssignable(pms[0], TypeUtils.GetNonNullableType(left.Type)) &&
                 !ParameterIsAssignable(pms[0], left.Type)) {
-                    throw Error.OperandTypesDoNotMatchParameters(ExpressionType.Coalesce, conversion.ToString());
+                throw Error.OperandTypesDoNotMatchParameters(ExpressionType.Coalesce, conversion.ToString());
             }
             return new BinaryExpression(Annotations.Empty, ExpressionType.Coalesce, left, right, right.Type, conversion);
         }
@@ -1021,13 +1021,13 @@ namespace System.Linq.Expressions {
             }
             ContractUtils.RequiresNotNull(left, "left");
             ContractUtils.RequiresNotNull(right, "right");
-            return MakePowerExpression(left,right,method, annotations);
+            return MakePowerExpression(left, right, method, annotations);
         }
 
         private static BinaryExpression MakePowerExpression(Expression left, Expression right, MethodInfo method, Annotations annotations) {
             return GetMethodBasedBinaryOperator(ExpressionType.Power, left, right, method, true, annotations);
         }
-        
+
         #endregion
 
         #region ArrayIndex Expression
@@ -1050,7 +1050,7 @@ namespace System.Linq.Expressions {
 
             return new BinaryExpression(Annotations.Empty, ExpressionType.ArrayIndex, array, index, arrayType.GetElementType());
         }
-        
+
         #endregion
 
         #region dynamic operations

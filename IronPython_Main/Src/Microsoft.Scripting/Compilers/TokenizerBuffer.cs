@@ -28,14 +28,14 @@ namespace Microsoft.Scripting.Compilers {
         public const int EndOfFile = -1;
         public const int InvalidCharacter = -2;
 
-        // Whether to allow multiple forms of EOLN. If false, then only \n are considered. 
-        // Otherwise, \r\n and \r are considered as well.
+        // Whether to allow multiple forms of EOLN. 
+        // If false only '\n' is treated as a line separator otherwise '\n', '\r\n' and '\r' are treated as separators.
         private readonly bool _multiEolns;
-        private readonly SourceUnitReader _source;
+        private readonly TextReader _reader;
 
         private char[] _buffer;
 
-        // Set to true when the buffer is resized. The contents of the buffer is shift to the beginning at that point,
+        // Set to true when the buffer is resized. The contents of the buffer is shifted to the beginning at that point,
         // which discards the no longer used data in the buffer.
         private bool _bufferResized;
 
@@ -55,9 +55,9 @@ namespace Microsoft.Scripting.Compilers {
         // index of the last+1 character of the current token (token start is _start):
         private int _tokenEnd;
 
-        public TextReader SourceReader {
+        public TextReader Reader {
             get {
-                return _source;
+                return _reader;
             }
         }
         
@@ -97,22 +97,22 @@ namespace Microsoft.Scripting.Compilers {
 
         public SourceLocation TokenStart {
             get {
-                return _source.SourceUnit.MakeLocation(_tokenStartLocation);
+                return _tokenStartLocation;
             }
         }
 
         public SourceLocation TokenEnd {
             get {
                 Debug.Assert(_tokenEnd != -1, "Token end not marked");
-                return _source.SourceUnit.MakeLocation(_tokenEndLocation);
+                return _tokenEndLocation;
             }
         }
 
-        public TokenizerBuffer(SourceUnitReader source, SourceLocation initialLocation, int initialCapacity, bool multiEolns) {
-            ContractUtils.RequiresNotNull(source, "source");
-            if (initialCapacity <= 0) throw new ArgumentOutOfRangeException("initialCapacity");
+        public TokenizerBuffer(TextReader reader, SourceLocation initialLocation, int initialCapacity, bool multiEolns) {
+            ContractUtils.RequiresNotNull(reader, "reader");
+            ContractUtils.Requires(initialCapacity > 0, "initialCapacity");
 
-            _source = source;
+            _reader = reader;
             _buffer = new char[initialCapacity];
 
             _tokenEnd = -1;
@@ -201,7 +201,7 @@ namespace Microsoft.Scripting.Compilers {
             }
 
             // make the buffer full:
-            int count = _source.Read(_buffer, _end, _buffer.Length - _end);
+            int count = _reader.Read(_buffer, _end, _buffer.Length - _end);
             _end += count;
 
             ClearInvalidChars();

@@ -798,7 +798,7 @@ namespace System.Linq.Expressions {
                     cases = new ReadOnlyCollection<SwitchCase>(clone);
                 }
 
-                expr = new SwitchStatement(node.Annotations, node.Label, test.Node, cases);
+                expr = new SwitchStatement(test.Node, node.Label, node.Annotations, cases);
             }
 
             return new Result(action, expr);
@@ -928,7 +928,7 @@ namespace System.Linq.Expressions {
         /// all vaues up to (and NOT including) the max index
         /// </summary>
         /// <returns>The cloned array.</returns>
-        private static T[] Clone<T>(ReadOnlyCollection<T>/*!*/ original, int max) {
+        private static T[] Clone<T>(ReadOnlyCollection<T> original, int max) {
             Debug.Assert(original != null);
             Debug.Assert(max < original.Count);
 

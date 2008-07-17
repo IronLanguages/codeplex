@@ -68,10 +68,9 @@ namespace System.Linq.Expressions {
         //Field and Property factories when CanRead/CanWrite are implemented
         internal static void CheckField(FieldInfo info, Expression instance, Expression rightValue) {
             ContractUtils.RequiresNotNull(info, "field");
-            ContractUtils.Requires((instance == null) == info.IsStatic, "expression",
-                "Static field requires null expression, non-static field requires non-null expression.");
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the field");
-            ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", "Incorrect value type for the field");
+            ContractUtils.Requires((instance == null) == info.IsStatic, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", Strings.IncorrectInstanceTypeField);
+            ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", Strings.IncorrectValueTypeField);
         }
 
         internal static void CheckProperty(PropertyInfo info, Expression instance, Expression rightValue) {
@@ -84,22 +83,20 @@ namespace System.Linq.Expressions {
         }
 
         internal static void CheckPropertyGet(MethodInfo getMethod, Expression instance) {
-            ContractUtils.Requires(getMethod != null, "Property is not readable");
-            ContractUtils.Requires((instance == null) == getMethod.IsStatic, "expression",
-                "Static property requires null expression, non-static property requires non-null expression.");
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(getMethod.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
+            ContractUtils.Requires(getMethod != null, "getMethod", Strings.PropertyNotReadable);
+            ContractUtils.Requires((instance == null) == getMethod.IsStatic, "expression", Strings.OnlyStaticPropertiesHaveNullExpr);
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(getMethod.DeclaringType, instance.Type), "expression", Strings.IncorrectinstanceTypeProperty);
         }
 
         internal static void CheckPropertySet(MethodInfo setMethod, Expression instance, Expression rightValue) {
-            ContractUtils.Requires(setMethod != null, "Property is not writeable");
-            ContractUtils.Requires((instance == null) == setMethod.IsStatic, "expression",
-                "Static property requires null expression, non-static property requires non-null expression.");
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(setMethod.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
+            ContractUtils.Requires(setMethod != null, "setMethod", Strings.PropertyNotWriteable);
+            ContractUtils.Requires((instance == null) == setMethod.IsStatic, "expression", Strings.OnlyStaticPropertiesHaveNullExpr);
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(setMethod.DeclaringType, instance.Type), "expression", Strings.IncorrectinstanceTypeProperty);
 
             ParameterInfo[] parameters = setMethod.GetParameters();
-            ContractUtils.Requires(parameters.Length > 0, "setMethod", "set method must have at least one parameter");
+            ContractUtils.Requires(parameters.Length > 0, "setMethod", Strings.SetMustHaveParams);
             Type valueType = parameters[parameters.Length - 1].ParameterType;
-            ContractUtils.Requires(TypeUtils.CanAssign(valueType, rightValue.Type), "value", "Incorrect value type for the property");
+            ContractUtils.Requires(TypeUtils.CanAssign(valueType, rightValue.Type), "value", Strings.IncorrectValueTypeForProperty);
         }
 
 

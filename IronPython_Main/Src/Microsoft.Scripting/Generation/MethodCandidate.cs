@@ -67,25 +67,25 @@ namespace Microsoft.Scripting.Generation {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return string.Format("MethodCandidate({0})", Target);
         }
-        
-        internal bool IsApplicable(Type[] types, NarrowingLevel narrowingLevel, List<ConversionResult> conversionResults) {            
+
+        internal bool IsApplicable(Type[] types, NarrowingLevel narrowingLevel, List<ConversionResult> conversionResults) {
             // attempt to convert each parameter
             bool res = true;
             for (int i = 0; i < types.Length; i++) {
                 bool success = _parameters[i].HasConversionFrom(types[i], narrowingLevel);
 
                 conversionResults.Add(new ConversionResult(types[i], _parameters[i].Type, i, !success));
-                    
-                res &= success;                
+
+                res &= success;
             }
 
             return res;
         }
 
-        internal bool IsApplicable(MetaObject/*!*/[]/*!*/ objects, NarrowingLevel narrowingLevel, List<ConversionResult>/*!*/ conversionResults) {
+        internal bool IsApplicable(MetaObject[] objects, NarrowingLevel narrowingLevel, List<ConversionResult> conversionResults) {
             // attempt to convert each parameter
             bool res = true;
             for (int i = 0; i < objects.Length; i++) {
@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Generation {
 
             return res;
         }
-                         
+
         internal int CompareTo(MethodCandidate other, CallTypes callType, Type[] actualTypes) {
             int? cmpParams = CompareParameters(other, actualTypes);
             if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
@@ -147,7 +147,7 @@ namespace Microsoft.Scripting.Generation {
 
             List<ParameterWrapper> newParameters = new List<ParameterWrapper>(count);
             // if we don't have a param array we'll have a param dict which is type object
-            Type elementType = null;  
+            Type elementType = null;
             int index = -1, kwIndex = -1;
 
             // keep track of which kw args map to a real argument, and which ones
@@ -203,7 +203,7 @@ namespace Microsoft.Scripting.Generation {
 
             return new MethodCandidate(_target.MakeParamsExtended(count, unusedNames.ToArray(), unusedNameIndexes.ToArray()), newParameters);
         }
-        
+
         internal string ToSignatureString(string name, CallTypes callType) {
             StringBuilder buf = new StringBuilder(name);
             buf.Append("(");

@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Runtime {
         abstract protected void WriteFunctionDefinition(CodeMemberMethod func);
         abstract protected string QuoteString(string val);
 
-        public SourceUnit/*!*/ GenerateCode(CodeMemberMethod/*!*/ codeDom, LanguageContext/*!*/ context, string path, SourceCodeKind kind) {
+        public SourceUnit GenerateCode(CodeMemberMethod codeDom, LanguageContext context, string path, SourceCodeKind kind) {
             ContractUtils.RequiresNotNull(codeDom, "codeDom");
             ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.Requires(path == null || path.Length > 0, "path");
@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Runtime {
             return CreateSourceUnit(context, path, kind);
         }
 
-        private SourceUnit/*!*/ CreateSourceUnit(LanguageContext context, string path, SourceCodeKind kind) {
+        private SourceUnit CreateSourceUnit(LanguageContext context, string path, SourceCodeKind kind) {
             string code = _writer.ToString();
             SourceUnit src = context.CreateSnippet(code, path, kind);
             src.SetLineMapping(_writer.GetLineMap());
@@ -80,8 +80,7 @@ namespace Microsoft.Scripting.Runtime {
 
             if (s is CodeExpressionStatement) {
                 WriteExpressionStatement((CodeExpressionStatement)s);
-            }
-            else if (s is CodeSnippetStatement) {
+            } else if (s is CodeSnippetStatement) {
                 WriteSnippetStatement((CodeSnippetStatement)s);
             }
         }
@@ -90,14 +89,11 @@ namespace Microsoft.Scripting.Runtime {
         protected void WriteExpression(CodeExpression e) {
             if (e is CodeSnippetExpression) {
                 WriteSnippetExpression((CodeSnippetExpression)e);
-            }
-            else if (e is CodePrimitiveExpression) {
+            } else if (e is CodePrimitiveExpression) {
                 WritePrimitiveExpression((CodePrimitiveExpression)e);
-            }
-            else if (e is CodeMethodInvokeExpression) {
+            } else if (e is CodeMethodInvokeExpression) {
                 WriteCallExpression((CodeMethodInvokeExpression)e);
-            }
-            else if (e is CodeArgumentReferenceExpression) {
+            } else if (e is CodeArgumentReferenceExpression) {
                 WriteArgumentReferenceExpression((CodeArgumentReferenceExpression)e);
             }
         }
@@ -108,8 +104,7 @@ namespace Microsoft.Scripting.Runtime {
             string strVal = val as string;
             if (strVal != null) {
                 _writer.Write(QuoteString(strVal));
-            }
-            else {
+            } else {
                 _writer.Write(val);
             }
         }

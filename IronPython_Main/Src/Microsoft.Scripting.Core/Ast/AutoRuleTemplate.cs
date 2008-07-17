@@ -145,7 +145,7 @@ namespace System.Linq.Expressions {
         class TemplateRuleRewriter : ExpressionTreeVisitor {
             private readonly List<ConstantExpression> _constants;
 
-            public TemplateRuleRewriter(List<ConstantExpression>/*!*/ constants) {
+            public TemplateRuleRewriter(List<ConstantExpression> constants) {
                 _constants = constants;
             }
 

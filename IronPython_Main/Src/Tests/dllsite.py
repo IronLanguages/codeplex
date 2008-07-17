@@ -21,9 +21,7 @@ from sys import exit, argv, path
 from nt import getcwd
 from lib.assert_util import *
 
-#site.py used for internal testing does not preload DLLs
-if is_snap:
-    path.insert(0, nt.getcwd() + "\\..\\Lib")
+path.insert(0, nt.getcwd() + "\\..\\Lib")
 
 import site
 

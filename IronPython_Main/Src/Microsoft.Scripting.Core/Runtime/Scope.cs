@@ -47,7 +47,7 @@ namespace System.Scripting.Runtime {
     /// TODO: Thread safety
     /// </summary>
     public class Scope {
-        private ScopeExtension[]/*!*/ _extensions; // resizable
+        private ScopeExtension[] _extensions; // resizable
         private readonly Scope _parent;
         private IAttributesCollection _dict;
 
@@ -55,7 +55,7 @@ namespace System.Scripting.Runtime {
         private ScopeAttributeDictionary _attrs;
         private ContextSensitiveScope _contextScopes;
         private bool _isVisible;
-        
+
         /// <summary>
         /// Creates a new top-level scope with a new empty dictionary.  The scope
         /// is marked as being visible.
@@ -92,9 +92,9 @@ namespace System.Scripting.Runtime {
             return (languageContextId.Id < _extensions.Length) ? _extensions[languageContextId.Id] : null;
         }
 
-        public ScopeExtension/*!*/ SetExtension(ContextId languageContextId, ScopeExtension/*!*/ extension) {
+        public ScopeExtension SetExtension(ContextId languageContextId, ScopeExtension extension) {
             ContractUtils.RequiresNotNull(extension, "extension");
-            
+
             if (languageContextId.Id >= _extensions.Length) {
                 Array.Resize(ref _extensions, languageContextId.Id + 1);
             }
@@ -113,7 +113,7 @@ namespace System.Scripting.Runtime {
                 return _parent;
             }
         }
-        
+
         /// <summary>
         /// Gets if the context is visible at this scope.  Visibility is a per-language feature that enables
         /// languages to include members in the Scope chain but hide them when directly exposed to the user.
@@ -137,8 +137,8 @@ namespace System.Scripting.Runtime {
 
                     SymbolId si = SymbolTable.StringToId(strName);
                     if (_attrs == null || _attrs.CheckEnumerable(si)) {
-                            yield return si;
-                    }                    
+                        yield return si;
+                    }
                 }
             }
         }
@@ -268,7 +268,7 @@ namespace System.Scripting.Runtime {
 
             return res;
         }
-        
+
         /// <summary>
         /// Sets the name to the specified value for the current context.
         /// </summary>
@@ -387,7 +387,7 @@ namespace System.Scripting.Runtime {
             if (_contextScopes != null && context != null) {
                 fRemoved = _contextScopes.TryRemoveName(context, name);
             }
-            
+
             // TODO: Ideally, we could do this without having to do two lookups.
             object removedObject;
             if ((_attrs == null || _attrs.CheckDeletable(name))
@@ -436,7 +436,7 @@ namespace System.Scripting.Runtime {
         public bool TryRemoveObjectName(object name) {
             return TryRemoveObjectName(null, name);
         }
-        
+
         /// <summary>
         /// Attemps to remove the provided object name from this scope removing names visible
         /// to both the current context and all contexts.
@@ -503,7 +503,7 @@ namespace System.Scripting.Runtime {
         public void SetObjectName(object name, object value) {
             SetObjectName(ContextId.Empty, name, value, ScopeMemberAttributes.None);
         }
-        
+
         /// <summary>
         /// Sets the name to the specified value for the current context.
         /// 
@@ -545,17 +545,17 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public IEnumerable<KeyValuePair<object, object>>/*!*/ GetAllItems() {
+        public IEnumerable<KeyValuePair<object, object>> GetAllItems() {
             return GetAllItems(null);
         }
-        
+
         /// <summary>
         /// Returns the list of Keys and Values available to all languages in addition to those
         /// keys which are only available to the provided LanguageContext.
         /// 
         /// Keys marked with DontEnumerate flag will not be returned.
         /// </summary>
-        public IEnumerable<KeyValuePair<object, object>>/*!*/ GetAllItems(LanguageContext context) {
+        public IEnumerable<KeyValuePair<object, object>> GetAllItems(LanguageContext context) {
             foreach (KeyValuePair<object, object> kvp in _dict) {
                 if (_attrs == null || _attrs.CheckEnumerable(kvp.Key)) {
                     yield return kvp;
@@ -784,13 +784,13 @@ namespace System.Scripting.Runtime {
                 if (name is SymbolId) return CheckDeletable((SymbolId)name);
 
                 ScopeMemberAttributes scopeAttrs;
-                if (_objectAttrs != null){
+                if (_objectAttrs != null) {
                     return !_objectAttrs.TryGetValue(name, out scopeAttrs) ||
                             (scopeAttrs & ScopeMemberAttributes.DontDelete) == 0;
                 } else {
                     string stringName = name as string;
                     if (stringName != null) {
-                        return CheckDeletable(SymbolTable.StringToId(stringName));  
+                        return CheckDeletable(SymbolTable.StringToId(stringName));
                     }
                 }
                 return true;
@@ -806,7 +806,7 @@ namespace System.Scripting.Runtime {
                 } else {
                     string stringName = name as string;
                     if (stringName != null) {
-                        return CheckEnumerable(SymbolTable.StringToId(stringName));  
+                        return CheckEnumerable(SymbolTable.StringToId(stringName));
                     }
                 }
                 return true;

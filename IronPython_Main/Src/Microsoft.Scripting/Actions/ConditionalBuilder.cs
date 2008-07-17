@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Text;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 
@@ -30,18 +29,18 @@ namespace Microsoft.Scripting.Actions {
     /// branch must be added.
     /// </summary>
     class ConditionalBuilder {
-        private readonly List<Expression/*!*/>/*!*/ _conditions = new List<Expression>();
-        private readonly List<Expression/*!*/>/*!*/ _bodies = new List<Expression>();
-        private readonly List<VariableExpression/*!*/>/*!*/ _variables = new List<VariableExpression>();
+        private readonly List<Expression> _conditions = new List<Expression>();
+        private readonly List<Expression> _bodies = new List<Expression>();
+        private readonly List<VariableExpression> _variables = new List<VariableExpression>();
         private Expression _body;
-        private Restrictions/*!*/ _restrictions = Restrictions.Empty;
+        private Restrictions _restrictions = Restrictions.Empty;
 
         /// <summary>
         /// Adds a new conditional and body.  The first call this becomes the top-level
         /// conditional, subsequent calls will have it added as false statement of the
         /// previous conditional.
         /// </summary>
-        public void AddCondition(Expression/*!*/ condition, Expression/*!*/ body) {
+        public void AddCondition(Expression condition, Expression body) {
             Assert.NotNull(condition, body);
 
             _conditions.Add(condition);
@@ -51,7 +50,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Adds the non-conditional terminating node.
         /// </summary>
-        public void FinishCondition(Expression/*!*/ body) {
+        public void FinishCondition(Expression body) {
             if (_body != null) throw new InvalidOperationException();
 
             for (int i = _bodies.Count - 1; i >= 0; i--) {
@@ -95,7 +94,7 @@ namespace Microsoft.Scripting.Actions {
         /// Gets the resulting meta object for the full body.  FinishCondition
         /// must have been called.
         /// </summary>
-        public MetaObject/*!*/ GetMetaObject(params MetaObject/*!*/[]/*!*/ types) {
+        public MetaObject GetMetaObject(params MetaObject[] types) {
             if (_body == null) {
                 throw new InvalidOperationException("FinishCondition should have been called");
             }
@@ -109,7 +108,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Adds a variable which will be scoped at the level of the final expression.
         /// </summary>
-        public void AddVariable(VariableExpression/*!*/ var) {
+        public void AddVariable(VariableExpression var) {
             _variables.Add(var);
         }
     }

@@ -27,22 +27,28 @@ namespace System.Linq.Expressions {
         private readonly ExpressionType _nodeType;
         private readonly Type _type;
         private readonly CallSiteBinder _binder;
-        private readonly Annotations/*!*/ _annotations;
+        private readonly Annotations _annotations;
 
         protected Expression(ExpressionType nodeType, Type type)
             : this(Annotations.Empty, nodeType, type) {
         }
 
+        // TODO: fix parameter order: ExpressionType, Type, Annotations
+        // (optional params must come last in APIs, and this is exposed surface area)
         protected Expression(Annotations annotations, ExpressionType nodeType, Type type)
             : this(annotations, nodeType, type, null) {
         }
 
+        // TODO: fix parameter order: ExpressionType, Type, Annotations, CallSiteBinder
+        // (optional params must come last in APIs, and this is exposed surface area)
         protected Expression(Annotations annotations, ExpressionType nodeType, Type type, CallSiteBinder bindingInfo) {
             ContractUtils.RequiresNotNull(annotations, "annotations");
 
             // We should also enforce that subtrees of a bound node are also bound.
             // But it's up to the subclasses of Expression to enforce that
-            ContractUtils.Requires(type != null || bindingInfo != null, "type or bindingInfo must be non-null");
+            if (type == null && bindingInfo == null){
+                throw Error.TypeOrBindingInfoMustBeNonNull();
+            }
 
             _annotations = annotations;
             _nodeType = nodeType;
@@ -84,7 +90,7 @@ namespace System.Linq.Expressions {
             get { return _type != null && _binder != null; }
         }
 
-        public Annotations/*!*/ Annotations {
+        public Annotations Annotations {
             get { return _annotations; }
         }
 
@@ -103,7 +109,7 @@ namespace System.Linq.Expressions {
         /// </summary>
         /// <returns>the reduced expression</returns>
         public virtual Expression Reduce() {
-            ContractUtils.Requires(!IsReducible, "this", "reducible nodes must override Expression.Reduce()");
+            ContractUtils.Requires(!IsReducible, "this", Strings.ReducibleMustOverrideReduce);
             return this;
         }
 
@@ -174,8 +180,8 @@ namespace System.Linq.Expressions {
                 // Sanity checks:
                 //   1. Reduction must return a new, non-null node
                 //   2. Reduction must return a new node whose result type can be assigned to the type of the original node
-                ContractUtils.Requires(newNode != null && newNode != node, "node", "node cannot reduce to itself or null");
-                ContractUtils.Requires(TypeUtils.CanAssign(node.Type, newNode), "node", "cannot assign from the reduced node type to the original node type");
+                ContractUtils.Requires(newNode != null && newNode != node, "node", Strings.MustReduceToDifferent);
+                ContractUtils.Requires(TypeUtils.CanAssign(node.Type, newNode), "node", Strings.ReducedNotCompatible);
 
                 node = newNode;
             }

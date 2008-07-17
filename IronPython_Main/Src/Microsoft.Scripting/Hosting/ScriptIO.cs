@@ -30,23 +30,23 @@ namespace Microsoft.Scripting.Hosting {
 #endif
     {
 
-        private readonly SharedIO/*!*/ _io;
+        private readonly SharedIO _io;
 
-        public Stream/*!*/ InputStream { get { return _io.InputStream; } }
-        public Stream/*!*/ OutputStream { get { return _io.OutputStream; } }
-        public Stream/*!*/ ErrorStream { get { return _io.ErrorStream; } }
+        public Stream InputStream { get { return _io.InputStream; } }
+        public Stream OutputStream { get { return _io.OutputStream; } }
+        public Stream ErrorStream { get { return _io.ErrorStream; } }
 
-        public TextReader/*!*/ InputReader { get { return _io.InputReader; } }
-        public TextWriter/*!*/ OutputWriter { get { return _io.OutputWriter; } }
-        public TextWriter/*!*/ ErrorWriter { get { return _io.ErrorWriter; } }
+        public TextReader InputReader { get { return _io.InputReader; } }
+        public TextWriter OutputWriter { get { return _io.OutputWriter; } }
+        public TextWriter ErrorWriter { get { return _io.ErrorWriter; } }
 
-        public Encoding/*!*/ InputEncoding { get { return _io.InputEncoding; } }
-        public Encoding/*!*/ OutputEncoding { get { return _io.OutputEncoding; } }
-        public Encoding/*!*/ ErrorEncoding { get { return _io.ErrorEncoding; } }
+        public Encoding InputEncoding { get { return _io.InputEncoding; } }
+        public Encoding OutputEncoding { get { return _io.OutputEncoding; } }
+        public Encoding ErrorEncoding { get { return _io.ErrorEncoding; } }
 
-        internal SharedIO/*!*/ SharedIO { get { return _io; } }
+        internal SharedIO SharedIO { get { return _io; } }
 
-        internal ScriptIO(SharedIO/*!*/ io) {
+        internal ScriptIO(SharedIO io) {
             Assert.NotNull(io);
             _io = io;
         }
@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         /// <param name="stream">Binary stream to write data to.</param>
         /// <param name="encoding">Encoding used to convert textual data written to the output by the script.</param>
-        public void SetOutput(Stream/*!*/ stream, Encoding/*!*/ encoding) {
+        public void SetOutput(Stream stream, Encoding encoding) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetOutput(stream, new StreamWriter(stream, encoding));
@@ -65,31 +65,31 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Used if the host handles both kinds of data (textual and binary) by itself.
         /// </summary>
-        public void SetOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
+        public void SetOutput(Stream stream, TextWriter writer) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(writer, "writer");
             _io.SetOutput(stream, writer);
         }
 
-        public void SetErrorOutput(Stream/*!*/ stream, Encoding/*!*/ encoding) {
+        public void SetErrorOutput(Stream stream, Encoding encoding) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetErrorOutput(stream, new StreamWriter(stream, encoding));
         }
 
-        public void SetErrorOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
+        public void SetErrorOutput(Stream stream, TextWriter writer) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(writer, "writer");
             _io.SetErrorOutput(stream, writer);
         }
 
-        public void SetInput(Stream/*!*/ stream, Encoding/*!*/ encoding) {
+        public void SetInput(Stream stream, Encoding encoding) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetInput(stream, new StreamReader(stream, encoding), encoding);
         }
 
-        public void SetInput(Stream/*!*/ stream, TextReader/*!*/ reader, Encoding/*!*/ encoding) {
+        public void SetInput(Stream stream, TextReader reader, Encoding encoding) {
             ContractUtils.RequiresNotNull(stream, "stream");
             ContractUtils.RequiresNotNull(reader, "writer");
             ContractUtils.RequiresNotNull(encoding, "encoding");
@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Hosting {
         public void RedirectToConsole() {
             _io.RedirectToConsole();
         }
-        
+
 #if !SILVERLIGHT
         // TODO: Figure out what is the right lifetime
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]

@@ -18,15 +18,15 @@ using System.Scripting.Utils;
 namespace System.Linq.Expressions {
 
     public sealed class DoStatement : Expression {
-        private readonly Expression /*!*/ _test;
-        private readonly Expression /*!*/ _body;
+        private readonly Expression _test;
+        private readonly Expression _body;
 
         private readonly LabelTarget _label;
 
         /// <summary>
         /// Called by <see cref="DoStatementBuilder"/>.
         /// </summary>
-        internal DoStatement(Annotations annotations, LabelTarget label, Expression /*!*/ test, Expression /*!*/ body)
+        internal DoStatement(Annotations annotations, LabelTarget label, Expression test, Expression body)
             : base(annotations, ExpressionType.DoStatement, typeof(void)) {
             _test = test;
             _body = body;

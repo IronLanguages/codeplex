@@ -20,15 +20,15 @@ namespace System.Scripting.Runtime {
     // TODO: this class should be abstract
     public class ScopeExtension {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
-        public static readonly ScopeExtension[]/*!*/ EmptyArray = new ScopeExtension[0];
+        public static readonly ScopeExtension[] EmptyArray = new ScopeExtension[0];
 
-        private readonly Scope/*!*/ _scope;
+        private readonly Scope _scope;
 
-        public Scope/*!*/ Scope {
+        public Scope Scope {
             get { return _scope; }
         }
 
-        public ScopeExtension(Scope/*!*/ scope) {
+        public ScopeExtension(Scope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
             _scope = scope;
         }

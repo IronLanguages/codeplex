@@ -28,19 +28,19 @@ namespace System.Scripting.Runtime {
 #if !SILVERLIGHT
  : ICloneable
 #endif
-    {
-        private readonly ScriptDomainManager/*!*/ _domainManager;
+ {
+        private readonly ScriptDomainManager _domainManager;
         private static readonly ModuleGlobalCache _noCache = new ModuleGlobalCache(ModuleGlobalCache.NotCaching);
         private ActionBinder _binder;
         private readonly ContextId _id;
 
-        protected LanguageContext(ScriptDomainManager/*!*/ domainManager) {
+        protected LanguageContext(ScriptDomainManager domainManager) {
             ContractUtils.RequiresNotNull(domainManager, "domainManager");
 
             _domainManager = domainManager;
             _id = domainManager.AssignContextId(this);
         }
-        
+
         public ActionBinder Binder {
             get {
                 return _binder;
@@ -66,7 +66,7 @@ namespace System.Scripting.Runtime {
         /// <summary>
         /// Gets the ScriptDomainManager that this LanguageContext is running within.
         /// </summary>
-        public ScriptDomainManager/*!*/ DomainManager {
+        public ScriptDomainManager DomainManager {
             get { return _domainManager; }
         }
 
@@ -79,19 +79,19 @@ namespace System.Scripting.Runtime {
 
         #region Scope
 
-        public virtual Scope GetScope(string/*!*/ path) {
+        public virtual Scope GetScope(string path) {
             return null;
         }
 
-        public ScopeExtension/*!*/ GetScopeExtension(Scope/*!*/ scope) {
+        public ScopeExtension GetScopeExtension(Scope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
             return scope.GetExtension(ContextId);
         }
 
-        public ScopeExtension/*!*/ EnsureScopeExtension(Scope/*!*/ scope) {
+        public ScopeExtension EnsureScopeExtension(Scope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
             ScopeExtension extension = scope.GetExtension(ContextId);
-            
+
             if (extension == null) {
                 extension = CreateScopeExtension(scope);
                 if (extension == null) {
@@ -107,7 +107,7 @@ namespace System.Scripting.Runtime {
         /// Factory for ModuleContext creation. 
         /// It is guaranteed that this method is called once per each ScriptScope the langauge code is executed within.
         /// </summary>
-        public virtual ScopeExtension/*!*/ CreateScopeExtension(Scope scope) {
+        public virtual ScopeExtension CreateScopeExtension(Scope scope) {
             return new ScopeExtension(scope);
         }
 
@@ -115,7 +115,7 @@ namespace System.Scripting.Runtime {
 
         #region Source Code Parsing & Compilation
 
-        public virtual StreamReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding defaultEncoding) {
+        public virtual StreamReader GetSourceReader(Stream stream, Encoding defaultEncoding) {
             return new StreamReader(stream, defaultEncoding);
         }
 
@@ -135,7 +135,7 @@ namespace System.Scripting.Runtime {
         /// <summary>
         /// Creates compiler options initialized by the options associated with the module.
         /// </summary>
-        public virtual CompilerOptions/*!*/ GetCompilerOptions(Scope/*!*/ scope) {
+        public virtual CompilerOptions GetCompilerOptions(Scope scope) {
             return GetCompilerOptions();
         }
 
@@ -195,7 +195,7 @@ namespace System.Scripting.Runtime {
         /// name lookup fails.
         /// </summary>
         protected internal virtual Exception MissingName(SymbolId name) {
-            return new MissingMemberException(ResourceUtils.GetString(ResourceUtils.NameNotDefined, SymbolTable.IdToString(name)));
+            return Error.NameNotDefined(SymbolTable.IdToString(name));
         }
 
         /// <summary>
@@ -216,7 +216,7 @@ namespace System.Scripting.Runtime {
 
         #region ICloneable Members
 
-        public virtual object/*!*/ Clone() {
+        public virtual object Clone() {
             return MemberwiseClone();
         }
 
@@ -308,13 +308,13 @@ namespace System.Scripting.Runtime {
         /// </summary>
         /// <returns><b>null</b> on failure.</returns>
         /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
-        internal protected abstract ScriptCode CompileSourceCode(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink);
+        internal protected abstract ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
 
-        internal protected virtual ScriptCode/*!*/ LoadCompiledCode(MethodInfo/*!*/ method) {
+        internal protected virtual ScriptCode LoadCompiledCode(MethodInfo method) {
             return ScriptCode.Load(method, this);
         }
 
-        public virtual string/*!*/ DisplayName {
+        public virtual string DisplayName {
             get {
                 return "unknown";
             }
@@ -331,7 +331,7 @@ namespace System.Scripting.Runtime {
 
 #if !SILVERLIGHT
         // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
-        public virtual SourceUnit/*!*/ GenerateSourceCode(System.CodeDom.CodeObject codeDom, string path, SourceCodeKind kind) {
+        public virtual SourceUnit GenerateSourceCode(System.CodeDom.CodeObject codeDom, string path, SourceCodeKind kind) {
             throw new NotImplementedException();
         }
 #endif
@@ -356,11 +356,11 @@ namespace System.Scripting.Runtime {
         public virtual void Shutdown() {
         }
 
-        public virtual string/*!*/ FormatException(Exception exception) {
+        public virtual string FormatException(Exception exception) {
             return exception.ToString();
         }
 
-        public virtual Microsoft.Scripting.EngineOptions/*!*/ Options {
+        public virtual Microsoft.Scripting.EngineOptions Options {
             get {
                 return new Microsoft.Scripting.EngineOptions();
             }
@@ -368,41 +368,41 @@ namespace System.Scripting.Runtime {
 
         #region Source Units
 
-        public SourceUnit CreateSnippet(string/*!*/ code) {
+        public SourceUnit CreateSnippet(string code) {
             return CreateSnippet(code, null, SourceCodeKind.Statements);
         }
 
-        public SourceUnit CreateSnippet(string/*!*/ code, SourceCodeKind kind) {
+        public SourceUnit CreateSnippet(string code, SourceCodeKind kind) {
             return CreateSnippet(code, null, kind);
         }
 
-        public SourceUnit CreateSnippet(string/*!*/ code, string id) {
+        public SourceUnit CreateSnippet(string code, string id) {
             return CreateSnippet(code, id, SourceCodeKind.Statements);
         }
 
-        public SourceUnit CreateSnippet(string/*!*/ code, string id, SourceCodeKind kind) {
+        public SourceUnit CreateSnippet(string code, string id, SourceCodeKind kind) {
             ContractUtils.RequiresNotNull(code, "code");
 
             return CreateSourceUnit(new SourceStringContentProvider(code), id, kind);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path) {
+        public SourceUnit CreateFileUnit(string path) {
             return CreateFileUnit(path, StringUtils.DefaultEncoding);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding/*!*/ encoding) {
+        public SourceUnit CreateFileUnit(string path, Encoding encoding) {
             return CreateFileUnit(path, encoding, SourceCodeKind.File);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
+        public SourceUnit CreateFileUnit(string path, Encoding encoding, SourceCodeKind kind) {
             ContractUtils.RequiresNotNull(path, "path");
             ContractUtils.RequiresNotNull(encoding, "encoding");
-            
+
             TextContentProvider provider = new LanguageBoundTextContentProvider(this, new FileStreamContentProvider(DomainManager.Platform, path), encoding);
             return CreateSourceUnit(provider, path, kind);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path, string/*!*/ content) {
+        public SourceUnit CreateFileUnit(string path, string content) {
             ContractUtils.RequiresNotNull(path, "path");
             ContractUtils.RequiresNotNull(content, "content");
 
@@ -410,9 +410,9 @@ namespace System.Scripting.Runtime {
             return CreateSourceUnit(provider, path, SourceCodeKind.File);
         }
 
-        public SourceUnit/*!*/ CreateSourceUnit(TextContentProvider/*!*/ contentProvider, string path, SourceCodeKind kind) {
+        public SourceUnit CreateSourceUnit(TextContentProvider contentProvider, string path, SourceCodeKind kind) {
             ContractUtils.RequiresNotNull(contentProvider, "contentProvider");
-            ContractUtils.Requires(path == null || path.Length > 0, "path", "Empty string is not a valid path.");
+            ContractUtils.Requires(path == null || path.Length > 0, "path", Strings.EmptyStringIsInvalidPath);
             ContractUtils.Requires(EnumBounds.IsValid(kind), "kind");
             ContractUtils.Requires(CanCreateSourceCode);
 
@@ -436,7 +436,7 @@ namespace System.Scripting.Runtime {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public virtual ErrorSink/*!*/ GetCompilerErrorSink() {
+        public virtual ErrorSink GetCompilerErrorSink() {
             return ErrorSink.Null;
         }
 
@@ -445,7 +445,7 @@ namespace System.Scripting.Runtime {
             errorTypeName = exception.GetType().Name;
         }
 
-        public virtual int ExecuteProgram(SourceUnit/*!*/ program) {
+        public virtual int ExecuteProgram(SourceUnit program) {
             ContractUtils.RequiresNotNull(program, "program");
 
             object returnValue = program.Execute();

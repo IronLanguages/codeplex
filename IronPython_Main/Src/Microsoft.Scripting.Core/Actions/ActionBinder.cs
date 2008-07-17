@@ -36,7 +36,7 @@ namespace System.Scripting.Actions {
             _manager = manager;
         }
 
-        public virtual Rule<T> Bind<T>(OldDynamicAction/*!*/ action, object[]/*!*/ args) where T : class {
+        public virtual Rule<T> Bind<T>(OldDynamicAction action, object[] args) where T : class {
             RuleBuilder<T> builder = MakeRule<T>(action, args);
             if (builder != null) {
                 return builder.CreateRule();
@@ -49,7 +49,7 @@ namespace System.Scripting.Actions {
                 return _manager;
             }
         }
-        
+
         /// <summary>
         /// Produces a rule for the specified Action for the given arguments.
         /// </summary>
@@ -57,7 +57,7 @@ namespace System.Scripting.Actions {
         /// <param name="action">The Action that is being performed.</param>
         /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
         /// <returns></returns>
-        protected abstract RuleBuilder<T> MakeRule<T>(OldDynamicAction/*!*/ action, object[]/*!*/ args) where T : class;
+        protected abstract RuleBuilder<T> MakeRule<T>(OldDynamicAction action, object[] args) where T : class;
 
         /// <summary>
         /// Converts an object at runtime into the specified type.
@@ -80,7 +80,7 @@ namespace System.Scripting.Actions {
             }
             throw Error.InvalidCast(obj != null ? obj.GetType().Name : "(null)", toType.Name);
         }
-        
+
         /// <summary>
         /// Determines if a conversion exists from fromType to toType at the specified narrowing level.
         /// </summary>
@@ -104,7 +104,7 @@ namespace System.Scripting.Actions {
         /// <summary>
         /// Converts the provided expression to the given type.  The expression is safe to evaluate multiple times.
         /// </summary>
-        public virtual Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType, ConversionResultKind kind, Expression context) {
+        public virtual Expression ConvertExpression(Expression expr, Type toType, ConversionResultKind kind, Expression context) {
             ContractUtils.RequiresNotNull(expr, "expr");
             ContractUtils.RequiresNotNull(toType, "toType");
 
@@ -129,7 +129,7 @@ namespace System.Scripting.Actions {
             } else {
                 args = new Expression[] { expr };
             }
-            
+
             return Expression.ActionExpression(
                 OldConvertToAction.Make(this, visType, kind),
                 visType,
@@ -178,24 +178,24 @@ namespace System.Scripting.Actions {
                 }
                 return MemberGroup.CreateInternal(mt.ToArray());
             }
-            
+
             if (members.Count == 0) {
                 members = new MemberGroup(type.GetMember(name, BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance));
                 if (members.Count == 0) {
                     members = GetAllExtensionMembers(type, name);
                 }
             }
-            
+
             return members;
         }
-        
+
         #region Error Production
 
         public virtual ErrorInfo MakeContainsGenericParametersError(MemberTracker tracker) {
             return ErrorInfo.FromException(
                 Expression.New(
                     typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) }),
-                    Expression.Constant(ResourceUtils.GetString(ResourceUtils.InvalidOperation_ContainsGenericParameters, tracker.DeclaringType.Name, tracker.Name))
+                    Expression.Constant(Strings.InvalidOperation_ContainsGenericParameters(tracker.DeclaringType.Name, tracker.Name))
                 )
             );
         }
@@ -218,7 +218,7 @@ namespace System.Scripting.Actions {
             );
         }
 
-        public ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression[]/*!*/ parameters) {
+        public ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker tracker, bool isAssignment, params Expression[] parameters) {
             return MakeStaticPropertyInstanceAccessError(tracker, isAssignment, (IList<Expression>)parameters);
         }
 
@@ -267,14 +267,14 @@ namespace System.Scripting.Actions {
         /// <param name="parameters">The parameters being used to access the property.  This includes the instance as the first entry, any index parameters, and the
         /// value being assigned as the last entry if isAssignment is true.</param>
         /// <returns></returns>
-        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression>/*!*/ parameters) {
+        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker tracker, bool isAssignment, IList<Expression> parameters) {
             ContractUtils.RequiresNotNull(tracker, "tracker");
-            ContractUtils.Requires(tracker.IsStatic, "expected only static property");
+            ContractUtils.Requires(tracker.IsStatic, "tracker", Strings.ExpectedStaticProperty);
             ContractUtils.RequiresNotNull(parameters, "parameters");
             ContractUtils.RequiresNotNullItems(parameters, "parameters");
 
-            string resource = isAssignment ? ResourceUtils.StaticAssignmentFromInstanceError : ResourceUtils.StaticAccessFromInstanceError;
-            string message = ResourceUtils.GetString(resource, tracker.Name, tracker.DeclaringType.Name);
+            string message = isAssignment ? Strings.StaticAssignmentFromInstanceError(tracker.Name, tracker.DeclaringType.Name) :
+                                            Strings.StaticAccessFromInstanceError(tracker.Name, tracker.DeclaringType.Name);
 
             return ErrorInfo.FromException(
                 Expression.New(
@@ -284,7 +284,7 @@ namespace System.Scripting.Actions {
             );
         }
 
-        public virtual ErrorInfo MakeConversionError(Type toType, Expression value) {            
+        public virtual ErrorInfo MakeConversionError(Type toType, Expression value) {
             return ErrorInfo.FromException(
                 Expression.Call(
                     typeof(RuntimeHelpers).GetMethod("CannotConvertError"),
@@ -316,7 +316,7 @@ namespace System.Scripting.Actions {
 
         #region Deprecated Error production
 
-        
+
         /// <summary>
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
@@ -355,8 +355,8 @@ namespace System.Scripting.Actions {
 
         protected virtual string GetTypeName(Type t) {
             return t.Name;
-        }       
-        
+        }
+
         /// <summary>
         /// Gets the extension members of the given name from the provided type.  Base classes are also
         /// searched for their extension members.  Once any of the types in the inheritance hierarchy
@@ -414,7 +414,7 @@ namespace System.Scripting.Actions {
                     deleter = (MethodInfo)mi;
                 }
 
-                if (getter != null || setter != null || deleter != null) {                    
+                if (getter != null || setter != null || deleter != null) {
                     members.Add(new ExtensionPropertyTracker(name, getter, setter, deleter, declaringType));
                 }
             }

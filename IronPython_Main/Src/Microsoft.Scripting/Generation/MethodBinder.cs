@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting;
@@ -24,7 +23,6 @@ using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using System.Text;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
@@ -71,15 +69,15 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     public class MethodBinder {
         private readonly string _name;                           // the name of the method (possibly language specific name which isn't the same as the method base)
-        private readonly Dictionary<int, TargetSet>/*!*/ _targetSets; // the methods as they map from # of arguments -> the possible TargetSet's.
-        private readonly SymbolId[]/*!*/ _kwArgs;                     // the names of the keyword arguments being provided
+        private readonly Dictionary<int, TargetSet> _targetSets; // the methods as they map from # of arguments -> the possible TargetSet's.
+        private readonly SymbolId[] _kwArgs;                     // the names of the keyword arguments being provided
         private readonly NarrowingLevel _minLevel, _maxLevel;         // specifies the minimum and maximum narrowing levels for conversions during binding
         internal readonly DefaultBinder _binder;                      // the ActionBinder which is being used for conversions
         private List<MethodCandidate> _paramsCandidates;              // the methods which are params methods which need special treatment because they don't have fixed # of args
 
         #region Constructors
 
-        private MethodBinder(ActionBinder/*!*/ binder, string name, IList<MethodBase/*!*/>/*!*/ methods, SymbolId[]/*!*/ kwArgs, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
+        private MethodBinder(ActionBinder binder, string name, IList<MethodBase> methods, SymbolId[] kwArgs, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
             ContractUtils.RequiresNotNullItems(methods, "methods");
             ContractUtils.RequiresNotNull(kwArgs, "kwArgs");
 
@@ -163,7 +161,7 @@ namespace Microsoft.Scripting.Generation {
         /// also be called reflectively at runtime, create an Expression for embedding in
         /// a RuleBuilder, or be used for performing an abstract call.
         /// </summary>
-        public BindingTarget MakeBindingTarget(CallTypes callType, Type/*!*/[]/*!*/ types) {
+        public BindingTarget MakeBindingTarget(CallTypes callType, Type[] types) {
             ContractUtils.RequiresNotNull(types, "types");
             ContractUtils.RequiresNotNullItems(types, "types");
 
@@ -171,11 +169,11 @@ namespace Microsoft.Scripting.Generation {
             if (ts != null && !ts.IsParamsDictionaryOnly()) {
                 return ts.MakeBindingTarget(callType, types, _kwArgs, _minLevel, _maxLevel);
             }
-            
+
             // no target set is applicable, report an error and the expected # of arguments.
             int[] expectedArgs = new int[_targetSets.Count + (_paramsCandidates != null ? 1 : 0)];
             int i = 0;
-            foreach(KeyValuePair<int, TargetSet> kvp in _targetSets) {
+            foreach (KeyValuePair<int, TargetSet> kvp in _targetSets) {
                 int count = kvp.Key;
                 if (callType == CallTypes.ImplicitInstance) {
                     foreach (MethodCandidate cand in kvp.Value._targets) {
@@ -203,7 +201,7 @@ namespace Microsoft.Scripting.Generation {
         /// also be called reflectively at runtime, create an Expression for embedding in
         /// a RuleBuilder, or be used for performing an abstract call.
         /// </summary>
-        public BindingTarget/*!*/ MakeBindingTarget(CallTypes callType, MetaObject/*!*/[]/*!*/ metaObjects) {
+        public BindingTarget MakeBindingTarget(CallTypes callType, MetaObject[] metaObjects) {
             ContractUtils.RequiresNotNull(metaObjects, "types");
             ContractUtils.RequiresNotNullItems(metaObjects, "types");
 
@@ -250,7 +248,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             string res = "";
             foreach (TargetSet ts in _targetSets.Values) {
                 res += ts + Environment.NewLine;
@@ -291,7 +289,7 @@ namespace Microsoft.Scripting.Generation {
 
             return ts;
         }
-        
+
         private void AddTarget(MethodCandidate target) {
             int count = target.Target.ParameterCount;
             TargetSet set;
@@ -307,7 +305,7 @@ namespace Microsoft.Scripting.Generation {
             if (BinderHelpers.IsParamsMethod(target.Target.Method)) {
                 if (_paramsCandidates == null) _paramsCandidates = new List<MethodCandidate>();
                 _paramsCandidates.Add(target);
-            }            
+            }
         }
 
         private void AddBasicMethodTargets(MethodBase method) {
@@ -337,16 +335,16 @@ namespace Microsoft.Scripting.Generation {
                     argBuilders.Add(new SiteLocalStorageBuilder(pi.ParameterType));
                     continue;
                 }
-                
+
                 int indexForArgBuilder, kwIndex = GetKeywordIndex(pi);
                 if (kwIndex == ParameterNotPassedByKeyword) {
                     // positional argument, we simply consume the next argument
-                    indexForArgBuilder = argIndex++; 
+                    indexForArgBuilder = argIndex++;
                 } else {
                     // keyword argument, we just tell the simple arg builder to consume arg 0.
                     // KeywordArgBuilder will then pass in the correct single argument based 
                     // upon the actual argument number provided by the user.
-                    indexForArgBuilder = 0;          
+                    indexForArgBuilder = 0;
                 }
 
                 // if the parameter is default we need to build a default arg builder and then
@@ -393,8 +391,8 @@ namespace Microsoft.Scripting.Generation {
             }
 
             ReturnBuilder returnBuilder = MakeKeywordReturnBuilder(
-                new ReturnBuilder(CompilerHelpers.GetReturnType(method)), 
-                methodParams, 
+                new ReturnBuilder(CompilerHelpers.GetReturnType(method)),
+                methodParams,
                 parameters,
                 _binder.AllowKeywordArgumentSetting(method));
 
@@ -408,11 +406,11 @@ namespace Microsoft.Scripting.Generation {
                     if (defaultBuilders[defaultBuilders.Count - defaultsUsed] != null) {
                         AddSimpleTarget(MakeDefaultCandidate(
                             method,
-                            parameters, 
-                            instanceBuilder, 
-                            argBuilders, 
-                            defaultBuilders, 
-                            returnBuilder, 
+                            parameters,
+                            instanceBuilder,
+                            argBuilders,
+                            defaultBuilders,
+                            returnBuilder,
                             defaultsUsed));
                     }
                 }
@@ -426,7 +424,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private MethodCandidate MakeDefaultCandidate(MethodBase method, List<ParameterWrapper> parameters, ArgBuilder instanceBuilder, List<ArgBuilder> argBuilders, List<ArgBuilder> defaultBuilders, ReturnBuilder returnBuilder, int defaultsUsed) {
-            List<ArgBuilder> defaultArgBuilders = new List<ArgBuilder>(argBuilders); 
+            List<ArgBuilder> defaultArgBuilders = new List<ArgBuilder>(argBuilders);
             List<ParameterWrapper> necessaryParams = parameters.GetRange(0, parameters.Count - defaultsUsed);
 
             for (int curDefault = 0; curDefault < defaultsUsed; curDefault++) {
@@ -443,7 +441,7 @@ namespace Microsoft.Scripting.Generation {
             // shift any arguments forward that need to be...
             int curArg = CompilerHelpers.IsStatic(method) ? 0 : 1;
             for (int i = 0; i < defaultArgBuilders.Count; i++) {
-                if (defaultArgBuilders[i] is DefaultArgBuilder || 
+                if (defaultArgBuilders[i] is DefaultArgBuilder ||
                     defaultArgBuilders[i] is ContextArgBuilder ||
                     defaultArgBuilders[i] is KeywordArgBuilder) {
                     continue;
@@ -454,7 +452,7 @@ namespace Microsoft.Scripting.Generation {
                     defaultArgBuilders[i] = new ReferenceArgBuilder(curArg++, rab.Type);
                     continue;
                 }
-                
+
                 SimpleArgBuilder sab = (SimpleArgBuilder)defaultArgBuilders[i];
                 Debug.Assert(sab.GetType() == typeof(SimpleArgBuilder));
                 defaultArgBuilders[i] = new SimpleArgBuilder(curArg++, sab.Type, sab.IsParamsArray, sab.IsParamsDict);
@@ -500,13 +498,13 @@ namespace Microsoft.Scripting.Generation {
                     kwIndex = GetKeywordIndex(pi);
                     if (kwIndex == ParameterNotPassedByKeyword) {
                         indexForArgBuilder = argIndex++;
-                    } 
+                    }
                 }
 
                 ArgBuilder ab;
                 if (CompilerHelpers.IsOutParameter(pi)) {
                     returnArgs.Add(argBuilders.Count);
-                    ab = new OutArgBuilder(pi); 
+                    ab = new OutArgBuilder(pi);
                 } else if (pi.ParameterType.IsByRef) {
                     returnArgs.Add(argBuilders.Count);
                     ParameterWrapper param = new ParameterWrapper(_binder, pi.ParameterType.GetElementType(), SymbolTable.StringToId(pi.Name));
@@ -527,11 +525,11 @@ namespace Microsoft.Scripting.Generation {
             }
 
             ReturnBuilder returnBuilder = MakeKeywordReturnBuilder(
-                new ByRefReturnBuilder(_binder, returnArgs), 
-                method.GetParameters(), 
+                new ByRefReturnBuilder(_binder, returnArgs),
+                method.GetParameters(),
                 parameters,
                 _binder.AllowKeywordArgumentSetting(method));
-            
+
             return MakeMethodCandidate(method, parameters, instanceBuilder, argBuilders, returnBuilder);
         }
 
@@ -551,12 +549,12 @@ namespace Microsoft.Scripting.Generation {
         private static bool IsUnsupported(MethodBase method) {
             return (method.CallingConvention & CallingConventions.VarArgs) != 0 || method.ContainsGenericParameters;
         }
-        
+
         #endregion
 
         #region Keyword arg binding support
 
-        private ReturnBuilder MakeKeywordReturnBuilder(ReturnBuilder returnBuilder, ParameterInfo[] methodParams, List<ParameterWrapper> parameters, bool isConstructor) {            
+        private ReturnBuilder MakeKeywordReturnBuilder(ReturnBuilder returnBuilder, ParameterInfo[] methodParams, List<ParameterWrapper> parameters, bool isConstructor) {
             if (isConstructor) {
                 List<SymbolId> unusedNames = GetUnusedKeywordParameters(methodParams);
                 List<MemberInfo> bindableMembers = GetBindableMembers(returnBuilder, unusedNames);
@@ -593,19 +591,19 @@ namespace Microsoft.Scripting.Generation {
                 string strName = SymbolTable.IdToString(si);
 
                 Type curType = returnBuilder.ReturnType;
-                MemberInfo[] mis = curType.GetMember(strName);                
+                MemberInfo[] mis = curType.GetMember(strName);
                 while (mis.Length != 1 && curType != null) {
                     // see if we have a single member defined as the closest level
                     mis = curType.GetMember(strName, BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.SetField | BindingFlags.SetProperty | BindingFlags.Instance);
 
-                    if(mis.Length > 1) {
+                    if (mis.Length > 1) {
                         break;
                     }
-                    
+
                     curType = curType.BaseType;
                 }
-                                
-                if (mis.Length == 1) {                    
+
+                if (mis.Length == 1) {
                     switch (mis[0].MemberType) {
                         case MemberTypes.Property:
                         case MemberTypes.Field:
@@ -652,7 +650,7 @@ namespace Microsoft.Scripting.Generation {
             return ParameterNotPassedByKeyword;
         }
 
-        #endregion       
+        #endregion
 
         #region TargetSet
 
@@ -727,14 +725,14 @@ namespace Microsoft.Scripting.Generation {
 
                         // more than one method found, no clear best method, report an ambigious match
                         return MakeAmbigiousBindingTarget(callType, types, result);
-                    }                    
+                    }
                 }
-                
+
                 Debug.Assert(failures != null);
                 return new BindingTarget(_binder.Name, callType == CallTypes.None ? types.Length : types.Length - 1, failures.ToArray());
             }
 
-            internal BindingTarget/*!*/ MakeBindingTarget(CallTypes callType, MetaObject/*!*/[]/*!*/ metaObjects, SymbolId[] names, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
+            internal BindingTarget MakeBindingTarget(CallTypes callType, MetaObject[] metaObjects, SymbolId[] names, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
                 List<ConversionResult> lastFail = new List<ConversionResult>();
                 List<CallFailure> failures = null;
 
@@ -785,7 +783,7 @@ namespace Microsoft.Scripting.Generation {
 
                 Debug.Assert(failures != null);
                 return new BindingTarget(_binder.Name, callType == CallTypes.None ? metaObjects.Length : metaObjects.Length - 1, failures.ToArray());
-            }            
+            }
 
             private static bool TryGetApplicableTarget(CallTypes callType, List<MethodCandidate> applicableTargets, Type[] actualTypes, out List<MethodCandidate> result) {
                 result = null;
@@ -841,7 +839,7 @@ namespace Microsoft.Scripting.Generation {
 
             private MetaObject[] GetRestrictedMetaObjects(MethodCandidate target, MetaObject[] objects, IList<MethodCandidate> candidates) {
                 IList<ParameterWrapper> parameters = target.Parameters;
-                
+
                 Debug.Assert(parameters.Count == objects.Length);
 
                 MetaObject[] resObjects = new MetaObject[objects.Length];
@@ -920,7 +918,7 @@ namespace Microsoft.Scripting.Generation {
                 return null;
             }
 
-            private static bool IsBest(MethodCandidate/*!*/ candidate, List<MethodCandidate/*!*/>/*!*/ applicableTargets, CallTypes callType, MetaObject/*!*/[]/*!*/ actualTypes) {
+            private static bool IsBest(MethodCandidate candidate, List<MethodCandidate> applicableTargets, CallTypes callType, MetaObject[] actualTypes) {
                 foreach (MethodCandidate target in applicableTargets) {
                     if (candidate == target) continue;
                     if (candidate.CompareTo(target, callType, actualTypes) != +1) return false;
@@ -928,7 +926,7 @@ namespace Microsoft.Scripting.Generation {
                 return true;
             }
 
-            private static MethodCandidate FindBest(CallTypes callType, List<MethodCandidate/*!*/>/*!*/ applicableTargets, MetaObject/*!*/[]/*!*/ actualTypes) {
+            private static MethodCandidate FindBest(CallTypes callType, List<MethodCandidate> applicableTargets, MetaObject[] actualTypes) {
                 foreach (MethodCandidate candidate in applicableTargets) {
                     if (IsBest(candidate, applicableTargets, callType, actualTypes)) return candidate;
                 }
@@ -947,17 +945,17 @@ namespace Microsoft.Scripting.Generation {
                 return new MethodCandidate(target, level);
             }
 
-            private BindingTarget/*!*/ MakeSuccessfulBindingTarget(CallTypes callType, Type[] types, List<MethodCandidate> result) {
+            private BindingTarget MakeSuccessfulBindingTarget(CallTypes callType, Type[] types, List<MethodCandidate> result) {
                 MethodCandidate resTarget = result[0];
                 return new BindingTarget(_binder.Name, callType == CallTypes.None ? types.Length : types.Length - 1, resTarget.Target, resTarget.NarrowingLevel, GetTypesForTest(types, _targets));
             }
 
-            private BindingTarget/*!*/ MakeSuccessfulBindingTarget(CallTypes callType, MetaObject/*!*/[]/*!*/ objects, List<MethodCandidate> result) {
+            private BindingTarget MakeSuccessfulBindingTarget(CallTypes callType, MetaObject[] objects, List<MethodCandidate> result) {
                 MethodCandidate resTarget = result[0];
                 return new BindingTarget(_binder.Name, callType == CallTypes.None ? objects.Length : objects.Length - 1, resTarget.Target, resTarget.NarrowingLevel, GetRestrictedMetaObjects(resTarget, objects, _targets));
             }
 
-            private BindingTarget/*!*/ MakeAmbigiousBindingTarget<T>(CallTypes callType, T[] types, List<MethodCandidate> result) {
+            private BindingTarget MakeAmbigiousBindingTarget<T>(CallTypes callType, T[] types, List<MethodCandidate> result) {
                 MethodTarget[] methods = new MethodTarget[result.Count];
                 for (int i = 0; i < result.Count; i++) {
                     methods[i] = result[i].Target;
@@ -967,11 +965,11 @@ namespace Microsoft.Scripting.Generation {
             }
 
             [Confined]
-            public override/*!*/ string ToString() {
+            public override string ToString() {
                 return string.Format("TargetSet({0} on {1}, nargs={2})", _targets[0].Target.Method.Name, _targets[0].Target.Method.DeclaringType.FullName, _count);
             }
         }
-        
+
         #endregion
     }
 }

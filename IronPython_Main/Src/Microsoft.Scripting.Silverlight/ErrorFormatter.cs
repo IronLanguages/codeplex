@@ -118,16 +118,16 @@ namespace Microsoft.Scripting.Silverlight {
 
         // Print the line with the error plus some context lines
         private static string FormatSourceCode(DynamicExceptionInfo err) {
-            ScriptSource source = err.Source;
+            var source = err.Source;
             int line = err.SourceLine;
 
             if (source == null || line <= 0) {
                 return "";
             }
 
-            StringBuilder text = new StringBuilder();
+            var text = new StringBuilder();
 
-            SourceUnitReader reader = source.GetReader();
+            var reader = source.GetReader();
             int maxLen = (line + 2).ToString().Length;
             for (int i = 1; i <= line + 2; ++i) {
                 string lineText = reader.ReadLine();
@@ -194,7 +194,7 @@ namespace Microsoft.Scripting.Silverlight {
 
         internal class Sink : ErrorListener {
             public override void ErrorReported(ScriptSource source, string message, SourceSpan span, int errorCode, Severity severity) {
-                throw new SyntaxErrorException(message, source.SourceUnit, span, errorCode, severity);
+                throw new SyntaxErrorException(message, HostingHelpers.GetSourceUnit(source), span, errorCode, severity);
             }
         }
 

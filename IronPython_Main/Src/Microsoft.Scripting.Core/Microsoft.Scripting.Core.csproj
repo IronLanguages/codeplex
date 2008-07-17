@@ -264,7 +264,6 @@
     <Compile Include="Generation\ToDiskRewriter.cs" />
     <Compile Include="Actions\Stitcher.cs" />
     <Compile Include="Ast\TreeComparer.cs" />
-    <Compile Include="Ast\SwitchStatementBuilder.cs" />
     <Compile Include="Compiler\ExpressionTreeVisitor.cs" />
     <Compile Include="Compiler\ExpressionTreeVisitor.Generated.cs" />
     <Compile Include="CompilerOptions.cs" />
@@ -360,7 +359,7 @@
     <Compile Include="Runtime\SourceStringContentProvider.cs" />
     <Compile Include="Severity.cs" />
     <Compile Include="SourceCodeKind.cs" />
-    <Compile Include="SourceCodeProperties.cs" />
+    <Compile Include="ScriptCodeParseResult.cs" />
     <Compile Include="SourceFileContentProvider.cs" />
     <Compile Include="Ast\SourceFileInformation.cs" />
     <Compile Include="Ast\SourceLocation.cs" />
@@ -430,7 +429,6 @@
     <Compile Include="Utils\IOUtils.cs" />
     <Compile Include="Utils\ListStack.cs" />
     <Compile Include="Utils\ReflectionUtils.cs" />
-    <Compile Include="Utils\ResourceUtils.cs" />
     <Compile Include="Utils\StringUtils.cs" />
     <Compile Include="Utils\StrongBox.cs" />
     <Compile Include="Utils\SynchronizedDictionary.cs" />
@@ -443,23 +441,8 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="Microsoft.Scripting.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="$(IntermediateOutputPath)\Microsoft.Scripting.Core.resources">
-      <LogicalName>Microsoft.Scripting.Core.resources</LogicalName>
-      <Visible>false</Visible>
-    </EmbeddedResource>
-  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
   <Import Project="..\..\..\..\..\..\Merlin\Main\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
-  <Target Name="BeforeBuild">
-    <MakeDir Directories="$(IntermediateOutputPath)" />
-    <GenerateResource Sources="Microsoft.Scripting.txt" OutputResources="$(IntermediateOutputPath)\Microsoft.Scripting.Core.resources">
-      <Output TaskParameter="OutputResources" ItemName="Resources" />
-    </GenerateResource>
-  </Target>
   <!-- This task produces a list of Compile items. -->
   <Target Name="GetCompileItems" Outputs="@(CompileItems)">
     <CreateItem Include="%(Compile.Identity)">

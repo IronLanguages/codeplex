@@ -22,15 +22,15 @@ using System.Linq.Expressions;
 namespace System.Scripting.Runtime {
     public sealed class SharedIO {
         // prevents this object from transitions to an inconsistent state, doesn't sync output or input:
-        private readonly object/*!*/ _mutex = new object();
+        private readonly object _mutex = new object();
 
         #region Proxies
 
         private sealed class StreamProxy : Stream {
-            private readonly ConsoleStreamType/*!*/ _type;
-            private readonly SharedIO/*!*/ _io;
+            private readonly ConsoleStreamType _type;
+            private readonly SharedIO _io;
 
-            public StreamProxy(SharedIO/*!*/ io, ConsoleStreamType/*!*/ type) {
+            public StreamProxy(SharedIO io, ConsoleStreamType type) {
                 Assert.NotNull(io);
                 _io = io;
                 _type = type;
@@ -52,11 +52,11 @@ namespace System.Scripting.Runtime {
                 _io.GetStream(_type).Flush();
             }
 
-            public override int Read(byte[]/*!*/ buffer, int offset, int count) {
+            public override int Read(byte[] buffer, int offset, int count) {
                 return _io.GetStream(_type).Read(buffer, offset, count);
             }
 
-            public override void Write(byte[]/*!*/ buffer, int offset, int count) {
+            public override void Write(byte[] buffer, int offset, int count) {
                 _io.GetStream(_type).Write(buffer, offset, count);
             }
 
@@ -97,17 +97,17 @@ namespace System.Scripting.Runtime {
 
         private Encoding _inputEncoding;
 
-        public Stream/*!*/ InputStream { get { InitializeInput(); return _inputStream; } }
-        public Stream/*!*/ OutputStream { get { InitializeOutput(); return _outputStream; } }
-        public Stream/*!*/ ErrorStream { get { InitializeErrorOutput(); return _errorStream; } }
+        public Stream InputStream { get { InitializeInput(); return _inputStream; } }
+        public Stream OutputStream { get { InitializeOutput(); return _outputStream; } }
+        public Stream ErrorStream { get { InitializeErrorOutput(); return _errorStream; } }
 
-        public TextReader/*!*/ InputReader { get { InitializeInput(); return _inputReader; } }
-        public TextWriter/*!*/ OutputWriter { get { InitializeOutput(); return _outputWriter; } }
-        public TextWriter/*!*/ ErrorWriter { get { InitializeErrorOutput(); return _errorWriter; } }
+        public TextReader InputReader { get { InitializeInput(); return _inputReader; } }
+        public TextWriter OutputWriter { get { InitializeOutput(); return _outputWriter; } }
+        public TextWriter ErrorWriter { get { InitializeErrorOutput(); return _errorWriter; } }
 
-        public Encoding/*!*/ InputEncoding { get { InitializeInput(); return _inputEncoding; } }
-        public Encoding/*!*/ OutputEncoding { get { InitializeOutput(); return _outputWriter.Encoding; } }
-        public Encoding/*!*/ ErrorEncoding { get { InitializeErrorOutput(); return _errorWriter.Encoding; } }
+        public Encoding InputEncoding { get { InitializeInput(); return _inputEncoding; } }
+        public Encoding OutputEncoding { get { InitializeOutput(); return _outputWriter.Encoding; } }
+        public Encoding ErrorEncoding { get { InitializeErrorOutput(); return _errorWriter.Encoding; } }
 
         internal SharedIO() {
         }
@@ -159,7 +159,7 @@ namespace System.Scripting.Runtime {
         /// <summary>
         /// Only host should redirect I/O.
         /// </summary>
-        public void SetOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
+        public void SetOutput(Stream stream, TextWriter writer) {
             Assert.NotNull(stream, writer);
             lock (_mutex) {
                 _outputStream = stream;
@@ -167,7 +167,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public void SetErrorOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
+        public void SetErrorOutput(Stream stream, TextWriter writer) {
             Assert.NotNull(stream, writer);
             lock (_mutex) {
                 _errorStream = stream;
@@ -175,7 +175,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public void SetInput(Stream/*!*/ stream, TextReader/*!*/ reader, Encoding/*!*/ encoding) {
+        public void SetInput(Stream stream, TextReader reader, Encoding encoding) {
             Assert.NotNull(stream, reader, encoding);
             lock (_mutex) {
                 _inputStream = stream;
@@ -196,7 +196,7 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public Stream/*!*/ GetStream(ConsoleStreamType type) {
+        public Stream GetStream(ConsoleStreamType type) {
             switch (type) {
                 case ConsoleStreamType.Input: return InputStream;
                 case ConsoleStreamType.Output: return OutputStream;
@@ -205,7 +205,7 @@ namespace System.Scripting.Runtime {
             throw Error.InvalidStreamType(type);
         }
 
-        public TextWriter/*!*/ GetWriter(ConsoleStreamType type) {
+        public TextWriter GetWriter(ConsoleStreamType type) {
             switch (type) {
                 case ConsoleStreamType.Output: return OutputWriter;
                 case ConsoleStreamType.ErrorOutput: return ErrorWriter;
@@ -213,7 +213,7 @@ namespace System.Scripting.Runtime {
             throw Error.InvalidStreamType(type);
         }
 
-        public Encoding/*!*/ GetEncoding(ConsoleStreamType type) {
+        public Encoding GetEncoding(ConsoleStreamType type) {
             switch (type) {
                 case ConsoleStreamType.Input: return InputEncoding;
                 case ConsoleStreamType.Output: return OutputEncoding;
@@ -222,7 +222,7 @@ namespace System.Scripting.Runtime {
             throw Error.InvalidStreamType(type);
         }
 
-        public TextReader/*!*/ GetReader(out Encoding/*!*/ encoding) {
+        public TextReader GetReader(out Encoding encoding) {
             TextReader reader;
             lock (_mutex) {
                 reader = InputReader;
@@ -231,8 +231,8 @@ namespace System.Scripting.Runtime {
             return reader;
         }
 
-        public Stream/*!*/ GetStreamProxy(ConsoleStreamType type) {
-            return new StreamProxy(this, type);            
+        public Stream GetStreamProxy(ConsoleStreamType type) {
+            return new StreamProxy(this, type);
         }
     }
 }

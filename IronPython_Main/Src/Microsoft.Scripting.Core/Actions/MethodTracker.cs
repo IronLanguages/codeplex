@@ -68,7 +68,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return _method.ToString();
         }
 
@@ -109,7 +109,7 @@ namespace System.Scripting.Actions {
                     typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
                     arguments[0],
                     Ast.NewArrayHelper(typeof(object), ArrayUtils.RemoveFirst(arguments))),
-                Method.ReturnType);                       
+                Method.ReturnType);
         }
     }
 }

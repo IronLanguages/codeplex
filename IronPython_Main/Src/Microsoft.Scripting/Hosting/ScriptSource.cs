@@ -27,16 +27,15 @@ namespace Microsoft.Scripting.Hosting {
     [DebuggerDisplay("{Path ?? \"<anonymous>\"}")]
     public sealed class ScriptSource
 #if !SILVERLIGHT
-        : MarshalByRefObject 
+        : MarshalByRefObject
 #endif
     {
-        private readonly ScriptEngine/*!*/ _engine;
-        private readonly SourceUnit/*!*/ _unit;
+        private readonly ScriptEngine _engine;
+        private readonly SourceUnit _unit;
 
-        // TODO: make internal as soon as SyntaxErrorException gets fixed
-        public SourceUnit/*!*/ SourceUnit { 
-            get { return _unit; } 
-        } 
+        internal SourceUnit SourceUnit {
+            get { return _unit; }
+        }
 
         /// <summary>
         /// Identification of the source unit. Assigned by the host. 
@@ -48,25 +47,15 @@ namespace Microsoft.Scripting.Hosting {
             get { return _unit.Path; }
         }
 
-        public bool HasPath {
-            get { return _unit.HasPath; }
-        }
-
         public SourceCodeKind Kind {
             get { return _unit.Kind; }
         }
 
-        public ScriptEngine/*!*/ Engine {
+        public ScriptEngine Engine {
             get { return _engine; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")] // TODO: fix
-        public SourceCodeProperties? CodeProperties {
-            get { return _unit.CodeProperties; }
-            set { _unit.CodeProperties = value; } 
-        }
-
-        internal ScriptSource(ScriptEngine/*!*/ engine, SourceUnit/*!*/ sourceUnit) {
+        internal ScriptSource(ScriptEngine engine, SourceUnit sourceUnit) {
             Assert.NotNull(engine, sourceUnit);
             _unit = sourceUnit;
             _engine = engine;
@@ -79,7 +68,7 @@ namespace Microsoft.Scripting.Hosting {
         /// repeatedly in its default scope or in other scopes without having to recompile the code.
         /// </summary>
         /// <exception cref="SyntaxErrorException">Code cannot be compiled.</exception>
-        public CompiledCode/*!*/ Compile() {
+        public CompiledCode Compile() {
             return CompileInternal(null, null);
         }
 
@@ -87,7 +76,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Errors are reported to the specified listener. 
         /// Returns <c>null</c> if the parser cannot compile the code due to errors.
         /// </remarks>
-        public CompiledCode Compile(ErrorListener/*!*/ errorListener) {
+        public CompiledCode Compile(ErrorListener errorListener) {
             ContractUtils.RequiresNotNull(errorListener, "errorListener");
 
             return CompileInternal(null, errorListener);
@@ -97,7 +86,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Errors are reported to the specified listener. 
         /// Returns <c>null</c> if the parser cannot compile the code due to error(s).
         /// </remarks>
-        public CompiledCode Compile(CompilerOptions/*!*/ compilerOptions) {
+        public CompiledCode Compile(CompilerOptions compilerOptions) {
             ContractUtils.RequiresNotNull(compilerOptions, "compilerOptions");
 
             return CompileInternal(compilerOptions, null);
@@ -107,7 +96,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Errors are reported to the specified listener. 
         /// Returns <c>null</c> if the parser cannot compile the code due to error(s).
         /// </remarks>
-        public CompiledCode Compile(CompilerOptions/*!*/ compilerOptions, ErrorListener/*!*/ errorListener) {
+        public CompiledCode Compile(CompilerOptions compilerOptions, ErrorListener errorListener) {
             ContractUtils.RequiresNotNull(errorListener, "errorListener");
             ContractUtils.RequiresNotNull(compilerOptions, "compilerOptions");
 
@@ -122,14 +111,6 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Execute the ScriptScope in a new scope.
-        /// </summary>
-        /// <returns></returns>
-        public object Execute() {
-            return _unit.Execute();
-        }
-        
-        /// <summary>
         /// Execute the ScriptScope.
         /// Returns an object that is the resulting value of running the code.  
         /// 
@@ -139,7 +120,7 @@ namespace Microsoft.Scripting.Hosting {
         /// based may return null.
         /// </summary>
         /// <exception cref="SyntaxErrorException">Code cannot be compiled.</exception>
-        public object Execute(ScriptScope/*!*/ scope) {
+        public object Execute(ScriptScope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
 
             return _unit.Execute(scope.Scope, ErrorSink.Default);
@@ -148,7 +129,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <remarks>
         /// Converts the result of execution to specified type using language specific conversions.
         /// </remarks>
-        public T Execute<T>(ScriptScope/*!*/ scope) {
+        public T Execute<T>(ScriptScope scope) {
             return _engine.Operations.ConvertTo<T>(Execute(scope));
         }
 
@@ -164,7 +145,7 @@ namespace Microsoft.Scripting.Hosting {
         /// by the last expression or statement, but languages that are not expression 
         /// based may return null.
         /// </summary>
-        public ObjectHandle ExecuteAndWrap(ScriptScope/*!*/ scope) {
+        public ObjectHandle ExecuteAndWrap(ScriptScope scope) {
             return new ObjectHandle(Execute(scope));
         }
 #endif
@@ -187,25 +168,24 @@ namespace Microsoft.Scripting.Hosting {
         #endregion
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public SourceCodeProperties GetCodeProperties() {
+        public ScriptCodeParseResult GetCodeProperties() {
             return _unit.GetCodeProperties();
         }
 
-        public SourceCodeProperties GetCodeProperties(CompilerOptions/*!*/ options) {
+        public ScriptCodeParseResult GetCodeProperties(CompilerOptions options) {
             return _unit.GetCodeProperties(options);
         }
 
-        // TODO: remove
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public SourceUnitReader/*!*/ GetReader() {
-            return _unit.GetReader();
+        public ScriptSourceReader GetReader() {
+            return new ScriptSourceReader(this);
         }
-        
+
         /// <summary>
         /// Reads specified range of lines (or less) from the source unit. 
         /// Line numbers starts with 1.
         /// </summary>
-        public string/*!*/[]/*!*/ GetCodeLines(int start, int count) {
+        public string[] GetCodeLines(int start, int count) {
             return _unit.GetCodeLines(start, count);
         }
 
@@ -215,17 +195,33 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public string/*!*/ GetCode() {
+        public string GetCode() {
             return _unit.GetCode();
         }
 
-        public SourceSpan MapLocation(SourceSpan span) {
+        // TODO: can this be removed? no one uses it
+        #region line number mapping
+
+        public int MapLine(int line) {
+            return _unit.MapLine(line);
+        }
+
+        public SourceSpan MapLine(SourceSpan span) {
             return new SourceSpan(_unit.MakeLocation(span.Start), _unit.MakeLocation(span.End));
         }
 
-        public SourceLocation MapLocation(SourceLocation location) {
+        public SourceLocation MapLine(SourceLocation location) {
             return _unit.MakeLocation(location);
         }
+
+        // TODO: remove this? we don't support file mapping
+        // (but it's still in the hosting spec)
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "line")]
+        public string MapLinetoFile(int line) {
+            return _unit.Path;
+        }
+
+        #endregion
 
 #if !SILVERLIGHT
         // TODO: Figure out what is the right lifetime

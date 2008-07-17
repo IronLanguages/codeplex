@@ -42,7 +42,7 @@ namespace System.Scripting.Actions {
         public abstract DynamicActionKind Kind { get; }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return Kind.ToString();
         }
 

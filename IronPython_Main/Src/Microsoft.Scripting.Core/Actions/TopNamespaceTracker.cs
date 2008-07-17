@@ -25,15 +25,15 @@ namespace System.Scripting.Actions {
     public class TopNamespaceTracker : NamespaceTracker {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
         private int _lastDiscovery = 0;
-        private readonly ScriptDomainManager/*!*/ _manager;
+        private readonly ScriptDomainManager _manager;
 
-        public TopNamespaceTracker(ScriptDomainManager/*!*/ manager)
+        public TopNamespaceTracker(ScriptDomainManager manager)
             : base(null) {
             ContractUtils.RequiresNotNull(manager, "manager");
             SetTopPackage(this);
 
             _manager = manager;
-        }       
+        }
 
         #region Public API Surface
 
@@ -79,7 +79,7 @@ namespace System.Scripting.Actions {
         /// <param name="assem"></param>
         /// <returns>true if the assembly was loaded for the first time. 
         /// false if the assembly had already been loaded before</returns>
-        public bool LoadAssembly(Assembly/*!*/ assem) {
+        public bool LoadAssembly(Assembly assem) {
             ContractUtils.RequiresNotNull(assem, "assem");
 
             lock (this) {
@@ -109,7 +109,7 @@ namespace System.Scripting.Actions {
             }
         }
 
-        public ScriptDomainManager/*!*/ DomainManager {
+        public ScriptDomainManager DomainManager {
             get {
                 return _manager;
             }

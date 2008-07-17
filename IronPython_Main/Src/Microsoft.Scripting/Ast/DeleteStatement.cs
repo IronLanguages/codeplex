@@ -24,9 +24,9 @@ namespace Microsoft.Scripting.Ast {
     /// TODO: Python specific?
     /// </summary>
     public sealed class DeleteStatement : Expression {
-        private readonly Expression/*!*/ _variable;
+        private readonly Expression _variable;
 
-        internal DeleteStatement(Annotations annotations, Expression/*!*/ variable)
+        internal DeleteStatement(Annotations annotations, Expression variable)
             : base(annotations, ExpressionType.Extension, typeof(void)) {
             _variable = variable;
         }
@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Ast {
 
         public static DeleteStatement Delete(Expression variable, Annotations annotations) {
             ContractUtils.RequiresNotNull(variable, "variable");
-            ContractUtils.Requires(                
+            ContractUtils.Requires(
                 variable is VariableExpression || variable is ParameterExpression || variable is GlobalVariableExpression,
                 "variable",
                 "variable must be VariableExpression, ParameterExpression, or GlobalVariableExpression");

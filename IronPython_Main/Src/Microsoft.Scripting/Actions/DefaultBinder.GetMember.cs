@@ -23,7 +23,7 @@ using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
-    
+
     public partial class DefaultBinder : ActionBinder {
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="target">
         /// The MetaObject from which the member is retrieved.
         /// </param>
-        public MetaObject/*!*/ GetMember(string name, MetaObject/*!*/ target) {
+        public MetaObject GetMember(string name, MetaObject target) {
             return GetMember(name, target, Ast.Null(typeof(CodeContext)));
         }
 
@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Actions {
         /// accessing the member (e.g. for an extension property which takes CodeContext).  By default this
         /// a null CodeContext object is passed.
         /// </param>
-        public MetaObject/*!*/ GetMember(string name, MetaObject/*!*/ target, Expression/*!*/ codeContext) {
+        public MetaObject GetMember(string name, MetaObject target, Expression codeContext) {
             return GetMember(
                 name,
                 target,
@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Actions {
         /// True if the operation should return Operation.Failed on failure, false if it
         /// should return the exception produced by MakeMissingMemberError.
         /// </param>
-        public MetaObject/*!*/ GetMember(string name, MetaObject/*!*/ target, Expression/*!*/ codeContext, bool isNoThrow) {
+        public MetaObject GetMember(string name, MetaObject target, Expression codeContext, bool isNoThrow) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNull(codeContext, "codeContext");
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private MetaObject/*!*/ MakeGetMemberTarget(GetMemberInfo/*!*/ getMemInfo, MetaObject/*!*/ target) {            
+        private MetaObject MakeGetMemberTarget(GetMemberInfo getMemInfo, MetaObject target) {
             Type type = target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
@@ -153,10 +153,10 @@ namespace Microsoft.Scripting.Actions {
                 propSelf = Ast.Field(Ast.ConvertHelper(self, type), type.GetField("Value"));
 
                 type = type.GetGenericArguments()[0];
-                
+
                 members = GetMember(
-                    act, 
-                    type, 
+                    act,
+                    type,
                     getMemInfo.Name
                 );
             }
@@ -167,14 +167,14 @@ namespace Microsoft.Scripting.Actions {
             return getMemInfo.Body.GetMetaObject(target);
         }
 
-        private void MakeBodyHelper(GetMemberInfo/*!*/ getMemInfo, Expression self, Expression propSelf, Type/*!*/ type, MemberGroup/*!*/ members) {
+        private void MakeBodyHelper(GetMemberInfo getMemInfo, Expression self, Expression propSelf, Type type, MemberGroup members) {
             if (self != null) {
                 MakeOperatorGetMemberBody(getMemInfo, propSelf, type, "GetCustomMember");
             }
 
             Expression error;
             TrackerTypes memberType = GetMemberType(members, out error);
-            
+
             if (error == null) {
                 MakeSuccessfulMemberAccess(getMemInfo, self, propSelf, type, members, memberType);
             } else {
@@ -182,7 +182,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private void MakeSuccessfulMemberAccess(GetMemberInfo/*!*/ getMemInfo, Expression self, Expression propSelf, Type/*!*/ type, MemberGroup/*!*/ members, TrackerTypes memberType) {
+        private void MakeSuccessfulMemberAccess(GetMemberInfo getMemInfo, Expression self, Expression propSelf, Type type, MemberGroup members, TrackerTypes memberType) {
             switch (memberType) {
                 case TrackerTypes.TypeGroup:
                 case TrackerTypes.Type:
@@ -212,11 +212,11 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private void MakeGenericBody(GetMemberInfo/*!*/ getMemInfo, Type/*!*/ type, MemberGroup/*!*/ members, Expression instance) {
+        private void MakeGenericBody(GetMemberInfo getMemInfo, Type type, MemberGroup members, Expression instance) {
             MakeGenericBodyWorker(getMemInfo, type, members[0], instance);
         }
 
-        private void MakeTypeBody(GetMemberInfo/*!*/ getMemInfo, Type/*!*/ type, MemberGroup/*!*/ members) {
+        private void MakeTypeBody(GetMemberInfo getMemInfo, Type type, MemberGroup members) {
             TypeTracker typeTracker = (TypeTracker)members[0];
             for (int i = 1; i < members.Count; i++) {
                 typeTracker = TypeGroup.UpdateTypeEntity(typeTracker, (TypeTracker)members[i]);
@@ -225,7 +225,7 @@ namespace Microsoft.Scripting.Actions {
             getMemInfo.Body.FinishCondition(typeTracker.GetValue(getMemInfo.CodeContext, this, type));
         }
 
-        private void MakeGenericBodyWorker(GetMemberInfo/*!*/ getMemInfo, Type/*!*/ type, MemberTracker/*!*/ tracker, Expression instance) {
+        private void MakeGenericBodyWorker(GetMemberInfo getMemInfo, Type type, MemberTracker tracker, Expression instance) {
             if (instance != null) {
                 tracker = tracker.BindToInstance(instance);
             }
@@ -233,26 +233,26 @@ namespace Microsoft.Scripting.Actions {
             Expression val = tracker.GetValue(getMemInfo.CodeContext, this, type);
 
             getMemInfo.Body.FinishCondition(
-                val != null ? 
+                val != null ?
                     val :
                     MakeError(tracker.GetError(this))
             );
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
-        private void MakeOperatorGetMemberBody(GetMemberInfo/*!*/ getMemInfo, Expression instance, Type/*!*/ type, string/*!*/ name) {
+        private void MakeOperatorGetMemberBody(GetMemberInfo getMemInfo, Expression instance, Type type, string name) {
             MethodInfo getMem = GetMethod(type, name);
             if (getMem != null && getMem.IsSpecialName) {
                 VariableExpression tmp = Ast.Variable(typeof(object), "getVal");
                 getMemInfo.Body.AddVariable(tmp);
 
-                getMemInfo.Body.AddCondition(                    
+                getMemInfo.Body.AddCondition(
                     Ast.NotEqual(
                         Ast.Assign(
                             tmp,
                             MakeCallExpression(
                                 getMemInfo.CodeContext,
-                                getMem, 
+                                getMem,
                                 Ast.ConvertHelper(instance, type),
                                 Ast.Constant(getMemInfo.Name)
                             )
@@ -264,7 +264,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private void MakeMissingMemberRuleForGet(GetMemberInfo/*!*/ getMemInfo, Type/*!*/ type) {
+        private void MakeMissingMemberRuleForGet(GetMemberInfo getMemInfo, Type type) {
             if (getMemInfo.IsNoThrow) {
                 getMemInfo.Body.FinishCondition(
                     Ast.Field(null, typeof(OperationFailed).GetField("Value"))
@@ -281,12 +281,12 @@ namespace Microsoft.Scripting.Actions {
         /// Helper class for flowing information about the GetMember request.
         /// </summary>
         private sealed class GetMemberInfo {
-            public readonly string/*!*/ Name;
-            public readonly Expression/*!*/ CodeContext;
+            public readonly string Name;
+            public readonly Expression CodeContext;
             public readonly bool IsNoThrow;
-            public readonly ConditionalBuilder/*!*/ Body = new ConditionalBuilder();
+            public readonly ConditionalBuilder Body = new ConditionalBuilder();
 
-            public GetMemberInfo(string name, Expression/*!*/ codeContext, bool noThrow) {
+            public GetMemberInfo(string name, Expression codeContext, bool noThrow) {
                 Name = name;
                 CodeContext = codeContext;
                 IsNoThrow = noThrow;

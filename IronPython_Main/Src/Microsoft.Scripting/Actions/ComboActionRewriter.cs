@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Actions {
     /// turn them into a single combo dynamic site.  The combo dynamic site will then run the
     /// individual meta binders and produce the resulting code in a single dynamic site.
     /// </summary>
-    public class ComboActionRewriter : ExpressionTreeVisitor {        
+    public class ComboActionRewriter : ExpressionTreeVisitor {
         protected override Expression Visit(ActionExpression node) {
             Debug.Assert(node.IsDynamic);
 
@@ -122,17 +122,17 @@ namespace Microsoft.Scripting.Actions {
         /// the binding mapping info.  If any of the inputs cause side effects then we'll stop the combination.
         /// </summary>
         class ComboDynamicSiteExpression : Expression {
-            private readonly Expression/*!*/[]/*!*/ _inputs;
-            private readonly List<BinderMappingInfo/*!*/>/*!*/ _binders;
+            private readonly Expression[] _inputs;
+            private readonly List<BinderMappingInfo> _binders;
 
-            public ComboDynamicSiteExpression(Type type, List<BinderMappingInfo/*!*/>/*!*/ binders, Expression/*!*/[]/*!*/ inputs) :
+            public ComboDynamicSiteExpression(Type type, List<BinderMappingInfo> binders, Expression[] inputs) :
                 base(ExpressionType.Extension, type) {
 
                 _binders = binders;
                 _inputs = inputs;
             }
 
-            public Expression/*!*/[]/*!*/ Inputs {
+            public Expression[] Inputs {
                 get {
                     return _inputs;
                 }
@@ -150,7 +150,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
-            public override Expression/*!*/ Reduce() {
+            public override Expression Reduce() {
                 // we just reduce to a simple ActionExpression
                 return Expression.ActionExpression(
                     new ComboBinder(_binders),
@@ -193,7 +193,7 @@ namespace Microsoft.Scripting.Actions {
                     ConstantExpression ce;
                     if (combo != null) {
                         // an action expression we can combine with our own expression
-                        
+
                         // remember how many actions we have so far - if any of our children consume
                         // actions their offset is bumped up
                         int baseActionCount = actionCount;

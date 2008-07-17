@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Runtime {
     /// </summary>
     public class DynamicOperations {
         /// <summary> a shared instance of CodeContext used for all object operations </summary>
-        private readonly CodeContext/*!*/ _context;
+        private readonly CodeContext _context;
 
         /// <summary> a dictionary of SiteKey's which are used to cache frequently used operations, logically a set </summary>
         private Dictionary<SiteKey, SiteKey> _sites = new Dictionary<SiteKey, SiteKey>();
@@ -59,7 +59,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary> the number of sites we should clear after if we can't make progress cleaning up otherwise </summary>
         private const int ClearThreshold = 50;
 
-        public DynamicOperations(CodeContext/*!*/ context) {
+        public DynamicOperations(CodeContext context) {
             ContractUtils.RequiresNotNull(context, "context");
 
             _context = context;
@@ -391,14 +391,14 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         private class SiteKey : IEquatable<SiteKey> {
             // the key portion of the data
-            public OldDynamicAction/*!*/ Action;
-            private readonly Type/*!*/ _siteType;
+            public OldDynamicAction Action;
+            private readonly Type _siteType;
 
             // not used for equality, used for caching strategy
             public int HitCount;
             public CallSite Site;
 
-            public SiteKey(Type/*!*/ siteType, OldDynamicAction/*!*/ action) {
+            public SiteKey(Type siteType, OldDynamicAction action) {
                 Debug.Assert(siteType != null);
                 Debug.Assert(action != null);
 
@@ -429,7 +429,7 @@ namespace Microsoft.Scripting.Runtime {
             #endregion
 #if DEBUG
             [Confined]
-            public override string/*!*/ ToString() {
+            public override string ToString() {
                 return String.Format("{0} {1}", Action.ToString(), HitCount);
             }
 #endif

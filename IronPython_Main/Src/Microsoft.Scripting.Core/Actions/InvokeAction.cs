@@ -45,12 +45,12 @@ namespace System.Scripting.Actions {
         [Confined]
         public override bool Equals(object obj) {
             InvokeAction ia = obj as InvokeAction;
-            return ia != null && CollectionUtils.Equal(ia._arguments, _arguments);
+            return ia != null && ia._arguments.ListEquals(_arguments);
         }
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ CollectionUtils.GetHashCode(_arguments);
+            return ((int)Kind << 28) ^ _arguments.ListHashCode();
         }
     }
 }
