@@ -57,8 +57,7 @@ namespace Microsoft.Scripting.Runtime {
         public override void Write(char value) {
             if (value != '\n') {
                 ++_column;
-            }
-            else {
+            } else {
                 _column = 1;
                 ++_line;
             }
@@ -70,7 +69,7 @@ namespace Microsoft.Scripting.Runtime {
             base.Write(value);
         }
 
-        public override void Write(char[]/*!*/ buffer, int index, int count) {
+        public override void Write(char[] buffer, int index, int count) {
             UpdateLineColumn(buffer, index, count);
             base.Write(buffer, index, count);
         }
@@ -84,8 +83,7 @@ namespace Microsoft.Scripting.Runtime {
 
             if (lastPos > 0) {
                 _column = value.Length - lastPos + 1;
-            }
-            else {
+            } else {
                 _column += value.Length;
             }
         }
@@ -100,8 +98,7 @@ namespace Microsoft.Scripting.Runtime {
 
             if (lastPos > 0) {
                 _column = count - lastPos + 1;
-            }
-            else {
+            } else {
                 _column += count;
             }
         }

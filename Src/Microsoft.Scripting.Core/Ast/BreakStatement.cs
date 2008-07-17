@@ -20,7 +20,7 @@ namespace System.Linq.Expressions {
     /// Breaks to the end of the the target LabeledStatement
     /// </summary>
     public sealed class BreakStatement : Expression {
-        private readonly LabelTarget/*!*/ _target;
+        private readonly LabelTarget _target;
 
         internal BreakStatement(Annotations annotations, LabelTarget target)
             : base(annotations, ExpressionType.BreakStatement, typeof(void)) {

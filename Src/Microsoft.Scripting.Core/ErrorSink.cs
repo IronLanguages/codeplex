@@ -21,16 +21,16 @@ namespace System.Scripting {
 
     public class ErrorSink {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public static readonly ErrorSink/*!*/ Default = new ErrorSink();
+        public static readonly ErrorSink Default = new ErrorSink();
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public static readonly ErrorSink/*!*/ Null = new NullErrorSink();
+        public static readonly ErrorSink Null = new NullErrorSink();
 
         protected ErrorSink() {
         }
 
         //TODO: need localization
-        public virtual void Add(SourceUnit source, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
+        public virtual void Add(SourceUnit source, string message, SourceSpan span, int errorCode, Severity severity) {
             throw new SyntaxErrorException(message, source, span, errorCode, severity);
         }
     }
@@ -39,12 +39,12 @@ namespace System.Scripting {
         internal NullErrorSink() {
         }
 
-        public override void Add(SourceUnit source, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
+        public override void Add(SourceUnit source, string message, SourceSpan span, int errorCode, Severity severity) {
         }
     }
 
     public class ErrorCounter : ErrorSink {
-        private readonly ErrorSink/*!*/ _sink;
+        private readonly ErrorSink _sink;
 
         private int _fatalErrorCount;
         private int _errorCount;
@@ -68,15 +68,15 @@ namespace System.Scripting {
             }
         }
 
-        public ErrorCounter() 
+        public ErrorCounter()
             : this(ErrorSink.Null) {
         }
 
-        public ErrorCounter(ErrorSink/*!*/ sink) {
+        public ErrorCounter(ErrorSink sink) {
             ContractUtils.RequiresNotNull(sink, "sink");
             _sink = sink;
         }
-        
+
         protected virtual void CountError(Severity severity) {
             if (severity == Severity.FatalError) Interlocked.Increment(ref _fatalErrorCount);
             else if (severity == Severity.Error) Interlocked.Increment(ref _errorCount);
@@ -87,7 +87,7 @@ namespace System.Scripting {
             _warningCount = _errorCount = _fatalErrorCount = 0;
         }
 
-        public override void Add(SourceUnit source, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
+        public override void Add(SourceUnit source, string message, SourceSpan span, int errorCode, Severity severity) {
             CountError(severity);
             _sink.Add(source, message, span, errorCode, severity);
         }

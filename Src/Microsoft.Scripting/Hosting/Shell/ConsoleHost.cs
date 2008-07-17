@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
         public ScriptDomainOptions GlobalOptions { get { return _optionsParser.GlobalOptions; } }
         public ScriptRuntimeSetup RuntimeConfig { get { return _optionsParser.RuntimeConfig; } }
-        
+
         public ScriptEngine Engine { get { return _engine; } }
         public ScriptRuntime Runtime { get { return _runtime; } }
 
@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         #region Customization
 
-        protected virtual void ParseHostOptions(string/*!*/[]/*!*/ args) {
+        protected virtual void ParseHostOptions(string[] args) {
             _optionsParser.Parse(args);
         }
 
@@ -78,14 +78,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
         public virtual ConsoleHostOptions HostOptions {
             get {
                 return _optionsParser.Options;
-            }    
+            }
         }
 
-        protected virtual ScriptRuntimeSetup/*!*/ CreateScriptEnvironmentSetup() {
+        protected virtual ScriptRuntimeSetup CreateScriptEnvironmentSetup() {
             return new ScriptRuntimeSetup(true);
         }
 
-        protected virtual ScriptEngine/*!*/ CreateEngine() {
+        protected virtual ScriptEngine CreateEngine() {
             ScriptEngine engine;
             if (Options.LanguageId != null) {
                 return Runtime.GetEngine(Options.LanguageId);
@@ -96,15 +96,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
             }
         }
 
-        protected virtual CommandLine/*!*/ CreateCommandLine() {
+        protected virtual CommandLine CreateCommandLine() {
             return new CommandLine();
         }
 
-        protected virtual OptionsParser/*!*/ CreateOptionsParser() {
+        protected virtual OptionsParser CreateOptionsParser() {
             return new DefaultOptionsParser();
         }
 
-        protected virtual IConsole/*!*/ CreateConsole(ScriptEngine/*!*/ engine, CommandLine/*!*/ commandLine, ConsoleOptions/*!*/ options) {
+        protected virtual IConsole CreateConsole(ScriptEngine engine, CommandLine commandLine, ConsoleOptions options) {
             ContractUtils.RequiresNotNull(commandLine, "commandLine");
             ContractUtils.RequiresNotNull(options, "options");
 
@@ -118,7 +118,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         // The advanced console functions are in a special non-inlined function so that 
         // dependencies are pulled in only if necessary.
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static IConsole/*!*/ CreateSuperConsole(CommandLine/*!*/ commandLine, bool isColorful) {
+        private static IConsole CreateSuperConsole(CommandLine commandLine, bool isColorful) {
             return new SuperConsole(commandLine, isColorful);
         }
 
@@ -128,7 +128,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// To be called from entry point.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public int Run(string/*!*/[]/*!*/ args) {
+        public int Run(string[] args) {
             InitializeOptionsParser();
 
             try {
@@ -136,8 +136,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
             } catch (InvalidOptionException e) {
                 Console.Error.WriteLine("Invalid argument: " + e.Message);
                 return _exitCode = 1;
-            } 
-            
+            }
+
             SetEnvironment();
 
             // TODO: this initialization needs to be fixed when hosting config is fixed:
@@ -150,7 +150,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 Console.Error.WriteLine(e.Message);
                 return _exitCode = 1;
             }
-            
+
             _engine.SetScriptSourceSearchPaths(Options.SourceUnitSearchPaths);
 
             _languageOptionsParser.Engine = _engine;
@@ -177,13 +177,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
         #region Printing help
 
         protected virtual void PrintHelp() {
-            Console.WriteLine(GetHelp());            
+            Console.WriteLine(GetHelp());
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        protected virtual string/*!*/ GetHelp() {
+        protected virtual string GetHelp() {
             StringBuilder sb = new StringBuilder();
-            
+
             string[,] optionsHelp = Options.GetHelp();
 
             sb.AppendLine(String.Format("Usage: {0}.exe [<dlr-options>] [--] [<language-specific-command-line>]", ExeName));
@@ -200,7 +200,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             return sb.ToString();
         }
 
-        public void PrintLanguageHelp(StringBuilder/*!*/ output) {
+        public void PrintLanguageHelp(StringBuilder output) {
             ContractUtils.RequiresNotNull(output, "output");
 
             string commandLine, comments;
@@ -247,7 +247,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 thread.Join();
                 return;
             }
-#endif            
+#endif
             ExecuteInternal();
         }
 
@@ -313,7 +313,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             CommandLine commandLine = CreateCommandLine();
             ConsoleOptions consoleOptions = _languageOptionsParser.ConsoleOptions;
-            
+
             if (consoleOptions.PrintVersionAndExit) {
                 Console.WriteLine("{0} {1} on .NET {2}", Engine.LanguageDisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;
@@ -352,7 +352,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             return exitCode;
         }
 
-        protected virtual void UnhandledException(ScriptEngine/*!*/ engine, Exception/*!*/ e) {
+        protected virtual void UnhandledException(ScriptEngine engine, Exception e) {
             Console.Error.Write("Unhandled exception");
             Console.Error.WriteLine(':');
             Console.Error.WriteLine(engine.FormatException(e));

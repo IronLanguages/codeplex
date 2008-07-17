@@ -17,21 +17,20 @@
 
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
 
 namespace System.Scripting.Com {
 
     internal sealed class ReturnBuilder {
-        private readonly Type/*!*/ _returnType;
+        private readonly Type _returnType;
 
         /// <summary>
         /// Creates a ReturnBuilder
         /// </summary>
         /// <param name="returnType">the type the ReturnBuilder will leave on the stack</param>
-        internal ReturnBuilder(Type/*!*/ returnType) {
+        internal ReturnBuilder(Type returnType) {
             Debug.Assert(returnType != null);
 
-            _returnType = returnType; 
+            _returnType = returnType;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
@@ -39,7 +38,7 @@ namespace System.Scripting.Com {
             return ret;
         }
 
-        internal Type/*!*/ ReturnType {
+        internal Type ReturnType {
             get {
                 return _returnType;
             }

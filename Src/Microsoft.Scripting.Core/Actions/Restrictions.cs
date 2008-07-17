@@ -30,7 +30,7 @@ namespace System.Scripting.Actions {
             private readonly RestrictionKind _kind;
 
             // Simplification ... for now just one kind of restriction rather than hierarchy.
-            private readonly Expression/*!*/ _expression;
+            private readonly Expression _expression;
             private readonly Type _type;
             private readonly object _instance;      // TODO: WeakRef ???
 
@@ -94,7 +94,7 @@ namespace System.Scripting.Actions {
             }
         }
 
-        private readonly Restriction/*!*/[]/*!*/ _restrictions;
+        private readonly Restriction[] _restrictions;
 
         private Restrictions(params Restriction[] restrictions) {
             _restrictions = restrictions;
@@ -123,7 +123,7 @@ namespace System.Scripting.Actions {
         /// <summary>
         /// Adds unique restrictions and doesn't add restrictions which are alerady present
         /// </summary>
-        private static void AddRestrictions(Restriction[] list, List<Restriction>/*!*/ res) {
+        private static void AddRestrictions(Restriction[] list, List<Restriction> res) {
             foreach (Restriction r in list) {
                 bool found = false;
                 for (int j = 0; j < res.Count; j++) {
@@ -144,7 +144,7 @@ namespace System.Scripting.Actions {
         public static Restrictions TypeRestriction(Expression expression, Type type) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
-            
+
             if (expression.Type == type && CompilerHelpers.IsSealed(type)) {
                 return Restrictions.Empty;
             }
@@ -164,9 +164,9 @@ namespace System.Scripting.Actions {
             return new Restrictions(new Restriction(expression));
         }
 
-        public static Restrictions/*!*/ Combine(IList<MetaObject> contributingObjects) {
+        public static Restrictions Combine(IList<MetaObject> contributingObjects) {
             Restrictions res = Restrictions.Empty;
-            if (contributingObjects != null) {                
+            if (contributingObjects != null) {
                 foreach (MetaObject mo in contributingObjects) {
                     if (mo != null) {
                         res = res.Merge(mo.Restrictions);

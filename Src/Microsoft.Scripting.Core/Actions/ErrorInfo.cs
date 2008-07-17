@@ -32,14 +32,14 @@ namespace System.Scripting.Actions {
     /// binding.  
     /// </summary>
     public sealed class ErrorInfo {
-        private readonly Expression/*!*/ _value;
-        private readonly ErrorInfoKind _kind;       
+        private readonly Expression _value;
+        private readonly ErrorInfoKind _kind;
 
         /// <summary>
         /// Private constructor - consumers must use static From* factories
         /// to create ErrorInfo objects.
         /// </summary>
-        private ErrorInfo(Expression/*!*/ value, ErrorInfoKind kind) {
+        private ErrorInfo(Expression value, ErrorInfoKind kind) {
             Debug.Assert(value != null);
 
             _value = value;
@@ -50,9 +50,9 @@ namespace System.Scripting.Actions {
         /// Creates a new ErrorInfo which represents an exception that should
         /// be thrown.
         /// </summary>
-        public static ErrorInfo FromException(Expression/*!*/ exceptionValue) {
+        public static ErrorInfo FromException(Expression exceptionValue) {
             ContractUtils.RequiresNotNull(exceptionValue, "exceptionValue");
-            ContractUtils.Requires(typeof(Exception).IsAssignableFrom(exceptionValue.Type), "exceptionValue", "must by an Exception instance");
+            ContractUtils.Requires(typeof(Exception).IsAssignableFrom(exceptionValue.Type), "exceptionValue", Strings.MustBeExceptionInstance);
 
             return new ErrorInfo(exceptionValue, ErrorInfoKind.Exception);
         }
@@ -61,7 +61,7 @@ namespace System.Scripting.Actions {
         /// Creates a new ErrorInfo which represents a value which should be
         /// returned to the user.
         /// </summary>
-        public static ErrorInfo FromValue(Expression/*!*/ resultValue) {
+        public static ErrorInfo FromValue(Expression resultValue) {
             ContractUtils.RequiresNotNull(resultValue, "resultValue");
 
             return new ErrorInfo(resultValue, ErrorInfoKind.Error);
@@ -73,7 +73,7 @@ namespace System.Scripting.Actions {
         /// </summary>
         /// <param name="resultValue"></param>
         /// <returns></returns>
-        public static ErrorInfo FromValueNoError(Expression/*!*/ resultValue) {
+        public static ErrorInfo FromValueNoError(Expression resultValue) {
             ContractUtils.RequiresNotNull(resultValue, "resultValue");
 
             return new ErrorInfo(resultValue, ErrorInfoKind.Success);
@@ -84,7 +84,7 @@ namespace System.Scripting.Actions {
         /// the error into a rule.
         /// </summary>
         public Expression MakeErrorForRule(RuleBuilder rule, ActionBinder binder) {
-            switch(_kind) {
+            switch (_kind) {
                 case ErrorInfoKind.Error:
                     rule.IsError = true;
                     return rule.MakeReturn(binder, _value);

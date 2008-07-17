@@ -22,26 +22,26 @@ namespace Microsoft.Scripting {
     [Serializable]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1032:ImplementStandardExceptionConstructors")]
     public class AmbiguousFileNameException : Exception {
-        private readonly string/*!*/ _firstPath;
-        private readonly string/*!*/ _secondPath;
+        private readonly string _firstPath;
+        private readonly string _secondPath;
 
-        public string/*!*/ FirstPath {
+        public string FirstPath {
             get { return _firstPath; }
         }
 
-        public string/*!*/ SecondPath {
+        public string SecondPath {
             get { return _secondPath; }
         }
 
-        public AmbiguousFileNameException(string/*!*/ firstPath, string/*!*/ secondPath)
+        public AmbiguousFileNameException(string firstPath, string secondPath)
             : this(firstPath, secondPath, null, null) {
         }
 
-        public AmbiguousFileNameException(string/*!*/ firstPath, string/*!*/ secondPath, string message)
+        public AmbiguousFileNameException(string firstPath, string secondPath, string message)
             : this(firstPath, secondPath, message, null) {
         }
 
-        public AmbiguousFileNameException(string/*!*/ firstPath, string/*!*/ secondPath, string message, Exception inner)
+        public AmbiguousFileNameException(string firstPath, string secondPath, string message, Exception inner)
             : base(message ?? string.Format("File name is ambiguous; more files are matching the same name (including '{0}' and '{1}')", firstPath, secondPath), inner) {
             ContractUtils.RequiresNotNull(firstPath, "firstPath");
             ContractUtils.RequiresNotNull(secondPath, "secondPath");
@@ -50,14 +50,14 @@ namespace Microsoft.Scripting {
             _secondPath = secondPath;
         }
 
-        
+
 #if !SILVERLIGHT
-        protected AmbiguousFileNameException(SerializationInfo/*!*/ info, StreamingContext/*!*/ context)
-            : base(info, context) { 
+        protected AmbiguousFileNameException(SerializationInfo info, StreamingContext context)
+            : base(info, context) {
         }
 
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
-        public override void GetObjectData(SerializationInfo/*!*/ info, StreamingContext/*!*/ context) {
+        public override void GetObjectData(SerializationInfo info, StreamingContext context) {
             info.AddValue("firstPath", _firstPath);
             info.AddValue("secondPath", _secondPath);
 

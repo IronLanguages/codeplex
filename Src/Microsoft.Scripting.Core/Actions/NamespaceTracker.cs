@@ -46,8 +46,8 @@ namespace System.Scripting.Actions {
         // not yet been loaded in _typeNames
         internal Dictionary<string, MemberTracker> _dict = new Dictionary<string, MemberTracker>();
 
-        internal readonly List<Assembly>/*!*/ _packageAssemblies = new List<Assembly>();
-        internal readonly Dictionary<Assembly, TypeNames>/*!*/ _typeNames = new Dictionary<Assembly, TypeNames>();
+        internal readonly List<Assembly> _packageAssemblies = new List<Assembly>();
+        internal readonly Dictionary<Assembly, TypeNames> _typeNames = new Dictionary<Assembly, TypeNames>();
 
         private string _fullName; // null for the TopReflectedPackage
         private TopNamespaceTracker _topPackage;
@@ -62,7 +62,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return base.ToString() + ":" + _fullName;
         }
 
@@ -75,7 +75,7 @@ namespace System.Scripting.Actions {
 
         #region Internal API Surface
 
-        internal NamespaceTracker GetOrMakeChildPackage(string/*!*/ childName, Assembly/*!*/ assem) {
+        internal NamespaceTracker GetOrMakeChildPackage(string childName, Assembly assem) {
             Assert.NotNull(childName, assem);
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             Debug.Assert(_packageAssemblies.Contains(assem)); // Parent namespace must contain all the assemblies of the child
@@ -98,7 +98,7 @@ namespace System.Scripting.Actions {
             return MakeChildPackage(childName, assem);
         }
 
-        private NamespaceTracker MakeChildPackage(string/*!*/ childName, Assembly/*!*/ assem) {
+        private NamespaceTracker MakeChildPackage(string childName, Assembly assem) {
             Assert.NotNull(childName, assem);
             NamespaceTracker rp = new NamespaceTracker();
             rp.SetTopPackage(_topPackage);
@@ -109,7 +109,7 @@ namespace System.Scripting.Actions {
             return rp;
         }
 
-        private string GetFullChildName(string/*!*/ childName) {
+        private string GetFullChildName(string childName) {
             Assert.NotNull(childName);
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             if (_fullName == null) {
@@ -119,7 +119,7 @@ namespace System.Scripting.Actions {
             return _fullName + Type.Delimiter + childName;
         }
 
-        private static Type LoadType(Assembly/*!*/ assem, string/*!*/ fullTypeName) {
+        private static Type LoadType(Assembly assem, string fullTypeName) {
             Assert.NotNull(assem, fullTypeName);
             Type type = assem.GetType(fullTypeName);
             // We should ignore nested types. They will be loaded when the containing type is loaded
@@ -127,7 +127,7 @@ namespace System.Scripting.Actions {
             return type;
         }
 
-        internal void AddTypeName(string/*!*/ typeName, Assembly/*!*/ assem) {
+        internal void AddTypeName(string typeName, Assembly assem) {
             Assert.NotNull(typeName, assem);
             Debug.Assert(typeName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
 
@@ -178,7 +178,7 @@ namespace System.Scripting.Actions {
             }
         }
 
-        protected void DiscoverAllTypes(Assembly/*!*/ assem) {
+        protected void DiscoverAllTypes(Assembly assem) {
             Assert.NotNull(assem);
 
             NamespaceTracker previousPackage = null;
@@ -207,7 +207,7 @@ namespace System.Scripting.Actions {
         /// <param name="assem"></param>
         /// <param name="fullNamespace">Full namespace name. It can be null (for top-level types)</param>
         /// <returns></returns>
-        private NamespaceTracker GetOrMakePackageHierarchy(Assembly/*!*/ assem, string fullNamespace) {
+        private NamespaceTracker GetOrMakePackageHierarchy(Assembly assem, string fullNamespace) {
             Assert.NotNull(assem);
 
             if (fullNamespace == null) {
@@ -231,7 +231,7 @@ namespace System.Scripting.Actions {
         /// 2. Previous calls to GetCustomMemberNames (eg. "from foo import *" in Python) would not have included this type.
         /// 3. This does not deal with new namespaces added to the assembly
         /// </summary>
-        private MemberTracker CheckForUnlistedType(string/*!*/ nameString) {
+        private MemberTracker CheckForUnlistedType(string nameString) {
             Assert.NotNull(nameString);
 
             string fullTypeName = GetFullChildName(nameString);
@@ -405,7 +405,7 @@ namespace System.Scripting.Actions {
         #region IEnumerable<KeyValuePair<object,object>> Members
 
         [Pure]
-        public IEnumerator<KeyValuePair<object, object>>/*!*/ GetEnumerator() {
+        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
             foreach (object key in Keys) {
                 yield return new KeyValuePair<object, object>(key, this[SymbolTable.StringToId((string)key)]);
             }
@@ -416,7 +416,7 @@ namespace System.Scripting.Actions {
         #region IEnumerable Members
 
         [Pure]
-        IEnumerator/*!*/ IEnumerable.GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator() {
             foreach (object key in Keys) {
                 yield return new KeyValuePair<object, object>(key, this[SymbolTable.StringToId((string)key)]);
             }
@@ -424,7 +424,7 @@ namespace System.Scripting.Actions {
 
         #endregion
 
-        public IList<Assembly>/*!*/ PackageAssemblies {
+        public IList<Assembly> PackageAssemblies {
             get {
                 LoadNamespaces();
 
@@ -438,7 +438,7 @@ namespace System.Scripting.Actions {
             }
         }
 
-        protected void SetTopPackage(TopNamespaceTracker/*!*/ pkg) {
+        protected void SetTopPackage(TopNamespaceTracker pkg) {
             Assert.NotNull(pkg);
             _topPackage = pkg;
         }

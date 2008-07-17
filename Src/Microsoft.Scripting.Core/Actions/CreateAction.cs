@@ -13,21 +13,28 @@
  *
  * ***************************************************************************/
 
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq.Expressions;
 using System.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace System.Scripting.Actions {
     public abstract class CreateAction : StandardAction {
-        private readonly CallSignature _signature;
+        private readonly ReadOnlyCollection<Argument> _arguments;
 
-        protected CreateAction(CallSignature signature)
+        protected CreateAction(IEnumerable<Argument> arguments)
             : base(StandardActionKind.Create) {
-            _signature = signature;
+            _arguments = arguments.ToReadOnly();
         }
 
-        public CallSignature Signature {
+        protected CreateAction(params Argument[] arguments)
+            : this((IEnumerable<Argument>)arguments) {
+        }
+
+        public ReadOnlyCollection<Argument> Arguments {
             get {
-                return _signature;
+                return _arguments;
             }
         }
 
@@ -40,12 +47,12 @@ namespace System.Scripting.Actions {
         [Confined]
         public override bool Equals(object obj) {
             CreateAction ca = obj as CreateAction;
-            return ca != null && ca._signature.Equals(_signature);
+            return ca != null && ca._arguments.ListEquals(_arguments);
         }
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28 ^ _signature.GetHashCode());
+            return ((int)Kind << 28 ^ _arguments.ListHashCode());
         }
     }
 }

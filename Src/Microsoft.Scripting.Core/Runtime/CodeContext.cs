@@ -49,22 +49,22 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public LanguageContext/*!*/ LanguageContext {
+        public LanguageContext LanguageContext {
             get {
                 return _languageContext;
             }
         }
 
-        public CodeContext(Scope scope, LanguageContext/*!*/ languageContext)
+        public CodeContext(Scope scope, LanguageContext languageContext)
             : this(scope, languageContext, null) {
         }
 
-        public CodeContext(Scope scope, LanguageContext/*!*/ languageContext, CodeContext parent) {
+        public CodeContext(Scope scope, LanguageContext languageContext, CodeContext parent) {
             Assert.NotNull(languageContext);
 
             _languageContext = languageContext;
             _scope = scope;
             _parent = parent;
         }
-    }   
+    }
 }

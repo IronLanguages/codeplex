@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args) {
             return CallMethod(
                 context,
                 targets,
@@ -63,7 +63,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="maxLevel">The maximum narrowing level for arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>
         /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
             return CallWorker(
                 context,
                 targets,
@@ -73,7 +73,7 @@ namespace Microsoft.Scripting.Actions {
                 Restrictions.Empty,
                 minLevel,
                 maxLevel,
-                null                
+                null
             );
         }
 
@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature) {
             return CallMethod(context, targets, args, signature, Restrictions.Empty);
         }
 
@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, string name) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, string name) {
             return CallMethod(context, targets, args, signature, Restrictions.Empty, name);
         }
 
@@ -114,7 +114,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions) {
             return CallWorker(
                 context,
                 targets,
@@ -139,7 +139,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions, string name) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, string name) {
             return CallWorker(
                 context,
                 targets,
@@ -148,7 +148,7 @@ namespace Microsoft.Scripting.Actions {
                 CallTypes.None,
                 restrictions,
                 NarrowingLevel.None,
-                NarrowingLevel.All,                
+                NarrowingLevel.All,
                 name
             );
         }
@@ -164,7 +164,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallInstanceMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, MetaObject/*!*/ instance, IList<MetaObject/*!*/> args, CallSignature signature, Restrictions/*!*/ restrictions) {
+        public MetaObject CallInstanceMethod(Expression context, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions) {
             ContractUtils.RequiresNotNull(instance, "instance");
             ContractUtils.RequiresNotNull(context, "context");
 
@@ -194,7 +194,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
             return CallWorker(
                 context,
                 targets,
@@ -223,7 +223,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
             return CallWorker(
                 context,
                 targets,
@@ -252,7 +252,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallInstanceMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, MetaObject/*!*/ instance, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
+        public MetaObject CallInstanceMethod(Expression context, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
             return CallWorker(
                 context,
                 targets,
@@ -282,7 +282,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject/*!*/ CallInstanceMethod(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, MetaObject/*!*/ instance, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+        public MetaObject CallInstanceMethod(Expression context, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
             return CallWorker(
                 context,
                 targets,
@@ -296,19 +296,19 @@ namespace Microsoft.Scripting.Actions {
                 out target
             );
         }
-        
-        private MetaObject/*!*/ CallWorker(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, CallTypes callType, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name) {
+
+        private MetaObject CallWorker(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, CallTypes callType, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name) {
             BindingTarget dummy;
             return CallWorker(context, targets, args, signature, callType, restrictions, minLevel, maxLevel, name, out dummy);
         }
 
-        private MetaObject/*!*/ CallWorker(Expression/*!*/ context, IList<MethodBase/*!*/>/*!*/ targets, IList<MetaObject/*!*/>/*!*/ args, CallSignature signature, CallTypes callType, Restrictions/*!*/ restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+        private MetaObject CallWorker(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, CallTypes callType, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
             ContractUtils.RequiresNotNullItems(args, "args");
             ContractUtils.RequiresNotNullItems(targets, "targets");
             ContractUtils.RequiresNotNull(restrictions, "restrictions");
             ContractUtils.Requires(context.Type == typeof(CodeContext), "context must be of type CodeContext.  Pass Expression.Null(typeof(CodeContext)) if one isn't available.");
 
-            MetaObject[] finalArgs; 
+            MetaObject[] finalArgs;
             SymbolId[] argNames;
 
             if (callType == CallTypes.ImplicitInstance) {
@@ -321,10 +321,10 @@ namespace Microsoft.Scripting.Actions {
             // attempt to bind to an individual method
             MethodBinder binder = MethodBinder.MakeBinder(
                 this,
-                name ?? GetTargetName(targets), 
-                targets, 
-                argNames, 
-                minLevel, 
+                name ?? GetTargetName(targets),
+                targets,
+                argNames,
+                minLevel,
                 maxLevel);
             target = binder.MakeBindingTarget(callType, finalArgs);
 
@@ -343,14 +343,14 @@ namespace Microsoft.Scripting.Actions {
 
         #region Restriction helpers
 
-        private static Restrictions MakeSplatTests(CallTypes callType, CallSignature signature, IList<MetaObject/*!*/>/*!*/ args) {
+        private static Restrictions MakeSplatTests(CallTypes callType, CallSignature signature, IList<MetaObject> args) {
             return MakeSplatTests(callType, signature, false, args);
         }
 
         /// <summary>
         /// Makes test for param arrays and param dictionary parameters.
         /// </summary>
-        private static Restrictions MakeSplatTests(CallTypes callType, CallSignature signature, bool testTypes, IList<MetaObject/*!*/>/*!*/ args) {
+        private static Restrictions MakeSplatTests(CallTypes callType, CallSignature signature, bool testTypes, IList<MetaObject> args) {
             Restrictions res = Restrictions.Empty;
 
             if (signature.HasListArgument()) {
@@ -367,7 +367,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Pulls out the right argument to build the splat test.  MakeParamsTest makes the actual test.
         /// </summary>
-        private static Restrictions MakeParamsArrayTest(CallTypes callType, CallSignature signature, bool testTypes, IList<MetaObject/*!*/>/*!*/ args) {
+        private static Restrictions MakeParamsArrayTest(CallTypes callType, CallSignature signature, bool testTypes, IList<MetaObject> args) {
             int listIndex = signature.IndexOf(ArgumentKind.List);
             Debug.Assert(listIndex != -1);
             if (callType == CallTypes.ImplicitInstance) {
@@ -381,7 +381,7 @@ namespace Microsoft.Scripting.Actions {
         /// Builds the restrictions for calling with a splatted argument array.  Ensures that the
         /// argument is still an ICollection of object and that it has the same number of arguments.
         /// </summary>
-        private static Restrictions/*!*/ MakeParamsTest(object paramArg, Expression listArg, bool testTypes) {
+        private static Restrictions MakeParamsTest(object paramArg, Expression listArg, bool testTypes) {
             IList<object> coll = (IList<object>)paramArg;
 
             Restrictions res = Restrictions.ExpressionRestriction(
@@ -397,7 +397,7 @@ namespace Microsoft.Scripting.Actions {
                 )
             );
 
-            if (testTypes) {                
+            if (testTypes) {
                 for (int i = 0; i < coll.Count; i++) {
                     res = res.Merge(
                         Restrictions.TypeRestriction(
@@ -422,7 +422,7 @@ namespace Microsoft.Scripting.Actions {
         /// Builds the restrictions for calling with keyword arguments.  The restrictions include
         /// tests on the individual keys of the dictionary to ensure they have the same names.
         /// </summary>
-        private static Restrictions MakeParamsDictionaryTest(IList<MetaObject/*!*/>/*!*/ args, bool testTypes) {
+        private static Restrictions MakeParamsDictionaryTest(IList<MetaObject> args, bool testTypes) {
             IDictionary dict = (IDictionary)args[args.Count - 1].Value;
             IDictionaryEnumerator dictEnum = dict.GetEnumerator();
 
@@ -470,7 +470,7 @@ namespace Microsoft.Scripting.Actions {
         /// ArgumentKind.List is unpacked in the return value. </param>
         /// <param name="args">The MetaObject array which has the arguments for the call</param>
         /// <param name="signature">The signature we're building the call for</param>
-        private static void GetArgumentNamesAndTypes(CallSignature signature, IList<MetaObject/*!*/>/*!*/ args, out SymbolId[] argNames, out MetaObject[] resultingArgs) {
+        private static void GetArgumentNamesAndTypes(CallSignature signature, IList<MetaObject> args, out SymbolId[] argNames, out MetaObject[] resultingArgs) {
             // Get names of named arguments
             argNames = signature.GetArgumentNames();
 
@@ -483,7 +483,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        private static MetaObject[] GetArgumentTypes(CallSignature signature, IList<MetaObject/*!*/>/*!*/ args) {
+        private static MetaObject[] GetArgumentTypes(CallSignature signature, IList<MetaObject> args) {
             List<MetaObject> res = new List<MetaObject>();
             for (int i = 0; i < args.Count; i++) {
                 switch (signature.GetArgumentKind(i)) {
@@ -499,7 +499,7 @@ namespace Microsoft.Scripting.Actions {
 
                         for (int j = 0; j < list.Count; j++) {
                             res.Add(
-                                new MetaObject(                                    
+                                new MetaObject(
                                         Ast.Call(
                                             Ast.Convert(
                                                 args[i].Expression,
@@ -526,7 +526,7 @@ namespace Microsoft.Scripting.Actions {
             return res.ToArray();
         }
 
-        private static void GetDictionaryNamesAndTypes(IList<MetaObject/*!*/>/*!*/ args, ref SymbolId[] argNames, ref MetaObject[] argTypes) {
+        private static void GetDictionaryNamesAndTypes(IList<MetaObject> args, ref SymbolId[] argNames, ref MetaObject[] argTypes) {
             List<SymbolId> names = new List<SymbolId>(argNames);
             List<MetaObject> types = new List<MetaObject>(argTypes);
 
@@ -556,7 +556,7 @@ namespace Microsoft.Scripting.Actions {
             argTypes = types.ToArray();
         }
 
-        private static MetaObject MakeInvalidParametersRule(CallTypes callType, CallSignature signature, DefaultBinder binder, IList<MetaObject/*!*/>/*!*/ args, Restrictions/*!*/ restrictions, BindingTarget bt) {
+        private static MetaObject MakeInvalidParametersRule(CallTypes callType, CallSignature signature, DefaultBinder binder, IList<MetaObject> args, Restrictions restrictions, BindingTarget bt) {
             Restrictions restriction = MakeSplatTests(callType, signature, true, args);
 
             // restrict to the exact type of all parameters for errors

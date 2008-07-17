@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
 
     public partial class DefaultBinder : ActionBinder {
-        public MetaObject/*!*/ ConvertTo(Type/*!*/ toType, ConversionResultKind kind, MetaObject/*!*/ arg) {
+        public MetaObject ConvertTo(Type toType, ConversionResultKind kind, MetaObject arg) {
             ContractUtils.RequiresNotNull(toType, "toType");
             ContractUtils.RequiresNotNull(arg, "arg");
 
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if the conversion is to object and produces a target if it is.
         /// </summary>
-        private static MetaObject TryConvertToObject(Type/*!*/ toType, Type/*!*/ knownType, MetaObject/*!*/ arg) {
+        private static MetaObject TryConvertToObject(Type toType, Type knownType, MetaObject arg) {
             if (toType == typeof(object)) {
                 if (knownType.IsValueType) {
                     return MakeBoxingTarget(arg);
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if any conversions are available and if so builds the target for that conversion.
         /// </summary>
-        private MetaObject TryAllConversions(Type/*!*/ toType, ConversionResultKind kind, Type/*!*/ knownType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private MetaObject TryAllConversions(Type toType, ConversionResultKind kind, Type knownType, Restrictions restrictions, MetaObject arg) {
             return
                 TryAssignableConversion(toType, knownType, restrictions, arg) ??           // known type -> known type
                 TryExtensibleConversion(toType, knownType, restrictions, arg) ??           // Extensible<T> -> Extensible<T>.Value
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if the conversion can be handled by a simple cast.
         /// </summary>
-        private static MetaObject TryAssignableConversion(Type/*!*/ toType, Type/*!*/ type, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject TryAssignableConversion(Type toType, Type type, Restrictions restrictions, MetaObject arg) {
             if (toType.IsAssignableFrom(type) ||
                 (type == typeof(None) && (toType.IsClass || toType.IsInterface))) {
                 if (toType == typeof(IEnumerator) && typeof(IEnumerable).IsAssignableFrom(type)) {
@@ -100,21 +100,21 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if the conversion can be handled by calling a user-defined conversion method.
         /// </summary>
-        private MetaObject TryUserDefinedConversion(ConversionResultKind kind, Type/*!*/ toType, Type/*!*/ type, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private MetaObject TryUserDefinedConversion(ConversionResultKind kind, Type toType, Type type, Restrictions restrictions, MetaObject arg) {
             Type fromType = GetUnderlyingType(type);
 
-            MetaObject res = 
+            MetaObject res =
                    TryOneConversion(kind, toType, type, fromType, "op_Implicit", true, restrictions, arg) ??
                    TryOneConversion(kind, toType, type, fromType, "ConvertTo" + toType.Name, true, restrictions, arg);
 
-            if (kind == ConversionResultKind.ExplicitCast || 
+            if (kind == ConversionResultKind.ExplicitCast ||
                 kind == ConversionResultKind.ExplicitTry) {
                 // finally try explicit conversions
                 res = res ??
                     TryOneConversion(kind, toType, type, fromType, "op_Explicit", false, restrictions, arg) ??
                     TryOneConversion(kind, toType, type, fromType, "ConvertTo" + toType.Name, false, restrictions, arg);
             }
-            
+
             return res;
         }
 
@@ -122,7 +122,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper that checkes both types to see if either one defines the specified conversion
         /// method.
         /// </summary>
-        private MetaObject TryOneConversion(ConversionResultKind kind, Type toType, Type type, Type fromType, string methodName, bool isImplicit, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private MetaObject TryOneConversion(ConversionResultKind kind, Type toType, Type type, Type fromType, string methodName, bool isImplicit, Restrictions restrictions, MetaObject arg) {
             OldConvertToAction action = OldConvertToAction.Make(this, toType, kind);
 
             MemberGroup conversions = GetMember(action, fromType, methodName);
@@ -140,11 +140,11 @@ namespace Microsoft.Scripting.Actions {
         /// Checks if any of the members of the MemberGroup provide the applicable conversion and 
         /// if so uses it to build a conversion rule.
         /// </summary>
-        private static MetaObject TryUserDefinedConversion(ConversionResultKind kind, Type toType, Type type, MemberGroup conversions, bool isImplicit, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject TryUserDefinedConversion(ConversionResultKind kind, Type toType, Type type, MemberGroup conversions, bool isImplicit, Restrictions restrictions, MetaObject arg) {
             Type checkType = GetUnderlyingType(type);
 
             foreach (MemberTracker mt in conversions) {
-                if (mt.MemberType != TrackerTypes.Method) continue;                
+                if (mt.MemberType != TrackerTypes.Method) continue;
 
                 MethodTracker method = (MethodTracker)mt;
 
@@ -171,7 +171,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if the conversion is to applicable by extracting the value from Extensible of T.
         /// </summary>
-        private static MetaObject TryExtensibleConversion(Type/*!*/ toType, Type/*!*/ type, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject TryExtensibleConversion(Type toType, Type type, Restrictions restrictions, MetaObject arg) {
             Type extensibleType = typeof(Extensible<>).MakeGenericType(toType);
             if (extensibleType.IsAssignableFrom(type)) {
                 return MakeExtensibleTarget(extensibleType, restrictions, arg);
@@ -182,7 +182,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if there's an implicit numeric conversion for primitive data types.
         /// </summary>
-        private static MetaObject TryImplicitNumericConversion(Type/*!*/ toType, Type/*!*/ type, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject TryImplicitNumericConversion(Type toType, Type type, Restrictions restrictions, MetaObject arg) {
             Type checkType = type;
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Extensible<>)) {
                 checkType = type.GetGenericArguments()[0];
@@ -209,7 +209,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if there's a conversion to/from Nullable of T.
         /// </summary>
-        private MetaObject TryNullableConversion(Type/*!*/ toType, ConversionResultKind kind, Type/*!*/ knownType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private MetaObject TryNullableConversion(Type toType, ConversionResultKind kind, Type knownType, Restrictions restrictions, MetaObject arg) {
             if (toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                 if (knownType == typeof(None)) {
                     // null -> Nullable<T>
@@ -230,7 +230,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks if there's a conversion to IEnumerator or IEnumerator of T via calling GetEnumerator
         /// </summary>
-        private static MetaObject TryEnumerableConversion(Type/*!*/ toType, Type/*!*/ knownType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject TryEnumerableConversion(Type toType, Type knownType, Restrictions restrictions, MetaObject arg) {
             if (toType == typeof(IEnumerator)) {
                 return MakeIEnumerableTarget(knownType, restrictions, arg);
             } else if (toType.IsInterface && toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(IEnumerator<>)) {
@@ -242,7 +242,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks to see if there's a conversion of null to a reference type
         /// </summary>
-        private static MetaObject TryNullConversion(Type/*!*/ toType, Type/*!*/ knownType, Restrictions/*!*/ restrictions) {
+        private static MetaObject TryNullConversion(Type toType, Type knownType, Restrictions restrictions) {
             if (knownType == typeof(None) && !toType.IsValueType) {
                 return MakeNullTarget(toType, restrictions);
             }
@@ -252,7 +252,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Checks for any extra conversions which aren't based upon the incoming type of the object.
         /// </summary>
-        private static MetaObject TryExtraConversions(Type/*!*/ toType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject TryExtraConversions(Type toType, Restrictions restrictions, MetaObject arg) {
             if (typeof(Delegate).IsAssignableFrom(toType) && toType != typeof(Delegate)) {
                 // generate a conversion to delegate
                 return MakeDelegateTarget(toType, restrictions, arg);
@@ -267,7 +267,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce an error when a conversion cannot occur
         /// </summary>
-        private MetaObject/*!*/ MakeErrorTarget(Type/*!*/ toType, ConversionResultKind kind, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private MetaObject MakeErrorTarget(Type toType, ConversionResultKind kind, Restrictions restrictions, MetaObject arg) {
             MetaObject target;
 
             switch (kind) {
@@ -295,7 +295,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce a rule which just boxes a value type
         /// </summary>
-        private static MetaObject/*!*/ MakeBoxingTarget(MetaObject arg) {
+        private static MetaObject MakeBoxingTarget(MetaObject arg) {
             // MakeSimpleConversionTarget handles the ConversionResultKind check
             return MakeSimpleConversionTarget(typeof(object), arg.Restrictions, arg);
         }
@@ -303,7 +303,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce a conversion rule by calling the helper method to do the convert
         /// </summary>
-        private static MetaObject/*!*/ MakeConversionTarget(ConversionResultKind kind, MethodTracker/*!*/ method, Type/*!*/ fromType, bool isImplicit, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {            
+        private static MetaObject MakeConversionTarget(ConversionResultKind kind, MethodTracker method, Type fromType, bool isImplicit, Restrictions restrictions, MetaObject arg) {
             Expression param = Ast.ConvertHelper(arg.Expression, fromType);
 
             return MakeConversionTargetWorker(kind, method, isImplicit, restrictions, param);
@@ -312,7 +312,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce a conversion rule by calling the helper method to do the convert
         /// </summary>
-        private static MetaObject/*!*/ MakeExtensibleConversionTarget(ConversionResultKind kind, MethodTracker/*!*/ method, Type/*!*/ fromType, bool isImplicit, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeExtensibleConversionTarget(ConversionResultKind kind, MethodTracker method, Type fromType, bool isImplicit, Restrictions restrictions, MetaObject arg) {
             return MakeConversionTargetWorker(kind, method, isImplicit, restrictions, GetExtensibleValue(fromType, arg));
         }
 
@@ -320,7 +320,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce a conversion rule by calling the method to do the convert.  This version takes the parameter
         /// to be passed to the conversion function and we call it w/ our own value or w/ our Extensible.Value.
         /// </summary>
-        private static MetaObject/*!*/ MakeConversionTargetWorker(ConversionResultKind kind, MethodTracker/*!*/ method, bool isImplicit, Restrictions/*!*/ restrictions, Expression/*!*/ param) {
+        private static MetaObject MakeConversionTargetWorker(ConversionResultKind kind, MethodTracker method, bool isImplicit, Restrictions restrictions, Expression param) {
             return new MetaObject(
                 WrapForThrowingTry(
                     kind,
@@ -339,7 +339,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to wrap explicit conversion call into try/catch incase it throws an exception.  If
         /// it throws the default value is returned.
         /// </summary>
-        private static Expression/*!*/ WrapForThrowingTry(ConversionResultKind kind, bool isImplicit, Expression/*!*/ ret, Type retType) {
+        private static Expression WrapForThrowingTry(ConversionResultKind kind, bool isImplicit, Expression ret, Type retType) {
             if (!isImplicit && kind == ConversionResultKind.ExplicitTry) {
                 Expression convFailed = GetTryConvertReturnValue(retType);
                 VariableExpression tmp = Ast.Variable(convFailed.Type == typeof(object) ? typeof(object) : ret.Type, "tmp");
@@ -363,7 +363,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce a rule when no conversion is required (the strong type of the expression
         /// input matches the type we're converting to or has an implicit conversion at the IL level)
         /// </summary>
-        private static MetaObject/*!*/ MakeSimpleConversionTarget(Type toType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeSimpleConversionTarget(Type toType, Restrictions restrictions, MetaObject arg) {
             return new MetaObject(
                 Ast.ConvertHelper(arg.Expression, CompilerHelpers.GetVisibleType(toType)),
                 restrictions);
@@ -387,7 +387,7 @@ namespace Microsoft.Scripting.Actions {
         /// underlying storage to the type we're converting to.  The type of extensible type
         /// matches the type we're converting to or has an implicit conversion at the IL level.
         /// </summary>
-        private static MetaObject/*!*/ MakeSimpleExtensibleConversionTarget(Type/*!*/ toType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeSimpleExtensibleConversionTarget(Type toType, Restrictions restrictions, MetaObject arg) {
             Type extType = typeof(Extensible<>).MakeGenericType(toType);
 
             return new MetaObject(
@@ -397,12 +397,12 @@ namespace Microsoft.Scripting.Actions {
                 ),
                 restrictions
             );
-        }       
+        }
 
         /// <summary>
         /// Helper to extract the value from an Extensible of T
         /// </summary>
-        private static MetaObject/*!*/ MakeExtensibleTarget(Type/*!*/ extensibleType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeExtensibleTarget(Type extensibleType, Restrictions restrictions, MetaObject arg) {
             return new MetaObject(
                 Ast.Property(Ast.Convert(arg.Expression, extensibleType), extensibleType.GetProperty("Value")),
                 restrictions
@@ -412,7 +412,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to convert a null value to nullable of T
         /// </summary>
-        private static MetaObject/*!*/ MakeNullToNullableOfTTarget(Type/*!*/ toType, Restrictions/*!*/ restrictions) {
+        private static MetaObject MakeNullToNullableOfTTarget(Type toType, Restrictions restrictions) {
             return new MetaObject(
                 Ast.Call(typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(toType)),
                 restrictions
@@ -422,7 +422,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce the rule for converting T to Nullable of T
         /// </summary>
-        private static MetaObject/*!*/ MakeTToNullableOfTTarget(Type/*!*/ toType, Type/*!*/ knownType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeTToNullableOfTTarget(Type toType, Type knownType, Restrictions restrictions, MetaObject arg) {
             // T -> Nullable<T>
             return new MetaObject(
                 Ast.New(
@@ -436,14 +436,14 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Helper to produce the rule for converting T to Nullable of T
         /// </summary>
-        private MetaObject/*!*/ MakeConvertingToTToNullableOfTTarget(Type/*!*/ toType, ConversionResultKind kind, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private MetaObject MakeConvertingToTToNullableOfTTarget(Type toType, ConversionResultKind kind, Restrictions restrictions, MetaObject arg) {
             Type valueType = toType.GetGenericArguments()[0];
-            
+
             // ConvertSelfToT -> Nullable<T>
             if (kind == ConversionResultKind.ExplicitCast) {
                 // if the conversion to T fails we just throw
                 Expression conversion = ConvertExpression(arg.Expression, valueType, kind, Ast.Null(typeof(CodeContext)));
-                
+
                 return new MetaObject(
                     Ast.New(
                         toType.GetConstructor(new Type[] { valueType }),
@@ -498,7 +498,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to extract the Value of an Extensible of T from the
         /// expression being converted.
         /// </summary>
-        private static Expression GetExtensibleValue(Type/*!*/ extType, MetaObject/*!*/ arg) {
+        private static Expression GetExtensibleValue(Type extType, MetaObject arg) {
             return Ast.Property(
                 Ast.ConvertHelper(
                     arg.Expression,
@@ -528,7 +528,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Makes a conversion target which converts IEnumerable -> IEnumerator
         /// </summary>
-        private static MetaObject MakeIEnumerableTarget(Type/*!*/ knownType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeIEnumerableTarget(Type knownType, Restrictions restrictions, MetaObject arg) {
             bool canConvert = typeof(IEnumerable).IsAssignableFrom(knownType);
 
             if (canConvert) {
@@ -546,7 +546,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Makes a conversion target which converts IEnumerable of T to IEnumerator of T
         /// </summary>
-        private static MetaObject MakeIEnumeratorOfTTarget(Type/*!*/ toType, Type/*!*/ knownType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeIEnumeratorOfTTarget(Type toType, Type knownType, Restrictions restrictions, MetaObject arg) {
             Type enumType = typeof(IEnumerable<>).MakeGenericType(toType.GetGenericArguments()[0]);
             if (enumType.IsAssignableFrom(knownType)) {
                 return new MetaObject(
@@ -563,7 +563,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Creates a target which returns null for a reference type.
         /// </summary>
-        private static MetaObject/*!*/ MakeNullTarget(Type toType, Restrictions/*!*/ restrictions) {
+        private static MetaObject MakeNullTarget(Type toType, Restrictions restrictions) {
             return new MetaObject(
                 Ast.Convert(Ast.Null(), toType),
                 restrictions
@@ -574,7 +574,7 @@ namespace Microsoft.Scripting.Actions {
         /// Creates a target which creates a new dynamic method which contains a single
         /// dynamic site that invokes the callable object.
         /// </summary>
-        private static MetaObject/*!*/ MakeDelegateTarget(Type/*!*/ toType, Restrictions/*!*/ restrictions, MetaObject/*!*/ arg) {
+        private static MetaObject MakeDelegateTarget(Type toType, Restrictions restrictions, MetaObject arg) {
             return new MetaObject(
                 Ast.Call(
                     typeof(BinderOps).GetMethod("GetDelegate"),

@@ -20,12 +20,12 @@ using System.Runtime.CompilerServices;
 
 namespace System.Scripting.Com {
     // TODO: should this be an IDO?
-    public class BoundDispEvent {
+    public sealed class BoundDispEvent {
         private object _rcw;
         private Guid _sourceIid;
         private int _dispid;
 
-        public BoundDispEvent(object rcw, Guid sourceIid, int dispid) {
+        internal BoundDispEvent(object rcw, Guid sourceIid, int dispid) {
             _rcw = rcw;
             _sourceIid = sourceIid;
             _dispid = dispid;

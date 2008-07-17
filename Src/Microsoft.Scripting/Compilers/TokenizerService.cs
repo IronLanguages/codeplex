@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Compilers {
         /// The current internal state of the scanner.
         /// </summary>
         public abstract object CurrentState { get; }
-        
+
         /// <summary>
         /// The current startLocation of the scanner.
         /// </summary>
@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Compilers {
         /// </summary>
         /// <returns>The token information associated with the token just scanned.</returns>
         public abstract TokenInfo ReadToken();
-        
+
         public abstract bool IsRestartable { get; }
         public abstract ErrorSink ErrorSink { get; set; }
 
@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Compilers {
         /// </remarks>
         /// <param name="countOfChars">The mininum number of characters to process while getting tokens.</param>
         /// <returns>A enumeration of tokens.</returns>
-        public virtual IEnumerable<TokenInfo>/*!*/ ReadTokens(int countOfChars) {
+        public virtual IEnumerable<TokenInfo> ReadTokens(int countOfChars) {
             List<TokenInfo> tokens = new List<TokenInfo>();
 
             int start_index = CurrentPosition.Index;
@@ -90,7 +90,9 @@ namespace Microsoft.Scripting.Compilers {
             bool eos = false;
             int start_index = CurrentPosition.Index;
 
-            while (CurrentPosition.Index - start_index < countOfChars && (eos = SkipToken()));
+            while (CurrentPosition.Index - start_index < countOfChars && (eos = SkipToken())) {
+                ;
+            }
 
             return eos;
         }

@@ -38,24 +38,24 @@ namespace Microsoft.Scripting.Hosting {
     [Serializable]
     public sealed class ScriptRuntimeSetup {
 
-        private LanguageProviderSetup[]/*!*/ _languageProviders;
-        private Type/*!*/ _hostType;
-        private object[]/*!*/ _hostArguments;
+        private LanguageProviderSetup[] _languageProviders;
+        private Type _hostType;
+        private object[] _hostArguments;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
-        public LanguageProviderSetup[]/*!*/ LanguageProviders {
-            get { 
-                return _languageProviders; 
+        public LanguageProviderSetup[] LanguageProviders {
+            get {
+                return _languageProviders;
             }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
-                _languageProviders = value; 
+                _languageProviders = value;
             }
         }
 
-        public Type/*!*/ HostType {
-            get { 
-                return _hostType; 
+        public Type HostType {
+            get {
+                return _hostType;
             }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
@@ -65,7 +65,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
-        public object[]/*!*/ HostArguments {
+        public object[] HostArguments {
             get {
                 return _hostArguments;
             }
@@ -75,25 +75,25 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        private static string/*!*/ AppDomainDataKey {
+        private static string AppDomainDataKey {
             get {
                 return typeof(ScriptRuntimeSetup).FullName;
             }
         }
 
 #if !SILVERLIGHT
-        public void AssociateWithAppDomain(AppDomain/*!*/ domain) {
+        public void AssociateWithAppDomain(AppDomain domain) {
             ContractUtils.RequiresNotNull(domain, "domain");
             domain.SetData(AppDomainDataKey, this);
         }
 
-        public static ScriptRuntimeSetup GetAppDomainAssociated(AppDomain/*!*/ domain) {
+        public static ScriptRuntimeSetup GetAppDomainAssociated(AppDomain domain) {
             ContractUtils.RequiresNotNull(domain, "domain");
             return domain.GetData(AppDomainDataKey) as ScriptRuntimeSetup;
         }
 #endif
 
-        public ScriptRuntimeSetup() 
+        public ScriptRuntimeSetup()
             : this(false) {
         }
 
@@ -115,14 +115,14 @@ namespace Microsoft.Scripting.Hosting {
 #endif
                 };
             } else {
-                 _languageProviders = new LanguageProviderSetup[0];
+                _languageProviders = new LanguageProviderSetup[0];
             }
 
             _hostType = typeof(ScriptHost);
             _hostArguments = ArrayUtils.EmptyObjects;
         }
 
-        internal void RegisterLanguages(ScriptDomainManager/*!*/ manager) {
+        internal void RegisterLanguages(ScriptDomainManager manager) {
             Debug.Assert(manager != null);
 
             foreach (LanguageProviderSetup provider in _languageProviders) {

@@ -131,19 +131,19 @@ namespace IronPython.Compiler {
 
         public SourceLocation TokenStart {
             get {
-                return _buffer.TokenStart;
+                return _sourceUnit.MakeLocation(_buffer.TokenStart);
             }
         }
 
         public SourceLocation TokenEnd {
             get {
-                return _buffer.TokenEnd;
+                return _sourceUnit.MakeLocation(_buffer.TokenEnd);
             }
         }
 
         public SourceSpan TokenSpan {
             get {
-                return _buffer.TokenSpan;
+                return new SourceSpan(TokenStart, TokenEnd);
             }
         }
 

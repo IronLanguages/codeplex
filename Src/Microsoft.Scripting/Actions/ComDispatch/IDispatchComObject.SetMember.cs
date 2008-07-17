@@ -16,8 +16,9 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Reflection;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
@@ -30,8 +31,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             private readonly ComTypeDesc _wrapperType;
 
-            internal SetMemberBinder(CodeContext context, ComTypeDesc wrapperType, OldSetMemberAction action, object[] args)
-                : base(context, action, args) {
+            internal SetMemberBinder(CodeContext context, ComTypeDesc wrapperType, OldSetMemberAction action)
+                : base(context, action) {
 
                 _wrapperType = wrapperType;
             }
@@ -57,7 +58,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                                     Rule.Parameters[0],
                                     typeof(IDispatchComObject).GetMethod("TrySetAttr"),
                                     Rule.Context,
-                                    Expression.Constant(Action.Name),
+                                    Expression.Constant(SymbolTable.IdToString(Action.Name)),
                                     Rule.Parameters[1],
                                     exception)),
                             fallback),

@@ -23,14 +23,14 @@ namespace System.Scripting.Runtime {
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public sealed class DlrCachedCodeAttribute : Attribute {
-        private readonly Type/*!*/ _languageContextType;
+        private readonly Type _languageContextType;
 
-        public DlrCachedCodeAttribute(Type/*!*/ languageContextType) {
+        public DlrCachedCodeAttribute(Type languageContextType) {
             ContractUtils.RequiresNotNull(languageContextType, "languageContextType");
             _languageContextType = languageContextType;
         }
 
-        public Type/*!*/ LanguageContextType {
+        public Type LanguageContextType {
             get {
                 return _languageContextType;
             }
@@ -39,14 +39,14 @@ namespace System.Scripting.Runtime {
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public sealed class CachedOptimizedCodeAttribute : Attribute {
-        private readonly string[]/*!*/ _names;
+        private readonly string[] _names;
 
         // C# requires a constructor with CLS compliant types:
         public CachedOptimizedCodeAttribute() {
             _names = ArrayUtils.EmptyStrings;
         }
 
-        public CachedOptimizedCodeAttribute(string[]/*!*/ names) {
+        public CachedOptimizedCodeAttribute(string[] names) {
             ContractUtils.RequiresNotNull(names, "names");
             _names = names;
         }
@@ -55,7 +55,7 @@ namespace System.Scripting.Runtime {
         /// Gets names stored in optimized scope. 
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public string[]/*!*/ Names {
+        public string[] Names {
             get {
                 return _names;
             }

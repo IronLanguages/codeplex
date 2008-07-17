@@ -55,7 +55,7 @@ namespace System.Scripting.Actions {
             get { return _test; }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
-                ContractUtils.Requires(TypeUtils.IsBool(value.Type), "value", "Type of test must be bool");
+                ContractUtils.Requires(TypeUtils.IsBool(value.Type), "value", Strings.TypeOfTestMustBeBool);
                 _test = value;
             }
         }
@@ -152,7 +152,7 @@ namespace System.Scripting.Actions {
 
         public void AddTest(Expression expression) {
             ContractUtils.RequiresNotNull(expression, "expression");
-            ContractUtils.Requires(TypeUtils.IsBool(expression.Type), "expression", "Type of the expression must be bool");
+            ContractUtils.Requires(TypeUtils.IsBool(expression.Type), "expression", Strings.TypeOfExpressionMustBeBool);
 
             if (_test == null) {
                 _test = expression;
@@ -313,7 +313,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return string.Format("RuleBuilder({0})", _target);
         }
 
@@ -348,6 +348,6 @@ namespace System.Scripting.Actions {
             }
 
             return _rule;
-        }        
+        }
     }
 }

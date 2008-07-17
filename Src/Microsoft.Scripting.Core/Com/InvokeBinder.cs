@@ -53,10 +53,9 @@ namespace System.Scripting.Com {
         internal InvokeBinder(IList<Argument> arguments, MetaObject[] args, Restrictions restrictions, Expression method, Expression dispatch, ComMethodDesc methodDesc) {
             ContractUtils.RequiresNotNull(arguments, "arguments");
             ContractUtils.RequiresNotNull(args, "args");
-            ContractUtils.Requires(args.Length > 0, "args", "Must receive at least one argument, the target to call");
+            ContractUtils.Requires(args.Length > 0, "args", Strings.MustHaveAtLeastTarget);
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(dispatch, "dispatch");
-            ContractUtils.RequiresNotNull("dc", "dc");
             ContractUtils.Requires(TypeUtils.AreReferenceAssignable(typeof(ComMethodDesc), method.Type), "method");
             ContractUtils.Requires(TypeUtils.AreReferenceAssignable(typeof(IDispatchObject), dispatch.Type), "method");
 
@@ -69,7 +68,7 @@ namespace System.Scripting.Com {
             _restrictions = restrictions;
 
             // Set Instance to some value so that CallBinderHelper has the right number of parameters to work with
-            _instance = GetIDispatchObject();
+            _instance = dispatch;
         }
 
         private VariableExpression DispatchObjectVariable {
@@ -168,10 +167,6 @@ namespace System.Scripting.Com {
             return vars.Count > 0 ? Expression.Scope(expression, vars) : expression;
         }
 
-        private Expression GetIDispatchObject() {
-            return _dispatch;
-        }
-
         private Expression GenerateTryBlock() {
             //
             // Declare variables
@@ -193,7 +188,9 @@ namespace System.Scripting.Com {
                         DispatchObjectVariable,
                         Expression.Constant(names),
                         DispIdVariable,
-                        DispIdsOfKeywordArgsPinnedVariable));
+                        DispIdsOfKeywordArgsPinnedVariable
+                    )
+                );
                 tryStatements.Add(expr);
             }
 
@@ -333,10 +330,10 @@ namespace System.Scripting.Com {
             return Expression.Block(finallyStatements);
         }
 
-        //    /// <summary>
-        //    /// Create a stub for the target of the optimized lopop.
-        //    /// </summary>
-        //    /// <returns></returns>
+        /// <summary>
+        /// Create a stub for the target of the optimized lopop.
+        /// </summary>
+        /// <returns></returns>
         private Expression MakeIDispatchInvokeTarget() {
             Debug.Assert(_varEnumSelector.VariantBuilders.Length == _totalExplicitArgs);
 
@@ -392,6 +389,7 @@ namespace System.Scripting.Com {
                 expr = Expression.Assign(
                     PropertyPutDispIdVariable,
                     Expression.Constant(ComDispIds.DISPID_PROPERTYPUT));
+                exprs.Add(expr);
 
                 MethodCallExpression rgdispidNamedArgs = Expression.Call(
                     typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("ConvertInt32ByrefToPtr"),
@@ -419,9 +417,7 @@ namespace System.Scripting.Com {
             // _dispatchPointer = dispatchObject.GetDispatchPointerInCurrentApartment();
             //
 
-            expr = Expression.Assign(
-                DispatchObjectVariable,
-                GetIDispatchObject());
+            expr = Expression.Assign(DispatchObjectVariable, _dispatch);
             exprs.Add(expr);
 
             expr = Expression.Assign(
@@ -447,7 +443,7 @@ namespace System.Scripting.Com {
         }
 
         private Expression MakeUnoptimizedInvokeTarget() {
-            Expression[] args = new Expression[_args.Length -1];
+            Expression[] args = new Expression[_args.Length - 1];
             for (int i = 0; i < args.Length; i++) {
                 args[i] = Expression.ConvertHelper(_args[i + 1].Expression, typeof(object));
             }

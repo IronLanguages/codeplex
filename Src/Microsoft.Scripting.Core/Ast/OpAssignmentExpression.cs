@@ -19,12 +19,12 @@ using System.Scripting.Utils;
 namespace System.Linq.Expressions {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Op")]
     public class OpAssignmentExpression : Expression {
-        private readonly Expression/*!*/ _left;
-        private readonly Expression/*!*/ _right;
-        private readonly MethodInfo/*!*/ _method;
+        private readonly Expression _left;
+        private readonly Expression _right;
+        private readonly MethodInfo _method;
         private readonly ExpressionType _op;
 
-        internal OpAssignmentExpression(Annotations annotations, ExpressionType op, Expression/*!*/ left, Expression/*!*/ right, Type type, MethodInfo method)
+        internal OpAssignmentExpression(Annotations annotations, ExpressionType op, Expression left, Expression right, Type type, MethodInfo method)
             : base(annotations, ExpressionType.Extension, type, null) {
             if (IsBound) {
                 RequiresBound(left, "left");

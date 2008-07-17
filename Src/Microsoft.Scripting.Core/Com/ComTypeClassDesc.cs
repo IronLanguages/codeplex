@@ -16,12 +16,9 @@
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using Ast = System.Linq.Expressions.Expression;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 using System.Linq.Expressions;
+using System.Scripting.Actions;
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace System.Scripting.Com {
     // TODO: Can it be made internal?

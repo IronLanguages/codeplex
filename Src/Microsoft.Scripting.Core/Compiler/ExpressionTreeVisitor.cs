@@ -307,7 +307,7 @@ namespace System.Linq.Expressions {
                 return node;
             }
 
-            return new SwitchStatement(node.Annotations, node.Label, t, c);
+            return new SwitchStatement(t, node.Label, node.Annotations, c);
         }
 
         protected virtual Expression Visit(ThrowStatement node) {

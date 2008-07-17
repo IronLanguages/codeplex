@@ -21,7 +21,7 @@ namespace System.Linq.Expressions {
     public sealed class ConstantExpression : Expression {
         private readonly object _value;
 
-        internal ConstantExpression(Annotations annotations, object value, Type /*!*/ type)
+        internal ConstantExpression(Annotations annotations, object value, Type type)
             : base(annotations, ExpressionType.Constant, type) {
             _value = value;
         }

@@ -44,10 +44,10 @@ namespace System.Scripting.Actions {
         /// extension type when ensuring that we only have 1 MemberTracker ever created.
         /// </summary>
         class MemberKey {
-            private readonly MemberInfo/*!*/ Member;
+            private readonly MemberInfo Member;
             private readonly Type Extending;
 
-            public MemberKey(MemberInfo/*!*/ member, Type extending) {
+            public MemberKey(MemberInfo member, Type extending) {
                 Member = member;
                 Extending = extending;
             }
@@ -61,7 +61,7 @@ namespace System.Scripting.Actions {
             }
 
             public override bool Equals(object obj) {
-                MemberKey other = obj as MemberKey ;
+                MemberKey other = obj as MemberKey;
                 if (other == null) return false;
 
                 return other.Member == Member &&
@@ -195,7 +195,7 @@ namespace System.Scripting.Actions {
         /// Helper for setting values that have been bound.  Called from BoundMemberTracker.  Custom member
         /// trackers can override this to provide their own behaviors when bound to an instance.
         /// </summary>
-        protected internal virtual Expression SetBoundValue(Expression context, ActionBinder binder, Type type, Expression value,Expression instance) {
+        protected internal virtual Expression SetBoundValue(Expression context, ActionBinder binder, Type type, Expression value, Expression instance) {
             return SetValue(context, binder, type, instance);
         }
 

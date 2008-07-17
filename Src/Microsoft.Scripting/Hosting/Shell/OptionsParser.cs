@@ -36,12 +36,12 @@ namespace Microsoft.Scripting.Hosting.Shell {
     }
 
     public abstract class OptionsParser {
-       
+
         private List<string> _ignoredArgs = new List<string>();
         private ScriptDomainOptions _globalOptions;
         private string[] _args;
         private int _current = -1;
-        private PlatformAdaptationLayer/*!*/ _platform;
+        private PlatformAdaptationLayer _platform;
 
         // TODO: remove when hosting configuration is fixed:
         private ScriptEngine _engine;
@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             set { _engine = value; }
         }
 
-        public PlatformAdaptationLayer/*!*/ Platform {
+        public PlatformAdaptationLayer Platform {
             get { return _platform; }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
@@ -64,29 +64,31 @@ namespace Microsoft.Scripting.Hosting.Shell {
             }
         }
 
-        public ScriptDomainOptions GlobalOptions { 
-            get { 
-                return _globalOptions; 
-            } set { 
-                _globalOptions = value; 
-            } 
-        }
-
-        public virtual ConsoleOptions ConsoleOptions { 
+        public ScriptDomainOptions GlobalOptions {
             get {
-                throw new NotSupportedException(); 
-            } 
+                return _globalOptions;
+            }
             set {
-                throw new NotSupportedException(); 
-            } 
+                _globalOptions = value;
+            }
         }
 
-        public virtual EngineOptions EngineOptions { 
-            get { 
-                throw new NotSupportedException(); 
-            } set { 
-                throw new NotSupportedException(); 
-            } 
+        public virtual ConsoleOptions ConsoleOptions {
+            get {
+                throw new NotSupportedException();
+            }
+            set {
+                throw new NotSupportedException();
+            }
+        }
+
+        public virtual EngineOptions EngineOptions {
+            get {
+                throw new NotSupportedException();
+            }
+            set {
+                throw new NotSupportedException();
+            }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
@@ -100,7 +102,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         public IList<string> IgnoredArgs { get { return _ignoredArgs; } }
-        
+
         /// <exception cref="InvalidOptionException">On error.</exception>
         public virtual void Parse(string[] args) {
             ContractUtils.RequiresNotNull(args, "args");
@@ -144,8 +146,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     IgnoreRemainingArgs();
                     break;
 
-                case "-D": 
-                    GlobalOptions.DebugMode = true; 
+                case "-D":
+                    GlobalOptions.DebugMode = true;
                     break;
 
                 case "-X:AssembliesDir":
@@ -175,9 +177,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 // TODO: remove
                 case "-X:DumpIL":
                 case "-X:ShowIL":
-                case "-X:ShowRules": 
-                case "-X:DumpTrees": 
-                case "-X:ShowTrees": 
+                case "-X:ShowRules":
+                case "-X:DumpTrees":
+                case "-X:ShowTrees":
                 case "-X:ShowScopes":
                     SetCompilerDebugOption(arg.Substring(3));
                     break;
@@ -192,8 +194,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
 #endif
                     break;
 
-                case "-X:PreferComDispatch": 
-                    GlobalOptions.PreferComDispatchOverTypeInfo = true; 
+                case "-X:PreferComDispatch":
+                    GlobalOptions.PreferComDispatchOverTypeInfo = true;
                     break;
 
                 case "-X:CachePointersInApartment":

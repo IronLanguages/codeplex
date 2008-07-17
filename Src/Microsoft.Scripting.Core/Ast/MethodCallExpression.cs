@@ -332,7 +332,7 @@ namespace System.Linq.Expressions {
         /// </summary>
         public static MethodCallExpression SimpleCallHelper(MethodInfo method, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(method, "method");
-            ContractUtils.Requires(method.IsStatic, "method", "Method must be static");
+            ContractUtils.Requires(method.IsStatic, "method", Strings.MustBeStatic);
             return SimpleCallHelper(null, method, arguments);
         }
 
@@ -348,7 +348,7 @@ namespace System.Linq.Expressions {
 
             ParameterInfo[] parameters = method.GetParameters();
 
-            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", "Incorrect number of arguments");
+            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", Strings.IncorrectArgNumber);
 
             if (instance != null) {
                 instance = ConvertHelper(instance, method.DeclaringType);
@@ -359,7 +359,7 @@ namespace System.Linq.Expressions {
             return Call(instance, method, arguments);
         }
 
-        private static Expression[]/*!*/ ArgumentConvertHelper(Expression[] /*!*/ arguments, ParameterInfo[] /*!*/ parameters) {
+        private static Expression[] ArgumentConvertHelper(Expression[] arguments, ParameterInfo[] parameters) {
             Debug.Assert(arguments != null);
             Debug.Assert(arguments != null);
 
@@ -386,7 +386,7 @@ namespace System.Linq.Expressions {
             return clone ?? arguments;
         }
 
-        private static Expression/*!*/ ArgumentConvertHelper(Expression/*!*/ argument, Type/*!*/ type) {
+        private static Expression ArgumentConvertHelper(Expression argument, Type type) {
             if (argument.Type != type) {
                 if (type.IsByRef) {
                     type = type.GetElementType();
@@ -414,7 +414,7 @@ namespace System.Linq.Expressions {
         /// </summary>
         public static Expression ComplexCallHelper(MethodInfo method, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(method, "method");
-            ContractUtils.Requires(method.IsStatic, "method", "Method must be static");
+            ContractUtils.Requires(method.IsStatic, "method", Strings.MustBeStatic);
             return ComplexCallHelper(null, method, arguments);
         }
 
@@ -469,7 +469,7 @@ namespace System.Linq.Expressions {
                         argument = arguments[consumed++];
                     } else {
                         // Missing argument, try default value.
-                        ContractUtils.Requires(!CompilerHelpers.IsMandatoryParameter(parameter), "arguments", "Argument not provided for a mandatory parameter");
+                        ContractUtils.Requires(!CompilerHelpers.IsMandatoryParameter(parameter), "arguments", Strings.ArgumentNotProvided);
                         argument = CreateDefaultValueExpression(parameter);
                     }
                 }
@@ -492,7 +492,7 @@ namespace System.Linq.Expressions {
                 // Next parameter
                 current++;
             }
-            ContractUtils.Requires(consumed == arguments.Length, "arguments", "Incorrect number of arguments");
+            ContractUtils.Requires(consumed == arguments.Length, "arguments", Strings.IncorrectArgNumber);
             return Call(instance, method, clone != null ? clone : arguments);
         }
 

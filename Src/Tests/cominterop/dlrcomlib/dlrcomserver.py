@@ -66,9 +66,6 @@ def test_errorInfo():
         # AreEqual("Test error message" in str(e), True)
         AreEqual("Test error message", e.Message)
 
-# Bug filed as
-# http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=465316
-@skip("cli")
 def test_documentation():
     import IronPython
     ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations

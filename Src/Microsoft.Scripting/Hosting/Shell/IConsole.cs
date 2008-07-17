@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         void WriteLine(string text, Style style);
         void WriteLine();
 
-        TextWriter/*!*/ Output { get; set; }
-        TextWriter/*!*/ ErrorOutput { get; set; }
+        TextWriter Output { get; set; }
+        TextWriter ErrorOutput { get; set; }
     }
 }

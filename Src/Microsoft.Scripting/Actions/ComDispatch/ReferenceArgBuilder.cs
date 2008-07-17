@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             if (_tmp == null) {
-                _tmp = context.GetTemporary(_elementType, "outParam");
+                _tmp = Expression.Variable(_elementType, "outParam");
             }
 
             // Ideally we'd pass in Expression.ReadField(parameters[Index], "Value") but due to
@@ -78,6 +78,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         internal Type ElementType {
             get {
                 return _elementType;
+            }
+        }
+
+        internal override VariableExpression[] TemporaryVariables {
+            get {
+                return new VariableExpression[] { _tmp };
             }
         }
 

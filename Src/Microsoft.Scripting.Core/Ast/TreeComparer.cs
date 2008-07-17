@@ -28,7 +28,7 @@ namespace System.Linq.Expressions {
         /// a list.
         /// </summary>
         class FlatTreeWalker : ExpressionTreeVisitor {
-            public List<Expression>/*!*/ Expressions = new List<Expression>();
+            public List<Expression> Expressions = new List<Expression>();
             public Dictionary<ConstantExpression, ConstantExpression> _templated;
 
             internal bool IsTemplatedConstant(ConstantExpression constantExpr) {
@@ -331,7 +331,7 @@ namespace System.Linq.Expressions {
                     // See if they're both sites
                     CallSite leftSite = ceLeft.Value as CallSite;
                     CallSite rightSite = ceRight.Value as CallSite;
-                    if (leftSite != null) {                        
+                    if (leftSite != null) {
                         if (rightSite == null) {
                             PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferBySiteAndConstant (R)");
                             return false;

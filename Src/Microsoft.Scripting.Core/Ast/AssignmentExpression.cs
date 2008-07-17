@@ -29,14 +29,14 @@ namespace System.Linq.Expressions {
     ///   (future) IndexedPropertyExpression
     /// </summary>
     public sealed class AssignmentExpression : Expression {
-        private readonly Expression/*!*/ _expression;
-        private readonly Expression/*!*/ _value;
+        private readonly Expression _expression;
+        private readonly Expression _value;
 
-        internal AssignmentExpression(Annotations annotations, Expression/*!*/ expression, Expression/*!*/ value)
+        internal AssignmentExpression(Annotations annotations, Expression expression, Expression value)
             : this(annotations, expression, value, expression.Type, null) {
         }
 
-        internal AssignmentExpression(Annotations annotations, Expression/*!*/ expression, Expression/*!*/ value, Type result, CallSiteBinder bindingInfo)
+        internal AssignmentExpression(Annotations annotations, Expression expression, Expression value, Type result, CallSiteBinder bindingInfo)
             : base(annotations, ExpressionType.Assign, result, bindingInfo) {
             if (IsBound) {
                 RequiresBound(expression, "expression");
@@ -109,12 +109,12 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(array, "array");
             ContractUtils.RequiresNotNull(index, "index");
             ContractUtils.RequiresNotNull(value, "value");
-            ContractUtils.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
+            ContractUtils.Requires(index.Type == typeof(int), "index", Strings.ArrayIndexMustBeInt);
 
             Type arrayType = array.Type;
-            ContractUtils.Requires(arrayType.IsArray, "array", "Array argument must be array.");
-            ContractUtils.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
-            ContractUtils.Requires(value.Type == arrayType.GetElementType(), "value", "Value type must match the array element type.");
+            ContractUtils.Requires(arrayType.IsArray, "array", Strings.ArrayArgumentMustBeArray);
+            ContractUtils.Requires(arrayType.GetArrayRank() == 1, "index", Strings.IncorrectIndicesCount);
+            ContractUtils.Requires(value.Type == arrayType.GetElementType(), "value", Strings.ValueTypeMustMatchElementType);
 
             return new AssignmentExpression(Annotations.Empty, new BinaryExpression(Annotations.Empty, ExpressionType.ArrayIndex, array, index, array.Type.GetElementType()), value);
         }
@@ -158,7 +158,7 @@ namespace System.Linq.Expressions {
                 case ExpressionType.Variable:
                 case ExpressionType.Parameter:
                 case ExpressionType.ArrayIndex:
-                    ContractUtils.Requires(TypeUtils.CanAssign(left.Type, right), "right", "right side must be assignable to left side");
+                    ContractUtils.Requires(TypeUtils.CanAssign(left.Type, right), "right", Strings.RhsMustBeAssignableToLhs);
                     return;
                 case ExpressionType.MemberAccess:
                     MemberExpression me = (MemberExpression)left;

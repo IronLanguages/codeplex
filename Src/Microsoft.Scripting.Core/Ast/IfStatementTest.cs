@@ -18,10 +18,10 @@ using System.Scripting.Utils;
 namespace System.Linq.Expressions {
 
     public sealed class IfStatementTest {
-        private readonly Expression /*!*/ _test;
-        private readonly Expression /*!*/ _body;
+        private readonly Expression _test;
+        private readonly Expression _body;
 
-        internal IfStatementTest(Expression /*!*/ test, Expression /*!*/ body) {
+        internal IfStatementTest(Expression test, Expression body) {
             _test = test;
             _body = body;
         }
@@ -39,7 +39,7 @@ namespace System.Linq.Expressions {
         public static IfStatementTest IfCondition(Expression test, Expression body) {
             ContractUtils.RequiresNotNull(test, "test");
             ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
+            ContractUtils.Requires(test.Type == typeof(bool), "test", Strings.TestMustBeBoolean);
 
             return new IfStatementTest(test, body);
         }

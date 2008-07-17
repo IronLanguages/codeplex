@@ -38,31 +38,27 @@ namespace Microsoft.Scripting.Hosting {
     /// </summary>
     public class ScriptHost
 #if !SILVERLIGHT
-        : MarshalByRefObject 
+        : MarshalByRefObject
 #endif
     {
         /// <summary>
         /// The runtime the host is attached to.
         /// </summary>
         private ScriptRuntime _runtime;
-
-        // TODO: remove (fix Nessie)
-        private ScriptScope _defaultScope;
         
         public ScriptHost() {
         }
 
         // Called by ScriptRuntime when it is completely initialized. 
         // Notifies the host implementation that the runtime is available now.
-        internal void SetRuntime(ScriptRuntime/*!*/ runtime) {
+        internal void SetRuntime(ScriptRuntime runtime) {
             Assert.NotNull(runtime);
             _runtime = runtime;
-            _defaultScope = _runtime.CreateScope();
 
             RuntimeAttached();
         }
 
-        public ScriptRuntime/*!*/ Runtime {
+        public ScriptRuntime Runtime {
             get {
                 if (_runtime == null) {
                     throw new InvalidOperationException("Host not initialized");
@@ -71,17 +67,7 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        // TODO: remove (fix Nessie)
-        public ScriptScope/*!*/ DefaultScope {
-            get {
-                if (_defaultScope == null) {
-                    throw new InvalidOperationException("Host not initialized");
-                }
-                return _defaultScope;
-            }
-        }
-
-        public virtual PlatformAdaptationLayer/*!*/ PlatformAdaptationLayer {
+        public virtual PlatformAdaptationLayer PlatformAdaptationLayer {
             get {
                 return PlatformAdaptationLayer.Default;
             }
@@ -90,12 +76,12 @@ namespace Microsoft.Scripting.Hosting {
         #region Source File Resolution and Creation
 
         public const string PathEnvironmentVariableName = "DLRPATH";
-        
+
         /// <summary>
         /// Gets the default path used for searching for source units.
         /// Default implementation returns content of <see cref="PathEnvironmentVariableName"/> environment variable.
         /// </summary>
-        protected virtual IList<string>/*!*/ SourceFileSearchPath {
+        protected virtual IList<string> SourceFileSearchPath {
             get {
 #if SILVERLIGHT
                 return new string[] { "." };
@@ -105,7 +91,7 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        private string/*!*/[]/*!*/ GetFullSearchPaths() {
+        private string[] GetFullSearchPaths() {
             IList<string> list;
             try {
                 list = SourceFileSearchPath;
@@ -131,7 +117,7 @@ namespace Microsoft.Scripting.Hosting {
         /// The resulting ScriptSource is associated with given language (engine). 
         /// </summary>
         /// <exception cref="ArgumentNullException">Engine or path is a <c>null</c> reference.</exception>
-        public ScriptSource TryGetSourceFile(ScriptEngine/*!*/ engine, string/*!*/ path) {
+        public ScriptSource TryGetSourceFile(ScriptEngine engine, string path) {
             return TryGetSourceFile(engine, path, StringUtils.DefaultEncoding, SourceCodeKind.File);
         }
 
@@ -140,12 +126,12 @@ namespace Microsoft.Scripting.Hosting {
         /// The resulting ScriptSource is associated with given language (engine). 
         /// </summary>
         /// <exception cref="ArgumentNullException">Engine, path or encoding is a <c>null</c> reference.</exception>
-        public virtual ScriptSource TryGetSourceFile(ScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
+        public virtual ScriptSource TryGetSourceFile(ScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
             ContractUtils.RequiresNotNull(engine, "engine");
             ContractUtils.RequiresNotNull(path, "path");
             ContractUtils.RequiresNotNull(encoding, "encoding");
 
-            if (PlatformAdaptationLayer.FileExists(path)) {                
+            if (PlatformAdaptationLayer.FileExists(path)) {
                 return engine.CreateScriptSourceFromFile(path, encoding, kind);
             }
 
@@ -162,7 +148,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
         /// <exception cref="ArgumentException">Name contains invalid characters (see System.IO.Path.GetInvalidFileNameChars).</exception>
         /// <returns>Resolved file path.</returns>
-        public virtual void ResolveSourceFileName(string/*!*/ name, out string path, out ScriptEngine engine) {
+        public virtual void ResolveSourceFileName(string name, out string path, out ScriptEngine engine) {
             ContractUtils.RequiresNotNull(name, "name");
 
             foreach (string directory in GetFullSearchPaths()) {
@@ -188,7 +174,7 @@ namespace Microsoft.Scripting.Hosting {
 
                         if (candidate != null) {
                             throw new AmbiguousFileNameException(candidate, fullPath);
-                        } 
+                        }
 
                         candidate = fullPath;
                     }
@@ -214,7 +200,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="AmbiguousFileNameException">Multiple matching files were found in a directory.</exception>
         /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
         /// <exception cref="ArgumentException">Name contains invalid characters (see System.IO.Path.GetInvalidFileNameChars).</exception>
-        public ScriptSource/*!*/ ResolveSourceFile(string/*!*/ name) {
+        public ScriptSource ResolveSourceFile(string name) {
             string path;
             ScriptEngine engine;
             ResolveSourceFileName(name, out path, out engine);
@@ -237,7 +223,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Invoked after a new language is loaded into the Runtime.
         /// The host can override this method to perform additional initialization of language engines.
         /// </summary>
-        internal protected virtual void EngineCreated(ScriptEngine/*!*/ engine) {
+        internal protected virtual void EngineCreated(ScriptEngine engine) {
             // nop
         }
 

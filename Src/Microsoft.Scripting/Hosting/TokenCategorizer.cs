@@ -20,20 +20,20 @@ using System.Scripting.Utils;
 using Microsoft.Scripting.Compilers;
 
 namespace Microsoft.Scripting.Hosting {
-    public sealed class TokenCategorizer 
-#if !SILVERLIGHT 
+    public sealed class TokenCategorizer
+#if !SILVERLIGHT
         : MarshalByRefObject
 #endif
     {
-        private readonly TokenizerService/*!*/ _tokenizer;
+        private readonly TokenizerService _tokenizer;
 
-        internal TokenCategorizer(TokenizerService/*!*/ tokenizer) {
+        internal TokenCategorizer(TokenizerService tokenizer) {
             Assert.NotNull(tokenizer);
             _tokenizer = tokenizer;
         }
 
-        public void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation) {
-            _tokenizer.Initialize(state, sourceReader, initialLocation);
+        public void Initialize(object state, ScriptSource scriptSource, SourceLocation initialLocation) {
+            _tokenizer.Initialize(state, scriptSource.SourceUnit.GetReader(), initialLocation);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Hosting {
         public object CurrentState {
             get { return _tokenizer.CurrentState; }
         }
-        
+
         /// <summary>
         /// The current startLocation of the scanner.
         /// </summary>
@@ -62,7 +62,7 @@ namespace Microsoft.Scripting.Hosting {
             get { return _tokenizer.IsRestartable; }
         }
 
-		// TODO: Should be ErrorListener
+        // TODO: Should be ErrorListener
         public ErrorSink ErrorSink {
             get { return _tokenizer.ErrorSink; }
             set { _tokenizer.ErrorSink = value; }
@@ -87,7 +87,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </remarks>s
         /// <param name="characterCount">The mininum number of characters to process while getting tokens.</param>
         /// <returns>A enumeration of tokens.</returns>
-        public IEnumerable<TokenInfo>/*!*/ ReadTokens(int characterCount) {
+        public IEnumerable<TokenInfo> ReadTokens(int characterCount) {
             return _tokenizer.ReadTokens(characterCount);
         }
 

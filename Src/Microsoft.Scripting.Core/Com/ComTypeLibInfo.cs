@@ -15,8 +15,8 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Scripting.Actions;
 
 namespace System.Scripting.Com {
     // TODO: Can it be made internal?

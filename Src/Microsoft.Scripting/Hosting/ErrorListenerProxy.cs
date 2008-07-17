@@ -32,16 +32,16 @@ namespace Microsoft.Scripting.Hosting {
     /// </remarks>
     internal sealed class ErrorListenerProxySink : ErrorSink {
         private readonly ErrorListener _listener;
-        private readonly ScriptSource/*!*/ _source;
+        private readonly ScriptSource _source;
 
-        public ErrorListenerProxySink(ScriptSource/*!*/ source, ErrorListener listener) {
+        public ErrorListenerProxySink(ScriptSource source, ErrorListener listener) {
             _listener = listener;
             _source = source;
         }
 
-        public override void Add(SourceUnit sourceUnit, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
+        public override void Add(SourceUnit sourceUnit, string message, SourceSpan span, int errorCode, Severity severity) {
             if (_listener != null) {
-                
+
                 ScriptSource scriptSource;
                 if (sourceUnit != _source.SourceUnit) {
                     scriptSource = new ScriptSource(_source.Engine.Runtime.GetEngine(sourceUnit.LanguageContext), sourceUnit);

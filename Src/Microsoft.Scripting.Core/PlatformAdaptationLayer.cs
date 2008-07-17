@@ -40,7 +40,7 @@ namespace System.Scripting {
     [Serializable]
     public class PlatformAdaptationLayer {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public static readonly PlatformAdaptationLayer/*!*/ Default = new PlatformAdaptationLayer();
+        public static readonly PlatformAdaptationLayer Default = new PlatformAdaptationLayer();
 
 #if SILVERLIGHT
         // this dictionary is readonly after initialization:
@@ -115,7 +115,7 @@ namespace System.Scripting {
 #endif
         #region Assembly Loading
 
-        public virtual Assembly/*!*/ LoadAssembly(string/*!*/ name) {
+        public virtual Assembly LoadAssembly(string name) {
 #if !SILVERLIGHT
             return Assembly.Load(name);
 #else
@@ -124,7 +124,7 @@ namespace System.Scripting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFile")]
-        public virtual Assembly/*!*/ LoadAssemblyFromPath(string/*!*/ path) {
+        public virtual Assembly LoadAssemblyFromPath(string path) {
 #if !SILVERLIGHT
             return Assembly.LoadFile(path);
 #else
@@ -144,7 +144,7 @@ namespace System.Scripting {
 
         #region Virtual File System
 
-        public virtual StringComparer/*!*/ PathComparer {
+        public virtual StringComparer PathComparer {
             get {
                 return StringComparer.Ordinal;
             }
@@ -166,7 +166,7 @@ namespace System.Scripting {
 #endif
         }
 
-        public virtual Stream/*!*/ OpenInputFileStream(string/*!*/ path, FileMode mode, FileAccess access, FileShare share) {
+        public virtual Stream OpenInputFileStream(string path, FileMode mode, FileAccess access, FileShare share) {
 #if !SILVERLIGHT
             return new FileStream(path, mode, access, share);
 #else
@@ -174,7 +174,7 @@ namespace System.Scripting {
 #endif
         }
 
-        public virtual Stream/*!*/ OpenInputFileStream(string/*!*/ path, FileMode mode, FileAccess access, FileShare share, int bufferSize) {
+        public virtual Stream OpenInputFileStream(string path, FileMode mode, FileAccess access, FileShare share, int bufferSize) {
 #if !SILVERLIGHT
             return new FileStream(path, mode, access, share, bufferSize);
 #else
@@ -182,7 +182,7 @@ namespace System.Scripting {
 #endif
         }
 
-        public virtual Stream/*!*/ OpenInputFileStream(string/*!*/ path) {
+        public virtual Stream OpenInputFileStream(string path) {
 #if !SILVERLIGHT
             return new FileStream(path, FileMode.Open, FileAccess.Read);
 #else
@@ -190,7 +190,7 @@ namespace System.Scripting {
 #endif
         }
 
-        public virtual Stream/*!*/ OpenOutputFileStream(string/*!*/ path) {
+        public virtual Stream OpenOutputFileStream(string path) {
 #if !SILVERLIGHT
             return new FileStream(path, FileMode.Create, FileAccess.Write);
 #else
@@ -198,7 +198,7 @@ namespace System.Scripting {
 #endif
         }
 
-        public virtual string/*!*/[]/*!*/ GetFiles(string/*!*/ path, string searchPattern) {
+        public virtual string[] GetFiles(string path, string searchPattern) {
 #if !SILVERLIGHT
             return Directory.GetFiles(path, searchPattern);
 #else
@@ -207,7 +207,7 @@ namespace System.Scripting {
         }
 
         /// <exception cref="ArgumentException">Invalid path.</exception>
-        public virtual string/*!*/ GetFullPath(string/*!*/ path) {
+        public virtual string GetFullPath(string path) {
 #if !SILVERLIGHT
             try {
                 return Path.GetFullPath(path);
@@ -220,7 +220,7 @@ namespace System.Scripting {
         }
 
         /// <exception cref="ArgumentException">Invalid path.</exception>
-        public virtual bool IsAbsolutePath(string/*!*/ path) {
+        public virtual bool IsAbsolutePath(string path) {
 #if !SILVERLIGHT
             // GetPathRoot returns either :
             // "" -> relative to the current dir
@@ -235,7 +235,7 @@ namespace System.Scripting {
 #endif
         }
 
-        public virtual string/*!*/ CurrentDirectory {
+        public virtual string CurrentDirectory {
             get {
 #if !SILVERLIGHT
                 return Environment.CurrentDirectory;

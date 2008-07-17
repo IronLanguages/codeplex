@@ -125,7 +125,7 @@ namespace System.Linq.Expressions {
         /// Write out the given AST (only if ShowTrees or DumpTrees is enabled)
         /// </summary>
         [Conditional("DEBUG")]
-        internal static void Dump(Expression/*!*/ expression, string description) {
+        internal static void Dump(Expression expression, string description) {
             Debug.Assert(expression != null);
 
             if (CompilerDebugOptions.ShowTrees) {
@@ -172,7 +172,7 @@ namespace System.Linq.Expressions {
         /// Write out the given AST
         /// </summary>
         [Conditional("DEBUG")]
-        internal static void Dump(Expression/*!*/ node, string/*!*/ descr, TextWriter/*!*/ writer) {
+        internal static void Dump(Expression node, string descr, TextWriter writer) {
             Debug.Assert(node != null);
             Debug.Assert(descr != null);
             Debug.Assert(writer != null);
@@ -181,7 +181,7 @@ namespace System.Linq.Expressions {
             dv.DoDump(node, descr);
         }
 
-        private static string GetFilePath(string/*!*/ path) {
+        private static string GetFilePath(string path) {
             Debug.Assert(path != null);
 
 #if !SILVERLIGHT // GetInvalidFileNameChars does not exist in CoreCLR
@@ -234,7 +234,7 @@ namespace System.Linq.Expressions {
             return _blockid;
         }
 
-#region The printing code
+        #region The printing code
 
         private void Out(string s) {
             Out(Flow.None, s, Flow.None);
@@ -308,7 +308,7 @@ namespace System.Linq.Expressions {
 
         #endregion
 
-#region The AST Output
+        #region The AST Output
 
         // More proper would be to make this a virtual method on Action
         private static string FormatBinder(CallSiteBinder binder) {
@@ -897,11 +897,11 @@ namespace System.Linq.Expressions {
             }
 
             Out("(.property");
-            
-            if (node.GetMethod != null){
+
+            if (node.GetMethod != null) {
                 Out(" get=" + node.GetMethod.ReflectedType.Name + "." + node.GetMethod.Name);
             }
-            if (node.SetMethod != null){
+            if (node.SetMethod != null) {
                 Out(" set=" + node.SetMethod.ReflectedType.Name + "." + node.SetMethod.Name);
             }
             Out(")(");
@@ -960,7 +960,7 @@ namespace System.Linq.Expressions {
         }
 
         private static string GetLambdaInfo(LambdaExpression lambda) {
-            string info = lambda.NodeType == ExpressionType.Generator ? ".generator ": ".lambda ";
+            string info = lambda.NodeType == ExpressionType.Generator ? ".generator " : ".lambda ";
 
             info += String.Format("{0} {1} (", CompilerHelpers.GetReturnType(lambda), lambda.Name);
             info += ")";

@@ -302,7 +302,6 @@ namespace System.Linq.Expressions {
         // TODO: expand to 8 arguments
         public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
-            ContractUtils.Requires(typeArgs.Length > 0, "incorrect number of type arguments for Func.");
 
             Type funcType;
 

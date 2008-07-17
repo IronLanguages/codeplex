@@ -19,14 +19,14 @@ namespace System.Linq.Expressions {
     public sealed class LoopStatement : Expression {
         private readonly Expression _test;
         private readonly Expression _increment;
-        private readonly Expression /*!*/ _body;
+        private readonly Expression _body;
         private readonly Expression _else;
         private readonly LabelTarget _label;
 
         /// <summary>
         /// Null test means infinite loop.
         /// </summary>
-        internal LoopStatement(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression /*!*/ body, Expression @else)
+        internal LoopStatement(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else)
             : base(annotations, ExpressionType.LoopStatement, typeof(void)) {
             _test = test;
             _increment = increment;
@@ -51,7 +51,7 @@ namespace System.Linq.Expressions {
             get { return _else; }
         }
 
-         new public LabelTarget Label {
+        new public LabelTarget Label {
             get { return _label; }
         }
     }

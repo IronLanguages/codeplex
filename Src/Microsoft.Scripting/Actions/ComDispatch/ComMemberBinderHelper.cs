@@ -16,8 +16,8 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Reflection;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
@@ -29,8 +29,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         where T : class
         where TAction : OldMemberAction {
 
-        internal ComMemberBinderHelper(CodeContext context, TAction action, object[] args)
-            : base(context, action, args) {
+        internal ComMemberBinderHelper(CodeContext context, TAction action)
+            : base(context, action) {
         }
 
         /// <summary> helper to grab the name of the member we're looking up as a string </summary>

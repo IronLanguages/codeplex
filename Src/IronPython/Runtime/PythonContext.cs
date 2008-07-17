@@ -357,7 +357,7 @@ namespace IronPython.Runtime {
             Assert.NotNull(sourceUnit, options, errorSink);
 
             PyAst.PythonAst ast;
-            SourceCodeProperties properties = SourceCodeProperties.None;
+            ScriptCodeParseResult properties = ScriptCodeParseResult.Complete;
             bool propertiesSet = false;
             int errorCode = 0;
 
@@ -391,12 +391,12 @@ namespace IronPython.Runtime {
             }
 
             if (!propertiesSet && errorCode != 0) {
-                properties = SourceCodeProperties.IsInvalid;
+                properties = ScriptCodeParseResult.Invalid;
             }
 
             context.SourceUnit.CodeProperties = properties;
 
-            if (errorCode != 0 || properties == SourceCodeProperties.IsEmpty) {
+            if (errorCode != 0 || properties == ScriptCodeParseResult.Empty) {
                 return null;
             }
 

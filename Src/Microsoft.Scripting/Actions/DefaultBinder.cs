@@ -15,7 +15,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
@@ -25,7 +24,6 @@ using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
@@ -39,7 +37,8 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract partial class DefaultBinder : ActionBinder {
-        protected DefaultBinder(ScriptDomainManager manager) : base(manager) {
+        protected DefaultBinder(ScriptDomainManager manager)
+            : base(manager) {
         }
 
         /// <summary>
@@ -53,7 +52,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="action">The Action that is being performed.</param>
         /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
         /// <returns></returns>
-        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction/*!*/ action, object[]/*!*/ args) {
+        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction action, object[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             ContractUtils.RequiresNotNull(args, "args");
 
@@ -83,7 +82,7 @@ namespace Microsoft.Scripting.Actions {
                     throw new NotImplementedException(action.ToString());
             }
         }
-        
+
         protected static CodeContext ExtractCodeContext(object[] args, out object[] extracted) {
             CodeContext cc;
             if (args.Length > 0 && (cc = args[0] as CodeContext) != null) {
@@ -214,7 +213,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public virtual ErrorInfo MakeEventValidation(MemberGroup/*!*/ members, Expression eventObject, Expression/*!*/ value, Expression/*!*/ codeContext) {
+        public virtual ErrorInfo MakeEventValidation(MemberGroup members, Expression eventObject, Expression value, Expression codeContext) {
             EventTracker ev = (EventTracker)members[0];
 
             // handles in place addition of events - this validates the user did the right thing.
@@ -235,7 +234,7 @@ namespace Microsoft.Scripting.Actions {
             return CompilerHelpers.IsConstructor(method);
         }
 
-        public static Expression/*!*/ MakeError(ErrorInfo/*!*/ error) {
+        public static Expression MakeError(ErrorInfo error) {
             switch (error.Kind) {
                 case ErrorInfoKind.Error:
                     // error meta objecT?
@@ -249,11 +248,11 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public static MetaObject/*!*/ MakeError(ErrorInfo/*!*/ error, Restrictions/*!*/ restrictions) {
+        public static MetaObject MakeError(ErrorInfo error, Restrictions restrictions) {
             return new MetaObject(MakeError(error), restrictions);
         }
 
-        protected TrackerTypes GetMemberType(MemberGroup/*!*/ members, out Expression error) {
+        protected TrackerTypes GetMemberType(MemberGroup members, out Expression error) {
             error = null;
             TrackerTypes memberType = TrackerTypes.All;
             for (int i = 0; i < members.Count; i++) {

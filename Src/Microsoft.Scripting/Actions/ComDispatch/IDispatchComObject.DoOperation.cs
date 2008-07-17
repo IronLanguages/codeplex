@@ -17,8 +17,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             private readonly ComTypeDesc _wrapperType;
 
             internal DoOperationBinder(CodeContext context, ComTypeDesc wrapperType, OldDoOperationAction action)
-                : base(context, action, null) {
+                : base(context, action) {
 
                 _wrapperType = wrapperType;
             }

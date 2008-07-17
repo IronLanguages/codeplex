@@ -31,7 +31,7 @@ namespace System.Linq.Expressions {
 
         public DoStatement While(Expression condition) {
             ContractUtils.RequiresNotNull(condition, "condition");
-            ContractUtils.Requires(condition.Type == typeof(bool), "condition", "Condition must be boolean");
+            ContractUtils.Requires(condition.Type == typeof(bool), "condition", Strings.ConditionMustBeBoolean);
 
             return new DoStatement(_annotations, _label, condition, _body);
         }

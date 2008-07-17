@@ -15,7 +15,6 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -98,7 +97,7 @@ namespace System.Scripting.Com {
 
         private readonly IDispatchObject _dispatchObject;
         private ComTypeDesc _comTypeDesc;
-        private static Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid,ComTypeDesc>();
+        private static Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid, ComTypeDesc>();
 
         internal IDispatchComObject(IDispatch rcw)
             : base(rcw) {
@@ -106,8 +105,7 @@ namespace System.Scripting.Com {
         }
 
         public override string ToString() {
-
-            EnsureScanDefinedFunctions();
+            EnsureScanDefinedMethods();
 
             string typeName = this._comTypeDesc.TypeName;
             if (String.IsNullOrEmpty(typeName))
@@ -118,7 +116,7 @@ namespace System.Scripting.Com {
 
         public ComTypeDesc ComTypeDesc {
             get {
-                EnsureScanDefinedFunctions();
+                EnsureScanDefinedMethods();
                 return _comTypeDesc;
             }
         }
@@ -163,7 +161,7 @@ namespace System.Scripting.Com {
 
         public override string Documentation {
             get {
-                EnsureScanDefinedFunctions();
+                EnsureScanDefinedMethods();
 
                 return _comTypeDesc.Documentation;
             }
@@ -181,7 +179,7 @@ namespace System.Scripting.Com {
 
         public bool TryGetGetItem(out DispCallable value) {
 
-            EnsureScanDefinedFunctions();
+            EnsureScanDefinedMethods();
 
             ComMethodDesc methodDesc = _comTypeDesc.GetItem;
 
@@ -211,8 +209,8 @@ namespace System.Scripting.Com {
 
         public bool TryGetSetItem(out DispCallable value) {
 
-            EnsureScanDefinedFunctions();
-            
+            EnsureScanDefinedMethods();
+
             ComMethodDesc methodDesc = _comTypeDesc.SetItem;
 
             // The following attempts to get a method corresponding to "[PROPERTYPUT, DISPID(0)] HRESULT Item(...)".
@@ -238,63 +236,44 @@ namespace System.Scripting.Com {
             }
 
             value = new DispPropertyPut(_dispatchObject, methodDesc);
-            
+
             return true;
         }
 
-        public bool TryGetAttr(string name, out object value) {
+        internal bool TryGetMemberMethod(string name, out ComMethodDesc method) {
+            EnsureScanDefinedMethods();
+            return _comTypeDesc.Funcs.TryGetValue(name, out method);
+        }
 
-            // Check if the name exists
-            EnsureScanDefinedFunctions();
-            ComMethodDesc methodDesc = null;
+        internal bool TryGetMemberEvent(string name, out ComEventDesc @event) {
+            EnsureScanDefinedEvents();
+            return _comTypeDesc.Events.TryGetValue(name, out @event);
+        }
+
+        internal bool TryGetMemberMethodExplicit(string name, out ComMethodDesc method) {
+            EnsureScanDefinedMethods();
 
             // TODO: We have a thread-safety issue here right now
             // TODO: since we are mutating _funcs array
             // TODO: The workaround is to use Hashtable (which is thread-safe
             // TODO: on read operations) to fetch the value out.
-            if (_comTypeDesc.Funcs.TryGetValue(name, out methodDesc) == false) {
+            int dispId;
+            int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
 
-                EnsureScanDefinedEvents();
-                ComEventDesc eventDesc;
-                if (_comTypeDesc.Events.TryGetValue(name, out eventDesc)) {
-                    value = new BoundDispEvent(this.Obj, eventDesc.sourceIID, eventDesc.dispid);
-                    return true;
-                }
-
-                int dispId;
-                int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
-                if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
-                    value = null;
-                    return false;
-                } else if (hresult != ComHresults.S_OK) {
-                    throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
-                }
-
-                methodDesc = new ComMethodDesc(name.ToString(), dispId);
-                _comTypeDesc.Funcs.Add(name, methodDesc);
-            }
-
-            // There is a member with the given name.
-            // It might be a property of a method.
-            // 1. If this is a method we will return a callable object this defering the execution
-            //    (notice that execution of parameterized properties is also defered)
-            // 2. If this is a property - we will return the result of 
-            //    invoking the property
-            if (methodDesc != null && methodDesc.IsPropertyGet) {
-                value = new DispPropertyGet(_dispatchObject, methodDesc);
-                if (methodDesc.Parameters.Length == 0) {
-                    value = ((DispPropertyGet)value)[new object[0]];
-                }
-            } else if (methodDesc != null && methodDesc.IsPropertyPut) {
-                value = new DispPropertyPut(_dispatchObject, methodDesc);
+            if (hresult == ComHresults.S_OK) {
+                ComMethodDesc cmd = new ComMethodDesc(name, dispId);
+                _comTypeDesc.Funcs.Add(name, cmd);
+                method = cmd;
+                return true;
+            } else if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
+                method = null;
+                return false;
             } else {
-                value = new DispMethod(_dispatchObject, methodDesc);
+                throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
             }
-
-            return true;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId="context")]
+        [Obsolete("Called from generated code only", true)]
         public bool TrySetAttr(string name, object value, out Exception exception) {
 
             exception = null;
@@ -348,7 +327,7 @@ namespace System.Scripting.Com {
         #region IMembersList
 
         public override IList<string> GetMemberNames() {
-            EnsureScanDefinedFunctions();
+            EnsureScanDefinedMethods();
             EnsureScanDefinedEvents();
             List<string> list = new List<string>();
 
@@ -368,7 +347,7 @@ namespace System.Scripting.Com {
         #endregion
 
         public override MetaObject GetMetaObject(Expression parameter) {
-            EnsureScanDefinedFunctions();
+            EnsureScanDefinedMethods();
             return new IDispatchMetaObject(parameter, _comTypeDesc, this);
         }
 
@@ -541,7 +520,7 @@ namespace System.Scripting.Com {
             return typeInfoCoClass;
         }
 
-        private void EnsureScanDefinedFunctions() {
+        private void EnsureScanDefinedMethods() {
             if (_comTypeDesc != null && _comTypeDesc.Funcs != null)
                 return;
 
@@ -567,84 +546,64 @@ namespace System.Scripting.Com {
             ComMethodDesc getItem = null;
             ComMethodDesc setItem = null;
             Dictionary<string, ComMethodDesc> funcs = new Dictionary<string, ComMethodDesc>(typeAttr.cFuncs);
-            Queue<KeyValuePair<IntPtr, ComTypes.FUNCDESC>> writeOnlyCandidates = new Queue<KeyValuePair<IntPtr, ComTypes.FUNCDESC>>();
-            List<int> usedDispIds = new List<int>();
+            List<ComMethodDesc> writable = new List<ComMethodDesc>();
+            Set<int> usedDispIds = new Set<int>();
 
-            try {
-                for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
-                    IntPtr funcDescHandleToRelease = IntPtr.Zero;
+            for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
+                IntPtr funcDescHandleToRelease = IntPtr.Zero;
 
-                    try {
-                        ComTypes.FUNCDESC funcDesc;
-                        GetFuncDescForDescIndex(typeInfo, definedFuncIndex, out funcDesc, out funcDescHandleToRelease);
+                try {
+                    ComTypes.FUNCDESC funcDesc;
+                    GetFuncDescForDescIndex(typeInfo, definedFuncIndex, out funcDesc, out funcDescHandleToRelease);
 
-                        if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0) {
-                            // This function is not meant for the script user to use.
-                            continue;
-                        }
+                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0) {
+                        // This function is not meant for the script user to use.
+                        continue;
+                    }
 
-                        // since we need to store only on function description per dispId, we might
-                        // not need to store any info for a property_put as it typically shares its
-                        // dispId with a property_get - as such, we will wait for a corresponding 
-                        // property_get to come along.  But if it's a write only property, we'll 
-                        // have to capture it later...
-                        if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
-                            (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
-                            // exception to the rule: for the special dispId == 0, we need to store
-                            // the method descriptor for the Do(SetItem) action. 
-                            if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
-                                setItem = new ComMethodDesc(typeInfo, funcDesc);
-                            }
-                            writeOnlyCandidates.Enqueue(new KeyValuePair<IntPtr, ComTypes.FUNCDESC>(funcDescHandleToRelease, funcDesc));
-                            funcDescHandleToRelease = IntPtr.Zero;
-                            continue;
-                        }
+                    ComMethodDesc method = new ComMethodDesc(typeInfo, funcDesc);
 
-                        ComMethodDesc methodDesc;
-                        string name;
-
-                        usedDispIds.Add(funcDesc.memid);
-
-                        if (funcDesc.memid == ComDispIds.DISPID_NEWENUM) {
-                            methodDesc = new ComMethodDesc(typeInfo, funcDesc);
-                            name = "GetEnumerator";
-                            funcs.Add(name, methodDesc);
-                            continue;
-                        }
-
-                        methodDesc = new ComMethodDesc(typeInfo, funcDesc);
-                        name = methodDesc.Name;
-                        funcs.Add(name, methodDesc);
-
-                        // for the special dispId == 0, we need to store the method descriptor 
-                        // for the Do(GetItem) action. 
+                    // since we need to store only on function description per dispId, we might
+                    // not need to store any info for a property_put as it typically shares its
+                    // dispId with a property_get - as such, we will wait for a corresponding 
+                    // property_get to come along.  But if it's a write only property, we'll 
+                    // have to capture it later...
+                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
+                        (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
+                        // exception to the rule: for the special dispId == 0, we need to store
+                        // the method descriptor for the Do(SetItem) action. 
                         if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
-                            getItem = new ComMethodDesc(typeInfo, funcDesc);
+                            setItem = method;
                         }
-                    } finally {
-                        if (funcDescHandleToRelease != IntPtr.Zero) {
-                            typeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
-                        }
+                        writable.Add(method);
+                        continue;
+                    }
+
+                    usedDispIds.Add(funcDesc.memid);
+
+                    if (funcDesc.memid == ComDispIds.DISPID_NEWENUM) {
+                        funcs.Add("GetEnumerator", method);
+                        continue;
+                    }
+
+                    funcs.Add(method.Name, method);
+
+                    // for the special dispId == 0, we need to store the method descriptor 
+                    // for the Do(GetItem) action. 
+                    if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
+                        getItem = method;
+                    }
+                } finally {
+                    if (funcDescHandleToRelease != IntPtr.Zero) {
+                        typeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
                     }
                 }
+            }
 
-                while (writeOnlyCandidates.Count > 0) {
-                    KeyValuePair<IntPtr, ComTypes.FUNCDESC> woc = writeOnlyCandidates.Dequeue();
-
-                    try {
-                        if (!usedDispIds.Contains(woc.Value.memid)) {
-                            ComMethodDesc methodDesc = new ComMethodDesc(typeInfo, woc.Value);
-                            funcs.Add(methodDesc.Name, methodDesc);
-                            usedDispIds.Add(woc.Value.memid);
-                        }
-                    } finally {
-                        Debug.Assert(woc.Key != IntPtr.Zero);
-                        typeInfo.ReleaseFuncDesc(woc.Key);
-                    }
-                }
-            } finally {
-                foreach (KeyValuePair<IntPtr, ComTypes.FUNCDESC> woc in writeOnlyCandidates) {
-                    typeInfo.ReleaseFuncDesc(woc.Key);
+            foreach (ComMethodDesc cmd in writable) {
+                if (!usedDispIds.Contains(cmd.DispId)) {
+                    funcs.Add(cmd.Name, cmd);
+                    usedDispIds.Add(cmd.DispId);
                 }
             }
 

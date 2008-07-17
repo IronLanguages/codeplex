@@ -15,14 +15,14 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace System.Scripting.Utils {
-    //TODO: localize
     public static class ContractUtils {
 
         public static void Requires(bool precondition) {
             if (!precondition) {
-                throw new ArgumentException("Method precondition violated");
+                throw new ArgumentException(Strings.MethodPreconditionViolated);
             }
         }
 
@@ -30,7 +30,7 @@ namespace System.Scripting.Utils {
             Assert.NotEmpty(paramName);
 
             if (!precondition) {
-                throw new ArgumentException("Invalid argument value", paramName);
+                throw new ArgumentException(Strings.InvalidArgumentValue, paramName);
             }
         }
 
@@ -53,14 +53,14 @@ namespace System.Scripting.Utils {
         public static void RequiresNotEmpty(string str, string paramName) {
             RequiresNotNull(str, paramName);
             if (str.Length == 0) {
-                throw new ArgumentException("Non-empty string required", paramName);
+                throw new ArgumentException(Strings.NonEmptyStringRequired, paramName);
             }
         }
 
         public static void RequiresNotEmpty<T>(ICollection<T> collection, string paramName) {
             RequiresNotNull(collection, paramName);
             if (collection.Count == 0) {
-                throw new ArgumentException("Non-empty collection required", paramName);
+                throw new ArgumentException(Strings.NonEmptyCollectionRequired, paramName);
             }
         }
 

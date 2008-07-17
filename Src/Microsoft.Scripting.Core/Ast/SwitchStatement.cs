@@ -17,7 +17,6 @@ using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-
 using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
@@ -26,7 +25,7 @@ namespace System.Linq.Expressions {
         private readonly ReadOnlyCollection<SwitchCase> _cases;
         private readonly LabelTarget _label;
 
-        internal SwitchStatement(Annotations annotations, LabelTarget label, Expression/*!*/ testValue, ReadOnlyCollection<SwitchCase>/*!*/ cases)
+        internal SwitchStatement(Expression testValue, LabelTarget label, Annotations annotations, ReadOnlyCollection<SwitchCase> cases)
             : base(annotations, ExpressionType.SwitchStatement, typeof(void)) {
             Assert.NotNullItems(cases);
 
@@ -52,18 +51,26 @@ namespace System.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        public static SwitchStatement Switch(Annotations annotations, LabelTarget label, Expression value, params SwitchCase[] cases) {
+        // TODO: label, annotations optional w/ default value
+        public static SwitchStatement Switch(Expression value, LabelTarget label, Annotations annotations, params SwitchCase[] cases) {
+            return Switch(value, label, annotations, (IEnumerable<SwitchCase>)cases);
+        }
+
+        // TODO: label, annotations optional w/ default value
+        public static SwitchStatement Switch(Expression value, LabelTarget label, Annotations annotations, IEnumerable<SwitchCase> cases) {
             ContractUtils.RequiresNotNull(value, "value");
-            ContractUtils.Requires(value.Type == typeof(int), "value", "Value must be int");
-            ContractUtils.RequiresNotEmpty(cases, "cases");
-            ContractUtils.RequiresNotNullItems(cases, "cases");
+            ContractUtils.Requires(value.Type == typeof(int), "value", Strings.ValueMustBeInt);
+            ContractUtils.RequiresNotNull(cases, "cases");
+            var caseList = cases.ToReadOnly();
+            ContractUtils.RequiresNotEmpty(caseList, "cases");
+            ContractUtils.RequiresNotNullItems(caseList, "cases");
 
             bool @default = false;
             int max = Int32.MinValue;
             int min = Int32.MaxValue;
-            foreach (SwitchCase sc in cases) {
+            foreach (SwitchCase sc in caseList) {
                 if (sc.IsDefault) {
-                    ContractUtils.Requires(@default == false, "cases", "Only one default clause allowed");
+                    ContractUtils.Requires(@default == false, "cases", Strings.OnlyDefaultIsAllowed);
                     @default = true;
                 } else {
                     int val = sc.Value;
@@ -72,9 +79,9 @@ namespace System.Linq.Expressions {
                 }
             }
 
-            ContractUtils.Requires(UniqueCaseValues(cases, min, max), "cases", "Case values must be unique");
+            ContractUtils.Requires(UniqueCaseValues(caseList, min, max), "cases", Strings.CaseValuesMustBeUnique);
 
-            return new SwitchStatement(annotations, label, value, cases.ToReadOnly());
+            return new SwitchStatement(value, label, annotations, caseList);
         }
 
         // Below his threshold we'll use brute force N^2 algorithm
@@ -83,8 +90,8 @@ namespace System.Linq.Expressions {
         // If values are in a small range, we'll use bit array
         private const long BitArrayThreshold = 1024;
 
-        private static bool UniqueCaseValues(SwitchCase[] cases, int min, int max) {
-            int length = cases.Length;
+        private static bool UniqueCaseValues(ReadOnlyCollection<SwitchCase> cases, int min, int max) {
+            int length = cases.Count;
 
             // If we have small number of cases, use straightforward N2 algorithm
             // which doesn't allocate memory

@@ -20,13 +20,13 @@ using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
     public sealed class Block : Expression {
-        private readonly ReadOnlyCollection<Expression> /*!*/ _expressions;
+        private readonly ReadOnlyCollection<Expression> _expressions;
 
-        public ReadOnlyCollection<Expression> /*!*/ Expressions {
+        public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }
 
-        internal Block(Annotations annotations, ReadOnlyCollection<Expression> /*!*/ expressions, Type /*!*/ type)
+        internal Block(Annotations annotations, ReadOnlyCollection<Expression> expressions, Type type)
             : base(annotations, ExpressionType.Block, type) {
             _expressions = expressions;
         }

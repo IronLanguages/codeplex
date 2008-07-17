@@ -27,8 +27,8 @@ using System.Threading;
 
 namespace System.Scripting.Generation {
     internal class AssemblyGen {
-        private readonly AssemblyBuilder/*!*/ _myAssembly;
-        private readonly ModuleBuilder/*!*/ _myModule;
+        private readonly AssemblyBuilder _myAssembly;
+        private readonly ModuleBuilder _myModule;
         private readonly PortableExecutableKinds _peKind;
         private readonly ImageFileMachine _machine;
         private readonly bool _isDebuggable;
@@ -42,19 +42,19 @@ namespace System.Scripting.Generation {
         private int _index;
 
         internal bool IsDebuggable {
-            get { 
+            get {
 #if !SILVERLIGHT
                 Debug.Assert(_isDebuggable == (_myModule.GetSymWriter() != null));
 #endif
-                return _isDebuggable; 
+                return _isDebuggable;
             }
         }
 
-        internal AssemblyGen(AssemblyName/*!*/ name, string outDir, string outFileExtension, bool isDebuggable)
-            : this(name, outDir, outFileExtension, isDebuggable, PortableExecutableKinds.ILOnly, ImageFileMachine.I386) { 
+        internal AssemblyGen(AssemblyName name, string outDir, string outFileExtension, bool isDebuggable)
+            : this(name, outDir, outFileExtension, isDebuggable, PortableExecutableKinds.ILOnly, ImageFileMachine.I386) {
         }
 
-        internal AssemblyGen(AssemblyName/*!*/ name, string outDir, string outFileExtension, bool isDebuggable,
+        internal AssemblyGen(AssemblyName name, string outDir, string outFileExtension, bool isDebuggable,
             PortableExecutableKinds peKind, ImageFileMachine machine) {
 
             ContractUtils.RequiresNotNull(name, "name");
@@ -89,7 +89,7 @@ namespace System.Scripting.Generation {
             };
 
             if (outDir != null) {
-                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, outDir, 
+                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, outDir,
                     null, null, null, null, false, attributes);
 
                 _myModule = _myAssembly.DefineDynamicModule(name.Name, _outFileName, isDebuggable);
@@ -103,18 +103,18 @@ namespace System.Scripting.Generation {
             _machine = machine;
             _peKind = peKind;
             _isDebuggable = isDebuggable;
-            
+
             if (isDebuggable) {
                 SetDebuggableAttributes();
             }
         }
 
         internal void SetDebuggableAttributes() {
-            DebuggableAttribute.DebuggingModes attrs = 
+            DebuggableAttribute.DebuggingModes attrs =
                 DebuggableAttribute.DebuggingModes.Default |
                 DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints |
                 DebuggableAttribute.DebuggingModes.DisableOptimizations;
-                   
+
             Type[] argTypes = new Type[] { typeof(DebuggableAttribute.DebuggingModes) };
             Object[] argValues = new Object[] { attrs };
 
@@ -132,7 +132,7 @@ namespace System.Scripting.Generation {
             IResourceWriter rw = _myModule.DefineResource(Path.GetFileName(file), name, attribute);
 
             string ext = Path.GetExtension(file);
-            if(String.Equals(ext, ".resources", StringComparison.OrdinalIgnoreCase)) {
+            if (String.Equals(ext, ".resources", StringComparison.OrdinalIgnoreCase)) {
                 ResourceReader rr = new ResourceReader(file);
                 using (rr) {
                     System.Collections.IDictionaryEnumerator de = rr.GetEnumerator();
@@ -212,7 +212,7 @@ namespace System.Scripting.Generation {
                 if (Snippets.Shared.SnippetsDirectory != null && Snippets.Shared.SnippetsDirectory != Path.GetTempPath()) {
                     CopyFilesCreatedSinceStart(Path.GetTempPath(), Snippets.Shared.SnippetsDirectory);
                 }
-                
+
                 // /IGNORE=80070002 ignores errors related to files we can't find, this happens when we generate assemblies
                 // and then peverify the result.  Note if we can't resolve a token thats in an external file we still
                 // generate an error.
@@ -234,18 +234,17 @@ namespace System.Scripting.Generation {
                 thread.Join();
                 exitCode = proc.ExitCode;
                 proc.Close();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 strOut = "Unexpected exception: " + e.ToString();
                 exitCode = 1;
             }
 
             if (exitCode != 0) {
                 Console.WriteLine("Verification failed w/ exit code {0}: {1}", exitCode, strOut);
-                throw new VerificationException(ResourceUtils.GetString(
-                    ResourceUtils.VerificationException,
-                    _outFileName, 
-                    verifyFile, 
-                    strOut ?? ""));
+                throw Error.VerificationException(
+                    _outFileName,
+                    verifyFile,
+                    strOut ?? "");
             }
 
             if (verifyFile != null) {
@@ -281,8 +280,8 @@ namespace System.Scripting.Generation {
                     if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
                         try {
                             File.Copy(filename, toFile, true);
-                        } catch (Exception e) { 
-                            Console.WriteLine("Error copying {0}: {1}", filename, e.Message); 
+                        } catch (Exception e) {
+                            Console.WriteLine("Error copying {0}: {1}", filename, e.Message);
                         }
                     }
                 }
@@ -334,7 +333,7 @@ namespace System.Scripting.Generation {
     internal static class SymbolGuids {
         internal static readonly Guid LanguageType_ILAssembly =
             new Guid(-1358664493, -12063, 0x11d2, 0x97, 0x7c, 0, 160, 0xc9, 180, 0xd5, 12);
-        
+
         internal static readonly Guid DocumentType_Text =
             new Guid(0x5a869d0b, 0x6611, 0x11d3, 0xbd, 0x2a, 0, 0, 0xf8, 8, 0x49, 0xbd);
 

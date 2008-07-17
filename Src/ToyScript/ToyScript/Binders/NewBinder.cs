@@ -18,8 +18,7 @@ using System.Scripting.Actions;
 
 namespace ToyScript.Binders {
     sealed class NewBinder : CreateAction {
-        public NewBinder(CallSignature signature)
-            : base(signature) {
+        public NewBinder() {
         }
 
         public override object HashCookie {

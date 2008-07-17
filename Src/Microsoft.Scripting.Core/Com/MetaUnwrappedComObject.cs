@@ -13,9 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+#if !SILVERLIGHT
+
 using System.Linq.Expressions;
 using System.Scripting.Actions;
 
@@ -42,3 +41,5 @@ namespace System.Scripting.Com {
         }
     }
 }
+
+#endif

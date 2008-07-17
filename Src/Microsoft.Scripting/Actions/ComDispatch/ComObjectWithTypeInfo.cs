@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -42,7 +41,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     public partial class ComObjectWithTypeInfo : GenericComObject {
 
         private Type _comType;
-        private List<SymbolId> _comTypeMemberNames;
+        private List<string> _comTypeMemberNames;
         private static SynchronizedDictionary<Guid, Type> _comTypeCache = new SynchronizedDictionary<Guid, Type>();
 
         private ComObjectWithTypeInfo(object rcw, Type comInterface)
@@ -90,7 +89,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         #region IMembersList
 
-        public override IList<SymbolId> GetMemberNames(CodeContext context) {
+        public override IList<string> GetMemberNames(CodeContext context) {
             if (_comTypeMemberNames == null) {
                 InitializeMemberNames();
             }
@@ -99,13 +98,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private void InitializeMemberNames() {
-            _comTypeMemberNames = new List<SymbolId>();
+            _comTypeMemberNames = new List<string>();
 
             InitializeMemberNames(_comType);
             RemoveDuplicates(_comTypeMemberNames);
         }
 
-        private static void RemoveDuplicates(List<SymbolId> list) {
+        private static void RemoveDuplicates(List<string> list) {
             list.Sort();
             for (int i = list.Count - 2; i >= 0; --i) {
                 if (list[i] == list[i + 1]) {
@@ -116,7 +115,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         private void InitializeMemberNames(Type type) {
             foreach (MemberInfo member in type.GetMembers()) {
-                _comTypeMemberNames.Add(SymbolTable.StringToId(member.Name));
+                _comTypeMemberNames.Add(member.Name);
             }
 
             // An interface does not contain methods declared by its parent interfaces. Hence, we
@@ -138,10 +137,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     return (new DoOperationBinder<T>(context, _comType, (OldDoOperationAction)action)).MakeNewRule();
 
                 case DynamicActionKind.GetMember:
-                    return (new GetMemberBinder<T>(context, _comType, (OldGetMemberAction)action, args)).MakeNewRule();
+                    return (new GetMemberBinder<T>(context, _comType, (OldGetMemberAction)action)).MakeNewRule();
 
                 case DynamicActionKind.SetMember:
-                    return (new SetMemberBinder<T>(context, _comType, (OldSetMemberAction)action, args)).MakeNewRule();
+                    return (new SetMemberBinder<T>(context, _comType, (OldSetMemberAction)action)).MakeNewRule();
             }
 
             return base.GetRule<T>(action, context, args);

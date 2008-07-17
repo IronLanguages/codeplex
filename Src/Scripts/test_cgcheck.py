@@ -36,10 +36,9 @@ def test_main(level='full'):
         'generate_typecache',
         'generate_comdispatch',
         'generate_tree',
-        'generate_resource_constants',
-        # TODO: uncomment when we have whole Core sources in Snap/test
-        # 'generate_exception_factory',
-        ]
+		# TODO: uncomment when we have whole Core sources in Snap/test
+		# 'generate_exception_factory',        
+	]
     #Merlin 277482
     import System
     if [System.IntPtr.Size==8]:

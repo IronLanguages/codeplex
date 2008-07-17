@@ -15,17 +15,17 @@
 
 using System;
 using System.Scripting.Utils;
-using Microsoft.Contracts; 
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {
- 
+
     /// <summary>
     /// Represents an array that has value equality.
     /// </summary>
     public class ValueArray<T> : IEquatable<ValueArray<T>> {
-        private readonly T/*!*/[]/*!*/_array;
+        private readonly T[] _array;
 
-        public ValueArray(T/*!*/[]/*!*/ array) {
+        public ValueArray(T[] array) {
             ContractUtils.RequiresNotNull(array, "array");
             ContractUtils.RequiresNotNullItems(array, "array");
             _array = array;

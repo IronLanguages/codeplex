@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="value">
         /// The value being assigned to the target member.
         /// </param>
-        public MetaObject/*!*/ SetMember(string/*!*/ name, MetaObject/*!*/ target, MetaObject/*!*/ value) {
+        public MetaObject SetMember(string name, MetaObject target, MetaObject value) {
             return SetMember(name, target, value, Ast.Null(typeof(CodeContext)));
         }
 
@@ -63,7 +63,7 @@ namespace Microsoft.Scripting.Actions {
         /// accessing the member (e.g. for an extension property which takes CodeContext).  By default this
         /// a null CodeContext object is passed.
         /// </param>
-        public MetaObject/*!*/ SetMember(string/*!*/ name, MetaObject/*!*/ target, MetaObject/*!*/ value, Expression/*!*/ codeContext) {
+        public MetaObject SetMember(string name, MetaObject target, MetaObject value, Expression codeContext) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNull(value, "value");
@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private MetaObject/*!*/ MakeSetMemberTarget(SetOrDeleteMemberInfo/*!*/ memInfo, MetaObject/*!*/ target, MetaObject/*!*/ value) {
+        private MetaObject MakeSetMemberTarget(SetOrDeleteMemberInfo memInfo, MetaObject target, MetaObject value) {
             Type type = target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
@@ -85,7 +85,7 @@ namespace Microsoft.Scripting.Actions {
             if (typeof(TypeTracker).IsAssignableFrom(type)) {
                 type = ((TypeTracker)target.Value).Type;
                 self = null;
-                
+
                 restrictions = restrictions.Merge(
                     Restrictions.InstanceRestriction(target.Expression, target.Value)
                 );
@@ -96,7 +96,7 @@ namespace Microsoft.Scripting.Actions {
             return memInfo.Body.GetMetaObject(target, value);
         }
 
-        private void MakeSetMemberRule(SetOrDeleteMemberInfo/*!*/ memInfo, Type/*!*/ type, Expression self, MetaObject/*!*/ target) {
+        private void MakeSetMemberRule(SetOrDeleteMemberInfo memInfo, Type type, Expression self, MetaObject target) {
             if (MakeOperatorSetMemberBody(memInfo, self, target, type, "SetMember")) {
                 return;
             }
@@ -127,18 +127,18 @@ namespace Microsoft.Scripting.Actions {
                     case TrackerTypes.Constructor:
                         memInfo.Body.FinishCondition(
                             MakeError(MakeReadOnlyMemberError(type, memInfo.Name))
-                        );                         
+                        );
                         break;
                     case TrackerTypes.Event:
                         memInfo.Body.FinishCondition(
                             MakeError(MakeEventValidation(members, self, target.Expression, memInfo.CodeContext))
                         );
                         break;
-                    case TrackerTypes.Field: 
-                        MakeFieldRule(memInfo, self, target, type, members); 
+                    case TrackerTypes.Field:
+                        MakeFieldRule(memInfo, self, target, type, members);
                         break;
                     case TrackerTypes.Property:
-                        MakePropertyRule(memInfo, self, target, type, members); 
+                        MakePropertyRule(memInfo, self, target, type, members);
                         break;
                     case TrackerTypes.Custom:
                         MakeGenericBody(memInfo, self, target, type, members[0]);
@@ -151,7 +151,7 @@ namespace Microsoft.Scripting.Actions {
 
                         memInfo.Body.FinishCondition(
                             MakeError(MakeMissingMemberError(type, memInfo.Name))
-                        ); 
+                        );
                         break;
                     default:
                         throw new InvalidOperationException();
@@ -161,7 +161,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private void MakeGenericBody(SetOrDeleteMemberInfo/*!*/ memInfo, Expression instance, MetaObject/*!*/ target, Type/*!*/ type, MemberTracker/*!*/ tracker) {
+        private void MakeGenericBody(SetOrDeleteMemberInfo memInfo, Expression instance, MetaObject target, Type type, MemberTracker tracker) {
             if (instance != null) {
                 tracker = tracker.BindToInstance(instance);
             }
@@ -177,7 +177,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private void MakePropertyRule(SetOrDeleteMemberInfo/*!*/ memInfo, Expression instance, MetaObject/*!*/ target, Type/*!*/ targetType, MemberGroup/*!*/ properties) {
+        private void MakePropertyRule(SetOrDeleteMemberInfo memInfo, Expression instance, MetaObject target, Type targetType, MemberGroup properties) {
             PropertyTracker info = (PropertyTracker)properties[0];
 
             MethodInfo setter = info.GetSetMethod(true);
@@ -196,8 +196,8 @@ namespace Microsoft.Scripting.Actions {
                     memInfo.Body.FinishCondition(
                         MakeError(
                             MakeStaticPropertyInstanceAccessError(
-                                info, 
-                                true, 
+                                info,
+                                true,
                                 instance,
                                 target.Expression
                             )
@@ -224,12 +224,12 @@ namespace Microsoft.Scripting.Actions {
                                     ConversionResultKind.ExplicitCast,
                                     memInfo.CodeContext
                                 )
-                            )                            
+                            )
                         );
                     } else {
                         memInfo.Body.FinishCondition(
                             MakeReturnValue(
-                                MakeCallExpression(memInfo.CodeContext, setter, instance, target.Expression), 
+                                MakeCallExpression(memInfo.CodeContext, setter, instance, target.Expression),
                                 target
                             )
                         );
@@ -246,7 +246,7 @@ namespace Microsoft.Scripting.Actions {
                                 Ast.NewArrayInit(typeof(object))
                             ),
                             target
-                        )                        
+                        )
                     );
                 }
             } else {
@@ -258,7 +258,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private void MakeFieldRule(SetOrDeleteMemberInfo/*!*/ memInfo, Expression instance, MetaObject/*!*/ target, Type/*!*/ targetType, MemberGroup/*!*/ fields) {
+        private void MakeFieldRule(SetOrDeleteMemberInfo memInfo, Expression instance, MetaObject target, Type targetType, MemberGroup fields) {
             FieldTracker field = (FieldTracker)fields[0];
 
             // TODO: Tmp variable for target
@@ -291,7 +291,7 @@ namespace Microsoft.Scripting.Actions {
                 memInfo.Body.FinishCondition(
                     Ast.Throw(
                         Ast.New(
-                            typeof(ArgumentException).GetConstructor(new Type[] { typeof(string) }), 
+                            typeof(ArgumentException).GetConstructor(new Type[] { typeof(string) }),
                             Ast.Constant("cannot assign to value types")
                         )
                     )
@@ -321,12 +321,12 @@ namespace Microsoft.Scripting.Actions {
                             Ast.ConvertHelper(target.Expression, typeof(object))
                         ),
                         target
-                    )                    
+                    )
                 );
             }
         }
 
-        private Expression/*!*/ MakeReturnValue(Expression/*!*/ expression, MetaObject/*!*/ target) {
+        private Expression MakeReturnValue(Expression expression, MetaObject target) {
             return Ast.Comma(
                 expression,
                 target.Expression
@@ -334,7 +334,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
-        private bool MakeOperatorSetMemberBody(SetOrDeleteMemberInfo/*!*/ memInfo, Expression self, MetaObject/*!*/ target, Type/*!*/ type, string/*!*/ name) {
+        private bool MakeOperatorSetMemberBody(SetOrDeleteMemberInfo memInfo, Expression self, MetaObject target, Type type, string name) {
             if (self != null) {
                 MethodInfo setMem = GetMethod(type, name);
                 if (setMem != null && setMem.IsSpecialName) {
@@ -361,7 +361,7 @@ namespace Microsoft.Scripting.Actions {
             return false;
         }
 
-        private static Expression/*!*/ MakeGenericPropertyExpression(SetOrDeleteMemberInfo/*!*/ memInfo) {
+        private static Expression MakeGenericPropertyExpression(SetOrDeleteMemberInfo memInfo) {
             return Ast.New(
                 typeof(MemberAccessException).GetConstructor(new Type[] { typeof(string) }),
                 Ast.Constant(memInfo.Name)

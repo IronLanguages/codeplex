@@ -82,7 +82,7 @@ namespace System.Scripting.Utils {
         /// </summary>
         /// <exception cref="InvalidOperationException">Stack has been modified during enumeration.</exception>
         [Pure]
-        public IEnumerator<T>/*!*/ GetEnumerator() {
+        public IEnumerator<T> GetEnumerator() {
             int version = _version;
             for (int i = _list.Count - 1; i >= 0; i--) {
                 yield return _list[i];
@@ -93,7 +93,7 @@ namespace System.Scripting.Utils {
         }
 
         [Pure]
-        IEnumerator/*!*/ IEnumerable.GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
     }

@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Actions {
         /// Builds a MetaObject for performing a member delete.  Supports all built-in .NET members, the OperatorMethod 
         /// DeleteMember, and StrongBox instances.
         /// </summary>
-        public MetaObject/*!*/ DeleteMember(string/*!*/ name, MetaObject/*!*/ target) {
+        public MetaObject DeleteMember(string name, MetaObject target) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(target, "target");
 
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public MetaObject/*!*/ DeleteMember(string/*!*/ name, MetaObject/*!*/ target, Expression/*!*/ codeContext) {
+        public MetaObject DeleteMember(string name, MetaObject target, Expression codeContext) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(target, "target");
 
@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private MetaObject/*!*/ MakeDeleteMemberTarget(SetOrDeleteMemberInfo/*!*/ delInfo, MetaObject/*!*/ target) {
+        private MetaObject MakeDeleteMemberTarget(SetOrDeleteMemberInfo delInfo, MetaObject target) {
             Type type = target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
@@ -94,7 +94,7 @@ namespace Microsoft.Scripting.Actions {
             return delInfo.Body.GetMetaObject(target);
         }
 
-        private static Type/*!*/ GetDeclaringMemberType(MemberGroup group) {
+        private static Type GetDeclaringMemberType(MemberGroup group) {
             Type t = typeof(object);
             foreach (MemberTracker mt in group) {
                 if (t.IsAssignableFrom(mt.DeclaringType)) {
@@ -104,14 +104,14 @@ namespace Microsoft.Scripting.Actions {
             return t;
         }
 
-        private void MakePropertyDeleteStatement(SetOrDeleteMemberInfo/*!*/ delInfo, Expression instance, MethodInfo/*!*/ delete) {
+        private void MakePropertyDeleteStatement(SetOrDeleteMemberInfo delInfo, Expression instance, MethodInfo delete) {
             delInfo.Body.FinishCondition(
                 MakeCallExpression(delInfo.CodeContext, delete, instance)
             );
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
-        private bool MakeOperatorDeleteMemberBody(SetOrDeleteMemberInfo/*!*/ delInfo, Expression instance, Type/*!*/ type, string/*!*/ name) {
+        private bool MakeOperatorDeleteMemberBody(SetOrDeleteMemberInfo delInfo, Expression instance, Type type, string name) {
             MethodInfo delMem = GetMethod(type, name);
 
             if (delMem != null && delMem.IsSpecialName) {
@@ -125,7 +125,7 @@ namespace Microsoft.Scripting.Actions {
                 } else {
                     delInfo.Body.FinishCondition(call);
                 }
-                
+
                 return delMem.ReturnType != typeof(bool);
             }
             return false;
@@ -135,11 +135,11 @@ namespace Microsoft.Scripting.Actions {
         /// Helper class for flowing information about the GetMember request.
         /// </summary>
         private sealed class SetOrDeleteMemberInfo {
-            public readonly string/*!*/ Name;
-            public readonly Expression/*!*/ CodeContext;
-            public readonly ConditionalBuilder/*!*/ Body = new ConditionalBuilder();
+            public readonly string Name;
+            public readonly Expression CodeContext;
+            public readonly ConditionalBuilder Body = new ConditionalBuilder();
 
-            public SetOrDeleteMemberInfo(string name, Expression/*!*/ codeContext) {
+            public SetOrDeleteMemberInfo(string name, Expression codeContext) {
                 Name = name;
                 CodeContext = codeContext;
             }

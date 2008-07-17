@@ -23,21 +23,21 @@ namespace System.Scripting {
     /// </summary>
     [Serializable]
     internal sealed class FileStreamContentProvider {
-        private readonly string/*!*/ _path;
-        private readonly PALHolder/*!*/ _pal;
+        private readonly string _path;
+        private readonly PALHolder _pal;
 
-        internal string/*!*/ Path {
+        internal string Path {
             get { return _path; }
         }
 
         #region Construction
 
-        internal FileStreamContentProvider(PlatformAdaptationLayer/*!*/ manager, string/*!*/ path) {
+        internal FileStreamContentProvider(PlatformAdaptationLayer manager, string path) {
             ContractUtils.RequiresNotNull(path, "path");
 
             _path = path;
             _pal = new PALHolder(manager);
-        }        
+        }
 
         #endregion
 
@@ -46,15 +46,15 @@ namespace System.Scripting {
         }
 
         [Serializable]
-        private class PALHolder 
+        private class PALHolder
 #if !SILVERLIGHT
-            : MarshalByRefObject 
+        : MarshalByRefObject
 #endif
         {
             [NonSerialized]
-            private readonly PlatformAdaptationLayer/*!*/ _pal;
+            private readonly PlatformAdaptationLayer _pal;
 
-            internal PALHolder(PlatformAdaptationLayer/*!*/ pal) {
+            internal PALHolder(PlatformAdaptationLayer pal) {
                 _pal = pal;
             }
 

@@ -15,8 +15,8 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System.Linq.Expressions;
 using System;
+using System.Linq.Expressions;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 
@@ -26,12 +26,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// Helper class for emitting calls via the MethodBinder.
     /// </summary>
     class MethodBinderContext {
-        private ActionBinder _actionBinder;
-        private RuleBuilder _rule;
+        private readonly ActionBinder _actionBinder;
+        private readonly Expression _context;
 
-        internal MethodBinderContext(ActionBinder actionBinder, RuleBuilder rule) {
+        internal MethodBinderContext(ActionBinder actionBinder, Expression context) {
             _actionBinder = actionBinder;
-            _rule = rule;
+            _context = context;
         }
 
         internal ActionBinder Binder {
@@ -40,19 +40,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
-        internal RuleBuilder Rule {
-            get {
-                return _rule;
-            }
-        }
-
         internal Expression ConvertExpression(Expression expr, Type type) {
-            return _actionBinder.ConvertExpression(expr, type, ConversionResultKind.ExplicitCast, _rule.Context);
+            return _actionBinder.ConvertExpression(expr, type, ConversionResultKind.ExplicitCast, _context);
         }
 
-        internal VariableExpression GetTemporary(Type type, string name) {            
-            return _rule.GetTemporary(type, name);
-        }
+        //internal VariableExpression GetTemporary(Type type, string name) {            
+        //    return _rule.GetTemporary(type, name);
+        //}
 
         internal bool CanConvert(Type fromType, Type toType, NarrowingLevel level) {
             return _actionBinder.CanConvertFrom(fromType, toType, level);

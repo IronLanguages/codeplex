@@ -320,7 +320,7 @@ namespace System.Scripting.Generation {
             cg.Emit(OpCodes.Ret);
         }
 
-        private ILGen/*!*/ MakeRawKeysMethod() {
+        private ILGen MakeRawKeysMethod() {
             FieldBuilder rawKeysCache = _typeGen.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
             ILGen init = _typeGen.TypeInitializer;
 

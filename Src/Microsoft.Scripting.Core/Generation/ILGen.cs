@@ -544,7 +544,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(name, "name");
 
             PropertyInfo pi = type.GetProperty(name);
-            ContractUtils.Requires(pi != null, "name", "Property doesn't exist on the provided type");
+            ContractUtils.Requires(pi != null, "name", Strings.PropertyDoesNotExist);
 
             EmitPropertyGet(pi);
         }
@@ -553,7 +553,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(pi, "pi");
 
             if (!pi.CanRead) {
-                throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantReadProperty));
+                throw Error.CantReadProperty();
             }
 
             EmitCall(pi.GetGetMethod());
@@ -564,7 +564,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(name, "name");
 
             PropertyInfo pi = type.GetProperty(name);
-            ContractUtils.Requires(pi != null, "name", "Property doesn't exist on the provided type");
+            ContractUtils.Requires(pi != null, "name", Strings.PropertyDoesNotExist);
 
             EmitPropertySet(pi);
         }
@@ -573,7 +573,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(pi, "pi");
 
             if (!pi.CanWrite) {
-                throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantWriteProperty));
+                throw Error.CantWriteProperty();
             }
 
             EmitCall(pi.GetSetMethod());
@@ -594,7 +594,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(name, "name");
 
             FieldInfo fi = type.GetField(name);
-            ContractUtils.Requires(fi != null, "name", "Field doesn't exist on provided type");
+            ContractUtils.Requires(fi != null, "name", Strings.FieldDoesNotExist);
             EmitFieldGet(fi);
         }
 
@@ -603,7 +603,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(name, "name");
 
             FieldInfo fi = type.GetField(name);
-            ContractUtils.Requires(fi != null, "name", "Field doesn't exist on provided type");
+            ContractUtils.Requires(fi != null, "name", Strings.FieldDoesNotExist);
             EmitFieldSet(fi);
         }
 
@@ -632,7 +632,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(ci, "ci");
 
             if (ci.DeclaringType.ContainsGenericParameters) {
-                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.IllegalNew_GenericParams, ci.DeclaringType));
+                throw Error.IllegalNew_GenericParams(ci.DeclaringType);
             }
 
             Emit(OpCodes.Newobj, ci);
@@ -644,7 +644,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(paramTypes, "paramTypes");
 
             ConstructorInfo ci = type.GetConstructor(paramTypes);
-            ContractUtils.Requires(ci != null, "type", "Type doesn't have constructor with a given signature");
+            ContractUtils.Requires(ci != null, "type", Strings.TypeDoesNotHaveConstructorForTheSignature);
             EmitNew(ci);
         }
 
@@ -663,7 +663,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(name, "name");
 
             MethodInfo mi = type.GetMethod(name);
-            ContractUtils.Requires(mi != null, "type", "Type doesn't have a method with a given name.");
+            ContractUtils.Requires(mi != null, "type", Strings.TypeDoesNotHaveMethodForName);
 
             EmitCall(mi);
         }
@@ -674,7 +674,7 @@ namespace System.Scripting.Generation {
             ContractUtils.RequiresNotNull(paramTypes, "paramTypes");
 
             MethodInfo mi = type.GetMethod(name, paramTypes);
-            ContractUtils.Requires(mi != null, "type", "Type doesn't have a method with a given name and signature.");
+            ContractUtils.Requires(mi != null, "type", Strings.TypeDoesNotHaveMethodForNameSignature);
 
             EmitCall(mi);
         }
@@ -1447,7 +1447,7 @@ namespace System.Scripting.Generation {
         public void EmitArray(Type elementType, int count, EmitArrayHelper emit) {
             ContractUtils.RequiresNotNull(elementType, "elementType");
             ContractUtils.RequiresNotNull(emit, "emit");
-            ContractUtils.Requires(count >= 0, "count", "Count must be non-negative.");
+            ContractUtils.Requires(count >= 0, "count", Strings.CountCannotBeNegative);
 
             EmitInt(count);
             Emit(OpCodes.Newarr, elementType);
@@ -1468,7 +1468,7 @@ namespace System.Scripting.Generation {
         /// </summary>
         public void EmitArray(Type arrayType) {
             ContractUtils.RequiresNotNull(arrayType, "arrayType");
-            ContractUtils.Requires(arrayType.IsArray, "arrayType", "arrayType must be an array type");
+            ContractUtils.Requires(arrayType.IsArray, "arrayType", Strings.ArrayTypeMustBeArray);
 
             int rank = arrayType.GetArrayRank();
             if (rank == 1) {

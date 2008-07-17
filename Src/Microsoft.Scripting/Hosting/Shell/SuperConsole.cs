@@ -209,7 +209,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// </summary>
         private CommandLine _commandLine;
 
-        public SuperConsole(CommandLine/*!*/ commandLine, bool colorful)
+        public SuperConsole(CommandLine commandLine, bool colorful)
             : base(colorful) {
             ContractUtils.RequiresNotNull(commandLine, "commandLine");
             _commandLine = commandLine;
@@ -609,7 +609,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
     }
 #else
     public sealed class SuperConsole : BasicConsole {
-        public SuperConsole(CommandLine/*!*/ commandLine, bool isColorful)
+        public SuperConsole(CommandLine  commandLine, bool isColorful)
             : base(isColorful) {
         }
     }

@@ -152,7 +152,7 @@ namespace System.Linq.Expressions {
         }
 
         public static IndexedPropertyExpression Property(Expression instance, MethodInfo getter, MethodInfo setter, IEnumerable<Expression> arguments, Annotations annotations) {
-            ContractUtils.Requires(!(getter == null && setter == null), "getter", "No getter or setter specified");
+            ContractUtils.Requires(!(getter == null && setter == null), "getter", Strings.NoGetterSetter);
 
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
 
@@ -172,27 +172,27 @@ namespace System.Linq.Expressions {
 
             if (setter != null) {
                 ParameterInfo[] setParameters = setter.GetParameters();
-                ContractUtils.Requires(setParameters.Length > 0, "setter", "Setter must have parameters.");
+                ContractUtils.Requires(setParameters.Length > 0, "setter", Strings.SetterHasNoParams);
 
                 // valueType is the type of the value passed to the setter (last parameter)
                 Type valueType = setParameters[setParameters.Length - 1].ParameterType;
-                ContractUtils.Requires(!valueType.IsByRef, "setter", "Property cannot have a managed pointer type.");
+                ContractUtils.Requires(!valueType.IsByRef, "setter", Strings.PropertyCannotHaveRefType);
 
                 if (getter != null) {
-                    ContractUtils.Requires(setter.ReturnType == typeof(void), "Setter should have void type.");
-                    ContractUtils.Requires(propertyType == valueType, "Property type must match the value type of setter");
-                    ContractUtils.Requires(!(getter.IsStatic ^ setter.IsStatic), "Both accessors must be static.");
-                    ContractUtils.Requires(getParameters.Length == setParameters.Length - 1, "getter", "Indexing parameters of getter and setter must match.");
+                    ContractUtils.Requires(setter.ReturnType == typeof(void), "setter", Strings.SetterMustBeVoid);
+                    ContractUtils.Requires(propertyType == valueType, "setter", Strings.PropertyTyepMustMatchSetter);
+                    ContractUtils.Requires(!(getter.IsStatic ^ setter.IsStatic), "getter", Strings.BothAccessorsMustBeStatic);
+                    ContractUtils.Requires(getParameters.Length == setParameters.Length - 1, "getter", Strings.IndexesOfSetGetMustMatch);
 
                     for (int i = 0; i < getParameters.Length; i++) {
-                        ContractUtils.Requires(getParameters[i].ParameterType == setParameters[i].ParameterType, "getter", "Indexing parameters of getter and setter must match.");
+                        ContractUtils.Requires(getParameters[i].ParameterType == setParameters[i].ParameterType, "getter", Strings.IndexesOfSetGetMustMatch);
                     }
                 } else {
                     propertyType = valueType;
                     ValidateAccessor(instance, setter, ArrayUtils.RemoveLast(setParameters), ref argList);
                 }
             }
-            ContractUtils.Requires(propertyType != typeof(void), "Property cannot have a void type.");
+            ContractUtils.Requires(propertyType != typeof(void), getter != null ? "getter" : "setter", Strings.PropertyTypeCannotBeVoid);
             return new IndexedPropertyExpression(annotations, instance, getter, setter, argList, propertyType, null);
         }
 
@@ -200,7 +200,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(arguments, "arguments");
 
             ValidateMethodInfo(method);
-            ContractUtils.Requires((method.CallingConvention & CallingConventions.VarArgs) == 0, "method", "Accessor method should not have VarArgs.");
+            ContractUtils.Requires((method.CallingConvention & CallingConventions.VarArgs) == 0, "method", Strings.AccessorsCannotHaveVarArgs);
             if (!method.IsStatic) {
                 ContractUtils.RequiresNotNull(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
@@ -221,7 +221,7 @@ namespace System.Linq.Expressions {
                     ContractUtils.RequiresNotNull(arg, "arguments");
 
                     Type pType = pi.ParameterType;
-                    ContractUtils.Requires(!pType.IsByRef, "indexes", "Accessor indexes cannot be passed ByRef.");
+                    ContractUtils.Requires(!pType.IsByRef, "indexes", Strings.AccessorsCannotHaveByRefArgs);
                     TypeUtils.ValidateType(pType);
 
                     if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {

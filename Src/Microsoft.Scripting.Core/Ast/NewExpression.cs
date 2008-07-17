@@ -24,10 +24,10 @@ namespace System.Linq.Expressions {
     //CONFORMING
     public sealed class NewExpression : Expression {
         private readonly ConstructorInfo _constructor;
-        private readonly ReadOnlyCollection<Expression>/*!*/ _arguments;
+        private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly ReadOnlyCollection<MemberInfo> _members;
 
-        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression>/*!*/ arguments, CallSiteBinder bindingInfo)
+        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, CallSiteBinder bindingInfo)
             : base(annotations, ExpressionType.New, type, bindingInfo) {
             if (IsBound) {
                 RequiresBoundItems(arguments, "arguments");
@@ -36,7 +36,7 @@ namespace System.Linq.Expressions {
             _arguments = arguments;
         }
 
-        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression>/*!*/ arguments, CallSiteBinder bindingInfo, ReadOnlyCollection<MemberInfo> members)
+        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, CallSiteBinder bindingInfo, ReadOnlyCollection<MemberInfo> members)
             : this(annotations, type, constructor, arguments, bindingInfo) {
 
             _members = members;
@@ -46,7 +46,7 @@ namespace System.Linq.Expressions {
             get { return _constructor; }
         }
 
-        public ReadOnlyCollection<Expression>/*!*/ Arguments {
+        public ReadOnlyCollection<Expression> Arguments {
             get { return _arguments; }
         }
 
@@ -106,17 +106,17 @@ namespace System.Linq.Expressions {
     /// </summary>
     public partial class Expression {
         //CONFORMING
-        public static NewExpression New(ConstructorInfo/*!*/ constructor) {
+        public static NewExpression New(ConstructorInfo constructor) {
             return New(constructor, (IEnumerable<Expression>)null);
         }
-        
+
         //CONFORMING
-        public static NewExpression New(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {
+        public static NewExpression New(ConstructorInfo constructor, params Expression[] arguments) {
             return New(constructor, (IEnumerable<Expression>)arguments);
         }
 
         //CONFORMING
-        public static NewExpression New(ConstructorInfo/*!*/ constructor, IEnumerable<Expression/*!*/>/*!*/ arguments) {
+        public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor.DeclaringType, constructor, ref argList);
@@ -219,7 +219,7 @@ namespace System.Linq.Expressions {
         private static void ValidateNewArgs(Type type, ConstructorInfo constructor, ref ReadOnlyCollection<Expression> arguments) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(constructor, "constructor");
-            
+
             TypeUtils.ValidateType(type);
 
             ParameterInfo[] pis;
@@ -292,25 +292,25 @@ namespace System.Linq.Expressions {
                     throw Error.ArgumentMustBeFieldInfoOrPropertInfoOrMethod();
             }
         }
-        
 
 
-        public static NewExpression New(Type result, CallSiteBinder bindingInfo, params Expression/*!*/[]/*!*/ arguments) {
+
+        public static NewExpression New(Type result, CallSiteBinder bindingInfo, params Expression[] arguments) {
             return New(result, bindingInfo, (IList<Expression>)arguments);
         }
 
-        public static NewExpression New(Type result, CallSiteBinder bindingInfo, IList<Expression/*!*/>/*!*/ arguments) {
+        public static NewExpression New(Type result, CallSiteBinder bindingInfo, IList<Expression> arguments) {
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
             return new NewExpression(Annotations.Empty, result, null, arguments.ToReadOnly(), bindingInfo);
         }
 
-        public static NewExpression SimpleNewHelper(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {
+        public static NewExpression SimpleNewHelper(ConstructorInfo constructor, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
 
             ParameterInfo[] parameters = constructor.GetParameters();
-            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", "Incorrect number of arguments");
+            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", Strings.IncorrectArgNumber);
 
             return New(constructor, ArgumentConvertHelper(arguments, parameters));
         }

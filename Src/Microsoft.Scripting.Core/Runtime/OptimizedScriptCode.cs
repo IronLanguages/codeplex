@@ -30,12 +30,12 @@ namespace System.Scripting.Runtime {
         private Scope _optimizedScope;
         private DlrMainCallTarget _optimizedTarget;
 
-        public OptimizedScriptCode(LambdaExpression/*!*/ code, SourceUnit/*!*/ sourceUnit)
+        public OptimizedScriptCode(LambdaExpression code, SourceUnit sourceUnit)
             : base(code, null, sourceUnit) {
             Debug.Assert(code.Parameters.Count == 0, "GlobalRewritter shouldn't have been applied yet");
         }
 
-        public OptimizedScriptCode(Scope/*!*/ optimizedScope, DlrMainCallTarget/*!*/ optimizedTarget, SourceUnit/*!*/ sourceUnit)
+        public OptimizedScriptCode(Scope optimizedScope, DlrMainCallTarget optimizedTarget, SourceUnit sourceUnit)
             : base(null, optimizedTarget, sourceUnit) {
             ContractUtils.RequiresNotNull(optimizedScope, "optimizedScope");
 
@@ -43,7 +43,7 @@ namespace System.Scripting.Runtime {
             _optimizedTarget = optimizedTarget;
         }
 
-        public override Scope/*!*/ CreateScope() {
+        public override Scope CreateScope() {
             return MakeOptimizedScope();
         }
 
@@ -51,9 +51,9 @@ namespace System.Scripting.Runtime {
             MakeOptimizedScope();
         }
 
-        private Scope/*!*/ MakeOptimizedScope() {
+        private Scope MakeOptimizedScope() {
             Debug.Assert((_optimizedTarget == null) == (_optimizedScope == null));
-            
+
             if (_optimizedScope != null) {
                 return _optimizedScope;
             }
@@ -61,13 +61,13 @@ namespace System.Scripting.Runtime {
             return CompileOptimizedScope();
         }
 
-        protected override object InvokeTarget(LambdaExpression/*!*/ code, Scope/*!*/ scope) {
+        protected override object InvokeTarget(LambdaExpression code, Scope scope) {
             if (scope == _optimizedScope) {
                 return _optimizedTarget(scope, LanguageContext);
             } else {
                 // TODO: fix generated DLR ASTs
                 code = new GlobalLookupRewriter().RewriteLambda(code);
-                
+
                 return base.InvokeTarget(code, scope);
             }
         }
@@ -95,7 +95,7 @@ namespace System.Scripting.Runtime {
             return scope;
         }
 
-        private bool UseLightweightScopes {        
+        private bool UseLightweightScopes {
             get {
 
                 if (LanguageContext.DomainManager.GlobalOptions.LightweightScopes) {
@@ -146,7 +146,7 @@ namespace System.Scripting.Runtime {
 
             // Compile lambda
             LambdaCompiler.CompileLambda(rewriter.RewriteLambda(Code), typeGen, mb, SourceUnit.EmitDebugSymbols);
-            
+
             // Create globals dictionary, finish type
             rewriter.EmitDictionary();
             Type type = typeGen.FinishType();
@@ -159,7 +159,7 @@ namespace System.Scripting.Runtime {
             DynamicSiteHelpers.InitializeFields(type);
         }
 
-        protected override LambdaExpression/*!*/ PrepareCodeForSave(MethodBuilder/*!*/ builder) {
+        protected override LambdaExpression PrepareCodeForSave(MethodBuilder builder) {
             ToDiskRewriter diskRewriter = new ToDiskRewriter();
             LambdaExpression lambda = diskRewriter.RewriteLambda(Code);
 
@@ -171,13 +171,13 @@ namespace System.Scripting.Runtime {
             return lambda;
         }
 
-        public static OptimizedScriptCode TryLoad(MethodInfo/*!*/ method, LanguageContext/*!*/ language) {
+        public static OptimizedScriptCode TryLoad(MethodInfo method, LanguageContext language) {
             ContractUtils.RequiresNotNull(method, "method");
             object[] attrs = method.GetCustomAttributes(typeof(CachedOptimizedCodeAttribute), false);
             if (attrs.Length != 1) {
                 return null;
             }
-             
+
             // create the CompilerContext for the ScriptCode
             CachedOptimizedCodeAttribute optimizedCode = (CachedOptimizedCodeAttribute)attrs[0];
 
@@ -198,9 +198,9 @@ namespace System.Scripting.Runtime {
             SourceUnit su = new SourceUnit(language, NullTextContentProvider.Null, method.Name, SourceCodeKind.File);
             return new OptimizedScriptCode(scope, (DlrMainCallTarget)Delegate.CreateDelegate(typeof(DlrMainCallTarget), method), su);
         }
-        
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        private string/*!*/ MakeDebugName() {
+        private string MakeDebugName() {
 #if DEBUG
             if (SourceUnit != null && SourceUnit.HasPath) {
                 return "OptScope_" + ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(SourceUnit.Path)));

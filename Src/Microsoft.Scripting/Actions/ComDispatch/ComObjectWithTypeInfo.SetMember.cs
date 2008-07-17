@@ -17,8 +17,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
@@ -31,8 +31,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             private readonly Type _comType;
 
-            internal SetMemberBinder(CodeContext context, Type comType, OldSetMemberAction action, object[] args)
-                : base(context, action, args) {
+            internal SetMemberBinder(CodeContext context, Type comType, OldSetMemberAction action)
+                : base(context, action) {
 
                 _comType = comType;
             }

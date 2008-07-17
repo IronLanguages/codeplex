@@ -19,11 +19,11 @@ using System.Text;
 namespace System.Linq.Expressions {
     //CONFORMING
     public sealed class ConditionalExpression : Expression {
-        private readonly Expression/*!*/ _test;
-        private readonly Expression/*!*/ _true;
-        private readonly Expression/*!*/ _false;
+        private readonly Expression _test;
+        private readonly Expression _true;
+        private readonly Expression _false;
 
-        internal ConditionalExpression(Annotations annotations, Expression/*!*/ test, Expression/*!*/ ifTrue, Expression/*!*/ ifFalse, Type/*!*/ type)
+        internal ConditionalExpression(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse, Type type)
             : base(annotations, ExpressionType.Conditional, type) {
             _test = test;
             _true = ifTrue;
@@ -69,7 +69,7 @@ namespace System.Linq.Expressions {
             if (test.Type != typeof(bool))
                 throw Error.ArgumentMustBeBoolean();
 
-            if (ifTrue.Type != ifFalse.Type){
+            if (ifTrue.Type != ifFalse.Type) {
                 throw Error.ArgumentTypesMustMatch();
             }
 

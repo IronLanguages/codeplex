@@ -111,7 +111,6 @@
     <Compile Include="Actions\ComDispatch\ArgBuilder.cs" />
     <Compile Include="Actions\ComDispatch\BoundDispEvent.cs" />
     <Compile Include="Actions\ComDispatch\ComBinderHelper.cs" />
-    <Compile Include="Actions\ComDispatch\ComCallBinderHelper.cs" />
     <Compile Include="Actions\ComDispatch\ComDispIds.cs" />
     <Compile Include="Actions\ComDispatch\ComEventDesc.cs" />
     <Compile Include="Actions\ComDispatch\ComEventSink.cs" />
@@ -136,7 +135,7 @@
     <Compile Include="Actions\ComDispatch\ComTypeLibDesc.cs" />
     <Compile Include="Actions\ComDispatch\ComTypeLibInfo.cs" />
     <Compile Include="Actions\ComDispatch\ComTypeLibMemberDesc.cs" />
-    <Compile Include="Actions\ComDispatch\DispCallable.CallBinder.cs" />
+    <Compile Include="Actions\ComDispatch\InvokeBinder.cs" />
     <Compile Include="Actions\ComDispatch\DispCallable.cs" />
     <Compile Include="Actions\ComDispatch\DispMethod.cs" />
     <Compile Include="Actions\ComDispatch\DispPropertyGet.cs" />
@@ -180,6 +179,7 @@
     <Compile Include="Actions\DefaultBinder.GetMember.cs" />
     <Compile Include="Actions\DefaultBinder.SetMember.cs" />
     <Compile Include="Actions\DefaultBinder.Operations.cs" />
+    <Compile Include="Ast\SwitchBuilder.cs" />
     <Compile Include="Generation\Dynamic.cs" />
     <Compile Include="Actions\DefaultBinder.MethodCalls.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
@@ -201,8 +201,6 @@
     <Compile Include="Ast\LoopStatement.cs" />
     <Compile Include="Ast\MethodCallExpression.cs" />
     <Compile Include="Ast\ReturnStatement.cs" />
-    <Compile Include="Ast\SwitchStatement.cs" />
-    <Compile Include="Ast\SwitchStatementBuilder.cs" />
     <Compile Include="Ast\ThrowStatement.cs" />
     <Compile Include="Ast\TryStatementBuilder.cs" />
     <Compile Include="Ast\YieldStatement.cs" />
@@ -251,6 +249,7 @@
     <Compile Include="Hosting\ScriptRuntimeSetup.cs" />
     <Compile Include="Hosting\ScriptScope.cs" />
     <Compile Include="Hosting\ScriptSource.cs" />
+    <Compile Include="Hosting\ScriptSourceReader.cs" />
     <Compile Include="Hosting\Shell\BasicConsole.cs" />
     <Compile Include="Hosting\Shell\CommandLine.cs" />
     <Compile Include="Hosting\Shell\ConsoleHost.cs" />

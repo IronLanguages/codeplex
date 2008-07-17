@@ -107,8 +107,7 @@ namespace System.Scripting.Com {
         }
 
         internal static string GetNameOfMethod(ComTypes.ITypeInfo typeInfo, int memid, string prefix) {
-            string name = GetNameOfMethod(typeInfo, memid);
-            return prefix + name;
+            return prefix + GetNameOfMethod(typeInfo, memid);
         }
 
         internal static string GetNameOfLib(ComTypes.ITypeLib typeLib) {
@@ -420,10 +419,10 @@ namespace System.Scripting.Com {
 
             private static MethodInfo Create_ConvertByrefToPtr() {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
-                TypeGen type = Snippets.Shared.DefineUnsafeTypeGen("Type$ConvertByrefToPtr", typeof(object));
+                TypeBuilder type = Snippets.Shared.DefineUnsafeType("Type$ConvertByrefToPtr", typeof(object));
 
                 Type[] paramTypes = new Type[] { typeof(Variant).MakeByRefType() };
-                MethodBuilder mb = type.TypeBuilder.DefineMethod("ConvertByrefToPtr", MethodAttributes.Public | MethodAttributes.Static, typeof(IntPtr), paramTypes);
+                MethodBuilder mb = type.DefineMethod("ConvertByrefToPtr", MethodAttributes.Public | MethodAttributes.Static, typeof(IntPtr), paramTypes);
                 GenericTypeParameterBuilder[] typeParams = mb.DefineGenericParameters("T");
                 typeParams[0].SetGenericParameterAttributes(GenericParameterAttributes.NotNullableValueTypeConstraint);
                 mb.SetSignature(typeof(IntPtr), null, null, new Type[] { typeParams[0].MakeByRefType() }, null, null);
@@ -438,7 +437,7 @@ namespace System.Scripting.Com {
 #endif
                 method.Emit(OpCodes.Ret);
 
-                return type.TypeBuilder.CreateType().GetMethod("ConvertByrefToPtr");
+                return type.CreateType().GetMethod("ConvertByrefToPtr");
             }
 
             /// <summary>
@@ -451,8 +450,8 @@ namespace System.Scripting.Com {
 
             private static IUnknownReleaseDelegate Create_IUnknownRelease() {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
-                TypeGen type = Snippets.Shared.DefineUnsafeTypeGen("Type$IUnknownRelease", typeof(object));
-                MethodBuilder mb = type.TypeBuilder.DefineMethod("IUnknownRelease", MethodAttributes.Public | MethodAttributes.Static, typeof(int), new Type[] { typeof(IntPtr) });
+                TypeBuilder type = Snippets.Shared.DefineUnsafeType("Type$IUnknownRelease", typeof(object));
+                MethodBuilder mb = type.DefineMethod("IUnknownRelease", MethodAttributes.Public | MethodAttributes.Static, typeof(int), new Type[] { typeof(IntPtr) });
 
                 ILGenerator method = mb.GetILGenerator();
 
@@ -478,7 +477,7 @@ namespace System.Scripting.Com {
 
                 method.Emit(OpCodes.Ret);
 
-                Type newType = type.FinishType();
+                Type newType = type.CreateType();
                 return (IUnknownReleaseDelegate)Delegate.CreateDelegate(typeof(IUnknownReleaseDelegate), newType.GetMethod("IUnknownRelease"));
             }
 
@@ -545,17 +544,17 @@ namespace System.Scripting.Com {
                 paramTypes[argErrIndex] = typeof(uint).MakeByRefType();
 
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
-                TypeGen type = Snippets.Shared.DefineUnsafeTypeGen("Type$IDispatchInvoke", typeof(object));
-                MethodBuilder mb = type.TypeBuilder.DefineMethod("IDispatchInvoke", MethodAttributes.Public | MethodAttributes.Static, typeof(int), paramTypes);
+                TypeBuilder type = Snippets.Shared.DefineUnsafeType("Type$IDispatchInvoke", typeof(object));
+                MethodBuilder mb = type.DefineMethod("IDispatchInvoke", MethodAttributes.Public | MethodAttributes.Static, typeof(int), paramTypes);
 
-                ILGen method = new ILGen(mb.GetILGenerator(), type);
+                ILGenerator method = mb.GetILGenerator();
 
                 LocalBuilder functionPtr = method.DeclareLocal(typeof(IntPtr));
 
                 // functionPtr = *(IntPtr*)(*(dispatchPointer) + VTABLE_OFFSET)
 
                 int idispatchInvokeOffset = ((int)IDispatchMethodIndices.IDispatch_Invoke) * Marshal.SizeOf(typeof(IntPtr));
-                method.EmitLoadArg(dispatchPointerIndex);
+                EmitLoadArg(method, dispatchPointerIndex);
                 method.Emit(OpCodes.Ldind_I);
                 method.Emit(OpCodes.Ldc_I4, idispatchInvokeOffset);
                 method.Emit(OpCodes.Add);
@@ -564,19 +563,19 @@ namespace System.Scripting.Com {
 
                 // return functionPtr(...)
 
-                method.EmitLoadArg(dispatchPointerIndex);
-                method.EmitLoadArg(memberDispIdIndex);
+                EmitLoadArg(method, dispatchPointerIndex);
+                EmitLoadArg(method, memberDispIdIndex);
                 method.Emit(OpCodes.Ldsfld, typeof(ComRuntimeHelpers.UnsafeMethods).GetField("NullInterfaceId")); // riid
                 method.Emit(OpCodes.Ldc_I4_0); // lcid
-                method.EmitLoadArg(flagsIndex);
-                method.EmitLoadArg(dispParamsIndex);
+                EmitLoadArg(method, flagsIndex);
+                EmitLoadArg(method, dispParamsIndex);
                 if (returnResult) {
-                    method.EmitLoadArg(resultIndex);
+                    EmitLoadArg(method, resultIndex);
                 } else {
                     method.Emit(OpCodes.Ldsfld, typeof(IntPtr).GetField("Zero"));
                 }
-                method.EmitLoadArg(exceptInfoIndex);
-                method.EmitLoadArg(argErrIndex);
+                EmitLoadArg(method, exceptInfoIndex);
+                EmitLoadArg(method, argErrIndex);
                 method.Emit(OpCodes.Ldloc, functionPtr);
                 SignatureHelper signature = SignatureHelper.GetMethodSigHelper(CallingConvention.Winapi, typeof(int));
                 Type[] invokeParamTypes = new Type[] { 
@@ -595,11 +594,37 @@ namespace System.Scripting.Com {
 
                 method.Emit(OpCodes.Ret);
 
-                Type newType = type.FinishType();
+                Type newType = type.CreateType();
                 return (IDispatchInvokeDelegate)Delegate.CreateDelegate(typeof(IDispatchInvokeDelegate), newType.GetMethod("IDispatchInvoke"));
             }
 
             #endregion
+        }
+
+        private static void EmitLoadArg(ILGenerator il, int index) {
+            ContractUtils.Requires(index >= 0, "index");
+
+            switch (index) {
+                case 0:
+                    il.Emit(OpCodes.Ldarg_0);
+                    break;
+                case 1:
+                    il.Emit(OpCodes.Ldarg_1);
+                    break;
+                case 2:
+                    il.Emit(OpCodes.Ldarg_2);
+                    break;
+                case 3:
+                    il.Emit(OpCodes.Ldarg_3);
+                    break;
+                default:
+                    if (index <= Byte.MaxValue) {
+                        il.Emit(OpCodes.Ldarg_S, (byte)index);
+                    } else {
+                        il.Emit(OpCodes.Ldarg, index);
+                    }
+                    break;
+            }
         }
 
         private static void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
@@ -669,6 +694,30 @@ namespace System.Scripting.Com {
                 // Unwrap the real (inner) exception and raise it
                 throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
             }
+        }
+
+        // TODO: Can be internal?
+        [Obsolete("Called only from generated code", true)]
+        public static BoundDispEvent CreateComEvent(object rcw, Guid sourceIid, int dispid) {
+            return new BoundDispEvent(rcw, sourceIid, dispid);
+        }
+
+        // TODO: Can be internal?
+        [Obsolete("Called only from generated code", true)]
+        public static DispPropertyGet CreatePropertyGet(IDispatchObject dispatch, ComMethodDesc method) {
+            return new DispPropertyGet(dispatch, method);
+        }
+
+        // TODO: Can be internal?
+        [Obsolete("Called only from generated code", true)]
+        public static DispPropertyPut CreatePropertyPut(IDispatchObject dispatch, ComMethodDesc method) {
+            return new DispPropertyPut(dispatch, method);
+        }
+
+        // TODO: Can be internal?
+        [Obsolete("Called only from generated code", true)]
+        public static DispMethod CreateMethod(IDispatchObject dispatch, ComMethodDesc method) {
+            return new DispMethod(dispatch, method);
         }
     }
 }

@@ -21,9 +21,9 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = System.Linq.Expressions.Expression;
 
     /// <summary>
     /// This allows passing a COM type by reference, given a StrongBox of the managed type.
@@ -32,7 +32,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// in the two worlds. ReferenceArgBuilder cannot be used as is in such cases
     /// </summary>
     internal sealed class ComReferenceArgBuilder : ReferenceArgBuilder {
-
         private VariableExpression _unmanagedTemp;
 
         internal ComReferenceArgBuilder(int index, Type parameterType)
@@ -42,23 +41,29 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             if (_unmanagedTemp == null) {
-                _unmanagedTemp = context.GetTemporary(typeof(IntPtr), "unmanagedOutParam");
+                _unmanagedTemp = Expression.Variable(typeof(IntPtr), "unmanagedOutParam");
             }
 
             // (_unmanagedTemp = Marshal.StringToBSTR(<string from underlying builder>)), &_unmanagedTemp
 
-            return Ast.Comma(
-                Ast.Assign(
+            return Expression.Comma(
+                Expression.Assign(
                     _unmanagedTemp,
-                    Ast.Call(
+                    Expression.Call(
                         typeof(Marshal).GetMethod("StringToBSTR"),
                         base.ToExpression(context, parameters))),
                 _unmanagedTemp);
         }
 
+        internal override VariableExpression[] TemporaryVariables {
+            get {
+                return ArrayUtils.Insert(_unmanagedTemp, base.TemporaryVariables);
+            }
+        }
+
         protected override Expression UpdatedValue() {
             // Marhsal.PtrToStringBSTR(_unmanagedTemp)
-            return Ast.Call(
+            return Expression.Call(
                 typeof(Marshal).GetMethod("PtrToStringBSTR"),
                 _unmanagedTemp);
         }
@@ -68,7 +73,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             Expression expr;
 
             // Marhsal.FreeBSTR(_unmanagedTemp)
-            expr = Ast.Call(
+            expr = Expression.Call(
                 typeof(Marshal).GetMethod("FreeBSTR"),
                 _unmanagedTemp
             );

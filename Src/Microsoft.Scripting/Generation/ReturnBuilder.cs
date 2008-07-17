@@ -22,16 +22,16 @@ using System.Scripting.Runtime;
 namespace Microsoft.Scripting.Generation {
 
     class ReturnBuilder {
-        private readonly Type/*!*/ _returnType;
+        private readonly Type _returnType;
 
         /// <summary>
         /// Creates a ReturnBuilder
         /// </summary>
         /// <param name="returnType">the type the ReturnBuilder will leave on the stack</param>
-        public ReturnBuilder(Type/*!*/ returnType) {
+        public ReturnBuilder(Type returnType) {
             Debug.Assert(returnType != null);
 
-            this._returnType = returnType; 
+            this._returnType = returnType;
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 0; }
         }
 
-        public Type/*!*/ ReturnType {
+        public Type ReturnType {
             get {
                 return _returnType;
             }

@@ -59,7 +59,7 @@ namespace System.Scripting {
             Dictionary<Categories, Dictionary<string, int>> result = new Dictionary<Categories, Dictionary<string, int>>();
             
             // We do not use Enum.GetValues here since it is n ot available in SILVERLIGHT 
-            for (int i = 0; i < (int)Categories.Count; i++) {
+            for (int i = 0; i <= (int)Categories.Count; i++) {
                 result[(Categories)i] = new Dictionary<string, int>();
             }
 

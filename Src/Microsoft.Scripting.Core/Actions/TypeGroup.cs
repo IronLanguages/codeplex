@@ -55,7 +55,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             StringBuilder repr = new StringBuilder(base.ToString());
             repr.Append(":" + NormalizedName + "(");
 
@@ -187,10 +187,10 @@ namespace System.Scripting.Actions {
         /// This returns the base name of the TypeGroup (the name shared by all types minus arity)
         /// </summary>
         public override string Name {
-            get { 
-                string name = AnyType().Name; 
+            get {
+                string name = AnyType().Name;
 
-                if(name.IndexOf(ReflectionUtils.GenericArityDelimiter) != -1) {
+                if (name.IndexOf(ReflectionUtils.GenericArityDelimiter) != -1) {
                     return name.Substring(0, name.LastIndexOf(ReflectionUtils.GenericArityDelimiter));
                 }
                 return name;

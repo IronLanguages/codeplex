@@ -16,7 +16,6 @@
 #if !SILVERLIGHT // ComObject
 
 namespace System.Scripting.Com {
-    // TODO: Can it be made internal?
     internal class ComEventDesc {
         internal Guid sourceIID;
         internal int dispid;

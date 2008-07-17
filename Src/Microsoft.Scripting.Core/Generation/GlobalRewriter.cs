@@ -38,7 +38,7 @@ namespace System.Scripting.Generation {
         private Expression _context;
 
         // Rewrite entry point
-        public LambdaExpression/*!*/ RewriteLambda(LambdaExpression/*!*/ lambda) {
+        public LambdaExpression RewriteLambda(LambdaExpression lambda) {
             Debug.Assert(_context == null);
             Debug.Assert(lambda.Parameters.Count == 0);
 
@@ -141,7 +141,7 @@ namespace System.Scripting.Runtime {
     public static partial class RuntimeHelpers {
         // emitted by GlobalRewriter
         // TODO: Python and JScript should do this
-        public static CodeContext/*!*/ CreateTopLevelCodeContext(Scope/*!*/ scope, LanguageContext/*!*/ context) {
+        public static CodeContext CreateTopLevelCodeContext(Scope scope, LanguageContext context) {
             context.EnsureScopeExtension(scope.ModuleScope);
             return new CodeContext(scope, context);
         }

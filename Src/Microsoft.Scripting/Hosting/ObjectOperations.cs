@@ -34,15 +34,15 @@ namespace Microsoft.Scripting.Hosting {
     /// engine.  However, very advanced hosts can create new instances.
     /// </summary>
     public sealed class ObjectOperations
-#if !SILVERLIGHT 
+#if !SILVERLIGHT
         : MarshalByRefObject
 #endif
         {
 
-        private readonly DynamicOperations/*!*/ _ops;
+        private readonly DynamicOperations _ops;
 
         // friend class: DynamicOperations
-        internal ObjectOperations(DynamicOperations/*!*/ ops) {
+        internal ObjectOperations(DynamicOperations ops) {
             Assert.NotNull(ops);
             _ops = ops;
         }
@@ -467,7 +467,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Adds the two remote objects.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public ObjectHandle Add(ObjectHandle self, ObjectHandle other) {            
+        public ObjectHandle Add(ObjectHandle self, ObjectHandle other) {
             return new ObjectHandle(Add(GetLocalObject(self), GetLocalObject(other)));
         }
 
@@ -623,7 +623,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Helper to unwrap multiple objects
         /// </summary>
-        private static object[] GetLocalObjects(ObjectHandle[]/*!*/ ohs) {
+        private static object[] GetLocalObjects(ObjectHandle[] ohs) {
             Debug.Assert(ohs != null);
 
             object[] res = new object[ohs.Length];

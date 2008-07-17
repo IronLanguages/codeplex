@@ -80,7 +80,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             StringBuilder text = new StringBuilder();
             text.Append(_returnType.ToString());
             text.Append("(");
@@ -99,10 +99,10 @@ namespace Microsoft.Scripting.Runtime {
             for (int i = 0; i < _parameters.Length; i++) {
                 delegateParams[i] = _parameters[i].ParameterType;
             }
-            
+
             // Create the method
             DynamicILGen cg = Snippets.Shared.CreateDynamicMethod(ToString(), _returnType, ArrayUtils.Insert(typeof(object[]), delegateParams), false);
-            
+
             // Emit the stub
             object[] constants = EmitClrCallStub(cg);
 

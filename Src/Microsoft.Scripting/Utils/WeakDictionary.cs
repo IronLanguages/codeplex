@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Contracts; 
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {
     /// <summary>
@@ -69,10 +69,10 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
-        public ICollection<TKey>/*!*/ Keys {
-            get { 
+        public ICollection<TKey> Keys {
+            get {
                 // TODO:
-                throw new NotImplementedException(); 
+                throw new NotImplementedException();
             }
         }
 
@@ -85,10 +85,10 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
-        public ICollection<TValue>/*!*/ Values {
-            get { 
+        public ICollection<TValue> Values {
+            get {
                 // TODO:
-                throw new NotImplementedException(); 
+                throw new NotImplementedException();
             }
         }
 
@@ -190,16 +190,16 @@ namespace Microsoft.Scripting.Utils {
             throw new NotImplementedException();
         }
 
-        public void CopyTo(KeyValuePair<TKey, TValue>[]/*!*/ array, int arrayIndex) {
+        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) {
             // TODO:
             throw new NotImplementedException();
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public int Count {
-            get { 
+            get {
                 // TODO:
-                throw new NotImplementedException(); 
+                throw new NotImplementedException();
             }
         }
 
@@ -213,7 +213,7 @@ namespace Microsoft.Scripting.Utils {
 
         public bool Remove(KeyValuePair<TKey, TValue> item) {
             // TODO:
-            throw new NotImplementedException(); 
+            throw new NotImplementedException();
         }
 
         #endregion
@@ -221,9 +221,9 @@ namespace Microsoft.Scripting.Utils {
         #region IEnumerable<KeyValuePair<TKey,TValue>> Members
 
         [Pure]
-        public IEnumerator<KeyValuePair<TKey, TValue>>/*!*/ GetEnumerator() {
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() {
             // TODO:
-            throw new NotImplementedException(); 
+            throw new NotImplementedException();
         }
 
         #endregion
@@ -231,9 +231,9 @@ namespace Microsoft.Scripting.Utils {
         #region IEnumerable Members
 
         [Pure]
-        System.Collections.IEnumerator/*!*/ System.Collections.IEnumerable.GetEnumerator() {
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
             // TODO:
-            throw new NotImplementedException(); 
+            throw new NotImplementedException();
         }
 
         #endregion

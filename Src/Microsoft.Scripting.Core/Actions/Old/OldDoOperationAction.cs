@@ -72,7 +72,7 @@ namespace System.Scripting.Actions {
 
         public bool IsUnary {
             get {
-                switch(_operation){ 
+                switch (_operation) {
                     case Operators.OnesComplement:
                     case Operators.Negate:
                     case Operators.Positive:
@@ -81,7 +81,7 @@ namespace System.Scripting.Actions {
 
                     // Added for COM support...
                     case Operators.Documentation:
-                        return true;                    
+                        return true;
                 }
                 return false;
             }
@@ -103,7 +103,7 @@ namespace System.Scripting.Actions {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return base.ToString() + " " + _operation.ToString();
         }
 

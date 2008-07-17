@@ -18,10 +18,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Linq.Expressions;
-using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -281,11 +280,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         #endregion
 
-        #region IMembersList Members
-
-        public abstract IList<SymbolId> GetMemberNames(CodeContext context);
-
-        #endregion
+        public abstract IList<string> GetMemberNames(CodeContext context);
 
         #region IOldDynamicObject Members
 

@@ -17,10 +17,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 
@@ -32,17 +31,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         private readonly CodeContext _context;
         private readonly TAction _action;
-        private readonly ReadOnlyCollection<object> _args;
         private readonly RuleBuilder<T> _rule;
 
-        internal ComBinderHelper(CodeContext context, TAction action, object[] args) {
+        internal ComBinderHelper(CodeContext context, TAction action) {
             Assert.NotNull(context, action);
 
             _context = context;
             _action = action;
-            if (args != null) {
-                _args = new ReadOnlyCollection<object>(args);
-            }
             _rule = new RuleBuilder<T>();
             _rule.Target = Expression.Empty();
         }
@@ -53,10 +48,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         protected TAction Action {
             get { return _action; }
-        }
-
-        protected ReadOnlyCollection<object> Arguments {
-            get { return _args; }
         }
 
         protected ActionBinder Binder {

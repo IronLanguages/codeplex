@@ -40,7 +40,7 @@ namespace System.Scripting.Generation {
             if (IsStatic(mi)) {
                 return types;
             }
-            
+
             // TODO (Spec#): do not specify <Type> type arg
             return ArrayUtils.Insert<Type>(mi.DeclaringType, types);
         }
@@ -295,13 +295,13 @@ namespace System.Scripting.Generation {
             }
             return false;
         }
-        
+
         /// <summary>
         /// Returns the System.Type for any object, including null.  The type of null
         /// is represented by None.Type and all other objects just return the 
         /// result of Object.GetType
         /// </summary>
-        public static Type/*!*/ GetType(object obj) {
+        public static Type GetType(object obj) {
             return obj == null ? None.Type : obj.GetType();
         }
 
@@ -445,11 +445,11 @@ namespace System.Scripting.Generation {
             }
         }
 
-        public static Type/*!*/ GetVisibleType(object value) {
+        public static Type GetVisibleType(object value) {
             return GetVisibleType(GetType(value));
         }
 
-        public static Type/*!*/ GetVisibleType(Type t) {
+        public static Type GetVisibleType(Type t) {
             while (!t.IsVisible) {
                 t = t.BaseType;
             }
@@ -612,10 +612,10 @@ namespace System.Scripting.Generation {
             return res.ToArray();
         }
 
-        public static Type/*!*/[]/*!*/ GetSiteTypes(IList<Expression>/*!*/ arguments, Type/*!*/ returnType) {
+        public static Type[] GetSiteTypes(IList<Expression> arguments, Type returnType) {
             int count = arguments.Count;
 
-            Type/*!*/[]/*!*/ ret = new Type/*!*/[count + 1];
+            Type[] ret = new Type[count + 1];
 
             for (int i = 0; i < count; i++) {
                 ret[i] = arguments[i].Type;
@@ -627,7 +627,7 @@ namespace System.Scripting.Generation {
             return ret;
         }
 
-        public static Type/*!*/[]/*!*/ GetExpressionTypes(Expression/*!*/[]/*!*/ expressions) {
+        public static Type[] GetExpressionTypes(Expression[] expressions) {
             ContractUtils.RequiresNotNull(expressions, "expressions");
 
             Type[] res = new Type[expressions.Length];

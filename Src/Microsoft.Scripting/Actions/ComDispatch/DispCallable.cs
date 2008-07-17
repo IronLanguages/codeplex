@@ -16,9 +16,9 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
@@ -36,26 +36,25 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private readonly IDispatchObject _dispatch;
         private readonly ComMethodDesc _methodDesc;
 
-        [CLSCompliant(false)]
-        protected DispCallable(IDispatchObject dispatch, ComMethodDesc methodDesc) {
+        internal DispCallable(IDispatchObject dispatch, ComMethodDesc methodDesc) {
             _dispatch = dispatch;
             _methodDesc = methodDesc;
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return String.Format("<bound dispmethod {0}>", _methodDesc.Name);
         }
 
-        public IDispatchObject DispatchObject { 
-            get { return _dispatch; } 
+        public IDispatchObject DispatchObject {
+            get { return _dispatch; }
         }
 
         public ComMethodDesc ComMethodDesc {
             get { return _methodDesc; }
         }
 
-        internal void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
+        private void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
             VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
             object[] allArgs = ArrayUtils.Insert<object>(this, explicitArgs);
             for (int i = 0; i < variantBuilders.Length; i++) {
@@ -63,7 +62,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
-        public object UnoptimizedInvoke(CodeContext context, SymbolId[] keywordArgNames, params object[] explicitArgs) {
+        public object UnoptimizedInvoke(CodeContext context, string[] keywordArgNames, params object[] explicitArgs) {
             try {
                 VarEnumSelector varEnumSelector = new VarEnumSelector(context.LanguageContext.Binder, typeof(object), explicitArgs);
                 object[] allArgs = ArrayUtils.Insert<object>(this, explicitArgs);
@@ -85,7 +84,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     // InvokeMember does not allow the method name to be in "[DISPID=N]" format if there are namedParams
                     memberName = _methodDesc.Name;
 
-                    namedParams = SymbolTable.IdsToStrings(keywordArgNames);
+                    namedParams = keywordArgNames;
                     argsForCall = ArrayUtils.RotateRight(argsForCall, namedParams.Length);
                 }
 
@@ -115,7 +114,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                         // ComRuntimeHelpers.CheckThrowException which handles these errorcodes specially. This ensures
                         // that we preserve identical behavior in both cases.
                         ExcepInfo excepInfo = new ExcepInfo();
-                        ComRuntimeHelpers.CheckThrowException(comException.ErrorCode, ref excepInfo, UInt32.MaxValue, this);
+                        ComRuntimeHelpers.CheckThrowException(comException.ErrorCode, ref excepInfo, UInt32.MaxValue, ComMethodDesc.Name);
                     }
                 }
 
@@ -128,24 +127,39 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
-                case DynamicActionKind.Call: return MakeCallRule<T>((OldCallAction)action, context, args);
-                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
+                case DynamicActionKind.Call:
+                    return MakeCallRule<T>((OldCallAction)action, context, args);
+
+                case DynamicActionKind.DoOperation:
+                    return MakeDoOperationRule<T>((OldDoOperationAction)action, context);
             }
             return null;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")] // TODO: fix
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args")] // TODO: fix
-        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
+        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context) where T : class {
             switch (doOperationAction.Operation) {
                 case Operators.CallSignatures:
                 case Operators.Documentation:
                     return MakeDocumentationRule<T>(context);
 
                 case Operators.IsCallable:
-                    return CallBinder<T>.MakeIsCallableRule(context, this, true);
+                    return MakeIsCallableRule<T>(context, true);
             }
             return null;
+        }
+
+        // This can produce a IsCallable rule that returns the immutable constant isCallable.
+        // Beware that objects can have a mutable callable property.
+        private RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, bool isCallable) where T : class {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
+            rule.MakeTest(this.GetType());
+            rule.Target =
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Expression.Constant(isCallable)
+                );
+
+            return rule;
         }
 
         private RuleBuilder<T> MakeDocumentationRule<T>(CodeContext context) where T : class {
@@ -163,8 +177,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return rule;
         }
 
-        private static RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            return new CallBinder<T>(context, action, args).MakeRule();
+        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            RuleBuilder<T> builder = new RuleBuilder<T>();
+            Expression test, body;
+
+            new CallBinder<T>(context, action, args, _methodDesc, builder.Context, builder.Parameters).Bind(out test, out body);
+
+            builder.Test = test;
+            builder.Target = body;
+            return builder;
         }
 
         #endregion

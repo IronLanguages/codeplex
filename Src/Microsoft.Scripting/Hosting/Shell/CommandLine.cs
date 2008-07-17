@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected Scope Scope { get { return _scope; } set { _scope = value; } }
 
         protected virtual string Prompt { get { return ">>> "; } }
-        protected virtual string PromptContinuation { get { return "... "; } } 
+        protected virtual string PromptContinuation { get { return "... "; } }
         protected virtual string Logo { get { return null; } }
 
         public CommandLine() {
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected virtual void Initialize() {
         }
 
-        protected virtual Scope/*!*/ CreateScope() {
+        protected virtual Scope CreateScope() {
             return new Scope();
         }
 
@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// Executes the comand line - depending upon the options provided we will
         /// either run a single file, a single command, or enter the interactive loop.
         /// </summary>
-        public int Run(ScriptEngine/*!*/ engine, IConsole/*!*/ console, ConsoleOptions/*!*/ options) {
+        public int Run(ScriptEngine engine, IConsole console, ConsoleOptions options) {
             ContractUtils.RequiresNotNull(engine, "engine");
             ContractUtils.RequiresNotNull(console, "console");
             ContractUtils.RequiresNotNull(options, "options");
@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _console = console;
 
             Initialize();
-            
+
             try {
                 return Run();
 
@@ -121,19 +121,19 @@ namespace Microsoft.Scripting.Hosting.Shell {
             }
         }
 
-        protected virtual int RunFile(string/*!*/ fileName) {
+        protected virtual int RunFile(string fileName) {
             return RunFile(_language.CreateFileUnit(fileName));
         }
 
-        protected virtual int RunCommand(string/*!*/ command) {
+        protected virtual int RunCommand(string command) {
             return RunFile(_language.CreateSnippet(command));
         }
-        
+
         /// <summary>
         /// Runs the specified filename
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        protected virtual int RunFile(SourceUnit/*!*/ source) {
+        protected virtual int RunFile(SourceUnit source) {
             int result = 1;
 
             if (Options.HandleExceptions) {
@@ -152,9 +152,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected void PrintLogo() {
             _console.Write(Logo, Style.Out);
         }
-        
+
         #region Interactivity
-        
+
         /// <summary>
         /// Starts the interactive loop.  Performs any initialization necessary before
         /// starting the loop and then calls RunInteractiveLoop to start the loop.
@@ -176,7 +176,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             if (_scope == null) {
                 _scope = CreateScope();
             }
-            
+
             int? res = null;
             do {
                 if (Options.HandleExceptions) {
@@ -199,7 +199,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             } while (res == null);
 
             return res.Value;
-        }        
+        }
 
         /// <summary>
         /// Attempts to run a single interaction and handle any language-specific
@@ -250,11 +250,11 @@ namespace Microsoft.Scripting.Hosting.Shell {
             return null;
         }
 
-        protected object ExecuteCommand(SourceUnit/*!*/ source) {
+        protected object ExecuteCommand(SourceUnit source) {
             return source.Compile(_language.GetCompilerOptions(_scope), ErrorSink).Run(_scope);
         }
 
-        protected virtual ErrorSink/*!*/ ErrorSink {
+        protected virtual ErrorSink ErrorSink {
             get { return ErrorSink.Default; }
         }
 
@@ -263,7 +263,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// 
         /// We do this if we only have auto-indent text.
         /// </summary>
-        private static bool TreatAsBlankLine(string/*!*/ line, int autoIndentSize) {
+        private static bool TreatAsBlankLine(string line, int autoIndentSize) {
             if (line.Length == 0) return true;
             if (autoIndentSize != 0 && line.Trim().Length == 0 && line.Length == autoIndentSize) {
                 return true;
@@ -300,10 +300,10 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 string code = b.ToString();
 
                 SourceUnit command = _language.CreateSnippet(code, SourceCodeKind.InteractiveCode);
-                SourceCodeProperties props = command.GetCodeProperties(_language.GetCompilerOptions(_scope)); 
+                ScriptCodeParseResult props = command.GetCodeProperties(_language.GetCompilerOptions(_scope));
 
                 if (SourceCodePropertiesUtils.IsCompleteOrInvalid(props, allowIncompleteStatement)) {
-                    return props != SourceCodeProperties.IsEmpty ? code : null;
+                    return props != ScriptCodeParseResult.Empty ? code : null;
                 }
 
                 if (_options.AutoIndent && _options.AutoIndentSize != 0) {
@@ -326,21 +326,21 @@ namespace Microsoft.Scripting.Hosting.Shell {
             return _console.ReadLine(autoIndentSize);
         }
 
-        internal protected virtual TextWriter/*!*/ GetOutputWriter(bool isErrorOutput) {
+        internal protected virtual TextWriter GetOutputWriter(bool isErrorOutput) {
             return isErrorOutput ? System.Console.Error : System.Console.Out;
         }
 
-        //private static DynamicSite<object, IList<string>>/*!*/ _memberCompletionSite =
+        //private static DynamicSite<object, IList<string>>  _memberCompletionSite =
         //    new DynamicSite<object, IList<string>>(OldDoOperationAction.Make(Operators.GetMemberNames));
 
-        public IList<string>/*!*/ GetMemberNames(string/*!*/ code) {
+        public IList<string> GetMemberNames(string code) {
             object value = _language.CreateSnippet(code, SourceCodeKind.Expression).Execute(_scope);
             return _engine.Operations.GetMemberNames(value);
             // TODO: why doesn't this work ???
             //return _memberCompletionSite.Invoke(new CodeContext(_scope, _language), value);
         }
 
-        public virtual IList<string>/*!*/ GetGlobals(string/*!*/ name) {
+        public virtual IList<string> GetGlobals(string name) {
             List<string> res = new List<string>();
             foreach (SymbolId scopeName in _scope.Keys) {
                 string strName = SymbolTable.IdToString(scopeName);
@@ -351,9 +351,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             return res;
         }
-        
+
         #endregion
     }
-    
-    
+
+
 }

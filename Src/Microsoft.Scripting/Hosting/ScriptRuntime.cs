@@ -30,38 +30,38 @@ namespace Microsoft.Scripting.Hosting {
     /// Represents a Dynamic Language Runtime in Hosting API. 
     /// Hosting API counterpart for <see cref="ScriptDomainManager"/>.
     /// </summary>
-    public sealed class ScriptRuntime 
+    public sealed class ScriptRuntime
 #if !SILVERLIGHT
-        : MarshalByRefObject 
+        : MarshalByRefObject
 #endif
     {
-        private readonly Dictionary<LanguageContext, ScriptEngine>/*!*/ _engines;
-        private readonly ScriptDomainManager/*!*/ _manager;
-        private readonly InvariantContext/*!*/ _invariantContext;
-        private readonly ScriptIO/*!*/ _io;
-        private readonly ScriptHost/*!*/ _host;
+        private readonly Dictionary<LanguageContext, ScriptEngine> _engines;
+        private readonly ScriptDomainManager _manager;
+        private readonly InvariantContext _invariantContext;
+        private readonly ScriptIO _io;
+        private readonly ScriptHost _host;
         private ScriptScope _globals;
         private ScriptEngine _invariantEngine;
 
-        internal ScriptDomainManager/*!*/ Manager {
+        internal ScriptDomainManager Manager {
             get { return _manager; }
         }
 
-        public ScriptHost/*!*/ Host {
+        public ScriptHost Host {
             get { return _host; }
         }
 
         // TODO: remove
-        public ScriptDomainOptions/*!*/ GlobalOptions {
+        public ScriptDomainOptions GlobalOptions {
             get { return _manager.GlobalOptions; }
             set { _manager.GlobalOptions = value; }
         }
 
-        public ScriptIO/*!*/ IO {
+        public ScriptIO IO {
             get { return _io; }
         }
 
-        private ScriptRuntime(ScriptDomainManager/*!*/ manager, ScriptHost/*!*/ host, InvariantContext/*!*/ invariantContext) {
+        private ScriptRuntime(ScriptDomainManager manager, ScriptHost host, InvariantContext invariantContext) {
             Assert.NotNull(manager);
             _manager = manager;
             _host = host;
@@ -77,7 +77,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
         /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
         /// </summary>
-        public static ScriptRuntime/*!*/ Create() {
+        public static ScriptRuntime Create() {
             return CreateInternal(null, null);
         }
 
@@ -86,13 +86,13 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates an instance of host class specified in the setup and associates it with the created runtime.
         /// Both Runtime and ScriptHost are collocated in the current app-domain.
         /// </summary>
-        public static ScriptRuntime/*!*/ Create(ScriptRuntimeSetup/*!*/ setup) {
+        public static ScriptRuntime Create(ScriptRuntimeSetup setup) {
             ContractUtils.RequiresNotNull(setup, "setup");
             return CreateInternal(null, setup);
         }
 
         // Creates Runtime in specified app-domain and initialized according to specified setup.
-        private static ScriptRuntime/*!*/ CreateInternal(AppDomain domain, ScriptRuntimeSetup setup) {
+        private static ScriptRuntime CreateInternal(AppDomain domain, ScriptRuntimeSetup setup) {
             if (domain != null && domain != AppDomain.CurrentDomain) {
 #if SILVERLIGHT
                 throw Assert.Unreachable;
@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Hosting {
                 return RemoteRuntimeFactory.CreateRuntime(domain, setup);
 #endif
             }
-            
+
             if (setup == null) {
                 setup = GetSetupInformation();
             }
@@ -131,7 +131,8 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates ScriptRuntime in the specified app-domain and initialized with default settings.
         /// Also creates a default ScriptHost instance associated with the runtime, also in the given app-domain.
         /// </summary>
-        public static ScriptRuntime/*!*/ Create(AppDomain/*!*/ domain) {
+        public static ScriptRuntime Create(AppDomain domain) {
+            ContractUtils.RequiresNotNull(domain, "domain");
             return CreateInternal(domain, null);
         }
 
@@ -140,14 +141,14 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates an instance of host class specified in the setup and associates it with the created runtime.
         /// Both Runtime and ScriptHost are collocated in the specified app-domain.
         /// </summary>
-        public static ScriptRuntime/*!*/ Create(AppDomain/*!*/ domain, ScriptRuntimeSetup/*!*/ setup) {
+        public static ScriptRuntime Create(AppDomain domain, ScriptRuntimeSetup setup) {
             ContractUtils.RequiresNotNull(domain, "domain");
             return CreateInternal(domain, setup);
         }
 
         // Factory object used for creating remote Runtime.
         private sealed class RemoteRuntimeFactory : MarshalByRefObject {
-            public readonly ScriptRuntime/*!*/ Runtime;
+            public readonly ScriptRuntime Runtime;
 
             // Runs in the app-domain remote to the user of the factory.
             public RemoteRuntimeFactory(ScriptRuntimeSetup setup) {
@@ -155,7 +156,7 @@ namespace Microsoft.Scripting.Hosting {
             }
 
             // Runs in the same app-domain as the user of the factory and returns a remote reference to the created Runtime.
-            public static ScriptRuntime/*!*/ CreateRuntime(AppDomain/*!*/ domain, ScriptRuntimeSetup setup) {
+            public static ScriptRuntime CreateRuntime(AppDomain domain, ScriptRuntimeSetup setup) {
                 RemoteRuntimeFactory rd = (RemoteRuntimeFactory)domain.CreateInstanceAndUnwrap(typeof(RemoteRuntimeFactory).Assembly.FullName,
                     typeof(RemoteRuntimeFactory).FullName, false, BindingFlags.Default, null, new object[] { setup }, null, null, null);
 
@@ -173,7 +174,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Configuration
 
-        private static ScriptRuntimeSetup/*!*/ GetSetupInformation() {
+        private static ScriptRuntimeSetup GetSetupInformation() {
 #if !SILVERLIGHT
             ScriptRuntimeSetup result;
 
@@ -200,25 +201,25 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
-        public string/*!*/[]/*!*/ GetRegisteredFileExtensions() {
+        public string[] GetRegisteredFileExtensions() {
             return _manager.GetRegisteredFileExtensions();
         }
 
-        public string/*!*/[]/*!*/ GetRegisteredLanguageIdentifiers() {
+        public string[] GetRegisteredLanguageIdentifiers() {
             return _manager.GetRegisteredLanguageIdentifiers();
         }
 
-        internal string/*!*/[]/*!*/ GetRegisteredFileExtensions(LanguageContext context) {
+        internal string[] GetRegisteredFileExtensions(LanguageContext context) {
             return _manager.GetRegisteredFileExtensions(context);
         }
 
-        internal string/*!*/[]/*!*/ GetRegisteredLanguageIdentifiers(LanguageContext context) {
+        internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
             return _manager.GetRegisteredLanguageIdentifiers(context);
         }
 
         #region Engines
 
-        public ScriptEngine/*!*/ GetEngine(string/*!*/ languageId) {
+        public ScriptEngine GetEngine(string languageId) {
             ContractUtils.RequiresNotNull(languageId, "languageId");
 
             ScriptEngine engine;
@@ -231,7 +232,7 @@ namespace Microsoft.Scripting.Hosting {
 
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public ScriptEngine/*!*/ GetEngineByFileExtension(string/*!*/ extension) {
+        public ScriptEngine GetEngineByFileExtension(string extension) {
             ContractUtils.RequiresNotNull(extension, "extension");
 
             ScriptEngine engine;
@@ -265,14 +266,14 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         // TODO: remove
-        public ScriptEngine GetEngine(Type/*!*/ languageContextType) {
+        public ScriptEngine GetEngine(Type languageContextType) {
             return GetEngine(_manager.GetLanguageContext(languageContextType));
         }
 
         /// <summary>
         /// Gets engine for the specified language.
         /// </summary>
-        internal ScriptEngine/*!*/ GetEngine(LanguageContext/*!*/ language) {
+        internal ScriptEngine GetEngine(LanguageContext language) {
             Assert.NotNull(language);
 
             ScriptEngine engine;
@@ -292,7 +293,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Looks up the engine for the specified language. It the engine hasn't been created in this Runtime, it is instantiated here.
         /// The method doesn't lock nor send notifications to the host.
         /// </summary>
-        private ScriptEngine/*!*/ GetEngineNoLockNoNotification(LanguageContext/*!*/ language, out bool freshEngineCreated) {
+        private ScriptEngine GetEngineNoLockNoNotification(LanguageContext language, out bool freshEngineCreated) {
             Debug.Assert(_engines != null, "Invalid ScriptRuntime initialiation order");
 
             ScriptEngine engine;
@@ -308,19 +309,19 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Compilation, Module Creation
 
-        public ScriptScope/*!*/ CreateScope() {
+        public ScriptScope CreateScope() {
             return InvariantEngine.CreateScope();
         }
 
-        public ScriptScope/*!*/ CreateScope(string/*!*/ languageId) {
+        public ScriptScope CreateScope(string languageId) {
             return GetEngine(languageId).CreateScope();
         }
-        
-        public ScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
+
+        public ScriptScope CreateScope(IAttributesCollection dictionary) {
             return InvariantEngine.CreateScope(dictionary);
         }
 
-        public ScriptScope/*!*/ CreateScope(string/*!*/ languageId, IAttributesCollection/*!*/ dictionary) {
+        public ScriptScope CreateScope(string languageId, IAttributesCollection dictionary) {
             return GetEngine(languageId).CreateScope(dictionary);
         }
 
@@ -330,12 +331,12 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="ArgumentException">
         /// path is empty, contains one or more of the invalid characters defined in GetInvalidPathChars or doesn't have an extension.
         /// </exception>
-        public ScriptScope/*!*/ ExecuteFile(string/*!*/ path) {
+        public ScriptScope ExecuteFile(string path) {
             ContractUtils.RequiresNotEmpty(path, "path");
             string extension = Path.GetExtension(path);
-            
+
             ScriptEngine engine;
-            if(!TryGetEngineByFileExtension(extension, out engine)) {
+            if (!TryGetEngineByFileExtension(extension, out engine)) {
                 throw new ArgumentException(String.Format("File extension '{0}' is not associated with any language.", extension));
             }
 
@@ -372,21 +373,21 @@ namespace Microsoft.Scripting.Hosting {
         /// it merges names together objects representing the namespaces.
         /// </summary>
         /// <param name="assembly"></param>
-        public void LoadAssembly(Assembly/*!*/ assembly) {
+        public void LoadAssembly(Assembly assembly) {
             _manager.LoadAssembly(assembly);
         }
 
-        public ObjectOperations/*!*/ Operations {
+        public ObjectOperations Operations {
             get {
                 return InvariantEngine.Operations;
             }
         }
 
-        public ObjectOperations/*!*/ CreateOperations() {
+        public ObjectOperations CreateOperations() {
             return InvariantEngine.CreateOperations();
         }
-        
-        internal ScriptEngine/*!*/ InvariantEngine {
+
+        internal ScriptEngine InvariantEngine {
             get {
                 if (_invariantEngine == null) {
                     _invariantEngine = GetEngine(_invariantContext);

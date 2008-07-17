@@ -20,21 +20,27 @@ namespace System.Scripting {
 
     /// <summary>
     /// Couples a source unit with an open text reader. Remotable (TextReader is a MBRO).
+    /// Move to Microsoft.Scripting !!!
     /// </summary>    
     public sealed class SourceUnitReader : TextReader {
 
         private readonly TextReader _textReader;
         private readonly SourceUnit _sourceUnit;
 
-        public SourceUnit SourceUnit {
-            get { return _sourceUnit; }
-        }
-
         internal SourceUnitReader(SourceUnit sourceUnit, TextReader textReader) {
             Assert.NotNull(sourceUnit, textReader);
 
             _textReader = textReader;
             _sourceUnit = sourceUnit;
+        }
+
+        public SourceUnit SourceUnit {
+            get { return _sourceUnit; }
+        }
+
+        // TODO: internal once this moves to Microsoft.Scripting
+        public TextReader TextReader {
+            get { return _textReader; }
         }
 
         public override string ReadLine() {
@@ -63,7 +69,7 @@ namespace System.Scripting {
             return _textReader.ReadToEnd();
         }
 
-        public override int Read(char[]/*!*/ buffer, int index, int count) {
+        public override int Read(char[] buffer, int index, int count) {
             return _textReader.Read(buffer, index, count);
         }
 

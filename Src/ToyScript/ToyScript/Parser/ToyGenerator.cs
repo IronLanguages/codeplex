@@ -245,7 +245,7 @@ namespace ToyScript.Parser {
 
         internal MSAst.Expression New(MSAst.Expression target, MSAst.Expression[] arguments) {
             if (UseNewBinders) {
-                return MSAst.Expression.New(typeof(object), Binder.New(new CallSignature(arguments.Length)), ArrayUtils.Insert(target, arguments));
+                return MSAst.Expression.New(typeof(object), Binder.New(), ArrayUtils.Insert(target, arguments));
             } else {
                 return Utils.Create(
                     _tlc.Binder,

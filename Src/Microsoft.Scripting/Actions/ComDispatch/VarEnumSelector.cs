@@ -24,7 +24,6 @@ using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>

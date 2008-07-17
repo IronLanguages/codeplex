@@ -20,7 +20,7 @@ namespace System.Linq.Expressions {
     /// Breaks to the beginning of the the target LabeledStatement
     /// </summary>
     public sealed class ContinueStatement : Expression {
-        private readonly LabelTarget/*!*/ _target;
+        private readonly LabelTarget _target;
 
         internal ContinueStatement(Annotations annotations, LabelTarget target)
             : base(annotations, ExpressionType.ContinueStatement, typeof(void)) {

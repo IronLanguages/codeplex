@@ -20,7 +20,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Scripting.Utils;
 using System.Text;
-using Microsoft.Contracts; 
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Math {
     /// <summary>
@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Math {
         private readonly short sign;
 
         // Non-null. data[0] is the least significant 32 bits.
-        private readonly uint[] /*!*/ data;
+        private readonly uint[] data;
 
         [SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly BigInteger Zero = new BigInteger(0, new uint[0]);
@@ -43,14 +43,12 @@ namespace Microsoft.Scripting.Math {
         private const int bias = 1075;
 
         [CLSCompliant(false)]
-        public static BigInteger Create(ulong v)
-        {
+        public static BigInteger Create(ulong v) {
             return new BigInteger(+1, (uint)v, (uint)(v >> BitsPerDigit));
         }
 
         [CLSCompliant(false)]
-        public static BigInteger Create(uint v)
-        {
+        public static BigInteger Create(uint v) {
             if (v == 0) return Zero;
             else if (v == 1) return One;
             else return new BigInteger(+1, v);
@@ -111,7 +109,7 @@ namespace Microsoft.Scripting.Math {
             int unalignedBytes = byteCount % 4;
             int dwordCount = byteCount / 4 + (unalignedBytes == 0 ? 0 : 1);
             uint[] data = new uint[dwordCount];
-            
+
             bool isNegative = (v[byteCount - 1] & 0x80) == 0x80;
 
             bool isZero = true;
@@ -199,37 +197,34 @@ namespace Microsoft.Scripting.Math {
         public static implicit operator BigInteger(sbyte i) {
             return Create((int)i);
         }
-        
+
         public static implicit operator BigInteger(short i) {
             return Create((int)i);
         }
-        
+
         [CLSCompliant(false)]
-        public static implicit operator BigInteger(ushort i)
-        {
+        public static implicit operator BigInteger(ushort i) {
             return Create((uint)i);
         }
-        
+
         [CLSCompliant(false)]
-        public static implicit operator BigInteger(uint i)
-        {
+        public static implicit operator BigInteger(uint i) {
             return Create(i);
         }
-        
+
         public static implicit operator BigInteger(int i) {
             return Create(i);
         }
-        
+
         [CLSCompliant(false)]
-        public static implicit operator BigInteger(ulong i)
-        {
+        public static implicit operator BigInteger(ulong i) {
             return Create(i);
         }
-        
+
         public static implicit operator BigInteger(long i) {
             return Create(i);
         }
-        
+
         public static implicit operator BigInteger(decimal i) {
             return Create(i);
         }
@@ -309,7 +304,7 @@ namespace Microsoft.Scripting.Math {
             }
             throw new OverflowException();
         }
-        
+
         public static explicit operator float(BigInteger self) {
             if (object.ReferenceEquals(self, null)) {
                 throw new ArgumentNullException("self");
@@ -338,8 +333,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false)]
-        public BigInteger(int sign, params uint[] data)
-        {
+        public BigInteger(int sign, params uint[] data) {
             ContractUtils.RequiresNotNull(data, "data");
             if (sign != -1 && sign != 0 && sign != 1) throw new ArgumentException(MathResources.InvalidArgument, "sign");
             if (GetLength(data) != 0) {
@@ -363,15 +357,14 @@ namespace Microsoft.Scripting.Math {
         /// is returned.
         /// </summary>
         [CLSCompliant(false)]
-        public uint[] GetBits()
-        {
+        public uint[] GetBits() {
             if (sign == 0) return new uint[0];
             int mostSignificantNonZeroWord;
             for (
                 mostSignificantNonZeroWord = data.Length - 1;
                 mostSignificantNonZeroWord >= 0 && data[mostSignificantNonZeroWord] == 0;
                 mostSignificantNonZeroWord--
-            );
+            ) ;
             uint[] bits = new uint[mostSignificantNonZeroWord + 1];
             Array.Copy(data, bits, mostSignificantNonZeroWord + 1);
             return bits;
@@ -402,8 +395,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false)]
-        public bool AsUInt32(out uint ret)
-        {
+        public bool AsUInt32(out uint ret) {
             ret = 0;
             if (sign == 0) return true;
             if (sign < 0) return false;
@@ -413,8 +405,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false)]
-        public bool AsUInt64(out ulong ret)
-        {
+        public bool AsUInt64(out ulong ret) {
             ret = 0;
             if (sign == 0) return true;
             if (sign < 0) return false;
@@ -460,8 +451,7 @@ namespace Microsoft.Scripting.Math {
 
 
         [CLSCompliant(false)]
-        public uint ToUInt32()
-        {
+        public uint ToUInt32() {
             uint ret;
             if (AsUInt32(out ret)) return ret;
             throw new OverflowException(MathResources.BigIntWontFitUInt);
@@ -480,8 +470,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false)]
-        public ulong ToUInt64()
-        {
+        public ulong ToUInt64() {
             ulong ret;
             if (AsUInt64(out ret)) return ret;
             throw new OverflowException(MathResources.BigIntWontFitULong);
@@ -494,8 +483,8 @@ namespace Microsoft.Scripting.Math {
         }
 
         public bool TryToFloat64(out double result) {
-            return StringUtils.TryParseDouble(ToString(10), 
-                System.Globalization.NumberStyles.Number, 
+            return StringUtils.TryParseDouble(ToString(10),
+                System.Globalization.NumberStyles.Number,
                 System.Globalization.CultureInfo.InvariantCulture.NumberFormat,
                 out result);
         }
@@ -695,7 +684,7 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(y, null)) {
                 throw new ArgumentNullException("y");
             }
-            
+
             if (x.sign == y.sign) {
                 return new BigInteger(x.sign, add0(x.data, x.Length, y.data, y.Length));
             } else {
@@ -1313,7 +1302,7 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(mod, null)) {
                 throw new ArgumentNullException("mod");
             }
-            
+
             if (power < 0) {
                 throw new ArgumentOutOfRangeException(MathResources.NonNegativePower);
             }
@@ -1364,7 +1353,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [Confined]
-        public override string/*!*/ ToString() {
+        public override string ToString() {
             return ToString(10);
         }
 
@@ -1373,8 +1362,7 @@ namespace Microsoft.Scripting.Math {
         private static readonly uint[] groupRadixValues = { 0, 0, 2147483648, 3486784401, 1073741824, 1220703125, 2176782336, 1977326743, 1073741824, 3486784401, 1000000000, 2357947691, 429981696, 815730721, 1475789056, 2562890625, 268435456, 410338673, 612220032, 893871739, 1280000000, 1801088541, 2494357888, 3404825447, 191102976, 244140625, 308915776, 387420489, 481890304, 594823321, 729000000, 887503681, 1073741824, 1291467969, 1544804416, 1838265625, 2176782336 };
 
         [CLSCompliant(false), Confined]
-        public string ToString(uint radix)
-        {
+        public string ToString(uint radix) {
             if (radix < 2) {
                 throw ExceptionUtils.MakeArgumentOutOfRangeException("radix", radix, MathResources.RadixLessThan2);
             }
@@ -1435,13 +1423,13 @@ namespace Microsoft.Scripting.Math {
             if (data.Length == 0) {
                 return 0;
             }
-            
+
             // Add up all uints. We want to incorporate all bits to get good hash distribution. 
             uint total = 0;
             foreach (uint x in data) {
                 total = unchecked(total + x);
             }
-            
+
             int hash = unchecked((int)total);
 
             // The sign is not part of the data array, so explicitly incorporate that.
@@ -1622,8 +1610,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false), Confined]
-        public sbyte ToSByte(IFormatProvider provider)
-        {
+        public sbyte ToSByte(IFormatProvider provider) {
             int ret;
             if (AsInt32(out ret) && (ret <= sbyte.MaxValue) && (ret >= sbyte.MinValue)) {
                 return (sbyte)ret;
@@ -1650,8 +1637,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false), Confined]
-        public ushort ToUInt16(IFormatProvider provider)
-        {
+        public ushort ToUInt16(IFormatProvider provider) {
             uint ret;
             if (AsUInt32(out ret) && ret <= ushort.MaxValue) {
                 return (ushort)ret;
@@ -1660,8 +1646,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false), Confined]
-        public uint ToUInt32(IFormatProvider provider)
-        {
+        public uint ToUInt32(IFormatProvider provider) {
             uint ret;
             if (AsUInt32(out ret)) {
                 return ret;
@@ -1670,8 +1655,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         [CLSCompliant(false), Confined]
-        public ulong ToUInt64(IFormatProvider provider)
-        {
+        public ulong ToUInt64(IFormatProvider provider) {
             ulong ret;
             if (AsUInt64(out ret)) {
                 return ret;

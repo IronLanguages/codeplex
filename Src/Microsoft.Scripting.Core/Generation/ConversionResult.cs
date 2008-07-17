@@ -20,26 +20,26 @@ namespace System.Scripting.Generation {
     /// Represents information about a failure to convert an argument from one
     /// type to another.
     /// </summary>
-    public sealed class ConversionResult {        
-        private readonly Type/*!*/ _fromType;
-        private readonly Type/*!*/ _toType;
+    public sealed class ConversionResult {
+        private readonly Type _fromType;
+        private readonly Type _toType;
         private readonly int _position;
         private readonly bool _failed;
 
-        public ConversionResult(Type/*!*/ fromType, Type/*!*/ toType, int position, bool failed) {
+        public ConversionResult(Type fromType, Type toType, int position, bool failed) {
             _fromType = fromType;
             _toType = toType;
             _position = position;
             _failed = failed;
         }
 
-        public Type/*!*/ From {
+        public Type From {
             get {
                 return _fromType;
             }
         }
 
-        public Type/*!*/ To {
+        public Type To {
             get {
                 return _toType;
             }

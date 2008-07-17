@@ -37,7 +37,7 @@ namespace System.Scripting.Actions {
     public class MemberGroup : IEnumerable<MemberTracker> {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly MemberGroup EmptyGroup = new MemberGroup(MemberTracker.EmptyTrackers);
-        
+
         private readonly MemberTracker[] _members;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "noChecks")]
@@ -45,7 +45,7 @@ namespace System.Scripting.Actions {
             Assert.NotNullItems(members);
             _members = members;
         }
-        
+
         public MemberGroup(params MemberTracker[] members) {
             ContractUtils.RequiresNotNullItems(members, "members");
             _members = members;
@@ -66,7 +66,7 @@ namespace System.Scripting.Actions {
             Assert.NotNullItems(members);
             return new MemberGroup(members, true);
         }
-        
+
         public int Count {
             get {
                 return _members.Length;
@@ -82,7 +82,7 @@ namespace System.Scripting.Actions {
         #region IEnumerable<MemberTracker> Members
 
         [Pure]
-        public IEnumerator<MemberTracker>/*!*/ GetEnumerator() {
+        public IEnumerator<MemberTracker> GetEnumerator() {
             foreach (MemberTracker tracker in _members) yield return tracker;
         }
 
@@ -91,7 +91,7 @@ namespace System.Scripting.Actions {
         #region IEnumerable Members
 
         [Pure]
-        System.Collections.IEnumerator/*!*/ System.Collections.IEnumerable.GetEnumerator() {
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
             foreach (MemberTracker tracker in _members) yield return tracker;
         }
 

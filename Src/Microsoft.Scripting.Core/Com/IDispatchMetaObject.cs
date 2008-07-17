@@ -22,10 +22,12 @@ namespace System.Scripting.Com {
 
     internal sealed class IDispatchMetaObject : MetaObject {
         private readonly ComTypeDesc _wrapperType;
+        private readonly IDispatchComObject _self;
 
         internal IDispatchMetaObject(Expression expression, ComTypeDesc wrapperType, IDispatchComObject self)
             : base(expression, Restrictions.Empty, self) {
             _wrapperType = wrapperType;
+            _self = self;
         }
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
@@ -61,30 +63,82 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
-            // The fallback expression permits us to get at language-specific extensions for
-            // COM objects.  For example, in Python, every class supports the "__repr__" method.
-            // This method must be implemented in Python as a type extension.  The fallback
-            // expression gives us access to that type extension...
-            MetaObject fallback = action.Fallback(args);
+            ComMethodDesc method;
+            ComEventDesc @event;
 
-            VariableExpression dispCallable = Expression.Variable(typeof(object), "dispCallable");
-            Expression result = Expression.Scope(
-                Expression.Condition(
-                    Expression.Call(
-                        Expression.Convert(Expression, typeof(IDispatchComObject)),
-                        typeof(IDispatchComObject).GetMethod("TryGetAttr"),
-                        Expression.Constant(action.Name),
-                        dispCallable
+            // 1. Try methods
+            if (_self.TryGetMemberMethod(action.Name, out method)) {
+                return BindGetMember(method, args);
+            }
+
+            // 2. Try events
+            if (_self.TryGetMemberEvent(action.Name, out @event)) {
+                return BindEvent(@event, args);
+            }
+
+            // 3. Try methods explicitly by name
+            if (_self.TryGetMemberMethodExplicit(action.Name, out method)) {
+                return BindGetMember(method, args);
+            }
+
+            // 4. Fallback
+            return action.Fallback(args);
+        }
+
+        private MetaObject BindGetMember(ComMethodDesc method, MetaObject[] args) {
+            string helper;
+
+            Restrictions restrictions = Restrictions.Combine(args).Merge(IDispatchRestriction());
+            Expression dispatch =
+                Expression.Property(
+                    Expression.ConvertHelper(args[0].Expression, typeof(IDispatchComObject)),
+                    typeof(IDispatchComObject).GetProperty("DispatchObject")
+                );
+
+            if (method.IsPropertyGet) {
+                if (method.Parameters.Length == 0 && args.Length == 1) {
+                    return new InvokeBinder(
+                        new Argument[0],
+                        args,
+                        restrictions,
+                        Expression.Constant(method),
+                        dispatch,
+                        method
+                    ).Invoke();
+                }
+                helper = "CreatePropertyGet";
+            } else if (method.IsPropertyPut) {
+                helper = "CreatePropertyPut";
+            } else {
+                helper = "CreateMethod";
+            }
+
+            Expression result =
+                Expression.Call(
+                    typeof(ComRuntimeHelpers).GetMethod(helper),
+                    dispatch,
+                    Expression.Constant(method)
+                );
+
+            return new MetaObject(result, restrictions);
+        }
+
+        private MetaObject BindEvent(ComEventDesc @event, MetaObject[] args) {
+            // BoundDispEvent CreateComEvent(object rcw, Guid sourceIid, int dispid)
+            Expression result =
+                Expression.Call(
+                    typeof(ComRuntimeHelpers).GetMethod("CreateComEvent"),
+                    Expression.Property(
+                        Expression.ConvertHelper(args[0].Expression, typeof(IDispatchComObject)),
+                        typeof(ComObject).GetProperty("Obj")
                     ),
-                    dispCallable,                       // true
-                    MakeObject(fallback.Expression)     // false
-                ),
-                dispCallable
-            );
+                    Expression.Constant(@event.sourceIID),
+                    Expression.Constant(@event.dispid)
+                );
 
             return new MetaObject(
                 result,
-                Restrictions.Combine(args).Merge(IDispatchRestriction()).Merge(fallback.Restrictions)
+                Restrictions.Combine(args).Merge(IDispatchRestriction())
             );
         }
 

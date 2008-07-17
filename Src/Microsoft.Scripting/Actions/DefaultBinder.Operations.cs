@@ -25,7 +25,6 @@ using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -35,7 +34,7 @@ namespace Microsoft.Scripting.Actions {
 
     public partial class DefaultBinder : ActionBinder {
 
-        public MetaObject/*!*/ DoOperation(string/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject DoOperation(string operation, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(operation, "operation");
             ContractUtils.RequiresNotNullItems(args, "args");
 
@@ -48,7 +47,7 @@ namespace Microsoft.Scripting.Actions {
         /// Creates the MetaObject for indexing directly into arrays or indexing into objects which have
         /// default members.  Returns null if we're not an indexing operation.
         /// </summary>
-        private MetaObject MakeDefaultMemberRule(string/*!*/ oper, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject MakeDefaultMemberRule(string oper, MetaObject[] args) {
             if (oper == StandardOperators.GetItem || oper == StandardOperators.SetItem) {
                 if (args[0].LimitType.IsArray) {
                     return MakeArrayIndexRule(oper, args);
@@ -65,10 +64,10 @@ namespace Microsoft.Scripting.Actions {
         /// operators.  If the operation cannot be completed a MetaObject which indicates an
         /// error will be returned.
         /// </summary>
-        private MetaObject/*!*/ MakeGeneralOperatorRule(string/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject MakeGeneralOperatorRule(string operation, MetaObject[] args) {
             OperatorInfo info = OperatorInfo.GetOperatorInfo(operation);
             MetaObject res;
-            
+
             if (CompilerHelpers.IsComparisonOperator(operation)) {
                 res = MakeComparisonRule(info, args);
             } else {
@@ -80,7 +79,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Comparison operator
 
-        private MetaObject/*!*/ MakeComparisonRule(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject MakeComparisonRule(OperatorInfo info, MetaObject[] args) {
             return
                 TryComparisonMethod(info, args[0], args) ??   // check the first type if it has an applicable method
                 TryComparisonMethod(info, args[0], args) ??   // then check the second type
@@ -92,7 +91,7 @@ namespace Microsoft.Scripting.Actions {
                 MakeOperatorError(info, args);                // no comparisons are possible            
         }
 
-        private MetaObject TryComparisonMethod(OperatorInfo/*!*/ info, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryComparisonMethod(OperatorInfo info, MetaObject target, MetaObject[] args) {
             MethodInfo[] targets = GetApplicableMembers(target.LimitType, info);
             if (targets.Length > 0) {
                 return TryMakeBindingTarget(targets, args, Restrictions.Empty);
@@ -101,7 +100,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private static MetaObject/*!*/ MakeOperatorError(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject MakeOperatorError(OperatorInfo info, MetaObject[] args) {
             return new MetaObject(
                 Ast.Throw(
                     Ast.ComplexCallHelper(
@@ -113,11 +112,11 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private MetaObject TryNumericComparison(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryNumericComparison(OperatorInfo info, MetaObject[] args) {
             MethodInfo[] targets = FilterNonMethods(
-                args[0].LimitType, 
-                GetMember(OldDoOperationAction.Make(this, info.Operator), 
-                args[0].LimitType, 
+                args[0].LimitType,
+                GetMember(OldDoOperationAction.Make(this, info.Operator),
+                args[0].LimitType,
                 "Compare")
             );
 
@@ -136,7 +135,7 @@ namespace Microsoft.Scripting.Actions {
                         case Operators.Compare:
                             break;
                     }
-                    
+
                     return new MetaObject(
                         call,
                         Restrictions.Combine(target.RestrictedArguments)
@@ -147,7 +146,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryInvertedComparison(OperatorInfo/*!*/ info, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryInvertedComparison(OperatorInfo info, MetaObject target, MetaObject[] args) {
             Operators revOp = GetInvertedOperator(info.Operator);
             OperatorInfo revInfo = OperatorInfo.GetOperatorInfo(revOp);
             Debug.Assert(revInfo != null);
@@ -164,7 +163,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Produces a rule for comparing a value to null - supports comparing object references and nullable types.
         /// </summary>
-        private static MetaObject TryNullComparisonRule(MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject TryNullComparisonRule(MetaObject[] args) {
             Type otherType = args[0].LimitType;
 
             Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
@@ -198,7 +197,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private static MetaObject TryPrimitiveCompare(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject TryPrimitiveCompare(OperatorInfo info, MetaObject[] args) {
             if (TypeUtils.GetNonNullableType(args[0].LimitType) == TypeUtils.GetNonNullableType(args[1].LimitType) &&
                 TypeUtils.IsNumeric(args[0].LimitType)) {
                 Expression arg0 = args[0].Expression;
@@ -230,7 +229,7 @@ namespace Microsoft.Scripting.Actions {
         #region Operator Rule
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")] // TODO: fix
-        private MetaObject/*!*/ MakeOperatorRule(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject MakeOperatorRule(OperatorInfo info, MetaObject[] args) {
             return
                 TryForwardOperator(info, args) ??
                 TryReverseOperator(info, args) ??
@@ -240,7 +239,7 @@ namespace Microsoft.Scripting.Actions {
                 MakeOperatorError(info, args);
         }
 
-        private static MetaObject TryPrimitiveOperator(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject TryPrimitiveOperator(OperatorInfo info, MetaObject[] args) {
             if (args.Length == 1 &&
                 TypeUtils.GetNonNullableType(args[0].LimitType) == TypeUtils.GetNonNullableType(args[1].LimitType) &&
                 TypeUtils.IsArithmetic(args[0].LimitType)) {
@@ -248,7 +247,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression expr;
                 MetaObject self = args[0].Restrict(args[0].LimitType);
                 MetaObject arg0 = args[1].Restrict(args[0].LimitType);
-                
+
                 switch (info.Operator) {
                     case Operators.Add: expr = Ast.Add(self.Expression, arg0.Expression); break;
                     case Operators.Subtract: expr = Ast.Subtract(self.Expression, arg0.Expression); break;
@@ -272,7 +271,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryForwardOperator(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/args) {
+        private MetaObject TryForwardOperator(OperatorInfo info, MetaObject[] args) {
             MethodInfo[] targets = GetApplicableMembers(args[0].LimitType, info);
             Restrictions restrictions = Restrictions.Empty;
             if (targets.Length == 0) {
@@ -286,7 +285,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryReverseOperator(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryReverseOperator(OperatorInfo info, MetaObject[] args) {
             if (args.Length > 0) {
                 MethodInfo[] targets = GetApplicableMembers(args[0].LimitType, info);
                 if (targets.Length > 0) {
@@ -297,9 +296,9 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryInplaceOperator(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryInplaceOperator(OperatorInfo info, MetaObject[] args) {
             Operators op = CompilerHelpers.InPlaceOperatorToOperator(info.Operator);
-            
+
             if (op != Operators.None) {
                 // recurse to try and get the non-inplace action...
                 return MakeOperatorRule(OperatorInfo.GetOperatorInfo(op), args);
@@ -308,7 +307,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private static MetaObject TryMakeDefaultUnaryRule(OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject TryMakeDefaultUnaryRule(OperatorInfo info, MetaObject[] args) {
             if (args.Length == 1) {
                 Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
                 switch (info.Operator) {
@@ -386,7 +385,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private static MetaObject/*!*/ MakeIMembersListRule(MetaObject/*!*/ target) {
+        private static MetaObject MakeIMembersListRule(MetaObject target) {
             return new MetaObject(
                 Ast.Call(
                     typeof(BinderOps).GetMethod("GetStringMembers"),
@@ -400,7 +399,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private static MetaObject/*!*/ MakeCallSignatureResult(MethodBase/*!*/[] methods, MetaObject/*!*/ target) {
+        private static MetaObject MakeCallSignatureResult(MethodBase[] methods, MetaObject target) {
             List<string> arrres = new List<string>();
 
             if (methods != null) {
@@ -430,11 +429,11 @@ namespace Microsoft.Scripting.Actions {
 
         #region Indexer Rule
 
-        private static Type GetArgType(MetaObject/*!*/[]/*!*/ args, int index) {
+        private static Type GetArgType(MetaObject[] args, int index) {
             return args[index].HasValue ? args[index].LimitType : args[index].Expression.Type;
         }
 
-        private MetaObject MakeMethodIndexRule(string oper, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject MakeMethodIndexRule(string oper, MetaObject[] args) {
             MethodInfo[] defaults = GetMethodsFromDefaults(args[0].LimitType.GetDefaultMembers(), oper);
             if (defaults.Length != 0) {
                 MethodBinder binder = MethodBinder.MakeBinder(
@@ -470,7 +469,7 @@ namespace Microsoft.Scripting.Actions {
                     } else {
                         return new MetaObject(
                             Ast.Scope(
-                                Ast.Comma(                                    
+                                Ast.Comma(
                                     target.MakeExpression(),
                                     arg2
                                 ),
@@ -490,7 +489,7 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject MakeArrayIndexRule(string oper, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject MakeArrayIndexRule(string oper, MetaObject[] args) {
             if (CanConvertFrom(GetArgType(args, 1), typeof(int), NarrowingLevel.All)) {
                 Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
 
@@ -517,14 +516,14 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MethodInfo/*!*/[]/*!*/ GetMethodsFromDefaults(MemberInfo/*!*/[]/*!*/ defaults, string op) {
+        private MethodInfo[] GetMethodsFromDefaults(MemberInfo[] defaults, string op) {
             List<MethodInfo> methods = new List<MethodInfo>();
             foreach (MemberInfo mi in defaults) {
                 PropertyInfo pi = mi as PropertyInfo;
 
                 if (pi != null) {
                     if (op == StandardOperators.GetItem) {
-                        MethodInfo method = pi.GetGetMethod(Manager.GlobalOptions.PrivateBinding); 
+                        MethodInfo method = pi.GetGetMethod(Manager.GlobalOptions.PrivateBinding);
                         if (method != null) methods.Add(method);
                     } else if (op == StandardOperators.SetItem) {
                         MethodInfo method = pi.GetSetMethod(Manager.GlobalOptions.PrivateBinding);
@@ -556,11 +555,11 @@ namespace Microsoft.Scripting.Actions {
 
         #region Common helpers
 
-        private MetaObject TryMakeBindingTarget(MethodInfo/*!*/[]/*!*/ targets, MetaObject/*!*/[]/*!*/ args, Restrictions/*!*/ restrictions) {
+        private MetaObject TryMakeBindingTarget(MethodInfo[] targets, MetaObject[] args, Restrictions restrictions) {
             MethodBinder mb = MethodBinder.MakeBinder(this, targets[0].Name, targets);
 
             BindingTarget target = mb.MakeBindingTarget(CallTypes.None, args);
-            if (target.Success) {                
+            if (target.Success) {
                 return new MetaObject(
                     target.MakeExpression(),
                     restrictions.Merge(Restrictions.Combine(target.RestrictedArguments))
@@ -570,11 +569,11 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryMakeInvertedBindingTarget(MethodBase/*!*/[]/*!*/ targets, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryMakeInvertedBindingTarget(MethodBase[] targets, MetaObject[] args) {
             MethodBinder mb = MethodBinder.MakeBinder(this, targets[0].Name, targets);
             MetaObject[] selfArgs = args;
             BindingTarget target = mb.MakeBindingTarget(CallTypes.None, selfArgs);
-            
+
             if (target.Success) {
                 return new MetaObject(
                     Ast.Not(target.MakeExpression()),
@@ -597,7 +596,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private Expression ConvertIfNeeded(Expression/*!*/ expression, Type/*!*/ type) {
+        private Expression ConvertIfNeeded(Expression expression, Type type) {
             Assert.NotNull(expression, type);
 
             if (expression.Type != type) {
@@ -606,7 +605,7 @@ namespace Microsoft.Scripting.Actions {
             return expression;
         }
 
-        private MethodInfo[] GetApplicableMembers(Type/*!*/ t, OperatorInfo/*!*/ info) {
+        private MethodInfo[] GetApplicableMembers(Type t, OperatorInfo info) {
             Assert.NotNull(t, info);
 
             OldDoOperationAction act = OldDoOperationAction.Make(this, info.Operator);
@@ -624,12 +623,12 @@ namespace Microsoft.Scripting.Actions {
         /// Gets alternate members which are specially recognized by the DLR for specific types when
         /// all other member lookup fails.
         /// </summary>
-        private static MethodInfo[]/*!*/ GetFallbackMembers(Type/*!*/ t, OperatorInfo/*!*/ info, MetaObject/*!*/[]/*!*/ args, out Restrictions restrictions) {
+        private static MethodInfo[] GetFallbackMembers(Type t, OperatorInfo info, MetaObject[] args, out Restrictions restrictions) {
             // if we have an event we need to make a strongly-typed event handler
 
             // TODO: Events, we need to look in the args and pull out the real values
 
-            if (t == typeof(EventTracker)) {                             
+            if (t == typeof(EventTracker)) {
                 EventTracker et = ((EventTracker)args[0].Value);
                 if (info.Operator == Operators.InPlaceAdd) {
                     restrictions = GetFallbackRestrictions(t, et, args[0]);
@@ -642,7 +641,7 @@ namespace Microsoft.Scripting.Actions {
                 BoundMemberTracker bmt = ((BoundMemberTracker)args[0].Value);
                 if (bmt.BoundTo.MemberType == TrackerTypes.Event) {
                     EventTracker et = ((EventTracker)bmt.BoundTo);
-                    
+
                     if (info.Operator == Operators.InPlaceAdd) {
                         restrictions = GetFallbackRestrictions(t, et, args[0]);
                         return new MethodInfo[] { typeof(BinderOps).GetMethod("BoundEventTrackerInPlaceAdd").MakeGenericMethod(et.Event.EventHandlerType) };
@@ -657,8 +656,8 @@ namespace Microsoft.Scripting.Actions {
             return new MethodInfo[0];
         }
 
-        private static Restrictions/*!*/ GetFallbackRestrictions(Type/*!*/ t, EventTracker/*!*/ et, MetaObject/*!*/ self) {
-            if(t == typeof(EventTracker)){
+        private static Restrictions GetFallbackRestrictions(Type t, EventTracker et, MetaObject self) {
+            if (t == typeof(EventTracker)) {
                 //
                 // Test Generated:
                 //   BinderOps.GetEventHandlerType(((EventTracker)args[0]).Event) == et.Event.EventHandlerType
@@ -678,7 +677,7 @@ namespace Microsoft.Scripting.Actions {
                         Ast.Constant(et.Event.EventHandlerType)
                     )
                 );
-            } else if( t == typeof(BoundMemberTracker)){
+            } else if (t == typeof(BoundMemberTracker)) {
                 //
                 // Test Generated:
                 //   BinderOps.GetEventHandlerType(((EventTracker)((BoundMemberTracker)args[0]).BountTo).Event) == et.Event.EventHandlerType
@@ -709,7 +708,7 @@ namespace Microsoft.Scripting.Actions {
             return Restrictions.Empty;
         }
 
-        private static MethodInfo[] FilterNonMethods(Type/*!*/ t, MemberGroup/*!*/ members) {
+        private static MethodInfo[] FilterNonMethods(Type t, MemberGroup members) {
             Assert.NotNull(t, members);
 
             List<MethodInfo> methods = new List<MethodInfo>(members.Count);

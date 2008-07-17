@@ -113,7 +113,7 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// OBSOLETE
         /// </summary>
-        public Expression/*!*/ MakeExpression(RuleBuilder/*!*/ rule, IList<Expression>/*!*/ parameters) {
+        public Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters) {
             ContractUtils.RequiresNotNull(parameters, "parameters");
 
             if (_target == null) {
@@ -130,7 +130,7 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// CodeContext is not available and will be null.
         /// </summary>
-        public Expression/*!*/ MakeExpression() {
+        public Expression MakeExpression() {
             return MakeExpression(Expression.Null(typeof(CodeContext)));
         }
 
@@ -139,13 +139,13 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// Throws InvalidOperationException if the binding failed.
         /// </summary>
-        public Expression/*!*/ MakeExpression(Expression/*!*/ codeContext) {
+        public Expression MakeExpression(Expression codeContext) {
             ContractUtils.RequiresNotNull(codeContext, "codeContext");
             ContractUtils.Requires(codeContext.Type == typeof(CodeContext), "codeContext expression must be of type CodeContext");
 
             if (_target == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
-            } else  if (_restrictedArgs == null) {
+            } else if (_restrictedArgs == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was done with Expressions, not MetaObject's");
             }
 
@@ -153,10 +153,10 @@ namespace Microsoft.Scripting.Generation {
             for (int i = 0; i < exprs.Length; i++) {
                 exprs[i] = _restrictedArgs[i].Expression;
             }
-            
+
             return _target.MakeExpression(codeContext, exprs);
         }
-        
+
         /// <summary>
         /// Returns the method if the binding succeeded, or null if no method was applicable.
         /// </summary>
@@ -244,7 +244,7 @@ namespace Microsoft.Scripting.Generation {
         /// The members of the array correspond to each of the arguments.  All members of the array
         /// have a value.
         /// </summary>
-        public IList<MetaObject/*!*/> RestrictedArguments {
+        public IList<MetaObject> RestrictedArguments {
             get {
                 return _restrictedArgs;
             }
@@ -268,7 +268,7 @@ namespace Microsoft.Scripting.Generation {
         /// failed returns NarrowingLevel.None.
         /// </summary>
         public NarrowingLevel NarrowingLevel {
-            get {                
+            get {
                 return _level;
             }
         }

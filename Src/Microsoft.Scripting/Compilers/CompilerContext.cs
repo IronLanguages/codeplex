@@ -27,48 +27,48 @@ namespace Microsoft.Scripting.Compilers {
         /// <summary>
         /// Source unit currently being compiled in the CompilerContext
         /// </summary>
-        private readonly SourceUnit/*!*/ _sourceUnit;
+        private readonly SourceUnit _sourceUnit;
 
         /// <summary>
         /// Current error sink.
         /// </summary>
-        private readonly ErrorSink/*!*/ _errors;
+        private readonly ErrorSink _errors;
 
         /// <summary>
         /// Sink for parser callbacks (e.g. brace matching, etc.).
         /// </summary>
-        private readonly ParserSink/*!*/ _parserSink;
+        private readonly ParserSink _parserSink;
 
         /// <summary>
         /// Compiler specific options.
         /// </summary>
-        private readonly CompilerOptions/*!*/ _options;
+        private readonly CompilerOptions _options;
 
-        public SourceUnit/*!*/ SourceUnit {
-            get { 
+        public SourceUnit SourceUnit {
+            get {
                 return _sourceUnit;
             }
         }
 
-        public ParserSink/*!*/ ParserSink {
+        public ParserSink ParserSink {
             get {
                 return _parserSink;
             }
         }
 
-        public ErrorSink/*!*/ Errors {
+        public ErrorSink Errors {
             get { return _errors; }
         }
 
-        public CompilerOptions/*!*/ Options {
+        public CompilerOptions Options {
             get { return _options; }
         }
 
-        public CompilerContext(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink)
+        public CompilerContext(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink)
             : this(sourceUnit, options, errorSink, ParserSink.Null) {
         }
 
-        public CompilerContext(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink, ParserSink/*!*/ parserSink) {
+        public CompilerContext(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink, ParserSink parserSink) {
             ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
             ContractUtils.RequiresNotNull(errorSink, "errorSink");
             ContractUtils.RequiresNotNull(parserSink, "parserSink");

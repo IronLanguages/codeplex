@@ -22,15 +22,15 @@ using System.Scripting.Utils;
 namespace Microsoft.Scripting.Hosting.Shell {
 
     public class ConsoleHostOptionsParser {
-        private readonly ConsoleHostOptions/*!*/ _options;
-        private readonly ScriptDomainOptions/*!*/ _globalOptions;
-        private readonly ScriptRuntimeSetup/*!*/ _runtimeConfig;
+        private readonly ConsoleHostOptions _options;
+        private readonly ScriptDomainOptions _globalOptions;
+        private readonly ScriptRuntimeSetup _runtimeConfig;
 
-        public ConsoleHostOptions/*!*/ Options { get { return _options; } }
-        public ScriptDomainOptions/*!*/ GlobalOptions { get { return _globalOptions; } }
-        public ScriptRuntimeSetup/*!*/ RuntimeConfig { get { return _runtimeConfig; } }
+        public ConsoleHostOptions Options { get { return _options; } }
+        public ScriptDomainOptions GlobalOptions { get { return _globalOptions; } }
+        public ScriptRuntimeSetup RuntimeConfig { get { return _runtimeConfig; } }
 
-        public ConsoleHostOptionsParser(ConsoleHostOptions/*!*/ options, ScriptDomainOptions/*!*/ globalOptions, ScriptRuntimeSetup/*!*/ runtimeConfig) {
+        public ConsoleHostOptionsParser(ConsoleHostOptions options, ScriptDomainOptions globalOptions, ScriptRuntimeSetup runtimeConfig) {
             ContractUtils.RequiresNotNull(options, "options");
             ContractUtils.RequiresNotNull(globalOptions, "globalOptions");
             ContractUtils.RequiresNotNull(runtimeConfig, "runtimeConfig");
@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         // TODO: this should be on ScriptRuntimeSetup and should distinguish id from extension
-        private bool IsRegisteredName(string/*!*/ name) {
+        private bool IsRegisteredName(string name) {
             foreach (LanguageProviderSetup language in _runtimeConfig.LanguageProviders) {
                 if (Array.IndexOf(language.Names, name) != -1) {
                     return true;
@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         /// <exception cref="InvalidOptionException"></exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public void Parse(string[]/*!*/ args) {
+        public void Parse(string[] args) {
             ContractUtils.RequiresNotNull(args, "args");
 
             int i = 0;
@@ -168,14 +168,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
             }
         }
 
-        protected void OptionValueRequired(string/*!*/ optionName, string value) {
+        protected void OptionValueRequired(string optionName, string value) {
             if (value == null) {
                 throw new InvalidOptionException(String.Format(CultureInfo.CurrentCulture, "Argument expected for the {0} option.", optionName));
             }
         }
 
         [Conditional("SILVERLIGHT")]
-        private void OptionNotAvailableOnSilverlight(string/*!*/ optionName) {
+        private void OptionNotAvailableOnSilverlight(string optionName) {
             throw new InvalidOptionException(String.Format("Option '{0}' is not available on Silverlight.", optionName));
         }
     }

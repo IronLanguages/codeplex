@@ -79,9 +79,10 @@ class FileConsole(object):
         
     def CreateASTFromFile(self, fileName):
         completeCode = self.engine.CreateScriptSourceFromFile(fileName)
-        cc = CompilerContext(completeCode.SourceUnit, PythonCompilerOptions(), ErrorSink.Default)
+        sourceUnit = HostingHelpers.GetSourceUnit(completeCode)
+        cc = CompilerContext(sourceUnit, PythonCompilerOptions(), ErrorSink.Default)
         parser = Parser.CreateParser(cc, PythonEngineOptions())
-        return parser.ParseFile(False), completeCode.SourceUnit.GetCode()
+        return parser.ParseFile(False), sourceUnit.GetCode()
         
     def GetCodeForStatement(self, codeText, statement):
         decoratorStart, decoratorLength = -1, 0

@@ -22,9 +22,9 @@ using System.Scripting.Utils;
 namespace System.Linq.Expressions {
     // TODO: remove or rename
     public sealed class ActionExpression : Expression {
-        private readonly ReadOnlyCollection<Expression>/*!*/ _arguments;
+        private readonly ReadOnlyCollection<Expression> _arguments;
 
-        internal ActionExpression(Annotations annotations, CallSiteBinder/*!*/ binder, ReadOnlyCollection<Expression>/*!*/ arguments, Type/*!*/ result)
+        internal ActionExpression(Annotations annotations, CallSiteBinder binder, ReadOnlyCollection<Expression> arguments, Type result)
             : base(annotations, ExpressionType.ActionExpression, result, binder) {
             _arguments = arguments;
         }
