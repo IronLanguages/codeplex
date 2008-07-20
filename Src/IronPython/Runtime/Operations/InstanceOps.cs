@@ -86,7 +86,11 @@ namespace IronPython.Runtime.Operations {
         internal static BuiltinFunction New {
             get {
                 if (_New == null) {
-                    _New = (BuiltinFunction)PythonTypeOps.GetSlot(TypeInfo.GetExtensionMemberGroup(typeof(object), typeof(ObjectOps).GetMember("__new__")), "__new__");
+                    _New = (BuiltinFunction)PythonTypeOps.GetSlot(
+                        TypeInfo.GetExtensionMemberGroup(typeof(object), typeof(ObjectOps).GetMember("__new__")),
+                        "__new__",
+                        false // privateBinding
+                    );
                 }
                 return _New;
             }

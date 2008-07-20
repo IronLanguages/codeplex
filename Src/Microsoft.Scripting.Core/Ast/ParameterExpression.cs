@@ -22,7 +22,7 @@ namespace System.Linq.Expressions {
         private readonly string _name;
         private readonly bool _isByRef;
 
-        internal ParameterExpression(Annotations annotations, Type type, string name, bool isByRef)
+        internal ParameterExpression(Type type, string name, Annotations annotations, bool isByRef)
             : base(annotations, ExpressionType.Parameter, type) {
             _name = name;
             _isByRef = isByRef;
@@ -52,29 +52,17 @@ namespace System.Linq.Expressions {
         //CONFORMING
         public static ParameterExpression Parameter(Type type, string name, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(!type.IsByRef, "type");
 
             if (type == typeof(void)) {
                 throw Error.ArgumentCannotBeOfTypeVoid();
             }
 
-            return new ParameterExpression(annotations, type, name, false);
-        }
-
-        public static ParameterExpression ByRefParameter(Type type, string name) {
-            return ByRefParameter(type, name, Annotations.Empty);
-        }
-
-        public static ParameterExpression ByRefParameter(Type type, string name, Annotations annotations) {
-            ContractUtils.RequiresNotNull(type, "type");
-
-            if (type == typeof(void)) {
-                throw Error.ArgumentCannotBeOfTypeVoid();
+            bool byref = type.IsByRef;
+            if (byref) {
+                type = type.GetElementType();
             }
 
-            type = TypeUtils.NoRef(type);
-
-            return new ParameterExpression(annotations, type, name, true);
+            return new ParameterExpression(type, name, annotations, byref);
         }
     }
 }

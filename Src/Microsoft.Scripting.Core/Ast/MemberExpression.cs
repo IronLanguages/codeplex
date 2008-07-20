@@ -68,7 +68,6 @@ namespace System.Linq.Expressions {
         //Field and Property factories when CanRead/CanWrite are implemented
         internal static void CheckField(FieldInfo info, Expression instance, Expression rightValue) {
             ContractUtils.RequiresNotNull(info, "field");
-            ContractUtils.Requires((instance == null) == info.IsStatic, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
             ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", Strings.IncorrectInstanceTypeField);
             ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", Strings.IncorrectValueTypeField);
         }
@@ -84,13 +83,11 @@ namespace System.Linq.Expressions {
 
         internal static void CheckPropertyGet(MethodInfo getMethod, Expression instance) {
             ContractUtils.Requires(getMethod != null, "getMethod", Strings.PropertyNotReadable);
-            ContractUtils.Requires((instance == null) == getMethod.IsStatic, "expression", Strings.OnlyStaticPropertiesHaveNullExpr);
             ContractUtils.Requires(instance == null || TypeUtils.CanAssign(getMethod.DeclaringType, instance.Type), "expression", Strings.IncorrectinstanceTypeProperty);
         }
 
         internal static void CheckPropertySet(MethodInfo setMethod, Expression instance, Expression rightValue) {
             ContractUtils.Requires(setMethod != null, "setMethod", Strings.PropertyNotWriteable);
-            ContractUtils.Requires((instance == null) == setMethod.IsStatic, "expression", Strings.OnlyStaticPropertiesHaveNullExpr);
             ContractUtils.Requires(instance == null || TypeUtils.CanAssign(setMethod.DeclaringType, instance.Type), "expression", Strings.IncorrectinstanceTypeProperty);
 
             ParameterInfo[] parameters = setMethod.GetParameters();
@@ -114,10 +111,10 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(field, "field");
             ContractUtils.RequiresNotNull(annotations, "annotations");
 
-            if (!field.IsStatic) {
-                if (expression == null) {
-                    ContractUtils.RequiresNotNull(expression, "expression");
-                }
+            if (field.IsStatic) {
+                ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
+            } else {
+                ContractUtils.RequiresNotNull(expression, "expression");
                 if (!TypeUtils.AreReferenceAssignable(field.DeclaringType, expression.Type)) {
                     throw Error.FieldNotDefinedForType(field, expression.Type);
                 }
@@ -203,13 +200,9 @@ namespace System.Linq.Expressions {
         public static MemberExpression Property(Expression expression, PropertyInfo property, Annotations annotations) {
             ContractUtils.RequiresNotNull(property, "property");
 
-            //TODO: this condition is too strict if we only need to assign to the property
-            if (!property.CanRead) {
-                throw Error.PropertyDoesNotHaveGetter(property);
-            }
-            bool isStatic = (property.GetGetMethod(true).IsStatic);
-
-            if (!isStatic) {
+            if (property.GetAccessors(true)[0].IsStatic) {
+                ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticPropertiesHaveNullExpr); 
+            } else {
                 ContractUtils.RequiresNotNull(expression, "expression");
                 if (!TypeUtils.IsValidInstanceType(property, expression.Type)) {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);

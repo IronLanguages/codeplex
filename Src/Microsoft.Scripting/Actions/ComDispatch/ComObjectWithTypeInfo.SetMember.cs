@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     // COM implementations are centered around interface definitions.  Consequently,
                     // the standard binder fails to find methods/properties for class types.
                     MemberInfo[] foundMembers = ComObjectWithTypeInfo.WalkType(_comType, StringName);
-                    if (!Context.LanguageContext.DomainManager.GlobalOptions.PrivateBinding) {
+                    if (!Context.LanguageContext.DomainManager.Configuration.PrivateBinding) {
                         members = new MemberGroup(CompilerHelpers.FilterNonVisibleMembers(_comType, foundMembers));
                     }
                 }
@@ -111,7 +111,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 MethodInfo setter = info.GetSetMethod(true);
 
                 if (setter != null) {
-                    setter = CompilerHelpers.GetCallableMethod(setter);
+                    setter = CompilerHelpers.GetCallableMethod(setter, Binder.PrivateBinding);
 
                     if (setter.IsPublic) {
                         AddToBody(Rule.MakeReturn(Binder, MakeReturnValue(Binder.MakeCallExpression(Rule.Context, setter, parameters))));

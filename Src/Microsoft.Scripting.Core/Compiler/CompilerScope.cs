@@ -21,6 +21,7 @@ using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using CompilerServices = System.Runtime.CompilerServices;
+using System.Scripting;
 
 namespace System.Linq.Expressions {
 
@@ -461,7 +462,7 @@ namespace System.Linq.Expressions {
 
         [Conditional("DEBUG")]
         private void DumpScope() {
-            if (!CompilerDebugOptions.ShowScopes) {
+            if (!GlobalDlrOptions.ShowScopes) {
                 return;
             }
 

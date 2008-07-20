@@ -220,6 +220,8 @@ namespace Microsoft.Scripting.Silverlight {
 
         private void InitializeDLR(ScriptRuntimeSetup setup) {
             setup.HostType = typeof(BrowserScriptHost);
+            setup.DebugMode = _debug;
+
             _env = ScriptRuntime.Create(setup);
 
             _env.LoadAssembly(GetType().Assembly); // to expose our helper APIs
@@ -233,8 +235,6 @@ namespace Microsoft.Scripting.Silverlight {
 
         private void StartMainProgram() {
             string code = DownloadEntryPoint();
-
-            _env.GlobalOptions.DebugMode = _debug;
 
             ScriptEngine engine = _env.GetEngineByFileExtension(Path.GetExtension(_entryPoint));
 
@@ -333,7 +333,6 @@ namespace Microsoft.Scripting.Silverlight {
                 return result;
             }
 
-            List<LanguageProviderSetup> langs = new List<LanguageProviderSetup>();
             try {
                 XmlReader reader = XmlReader.Create(configFile);
                 reader.MoveToContent();
@@ -364,16 +363,13 @@ namespace Microsoft.Scripting.Silverlight {
                         throw new ConfigFileException("expected 'Language' element to have attributes 'languageContext', 'assembly', 'extensions'");
                     }
 
-                    langs.Add(new LanguageProviderSetup(context, assembly, exts.Split(',')));
+                    string[] extensions = exts.Split(',');
+                    result.LanguageSetups.Add(new AssemblyQualifiedTypeName(context, assembly), new LanguageSetup(String.Empty, extensions, extensions));
                 }
             } catch (ConfigFileException cfe) {
                 throw cfe;
             } catch (Exception ex) {
                 throw new ConfigFileException(ex.Message, ex);
-            }
-
-            if (langs.Count > 0) {
-                result.LanguageProviders = ArrayUtils.AppendRange(result.LanguageProviders, langs);
             }
 
             return result;

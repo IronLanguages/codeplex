@@ -42,15 +42,13 @@ namespace System.Linq.Expressions {
         // TODO: fix parameter order: ExpressionType, Type, Annotations, CallSiteBinder
         // (optional params must come last in APIs, and this is exposed surface area)
         protected Expression(Annotations annotations, ExpressionType nodeType, Type type, CallSiteBinder bindingInfo) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
-
             // We should also enforce that subtrees of a bound node are also bound.
             // But it's up to the subclasses of Expression to enforce that
             if (type == null && bindingInfo == null){
                 throw Error.TypeOrBindingInfoMustBeNonNull();
             }
 
-            _annotations = annotations;
+            _annotations = annotations ?? Annotations.Empty;
             _nodeType = nodeType;
             _type = type;
             _binder = bindingInfo;

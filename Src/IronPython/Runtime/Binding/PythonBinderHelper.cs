@@ -274,14 +274,11 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Expression AddRecursionCheck(Expression expr) {
             if (PythonFunction.EnforceRecursion) {
-                expr = Ast.Block(
+                expr = Ast.Try(
                     Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
-                    Ast.TryFinally(
-                        expr,
-                        Ast.Block(
-                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
-                        )
-                    )
+                    expr
+                ).Finally(
+                    Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
                 );
             }
             return expr;

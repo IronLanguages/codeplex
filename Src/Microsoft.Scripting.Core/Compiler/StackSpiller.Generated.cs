@@ -80,6 +80,8 @@ namespace System.Linq.Expressions {
             RewriteDeleteExpression,                                    //    Delete
             RewriteDoStatement,                                         //    DoStatement
             RewriteEmptyStatement,                                      //    EmptyStatement
+            RewriteExtensionExpression,                                 //    Extension
+            RewriteIndexedPropertyExpression,                           //    IndexedProperty
             RewriteLabeledStatement,                                    //    LabeledStatement
             RewriteLocalScopeExpression,                                //    LocalScope
             RewriteLoopStatement,                                       //    LoopStatement
@@ -89,10 +91,9 @@ namespace System.Linq.Expressions {
             RewriteSwitchStatement,                                     //    SwitchStatement
             RewriteThrowStatement,                                      //    ThrowStatement
             RewriteTryStatement,                                        //    TryStatement
+            RewriteUnaryExpression,                                     //    Unbox
             RewriteVariableExpression,                                  //    Variable
             RewriteYieldStatement,                                      //    YieldStatement
-            RewriteIndexedPropertyExpression,                           //    IndexedProperty
-            RewriteExtensionExpression,                                 //    Extension
 
             // *** END GENERATED CODE ***
 

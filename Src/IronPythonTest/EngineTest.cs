@@ -55,8 +55,8 @@ namespace IronPythonTest {
             return context.LanguageContext;
         }
 
-        public static ScriptDomainOptions GetGlobalOptions() {
-            return ScriptDomainManager.Options;
+        public static DlrConfiguration GetGlobalOptions(CodeContext context) {
+            return context.LanguageContext.DomainManager.Configuration;
         }
     }
 
@@ -586,39 +586,29 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
         public void ScenarioStackFrameLineInfo() {
             const string lineNumber = "raise.py:line";
 
-            if (_pe.Options.InterpretedMode) {
-                // Disable this test in interpreted mode, since in this case
-                // the CLR stack traces do not include the python source file and line number.
-                return;
-            }
+            // TODO: clone setup?
+            var scope = ScriptRuntime.Create(new ScriptRuntimeSetup(true)).CreateScope("py");
+            var debugScope = ScriptRuntime.Create(new ScriptRuntimeSetup(true) { DebugMode = true }).CreateScope("py");
 
-            bool oldDebug = ScriptDomainManager.Options.DebugMode;
+            TestLineInfo(scope, lineNumber);
+            TestLineInfo(debugScope, lineNumber);
+            TestLineInfo(scope, lineNumber);
 
-            try {
-                ScriptScope scope = _pe.Runtime.CreateScope();
+            // Ensure that all APIs work
+            AreEqual(scope.GetVariable<int>("x"), 1);
 
-                TestLineInfo(scope, lineNumber, false);
-                TestLineInfo(scope, lineNumber, true);
-                TestLineInfo(scope, lineNumber, false);
-
-                // Ensure that all APIs work
-                AreEqual(_pe.CreateScriptSourceFromString("x").Execute<int>(scope), 1);
-                //IntIntDelegate d = pe.CreateLambda<IntIntDelegate>("arg + x");
-                //AreEqual(d(100), 101);
-                //d = pe.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
-                //AreEqual(d(100), 101);
-            } finally {
-                ScriptDomainManager.Options.DebugMode = oldDebug;
-            }
+            //IntIntDelegate d = pe.CreateLambda<IntIntDelegate>("arg + x");
+            //AreEqual(d(100), 101);
+            //d = pe.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
+            //AreEqual(d(100), 101);
         }
 
-        private void TestLineInfo(ScriptScope scope, string lineNumber, bool debuggable) {
-            ScriptDomainManager.Options.DebugMode = debuggable;
+        private void TestLineInfo(ScriptScope/*!*/ scope, string lineNumber) {
             try {
-                _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py").Execute(scope);
+                scope.IncludeFile(Common.InputTestDirectory + "\\raise.py");
                 throw new Exception("We should not get here");
             } catch (StringException e2) {
-                if (debuggable != e2.StackTrace.Contains(lineNumber))
+                if (scope.Engine.Runtime.DebugMode != e2.StackTrace.Contains(lineNumber))
                     throw new Exception("Debugging is enabled even though Options.DebugMode is not specified");
             }
         }

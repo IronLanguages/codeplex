@@ -108,32 +108,20 @@ import Namespace.")]
 #if !SILVERLIGHT // files, paths
 
         public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, object rcw) {
-            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-
             return ComTypeLibDesc.CreateFromObject(rcw);
         }
 
         public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
-            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-
             return ComTypeLibDesc.CreateFromGuid(typeLibGuid);
         }
 
         public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, object rcw) {
-            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-
             ComTypeLibInfo typeLibInfo;
             typeLibInfo = ComTypeLibDesc.CreateFromObject(rcw);
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
         }
 
         public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
-            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-
             ComTypeLibInfo typeLibInfo;
             typeLibInfo = ComTypeLibDesc.CreateFromGuid(typeLibGuid);
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);

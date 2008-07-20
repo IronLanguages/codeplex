@@ -63,7 +63,8 @@ namespace IronPythonTest.Stress {
             long memoryUsed = finalMemory - initialMemory;
             const long memoryThreshold = 100000;
 
-            if (!_env.GlobalOptions.EmitsUncollectableCode) {
+            bool emitsUncollectibleCode = System.Scripting.Generation.Snippets.Shared.SaveSnippets || _env.DebugMode;
+            if (!emitsUncollectibleCode) {
                 if (memoryUsed > memoryThreshold)
                     throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));
             }

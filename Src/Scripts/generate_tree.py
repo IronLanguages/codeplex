@@ -77,7 +77,7 @@ expressions = [
     Expression("TypeAs",                        "UnaryExpression",                      True),
     Expression("TypeIs",                        "TypeBinaryExpression",                 True),
 
-    # DLR Added values
+    # New types in LINQ V2
 
     Expression("ActionExpression",              "ActionExpression",                     True),
     Expression("Assign",                        "AssignmentExpression",                 True),
@@ -88,6 +88,8 @@ expressions = [
     Expression("Delete",                        "DeleteExpression",                     True),
     Expression("DoStatement",                   "DoStatement",                          True),
     Expression("EmptyStatement",                "EmptyStatement",                       True),
+    Expression("Extension",                     "ExtensionExpression",                  True),
+    Expression("IndexedProperty",               "IndexedPropertyExpression",            True),
     Expression("LabeledStatement",              "LabeledStatement",                     True),
     Expression("LocalScope",                    "LocalScopeExpression",                 True),
     Expression("LoopStatement",                 "LoopStatement",                        True),
@@ -97,10 +99,9 @@ expressions = [
     Expression("SwitchStatement",               "SwitchStatement",                      True),
     Expression("ThrowStatement",                "ThrowStatement",                       True),
     Expression("TryStatement",                  "TryStatement",                         True),
+    Expression("Unbox",                         "UnaryExpression",                      True),
     Expression("Variable",                      "VariableExpression",                   True),
     Expression("YieldStatement",                "YieldStatement",                       True),
-    Expression("IndexedProperty",               "IndexedPropertyExpression",            True),
-    Expression("Extension",                     "ExtensionExpression",                  True),
 ]
 
 def get_unique_types():
@@ -180,8 +181,8 @@ def gen_compiler_interpreter(cw, name):
     for node in expressions:
         method = name
 
-        # special case AndAlso and OrElse
-        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce"]:
+        # special case certain unary/binary expressions
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox"]:
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"

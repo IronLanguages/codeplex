@@ -166,6 +166,11 @@ namespace IronPython.Runtime.Binding {
                     // explitit interface implementation dispatch on a value type, don't
                     // unbox the value type before the dispatch.
                     instance = Ast.Convert(instance, Value.Target.DeclaringType);
+                } else if (selfType.IsValueType) {
+                    // We might be calling a a mutating method (like
+                    // Rectangle.Intersect). If so, we want it to mutate
+                    // the boxed value directly
+                    instance = Ast.Unbox(instance, selfType);
                 } else {
 #if SILVERLIGHT
                     instance = Ast.Convert(instance, selfType);

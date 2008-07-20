@@ -51,10 +51,12 @@ namespace Microsoft.Scripting.Hosting {
             get { return _host; }
         }
 
-        // TODO: remove
-        public ScriptDomainOptions GlobalOptions {
-            get { return _manager.GlobalOptions; }
-            set { _manager.GlobalOptions = value; }
+        public bool DebugMode {
+            get { return _manager.Configuration.DebugMode; }
+        }
+
+        public bool PrivateBinding {
+            get { return _manager.Configuration.PrivateBinding; }
         }
 
         public ScriptIO IO {
@@ -109,16 +111,12 @@ namespace Microsoft.Scripting.Hosting {
 
             ScriptHostProxy hostProxy = new ScriptHostProxy(host);
 
-            ScriptDomainManager manager = new ScriptDomainManager(hostProxy);
+            ScriptDomainManager manager = new ScriptDomainManager(hostProxy, setup.ToConfiguration());
             InvariantContext invariantContext = new InvariantContext(manager);
-
-            // set the manager up:
-            setup.RegisterLanguages(manager);
 
             ScriptRuntime runtime = new ScriptRuntime(manager, host, invariantContext);
 
-            // runtime needs to be all set at this point, host code is called:
-            Thread.MemoryBarrier();
+            // runtime needs to be all set at this point, host code is called
 
             host.SetRuntime(runtime);
             return runtime;
@@ -176,14 +174,6 @@ namespace Microsoft.Scripting.Hosting {
 
         private static ScriptRuntimeSetup GetSetupInformation() {
 #if !SILVERLIGHT
-            ScriptRuntimeSetup result;
-
-            // setup provided by app-domain creator:
-            result = ScriptRuntimeSetup.GetAppDomainAssociated(AppDomain.CurrentDomain);
-            if (result != null) {
-                return result;
-            }
-
             // setup provided in a configuration file:
             // This will load System.Configuration.dll which costs ~350 KB of memory. However, this does not normally 
             // need to be loaded in simple scenarios (like running the console hosts). Hence, the working set cost
@@ -202,19 +192,11 @@ namespace Microsoft.Scripting.Hosting {
         #endregion
 
         public string[] GetRegisteredFileExtensions() {
-            return _manager.GetRegisteredFileExtensions();
+            return _manager.Configuration.GetFileExtensions();
         }
 
         public string[] GetRegisteredLanguageIdentifiers() {
-            return _manager.GetRegisteredLanguageIdentifiers();
-        }
-
-        internal string[] GetRegisteredFileExtensions(LanguageContext context) {
-            return _manager.GetRegisteredFileExtensions(context);
-        }
-
-        internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
-            return _manager.GetRegisteredLanguageIdentifiers(context);
+            return _manager.Configuration.GetLanguageIdentifiers();
         }
 
         #region Engines
@@ -224,7 +206,7 @@ namespace Microsoft.Scripting.Hosting {
 
             ScriptEngine engine;
             if (!TryGetEngine(languageId, out engine)) {
-                throw new ArgumentException("Unknown language identifier");
+                throw new ArgumentException(String.Format("Unknown language identifier: '{0}'", languageId));
             }
 
             return engine;
@@ -237,7 +219,7 @@ namespace Microsoft.Scripting.Hosting {
 
             ScriptEngine engine;
             if (!TryGetEngineByFileExtension(extension, out engine)) {
-                throw new ArgumentException("Unknown file extension");
+                throw new ArgumentException(String.Format("Unknown file extension: '{0}'", extension));
             }
 
             return engine;
@@ -245,7 +227,7 @@ namespace Microsoft.Scripting.Hosting {
 
         public bool TryGetEngine(string languageId, out ScriptEngine engine) {
             LanguageContext language;
-            if (!_manager.TryGetLanguageContext(languageId, out language)) {
+            if (!_manager.TryGetLanguage(languageId, out language)) {
                 engine = null;
                 return false;
             }
@@ -256,7 +238,7 @@ namespace Microsoft.Scripting.Hosting {
 
         public bool TryGetEngineByFileExtension(string extension, out ScriptEngine engine) {
             LanguageContext language;
-            if (!_manager.TryGetLanguageContextByFileExtension(extension, out language)) {
+            if (!_manager.TryGetLanguageByFileExtension(extension, out language)) {
                 engine = null;
                 return false;
             }
@@ -265,9 +247,8 @@ namespace Microsoft.Scripting.Hosting {
             return true;
         }
 
-        // TODO: remove
-        public ScriptEngine GetEngine(Type languageContextType) {
-            return GetEngine(_manager.GetLanguageContext(languageContextType));
+        public ScriptEngine GetEngine(AssemblyQualifiedTypeName languageContextType) {
+            return GetEngine(_manager.GetLanguage(languageContextType));
         }
 
         /// <summary>

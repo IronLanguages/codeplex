@@ -135,7 +135,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (setter != null) {
-                setter = CompilerHelpers.GetCallableMethod(setter);
+                setter = CompilerHelpers.GetCallableMethod(setter, Binder.PrivateBinding);
 
                 if (info.IsStatic != _isStatic) {
                     AddToBody(Binder.MakeStaticPropertyInstanceAccessError(info, true, Rule.Parameters).MakeErrorForRule(Rule, Binder));

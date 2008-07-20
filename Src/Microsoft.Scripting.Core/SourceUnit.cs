@@ -189,7 +189,7 @@ namespace System.Scripting {
 
         public bool EmitDebugSymbols {
             get {
-                return HasPath && LanguageContext.DomainManager.GlobalOptions.DebugMode;
+                return HasPath && LanguageContext.DomainManager.Configuration.DebugMode;
             }
         }
 

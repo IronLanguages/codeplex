@@ -246,7 +246,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        internal static PythonTypeSlot/*!*/ GetSlot(MemberGroup group, string name) {
+        internal static PythonTypeSlot/*!*/ GetSlot(MemberGroup group, string name, bool privateBinding) {
             if (group.Count == 0) {
                 return null;
             }
@@ -260,12 +260,16 @@ namespace IronPython.Runtime.Operations {
                         mems.Add(((MethodTracker)mt).Method);
                     }
                     return GetFinalSlotForFunction(GetBuiltinFunction(group[0].DeclaringType, group[0].Name, name, null, mems.ToArray()));
+                
                 case TrackerTypes.Field:
                     return GetReflectedField(((FieldTracker)group[0]).Field);
+                
                 case TrackerTypes.Property:
-                    return GetReflectedProperty((PropertyTracker)group[0]);       
+                    return GetReflectedProperty((PropertyTracker)group[0], privateBinding);       
+                
                 case TrackerTypes.Event:
                     return GetReflectedEvent(((EventTracker)group[0]));
+                
                 case TrackerTypes.Type:
                     TypeTracker type = (TypeTracker)group[0];
                     for (int i = 1; i < group.Count; i++) {
@@ -277,10 +281,13 @@ namespace IronPython.Runtime.Operations {
                     }
 
                     return new PythonTypeValueSlot(DynamicHelpers.GetPythonTypeFromType(type.Type));
+                
                 case TrackerTypes.Constructor:
-                    return GetConstructor(group[0].DeclaringType);
+                    return GetConstructor(group[0].DeclaringType, privateBinding);
+                
                 case TrackerTypes.Custom:
                     return ((PythonCustomTracker)group[0]).GetSlot();
+                
                 default:
                     // if we have a new slot in the derived class filter out the 
                     // members from the base class.
@@ -314,9 +321,9 @@ namespace IronPython.Runtime.Operations {
             return group;
         }
 
-        private static BuiltinFunction GetConstructor(Type t) {
+        private static BuiltinFunction GetConstructor(Type t, bool privateBinding) {
             BuiltinFunction ctorFunc = InstanceOps.NonDefaultNewInst;
-            MethodBase[] ctors = CompilerHelpers.GetConstructors(t);
+            MethodBase[] ctors = CompilerHelpers.GetConstructors(t, privateBinding);
 
             return GetConstructor(t, ctorFunc, ctors);
         }
@@ -618,7 +625,7 @@ namespace IronPython.Runtime.Operations {
                             Replace("__new__(cls, ", DynamicHelpers.GetPythonTypeFromType(type).Name + "(");
         }
 
-        internal static ReflectedGetterSetter GetReflectedProperty(PropertyTracker pt) {
+        internal static ReflectedGetterSetter GetReflectedProperty(PropertyTracker pt, bool privateBinding) {
             ReflectedGetterSetter rp;
             lock (_propertyCache) {
                 if (_propertyCache.TryGetValue(pt, out rp)) {
@@ -626,7 +633,6 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 NameType nt = NameType.PythonProperty;
-                bool privateBinding = ScriptDomainManager.Options.PrivateBinding;
                 MethodInfo getter = FilterProtectedGetterOrSetter(pt.GetGetMethod(true), privateBinding);
                 MethodInfo setter = FilterProtectedGetterOrSetter(pt.GetSetMethod(true), privateBinding);
 

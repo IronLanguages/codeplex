@@ -292,11 +292,7 @@ namespace System.Scripting.Actions {
 
             vars[0] = Ast.Parameter(typeof(CallSite), "callSite");
             for (int i = FirstParameterIndex; i < pis.Length; i++) {
-                Type pt = pis[i].ParameterType;
-                all[i] = vars[i] =
-                    pt.IsByRef
-                        ? Ast.ByRefParameter(pt, "$arg" + i)
-                        : Ast.Parameter(pt, "$arg" + i);
+                all[i] = vars[i] = Ast.Parameter(pis[i].ParameterType, "$arg" + i);
             }
 
             _paramVariables = vars;

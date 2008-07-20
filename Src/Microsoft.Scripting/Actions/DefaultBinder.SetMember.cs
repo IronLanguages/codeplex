@@ -184,13 +184,13 @@ namespace Microsoft.Scripting.Actions {
 
             // Allow access to protected getters TODO: this should go, it supports IronPython semantics.
             if (setter != null && !setter.IsPublic && !(setter.IsFamily || setter.IsFamilyOrAssembly)) {
-                if (!Manager.GlobalOptions.PrivateBinding) {
+                if (!PrivateBinding) {
                     setter = null;
                 }
             }
 
             if (setter != null) {
-                setter = CompilerHelpers.GetCallableMethod(setter);
+                setter = CompilerHelpers.GetCallableMethod(setter, PrivateBinding);
 
                 if (info.IsStatic != (instance == null)) {
                     memInfo.Body.FinishCondition(

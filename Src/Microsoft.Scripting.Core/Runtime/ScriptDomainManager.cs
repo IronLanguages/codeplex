@@ -69,10 +69,11 @@ namespace System.Scripting.Runtime {
         private readonly SharedIO _sharedIO;
 
         // TODO: ReaderWriterLock (Silverlight?)
-        private readonly object _languageRegistrationLock = new object();
-        private readonly Dictionary<string, LanguageRegistration> _languageIds = new Dictionary<string, LanguageRegistration>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, LanguageRegistration> _languageTypes = new Dictionary<string, LanguageRegistration>();
         private readonly List<LanguageContext> _registeredContexts = new List<LanguageContext>();
+
+        private ScopeAttributesWrapper _scopeWrapper;
+        private Scope _globals;
+        private readonly DlrConfiguration _configuration;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
         public PlatformAdaptationLayer Platform {
@@ -85,275 +86,90 @@ namespace System.Scripting.Runtime {
             }
         }
 
-        public SharedIO SharedIO { get { return _sharedIO; } }
-        public DynamicRuntimeHostingProvider Host { get { return _hostingProvider; } }
-        private ScopeAttributesWrapper _scopeWrapper;
-        private Scope _globals;
+        public SharedIO SharedIO {
+            get { return _sharedIO; }
+        }
 
-        private static ScriptDomainOptions _options = new ScriptDomainOptions();// TODO: remove or reduce     
+        public DynamicRuntimeHostingProvider Host {
+            get { return _hostingProvider; }
+        }
 
-        public ScriptDomainManager(DynamicRuntimeHostingProvider hostingProvider) {
+        public DlrConfiguration Configuration {
+            get { return _configuration; }
+        }
+
+        public ScriptDomainManager(DynamicRuntimeHostingProvider hostingProvider, DlrConfiguration configuration) {
             ContractUtils.RequiresNotNull(hostingProvider, "hostingProvider");
+            ContractUtils.RequiresNotNull(configuration, "configuration");
+
+            configuration.Freeze();
 
             _hostingProvider = hostingProvider;
+            _configuration = configuration;
 
             _sharedIO = new SharedIO();
 
             // create the initial default scope
             _scopeWrapper = new ScopeAttributesWrapper(this);
             _globals = new Scope(_scopeWrapper);
-
-            // Dynamic languages still prefer type info over com IDispatch
-            _options.PreferComDispatchOverTypeInfo = false;
         }
 
         #region Language Registration
 
-        /// <summary>
-        /// Singleton for each language.
-        /// </summary>
-        private sealed class LanguageRegistration {
-            private readonly ScriptDomainManager _domainManager;
-            private readonly string _assemblyName;
-            private readonly string _typeName;
-            private LanguageContext _context;
-            private Type _type;
+        internal ContextId AssignContextId(LanguageContext language) {
+            lock (_registeredContexts) {
+                int index = _registeredContexts.Count;
+                _registeredContexts.Add(language);
 
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")] // TODO: fix
-            public string AssemblyName {
-                get { return _assemblyName; }
-            }
-
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")] // TODO: fix
-            public string TypeName {
-                get { return _typeName; }
-            }
-
-            public LanguageContext LanguageContext {
-                get { return _context; }
-            }
-
-            public LanguageRegistration(ScriptDomainManager domainManager, Type type) {
-                Debug.Assert(type != null);
-
-                _type = type;
-                _domainManager = domainManager;
-            }
-
-            public LanguageRegistration(ScriptDomainManager domainManager, string typeName, string assemblyName) {
-                Debug.Assert(typeName != null && assemblyName != null);
-
-                _assemblyName = assemblyName;
-                _typeName = typeName;
-                _domainManager = domainManager;
-            }
-
-            /// <summary>
-            /// Must not be called under a lock as it can potentially call a user code.
-            /// </summary>
-            /// <exception cref="MissingTypeException">languageId</exception>
-            /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-            public LanguageContext LoadLanguageContext() {
-                if (_context == null) {
-
-                    if (_type == null) {
-                        try {
-                            _type = _domainManager.Platform.LoadAssembly(_assemblyName).GetType(_typeName, true);
-                        } catch (Exception e) {
-                            throw new MissingTypeException(MakeAssemblyQualifiedName(_assemblyName, _typeName), e);
-                        }
-                    }
-
-                    lock (_domainManager._languageRegistrationLock) {
-                        _domainManager._languageTypes[_type.AssemblyQualifiedName] = this;
-                    }
-
-                    Interlocked.CompareExchange(ref _context, ReflectionUtils.CreateInstance<LanguageContext>(_type, _domainManager), null);
-                }
-                return _context;
+                return new ContextId(index + 1);
             }
         }
 
-        public void RegisterLanguageContext(string assemblyName, string typeName, params string[] identifiers) {
-            RegisterLanguageContext(assemblyName, typeName, false, identifiers);
+        public LanguageContext GetLanguage(Type providerType) {
+            ContractUtils.RequiresNotNull(providerType, "providerType");
+            return GetLanguage(new AssemblyQualifiedTypeName(providerType));
         }
 
-        public void RegisterLanguageContext(string assemblyName, string typeName, bool overrideExistingIds, params string[] identifiers) {
-            ContractUtils.RequiresNotNull(identifiers, "identifiers");
-
-            LanguageRegistration singleton_desc;
-            bool add_singleton_desc = false;
-            string aq_name = MakeAssemblyQualifiedName(typeName, assemblyName);
-
-            lock (_languageRegistrationLock) {
-                if (!_languageTypes.TryGetValue(aq_name, out singleton_desc)) {
-                    add_singleton_desc = true;
-                    singleton_desc = new LanguageRegistration(this, typeName, assemblyName);
-                }
-
-                // check for conflicts:
-                if (!overrideExistingIds) {
-                    for (int i = 0; i < identifiers.Length; i++) {
-                        LanguageRegistration desc;
-                        if (_languageIds.TryGetValue(identifiers[i], out desc) && !ReferenceEquals(desc, singleton_desc)) {
-                            throw Error.ConflictingIds();
-                        }
-                    }
-                }
-
-                // add singleton LP-desc:
-                if (add_singleton_desc)
-                    _languageTypes.Add(aq_name, singleton_desc);
-
-                // add id mapping to the singleton LP-desc:
-                for (int i = 0; i < identifiers.Length; i++) {
-                    _languageIds[identifiers[i]] = singleton_desc;
-                }
+        public LanguageContext GetLanguage(AssemblyQualifiedTypeName providerName) {
+            LanguageContext language;
+            if (!_configuration.TryLoadLanguage(this, providerName, out language)) {
+                throw Error.UnknownLanguageProviderType();
             }
-        }
-
-        public bool RemoveLanguageMapping(string identifier) {
-            ContractUtils.RequiresNotNull(identifier, "identifier");
-
-            lock (_languageRegistrationLock) {
-                return _languageIds.Remove(identifier);
-            }
-        }
-
-        /// <summary>
-        /// Throws an exception on failure.
-        /// </summary>
-        /// <exception cref="ArgumentNullException"><paramref name="type"/></exception>
-        /// <exception cref="ArgumentException"><paramref name="type"/></exception>
-        /// <exception cref="MissingTypeException">languageId</exception>
-        /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        public LanguageContext GetLanguageContext(Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-            if (!type.IsSubclassOf(typeof(LanguageContext))) {
-                throw Error.ShouldBeSubclassOfLangContext(); // TODO
-            }
-
-            LanguageRegistration desc = null;
-
-            lock (_languageRegistrationLock) {
-                if (!_languageTypes.TryGetValue(type.AssemblyQualifiedName, out desc)) {
-                    desc = new LanguageRegistration(this, type);
-                    _languageTypes[type.AssemblyQualifiedName] = desc;
-                }
-            }
-
-            if (desc != null) {
-                return desc.LoadLanguageContext();
-            }
-
-            // not found, not registered:
-            throw Error.UnknownLanguageProviderType();
+            return language;
         }
 
         /// <summary>
         /// Gets the language context of the specified type.  This can be used by language implementors
         /// to get their LanguageContext for an already existing ScriptDomainManager.
         /// </summary>
-        public TContextType GetLanguageContext<TContextType>() where TContextType : LanguageContext {
-            return (TContextType)GetLanguageContext(typeof(TContextType));
+        public TContextType GetLanguage<TContextType>() where TContextType : LanguageContext {
+            return (TContextType)GetLanguage(typeof(TContextType));
         }
 
-        internal string[] GetLanguageIdentifiers(Type type, bool extensionsOnly) {
-            if (type != null && !type.IsSubclassOf(typeof(LanguageContext))) {
-                throw Error.ShouldBeSubclassOfLangContext(); // TODO
-            }
-
-            bool get_all = type == null;
-            List<string> result = new List<string>();
-
-            lock (_languageTypes) {
-                LanguageRegistration singleton_desc = null;
-                if (!get_all && !_languageTypes.TryGetValue(type.AssemblyQualifiedName, out singleton_desc)) {
-                    return ArrayUtils.EmptyStrings;
-                }
-
-                foreach (KeyValuePair<string, LanguageRegistration> entry in _languageIds) {
-                    if (get_all || ReferenceEquals(entry.Value, singleton_desc)) {
-                        if (!extensionsOnly || IsExtensionId(entry.Key)) {
-                            result.Add(entry.Key);
-                        }
-                    }
-                }
-            }
-
-            return result.ToArray();
-        }
-
-        /// <exception cref="ArgumentNullException"><paramref name="languageId"/></exception>
-        /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
-        /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        public bool TryGetLanguageContext(string languageId, out LanguageContext languageContext) {
+        public bool TryGetLanguage(string languageId, out LanguageContext language) {
             ContractUtils.RequiresNotNull(languageId, "languageId");
+            return _configuration.TryLoadLanguage(this, languageId, false, out language);
+        }
 
-            bool result;
-            LanguageRegistration desc;
-
-            lock (_languageRegistrationLock) {
-                result = _languageIds.TryGetValue(languageId, out desc);
+        public LanguageContext GetLanguage(string languageId) {
+            LanguageContext language;
+            if (!TryGetLanguage(languageId, out language)) {
+                throw new ArgumentException("Unknown language identifier");
             }
-
-            languageContext = result ? desc.LoadLanguageContext() : null;
-
-            return result;
+            return language;
         }
 
-        public bool TryGetLanguageContextByFileExtension(string extension, out LanguageContext languageContext) {
-            if (String.IsNullOrEmpty(extension)) {
-                languageContext = null;
-                return false;
+        public bool TryGetLanguageByFileExtension(string extension, out LanguageContext language) {
+            ContractUtils.RequiresNotNull(extension, "extension");
+            return _configuration.TryLoadLanguage(this, DlrConfiguration.NormalizeExtension(extension), true, out language);
+        }
+
+        public LanguageContext GetLanguageByExtension(string extension) {
+            LanguageContext language;
+            if (!TryGetLanguageByFileExtension(extension, out language)) {
+                throw new ArgumentException("Unknown extension");
             }
-
-            // TODO: separate hashtable for extensions (see CodeDOM config)
-            if (extension[0] != '.') extension = '.' + extension;
-            return TryGetLanguageContext(extension, out languageContext);
-        }
-
-        public string[] GetRegisteredFileExtensions() {
-            return GetLanguageIdentifiers(null, true);
-        }
-
-        public string[] GetRegisteredLanguageIdentifiers() {
-            return GetLanguageIdentifiers(null, false);
-        }
-
-        // TODO: separate hashtable for extensions (see CodeDOM config)
-        private static bool IsExtensionId(string id) {
-            return id.StartsWith(".");
-        }
-
-        /// <exception cref="MissingTypeException">languageId</exception>
-        /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        public LanguageContext[] GetLanguageContexts(bool usedOnly) {
-            List<LanguageContext> results = new List<LanguageContext>(_languageIds.Count);
-
-            List<LanguageRegistration> to_be_loaded = usedOnly ? null : new List<LanguageRegistration>();
-
-            lock (_languageRegistrationLock) {
-                foreach (LanguageRegistration desc in _languageIds.Values) {
-                    if (desc.LanguageContext != null) {
-                        results.Add(desc.LanguageContext);
-                    } else if (!usedOnly) {
-                        to_be_loaded.Add(desc);
-                    }
-                }
-            }
-
-            if (!usedOnly) {
-                foreach (LanguageRegistration desc in to_be_loaded) {
-                    results.Add(desc.LoadLanguageContext());
-                }
-            }
-
-            return results.ToArray();
-        }
-
-        private static string MakeAssemblyQualifiedName(string typeName, string assemblyName) {
-            return String.Concat(typeName, ", ", assemblyName);
+            return language;
         }
 
         #endregion
@@ -435,10 +251,8 @@ namespace System.Scripting.Runtime {
             ContractUtils.RequiresNotNull(path, "path");
             ContractUtils.RequiresNotNull(languageId, "languageId");
 
-            LanguageContext language;
-            TryGetLanguageContext(languageId, out language);
-
-            SourceUnit source = Host.TryGetSourceFileUnit(language, path, StringUtils.DefaultEncoding, SourceCodeKind.File);
+            var language = GetLanguage(languageId);
+            var source = Host.TryGetSourceFileUnit(language, path, StringUtils.DefaultEncoding, SourceCodeKind.File);
             if (source == null) {
                 return null;
             }
@@ -455,65 +269,7 @@ namespace System.Scripting.Runtime {
 
         #endregion
 
-        #region TODO: Options
-
-        // TODO: remove or reduce
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public ScriptDomainOptions GlobalOptions {
-            get {
-                return _options;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _options = value;
-            }
-        }
-
-        // TODO: remove or reduce
-        public static ScriptDomainOptions Options {
-            get { return _options; }
-        }
-
-        #endregion
-
-        public string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
-            List<string> res = new List<string>();
-            lock (_languageRegistrationLock) {
-                foreach (KeyValuePair<string, LanguageRegistration> kvp in _languageIds) {
-                    if (kvp.Key.StartsWith(".")) continue;
-
-                    if (kvp.Value.LanguageContext == context) {
-                        res.Add(kvp.Key);
-                    }
-                }
-            }
-            return res.ToArray();
-        }
-
-        public string[] GetRegisteredFileExtensions(LanguageContext context) {
-            // TODO: separate hashtable for extensions (see CodeDOM config)
-            List<string> res = new List<string>();
-            lock (_languageRegistrationLock) {
-                foreach (KeyValuePair<string, LanguageRegistration> kvp in _languageIds) {
-                    if (!kvp.Key.StartsWith(".")) continue;
-
-                    if (kvp.Value.LanguageContext == context) {
-                        res.Add(kvp.Key);
-                    }
-                }
-            }
-
-            return res.ToArray();
-        }
-
-        internal ContextId AssignContextId(LanguageContext lc) {
-            lock (_registeredContexts) {
-                int index = _registeredContexts.Count;
-                _registeredContexts.Add(lc);
-
-                return new ContextId(index + 1);
-            }
-        }
+        #region ScopeAttributesWrapper
 
         private class ScopeAttributesWrapper : IAttributesCollection {
             private IAttributesCollection _dict = new SymbolDictionary();
@@ -658,5 +414,7 @@ namespace System.Scripting.Runtime {
         public Assembly[] GetLoadedAssemblyList() {
             return _scopeWrapper.GetLoadedAssemblies().ToArray();
         }
+
+        #endregion
     }
 }

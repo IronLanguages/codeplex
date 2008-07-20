@@ -91,7 +91,7 @@ namespace System.Scripting.Utils {
             return (array.Length > 0) ? (T[])array.Clone() : array;
         }
 
-        public static T[] MakeArray<T>(IList<T> list) {
+        public static T[] MakeArray<T>(ICollection<T> list) {
             if (list.Count == 0) {
                 return new T[0];
             }
@@ -101,7 +101,7 @@ namespace System.Scripting.Utils {
             return res;
         }
 
-        public static T[] MakeArray<T>(IList<T> elements, int reservedSlotsBefore, int reservedSlotsAfter) {
+        public static T[] MakeArray<T>(ICollection<T> elements, int reservedSlotsBefore, int reservedSlotsAfter) {
             if (reservedSlotsAfter < 0) throw new ArgumentOutOfRangeException("reservedSlotsAfter");
             if (reservedSlotsBefore < 0) throw new ArgumentOutOfRangeException("reservedSlotsBefore");
 

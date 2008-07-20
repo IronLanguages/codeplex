@@ -30,6 +30,8 @@ namespace System.Linq.Expressions {
         //
         // We don't want to "ref" parameters to modify values of expressions
         // except where it would in IL: locals, args, fields, and array elements
+        // (Unbox is an exception, it's intended to emit a ref to the orignal
+        // boxed value)
         private void EmitAddress(Expression node, Type type) {
             Debug.Assert(node != null);
 
@@ -69,8 +71,7 @@ namespace System.Linq.Expressions {
                     AddressOf((MemberExpression)node, type);
                     break;
 
-                // TODO: remove
-                case ExpressionType.Convert:
+                case ExpressionType.Unbox:
                     AddressOf((UnaryExpression)node, type);
                     break;
 
@@ -234,16 +235,12 @@ namespace System.Linq.Expressions {
         }
 
         private void AddressOf(UnaryExpression node, Type type) {
-            Debug.Assert(node.NodeType == ExpressionType.Convert);
+            Debug.Assert(node.NodeType == ExpressionType.Unbox);
+            Debug.Assert(type.IsValueType && !TypeUtils.IsNullableType(type));
 
-            // TODO: this is bad--we're letting things modify the boxed value
-            // TODO: doesn't work on Nullable<T>, possibly a JIT bug
-            if (node.Operand.Type == typeof(object) && type.IsValueType && !TypeUtils.IsNullableType(type)) {
-                EmitExpression(node.Operand);
-                _ilg.Emit(OpCodes.Unbox, type);
-            } else {
-                EmitExpressionAddress(node, type);
-            }
+            // Unbox leaves a pointer to the boxed value on the stack
+            EmitExpression(node.Operand);
+            _ilg.Emit(OpCodes.Unbox, type);
         }
 
         private void EmitExpressionAddress(Expression node, Type type) {

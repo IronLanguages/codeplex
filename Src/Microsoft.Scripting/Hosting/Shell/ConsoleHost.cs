@@ -35,22 +35,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private OptionsParser _languageOptionsParser;
 
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
-        public ScriptDomainOptions GlobalOptions { get { return _optionsParser.GlobalOptions; } }
-        public ScriptRuntimeSetup RuntimeConfig { get { return _optionsParser.RuntimeConfig; } }
-
+        public ScriptRuntimeSetup RuntimeSetup { get { return _optionsParser.RuntimeSetup; } }
+        
         public ScriptEngine Engine { get { return _engine; } }
         public ScriptRuntime Runtime { get { return _runtime; } }
 
         protected ConsoleHost() {
         }
 
-        protected void InitializeOptionsParser() {
-            if (_optionsParser == null) {
-                ScriptRuntimeSetup setup = CreateScriptEnvironmentSetup();
-                ConsoleHostOptions options = new ConsoleHostOptions();
-                _optionsParser = new ConsoleHostOptionsParser(options, ScriptDomainManager.Options, setup);
-            }
-        }
 
         /// <summary>
         /// Console Host entry-point .exe name.
@@ -71,29 +63,33 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _optionsParser.Parse(args);
         }
 
-        /// <summary>
-        /// Gets the ConsoleHostOptions so that languages can provide values from 
-        /// their own command line parser.
-        /// </summary>
-        public virtual ConsoleHostOptions HostOptions {
-            get {
-                return _optionsParser.Options;
-            }
-        }
-
-        protected virtual ScriptRuntimeSetup CreateScriptEnvironmentSetup() {
+        protected virtual ScriptRuntimeSetup CreateRuntimeSetup() {
             return new ScriptRuntimeSetup(true);
         }
 
-        protected virtual ScriptEngine CreateEngine() {
-            ScriptEngine engine;
-            if (Options.LanguageId != null) {
-                return Runtime.GetEngine(Options.LanguageId);
-            } else if (Options.RunFile != null && Runtime.TryGetEngineByFileExtension(Path.GetExtension(Options.RunFile), out engine)) {
-                return engine;
+        protected virtual PlatformAdaptationLayer PlatformAdaptationLayer {
+            get { return PlatformAdaptationLayer.Default; }
+        }
+
+        protected virtual Type Provider {
+            get { return null; }
+        }
+
+        private AssemblyQualifiedTypeName GetLanguageProvider(ScriptRuntimeSetup setup) {
+            AssemblyQualifiedTypeName providerName;
+
+            var providerType = Provider;
+            if (providerType != null) {
+                providerName = new AssemblyQualifiedTypeName(providerType);
+            } else if (Options.LanguageProvider.HasValue) {
+                providerName = Options.LanguageProvider.Value;
+            } else if (Options.RunFile != null && setup.TryGetLanguageProviderByExtension(Path.GetExtension(Options.RunFile), out providerName)) {
+                // nop
             } else {
                 throw new InvalidOptionException("No language specified.");
             }
+
+            return providerName;
         }
 
         protected virtual CommandLine CreateCommandLine() {
@@ -101,7 +97,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected virtual OptionsParser CreateOptionsParser() {
-            return new DefaultOptionsParser();
+            return new OptionsParser<ConsoleOptions>();
         }
 
         protected virtual IConsole CreateConsole(ScriptEngine engine, CommandLine commandLine, ConsoleOptions options) {
@@ -129,8 +125,11 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public int Run(string[] args) {
-            InitializeOptionsParser();
 
+            var runtimeSetup = CreateRuntimeSetup();
+            var options = new ConsoleHostOptions();
+            _optionsParser = new ConsoleHostOptionsParser(options, runtimeSetup);
+            
             try {
                 ParseHostOptions(args);
             } catch (InvalidOptionException e) {
@@ -140,35 +139,34 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             SetEnvironment();
 
-            // TODO: this initialization needs to be fixed when hosting config is fixed:
-            _runtime = ScriptRuntime.Create(RuntimeConfig);
+            AssemblyQualifiedTypeName provider = GetLanguageProvider(runtimeSetup);
+
+            LanguageSetup languageSetup;
+            if (!runtimeSetup.LanguageSetups.TryGetValue(provider, out languageSetup)) {
+                // add the language that the console returned a provider for:
+                runtimeSetup.LanguageSetups.Add(provider, languageSetup = new LanguageSetup(String.Empty));
+            }
+
             _languageOptionsParser = CreateOptionsParser();
 
             try {
-                _engine = CreateEngine();
-            } catch (Exception e) {
-                Console.Error.WriteLine(e.Message);
-                return _exitCode = 1;
-            }
-
-            _engine.SetScriptSourceSearchPaths(Options.SourceUnitSearchPaths);
-
-            _languageOptionsParser.Engine = _engine;
-            _languageOptionsParser.Platform = _runtime.Host.PlatformAdaptationLayer;
-            _languageOptionsParser.EngineOptions = _engine.Options;
-            _languageOptionsParser.GlobalOptions = GlobalOptions;
-
-            try {
-                _languageOptionsParser.Parse(Options.IgnoredArgs.ToArray());
+                _languageOptionsParser.Parse(Options.IgnoredArgs.ToArray(), runtimeSetup, languageSetup, PlatformAdaptationLayer);
             } catch (InvalidOptionException e) {
                 Console.Error.WriteLine(e.Message);
                 return _exitCode = -1;
             }
 
-            if (Options.RunAction == ConsoleHostOptions.Action.DisplayHelp) {
-                PrintHelp();
-                return _exitCode = 0;
+            _runtime = ScriptRuntime.Create(runtimeSetup);
+
+            try {
+                _engine = _runtime.GetEngine(provider);
+            } catch (Exception e) {
+                Console.Error.WriteLine(e.Message);
+                return _exitCode = 1;
             }
+            
+            // TODO: move to setup
+            _engine.SetScriptSourceSearchPaths(Options.SourceUnitSearchPaths);
 
             Execute();
             return _exitCode;
@@ -240,7 +238,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         private void Execute() {
 #if !SILVERLIGHT
-            if (Options.IsMTA) {
+            if (_languageOptionsParser.CommonConsoleOptions.IsMta) {
                 Thread thread = new Thread(ExecuteInternal);
                 thread.SetApartmentState(ApartmentState.MTA);
                 thread.Start();
@@ -312,8 +310,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
             Debug.Assert(_engine != null);
 
             CommandLine commandLine = CreateCommandLine();
-            ConsoleOptions consoleOptions = _languageOptionsParser.ConsoleOptions;
-
+            ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
+            
             if (consoleOptions.PrintVersionAndExit) {
                 Console.WriteLine("{0} {1} on .NET {2}", Engine.LanguageDisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;

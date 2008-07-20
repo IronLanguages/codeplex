@@ -128,7 +128,7 @@ def test_interactive_mode():
 # Test sys.exitfunc
 
 def test_sys_exitfunc():
-    from System.Scripting.Runtime import ScriptDomainManager
+    import clr
         
     inputScript = testpath.test_inputs_dir + "\\exitFuncRuns.py"
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
@@ -139,7 +139,7 @@ def test_sys_exitfunc():
     
     args = extraArgs
     
-    if ScriptDomainManager.Options.DebugMode:
+    if clr.GetCurrentRuntime().Configuration.DebugMode:
         args = "-D " + args
 
     inputScript = testpath.test_inputs_dir + "\\exitFuncRaises.py"

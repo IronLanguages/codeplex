@@ -17,54 +17,42 @@ using System;
 using System.Diagnostics;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Hosting {
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")] // TODO: fix
-    [Serializable]
-    public struct LanguageProviderSetup {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")] // TODO: fix
-        public readonly string[] Names;
-        public readonly string Assembly;
-        public readonly string Type;
-
-        public LanguageProviderSetup(string type, string assembly, params string[] names) {
-            this.Names = names;
-            this.Assembly = assembly;
-            this.Type = type;
-        }
-    }
-
     [Serializable]
     public sealed class ScriptRuntimeSetup {
-
-        private LanguageProviderSetup[] _languageProviders;
+        // host specification:
         private Type _hostType;
         private object[] _hostArguments;
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
-        public LanguageProviderSetup[] LanguageProviders {
-            get {
-                return _languageProviders;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _languageProviders = value;
-            }
+        // languages available in the runtime: 
+        private readonly Dictionary<AssemblyQualifiedTypeName, LanguageSetup> _languageSetups;
+
+        // DLR options:
+        private bool _debugMode;
+        private bool _privateBinding;
+
+        public Dictionary<AssemblyQualifiedTypeName, LanguageSetup> LanguageSetups {
+            get { return _languageSetups; }
+        }
+
+        public bool DebugMode {
+            get { return _debugMode; }
+            set { _debugMode = value; }
+        }
+
+        public bool PrivateBinding {
+            get { return _privateBinding; }
+            set { _privateBinding = value; }
         }
 
         public Type HostType {
-            get {
-                return _hostType;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                if (!value.IsSubclassOf(typeof(ScriptHost))) throw new ArgumentException("Invalid type", "value");
-                _hostType = value;
-            }
+            get { return _hostType; }
+            set { _hostType = value; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public object[] HostArguments {
             get {
                 return _hostArguments;
@@ -75,59 +63,143 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        private static string AppDomainDataKey {
-            get {
-                return typeof(ScriptRuntimeSetup).FullName;
-            }
-        }
-
-#if !SILVERLIGHT
-        public void AssociateWithAppDomain(AppDomain domain) {
-            ContractUtils.RequiresNotNull(domain, "domain");
-            domain.SetData(AppDomainDataKey, this);
-        }
-
-        public static ScriptRuntimeSetup GetAppDomainAssociated(AppDomain domain) {
-            ContractUtils.RequiresNotNull(domain, "domain");
-            return domain.GetData(AppDomainDataKey) as ScriptRuntimeSetup;
-        }
-#endif
-
-        public ScriptRuntimeSetup()
+        public ScriptRuntimeSetup() 
             : this(false) {
         }
 
-        public ScriptRuntimeSetup(bool addWellKnownLanguages) {
-            if (addWellKnownLanguages) {
-                _languageProviders = new LanguageProviderSetup[] {
 #if SIGNED
-                    new LanguageProviderSetup("IronPython.Runtime.PythonContext", "IronPython, Version=2.0.0.3000, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".py", "py", "python", "ironpython"),
-                    new LanguageProviderSetup("Microsoft.JScript.Runtime.JSContext", "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".jsx", ".js", "managedjscript", "js", "jscript"),
-                    new LanguageProviderSetup("Ruby.Runtime.RubyContext", "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".rb", "rb", "ruby", "ironruby"),
-                    new LanguageProviderSetup("Microsoft.VisualBasic.Scripting.Runtime.VisualBasicLanguageContext", "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".vbx", "vbx"),
-                    new LanguageProviderSetup("ToyScript.ToyLanguageContext", "ToyScript, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".ts", "ts", "toyscript", "toyscript"),
+        private const string IronPythonAssembly = "IronPython, Version=2.0.0.3000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+        private const string JScriptAssembly = "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+        private const string IronRubyAssembly = "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+        private const string VisualBasicAssembly = "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+        private const string ToyScriptAssembly = "ToyScript, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
 #else
-                    new LanguageProviderSetup("IronPython.Runtime.PythonContext", "IronPython", ".py", "py", "python", "ironpython"),
-                    new LanguageProviderSetup("Microsoft.JScript.Runtime.JSContext", "Microsoft.JScript.Runtime", ".jsx", ".js", "managedjscript", "js", "jscript"),
-                    new LanguageProviderSetup("Microsoft.VisualBasic.Scripting.Runtime.VisualBasicLanguageContext", "Microsoft.VisualBasic.Scripting", ".vbx", "vbx"),
-                    new LanguageProviderSetup("Ruby.Runtime.RubyContext", "IronRuby", ".rb", "rb", "ruby", "ironruby"),
-                    new LanguageProviderSetup("ToyScript.ToyLanguageContext", "ToyScript", ".ts", "ts", "toyscript", "toyscript"),
+        private const string IronPythonAssembly = "IronPython";
+        private const string JScriptAssembly = "Microsoft.JScript.Runtime";
+        private const string IronRubyAssembly = "IronRuby";
+        private const string VisualBasicAssembly = "Microsoft.VisualBasic.Scripting";
+        private const string ToyScriptAssembly = "ToyScript";
 #endif
-                };
-            } else {
-                _languageProviders = new LanguageProviderSetup[0];
+
+        public ScriptRuntimeSetup(bool addWellKnownLanguages) {
+            _languageSetups = new Dictionary<AssemblyQualifiedTypeName, LanguageSetup>();
+
+            if (addWellKnownLanguages) {
+                AddLanguage("IronPython.Runtime.PythonContext", IronPythonAssembly, 
+                    "IronPython",
+                    new[] { "py", "python", "ironpython" },
+                    new[] { ".py" } 
+                );
+
+                AddLanguage("Microsoft.JScript.Runtime.JSContext", JScriptAssembly,
+                    "Managed JScript",
+                    new[] { "managedjscript", "js", "jscript" },
+                    new[] { ".jsx", ".js" }
+                );
+
+                AddLanguage("Ruby.Runtime.RubyContext", IronRubyAssembly, 
+                    "IronRuby",
+                    new[] { "rb", "ruby", "ironruby" },
+                    new[] { ".rb" }
+                );
+
+                AddLanguage("Microsoft.VisualBasic.Scripting.Runtime.VisualBasicLanguageContext", VisualBasicAssembly, 
+                    "Visual Basic",
+                    new[] { "vbx" },
+                    new[] { ".vbx" } 
+                );
+
+                AddLanguage("ToyScript.ToyLanguageContext", ToyScriptAssembly, 
+                    "ToyScript",
+                    new[] { "ts", "toyscript" },
+                    new[] { ".ts" } 
+                );
             }
 
             _hostType = typeof(ScriptHost);
             _hostArguments = ArrayUtils.EmptyObjects;
         }
 
-        internal void RegisterLanguages(ScriptDomainManager manager) {
-            Debug.Assert(manager != null);
+        private void AddLanguage(string typeName, string assemblyName, string displayName, string[] ids, string[] extensions) {
+            _languageSetups.Add(new AssemblyQualifiedTypeName(typeName, assemblyName), new LanguageSetup(displayName, ids, extensions));
+        }
 
-            foreach (LanguageProviderSetup provider in _languageProviders) {
-                manager.RegisterLanguageContext(provider.Assembly, provider.Type, provider.Names);
+        public LanguageSetup GetLanguageSetup<TLanguage>() {
+            LanguageSetup setup;
+            if (!_languageSetups.TryGetValue(new AssemblyQualifiedTypeName(typeof(TLanguage)), out setup)) {
+                throw new ArgumentException("Language not registered");
             }
+            return setup;
+        }
+
+        public bool TryGetLanguageProviderByExtension(string extension, out AssemblyQualifiedTypeName provider) {
+            if (!extension.StartsWith(".")) {
+                extension = "." + extension;
+            }
+
+            foreach (var entry in _languageSetups) {
+                if (IndexOf(entry.Value.FileExtensions, extension, StringComparer.OrdinalIgnoreCase) != -1) {
+                    provider = entry.Key;
+                    return true;
+                }
+            }
+
+            provider = default(AssemblyQualifiedTypeName);
+            return false;
+        }
+
+        public bool TryGetLanguageProviderById(string id, out AssemblyQualifiedTypeName provider) {
+            foreach (var entry in _languageSetups) {
+                if (IndexOf(entry.Value.Ids, id, StringComparer.OrdinalIgnoreCase) != -1) {
+                    provider = entry.Key;
+                    return true;
+                }
+            }
+            provider = default(AssemblyQualifiedTypeName);
+            return false;
+        }
+
+        public AssemblyQualifiedTypeName GetLanguageProviderById(string id) {
+            AssemblyQualifiedTypeName provider;
+            if (!TryGetLanguageProviderById(id, out provider)) {
+                throw new ArgumentException("Unknown language identifier");
+            }
+            return provider;
+        }
+
+        public AssemblyQualifiedTypeName GetLanguageProviderByExtension(string extension) {
+            AssemblyQualifiedTypeName provider;
+            if (!TryGetLanguageProviderByExtension(extension, out provider)) {
+                throw new ArgumentException("Unknown language extension");
+            }
+            return provider;
+        }
+
+        private static int IndexOf(IList<string> list, string value, StringComparer comparer) {
+            for (int i = 0; i < list.Count; i++) {
+                if (comparer.Compare(list[i], value) == 0) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        internal DlrConfiguration ToConfiguration() {
+            var config = new DlrConfiguration(
+                _debugMode,
+                _privateBinding
+            );
+
+            foreach (var entry in _languageSetups) {
+                config.AddLanguage(
+                    entry.Key, 
+                    entry.Value.Ids, 
+                    entry.Value.FileExtensions, 
+                    entry.Value.HasOptions ? entry.Value.Options : null
+                );
+            }
+
+            return config;
         }
     }
 }

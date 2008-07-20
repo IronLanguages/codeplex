@@ -68,7 +68,7 @@ if sys.platform=="win32":
     
 windir = get_environ_variable("windir")
 if is_cli:
-    preferComDispatch = IronPythonTest.TestHelpers.GetGlobalOptions().PreferComDispatchOverTypeInfo
+    preferComDispatch = nt.environ.get("COREDLR_PreferComDispatch") == "TRUE"
 else:
     preferComDispatch = False
 

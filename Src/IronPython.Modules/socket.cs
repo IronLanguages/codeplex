@@ -105,6 +105,7 @@ namespace IronPython.Modules {
             internal string _hostName;
             private WeakRefTracker _weakRefTracker = null;
             private int _referenceCount = 1;
+            public const string __module__ = "socket";
 
             #endregion
 
@@ -343,7 +344,7 @@ namespace IronPython.Modules {
                 + "and bufsize arguments are as for the built-in open() function.")]
             public PythonFile makefile(CodeContext/*!*/ context, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
                 System.Threading.Interlocked.Increment(ref _referenceCount); // dup our handle
-                return new _fileobject(context, this, mode, bufSize);
+                return new _fileobject(context, this, mode, bufSize, false);
             }
 
             [Documentation("recv(bufsize[, flags]) -> string\n\n"
@@ -1652,45 +1653,28 @@ namespace IronPython.Modules {
             public new const string name = "<socket>";
             private readonly socket _socket = null;
             private readonly bool _close;
+            public const string __module__ = "socket";
+            public object bufsize = DefaultBufferSize; // Only present for compatibility with CPython public API
 
-            public _fileobject(CodeContext/*!*/ context, socket socket)
-                : this(context, socket, "rb", -1, false) {
-            }
-
-            public _fileobject(CodeContext/*!*/ context, socket socket, string mode)
-                : this(context, socket, mode, -1, false) {
-            }
-
-            public _fileobject(CodeContext/*!*/ context, socket socket, string mode, int bufsize)
-                : this(context, socket, mode, bufsize, false) {
-            }
-
-            public _fileobject(CodeContext/*!*/ context, socket socket, string mode, int bufsize, bool close)
+            public _fileobject(CodeContext/*!*/ context, object socket, [DefaultParameterValue("rb")]string mode, [DefaultParameterValue(-1)]int bufsize, [DefaultParameterValue(false)]bool close)
                 : base(PythonContext.GetContext(context)) {
-                _socket = socket;
                 _close = close;
-                base.__init__(new NetworkStream(socket._socket), System.Text.Encoding.Default, mode);
-            }
 
-            public _fileobject(CodeContext/*!*/ context, object socket)
-                : this(context, socket, "rb", -1, false) {
-            }
-
-            public _fileobject(CodeContext/*!*/ context, object socket, string mode)
-                : this(context, socket, mode, -1, false) {
-            }
-
-            public _fileobject(CodeContext/*!*/ context, object socket, string mode, int bufsize)
-                : this(context, socket, mode, bufsize, false) {
-            }
-
-            public _fileobject(CodeContext/*!*/ context, object socket, string mode, int bufsize, bool close)
-                : base(PythonContext.GetContext(context)) {
-                base.__init__(new PythonUserSocketStream(socket, GetBufferSize(context, bufsize), close), System.Text.Encoding.Default, mode);
-                _close = close;
+                Stream stream;
+                socket s = (socket as socket);
+                if (s != null && s._socket.Connected) {
+                    _socket = s;
+                    stream = new NetworkStream(s._socket);
+                } else {
+                    stream = new PythonUserSocketStream(socket, GetBufferSize(context, bufsize), close);
+                }
+                base.__init__(stream, System.Text.Encoding.Default, mode);
             }
 
             public void __init__(params object[] args) {
+            }
+
+            public void __del__() {
             }
 
             private static int GetBufferSize(CodeContext/*!*/ context, int size) {

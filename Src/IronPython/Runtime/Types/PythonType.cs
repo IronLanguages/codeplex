@@ -1642,7 +1642,7 @@ namespace IronPython.Runtime.Types {
 
         private RuleBuilder<T> MakeCreateInstanceAction<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
             if (IsSystemType) {
-                MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
+                MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType, context.LanguageContext.Binder.PrivateBinding);
                 RuleBuilder<T> rule;
                 if (ctors.Length > 0) {
                     rule = new CallBinderHelper<T, OldCallAction>(context, (OldCallAction)action, args, ctors).MakeRule();
@@ -2035,8 +2035,7 @@ namespace IronPython.Runtime.Types {
             }
 
             if (target != null) {
-                if (IsPythonType &&
-                    !PythonTypeOps.GetSlot(mg, name).IsAlwaysVisible) {
+                if (IsPythonType && !PythonTypeOps.GetSlot(mg, name, ab.PrivateBinding).IsAlwaysVisible) {
                     Expression error;
 
                     if (action.IsNoThrow) {

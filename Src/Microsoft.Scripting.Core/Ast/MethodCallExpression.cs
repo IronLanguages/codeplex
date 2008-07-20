@@ -154,7 +154,9 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(arguments, "arguments");
 
             ValidateMethodInfo(method);
-            if (!method.IsStatic) {
+            if (method.IsStatic) {
+                ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr);
+            } else {
                 ContractUtils.RequiresNotNull(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }

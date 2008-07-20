@@ -135,13 +135,6 @@ cor_mapper = {
                 com_obj.genCorVerification : VerificationException,
                 }
 
-#Merlin 380303
-if preferComDispatch:
-    #Due to 379618, we must disable tests like this...
-    for x in cor_mapper.keys():
-        if "genCorTargetInvocation" in str(x):
-            del cor_mapper[x]
-            cor_mapper[com_obj.genCorTargetInvocation] = StandardError
 
 def test_cor_exceptions():
     for meth in cor_mapper.keys():

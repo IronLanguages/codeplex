@@ -95,10 +95,10 @@ namespace System.Scripting.Runtime {
             return scope;
         }
 
-        private bool UseLightweightScopes {
+        private static bool UseLightweightScopes {        
             get {
 
-                if (LanguageContext.DomainManager.GlobalOptions.LightweightScopes) {
+                if (GlobalDlrOptions.LightweightScopes) {
                     return true;
                 }
 

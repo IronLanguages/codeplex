@@ -18,24 +18,19 @@ using System.Collections.Generic;
 using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
+
+    // TODO: should be ICollection<object> at least
     [Serializable]
     public sealed class Annotations : IEnumerable<object>, IEnumerable {
         // Internal storage as low level as possible 
         private readonly object[] _annotations;
 
-        internal Annotations(IEnumerable<Object> annotations) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
-            List<object> clone = new List<object>();
-
-            foreach (object annotation in annotations) {
-                ContractUtils.RequiresNotNull(annotation, "annotations");
-                clone.Add(annotation);
-            }
-            this._annotations = clone.ToArray();
+        internal Annotations(object[] annotations) {
+            _annotations = annotations;
         }
 
-        private Annotations(object[] annotations) {
-            _annotations = annotations;
+        public int Count {
+            get { return _annotations.Length; }
         }
 
         //
@@ -122,8 +117,11 @@ namespace System.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        public static Annotations Annotate(params Object[] items) {
-            return new Annotations(items);
+        public static Annotations Annotate(params object[] items) {
+            if (items == null || items.Length == 0) {
+                return Annotations.Empty;
+            }
+            return new Annotations((object[])items.Clone());
         }
     }
 }

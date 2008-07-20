@@ -102,10 +102,7 @@ namespace System.Scripting.Actions {
             ParameterExpression[] vars = new ParameterExpression[pis.Length];
 
             for (int i = 0; i < pis.Length; i++) {
-                Type type = pis[i].ParameterType;
-                vars[i] = type.IsByRef
-                    ? Expression.ByRefParameter(type, "$arg" + i)
-                    : Expression.Parameter(type, "$arg" + i);
+                vars[i] = Expression.Parameter(pis[i].ParameterType, "$arg" + i);
             }
 
             return vars;

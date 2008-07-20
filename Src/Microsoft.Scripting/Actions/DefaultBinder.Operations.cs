@@ -523,10 +523,10 @@ namespace Microsoft.Scripting.Actions {
 
                 if (pi != null) {
                     if (op == StandardOperators.GetItem) {
-                        MethodInfo method = pi.GetGetMethod(Manager.GlobalOptions.PrivateBinding);
+                        MethodInfo method = pi.GetGetMethod(PrivateBinding); 
                         if (method != null) methods.Add(method);
                     } else if (op == StandardOperators.SetItem) {
-                        MethodInfo method = pi.GetSetMethod(Manager.GlobalOptions.PrivateBinding);
+                        MethodInfo method = pi.GetSetMethod(PrivateBinding);
                         if (method != null) methods.Add(method);
                     }
                 }

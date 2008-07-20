@@ -68,7 +68,6 @@ namespace System.Linq.Expressions {
             return AllVariables(annotations, (IEnumerable<Expression>)variables);
         }
         public static LocalScopeExpression AllVariables(Annotations annotations, IEnumerable<Expression> variables) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(variables, "variables");
 
             ReadOnlyCollection<Expression> vars = variables.ToReadOnly();

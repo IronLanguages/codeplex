@@ -79,6 +79,8 @@ namespace System.Linq.Expressions {
             EmitDeleteExpression,                                       //    Delete
             EmitDoStatement,                                            //    DoStatement
             EmitEmptyStatement,                                         //    EmptyStatement
+            EmitExtensionExpression,                                    //    Extension
+            EmitIndexedPropertyExpression,                              //    IndexedProperty
             EmitLabeledStatement,                                       //    LabeledStatement
             EmitLocalScopeExpression,                                   //    LocalScope
             EmitLoopStatement,                                          //    LoopStatement
@@ -88,10 +90,9 @@ namespace System.Linq.Expressions {
             EmitSwitchStatement,                                        //    SwitchStatement
             EmitThrowStatement,                                         //    ThrowStatement
             EmitTryStatement,                                           //    TryStatement
+            EmitUnboxUnaryExpression,                                   //    Unbox
             EmitVariableExpression,                                     //    Variable
             EmitYieldStatement,                                         //    YieldStatement
-            EmitIndexedPropertyExpression,                              //    IndexedProperty
-            EmitExtensionExpression,                                    //    Extension
 
             // *** END GENERATED CODE ***
 

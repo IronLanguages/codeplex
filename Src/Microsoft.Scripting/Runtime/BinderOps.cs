@@ -138,34 +138,34 @@ namespace Microsoft.Scripting.Runtime {
 
         #region Event support
 
-        public static EventTracker EventTrackerInPlaceAdd<T>(EventTracker self, T target) {
-            MethodInfo add = self.Event.GetAddMethod(ScriptDomainManager.Options.PrivateBinding);
+        public static EventTracker EventTrackerInPlaceAdd<T>(CodeContext context, EventTracker self, T target) {
+            MethodInfo add = self.Event.GetAddMethod(context.LanguageContext.DomainManager.Configuration.PrivateBinding);
             add.Invoke(null, new object[] { target });
             return self;
         }
 
-        public static EventTracker EventTrackerInPlaceRemove<T>(EventTracker self, T target) {
-            MethodInfo remove = self.Event.GetRemoveMethod(ScriptDomainManager.Options.PrivateBinding);
+        public static EventTracker EventTrackerInPlaceRemove<T>(CodeContext context, EventTracker self, T target) {
+            MethodInfo remove = self.Event.GetRemoveMethod(context.LanguageContext.DomainManager.Configuration.PrivateBinding);
             remove.Invoke(null, new object[] { target });
             return self;
         }
 
-        public static BoundMemberTracker BoundEventTrackerInPlaceAdd<T>(BoundMemberTracker self, T target) {
+        public static BoundMemberTracker BoundEventTrackerInPlaceAdd<T>(CodeContext context, BoundMemberTracker self, T target) {
             if (self.BoundTo.MemberType == TrackerTypes.Event) {
                 EventTracker et = (EventTracker)self.BoundTo;
 
-                MethodInfo add = et.Event.GetAddMethod(ScriptDomainManager.Options.PrivateBinding);
+                MethodInfo add = et.Event.GetAddMethod(context.LanguageContext.DomainManager.Configuration.PrivateBinding);
                 add.Invoke(self.ObjectInstance, new object[] { target });
                 return self;
             }
             throw new InvalidOperationException();
         }
 
-        public static BoundMemberTracker BoundEventTrackerInPlaceRemove<T>(BoundMemberTracker self, T target) {
+        public static BoundMemberTracker BoundEventTrackerInPlaceRemove<T>(CodeContext context, BoundMemberTracker self, T target) {
             if (self.BoundTo.MemberType == TrackerTypes.Event) {
                 EventTracker et = (EventTracker)self.BoundTo;
 
-                MethodInfo remove = et.Event.GetRemoveMethod(ScriptDomainManager.Options.PrivateBinding);
+                MethodInfo remove = et.Event.GetRemoveMethod(context.LanguageContext.DomainManager.Configuration.PrivateBinding);
                 remove.Invoke(self.ObjectInstance, new object[] { target });
                 return self;
             }

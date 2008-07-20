@@ -218,7 +218,7 @@ namespace Microsoft.Scripting.Actions {
 
         protected bool PrivateBinding {
             get {
-                return Context.LanguageContext.DomainManager.GlobalOptions.PrivateBinding;
+                return Context.LanguageContext.DomainManager.Configuration.PrivateBinding;
             }
         }
     }
