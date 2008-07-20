@@ -184,7 +184,7 @@ namespace System.Scripting.Actions {
             NamespaceTracker previousPackage = null;
             string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
 
-            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.GlobalOptions.PrivateBinding)) {
+            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.Configuration.PrivateBinding)) {
                 NamespaceTracker package;
                 Debug.Assert(typeName.Namespace != String.Empty);
                 if (typeName.Namespace == previousFullNamespace) {
@@ -241,7 +241,7 @@ namespace System.Scripting.Actions {
                     continue;
                 }
 
-                bool publishType = type.IsPublic || ScriptDomainManager.Options.PrivateBinding;
+                bool publishType = type.IsPublic || _topPackage.DomainManager.Configuration.PrivateBinding;
                 if (!publishType) {
                     continue;
                 }

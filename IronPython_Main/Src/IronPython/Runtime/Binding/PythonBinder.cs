@@ -268,7 +268,7 @@ namespace IronPython.Runtime.Binding {
             return ErrorInfo.FromValue(
                 Ast.Property(
                     null,
-                    tracker.GetGetMethod(DomainManager.GlobalOptions.PrivateBinding)
+                    tracker.GetGetMethod(DomainManager.Configuration.PrivateBinding)
                 )
             );
         }
@@ -297,7 +297,7 @@ namespace IronPython.Runtime.Binding {
                     type,
                     name);
 
-                _resolvedMembers.CacheSlot(type, name, PythonTypeOps.GetSlot(mg, name), mg);
+                _resolvedMembers.CacheSlot(type, name, PythonTypeOps.GetSlot(mg, name, PrivateBinding), mg);
             }
 
             return mg ?? MemberGroup.EmptyGroup;
@@ -468,12 +468,12 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
-            Expression res = ReturnMemberTracker(type, memberTracker, _context.DomainManager.GlobalOptions.PrivateBinding);
+            Expression res = ReturnMemberTracker(type, memberTracker, PrivateBinding);
 
             return res ?? base.ReturnMemberTracker(type, memberTracker);
         }
 
-        private static Expression ReturnMemberTracker(Type type, MemberTracker memberTracker, bool privateMembers) {
+        private static Expression ReturnMemberTracker(Type type, MemberTracker memberTracker, bool privateBinding) {
             switch (memberTracker.MemberType) {
                 case TrackerTypes.TypeGroup:
                     return Ast.Constant(memberTracker);
@@ -482,7 +482,7 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.Bound:
                     return ReturnBoundTracker((BoundMemberTracker)memberTracker);
                 case TrackerTypes.Property:
-                    return ReturnPropertyTracker((PropertyTracker)memberTracker, privateMembers);
+                    return ReturnPropertyTracker((PropertyTracker)memberTracker, privateBinding);
                 case TrackerTypes.Event:
                     return Ast.Call(
                         typeof(PythonOps).GetMethod("MakeBoundEvent"),
@@ -495,7 +495,7 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.MethodGroup:
                     return ReturnMethodGroup((MethodGroup)memberTracker);
                 case TrackerTypes.Constructor:
-                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type);
+                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type, privateBinding);
                     object val;
                     if (PythonTypeOps.IsDefaultNew(ctors)) {
                         if (IsPythonType(type)) {
@@ -504,7 +504,7 @@ namespace IronPython.Runtime.Binding {
                             val = InstanceOps.NewCls;
                         }
                     } else {
-                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, CompilerHelpers.GetConstructors(type));
+                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, CompilerHelpers.GetConstructors(type, privateBinding));
                     }
 
                     return Ast.Constant(val);
@@ -539,7 +539,7 @@ namespace IronPython.Runtime.Binding {
                     curType,
                     strName);
 
-                slot = PythonTypeOps.GetSlot(mg, SymbolTable.IdToString(name));
+                slot = PythonTypeOps.GetSlot(mg, SymbolTable.IdToString(name), PrivateBinding);
 
                 _typeMembers.CacheSlot(curType, strName, slot, mg);
             }
@@ -569,7 +569,7 @@ namespace IronPython.Runtime.Binding {
                     curType,
                     strName);
 
-                slot = PythonTypeOps.GetSlot(mg, SymbolTable.IdToString(name));
+                slot = PythonTypeOps.GetSlot(mg, SymbolTable.IdToString(name), PrivateBinding);
 
                 _resolvedMembers.CacheSlot(curType, strName, slot, mg);
             }
@@ -597,7 +597,10 @@ namespace IronPython.Runtime.Binding {
                     type.UnderlyingSystemType)) {
 
                     if (!members.ContainsKey(rm.Name)) {
-                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member, rm.Name), rm.Member);
+                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(
+                            PythonTypeOps.GetSlot(rm.Member, rm.Name, PrivateBinding), 
+                            rm.Member
+                        );
                     }
                 }
 
@@ -630,7 +633,10 @@ namespace IronPython.Runtime.Binding {
                     type.UnderlyingSystemType)) {
 
                     if (!members.ContainsKey(rm.Name)) {
-                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member, rm.Name), rm.Member);
+                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(
+                            PythonTypeOps.GetSlot(rm.Member, rm.Name, PrivateBinding), 
+                            rm.Member
+                        );
                     }
                 }
 
@@ -701,8 +707,8 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static Expression ReturnPropertyTracker(PropertyTracker propertyTracker, bool privateMembers) {
-            return Ast.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker));
+        private static Expression ReturnPropertyTracker(PropertyTracker propertyTracker, bool privateBinding) {
+            return Ast.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker, privateBinding));
         }
 
         private static MethodInfo IncludePropertyMethod(MethodInfo method, bool privateMembers) {

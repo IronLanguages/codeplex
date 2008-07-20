@@ -81,6 +81,8 @@ namespace Microsoft.Scripting.Interpretation {
             InterpretDeleteExpression,                                  //    Delete
             InterpretDoStatement,                                       //    DoStatement
             InterpretEmptyStatement,                                    //    EmptyStatement
+            InterpretExtensionExpression,                               //    Extension
+            InterpretIndexedPropertyExpression,                         //    IndexedProperty
             InterpretLabeledStatement,                                  //    LabeledStatement
             InterpretLocalScopeExpression,                              //    LocalScope
             InterpretLoopStatement,                                     //    LoopStatement
@@ -90,10 +92,9 @@ namespace Microsoft.Scripting.Interpretation {
             InterpretSwitchStatement,                                   //    SwitchStatement
             InterpretThrowStatement,                                    //    ThrowStatement
             InterpretTryStatement,                                      //    TryStatement
+            InterpretUnboxUnaryExpression,                              //    Unbox
             InterpretVariableExpression,                                //    Variable
             InterpretYieldStatement,                                    //    YieldStatement
-            InterpretIndexedPropertyExpression,                         //    IndexedProperty
-            InterpretExtensionExpression,                               //    Extension
 
             // *** END GENERATED CODE ***
 

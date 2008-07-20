@@ -20,15 +20,12 @@ using IronPython.Hosting;
 using IronPython.Runtime;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
+using System.Scripting.Utils;
 
 internal sealed class PythonWindowsConsoleHost : ConsoleHost {
 
-    internal PythonWindowsConsoleHost() {
-        InitializeOptionsParser();
-    }
-
-    protected override ScriptEngine/*!*/ CreateEngine() {
-        return Runtime.GetEngine(typeof(PythonContext));
+    protected override Type Provider {
+        get { return typeof(PythonContext); }
     }
 
     protected override CommandLine/*!*/ CreateCommandLine() {
@@ -36,7 +33,7 @@ internal sealed class PythonWindowsConsoleHost : ConsoleHost {
     }
 
     protected override OptionsParser/*!*/ CreateOptionsParser() {
-        return new PythonOptionsParser(this.Options);
+        return new PythonOptionsParser();
     }
 
     protected override string/*!*/ GetHelp() {

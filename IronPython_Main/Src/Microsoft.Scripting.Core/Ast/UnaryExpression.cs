@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace System.Linq.Expressions {
@@ -339,6 +340,22 @@ namespace System.Linq.Expressions {
             return new UnaryExpression(Annotations.Empty, ExpressionType.TypeAs, expression, type, null);
         }
 
+        // TODO: optional annotations and remove this overload?
+        public static UnaryExpression Unbox(Expression expression, Type type) {
+            return Unbox(expression, type, null);
+        }
+
+        public static UnaryExpression Unbox(Expression expression, Type type, Annotations annotations) {
+            ContractUtils.RequiresNotNull(expression, "expression");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(
+                expression.Type.IsInterface || expression.Type == typeof(object),
+                "expression", Strings.InvalidUnboxType
+            );
+            ContractUtils.Requires(type.IsValueType, "type", Strings.InvalidUnboxType);
+            return new UnaryExpression(annotations, ExpressionType.Unbox, expression, type, null);
+        }
+
         //CONFORMING
         public static UnaryExpression Convert(Expression expression, Type type) {
             ContractUtils.RequiresNotNull(expression, "expression");
@@ -441,7 +458,6 @@ namespace System.Linq.Expressions {
 
 
         public static UnaryExpression Negate(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.Requires(bindingInfo.Operation == Operators.Negate, "bindingInfo", Strings.OperationKindMustMatchNodeType);
@@ -450,7 +466,6 @@ namespace System.Linq.Expressions {
         }
 
         public static UnaryExpression Not(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.Requires(bindingInfo.Operation == Operators.Not, "bindingInfo", Strings.OperationKindMustMatchNodeType);
@@ -459,7 +474,6 @@ namespace System.Linq.Expressions {
         }
 
         public static UnaryExpression OnesComplement(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.Requires(bindingInfo.Operation == Operators.OnesComplement, "bindingInfo", Strings.OperationKindMustMatchNodeType);

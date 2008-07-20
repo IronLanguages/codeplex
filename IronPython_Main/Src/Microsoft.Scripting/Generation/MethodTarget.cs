@@ -134,7 +134,7 @@ namespace Microsoft.Scripting.Generation {
             Expression ret, call;
             if (!mb.IsPublic || !mb.DeclaringType.IsVisible) {
                 if (mi != null) {
-                    mi = CompilerHelpers.GetCallableMethod(mi);
+                    mi = CompilerHelpers.GetCallableMethod(mi, _binder._binder.PrivateBinding);
                     if (mi != null) mb = mi;
                 }
             }

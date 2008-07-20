@@ -126,7 +126,7 @@ namespace System.Scripting {
 
         [Conditional("DEBUG")]
         public static void NoteEvent(Categories category, object key) {
-            if (!ScriptDomainManager.Options.TrackPerformance) return;
+            if (!GlobalDlrOptions.TrackPerformance) return;
 
             Dictionary<string, int> categoryEvents = _events[category];
             totalEvents++;

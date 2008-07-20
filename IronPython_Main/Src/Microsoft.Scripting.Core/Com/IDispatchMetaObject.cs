@@ -51,7 +51,19 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
-            return base.Convert(action, args);
+            Expression result = 
+                Expression.Convert(
+                    Expression.Property(
+                        Expression.ConvertHelper(args[0].Expression, typeof(IDispatchComObject)),
+                        typeof(ComObject).GetProperty("Obj")
+                    ),
+                    action.ToType
+                );
+
+            return new MetaObject(
+                result,
+                Restrictions.Combine(args).Merge(IDispatchRestriction())
+            );
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {

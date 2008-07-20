@@ -129,8 +129,8 @@ namespace IronPython.Runtime.Binding {
                             tmp
                         ),
                         Ast.Comma(
-                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                             Ast.Try(
+                                Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                                 Ast.Assign(
                                     tmp,
                                     Ast.ActionExpression(

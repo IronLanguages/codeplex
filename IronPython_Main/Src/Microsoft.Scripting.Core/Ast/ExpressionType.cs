@@ -77,6 +77,8 @@ namespace System.Linq.Expressions {
         Delete,
         DoStatement,
         EmptyStatement,
+        Extension,
+        IndexedProperty,
         LabeledStatement,
         LocalScope,
         LoopStatement,
@@ -86,10 +88,9 @@ namespace System.Linq.Expressions {
         SwitchStatement,
         ThrowStatement,
         TryStatement,
+        Unbox,
         Variable,
         YieldStatement,
-        IndexedProperty,
-        Extension,
 
         // *** END GENERATED CODE ***
 

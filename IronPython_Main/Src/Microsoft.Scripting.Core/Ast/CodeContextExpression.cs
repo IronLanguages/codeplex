@@ -71,7 +71,6 @@ namespace System.Linq.Expressions {
             return CodeContext(Annotations.Empty);
         }
         public static Expression CodeContext(Annotations annotations) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             return new CodeContextExpression(annotations);
         }
         public static CodeContextScopeExpression CodeContextScope(Expression body, Expression newContext) {
@@ -80,7 +79,6 @@ namespace System.Linq.Expressions {
         public static CodeContextScopeExpression CodeContextScope(Expression body, Expression newContext, Annotations annotations) {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(newContext, "newContext");
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.Requires(TypeUtils.AreAssignable(typeof(CodeContext), newContext.Type), "newContext");
 
             return new CodeContextScopeExpression(annotations, body, newContext);

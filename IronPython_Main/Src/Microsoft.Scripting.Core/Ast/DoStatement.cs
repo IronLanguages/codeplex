@@ -56,7 +56,6 @@ namespace System.Linq.Expressions {
         public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label, Annotations annotations) {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(test, "test");
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             return new DoStatement(annotations, label, test, body);
         }
     }

@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     // COM implementations are centered around interface definitions.  Consequently,
                     // the standard binder fails to find methods/properties for class types.
                     MemberInfo[] foundMembers = ComObjectWithTypeInfo.WalkType(_comType, StringName);
-                    if (!Context.LanguageContext.DomainManager.GlobalOptions.PrivateBinding) {
+                    if (!Context.LanguageContext.DomainManager.Configuration.PrivateBinding) {
                         members = new MemberGroup(CompilerHelpers.FilterNonVisibleMembers(_comType, foundMembers));
                     }
                 }

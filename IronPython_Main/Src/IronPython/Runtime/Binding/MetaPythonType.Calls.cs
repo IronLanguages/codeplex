@@ -61,8 +61,8 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         private MetaObject/*!*/ MakeStandardDotNetTypeCall(InvokeAction/*!*/ call, MetaObject/*!*/[]/*!*/ args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
-            MethodBase[] ctors = CompilerHelpers.GetConstructors(Value.UnderlyingSystemType);
             BinderState state = BinderState.GetBinderState(call);
+            MethodBase[] ctors = CompilerHelpers.GetConstructors(Value.UnderlyingSystemType, state.Binder.PrivateBinding);
 
             if (ctors.Length > 0) {
                 return state.Binder.CallMethod(

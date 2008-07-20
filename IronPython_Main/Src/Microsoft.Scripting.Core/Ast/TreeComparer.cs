@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
 
@@ -453,6 +454,7 @@ namespace System.Linq.Expressions {
                 case ExpressionType.EmptyStatement:
                 case ExpressionType.DoStatement:
                 case ExpressionType.Convert:
+                case ExpressionType.Unbox:
                 case ExpressionType.Negate:
                 case ExpressionType.Not:
                 case ExpressionType.OnesComplement:
@@ -477,7 +479,7 @@ namespace System.Linq.Expressions {
                     // we should have been reduced, but error on the side of being different.
                     return false;
                 default:
-                    throw new InvalidOperationException();
+                    throw Assert.Unreachable;
             }
             return true;
         }

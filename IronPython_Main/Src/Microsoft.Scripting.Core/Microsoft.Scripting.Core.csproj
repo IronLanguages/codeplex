@@ -152,7 +152,6 @@
     <Compile Include="Compiler\CompilerScope.Storage.cs" />
     <Compile Include="Compiler\LambdaCompiler.Unary.cs" />
     <Compile Include="Compiler\StackSpiller.Bindings.cs" />
-    <Compile Include="Compiler\CompilerDebugOptions.cs" />
     <Compile Include="Com\ArgBuilder.cs" />
     <Compile Include="Com\BoundDispEvent.cs" />
     <Compile Include="Com\ComClassMetaObject.cs" />
@@ -268,6 +267,7 @@
     <Compile Include="Compiler\ExpressionTreeVisitor.Generated.cs" />
     <Compile Include="CompilerOptions.cs" />
     <Compile Include="ErrorSink.cs" />
+    <Compile Include="GlobalDlrOptions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Runtime\OptimizedScriptCode.cs" />
     <Compile Include="SourceUnit.cs" />
@@ -355,7 +355,7 @@
     <Compile Include="Generation\NarrowingLevel.cs" />
     <Compile Include="None.cs" />
     <Compile Include="Runtime\ScriptCode.cs" />
-    <Compile Include="Runtime\ScriptDomainOptions.cs" />
+    <Compile Include="Runtime\DlrConfiguration.cs" />
     <Compile Include="Runtime\SourceStringContentProvider.cs" />
     <Compile Include="Severity.cs" />
     <Compile Include="SourceCodeKind.cs" />
@@ -414,6 +414,7 @@
     <Compile Include="Actions\UpdateDelegates.Generated.cs" />
     <Compile Include="Utils\Action.cs" />
     <Compile Include="Utils\ArrayUtils.cs" />
+    <Compile Include="Utils\AssemblyQualifiedTypeName.cs" />
     <Compile Include="Utils\Assert.cs" />
     <Compile Include="Utils\CheckedDictionaryEnumerator.cs" />
     <Compile Include="Utils\CollectionUtils.cs" />

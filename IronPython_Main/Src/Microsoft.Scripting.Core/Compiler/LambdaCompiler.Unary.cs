@@ -192,6 +192,15 @@ namespace System.Linq.Expressions {
             }
         }
 
+        private static void EmitUnboxUnaryExpression(LambdaCompiler lc, Expression expr) {
+            var node = (UnaryExpression)expr;
+            Debug.Assert(node.Type.IsValueType && !TypeUtils.IsNullableType(node.Type));
+
+            // Unbox_Any leaves the value on the stack
+            lc.EmitExpression(node.Operand);
+            lc.IL.Emit(OpCodes.Unbox_Any, node.Type);
+        }
+
         private static void EmitConvertUnaryExpression(LambdaCompiler lc, Expression expr) {
             lc.EmitConvert((UnaryExpression)expr);
         }

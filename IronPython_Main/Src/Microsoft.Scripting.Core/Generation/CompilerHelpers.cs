@@ -423,10 +423,10 @@ namespace System.Scripting.Generation {
         /// 
         /// Throws InvalidOperationException if the method cannot be obtained.
         /// </summary>
-        public static MethodInfo GetCallableMethod(MethodInfo method) {
+        public static MethodInfo GetCallableMethod(MethodInfo method, bool privateBinding) {
             MethodInfo mi = TryGetCallableMethod(method);
             if (mi == null) {
-                if (!ScriptDomainManager.Options.PrivateBinding) {
+                if (!privateBinding) {
                     throw Error.NoCallableMethods(method.DeclaringType, method.Name);
                 }
             }
@@ -457,7 +457,7 @@ namespace System.Scripting.Generation {
         }
 
 
-        public static MethodBase[] GetConstructors(Type t) {
+        public static MethodBase[] GetConstructors(Type t, bool privateBinding) {
             if (t.IsArray) {
                 // The JIT verifier doesn't like new int[](3) even though it appears as a ctor.
                 // We could do better and return newarr in the future.
@@ -465,7 +465,7 @@ namespace System.Scripting.Generation {
             }
 
             BindingFlags bf = BindingFlags.Instance | BindingFlags.Public;
-            if (ScriptDomainManager.Options.PrivateBinding) {
+            if (privateBinding) {
                 bf |= BindingFlags.NonPublic;
             }
 

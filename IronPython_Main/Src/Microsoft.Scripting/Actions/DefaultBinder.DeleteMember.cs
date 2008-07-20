@@ -78,7 +78,7 @@ namespace Microsoft.Scripting.Actions {
                 MemberGroup group = GetMember(act, type, delInfo.Name);
                 if (group.Count != 0) {
                     if (group[0].MemberType == TrackerTypes.Property) {
-                        MethodInfo del = ((PropertyTracker)group[0]).GetDeleteMethod(Manager.GlobalOptions.PrivateBinding);
+                        MethodInfo del = ((PropertyTracker)group[0]).GetDeleteMethod(PrivateBinding);
                         if (del != null) {
                             MakePropertyDeleteStatement(delInfo, self, del);
                             return delInfo.Body.GetMetaObject(target);

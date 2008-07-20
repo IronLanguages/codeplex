@@ -124,7 +124,7 @@ namespace System.Linq.Expressions {
             }
 
             // Create the ILGen instance, debug or not
-            if (CompilerDebugOptions.DumpIL || CompilerDebugOptions.ShowIL) {
+            if (GlobalDlrOptions.DumpIL || GlobalDlrOptions.ShowIL) {
                 _ilg = CreateDebugILGen(ilg, typeGen, mi, paramTypes);
             } else {
                 _ilg = new ILGen(ilg, typeGen);
@@ -484,7 +484,7 @@ namespace System.Linq.Expressions {
         private static DebugILGen CreateDebugILGen(ILGenerator il, TypeGen tg, MethodBase method, IList<Type> paramTypes) {
             TextWriter txt = Console.Out;
 #if !SILVERLIGHT
-            if (CompilerDebugOptions.DumpIL) {
+            if (GlobalDlrOptions.DumpIL) {
                 txt = new StreamWriter(Snippets.Shared.GetMethodILDumpFile(method));
             }
 #endif

@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Actions {
                     );
                 }
 
-                return CallMethod(codeContext, CompilerHelpers.GetConstructors(t), ArrayUtils.RemoveFirst(args), signature);
+                return CallMethod(codeContext, CompilerHelpers.GetConstructors(t, PrivateBinding), ArrayUtils.RemoveFirst(args), signature);
             }
 
             return null;

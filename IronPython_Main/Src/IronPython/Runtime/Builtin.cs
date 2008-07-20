@@ -827,8 +827,8 @@ namespace IronPython.Runtime {
             if (pt != null) {
                 // Recursively inspect nested tuple(s)
                 foreach (object subTypeInfo in pt) {
-                    PythonOps.FunctionPushFrame();
                     try {
+                        PythonOps.FunctionPushFrame();
                         if (issubclass(context, o, subTypeInfo)) {
                             return true;
                         }
@@ -1730,7 +1730,7 @@ namespace IronPython.Runtime {
 
         [SpecialName]
         public static void PerformModuleReload(PythonContext context, IAttributesCollection dict) {
-            dict[SymbolTable.StringToId("__debug__")] = RuntimeHelpers.BooleanToObject(context.DomainManager.GlobalOptions.DebugMode);
+            dict[SymbolTable.StringToId("__debug__")] = RuntimeHelpers.BooleanToObject(context.DomainManager.Configuration.DebugMode);
         }
     }
 }

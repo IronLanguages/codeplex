@@ -575,7 +575,8 @@ namespace Microsoft.Scripting.Generation {
                     KeywordConstructorReturnBuilder kwBuilder = new KeywordConstructorReturnBuilder(returnBuilder,
                         _kwArgs.Length,
                         kwArgIndexs.ToArray(),
-                        bindableMembers.ToArray());
+                        bindableMembers.ToArray(),
+                        _binder.PrivateBinding);
 
                     return kwBuilder;
                 }

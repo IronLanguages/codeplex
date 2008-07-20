@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Scripting.Utils;
+using System.Runtime.InteropServices;
 
 namespace System.Linq.Expressions {
     public sealed class SwitchStatement : Expression {
@@ -51,12 +52,15 @@ namespace System.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        // TODO: label, annotations optional w/ default value
+        public static SwitchStatement Switch(Expression value, params SwitchCase[] cases) {
+            return Switch(value, null, null, (IEnumerable<SwitchCase>)cases);
+        }
+        public static SwitchStatement Switch(Expression value, LabelTarget label, params SwitchCase[] cases) {
+            return Switch(value, label, null, (IEnumerable<SwitchCase>)cases);
+        }
         public static SwitchStatement Switch(Expression value, LabelTarget label, Annotations annotations, params SwitchCase[] cases) {
             return Switch(value, label, annotations, (IEnumerable<SwitchCase>)cases);
         }
-
-        // TODO: label, annotations optional w/ default value
         public static SwitchStatement Switch(Expression value, LabelTarget label, Annotations annotations, IEnumerable<SwitchCase> cases) {
             ContractUtils.RequiresNotNull(value, "value");
             ContractUtils.Requires(value.Type == typeof(int), "value", Strings.ValueMustBeInt);

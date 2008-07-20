@@ -36,189 +36,79 @@ namespace Microsoft.Scripting.Hosting.Shell {
     }
 
     public abstract class OptionsParser {
-
-        private List<string> _ignoredArgs = new List<string>();
-        private ScriptDomainOptions _globalOptions;
-        private string[] _args;
-        private int _current = -1;
+        private ScriptRuntimeSetup _runtimeSetup;
+        private LanguageSetup _languageSetup;
         private PlatformAdaptationLayer _platform;
 
-        // TODO: remove when hosting configuration is fixed:
-        private ScriptEngine _engine;
+        private List<string> _ignoredArgs = new List<string>();
+        private string[] _args;
+        private int _current = -1;
 
         protected OptionsParser() {
-            _platform = PlatformAdaptationLayer.Default;
         }
 
-        // TODO: remove when hosting configuration is fixed:
-        public ScriptEngine Engine {
-            get { return _engine; }
-            set { _engine = value; }
+        public ScriptRuntimeSetup RuntimeSetup {
+            get { return _runtimeSetup; }
+        }
+
+        public LanguageSetup LanguageSetup {
+            get { return _languageSetup; }
         }
 
         public PlatformAdaptationLayer Platform {
             get { return _platform; }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _platform = value;
-            }
         }
 
-        public ScriptDomainOptions GlobalOptions {
-            get {
-                return _globalOptions;
-            }
-            set {
-                _globalOptions = value;
-            }
+        public abstract ConsoleOptions CommonConsoleOptions { 
+            get; 
         }
 
-        public virtual ConsoleOptions ConsoleOptions {
-            get {
-                throw new NotSupportedException();
-            }
-            set {
-                throw new NotSupportedException();
-            }
-        }
-
-        public virtual EngineOptions EngineOptions {
-            get {
-                throw new NotSupportedException();
-            }
-            set {
-                throw new NotSupportedException();
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public virtual ConsoleOptions GetDefaultConsoleOptions() {
-            return new ConsoleOptions();
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public virtual EngineOptions GetDefaultEngineOptions() {
-            return new EngineOptions();
-        }
-
-        public IList<string> IgnoredArgs { get { return _ignoredArgs; } }
+        public IList<string> IgnoredArgs {
+            get { return _ignoredArgs; }
+        } 
 
         /// <exception cref="InvalidOptionException">On error.</exception>
-        public virtual void Parse(string[] args) {
+        public void Parse(string[] args, ScriptRuntimeSetup setup, LanguageSetup languageSetup, PlatformAdaptationLayer platform) {
             ContractUtils.RequiresNotNull(args, "args");
-
-            if (_globalOptions == null) _globalOptions = new ScriptDomainOptions();
+            ContractUtils.RequiresNotNull(setup, "setup");
+            ContractUtils.RequiresNotNull(languageSetup, "languageSetup");
+            ContractUtils.RequiresNotNull(platform, "platform");
 
             _args = args;
-
+            _runtimeSetup = setup;
+            _languageSetup = languageSetup;
+            _platform = platform;
+            _current = 0;
             try {
-                _current = 0;
+                BeforeParse();
                 while (_current < args.Length) {
                     ParseArgument(args[_current++]);
                 }
+                AfterParse();
             } finally {
                 _args = null;
+                _runtimeSetup = null;
+                _languageSetup = null;
+                _platform = null;
                 _current = -1;
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        protected virtual void ParseArgument(string arg) {
-            ContractUtils.RequiresNotNull(arg, "arg");
-
-            // the following extension switches are in alphabetic order
-            switch (arg) {
-                case "-c":
-                    ConsoleOptions.Command = PeekNextArg();
-                    break;
-
-                case "-h":
-                case "-help":
-                case "-?":
-                    ConsoleOptions.PrintUsageAndExit = true;
-                    IgnoreRemainingArgs();
-                    break;
-
-                case "-i": ConsoleOptions.Introspection = true; break;
-
-                case "-V":
-                    ConsoleOptions.PrintVersionAndExit = true;
-                    IgnoreRemainingArgs();
-                    break;
-
-                case "-D":
-                    GlobalOptions.DebugMode = true;
-                    break;
-
-                case "-X:AssembliesDir":
-
-                    string dir = PopNextArg();
-
-                    if (!_platform.DirectoryExists(dir)) {
-                        throw new InvalidOptionException(String.Format("Directory '{0}' doesn't exist.", dir));
-                    }
-
-                    Snippets.Shared.SnippetsDirectory = dir;
-                    break;
-
-                case "-X:Interpret": EngineOptions.InterpretedMode = true; break;
-                case "-X:Frames": GlobalOptions.Frames = true; break;
-
-                case "-X:LightweightScopes": GlobalOptions.LightweightScopes = true; break;
-
-                case "-X:PassExceptions": ConsoleOptions.HandleExceptions = false; break;
-                // TODO: #if !IRONPYTHON_WINDOW
-                case "-X:ColorfulConsole": ConsoleOptions.ColorfulConsole = true; break;
-                case "-X:ExceptionDetail": EngineOptions.ExceptionDetail = true; break;
-                case "-X:TabCompletion": ConsoleOptions.TabCompletion = true; break;
-                case "-X:AutoIndent": ConsoleOptions.AutoIndent = true; break;
-                //#endif
-
-                // TODO: remove
-                case "-X:DumpIL":
-                case "-X:ShowIL":
-                case "-X:ShowRules":
-                case "-X:DumpTrees":
-                case "-X:ShowTrees":
-                case "-X:ShowScopes":
-                    SetCompilerDebugOption(arg.Substring(3));
-                    break;
-
-                case "-X:PerfStats": EngineOptions.PerfStats = true; break;
-                case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
-                case "-X:SaveAssemblies": Snippets.Shared.SaveSnippets = true; break;
-                case "-X:ShowClrExceptions": EngineOptions.ShowClrExceptions = true; break;
-                case "-X:TrackPerformance": // accepted but ignored on retail builds
-#if DEBUG
-                    GlobalOptions.TrackPerformance = true;
-#endif
-                    break;
-
-                case "-X:PreferComDispatch":
-                    GlobalOptions.PreferComDispatchOverTypeInfo = true;
-                    break;
-
-                case "-X:CachePointersInApartment":
-                    GlobalOptions.CachePointersInApartment = true;
-                    break;
-
-                default:
-                    ConsoleOptions.FileName = arg;
-                    // The language-specific parsers may want to do something like this to pass arguments to the script
-                    //   PushArgBack();
-                    //   EngineOptions.Arguments = PopRemainingArgs();
-                    break;
-            }
+        protected virtual void BeforeParse() {
+            // nop
         }
 
-        // Note: this works because it runs before the compiler picks up the
-        // environment variable
-        internal static void SetCompilerDebugOption(string option) {
+        protected virtual void AfterParse() {
 #if !SILVERLIGHT
-            string env = Environment.GetEnvironmentVariable("lambdacompiler_debug");
-            Environment.SetEnvironmentVariable("lambdacompiler_debug", option + " " + env);
+            // TODO:
+            // Dynamic languages prefer type info over com IDispatch
+            if (Environment.GetEnvironmentVariable("COREDLR_PreferComDispatch") == null) {
+                Environment.SetEnvironmentVariable("COREDLR_PreferComDispatch", "TRUE");
+            }
 #endif
         }
+
+        protected abstract void ParseArgument(string arg);
 
         protected void IgnoreRemainingArgs() {
             while (_current < _args.Length) {
@@ -254,7 +144,121 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional")] // TODO: fix
-        public virtual void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments) {
+        public abstract void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments);
+    }
+
+    public class OptionsParser<TConsoleOptions> : OptionsParser
+        where TConsoleOptions : ConsoleOptions, new() {
+       
+        private TConsoleOptions _consoleOptions;
+
+        public OptionsParser() {
+        }
+
+        public TConsoleOptions ConsoleOptions {
+            get {
+                if (_consoleOptions == null) {
+                    _consoleOptions = new TConsoleOptions();
+                } 
+                
+                return _consoleOptions; 
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _consoleOptions = value; 
+            }
+        }
+
+        public sealed override ConsoleOptions CommonConsoleOptions {
+            get { return ConsoleOptions; }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        protected override void ParseArgument(string arg) {
+            ContractUtils.RequiresNotNull(arg, "arg");
+
+            // the following extension switches are in alphabetic order
+            switch (arg) {
+                case "-h":
+                case "-help":
+                case "-?":
+                    ConsoleOptions.PrintUsageAndExit = true;
+                    IgnoreRemainingArgs();
+                    break;
+
+                case "-D": 
+                    RuntimeSetup.DebugMode = true; 
+                    break;
+                
+                case "-X:PrivateBinding": 
+                    RuntimeSetup.PrivateBinding = true; 
+                    break;
+
+                case "-X:PassExceptions": ConsoleOptions.HandleExceptions = false; break;
+                // TODO: #if !IRONPYTHON_WINDOW
+                case "-X:ColorfulConsole": ConsoleOptions.ColorfulConsole = true; break;
+                case "-X:TabCompletion": ConsoleOptions.TabCompletion = true; break;
+                case "-X:AutoIndent": ConsoleOptions.AutoIndent = true; break;
+                //#endif
+
+                case "-X:AssembliesDir":
+                    Snippets.Shared.SnippetsDirectory = PopNextArg();
+                    break;
+
+                case "-X:SaveAssemblies": 
+                    Snippets.Shared.SaveSnippets = true; 
+                    break;
+
+                case "-X:Frames":
+                    SetDlrOption(arg.Substring(3)); 
+                    break;
+
+                // TODO: remove
+                case "-X:DumpIL":
+                case "-X:ShowIL":
+                case "-X:ShowRules": 
+                case "-X:DumpTrees": 
+                case "-X:ShowTrees": 
+                case "-X:ShowScopes":
+                case "-X:LightweightScopes":
+                case "-X:PreferComDispatch":
+                case "-X:CachePointersInApartment":
+                case "-X:TrackPerformance": 
+                    SetCoreDlrOption(arg.Substring(3));
+                    break;
+
+                case "-X:ExceptionDetail":
+                case "-X:Interpret":
+                case "-X:ShowClrExceptions":
+                case "-X:PerfStats":
+                    // TODO: separate options dictionary?
+                    LanguageSetup.Options[arg.Substring(3)] = RuntimeHelpers.True; 
+                    break;
+
+                default:
+                    ConsoleOptions.FileName = arg.Trim();
+                    break;
+            }
+        }
+
+        // Note: this works because it runs before the compiler picks up the
+        // environment variable
+        internal static void SetCoreDlrOption(string option) {
+#if !SILVERLIGHT
+            Environment.SetEnvironmentVariable("COREDLR_" + option, "TRUE");
+#endif
+        }
+
+        // Note: this works because it runs before the compiler picks up the
+        // environment variable
+        internal static void SetDlrOption(string option) {
+#if !SILVERLIGHT
+            Environment.SetEnvironmentVariable("DLR_" + option, "TRUE");
+#endif
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional")] // TODO: fix
+        public override void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments) {
 
             commandLine = "[options] [file|- [arguments]]";
 

@@ -31,12 +31,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         // typically typelibs contain very small number of coclasses
         // so we will just use the linked list as it performs better
         // on small number of entities
-        LinkedList<ComTypeClassDesc> _classes;
-        Dictionary<string, ComTypeEnumDesc> _enums;
-        string _typeLibName;
-        ComTypes.TYPELIBATTR _typeLibAttributes;
+        private readonly LinkedList<ComTypeClassDesc> _classes;
+        private readonly Dictionary<string, ComTypeEnumDesc> _enums;
+        private string _typeLibName;
+        private ComTypes.TYPELIBATTR _typeLibAttributes;
 
-        private static Dictionary<Guid, ComTypeLibDesc> _CachedTypeLibDesc = new Dictionary<Guid, ComTypeLibDesc>();
+        private static readonly Dictionary<Guid, ComTypeLibDesc> _CachedTypeLibDesc = new Dictionary<Guid, ComTypeLibDesc>();
 
         private ComTypeLibDesc() {
             _enums = new Dictionary<string, ComTypeEnumDesc>();
@@ -61,7 +61,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// <param name="typeLibGuid">Type Library Guid</param>
         /// <returns>ComTypeLibDesc object</returns>
         public static ComTypeLibInfo CreateFromGuid(Guid typeLibGuid) {
-
+            if (!GlobalDlrOptions.PreferComDispatch) {
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+            }
+            
             // passing majorVersion = -1, minorVersion = -1 will always
             // load the latest typelib
             ComTypes.ITypeLib typeLib = ComRuntimeHelpers.UnsafeNativeMethods.LoadRegTypeLib(ref typeLibGuid, -1, -1, 0);
@@ -78,6 +81,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// <param name="rcw">OLE automation compatible RCW</param>
         /// <returns>ComTypeLibDesc object</returns>
         public static ComTypeLibInfo CreateFromObject(object rcw) {
+            if (GlobalDlrOptions.PreferComDispatch == false) {
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+            }
+            
             if (Marshal.IsComObject(rcw) == false) {
                 throw new ArgumentException("COM object is expected");
             }

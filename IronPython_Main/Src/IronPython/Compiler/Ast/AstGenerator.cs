@@ -71,7 +71,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         public bool DebugMode {
-            get { return _context.SourceUnit.LanguageContext.DomainManager.GlobalOptions.DebugMode; }
+            get { return _context.SourceUnit.LanguageContext.DomainManager.Configuration.DebugMode; }
         }
 
         public PythonDivisionOptions DivisionOptions {

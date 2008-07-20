@@ -406,11 +406,9 @@ def test_getfqdn():
     #TODO
 
 
-
-@skip("cli")
 def test_cp12452():
     '''
-    Need to fully test socket._fileobj when this bug gets fixed.
+    Fully test socket._fileobj compatibility
     '''
     expected_dir = [
                     '__module__',
@@ -431,6 +429,11 @@ def test_cp12452():
     
     missing = [ x for x in expected_dir if x not in fileobject_dir ]
     AreEqual([], missing)
+
+def test_misc():
+    f = socket.socket().makefile()
+    f.bufsize = 4096
+    AreEqual(4096, f.bufsize)
 
 #Dev10 446426
 @skip("multiple_execute")

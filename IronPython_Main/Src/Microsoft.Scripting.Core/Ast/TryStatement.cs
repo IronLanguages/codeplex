@@ -112,7 +112,6 @@ namespace System.Linq.Expressions {
                 throw Error.CannotHaveFinallyAndFault();
             }
             
-            ContractUtils.RequiresNotNull(annotations, "annotations");
 
             var @catch = handlers.ToReadOnly();
             ContractUtils.RequiresNotNullItems(@catch, "handlers");

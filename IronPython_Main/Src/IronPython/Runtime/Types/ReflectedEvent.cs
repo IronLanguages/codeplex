@@ -185,12 +185,14 @@ namespace IronPython.Runtime.Types {
                     stubs = _event.GetStubList(_instance);
                 }
 
+                bool privateBinding = context.LanguageContext.DomainManager.Configuration.PrivateBinding;
+
                 // wire the handler up:
                 if (!add.DeclaringType.IsPublic) {
-                    add = CompilerHelpers.GetCallableMethod(add);
+                    add = CompilerHelpers.GetCallableMethod(add, privateBinding);
                 }
 
-                if ((add.IsPublic && add.DeclaringType.IsPublic) || PythonContext.GetContext(context).DomainManager.GlobalOptions.PrivateBinding) {
+                if ((add.IsPublic && add.DeclaringType.IsPublic) || privateBinding) {
                     add.Invoke(_instance, new object[] { handler });
                 } else {
                     throw new ArgumentTypeException("cannot add to private event");
@@ -219,12 +221,14 @@ namespace IronPython.Runtime.Types {
                     }
                 }
 
+                bool privateBinding = context.LanguageContext.DomainManager.Configuration.PrivateBinding;
+
                 if (!remove.DeclaringType.IsPublic) {
-                    remove = CompilerHelpers.GetCallableMethod(remove);
+                    remove = CompilerHelpers.GetCallableMethod(remove, privateBinding);
                 }
 
                 bool isRemovePublic = remove.IsPublic && remove.DeclaringType.IsPublic;
-                if (isRemovePublic || PythonContext.GetContext(context).DomainManager.GlobalOptions.PrivateBinding) {
+                if (isRemovePublic || privateBinding) {
 
                     Delegate handler;
 

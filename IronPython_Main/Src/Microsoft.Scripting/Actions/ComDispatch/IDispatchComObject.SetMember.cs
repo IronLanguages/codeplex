@@ -120,7 +120,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 Rule.Parameters[0] = Expression.Call(Rule.Parameters[0], typeof(ComObject).GetProperty("Obj").GetGetMethod());
 
                 if (setter != null) {
-                    setter = CompilerHelpers.GetCallableMethod(setter);
+                    setter = CompilerHelpers.GetCallableMethod(setter, Binder.PrivateBinding);
 
                     if (setter.IsPublic) {
                         expression = Rule.MakeReturn(Binder, MakeReturnValue(Binder.MakeCallExpression(Rule.Context, setter, Rule.Parameters)));

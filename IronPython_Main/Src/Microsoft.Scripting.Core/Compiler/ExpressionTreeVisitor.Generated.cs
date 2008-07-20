@@ -78,6 +78,8 @@ namespace System.Linq.Expressions {
             DefaultVisitDeleteExpression,                               //    Delete
             DefaultVisitDoStatement,                                    //    DoStatement
             DefaultVisitEmptyStatement,                                 //    EmptyStatement
+            DefaultVisitExtensionExpression,                            //    Extension
+            DefaultVisitIndexedPropertyExpression,                      //    IndexedProperty
             DefaultVisitLabeledStatement,                               //    LabeledStatement
             DefaultVisitLocalScopeExpression,                           //    LocalScope
             DefaultVisitLoopStatement,                                  //    LoopStatement
@@ -87,10 +89,9 @@ namespace System.Linq.Expressions {
             DefaultVisitSwitchStatement,                                //    SwitchStatement
             DefaultVisitThrowStatement,                                 //    ThrowStatement
             DefaultVisitTryStatement,                                   //    TryStatement
+            DefaultVisitUnaryExpression,                                //    Unbox
             DefaultVisitVariableExpression,                             //    Variable
             DefaultVisitYieldStatement,                                 //    YieldStatement
-            DefaultVisitIndexedPropertyExpression,                      //    IndexedProperty
-            DefaultVisitExtensionExpression,                            //    Extension
 
             // *** END GENERATED CODE ***
 

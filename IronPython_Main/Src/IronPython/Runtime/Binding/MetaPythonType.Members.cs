@@ -307,7 +307,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             if (target != null) {
-                if (Value.IsPythonType && !PythonTypeOps.GetSlot(mg, member.Name).IsAlwaysVisible) {
+                if (Value.IsPythonType && !PythonTypeOps.GetSlot(mg, member.Name, state.Binder.PrivateBinding).IsAlwaysVisible) {
                     Type resType = BindingHelpers.GetCompatibleType(target.Type, error.Type);
 
                     target = Ast.Condition(

@@ -77,6 +77,8 @@ def launch_ironpython_changing_extensions(test, add=[], remove=[], additionalScr
     params.append(test)
     params.extend(additionalScriptParams)
     
+    print "Starting process: %s" % params
+    
     return nt.spawnv(0, sys.executable, params)
 
 def run_tool(cmd, args=""):

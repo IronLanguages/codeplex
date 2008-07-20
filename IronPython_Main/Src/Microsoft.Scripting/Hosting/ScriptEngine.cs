@@ -609,14 +609,14 @@ namespace Microsoft.Scripting.Hosting {
         /// These methods return unique identifiers for this engine that map to this engine and its language.
         /// </summary>
         public string[] GetRegisteredIdentifiers() {
-            return _runtime.GetRegisteredLanguageIdentifiers(_language);
+            return _runtime.Manager.Configuration.GetLanguageIdentifiers(_language);
         }
 
         /// <summary>
         /// These methods return file extensions for this engine that map to this engine and its language.
         /// </summary>
         public string[] GetRegisteredExtensions() {
-            return _runtime.GetRegisteredFileExtensions(_language);
+            return _runtime.Manager.Configuration.GetFileExtensions(_language);
         }
 
         /// <summary>

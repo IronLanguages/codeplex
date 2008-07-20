@@ -279,9 +279,7 @@ namespace IronPython.Runtime.Binding {
 
                 MethodInfo mi = mb as MethodInfo;
                 if (mi != null) {
-                    string name;
-                    NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mb.DeclaringType), mi, out name);
-                    res.Append(name);
+                    res.Append(mi.Name);
                 } else {
                     res.Append(DynamicHelpers.GetPythonTypeFromType(mb.DeclaringType).Name);
                 }

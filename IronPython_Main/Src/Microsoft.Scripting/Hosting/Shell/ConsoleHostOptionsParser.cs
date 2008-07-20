@@ -23,31 +23,17 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
     public class ConsoleHostOptionsParser {
         private readonly ConsoleHostOptions _options;
-        private readonly ScriptDomainOptions _globalOptions;
-        private readonly ScriptRuntimeSetup _runtimeConfig;
+        private readonly ScriptRuntimeSetup _runtimeSetup;
 
         public ConsoleHostOptions Options { get { return _options; } }
-        public ScriptDomainOptions GlobalOptions { get { return _globalOptions; } }
-        public ScriptRuntimeSetup RuntimeConfig { get { return _runtimeConfig; } }
+        public ScriptRuntimeSetup RuntimeSetup { get { return _runtimeSetup; } }
 
-        public ConsoleHostOptionsParser(ConsoleHostOptions options, ScriptDomainOptions globalOptions, ScriptRuntimeSetup runtimeConfig) {
+        public ConsoleHostOptionsParser(ConsoleHostOptions options, ScriptRuntimeSetup runtimeSetup) {
             ContractUtils.RequiresNotNull(options, "options");
-            ContractUtils.RequiresNotNull(globalOptions, "globalOptions");
-            ContractUtils.RequiresNotNull(runtimeConfig, "runtimeConfig");
+            ContractUtils.RequiresNotNull(runtimeSetup, "runtimeSetup");
 
             _options = options;
-            _globalOptions = globalOptions;
-            _runtimeConfig = runtimeConfig;
-        }
-
-        // TODO: this should be on ScriptRuntimeSetup and should distinguish id from extension
-        private bool IsRegisteredName(string name) {
-            foreach (LanguageProviderSetup language in _runtimeConfig.LanguageProviders) {
-                if (Array.IndexOf(language.Names, name) != -1) {
-                    return true;
-                }
-            }
-            return false;
+            _runtimeSetup = runtimeSetup;
         }
 
         /// <exception cref="InvalidOptionException"></exception>
@@ -76,11 +62,12 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     case "lang":
                         OptionValueRequired(name, value);
 
-                        if (!IsRegisteredName(value)) {
+                        AssemblyQualifiedTypeName provider;
+                        if (!_runtimeSetup.TryGetLanguageProviderById(value, out provider)) {
                             throw new InvalidOptionException(String.Format("Unknown language id '{0}'.", value));
                         }
 
-                        _options.LanguageId = value;
+                        _options.LanguageProvider = provider;
                         break;
 
                     case "path":
@@ -89,36 +76,10 @@ namespace Microsoft.Scripting.Hosting.Shell {
                         _options.SourceUnitSearchPaths = value.Split(';');
                         break;
 
-                    case "mta":
-                        OptionNotAvailableOnSilverlight(name);
-                        _options.IsMTA = true;
-                        break;
-
                     case "setenv":
                         OptionNotAvailableOnSilverlight(name);
                         _options.EnvironmentVars.AddRange(value.Split(';'));
                         break;
-
-                    case "x":
-                        switch (value) {
-                            case "ShowTrees":
-                            case "DumpTrees":
-                            case "ShowRules":
-                            case "ShowScopes":
-                                OptionsParser.SetCompilerDebugOption(value);
-                                break;
-                            default: _options.IgnoredArgs.Add(current); break;
-                        }
-                        break;
-
-                    case "d":
-                        _globalOptions.DebugMode = true;
-                        break;
-
-                    case "help":
-                    case "?":
-                        _options.RunAction = ConsoleHostOptions.Action.DisplayHelp;
-                        return;
 
                     // first unknown/non-option:
                     case null:

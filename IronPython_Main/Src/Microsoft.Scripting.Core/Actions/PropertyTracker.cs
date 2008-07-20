@@ -61,7 +61,7 @@ namespace System.Scripting.Actions {
                 return binder.ReturnMemberTracker(type, this);
             }
 
-            MethodInfo getter = ResolveGetter();
+            MethodInfo getter = ResolveGetter(binder.PrivateBinding);
             if (getter == null || getter.ContainsGenericParameters) {
                 // no usable getter
                 return null;
@@ -76,7 +76,7 @@ namespace System.Scripting.Actions {
         }
 
         public override ErrorInfo GetError(ActionBinder binder) {
-            MethodInfo getter = ResolveGetter();
+            MethodInfo getter = ResolveGetter(binder.PrivateBinding);
 
             if(getter == null) {
                 return binder.MakeMissingMemberErrorInfo(DeclaringType, Name);
@@ -103,7 +103,7 @@ namespace System.Scripting.Actions {
                 return binder.ReturnMemberTracker(type, BindToInstance(instance));
             }
 
-            MethodInfo getter = ResolveGetter();
+            MethodInfo getter = ResolveGetter(binder.PrivateBinding);
             if (getter == null || getter.ContainsGenericParameters) {
                 // no usable getter
                 return null;
@@ -118,7 +118,7 @@ namespace System.Scripting.Actions {
         }
 
         public override ErrorInfo GetBoundError(ActionBinder binder, Expression instance) {
-            MethodInfo getter = ResolveGetter();
+            MethodInfo getter = ResolveGetter(binder.PrivateBinding);
 
             if (getter == null) {
                 return binder.MakeMissingMemberErrorInfo(DeclaringType, Name);
@@ -143,18 +143,18 @@ namespace System.Scripting.Actions {
 
         #region Private expression builder helpers
 
-        private MethodInfo ResolveGetter() {
+        private MethodInfo ResolveGetter(bool privateBinding) {
             MethodInfo getter = GetGetMethod(true);
 
             if (getter == null) return null;
 
             // Allow access to protected getters TODO: this should go, it supports IronPython semantics.
             if (!getter.IsPublic && !(getter.IsFamily || getter.IsFamilyOrAssembly)) {
-                if (!ScriptDomainManager.Options.PrivateBinding) {
+                if (!privateBinding) {
                     getter = null;
                 }
             }
-            return CompilerHelpers.GetCallableMethod(getter);
+            return CompilerHelpers.GetCallableMethod(getter, privateBinding);
         }
 
         #endregion        

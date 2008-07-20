@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Actions {
             if (t != null) {
                 Test = Ast.AndAlso(Test, Ast.Equal(Rule.Parameters[0], Ast.Constant(target)));
 
-                return CompilerHelpers.GetConstructors(t);
+                return CompilerHelpers.GetConstructors(t, Binder.PrivateBinding);
             }
 
             return null;

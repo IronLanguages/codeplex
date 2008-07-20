@@ -200,8 +200,10 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(arguments, "arguments");
 
             ValidateMethodInfo(method);
-            ContractUtils.Requires((method.CallingConvention & CallingConventions.VarArgs) == 0, "method", Strings.AccessorsCannotHaveVarArgs);
-            if (!method.IsStatic) {
+            ContractUtils.Requires((method.CallingConvention & CallingConventions.VarArgs) == 0, "method", Strings.AccessorsCannotHaveVarArgs);            
+            if (method.IsStatic) {
+                ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr); 
+            } else {
                 ContractUtils.RequiresNotNull(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }

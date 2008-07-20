@@ -118,7 +118,7 @@ namespace IronPython.Runtime.Types {
                 // We could have an MBRO whos DeclaringType is completely different.  
                 // Therefore we special case it here and cast to the declaring type
                 Type selfType = CompilerHelpers.GetType(__self__);
-                if (!selfType.IsVisible && PythonContext.GetContext(context).DomainManager.GlobalOptions.PrivateBinding) {
+                if (!selfType.IsVisible && PythonContext.GetContext(context).DomainManager.Configuration.PrivateBinding) {
                     helper.InstanceType = selfType;
                 } else {
                     selfType = CompilerHelpers.GetVisibleType(selfType);
@@ -131,6 +131,11 @@ namespace IronPython.Runtime.Types {
                         // explitit interface implementation dispatch on a value type, don't
                         // unbox the value type before the dispatch.
                         instance = Ast.Convert(instance, Target.DeclaringType);
+                    } else if (selfType.IsValueType) {
+                        // We might be calling a a mutating method (like
+                        // Rectangle.Intersect). If so, we want it to mutate
+                        // the boxed value directly
+                        instance = Ast.Unbox(instance, selfType);
                     } else {
 #if SILVERLIGHT
                     instance = Ast.Convert(instance, selfType);

@@ -88,7 +88,6 @@ namespace System.Linq.Expressions {
 
         public static ScopeExpression Scope(Expression body, string name, Annotations annotations, IEnumerable<VariableExpression> variables) {
             ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.RequiresNotNull(annotations, "annotations");
 
             ReadOnlyCollection<VariableExpression> varList = variables.ToReadOnly();
             ContractUtils.RequiresNotNullItems(varList, "variables");

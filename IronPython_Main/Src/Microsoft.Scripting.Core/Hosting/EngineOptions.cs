@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting {
 
@@ -21,15 +22,15 @@ namespace Microsoft.Scripting {
     public class EngineOptions {
         private bool _exceptionDetail;
         private bool _showClrExceptions;
-        private bool _interpret;
-        private bool _perfStats;
+        private bool _interpretedMode;
+        private readonly bool _perfStats;
 
         /// <summary>
         /// Interpret code instead of emitting it.
         /// </summary>
         public bool InterpretedMode {
-            get { return _interpret; }
-            set { _interpret = value; }
+            get { return _interpretedMode; }
+            set { _interpretedMode = value; }
         }
 
         /// <summary>
@@ -50,11 +51,28 @@ namespace Microsoft.Scripting {
         /// </summary>
         public bool PerfStats {
             get { return _perfStats; }
-            set { _perfStats = value; }
         }
 
-        public EngineOptions() {
+        public EngineOptions() 
+            : this(null) {
+        }
 
+        public EngineOptions(IDictionary<string, object> options) {
+            _interpretedMode = GetOption(options, "InterpretedMode", false);
+            _exceptionDetail = GetOption(options, "ExceptionDetail", false);
+            _showClrExceptions = GetOption(options, "ShowClrExceptions", false);
+            _perfStats = GetOption(options, "PerfStats", false);
+        }
+
+        protected static T GetOption<T>(IDictionary<string, object> options, string name, T defaultValue) {
+            object value;
+            if (options != null && options.TryGetValue(name, out value)) {
+                if (value is T) {
+                    return (T)value;
+                }
+                throw new ArgumentException(String.Format("Invalid value for option {0}", name));
+            }
+            return defaultValue;
         }
     }
 }

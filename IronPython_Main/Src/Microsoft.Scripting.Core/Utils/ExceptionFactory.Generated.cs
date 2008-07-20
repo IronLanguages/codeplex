@@ -545,6 +545,15 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Static methods requires null expression, non-static property requires non-null expression."
+        /// </summary>
+        internal static string OnlyStaticMethodsHaveNullExpr {
+            get {
+                return "Static methods requires null expression, non-static property requires non-null expression.";
+            }
+        }
+
+        /// <summary>
         /// A string like  "expected only static property"
         /// </summary>
         internal static string ExpectedStaticProperty {
@@ -577,6 +586,15 @@ namespace System.Linq.Expressions {
         internal static string PropertyNotWriteable {
             get {
                 return "Property is not writeable";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Can only unbox from an object or interface type to a value type."
+        /// </summary>
+        internal static string InvalidUnboxType {
+            get {
+                return "Can only unbox from an object or interface type to a value type.";
             }
         }
 

@@ -128,7 +128,7 @@ namespace System.Linq.Expressions {
         internal static void Dump(Expression expression, string description) {
             Debug.Assert(expression != null);
 
-            if (CompilerDebugOptions.ShowTrees) {
+            if (GlobalDlrOptions.ShowTrees) {
 #if !SILVERLIGHT
                 ConsoleColor color = Console.ForegroundColor;
                 try {
@@ -140,7 +140,7 @@ namespace System.Linq.Expressions {
                     Console.ForegroundColor = color;
                 }
 #endif
-            } else if (CompilerDebugOptions.DumpTrees) {
+            } else if (GlobalDlrOptions.DumpTrees) {
                 StreamWriter sw = new StreamWriter(GetFilePath(description), true);
                 using (sw) {
                     Dump(expression, description, sw);
@@ -153,7 +153,7 @@ namespace System.Linq.Expressions {
         /// </summary>
         [Conditional("DEBUG")]
         internal static void Dump<T>(Rule<T> rule) where T : class {
-            if (CompilerDebugOptions.ShowRules) {
+            if (GlobalDlrOptions.ShowRules) {
 #if !SILVERLIGHT
                 ConsoleColor color = Console.ForegroundColor;
                 try {

@@ -28,20 +28,23 @@ namespace Microsoft.Scripting.Generation {
     /// Updates fields/properties of the returned value with unused keyword parameters.
     /// </summary>
     class KeywordConstructorReturnBuilder : ReturnBuilder {
-        private ReturnBuilder _builder;
-        private int _kwArgCount;
-        private int[] _indexesUsed;
-        private MemberInfo[] _membersSet;
+        private readonly ReturnBuilder _builder;
+        private readonly int _kwArgCount;
+        private readonly int[] _indexesUsed;
+        private readonly MemberInfo[] _membersSet;
+        private readonly bool _privateBinding;
 
-        public KeywordConstructorReturnBuilder(ReturnBuilder builder, int kwArgCount, int[]indexesUsed, MemberInfo[] membersSet)
+        public KeywordConstructorReturnBuilder(ReturnBuilder builder, int kwArgCount, int[] indexesUsed, MemberInfo[] membersSet,
+            bool privateBinding)
             : base(builder.ReturnType) {
             _builder = builder;
             _kwArgCount = kwArgCount;
             _indexesUsed = indexesUsed;
             _membersSet = membersSet;
+            _privateBinding = privateBinding;
         }
 
-        public override object Build(CodeContext context, object[] args, object[]parameters, object ret) {
+        public override object Build(CodeContext context, object[] args, object[] parameters, object ret) {
             for (int i = 0; i < _indexesUsed.Length; i++) {
                 object value = parameters[parameters.Length - _kwArgCount + _indexesUsed[i]];
                 switch(_membersSet[i].MemberType) {
@@ -92,9 +95,10 @@ namespace Microsoft.Scripting.Generation {
                             );
                         }                        
                         break;
+
                     case MemberTypes.Property:
                         PropertyInfo pi = (PropertyInfo)_membersSet[i];
-                        if (pi.GetSetMethod(ScriptDomainManager.Options.PrivateBinding) != null) {
+                        if (pi.GetSetMethod(_privateBinding) != null) {
                             sets.Add(
                                 Ast.AssignProperty(
                                     tmp,

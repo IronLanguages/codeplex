@@ -339,12 +339,11 @@ namespace IronPython.Runtime.Binding {
 
                 expr = Ast.Scope(
                     Ast.Comma(
-                        Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
-                        Ast.TryFinally(
-                            Ast.Assign(tmp, expr),
-                            Ast.Block(
-                                Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
-                            )
+                        Ast.Try(
+                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
+                            Ast.Assign(tmp, expr)
+                        ).Finally(
+                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
                         ),
                         tmp
                     ),

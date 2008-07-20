@@ -29,21 +29,21 @@ namespace IronPython {
         WarnAll
     }
 
+    // TODO: rename to PythonOptions
     [CLSCompliant(true)]
     [Serializable]
     public sealed class PythonEngineOptions : EngineOptions {
 
-        private string[] _arguments = ArrayUtils.EmptyStrings;
-        private List<string> _warningFilters;
-        private int _maximumRecursion = Int32.MaxValue;
-        private Severity _indentationInconsistencySeverity;
-        private PythonDivisionOptions _division;
-        private bool _stripDocStrings;
-        private bool _optimize;
+        private readonly string[]/*!*/ _arguments;
+        private readonly string[]/*!*/ _warningFilters;
+        private readonly int _recursionLimit;
+        private readonly Severity _indentationInconsistencySeverity;
+        private readonly PythonDivisionOptions _division;
+        private readonly bool _stripDocStrings;
+        private readonly bool _optimize;
 
-        public string[] Arguments {
+        public string[]/*!*/ Arguments {
             get { return _arguments; }
-            set { _arguments = value; }
         }
 
         /// <summary>
@@ -51,7 +51,6 @@ namespace IronPython {
         /// </summary>
         public bool Optimize {
             get { return _optimize; }
-            set { _optimize = value; }
         }
         
         /// <summary>
@@ -59,20 +58,17 @@ namespace IronPython {
         /// </summary>
         public bool StripDocStrings {
             get { return _stripDocStrings; }
-            set { _stripDocStrings = value; }
         }
 
         /// <summary>
         ///  List of -W (warning filter) options collected from the command line.
         /// </summary>
-        public IList<string> WarningFilters {
+        public string[]/*!*/ WarningFilters {
             get { return _warningFilters; }
-            set { _warningFilters = new List<string>(value); }
         }
 
-        public int MaximumRecursion {
-            get { return _maximumRecursion; }
-            set { _maximumRecursion = value; }
+        public int RecursionLimit {
+            get { return _recursionLimit; }
         }
 
         /// <summary> 
@@ -80,7 +76,6 @@ namespace IronPython {
         /// </summary>
         public Severity IndentationInconsistencySeverity {
             get { return _indentationInconsistencySeverity; }
-            set { _indentationInconsistencySeverity = value; }
         }
 
         /// <summary>
@@ -88,14 +83,23 @@ namespace IronPython {
         /// </summary>
         public PythonDivisionOptions DivisionOptions {
             get { return _division; }
-            set { _division = value; }
         }
 
-        public PythonEngineOptions Clone() {
-            PythonEngineOptions result = (PythonEngineOptions)MemberwiseClone();
-            result._arguments = (string[])_arguments.Clone();
-            result._warningFilters = new List<string>(_warningFilters);
-            return result;
+        public PythonEngineOptions() 
+            : this(null) {
+        }
+    
+        public PythonEngineOptions(IDictionary<string, object> options) 
+            : base(options) {
+
+            _arguments = ArrayUtils.Copy(GetOption(options, "Arguments", ArrayUtils.EmptyStrings));
+            _warningFilters = ArrayUtils.Copy(GetOption(options, "WarningFilters", ArrayUtils.EmptyStrings));
+
+            _optimize = GetOption(options, "Optimize", false);
+            _stripDocStrings = GetOption(options, "StripDocStrings", false);
+            _division = GetOption(options, "DivisionOptions", PythonDivisionOptions.Old);
+            _recursionLimit = GetOption(options, "RecursionLimit", Int32.MaxValue);
+            _indentationInconsistencySeverity = GetOption(options, "IndentationInconsistencySeverity", Severity.Ignore);
         }
     }
 }

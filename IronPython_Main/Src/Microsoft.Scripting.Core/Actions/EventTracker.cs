@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using Microsoft.Contracts;
+using System.Diagnostics;
 
 namespace System.Scripting.Actions {
     public class EventTracker : MemberTracker {
@@ -44,12 +45,28 @@ namespace System.Scripting.Actions {
             }
         }
 
+        /// <summary>
+        /// Doesn't need to check PrivateBinding setting: no method that is part of the event is public the entire event is private. 
+        /// If the code has already a reference to the event tracker instance for a private event its "static-ness" is not influenced 
+        /// by private-binding setting.
+        /// </summary>
         public bool IsStatic {
             get {
-                MethodInfo mi = Event.GetAddMethod(ScriptDomainManager.Options.PrivateBinding) ??
-                    Event.GetRemoveMethod(ScriptDomainManager.Options.PrivateBinding) ??
-                    Event.GetRaiseMethod(ScriptDomainManager.Options.PrivateBinding);
+                MethodInfo mi = Event.GetAddMethod(false) ??
+                    Event.GetRemoveMethod(false) ??
+                    Event.GetRaiseMethod(false) ??
+                    Event.GetAddMethod(true) ??
+                    Event.GetRemoveMethod(true) ??
+                    Event.GetRaiseMethod(true);
 
+                MethodInfo m;
+                Debug.Assert(
+                    ((m = Event.GetAddMethod(true)) == null || m.IsStatic == mi.IsStatic) &&
+                    ((m = Event.GetRaiseMethod(true)) == null || m.IsStatic == mi.IsStatic) &&
+                    ((m = Event.GetRaiseMethod(true)) == null || m.IsStatic == mi.IsStatic),
+                    "Methods are either all static or all instance."
+                );
+                
                 return mi.IsStatic;
             }
         }

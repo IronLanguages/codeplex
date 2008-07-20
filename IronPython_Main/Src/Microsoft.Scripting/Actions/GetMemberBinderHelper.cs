@@ -197,11 +197,11 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private static MethodInfo[] GetCallableMethods(MemberGroup members) {
+        private MethodInfo[] GetCallableMethods(MemberGroup members) {
             MethodInfo[] methods = new MethodInfo[members.Count];
 
             for (int i = 0; i < members.Count; i++) {
-                methods[i] = CompilerHelpers.GetCallableMethod(((MethodTracker)members[i]).Method);
+                methods[i] = CompilerHelpers.GetCallableMethod(((MethodTracker)members[i]).Method, Binder.PrivateBinding);
             }
             return methods;
         }

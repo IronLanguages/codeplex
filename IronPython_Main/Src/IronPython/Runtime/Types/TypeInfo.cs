@@ -403,7 +403,7 @@ namespace IronPython.Runtime.Types {
             private const BindingFlags _privateFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
             public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
-                if (binder.DomainManager.GlobalOptions.PrivateBinding) {
+                if (binder.DomainManager.Configuration.PrivateBinding) {
                     // in private binding mode Python exposes private members under a mangled name.
                     string header = "_" + type.Name + "__";
                     if (name.StartsWith(header)) {
@@ -425,7 +425,7 @@ namespace IronPython.Runtime.Types {
             }
 
             protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
-                if (!binder.DomainManager.GlobalOptions.PrivateBinding) {
+                if (!binder.DomainManager.Configuration.PrivateBinding) {
                     yield break;
                 }
 
@@ -1030,7 +1030,7 @@ namespace IronPython.Runtime.Types {
 
                 MemberInfo[] foundMembers = type.GetMember(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | flags);
 
-                if (!Binder.DomainManager.GlobalOptions.PrivateBinding) {
+                if (!Binder.DomainManager.Configuration.PrivateBinding) {
                     foundMembers = CompilerHelpers.FilterNonVisibleMembers(type, foundMembers);
                 }
 

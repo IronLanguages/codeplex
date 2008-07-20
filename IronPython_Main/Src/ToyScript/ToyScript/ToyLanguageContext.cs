@@ -18,11 +18,13 @@ using System.Scripting.Runtime;
 using ToyScript.Parser;
 using ToyScript.Runtime;
 using MSAst = System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {
-        public ToyLanguageContext(ScriptDomainManager manager) : base(manager) { 
+        public ToyLanguageContext(ScriptDomainManager manager, IDictionary<string, object> options) : base(manager) { 
             Binder = new ToyBinder(manager);
+            manager.LoadAssembly(typeof(string).Assembly);
         }
 
         protected override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {

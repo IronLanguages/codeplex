@@ -204,6 +204,8 @@
     <Compile Include="Ast\ThrowStatement.cs" />
     <Compile Include="Ast\TryStatementBuilder.cs" />
     <Compile Include="Ast\YieldStatement.cs" />
+    <Compile Include="Hosting\LanguageSetup.cs" />
+    <Compile Include="GlobalDlrOptions.cs" />
     <Compile Include="Compilers\CompilerContext.cs" />
     <Compile Include="Compilers\ParserSink.cs" />
     <Compile Include="Compilers\TokenizerBuffer.cs" />
@@ -256,7 +258,6 @@
     <Compile Include="Hosting\Shell\ConsoleHostOptions.cs" />
     <Compile Include="Hosting\Shell\ConsoleHostOptionsParser.cs" />
     <Compile Include="Hosting\Shell\ConsoleOptions.cs" />
-    <Compile Include="Hosting\Shell\DefaultOptionsParser.cs" />
     <Compile Include="Hosting\Shell\IConsole.cs" />
     <Compile Include="Hosting\Shell\OptionsParser.cs" />
     <Compile Include="Hosting\Shell\Style.cs" />

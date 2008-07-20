@@ -186,20 +186,17 @@ namespace System.Scripting.Com {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         private static Type ConvertTypeLibToAssembly(IntPtr typeInfoPtr, Guid typeInfoGuid) {
-            if (ScriptDomainManager.Options.Verbose) {
-                Console.WriteLine("Generating Interop assembly for type " + typeInfoGuid);
-            }
+            Debug.WriteLine("Generating Interop assembly for type " + typeInfoGuid);
 
             // This can be very slow. If this is taking a long time, you need to add a reference
             // to the Primary Interop Assembly using clr.AddReference
             Type interfaceType = Marshal.GetTypeForITypeInfo(typeInfoPtr);
 
-            if (ScriptDomainManager.Options.Verbose) {
-                if (interfaceType == null) {
-                    Console.WriteLine("Could not find COM interface " + typeInfoGuid);
-                } else {
-                    Console.WriteLine("Resulting type is " + interfaceType.AssemblyQualifiedName);
-                }
+            
+            if (interfaceType == null) {
+                Debug.WriteLine("Could not find COM interface " + typeInfoGuid, "COM");
+            } else {
+                Debug.WriteLine("Resulting type is " + interfaceType.AssemblyQualifiedName, "COM");
             }
 
             if (interfaceType == null) {

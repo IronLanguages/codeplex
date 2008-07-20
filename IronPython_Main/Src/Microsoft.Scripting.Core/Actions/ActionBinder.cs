@@ -32,6 +32,10 @@ namespace System.Scripting.Actions {
     public abstract class ActionBinder {
         private ScriptDomainManager _manager;
 
+        public bool PrivateBinding {
+            get { return _manager.Configuration.PrivateBinding; }
+        }
+
         protected ActionBinder(ScriptDomainManager manager) {
             _manager = manager;
         }
@@ -154,7 +158,7 @@ namespace System.Scripting.Actions {
         /// </summary>
         public virtual MemberGroup GetMember(OldDynamicAction action, Type type, string name) {
             MemberInfo[] foundMembers = type.GetMember(name);
-            if (!_manager.GlobalOptions.PrivateBinding) {
+            if (!PrivateBinding) {
                 foundMembers = CompilerHelpers.FilterNonVisibleMembers(type, foundMembers);
             }
 

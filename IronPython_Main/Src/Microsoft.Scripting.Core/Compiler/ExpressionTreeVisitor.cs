@@ -21,10 +21,11 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Base class for visiting and rewriting trees. Subclasses can override
     /// individual Visit methods from which they can return rewritten nodes.
-    /// If a node is rewritten, all parent nodes will be rewritten.
+    /// If a node is rewritten, all parent nodes will be rewritten
+    /// automatically.
     /// 
-    /// TODO: rename back to ExpressionVisitor
-    /// TODO: copy into Microsoft.Scripting, make this one internal
+    /// TODO: rename back to ExpressionVisitor (fix the Linq test that has a copy)
+    /// TODO: needs public API vetting (we'll probably expose it, tree rewriters are *very* useful)
     /// </summary>
     public partial class ExpressionTreeVisitor {
 

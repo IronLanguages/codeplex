@@ -31,6 +31,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private bool _tabCompletion;
         private bool _colorfulConsole;
         private bool _printUsageAndExit;
+        private bool _isMta;
 
         public bool AutoIndent {
             get { return _autoIndent; }
@@ -97,7 +98,12 @@ namespace Microsoft.Scripting.Hosting.Shell {
             set { _introspection = value; }
         }
 
-        internal protected ConsoleOptions() {
+        public bool IsMta {
+            get { return _isMta; }
+            set { _isMta = value; }
+        }
+
+        public ConsoleOptions() {
 	    }
 
         protected ConsoleOptions(ConsoleOptions options) {
@@ -114,6 +120,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _tabCompletion = options._tabCompletion;
             _colorfulConsole = options._colorfulConsole;
             _printUsageAndExit = options._printUsageAndExit;
+            _isMta = options._isMta;
         }
     }
 }

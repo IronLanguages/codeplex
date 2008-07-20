@@ -396,8 +396,8 @@ namespace IronPython.Runtime.Types {
                         tmp
                     ),
                     Ast.Block(
-                        Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                         Ast.Try(
+                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                             rule.MakeReturn(context.LanguageContext.Binder,
                                 AstUtils.Call(
                                     callAction,
@@ -779,10 +779,10 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, object args) {
-            PythonOps.FunctionPushFrame();
             try {
-                object value;
+                PythonOps.FunctionPushFrame();
 
+                object value;
                 if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
                     KwCallInfo kwInfo;
 
@@ -802,10 +802,10 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
-            PythonOps.FunctionPushFrame();
             try {
-                object value;
+                PythonOps.FunctionPushFrame();
 
+                object value;
                 if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
                     return PythonOps.CallWithContext(context, value, args);
                 }
@@ -818,10 +818,10 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, [ParamDictionary]IAttributesCollection dict, params object[] args) {
-            PythonOps.FunctionPushFrame();
             try {
-                object value;
+                PythonOps.FunctionPushFrame();
 
+                object value;
                 if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
                     return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, ArrayUtils.EmptyStrings, null, dict);
                 }

@@ -297,8 +297,8 @@ namespace IronPython.Runtime.Operations {
             if (pt != null) {
                 // Recursively inspect nested tuple(s)
                 foreach (object o in pt) {
-                    FunctionPushFrame();
                     try {
+                        FunctionPushFrame();
                         if (IsSubClass(c, o)) {
                             return true;
                         }
@@ -359,8 +359,8 @@ namespace IronPython.Runtime.Operations {
             PythonTuple tt = typeinfo as PythonTuple;
             if (tt != null) {
                 foreach (object type in tt) {
-                    PythonOps.FunctionPushFrame();
                     try {
+                        PythonOps.FunctionPushFrame();
                         if (IsInstance(o, type)) return true;
                     } finally {
                         PythonOps.FunctionPopFrame();
@@ -3244,7 +3244,7 @@ namespace IronPython.Runtime.Operations {
             ContractUtils.RequiresNotNull(main, "main");
 
             ScriptRuntime sr = ScriptRuntime.Create();
-            ScriptEngine se = sr.GetEngine(typeof(PythonContext));
+            ScriptEngine se = sr.GetEngine(new AssemblyQualifiedTypeName(typeof(PythonContext)));
             PythonContext pc = (PythonContext)HostingHelpers.GetLanguageContext(se);
 
             foreach (ScriptCode sc in ScriptCode.LoadFromAssembly(HostingHelpers.GetDomainManager(sr), precompiled)) {

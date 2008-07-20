@@ -56,7 +56,7 @@ namespace IronPython.Runtime {
         private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
 
         // other fields which might only be conditionally used
-        private readonly PythonEngineOptions/*!*/ _engineOptions;
+        private readonly PythonEngineOptions/*!*/ _options;
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
         private string _initialVersionString;
@@ -88,16 +88,15 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
         /// </summary>
-        public PythonContext(ScriptDomainManager/*!*/ manager)
+        public PythonContext(ScriptDomainManager/*!*/ manager, IDictionary<string, object> options)
             : base(manager) {
+            _options = new PythonEngineOptions(options);
             _builtinsDict = CreateBuiltinTable();
-
-            // singletons:
-            _engineOptions = new PythonEngineOptions();
 
             DefaultContext.CreateContexts(manager, this);
 
             Binder = new PythonBinder(manager, this, DefaultContext.DefaultCLS);
+
 
             // need to run PythonOps 1st so the type system is spun up...
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(PythonOps).TypeHandle);
@@ -122,8 +121,14 @@ namespace IronPython.Runtime {
 #endif
 
             // sys.argv always includes at least one empty string.
-            Debug.Assert(PythonOptions.Arguments != null);
-            SetSystemStateValue("argv", new List(PythonOptions.Arguments.Length == 0 ? new object[] { String.Empty } : PythonOptions.Arguments));
+            SetSystemStateValue("argv", new List(_options.Arguments.Length == 0 ? new object[] { String.Empty } : _options.Arguments));
+            
+            
+            if (_options.WarningFilters.Length > 0) {
+                _systemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(_options.WarningFilters);
+            }
+
+            PythonFunction.SetRecursionLimit(_options.RecursionLimit);
 
 #if !SILVERLIGHT // AssemblyResolve
             try {
@@ -134,7 +139,7 @@ namespace IronPython.Runtime {
                 // We may not have SecurityPermissionFlag.ControlAppDomain. 
                 // If so, we will not look up sys.path for module loads
             }
-#endif
+#endif            
         }
 
         public override EngineOptions/*!*/ Options {
@@ -201,7 +206,7 @@ namespace IronPython.Runtime {
 
         public PythonEngineOptions/*!*/ PythonOptions {
             get {
-                return _engineOptions;
+                return _options;
             }
         }
 
@@ -1100,7 +1105,7 @@ namespace IronPython.Runtime {
 
             PythonContext result;
             if (((result = context.LanguageContext as PythonContext) == null)) {
-                result = context.LanguageContext.DomainManager.GetLanguageContext<PythonContext>();
+                result = context.LanguageContext.DomainManager.GetLanguage<PythonContext>();
             }
 
             return result;
@@ -1130,7 +1135,7 @@ namespace IronPython.Runtime {
         }
 
         public static PythonEngineOptions GetPythonOptions(CodeContext context) {
-            return DefaultContext.DefaultPythonContext._engineOptions;
+            return DefaultContext.DefaultPythonContext._options;
         }
 
         public void AddToPath(string directory) {

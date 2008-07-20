@@ -199,7 +199,7 @@ namespace System.Scripting {
 
                 DlrCachedCodeAttribute code = (DlrCachedCodeAttribute)attrs[0];
 
-                LanguageContext lc = runtime.GetLanguageContext(code.LanguageContextType);
+                LanguageContext lc = runtime.GetLanguage(code.LanguageContextType);
                 ScriptCode sc = lc.LoadCompiledCode(mi);
                 codes.Add(sc);
             }

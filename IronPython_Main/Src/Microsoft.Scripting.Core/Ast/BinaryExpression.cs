@@ -1056,7 +1056,6 @@ namespace System.Linq.Expressions {
         #region dynamic operations
 
         private static BinaryExpression MakeDynamicBinaryExpression(ExpressionType nodeType, Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(left, "left");
             ContractUtils.RequiresNotNull(left, "right");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");

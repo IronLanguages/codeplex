@@ -45,13 +45,9 @@ namespace IronPython.Compiler {
 
             string namePrefix = "";
             if (fi.IsPrivate || (fi.IsAssembly && !fi.IsFamilyOrAssembly)) {
-                if (!ScriptDomainManager.Options.PrivateBinding) {
-                    return NameType.None;
-                } else {
-                    // mangle protectes to private
-                    namePrefix = "_" + dt.Name + "__";
-                    nt = NameType.Field;
-                }
+               // mangle protectes to private
+                namePrefix = "_" + dt.Name + "__";
+                nt = NameType.Field;
             }
 
             name = namePrefix + name;
@@ -88,9 +84,7 @@ namespace IronPython.Compiler {
             string namePrefix = "";
 
             if ((ReflectionUtils.IsNested(t) && !t.IsNestedPublic) || (t.IsNestedAssembly && !t.IsNestedFamORAssem)) {
-                if (!ScriptDomainManager.Options.PrivateBinding) {
-                    return NameType.None;
-                } else if (!t.IsGenericParameter) {
+                if (!t.IsGenericParameter) {
                     namePrefix = "_" + DynamicHelpers.GetPythonTypeFromType(t.DeclaringType).Name + "__";
                 }
             }
@@ -147,12 +141,8 @@ namespace IronPython.Compiler {
             if (mi.IsPrivate || (mi.IsAssembly && !mi.IsFamilyOrAssembly)) {
                 // allow explicitly implemented interface
                 if (!(mi.IsPrivate && mi.IsFinal && mi.IsHideBySig && mi.IsVirtual)) {
-                    if (!ScriptDomainManager.Options.PrivateBinding) {
-                        return NameType.None;
-                    } else {
-                        // mangle protectes to private
-                        namePrefix = "_" + dt.Name + "__";
-                    }
+                    // mangle protectes to private
+                    namePrefix = "_" + dt.Name + "__";
                 } else {
                     // explicitly implemented interface
 

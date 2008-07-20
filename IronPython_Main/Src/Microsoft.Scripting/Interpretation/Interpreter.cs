@@ -547,6 +547,26 @@ namespace Microsoft.Scripting.Interpretation {
             return ((UnaryExpression)expr).Operand;
         }
 
+        private static object InterpretUnboxUnaryExpression(InterpreterState state, Expression expr) {
+            Debug.Assert(!expr.IsDynamic);
+            UnaryExpression node = (UnaryExpression)expr;
+
+            object value;
+            if (InterpretAndCheckFlow(state, node.Operand, out value)) {
+                return value;
+            }
+
+            if (state.CurrentYield != null) {
+                return ControlFlow.NextForYield;
+            }
+
+            if (value != null && node.Type == value.GetType()) {
+                return value;
+            }
+
+            throw new InvalidCastException(string.Format("cannot unbox value to type '{0}'", node.Type));
+        }
+
         private static object InterpretConvertUnaryExpression(InterpreterState state, Expression expr) {
             Debug.Assert(!expr.IsDynamic);
 

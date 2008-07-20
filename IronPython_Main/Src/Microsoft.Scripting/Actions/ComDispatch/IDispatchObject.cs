@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         public IDispatchObject(IDispatch rcw) {
             _dispatchObject = rcw;
 
-            if (ScriptDomainManager.Options.CachePointersInApartment) {
+            if (GlobalDlrOptions.CachePointersInApartment) {
                 _dispatchPointersByApartment = new Dictionary<Thread,IntPtr>();
             }
         }
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public IntPtr GetDispatchPointerInCurrentApartment() {
-            if (!ScriptDomainManager.Options.CachePointersInApartment) {
+            if (!GlobalDlrOptions.CachePointersInApartment) {
                 return Marshal.GetIDispatchForObject(_dispatchObject);
             }
 
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public void ReleaseDispatchPointer(IntPtr dispatchPointer) {
-            if (ScriptDomainManager.Options.CachePointersInApartment) {
+            if (GlobalDlrOptions.CachePointersInApartment) {
                 // Nothing to do here. This will leak the COM object.
                 Debug.Assert(_dispatchPointersByApartment[Thread.CurrentThread] == dispatchPointer);
                 return;

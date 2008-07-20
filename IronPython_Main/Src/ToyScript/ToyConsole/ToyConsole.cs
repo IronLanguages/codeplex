@@ -15,15 +15,15 @@
 
 using System;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Hosting.Shell; 
+using Microsoft.Scripting.Hosting.Shell;
+using System.Scripting.Utils; 
 
 namespace ToyScript {
     class ToyConsole : ConsoleHost {
-        protected override ScriptEngine/*!*/ CreateEngine() {
-            Runtime.LoadAssembly(typeof(string).Assembly);
-            return Runtime.GetEngine(typeof(ToyLanguageContext));
+        protected override Type Provider {
+            get { return typeof(ToyLanguageContext); }
         }
-
+        
         protected override CommandLine CreateCommandLine() {
             return new ToyCommandLine();
         }

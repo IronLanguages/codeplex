@@ -551,7 +551,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private bool EmitDictionary {
-            get { return _dictionary || ScriptDomainManager.Options.Frames; }
+            get { return _dictionary || GlobalDlrOptions.Frames; }
         }
 
         private Expression MakeBody() {
