@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Scripting.Runtime;
 using System.Text;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
@@ -81,37 +82,37 @@ namespace IronPython.Modules {
         public static object decode(CodeContext/*!*/ context, object obj) {
             PythonTuple t = lookup(context, PythonContext.GetContext(context).GetDefaultEncodingName());
 
-            return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(context, PythonCalls.Call(context, t[DecoderIndex], obj, null), 0);
         }
 
         public static object decode(CodeContext/*!*/ context, object obj, string encoding) {
             PythonTuple t = lookup(context, encoding);
 
-            return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(context, PythonCalls.Call(context, t[DecoderIndex], obj, null), 0);
         }
 
         public static object decode(CodeContext/*!*/ context, object obj, string encoding, string errors) {
             PythonTuple t = lookup(context, encoding);
 
-            return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, errors), 0);
+            return PythonOps.GetIndex(context, PythonCalls.Call(context, t[DecoderIndex], obj, errors), 0);
         }
 
         public static object encode(CodeContext/*!*/ context, object obj) {
             PythonTuple t = lookup(context, PythonContext.GetContext(context).GetDefaultEncodingName());
 
-            return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(context, PythonCalls.Call(context, t[EncoderIndex], obj, null), 0);
         }
 
         public static object encode(CodeContext/*!*/ context, object obj, string encoding) {
             PythonTuple t = lookup(context, encoding);
 
-            return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(context, PythonCalls.Call(context, t[EncoderIndex], obj, null), 0);
         }
 
         public static object encode(CodeContext/*!*/ context, object obj, string encoding, string errors) {
             PythonTuple t = lookup(context, encoding);
 
-            return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, errors), 0);
+            return PythonOps.GetIndex(context, PythonCalls.Call(context, t[EncoderIndex], obj, errors), 0);
         }
 
         public static object escape_decode(string text) {

@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 
-using System.Scripting.Runtime;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
 using System;
+using System.Scripting.Runtime;
 
-namespace IronPython.Runtime.Types {
+using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Types;
+
+namespace IronPython.Runtime.Operations {
+
     public static class DelegateOps {
         [StaticExtensionMethod]
         public static object __new__(CodeContext context, PythonType type, object function) {

@@ -23,13 +23,15 @@ using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Compiler.Generation;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     using Ast = System.Linq.Expressions.Expression;
@@ -73,13 +75,15 @@ namespace IronPython.Runtime.Operations {
         public static void AddRemoveEventHelper(object method, object instance, PythonType dt, object eventValue, SymbolId name) {
             object callable = method;
 
+            // TODO: dt gives us a PythonContext which we should use
+
             PythonTypeSlot dts = method as PythonTypeSlot;
             if (dts != null) {
                 if (!dts.TryGetValue(DefaultContext.Default, instance, dt, out callable))
                     throw PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
             }
 
-            if (!PythonOps.IsCallable(callable)) {
+            if (!PythonOps.IsCallable(DefaultContext.Default, callable)) {
                 throw PythonOps.TypeError("Expected callable value for {0}, but found {1}", name.ToString(),
                     PythonTypeOps.GetName(method));
             }
@@ -97,6 +101,10 @@ namespace IronPython.Runtime.Operations {
                 case DynamicActionKind.ConvertTo: return MakeConvertRule<T>(context, (OldConvertToAction)action, args);
                 default: return null;
             }
+        }
+
+        public static MetaObject/*!*/ GetMetaObjectHelper(IPythonObject self, Expression/*!*/ parameter, MetaObject baseMetaObject) {
+            return new Binding.MetaUserObject(parameter, Restrictions.Empty, baseMetaObject, self);
         }
 
         #region Conversion support
@@ -316,7 +324,7 @@ namespace IronPython.Runtime.Operations {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("SlotTryGetValue"),
                             rule.Context,
-                            Ast.Convert(Ast.WeakConstant(callSlot), typeof(PythonTypeSlot)),
+                            Ast.Convert(Utils.WeakConstant(callSlot), typeof(PythonTypeSlot)),
                             Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                             Ast.Convert(
                                 Ast.Property(
@@ -607,7 +615,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static Expression MakeGetAttrRule<T>(CodeContext context, OldGetMemberAction action, RuleBuilder<T> rule, Expression body, VariableExpression tmp, PythonTypeSlot getattr) where T : class {
-            Expression slot = Ast.ConvertHelper(Ast.WeakConstant(getattr), typeof(PythonTypeSlot));
+            Expression slot = Ast.ConvertHelper(Utils.WeakConstant(getattr), typeof(PythonTypeSlot));
             return MakeGetAttrRule(context, action, rule, body, tmp, slot);
         }
 
@@ -708,7 +716,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTrySetValue"),
                         rule.Context,
-                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
+                        Ast.ConvertHelper(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                         Ast.Convert(
                             Ast.Property(
@@ -731,7 +739,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryDeleteValue"),
                         rule.Context,
-                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
+                        Ast.ConvertHelper(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                         Ast.Convert(
                             Ast.Property(
@@ -829,7 +837,7 @@ namespace IronPython.Runtime.Operations {
                         body,
                         rule.MakeReturn(
                             context.LanguageContext.Binder,
-                            Ast.ConvertHelper(Ast.WeakConstant(slot.Value), typeof(object))
+                            Ast.ConvertHelper(Utils.WeakConstant(slot.Value), typeof(object))
                         )
                     );
                 }
@@ -842,7 +850,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         TypeInfo._PythonOps.SlotTryGetBoundValue,
                         rule.Context,
-                        Ast.Convert(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
+                        Ast.Convert(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                         Ast.Property(
                             Ast.Convert(
@@ -1036,9 +1044,9 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetValue"),
                         rule.Context,
-                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
+                        Ast.ConvertHelper(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                        Ast.ConvertHelper(Ast.WeakConstant(sdo.PythonType), typeof(PythonType)),
+                        Ast.ConvertHelper(Utils.WeakConstant(sdo.PythonType), typeof(PythonType)),
                         tmp
                     ),
                     rule.MakeReturn(
@@ -1064,9 +1072,9 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         TypeInfo._PythonOps.SlotTryGetBoundValue,
                         rule.Context,
-                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
+                        Ast.ConvertHelper(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                        Ast.ConvertHelper(Ast.WeakConstant(sdo.PythonType), typeof(PythonType)),
+                        Ast.ConvertHelper(Utils.WeakConstant(sdo.PythonType), typeof(PythonType)),
                         tmp
                     ),
                     rule.MakeReturn(
@@ -1194,6 +1202,72 @@ namespace IronPython.Runtime.Operations {
 
             callTarget = null;
             return false;
+        }
+
+        public static object GetAttribute(CodeContext/*!*/ context, object self, string name, PythonTypeSlot getAttributeSlot, PythonTypeSlot getAttrSlot, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, string, object>>>/*!*/ callSite) {
+            object value;
+            if (callSite.Data == null) {
+                callSite.Data = MakeGetAttrSite(context);
+            }
+
+            try {
+                if (getAttributeSlot.TryGetBoundValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                    return callSite.Data.Target(callSite.Data, context, value, name);
+                } 
+            } catch (MissingMemberException) {
+                if (getAttrSlot != null && getAttrSlot.TryGetBoundValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                    return callSite.Data.Target(callSite.Data, context, value, name);
+                }
+
+                throw;
+            }
+
+            if (getAttrSlot != null && getAttrSlot.TryGetBoundValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                return callSite.Data.Target(callSite.Data, context, value, name);
+            }
+
+            throw PythonOps.AttributeError(name);
+        }
+
+        public static object GetAttributeNoThrow(CodeContext/*!*/ context, object self, string name, PythonTypeSlot getAttributeSlot, PythonTypeSlot getAttrSlot, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, string, object>>>/*!*/ callSite) {
+            object value;
+            if (callSite.Data == null) {
+                callSite.Data = MakeGetAttrSite(context);
+            }
+
+            try {
+                if (getAttributeSlot.TryGetBoundValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                    return callSite.Data.Target(callSite.Data, context, value, name);
+                }
+            } catch (MissingMemberException) {
+                try {
+                    if (getAttrSlot != null && getAttrSlot.TryGetBoundValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                        return callSite.Data.Target(callSite.Data, context, value, name);
+                    }
+
+                    return OperationFailed.Value;
+                } catch (MissingMemberException) {
+                    return OperationFailed.Value;
+                }
+            }
+
+            try {
+                if (getAttrSlot != null && getAttrSlot.TryGetBoundValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                    return callSite.Data.Target(callSite.Data, context, value, name);
+                }
+            } catch (MissingMemberException) {
+            }
+
+            return OperationFailed.Value;
+        }
+
+        private static CallSite<DynamicSiteTarget<CodeContext, object, string, object>> MakeGetAttrSite(CodeContext context) {
+            return CallSite<DynamicSiteTarget<CodeContext, object, string, object>>.Create(
+                new InvokeBinder(
+                    PythonContext.GetContext(context).DefaultBinderState,
+                    new CallSignature(1)
+                )
+            );
         }
 
         #region IValueEquality Helpers

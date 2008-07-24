@@ -130,6 +130,8 @@ if not is_silverlight:
 #########################################################################################
 # using import in nested blocks
 
+del time  # picked this up from lib.assert_util
+
 def f():
     import time
     now = time.time()

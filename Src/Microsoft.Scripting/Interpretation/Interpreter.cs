@@ -32,18 +32,12 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Interpretation {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public static partial class Interpreter {
-
-        // The ReflectiveCaller cache
-        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
-
         #region Entry points
 
-        public static object TopLevelExecute(LambdaExpression lambda, params object[] args) {
-            // Create interpreter state and pass CodeContext argument
-            InterpreterState state = InterpreterState.CreateForTopLambda(lambda, args);
-
-            // Run the body
-            return DoExecute(state, lambda);
+        public static object TopLevelExecute(InterpretedScriptCode scriptCode, params object[] args) {
+            ContractUtils.RequiresNotNull(scriptCode, "scriptCode");
+            InterpreterState state = InterpreterState.CreateForTopLambda(scriptCode, scriptCode.Code, args);
+            return DoExecute(state, scriptCode.Code);
         }
 
         internal static object Evaluate(InterpreterState state, Expression expression) {
@@ -71,14 +65,6 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         #endregion
-
-        private static object Interpret(InterpreterState state, Expression expr) {
-            int kind = (int)expr.NodeType;
-            Debug.Assert(kind < _Interpreters.Length);
-
-            return _Interpreters[kind](state, expr);
-        }
-
 
         /// <summary>
         /// Evaluates expression and checks it for ControlFlow. If it is control flow, returns true,
@@ -541,6 +527,7 @@ namespace Microsoft.Scripting.Interpretation {
             return Object.Equals(l, r);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
         private static object InterpretQuoteUnaryExpression(InterpreterState state, Expression expr) {
             Debug.Assert(!expr.IsDynamic);
             // TODO: should we do all the fancy tree rewrite stuff here?
@@ -699,10 +686,12 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
         private static object InterpretListInitExpression(InterpreterState state, Expression expr) {
             throw new NotImplementedException("InterpretListInitExpression");
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
         private static object InterpretMemberInitExpression(InterpreterState state, Expression expr) {
             throw new NotImplementedException("InterpretMemberInitExpression");
         }
@@ -734,9 +723,6 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretCallSite(InterpreterState state, Expression node, IList<Expression> arguments) {
-            CallSiteBinder binder = node.BindingInfo;
-            Type returnType = node.Type;
-
             object[] args;
             if (!state.TryGetStackState(node, out args)) {
                 args = new object[arguments.Count];
@@ -760,20 +746,51 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            Type[] types = CompilerHelpers.GetSiteTypes(arguments, returnType);
+            var callSite = GetCallSite(state, node, arguments);
+            MatchCallerTarget caller = MatchCaller.GetCaller(callSite.GetType().GetGenericArguments()[0]);
+            return caller(callSite, args);
+        }
+
+        private static CallSite GetCallSite(InterpreterState state, Expression node, IList<Expression> arguments) {
+            CallSite callSite;
+            var callSites = state.LambdaState.ScriptCode.CallSites;
+
+            // TODO: better locking
+            lock (callSites) {
+                if (!callSites.TryGetValue(node, out callSite)) {
+                    ReflectedCaller factory = GetCallSiteFactory(node, arguments);
+                    callSite = (CallSite)factory.Invoke(node.BindingInfo);
+                    callSites.Add(node, callSite);
+                }
+            }
+
+            return callSite;
+        }
+
+        // The ReflectiveCaller cache
+        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
+        
+        private static ReflectedCaller GetCallSiteFactory(Expression node, IList<Expression> arguments) {
+            Type[] types = CompilerHelpers.GetSiteTypes(arguments, node.Type);
+
+            // TODO: remove CodeContext special case:
+            int i = (arguments.Count > 0 && typeof(CodeContext).IsAssignableFrom(arguments[0].Type)) ? 1 : 0;
+            for (; i < arguments.Count; i++) {
+                types[i] = typeof(object);
+            }
 
             ReflectedCaller rc;
             lock (_executeSites) {
                 ValueArray<Type> array = new ValueArray<Type>(types);
                 if (!_executeSites.TryGetValue(array, out rc)) {
                     Type siteType = DynamicSiteHelpers.MakeDynamicSiteTargetType(types);
-                    MethodInfo target = typeof(InterpreterHelpers).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
+                    MethodInfo target = typeof(InterpreterHelpers).GetMethod("CreateSite").MakeGenericMethod(siteType);
                     _executeSites[array] = rc = ReflectedCaller.Create(target);
                 }
             }
-
-            return rc.Invoke(binder, args);
+            return rc;
         }
+
 
         private static object InterpretArrayIndexAssignment(InterpreterState state, AssignmentExpression node) {
             BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
@@ -1414,7 +1431,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretExtensionExpression(InterpreterState state, Expression expr) {
-            return Interpret(state, Expression.ReduceToKnown(expr));
+            return Interpret(state, expr.ReduceToKnown());
         }
 
         #endregion

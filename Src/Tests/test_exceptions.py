@@ -14,10 +14,10 @@
 #####################################################################################
 
 from lib.assert_util import *
+from lib.warning_util import warning_trapper
 import sys
 
 AreEqual(sys.exc_info(), (None, None, None))
-
 
 def test_exception_line_no_with_finally():
     def f():
@@ -858,21 +858,19 @@ def test_enverror_init():
     AreEqual(x.filename, 'foo')
     AreEqual(x.args, ())
 
-    if is_cli or is_silverlight:
-        # CPython 2.5.0 is broken
-        x.__init__('1', '2', '3', '4')
-        AreEqual(x.message, 'abc')
-        AreEqual(x.errno, 'def')
-        AreEqual(x.strerror, 'qrt')
-        AreEqual(x.filename, 'foo')
-        AreEqual(x.args, ('1', '2', '3', '4'))
-        
-        x = EnvironmentError('a', 'b', 'c', 'd')
-        AreEqual(x.message, '')
-        AreEqual(x.errno, None)
-        AreEqual(x.filename, None)
-        AreEqual(x.strerror, None)
-        AreEqual(x.args, ('a', 'b', 'c', 'd'))
+    x.__init__('1', '2', '3', '4')
+    AreEqual(x.message, 'abc')
+    AreEqual(x.errno, 'def')
+    AreEqual(x.strerror, 'qrt')
+    AreEqual(x.filename, 'foo')
+    AreEqual(x.args, ('1', '2', '3', '4'))
+    
+    x = EnvironmentError('a', 'b', 'c', 'd')
+    AreEqual(x.message, '')
+    AreEqual(x.errno, None)
+    AreEqual(x.filename, None)
+    AreEqual(x.strerror, None)
+    AreEqual(x.args, ('a', 'b', 'c', 'd'))
 
 def test_raise_None():
     lineno1, lineno2 = 0, 0
@@ -889,5 +887,23 @@ def test_raise_None():
     
     Assert(lineno1 != lineno2, "FAILED! Should not have reused exception")
 
+def test_exception_setstate():
+    x = BaseException()
+    AreEqual(x.__dict__, {})
+    x.__setstate__({'a' : 1, 'b' : 2})
+    AreEqual(x.__dict__, {'a' : 1, 'b' : 2})
+    x.__setstate__({'a' : 3, 'c' : 4})
+    AreEqual(x.__dict__, {'a' : 3, 'b' : 2, 'c' : 4})
+
+def test_deprecated_string_exception():
+    w = warning_trapper()
+    try:
+        raise 'Error'
+    except:
+        pass
+    m = w.finish()
+    AreEqual(len(m), 1)
+    AreEqual(m[0].category, DeprecationWarning)
+    AreEqual(m[0].message, 'raising a string exception is deprecated')
 
 run_test(__name__)

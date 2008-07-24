@@ -17,6 +17,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Scripting.Runtime;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
 
@@ -96,14 +97,15 @@ namespace IronPython.Runtime.Operations {
             return x.Power(y);
         }
 
-        // floordiv for complex numbers is deprecated in the Python 2.4
+        // floordiv for complex numbers is deprecated in the Python 2.
         // specification; this function implements the observable
         // functionality in CPython 2.4: 
         //   Let x, y be complex.
         //   Re(x//y) := floor(Re(x/y))
         //   Im(x//y) := 0
         [SpecialName]
-        public static Complex64 FloorDivide(Complex64 x, Complex64 y) {
+        public static Complex64 FloorDivide(CodeContext context, Complex64 x, Complex64 y) {
+            PythonOps.Warn(context, PythonExceptions.DeprecationWarning, "complex divmod(), // and % are deprecated");
             Complex64 quotient = x / y;
             return Complex64.MakeReal(PythonOps.CheckMath(Math.Floor(quotient.Real)));
         }
@@ -112,14 +114,15 @@ namespace IronPython.Runtime.Operations {
         // implements the CPython semantics, that is:
         // x % y = x - (y * (x//y)).
         [SpecialName]
-        public static Complex64 Mod(Complex64 x, Complex64 y) {
-            Complex64 quotient = FloorDivide(x, y);
+        public static Complex64 Mod(CodeContext context, Complex64 x, Complex64 y) {
+            Complex64 quotient = FloorDivide(context, x, y);
             return x - (quotient * y);
         }
 
         [SpecialName]
-        public static PythonTuple DivMod(Complex64 x, Complex64 y) {
-            return PythonTuple.MakeTuple(FloorDivide(x, y), Mod(x, y));
+        public static PythonTuple DivMod(CodeContext context, Complex64 x, Complex64 y) {
+            Complex64 quotient = FloorDivide(context, x, y);
+            return PythonTuple.MakeTuple(quotient, x - (quotient * y));
         }
 
         #endregion
@@ -165,17 +168,17 @@ namespace IronPython.Runtime.Operations {
             return NotImplementedType.Value;
         }
 
-        public static string __repr__(Complex64 x) {            
+        public static string __repr__(CodeContext/*!*/ context, Complex64 x) {            
             if (x.Real != 0) {
                 if (x.Imag >= 0) {
 
-                    return "(" + FormatComplexValue(x.Real) + "+" + FormatComplexValue(x.Imag) + "j)";
+                    return "(" + FormatComplexValue(context, x.Real) + "+" + FormatComplexValue(context, x.Imag) + "j)";
                 } else {
-                    return "(" + FormatComplexValue(x.Real) + FormatComplexValue(x.Imag) + "j)";
+                    return "(" + FormatComplexValue(context, x.Real) + FormatComplexValue(context, x.Imag) + "j)";
                 }
             }
 
-            return FormatComplexValue(x.Imag) + "j";
+            return FormatComplexValue(context, x.Imag) + "j";
         }
 
         // report the same errors as CPython for these invalid conversions
@@ -191,8 +194,8 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeError("can't convert complex to long; use long(abs(z))");
         }
 
-        private static string FormatComplexValue(double x) {
-            StringFormatter sf = new StringFormatter("%.6g", x);
+        private static string FormatComplexValue(CodeContext/*!*/ context, double x) {
+            StringFormatter sf = new StringFormatter(context, "%.6g", x);
             return sf.Format();
         }
         

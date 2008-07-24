@@ -18,9 +18,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
+
+using Microsoft.Scripting.Actions;
+
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -48,7 +50,12 @@ namespace IronPython.Runtime {
         private const int ResizeMultiplier = 3;
 
         class HashSite {
-            internal static DynamicSite<object, int> _HashSite = new DynamicSite<object, int>(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Dispose));
+            internal static CallSite<DynamicSiteTarget<object, int>> _HashSite = CallSite<DynamicSiteTarget<object, int>>.Create(
+                new OperationBinder(
+                    DefaultContext.DefaultPythonContext.DefaultBinderState,
+                    OperatorStrings.Hash
+                )
+            );
         }
 
         /// <summary>
@@ -364,7 +371,7 @@ namespace IronPython.Runtime {
         }
 
         private static int GeneralHash(object key) {
-            return HashSite._HashSite.Invoke(DefaultContext.Default, key) & 0x7fffffff;
+            return HashSite._HashSite.Target(HashSite._HashSite, key) & 0x7fffffff;
         }
 
         private class Bucket {

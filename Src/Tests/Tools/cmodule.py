@@ -103,6 +103,10 @@ for x in nt.listdir(CPY_DIR + "\\Lib"):
     if x.endswith(".pyd"):
         MODULES.append(x.split(".pyd", 1)[0])
 
+#Let the user override modules from the command-line
+if len(argv)==3:
+    MODULES = [argv[2]]
+
 #Log containing all modules and their attributes which IP should implement, but does not
 IPY_SHOULD_IMPL = open("IPY_NEEDS_TO_IMPLEMENT.log", "w")
 #Log containing all module attributes that IP should not be implementing

@@ -23,16 +23,12 @@ namespace Microsoft.Scripting.Ast {
         private readonly SymbolId _name;
 
         internal UnboundExpression(Annotations annotations, SymbolId name)
-            : base(annotations, ExpressionType.Extension, typeof(object)) {
+            : base(typeof(object), true, annotations) {
             _name = name;
         }
 
         public SymbolId Name {
             get { return _name; }
-        }
-
-        public override bool IsReducible {
-            get { return true; }
         }
 
         public override Expression Reduce() {

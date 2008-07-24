@@ -24,12 +24,14 @@ using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
-using IronPython.Runtime.Binding;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {
     
@@ -38,8 +40,6 @@ namespace IronPython.Runtime {
     /// Singleton living on Python engine.
     /// </summary>
     public static class Importer {
-        private static readonly DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object> _importSite = MakeImportSite();
-        private static readonly DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> _oldImportSite = MakeOldImportSite();
         internal const string ModuleReloadMethod = "PerformModuleReload";
 
         #region Internal API Surface
@@ -51,9 +51,19 @@ namespace IronPython.Runtime {
         public static object Import(CodeContext/*!*/ context, string fullName, PythonTuple from, int level) {
             Exception exLast = PythonOps.SaveCurrentException();
             try {
+                PythonContext pc = PythonContext.GetContext(context);
+
                 if (level == -1) {
                     // no specific level provided, call the 4 param version so legacy code continues to work
-                    return _oldImportSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.LocalsAsAttributesCollection(context), from);
+                    return pc.OldImportSite.Target(
+                        pc.OldImportSite,
+                        context,
+                        FindImportFunction(context), 
+                        fullName, 
+                        Builtin.globals(context), 
+                        Builtin.LocalsAsAttributesCollection(context), 
+                        from
+                    );
                 }
 
                 // relative import or absolute import, in other words:
@@ -61,21 +71,21 @@ namespace IronPython.Runtime {
                 // from . import xyz
                 // or 
                 // from __future__ import absolute_import
-                return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.LocalsAsAttributesCollection(context), from, level);
+            
+                return pc.ImportSite.Target(
+                    pc.ImportSite,
+                    context,
+                    FindImportFunction(context), 
+                    fullName, 
+                    Builtin.globals(context), 
+                    Builtin.LocalsAsAttributesCollection(context), 
+                    from, 
+                    level
+                );
             } finally {
                 PythonOps.RestoreCurrentException(exLast);
             }
 
-        }
-
-        private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object> MakeImportSite() {
-            // cant be FastDynamicSite because we need to flow our caller's true context because import is a meta-programming feature.
-            return CallSiteFactory.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>(DefaultContext.DefaultPythonBinder);
-        }
-
-        private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> MakeOldImportSite() {
-            // cant be FastDynamicSite because we need to flow our caller's true context because import is a meta-programming feature.
-            return CallSiteFactory.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>(DefaultContext.DefaultPythonBinder);
         }
 
         /// <summary>
@@ -455,12 +465,12 @@ namespace IronPython.Runtime {
                 return ret;
             }
 
-            ret = ImportBuiltin(context, name);
-            if (ret != null) return ret;
-
             if (TryLoadMetaPathModule(context, name, null, out ret)) {
                 return ret;
             }
+
+            ret = ImportBuiltin(context, name);
+            if (ret != null) return ret;
 
             List path;
             if (PythonContext.GetContext(context).TryGetSystemPath(out path)) {
@@ -665,7 +675,7 @@ namespace IronPython.Runtime {
 
             foreach (object hook in (IEnumerable)pathHooks) {
                 try {
-                    object handler = PythonCalls.Call(hook, str);
+                    object handler = PythonCalls.Call(context, hook, str);
 
                     if (handler != null) {
                         return handler;

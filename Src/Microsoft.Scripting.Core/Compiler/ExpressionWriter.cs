@@ -952,7 +952,7 @@ namespace System.Linq.Expressions {
 
             // print the known node (best we can do)
             if (node.IsReducible) {
-                VisitNode(Expression.ReduceToKnown(node));
+                VisitNode(node.ReduceToKnown());
             }
 
             Out(";", Flow.NewLine);

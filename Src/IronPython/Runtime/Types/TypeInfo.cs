@@ -24,18 +24,15 @@ using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Threading;
-using IronPython.Compiler;
-using IronPython.Compiler.Generation;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 
-#if !SILVERLIGHT
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-#endif
+using IronPython.Compiler;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -143,6 +140,7 @@ namespace IronPython.Runtime.Types {
         public static class _PythonGenerator {
             public static readonly ConstructorInfo Ctor = typeof(PythonGenerator).GetConstructor(new Type[] { typeof(CodeContext) });
         }
+
 
         #endregion
 
@@ -515,6 +513,7 @@ namespace IronPython.Runtime.Types {
                 new OneOffResolver("__dir__", DirResolver),
                 new OneOffResolver("__doc__", DocResolver),
                 new OneOffResolver("next", NextResolver),           
+                new OneOffResolver("__len__", LengthResolver),        
 
                 new OneOffResolver("__enter__", EnterResolver),     
                 new OneOffResolver("__exit__", ExitResolver),  
@@ -668,6 +667,26 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
+        /// Provides a resolution for __len__
+        /// </summary>
+        private static MemberGroup/*!*/ LengthResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            if (binder.GetInterfaces(type).Contains(typeof(ICollection))) {
+                return GetInstanceOpsMethod(type, "LengthMethod");
+            }
+
+            foreach (Type t in binder.GetInterfaces(type)) {
+                if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ICollection<>)) {
+                    MethodInfo genMeth = typeof(InstanceOps).GetMethod("GenericLengthMethod");
+                    return new MemberGroup(
+                        MethodTracker.FromMemberInfo(genMeth.MakeGenericMethod(t.GetGenericArguments()), type)
+                    );
+                }
+            }
+
+            return MemberGroup.EmptyGroup;
+        }
+
+        /// <summary>
         /// Provides a resolution for __iter__
         /// </summary>
         private static MemberGroup/*!*/ IterResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
@@ -677,7 +696,7 @@ namespace IronPython.Runtime.Types {
                     foreach (Type t in binder.GetContributingTypes(type)) {
                         MemberInfo[] news = t.GetMember("__iter__");
                         if (news.Length > 0) {
-                            // type has a specific __new__ overload, we'll pick it up later
+                            // type has a specific __i__ overload, we'll pick it up later
                             return MemberGroup.EmptyGroup;
                         }
                     }
@@ -754,6 +773,12 @@ namespace IronPython.Runtime.Types {
             internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
                 value = PythonTypeOps.GetDocumentation(owner.UnderlyingSystemType);
                 return true;
+            }
+
+            internal override bool GetAlwaysSucceeds {
+                get {
+                    return true;
+                }
             }
 
             internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
@@ -1337,7 +1362,6 @@ namespace IronPython.Runtime.Types {
             // TODO: Should determine reverse some other way or Python should be recognizing reverse operators some other way.
             return op.StartsWith("Reverse");
         }
-        
         /// <summary>
         /// If an operator is a reverisble operator (e.g. addition) then we need to filter down to just the forward/reverse
         /// versions of the .NET method.  For example consider:
@@ -1443,6 +1467,8 @@ namespace IronPython.Runtime.Types {
             // avoid getting/creating the PythonType if possible
             if (paramType == declaringType || declaringType.IsSubclassOf(paramType)) {
                 return true;
+            } else if (declaringType.IsSubclassOf(typeof(Extensible<>).MakeGenericType(paramType))) {
+                return true;
             }
 
             return DynamicHelpers.GetPythonTypeFromType(declaringType).IsSubclassOf(DynamicHelpers.GetPythonTypeFromType(paramType));
@@ -1476,7 +1502,9 @@ namespace IronPython.Runtime.Types {
                 if (mt.MemberType == TrackerTypes.Method) {
                     MethodTracker meth = (MethodTracker)mt;
                     if (meth.Method.IsSpecialName && mt.Name != "op_Implicit" && mt.Name != "op_Explicit") {
-                        skip = true;
+                        if (!IsPropertyWithParameters(meth)) {
+                            skip = true;
+                        }
                     }
 
                     if (meth.Method.IsDefined(typeof(PythonClassMethodAttribute), true)) {
@@ -1516,6 +1544,25 @@ namespace IronPython.Runtime.Types {
                 return new MemberGroup(mts.ToArray());
             }
             return group;
+        }
+
+        private static bool IsPropertyWithParameters(MethodTracker/*!*/ meth) {            
+            if (meth.Method.Name.StartsWith("get_")) {
+                if (!IsMethodDefaultMember(meth)) {
+                    ParameterInfo[] args = meth.Method.GetParameters();
+                    if (args.Length > 0) {
+                        return true;
+                    }
+                }
+            } else if (meth.Method.Name.StartsWith("set_")) {
+                if (!IsMethodDefaultMember(meth)) {
+                    ParameterInfo[] args = meth.Method.GetParameters();
+                    if (args.Length > 1) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -1562,6 +1609,19 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
+        private static bool IsMethodDefaultMember(MethodTracker pt) {
+            foreach (MemberInfo mem in pt.DeclaringType.GetDefaultMembers()) {
+                if (mem.MemberType == MemberTypes.Property) {
+                    PropertyInfo pi = (PropertyInfo)mem;
+                    if (pi.GetGetMethod() == pt.Method ||
+                        pi.GetSetMethod() == pt.Method) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         private static List<MemberTracker> MakeListWithPreviousMembers(MemberGroup group, List<MemberTracker> mts, int i) {
             mts = new List<MemberTracker>(i);
             for (int j = 0; j < i; j++) {
@@ -1577,13 +1637,16 @@ namespace IronPython.Runtime.Types {
         /// users subclasses.
         /// </summary>
         private static MemberGroup GetBaseHelperOverloads(Type/*!*/ type, string/*!*/ name, MemberGroup/*!*/ res) {
-            if (res.Count > 0) {
+            // we only get base methods when we're looking for a type from a normal .NET type.  If it's a NewTypeMaker
+            // type then we don't want them as we'll bind to the NewTypeMaker methods which override the base helper
+            // methods.
+            if (res.Count > 0 && PythonTypeOps.GetFinalSystemType(type) == type) {
                 List<MemberTracker> newMembers = null;
 
                 Type curType = type;
                 do {
                     IList<MethodInfo> overriddenMethods = NewTypeMaker.GetOverriddenMethods(curType, name);
-
+                    
                     if (overriddenMethods.Count > 0) {
                         if (newMembers == null) {
                             newMembers = new List<MemberTracker>();
@@ -1607,7 +1670,7 @@ namespace IronPython.Runtime.Types {
 
         private static bool IsComObject(Type type) {
 #if !SILVERLIGHT
-            return ComObject.IsGenericComObjectType(type);
+            return false;
 #else
             return false;
 #endif

@@ -27,16 +27,12 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _variable;
 
         internal DeleteStatement(Annotations annotations, Expression variable)
-            : base(annotations, ExpressionType.Extension, typeof(void)) {
+            : base(typeof(void), true, annotations) {
             _variable = variable;
         }
 
         public Expression Expression {
             get { return _variable; }
-        }
-
-        public override bool IsReducible {
-            get { return true; }
         }
 
         public override Expression Reduce() {

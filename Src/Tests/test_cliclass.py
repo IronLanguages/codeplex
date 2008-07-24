@@ -397,25 +397,25 @@ def test_type_descs():
     Assert(test.TestProperties(a, [], ['bar']))
     
     x = test.GetClassName(a)
-    Assert(x == 'IronPython.Runtime.Types.OldClass')
+    AreEqual(x, 'classobj')
     
     x = test.CallCanConvertToForInt(a)
-    Assert(x == False)
+    AreEqual(x, False)
     
     x = test.GetDefaultEvent(a)
-    Assert(x == None)
+    AreEqual(x, None)
     
     x = test.GetDefaultProperty(a)
-    Assert(x == None)
+    AreEqual(x, None)
     
     x = test.GetEditor(a, object)
-    Assert(x == None)
+    AreEqual(x, None)
     
     x = test.GetEvents(a)
-    Assert(x.Count == 0)
+    AreEqual(x.Count, 0)
     
     x = test.GetEvents(a, None)
-    Assert(x.Count == 0)
+    AreEqual(x.Count, 0)
     
     x = test.GetProperties(a)
     Assert(x.Count > 0)

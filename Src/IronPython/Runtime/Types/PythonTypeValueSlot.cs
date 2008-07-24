@@ -28,6 +28,12 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
+        }
+
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             if (instance == null) {
                 //!!! remove ValueSlot from dictionary

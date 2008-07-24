@@ -31,7 +31,7 @@ namespace System.Linq.Expressions {
         }
 
         internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type type, MethodInfo method, CallSiteBinder bindingInfo)
-            : base(annotations, nodeType, type, bindingInfo) {
+            : base(nodeType, type, annotations, bindingInfo) {
             if (IsBound) {
                 RequiresBound(expression, "expression");
             }
@@ -261,7 +261,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression Negate(Expression expression) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (TypeUtils.IsArithmetic(expression.Type) && !TypeUtils.IsUnsignedInt(expression.Type)) {
                 return new UnaryExpression(Annotations.Empty, ExpressionType.Negate, expression, expression.Type, null);
             }
@@ -269,7 +269,7 @@ namespace System.Linq.Expressions {
         }
         //CONFORMING
         public static UnaryExpression Negate(Expression expression, MethodInfo method) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (method == null) {
                 return Negate(expression);
             }
@@ -278,7 +278,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression UnaryPlus(Expression expression) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (TypeUtils.IsArithmetic(expression.Type)) {
                 return new UnaryExpression(Annotations.Empty, ExpressionType.UnaryPlus, expression, expression.Type, null);
             }
@@ -286,7 +286,7 @@ namespace System.Linq.Expressions {
         }
         //CONFORMING
         public static UnaryExpression UnaryPlus(Expression expression, MethodInfo method) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (method == null) {
                 return UnaryPlus(expression);
             }
@@ -295,7 +295,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression NegateChecked(Expression expression) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (TypeUtils.IsArithmetic(expression.Type) && !TypeUtils.IsUnsignedInt(expression.Type)) {
                 return new UnaryExpression(Annotations.Empty, ExpressionType.NegateChecked, expression, expression.Type, null);
             }
@@ -303,7 +303,7 @@ namespace System.Linq.Expressions {
         }
         //CONFORMING
         public static UnaryExpression NegateChecked(Expression expression, MethodInfo method) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (method == null) {
                 return NegateChecked(expression);
             }
@@ -312,7 +312,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression Not(Expression expression) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (TypeUtils.IsIntegerOrBool(expression.Type)) {
                 return new UnaryExpression(Annotations.Empty, ExpressionType.Not, expression, expression.Type, null);
             }
@@ -323,7 +323,7 @@ namespace System.Linq.Expressions {
         }
         //CONFORMING
         public static UnaryExpression Not(Expression expression, MethodInfo method) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (method == null) {
                 return Not(expression);
             }
@@ -332,7 +332,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression TypeAs(Expression expression, Type type) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
             if (type.IsValueType && !TypeUtils.IsNullableType(type)) {
                 throw Error.IncorrectTypeForTypeAs(type);
@@ -346,7 +346,7 @@ namespace System.Linq.Expressions {
         }
 
         public static UnaryExpression Unbox(Expression expression, Type type, Annotations annotations) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(
                 expression.Type.IsInterface || expression.Type == typeof(object),
@@ -358,7 +358,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression Convert(Expression expression, Type type) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
             if (TypeUtils.HasIdentityPrimitiveOrNullableConversion(expression.Type, type) ||
                 TypeUtils.HasReferenceConversion(expression.Type, type)) {
@@ -369,7 +369,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (method == null) {
                 return Convert(expression, type);
             }
@@ -378,7 +378,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression ConvertChecked(Expression expression, Type type) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
             if (TypeUtils.HasIdentityPrimitiveOrNullableConversion(expression.Type, type)) {
                 return new UnaryExpression(Annotations.Empty, ExpressionType.ConvertChecked, expression, type, null);
@@ -391,7 +391,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression ConvertChecked(Expression expression, Type type, MethodInfo method) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             if (method == null) {
                 return ConvertChecked(expression, type);
             }
@@ -412,7 +412,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static UnaryExpression Quote(Expression expression) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             return new UnaryExpression(Annotations.Empty, ExpressionType.Quote, expression, expression.GetType(), null);
         }
 
@@ -435,14 +435,14 @@ namespace System.Linq.Expressions {
         /// <returns></returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static UnaryExpression Convert(Expression expression, Type type, CallSiteBinder bindingInfo, Annotations annotations) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
 
             return new UnaryExpression(annotations, ExpressionType.Convert, expression, type, null, bindingInfo);
         }
 
         public static Expression ConvertHelper(Expression expression, Type type) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
 
             if (expression.Type != type) {
@@ -452,13 +452,13 @@ namespace System.Linq.Expressions {
         }
 
         public static Expression Void(Expression expression) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             return ConvertHelper(expression, typeof(void));
         }
 
 
         public static UnaryExpression Negate(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.Requires(bindingInfo.Operation == Operators.Negate, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
@@ -466,7 +466,7 @@ namespace System.Linq.Expressions {
         }
 
         public static UnaryExpression Not(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.Requires(bindingInfo.Operation == Operators.Not, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
@@ -474,7 +474,7 @@ namespace System.Linq.Expressions {
         }
 
         public static UnaryExpression OnesComplement(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
             ContractUtils.Requires(bindingInfo.Operation == Operators.OnesComplement, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 

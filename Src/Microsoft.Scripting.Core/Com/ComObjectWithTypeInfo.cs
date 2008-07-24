@@ -247,10 +247,12 @@ namespace System.Scripting.Com {
                 try {
                     Assembly interopAssembly = Assembly.Load(asmName);
                     PublishComTypes(interopAssembly);
-
-                    Debug.Assert(_comTypeCache.ContainsKey(typeInfoGuid));
+                    
                     if (!_comTypeCache.ContainsKey(typeInfoGuid)) {
-                        throw Error.TypeLibDoesNotContainInterface(asmName, typeInfoGuid);
+                        // if we have a IDispatch object w/ a PIA the GUID we get
+                        // is that of the class which isn't included in the table
+                        // so we'll fallback to IDispatch
+                        return null;
                     }
                     return _comTypeCache[typeInfoGuid];
                 } catch (FileNotFoundException) { }

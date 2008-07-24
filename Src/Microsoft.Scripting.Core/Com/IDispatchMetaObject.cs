@@ -51,19 +51,23 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
-            Expression result = 
-                Expression.Convert(
-                    Expression.Property(
-                        Expression.ConvertHelper(args[0].Expression, typeof(IDispatchComObject)),
-                        typeof(ComObject).GetProperty("Obj")
-                    ),
-                    action.ToType
-                );
+            if (action.ToType.IsInterface) {
+                Expression result =
+                    Expression.Convert(
+                        Expression.Property(
+                            Expression.ConvertHelper(args[0].Expression, typeof(IDispatchComObject)),
+                            typeof(ComObject).GetProperty("Obj")
+                        ),
+                        action.ToType
+                    );
 
-            return new MetaObject(
-                result,
-                Restrictions.Combine(args).Merge(IDispatchRestriction())
-            );
+                return new MetaObject(
+                    result,
+                    Restrictions.Combine(args).Merge(IDispatchRestriction())
+                );
+            }
+
+            return base.Convert(action, args);
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {
@@ -107,11 +111,14 @@ namespace System.Scripting.Com {
                     typeof(IDispatchComObject).GetProperty("DispatchObject")
                 );
 
-            if (method.IsPropertyGet) {
-                if (method.Parameters.Length == 0 && args.Length == 1) {
+            if (method.DispId == ComDispIds.DISPID_NEWENUM) {
+                // says it's a property but it needs to be called
+                helper = "CreateMethod";
+            } else if (method.IsPropertyGet) {
+                if (method.Parameters.Length == 0) {                    
                     return new InvokeBinder(
                         new Argument[0],
-                        args,
+                        new MetaObject[] { args[0] },
                         restrictions,
                         Expression.Constant(method),
                         dispatch,
@@ -186,14 +193,17 @@ namespace System.Scripting.Com {
             }
             callArgs[0] = callable;
 
-            Expression result = Expression.Condition(
-                Expression.Call(
-                    Expression.Convert(Expression, typeof(IDispatchComObject)),
-                    typeof(IDispatchComObject).GetMethod(method),
-                    callable
+            Expression result = Expression.Scope(
+                Expression.Condition(
+                    Expression.Call(
+                        Expression.Convert(Expression, typeof(IDispatchComObject)),
+                        typeof(IDispatchComObject).GetMethod(method),
+                        callable
+                    ),
+                    Expression.ActionExpression(new ComInvokeAction(), typeof(object), callArgs),
+                    Expression.ConvertHelper(fallback.Expression, typeof(object))
                 ),
-                Expression.ActionExpression(new ComInvokeAction(), typeof(object), callArgs),
-                fallback.Expression
+                callable
             );
 
             return new MetaObject(
@@ -253,7 +263,10 @@ namespace System.Scripting.Com {
                             Expression.Convert(Expression, typeof(IDispatchComObject)),
                             typeof(IDispatchComObject).GetMethod("TrySetAttr"),
                             Expression.Constant(action.Name),
-                            args[1].Expression,
+                            Expression.ConvertHelper(
+                                args[1].Expression,
+                                typeof(object)
+                            ),
                             exception
                         ),
                         Expression.Null(),              // true

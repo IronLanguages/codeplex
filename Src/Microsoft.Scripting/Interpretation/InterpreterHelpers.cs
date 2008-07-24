@@ -14,15 +14,14 @@
  * ***************************************************************************/
 
 using System.Scripting.Actions;
+using System.Reflection;
+using System.Linq.Expressions;
+using System;
 
 namespace Microsoft.Scripting.Interpretation {
     public static class InterpreterHelpers {
-        /// <summary>
-        /// Used by interpreter to invoke the dynamic site via the action binder.
-        /// </summary>
-        public static object ExecuteRule<T>(CallSiteBinder action, object[] args) where T : class {
-            CallSite<T> site = CallSite<T>.Create(action);
-            return site.UpdateAndExecute(args);
+        public static CallSite CreateSite<T>(CallSiteBinder action) where T : class {
+            return CallSite<T>.Create(action);
         }
     }
 }

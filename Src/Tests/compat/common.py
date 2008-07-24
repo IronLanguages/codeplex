@@ -48,9 +48,12 @@ def get_all_paths():
             cpython_lib_path   = get_environ_variable('MERLIN_ROOT')+'/../External/Languages/IronPython20/25/Lib'
             
         elif sys.platform == "win32":
+            rowan_bin = get_environ_variable('ROWAN_BIN')
+            if not rowan_bin and not get_environ_variable('THISISSNAP'):
+                rowan_bin = get_environ_variable('MERLIN_ROOT') + '/Bin/Debug'
             cpython_executable = sys.executable
             cpython_lib_path   = sys.prefix + "/Lib"
-            ipython_executable = get_environ_variable('ROWAN_BIN')+'/ipy.exe'
+            ipython_executable = rowan_bin+'/ipy.exe'
             compat_test_path   = get_environ_variable('MERLIN_ROOT')+'/Languages/IronPython/Tests/Compat/'
         else:
             raise AssertionError        

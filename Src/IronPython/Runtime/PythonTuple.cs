@@ -71,11 +71,6 @@ namespace IronPython.Runtime {
             return new PythonTuple(items);
         }
 
-        internal static PythonTuple MakeExpandableTuple(params object[] items) {
-            if (items.Length == 0) return EMPTY;
-            return new PythonTuple(true, items);
-        }
-
         private static object[] MakeItems(object o) {
             object[] arr;
             if (o is PythonTuple) {
@@ -104,8 +99,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal readonly object[] _data;
-        private readonly bool expandable;
+        internal readonly object[] _data;        
 
         public PythonTuple(object o) {
             this._data = MakeItems(o);
@@ -119,19 +113,8 @@ namespace IronPython.Runtime {
             this._data = ArrayUtils.EmptyObjects;
         }
 
-        internal PythonTuple(bool expandable, object[] items) {
-            this.expandable = expandable;
-            this._data = items;
-        }
-
         internal PythonTuple(IParameterSequence other, object o) {
             this._data = other.Expand(o);
-        }
-
-        bool IParameterSequence.IsExpandable {
-            get {
-                return expandable;
-            }
         }
 
         /// <summary>
@@ -348,36 +331,20 @@ namespace IronPython.Runtime {
             return PythonOps.CompareArrays(_data, _data.Length, other._data, other._data.Length);
         }
 
-        [return: MaybeNotImplemented]
-        public static object operator >(PythonTuple self, object other) {
-            PythonTuple t = other as PythonTuple;
-            if (t == null) return NotImplementedType.Value;
-
-            return RuntimeHelpers.BooleanToObject(self.CompareTo(t) > 0);
+        public static bool operator >(PythonTuple self, PythonTuple other) {
+            return self.CompareTo(other) > 0;
         }
 
-        [return: MaybeNotImplemented]
-        public static object operator <(PythonTuple self, object other) {
-            PythonTuple t = other as PythonTuple;
-            if (t == null) return NotImplementedType.Value;
-
-            return RuntimeHelpers.BooleanToObject(self.CompareTo(t) < 0);
+        public static bool operator <(PythonTuple self, PythonTuple other) {
+            return self.CompareTo(other) < 0;
         }
 
-        [return: MaybeNotImplemented]
-        public static object operator >=(PythonTuple self, object other) {
-            PythonTuple t = other as PythonTuple;
-            if (t == null) return NotImplementedType.Value;
-
-            return RuntimeHelpers.BooleanToObject(self.CompareTo(t) >= 0);
+        public static bool operator >=(PythonTuple self, PythonTuple other) {
+            return self.CompareTo(other) >= 0;
         }
 
-        [return: MaybeNotImplemented]
-        public static object operator <=(PythonTuple self, object other) {
-            PythonTuple t = other as PythonTuple;
-            if (t == null) return NotImplementedType.Value;
-
-            return RuntimeHelpers.BooleanToObject(self.CompareTo(t) <= 0);
+        public static bool operator <=(PythonTuple self, PythonTuple other) {
+            return self.CompareTo(other) <= 0;
         }
 
         #endregion
@@ -427,12 +394,12 @@ namespace IronPython.Runtime {
             int hash2 = hash1;
 
             for (int i = 0; i < _data.Length; i += 2) {
-                hash1 = ((hash1 << 27) + ((hash2 + 1) << 1) + (hash1 >> 5)) ^ PythonOps.Hash(_data[i]);
+                hash1 = ((hash1 << 27) + ((hash2 + 1) << 1) + (hash1 >> 5)) ^ PythonOps.Hash(DefaultContext.Default, _data[i]);
 
                 if (i == _data.Length - 1) {
                     break;
                 }
-                hash2 = ((hash2 << 5) + ((hash1 - 1) >> 1) + (hash2 >> 27)) ^ PythonOps.Hash(_data[i + 1]);
+                hash2 = ((hash2 << 5) + ((hash1 - 1) >> 1) + (hash2 >> 27)) ^ PythonOps.Hash(DefaultContext.Default, _data[i + 1]);
             }
 
             return hash1 + (hash2 * 1566083941);

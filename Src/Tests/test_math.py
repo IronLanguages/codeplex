@@ -403,7 +403,7 @@ def test_nan():
     Assert(not x<=y)
     Assert(not x<y)
     Assert(not x>y)
-    #CodePlex 16304
+    #CodePlex 17517
     #AreEqual(cmp(x, y), 1)
                
 run_test(__name__)

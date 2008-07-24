@@ -49,6 +49,14 @@ namespace Microsoft.Scripting.Actions {
                 BinderMappingInfo curBinder = _metaBinders[i];
 
                 MetaObject next = curBinder.Binder.Bind(GetArguments(args, results, i));
+                
+                if (next.Expression.NodeType == ExpressionType.ThrowStatement) {
+                    // end of the line... the expression is throwing, none of the other 
+                    // binders will have an opportunity to run.
+                    steps.Add(next.Expression);
+                    break;
+                }
+
                 VariableExpression tmp = Expression.Variable(next.Expression.Type, "comboTemp" + i.ToString());
                 temps.Add(tmp);
 
@@ -126,7 +134,7 @@ namespace Microsoft.Scripting.Actions {
                     }
 
                     for (int j = 0; j < self.MappingInfo.Count; j++) {
-                        if (self.MappingInfo[j] != otherBinders.MappingInfo[j]) {
+                        if (!self.MappingInfo[j].Equals(otherBinders.MappingInfo[j])) {
                             return false;
                         }
                     }

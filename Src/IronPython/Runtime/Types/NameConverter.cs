@@ -22,7 +22,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 
-namespace IronPython.Compiler {
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// Contains helper methods for converting C# names into Python names.
     /// </summary>

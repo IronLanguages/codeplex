@@ -149,8 +149,7 @@ def test_cp14632():
     x, y = helper_func()
     gc.collect()
     
-    #CodePlex 14632
-    #Assert(not x==3)
+    Assert(not x==3)
     AssertError(ReferenceError, lambda: x==y)
 
 def test_equals():

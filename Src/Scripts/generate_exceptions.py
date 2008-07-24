@@ -330,7 +330,7 @@ def gen_one_new_exception(cw, exception, parent):
         if exception.fields:
             cw.writeline('')
 
-        cw.writeline('public _%s() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_%s))) { }' % (exception.name, exception.name))
+        cw.writeline('public _%s() : base(%s) { }' % (exception.name, exception.name))
         cw.writeline('public _%s(PythonType type) : base(type) { }' % (exception.name, ))
         cw.writeline('')
         

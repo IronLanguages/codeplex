@@ -100,14 +100,14 @@ namespace IronPython.Modules {
             return (ticks / ticksPerSecond) - epochDifference;
         }
 
-        public static string asctime() {
-            return asctime(null);
+        public static string asctime(CodeContext/*!*/ context) {
+            return asctime(context, null);
         }
 
-        public static string asctime(object time) {
+        public static string asctime(CodeContext/*!*/ context, object time) {
             DateTime dt;
             if (time is PythonTuple) {
-                dt = GetDateTimeFromTuple(time as PythonTuple);
+                dt = GetDateTimeFromTuple(context, time as PythonTuple);
             } else if (time == null) {
                 dt = DateTime.Now;
             } else {
@@ -124,14 +124,14 @@ namespace IronPython.Modules {
         }
 #endif
 
-        public static string ctime() {
-            return asctime(localtime());
+        public static string ctime(CodeContext/*!*/ context) {
+            return asctime(context, localtime());
         }
 
-        public static string ctime(object seconds) {
+        public static string ctime(CodeContext/*!*/ context, object seconds) {
             if (seconds == null)
-                return ctime();
-            return asctime(localtime(seconds));
+                return ctime(context);
+            return asctime(context, localtime(seconds));
         }
 
         public static void sleep(double tm) {
@@ -165,8 +165,8 @@ namespace IronPython.Modules {
             return GetDateTimeTuple(new DateTime(ticks).ToUniversalTime(), false);
         }
 
-        public static double mktime(PythonTuple localTime) {
-            return TicksToTimestamp(GetDateTimeFromTuple(localTime).Ticks);
+        public static double mktime(CodeContext/*!*/ context, PythonTuple localTime) {
+            return TicksToTimestamp(GetDateTimeFromTuple(context, localTime).Ticks);
         }
 
         public static string strftime(CodeContext/*!*/ context, string format) {
@@ -174,7 +174,7 @@ namespace IronPython.Modules {
         }
 
         public static string strftime(CodeContext/*!*/ context, string format, PythonTuple dateTime) {
-            return strftime(context, format, GetDateTimeFromTuple(dateTime));
+            return strftime(context, format, GetDateTimeFromTuple(context, dateTime));
         }
 
         public static object strptime(CodeContext/*!*/ context, string @string) {
@@ -435,10 +435,10 @@ namespace IronPython.Modules {
             return new struct_time(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, dstMode ? 1 : 0);
         }
 
-        private static DateTime GetDateTimeFromTuple(PythonTuple t) {
+        private static DateTime GetDateTimeFromTuple(CodeContext/*!*/ context, PythonTuple t) {
             if (t == null) return DateTime.Now;
 
-            int[] ints = ValidateDateTimeTuple(t);
+            int[] ints = ValidateDateTimeTuple(context, t);
             DateTime res = new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
 
             if (ints[IsDaylightSavingsIndex] == 0) {
@@ -452,12 +452,12 @@ namespace IronPython.Modules {
             return res;
         }
 
-        private static int[] ValidateDateTimeTuple(PythonTuple t) {
+        private static int[] ValidateDateTimeTuple(CodeContext/*!*/ context, PythonTuple t) {
             if (t.__len__() != MaxIndex) throw PythonOps.TypeError("expected tuple of length {0}", MaxIndex);
 
             int[] ints = new int[MaxIndex];
             for (int i = 0; i < MaxIndex; i++) {
-                ints[i] = Converter.ConvertToInt32(t[i]);
+                ints[i] = PythonContext.GetContext(context).ConvertToInt32(t[i]);
             }
 
             int year = ints[YearIndex];

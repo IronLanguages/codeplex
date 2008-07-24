@@ -200,7 +200,23 @@ def gen_compiler(cw):
     gen_compiler_interpreter(cw, "Emit")
 
 def gen_interpreter(cw):
-    gen_compiler_interpreter(cw, "Interpret")
+   for node in expressions:
+        method = "Interpret"
+
+        # special case AndAlso and OrElse
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox"]:
+            method += node.kind
+        elif node.kind in ["Convert", "ConvertChecked"]:
+            method += "Convert"
+
+        method += node.type           
+        
+        if node.enabled:
+            comment = ""
+        else:
+            comment = "//"            
+			
+        cw.write("%s case ExpressionType.%s: return %s(state, expr);" % (comment, node.kind, method))
 
 def gen_ast_dispatch(cw, name):
     for node in expressions:

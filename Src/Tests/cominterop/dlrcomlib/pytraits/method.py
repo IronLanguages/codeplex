@@ -41,7 +41,7 @@ STD_METHOD_ATTRIBUTES = ['__call__', '__class__', '__cmp__', '__delattr__',
 #Merlin 370042
 BROKEN_STD_METHOD_ATTRIBUTES = ['__cmp__', 'im_class', 'im_func', 'im_self']
 
-#Attributes which are missing from COM methods in IP under -X:PreferComDispatch
+#Attributes which are missing from COM methods in IP w/o -X:PreferComInteropAssembly
 #Merlin 370043
 BROKEN_ID_STD_METHOD_ATTRIBUTES = ['__call__', '__cmp__', '__get__', 'im_class', 'im_func', 'im_self']
 
@@ -496,8 +496,8 @@ def test_from_cmdline():
     from System import Environment
     
     extraArgs = ""
-    if "-X:PreferComDispatch" in Environment.GetCommandLineArgs():
-        extraArgs += "-X:PreferComDispatch"
+    if "-X:PreferComInteropAssembly" in Environment.GetCommandLineArgs():
+        extraArgs += "-X:PreferComInteropAssembly"
         
     #Does it work from the commandline with positive cases?
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
@@ -523,8 +523,8 @@ def test_from_cmdline_neg():
     from System import Environment
     
     extraArgs = ""
-    if "-X:PreferComDispatch" in Environment.GetCommandLineArgs():
-        extraArgs += "-X:PreferComDispatch"
+    if "-X:PreferComInteropAssembly" in Environment.GetCommandLineArgs():
+        extraArgs += "-X:PreferComInteropAssembly"
         
     #Does it work from the commandline with negative cases?
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)

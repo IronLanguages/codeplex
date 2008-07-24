@@ -45,7 +45,7 @@ def test_cp8678():
     for i in xrange(len(expected)):
         AreEqual(expected[i], actual[i])
 
-@skip("win32", "multiple_execute") #No _socket
+@skip("multiple_execute")
 def test_cp10825():
     import urllib
     from time import sleep

@@ -46,7 +46,7 @@ def test_load_typelib():
         
         #Create an instance of the class and access members.
         obj = dlrComServer.CreateInstance()
-        Assert("__ComObject" in str(obj.__class__))
+        Assert("IDispatchComObject" in str(obj.__class__))
         AreEqual(12345, obj.SumArgs(1,2,3,4,5))
         
         #Complete the circle back to the lib
@@ -68,7 +68,7 @@ def test_import_typelib():
         
         #Create an instance of the class and access members.
         obj = DlrComServer.CreateInstance()
-        Assert("__ComObject" in str(obj.__class__))
+        Assert("IDispatchComObject" in str(obj.__class__))
         AreEqual(12345, obj.SumArgs(1,2,3,4,5))
         
         del DlrComServer

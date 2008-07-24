@@ -20,13 +20,16 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Scripting;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -122,7 +125,7 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static object OverloadedNewBasic(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, BuiltinFunction overloads\u00F8, PythonType type\u00F8, params object[] args\u00F8) {
+        public static object OverloadedNewBasic(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, BuiltinFunction overloads\u00F8, PythonType type\u00F8, params object[] args\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
             if (args\u00F8 == null) args\u00F8 = new object[1];
             return overloads\u00F8.Call(context, storage, null, args\u00F8);
@@ -179,14 +182,22 @@ namespace IronPython.Runtime.Operations {
             return type\u00F8.CreateInstance(context, args, names);
         }
 
-        public static object IterMethod(object self) {
-            return PythonOps.GetEnumeratorForIteration(self);
+        public static object IterMethod(CodeContext/*!*/ context, object self) {
+            return PythonOps.GetEnumeratorForIteration(context, self);
         }
 
         public static object NextMethod(object self) {
             IEnumerator i = (IEnumerator)self;
             if (i.MoveNext()) return i.Current;
             throw PythonOps.StopIteration();
+        }
+
+        public static int LengthMethod(ICollection self) {
+            return self.Count;
+        }
+
+        public static int GenericLengthMethod<T>(ICollection<T> self) {
+            return self.Count;
         }
 
         public static string SimpleRepr(object self) {
@@ -332,9 +343,9 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements __contains__ for types implementing IEnumerable of T.
         /// </summary>
-        public static bool ContainsGenericMethod<T>(IEnumerable<T> enumerable, T value) {
+        public static bool ContainsGenericMethod<T>(CodeContext/*!*/ context, IEnumerable<T> enumerable, T value) {
             foreach(T item in enumerable) {
-                if (PythonOps.EqualRetBool(item, value)) {
+                if (PythonOps.EqualRetBool(context, item, value)) {
                     return true;
                 }
             }
@@ -345,10 +356,10 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements __contains__ for types implementing IEnumerable
         /// </summary>
-        public static bool ContainsMethod(IEnumerable enumerable, object value) {
+        public static bool ContainsMethod(CodeContext/*!*/ context, IEnumerable enumerable, object value) {
             IEnumerator ie = enumerable.GetEnumerator();
             while (ie.MoveNext()) {
-                if (PythonOps.EqualRetBool(ie.Current, value)) {
+                if (PythonOps.EqualRetBool(context, ie.Current, value)) {
                     return true;
                 }
             }
@@ -359,9 +370,9 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements __contains__ for types implementing IEnumerable of T.
         /// </summary>
-        public static bool ContainsGenericMethodIEnumerator<T>(IEnumerator<T> enumerator, T value) {
+        public static bool ContainsGenericMethodIEnumerator<T>(CodeContext/*!*/ context, IEnumerator<T> enumerator, T value) {
             while (enumerator.MoveNext()) {
-                if (PythonOps.EqualRetBool(enumerator.Current, value)) {
+                if (PythonOps.EqualRetBool(context, enumerator.Current, value)) {
                     return true;
                 }
             }
@@ -372,9 +383,9 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements __contains__ for types implementing IEnumerable
         /// </summary>
-        public static bool ContainsMethodIEnumerator(IEnumerator enumerator, object value) {
+        public static bool ContainsMethodIEnumerator(CodeContext/*!*/ context, IEnumerator enumerator, object value) {
             while (enumerator.MoveNext()) {
-                if (PythonOps.EqualRetBool(enumerator.Current, value)) {
+                if (PythonOps.EqualRetBool(context, enumerator.Current, value)) {
                     return true;
                 }
             }

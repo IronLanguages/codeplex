@@ -25,6 +25,7 @@ using System.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
@@ -54,7 +55,14 @@ namespace IronPython.Modules {
 
         [Documentation("gets the default locale tuple")]
         public static object _getdefaultlocale() {            
-            return PythonTuple.MakeTuple(new object[] { CultureInfo.CurrentCulture.Name, "" });
+            return PythonTuple.MakeTuple(
+                CultureInfo.CurrentCulture.Name.Replace('-', '_').Replace(' ', '_'), 
+#if !SILVERLIGHT    // No ANSICodePage in Silverlight
+                "cp" + CultureInfo.CurrentCulture.TextInfo.ANSICodePage.ToString()
+#else
+                ""
+#endif
+            );
         }
 
         [Documentation(@"gets the locale's convetions table.  
@@ -77,12 +85,12 @@ LC_TIME:      sets the locale for time functions [unused]
 If locale is None then the current setting is returned.
 ")]
         public static object setlocale(CodeContext/*!*/ context, object category, [DefaultParameterValue(null)]string locale) {
+            LocaleInfo li = GetLocaleInfo(context);
             if (locale == null) {
-                return GetLocaleInfo(context).GetLocale(category);
+                return li.GetLocale(category);
             }
 
-            GetLocaleInfo(context).SetLocale(category, locale);
-            return null;
+            return li.SetLocale(category, locale);
         }
 
         [Documentation("compares two strings using the current locale")]
@@ -108,11 +116,11 @@ Currently returns the string unmodified")]
 
         internal class LocaleInfo {
             public LocaleInfo() {
-                Collate = CultureInfo.CurrentCulture;
-                CType = CultureInfo.CurrentCulture;
-                Time = CultureInfo.CurrentCulture;
-                Monetary = CultureInfo.CurrentCulture;
-                Numeric = CultureInfo.CurrentCulture;
+                Collate = CultureInfo.InvariantCulture;
+                CType = CultureInfo.InvariantCulture;
+                Time = CultureInfo.InvariantCulture;
+                Monetary = CultureInfo.InvariantCulture;
+                Numeric = CultureInfo.InvariantCulture;
             }
 
             public CultureInfo Collate;
@@ -134,29 +142,32 @@ Currently returns the string unmodified")]
                 return conv;
             }
 
-            public void SetLocale(object category, string locale) {
+            public string SetLocale(object category, string locale) {
                 switch ((LocaleCategories)(int)category) {
                     case LocaleCategories.All:
                         SetLocale(LC_COLLATE, locale);
                         SetLocale(LC_CTYPE, locale);
                         SetLocale(LC_MONETARY, locale);
                         SetLocale(LC_NUMERIC, locale);
-                        SetLocale(LC_TIME, locale);
-                        break;
-                    case LocaleCategories.Collate: Collate = LocaleToCulture(locale); break;
-                    case LocaleCategories.CType: CType = LocaleToCulture(locale); break;
-                    case LocaleCategories.Time: Time = LocaleToCulture(locale); break;
+                        return SetLocale(LC_TIME, locale);
+                    case LocaleCategories.Collate:
+                        return CultureToName(Collate = LocaleToCulture(locale));
+                    case LocaleCategories.CType:
+                        return CultureToName(CType = LocaleToCulture(locale));                        
+                    case LocaleCategories.Time:
+                        return CultureToName(Time = LocaleToCulture(locale));                        
                     case LocaleCategories.Monetary:
                         Monetary = LocaleToCulture(locale);
                         conv = null;
-                        break;
+                        return CultureToName(Monetary);
                     case LocaleCategories.Numeric:
                         Numeric = LocaleToCulture(locale);
                         conv = null;
-                        break;
+                        return CultureToName(Numeric);
                     default:
                         throw PythonExceptions.CreateThrowable(Error, "unknown locale category");
                 }
+
             }
 
             public string GetLocale(object category) {
@@ -188,10 +199,18 @@ Currently returns the string unmodified")]
             }
 
             public string CultureToName(CultureInfo culture) {
+                if (culture == CultureInfo.InvariantCulture) {
+                    return "C";
+                }
+
                 return culture.Name.Replace('-', '_');
             }
 
             private CultureInfo LocaleToCulture(string locale) {
+                if (locale == "C") {
+                    return CultureInfo.InvariantCulture;
+                }
+
                 locale = locale.Replace('_', '-');
 
                 try {

@@ -27,9 +27,6 @@ namespace IronPython.Runtime {
         object this[int index] {
             get;
         }
-        bool IsExpandable {
-            get;
-        }
         int Count {
             get;
         }

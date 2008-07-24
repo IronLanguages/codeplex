@@ -28,8 +28,8 @@ namespace System.Linq.Expressions {
         private readonly string _name;
         private readonly bool _local;
 
-        internal GlobalVariableExpression(Annotations annotations, Type type, string name, bool local)
-            : base(annotations, ExpressionType.Extension, type) {
+        internal GlobalVariableExpression(Type type, string name, bool local, Annotations annotations)
+            : base(type, false, annotations, true, true) {
             Debug.Assert(type != typeof(void));
 
             _name = name;
@@ -69,7 +69,7 @@ namespace System.Linq.Expressions {
         }
 
         public static GlobalVariableExpression GlobalVariable(Type type, string name, bool local, Annotations annotations) {
-            return new GlobalVariableExpression(annotations, GetNonVoidType(type), name, local);
+            return new GlobalVariableExpression(type, name, local, annotations);
         }
     }
 }

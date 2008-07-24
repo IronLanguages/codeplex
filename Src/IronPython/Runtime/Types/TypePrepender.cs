@@ -35,13 +35,13 @@ namespace IronPython.Runtime.Types {
             }
 
             public BuiltinFunction Ctor;
-            public DynamicSite<BuiltinFunction, PythonType, object[], object> Site;
+            public CallSite<DynamicSiteTarget<CodeContext, BuiltinFunction, PythonType, object[], object>> Site;
 
             internal void EnsureSite() {
-                if (!Site.IsInitialized) {
-                    Site.EnsureInitialized(
-                        OldCallAction.Make(
-                            DefaultContext.DefaultPythonBinder,
+                if (Site == null) {
+                    Site = CallSite<DynamicSiteTarget<CodeContext, BuiltinFunction, PythonType, object[], object>>.Create(
+                        new InvokeBinder(
+                            DefaultContext.DefaultPythonContext.DefaultBinderState,
                             new CallSignature(
                                 new ArgumentInfo(ArgumentKind.Simple),
                                 new ArgumentInfo(ArgumentKind.List)
@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Types {
             // which will do the unsplat for us.
 
             _state.EnsureSite();
-            return _state.Site.Invoke(DefaultContext.Default, _state.Ctor, _type, args);
+            return _state.Site.Target(_state.Site, context, _state.Ctor, _type, args);
         }
 
         [SpecialName]

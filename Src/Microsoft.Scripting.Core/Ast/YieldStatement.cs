@@ -20,7 +20,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _expr;
 
         internal YieldStatement(Annotations annotations, Expression expression)
-            : base(annotations, ExpressionType.YieldStatement, typeof(void)) {
+            : base(ExpressionType.YieldStatement, typeof(void), annotations, null) {
             _expr = expression;
         }
 
@@ -37,7 +37,7 @@ namespace System.Linq.Expressions {
             return Yield(expression, Annotations.Empty);
         }
         public static YieldStatement Yield(Expression expression, Annotations annotations) {
-            ContractUtils.Requires(expression != null, "expression");
+            RequiresCanRead(expression, "expression");
             return new YieldStatement(annotations, expression);
         }
     }

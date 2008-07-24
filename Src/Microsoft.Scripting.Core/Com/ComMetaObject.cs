@@ -21,9 +21,6 @@ using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
     internal class ComMetaObject : MetaObject {
-        private const string _comObjectTypeName = "System.__ComObject";
-        private readonly static Type _comObjectType = Type.GetType(_comObjectTypeName);
-
         internal ComMetaObject(Expression expression, Restrictions restrictions, object arg)
             : base(expression, restrictions, arg) {
         }
@@ -71,7 +68,18 @@ namespace System.Scripting.Com {
                     typeof(ComObject).GetMethod("ObjectToComObject"),
                     Expression.ConvertHelper(Expression, typeof(object))
                 ),
-                Restrictions.TypeRestriction(Expression, _comObjectType)
+                Restrictions.ExpressionRestriction(
+                    Expression.AndAlso(
+                        Expression.NotEqual(
+                            Expression.ConvertHelper(Expression, typeof(object)),
+                            Expression.Null()
+                        ),
+                        Expression.Call(
+                            typeof(System.Runtime.InteropServices.Marshal).GetMethod("IsComObject"),
+                            Expression.ConvertHelper(Expression, typeof(object))
+                        )
+                    )
+                )
             );
             return wrap;
         }
@@ -80,12 +88,8 @@ namespace System.Scripting.Com {
             return new ComMetaObject(expression, Restrictions.Empty, arg);
         }
 
-        internal static bool IsGenericComObject(object obj) {
-            return obj != null && obj.GetType() == _comObjectType;
-        }
-
-        internal static Type ComObjectType {
-            get { return _comObjectType; }
+        internal static bool IsComObject(object obj) {
+            return obj != null && System.Runtime.InteropServices.Marshal.IsComObject(obj);
         }
     }
 }

@@ -21,56 +21,57 @@ using System.Scripting;
 using System.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
+using ComObject = System.Scripting.Com.ComObject;
+using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {
     public static class ComOps {
-        public static string __str__(object self) {
+        public static string __str__(object/*!*/ self) {
             if (self is ComObject) {
                 return __str__inner((ComObject)self);
             }
 
-            if (ComObject.IsGenericComObject(self)) {
+            if (Marshal.IsComObject(self)) {
                 return __str__inner(ComObject.ObjectToComObject(self));
             }
 
             return __str__inner(self);
         }
 
-        public static string __repr__(object self) {
+        public static string/*!*/ __repr__(object/*!*/ self) {
             if (self is ComObject) {
                 return __repr__inner((ComObject)self);
             }
 
-            if (ComObject.IsGenericComObject(self)) {
+            if (Marshal.IsComObject(self)) {
                 return __repr__inner(ComObject.ObjectToComObject(self));
             }
 
             return __repr__inner(self);
         }
 
-        private static string __str__inner(object self) {
+        private static string __str__inner(object/*!*/ self) {
             return self.ToString();
         }
 
-        private static string __repr__inner(object self) {
+        private static string/*!*/ __repr__inner(object/*!*/ self) {
             return String.Format("<{0} object at {1}>",
                 self.ToString(),
                 PythonOps.HexId(self));
         }
 
-        public static IList<object> GetAttrNames(CodeContext context, object self) {
+        public static IList<object>/*!*/ GetAttrNames(CodeContext/*!*/ context, object/*!*/ self) {
             return (IList<object>)GetMemberNames(context, self);
         }
 
-        public static IList<object> GetMemberNames(CodeContext context, object self) {
+        public static IList<object>/*!*/ GetMemberNames(CodeContext/*!*/ context, object/*!*/ self) {
             // resolve statically known names from .NET objects...
             Dictionary<string, string> names = new Dictionary<string, string>();
             PythonBinder.GetBinder(context).ResolveMemberNames(context, DynamicHelpers.GetPythonType(self), DynamicHelpers.GetPythonType(self), names);
 
             // then pcik up any names from the COM object...
             ComObject co = self as ComObject;
-            if (self == null && ComObject.IsGenericComObject(self)) {
+            if (self == null && Marshal.IsComObject(self)) {
                 co = ComObject.ObjectToComObject(self);
             }
 
@@ -87,10 +88,10 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        private static IList<string> GetMemberNames_inner(CodeContext context, ComObject self) {
+        private static IList<string>/*!*/ GetMemberNames_inner(CodeContext/*!*/ context, ComObject/*!*/ self) {
             List<string> res = new List<string>();
-            foreach (SymbolId si in self.GetMemberNames(context)) {
-                res.Add(SymbolTable.IdToString(si));
+            foreach (string name in self.GetMemberNames()) {
+                res.Add(name);
             }
             return res;
         }

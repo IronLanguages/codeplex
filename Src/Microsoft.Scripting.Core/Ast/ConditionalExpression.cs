@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _false;
 
         internal ConditionalExpression(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse, Type type)
-            : base(annotations, ExpressionType.Conditional, type) {
+            : base(ExpressionType.Conditional, type, annotations, null) {
             _test = test;
             _true = ifTrue;
             _false = ifFalse;
@@ -62,13 +62,13 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Annotations annotations) {
-            ContractUtils.RequiresNotNull(test, "test");
-            ContractUtils.RequiresNotNull(ifTrue, "ifTrue");
-            ContractUtils.RequiresNotNull(ifFalse, "ifFalse");
+            RequiresCanRead(test, "test");
+            RequiresCanRead(ifTrue, "ifTrue");
+            RequiresCanRead(ifFalse, "ifFalse");
 
-            if (test.Type != typeof(bool))
+            if (test.Type != typeof(bool)) {
                 throw Error.ArgumentMustBeBoolean();
-
+            }
             if (ifTrue.Type != ifFalse.Type) {
                 throw Error.ArgumentTypesMustMatch();
             }

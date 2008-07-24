@@ -28,7 +28,7 @@ using Microsoft.Scripting.Hosting.Shell;
 using System.Collections.Generic;
 
 namespace IronPython.Hosting {
-
+#if !SILVERLIGHT
     /// <summary>
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
@@ -51,7 +51,7 @@ namespace IronPython.Hosting {
         public static string GetLogoDisplay() {
             return GetVersionString() +
                             Environment.NewLine +
-                            "Copyright (c) Microsoft Corporation. All rights reserved." +
+                            "Type \"help\", \"copyright\", \"credits\" or \"license\" for more information." +
                             Environment.NewLine;
         }
 
@@ -138,6 +138,7 @@ namespace IronPython.Hosting {
             InitializePath();
             InitializeArguments();
             InitializeModules();
+            InitializeExtensionDLLs();
             ImportSite();
         }
 
@@ -210,6 +211,28 @@ namespace IronPython.Hosting {
 #endif
             PythonContext.SetHostVariables(prefix, executable, version);
             return version;
+        }
+
+        /// <summary>
+        /// Loads any extension DLLs present in sys.prefix\DLLs directory and adds references to them.
+        /// 
+        /// This provides an easy drop-in location for .NET assemblies which should be automatically referenced
+        /// (exposed via import), COM libraries, and pre-compiled Python code.
+        /// </summary>
+        private void InitializeExtensionDLLs() {
+            string dir = Path.Combine(PythonContext.InitialPrefix, "DLLs");
+            if (Directory.Exists(dir)) {
+                CodeContext ctx = new CodeContext(Scope, PythonContext);
+
+                foreach (string file in Directory.GetFiles(dir)) {
+                    if (file.ToLower().EndsWith(".dll")) {
+                        try {
+                            ClrModule.AddReference(ctx, new FileInfo(file).Name);
+                        } catch {
+                        }
+                    }
+                }
+            }
         }
 
         private void ImportSite() {
@@ -338,17 +361,25 @@ namespace IronPython.Hosting {
             PythonCompilerOptions pco = (PythonCompilerOptions)Language.GetCompilerOptions(Scope);
             pco.Module |= ModuleOptions.ExecOrEvalCode;
 
-            Delegate action = (Action)(delegate() {
+            Action action = delegate() {
                 try {
                     su.Compile(pco, ErrorSink).Run(Scope);
                 } catch (Exception e) {
+                    if (e is SystemExitException) {
+                        throw;
+                    }
                     // Need to handle exceptions in the delegate so that they're not wrapped
                     // in a TargetInvocationException
-                    Console.WriteLine(Language.FormatException(e), Style.Error);
+                    UnhandledException(e);
                 }
-            });
+            };
 
-            PythonContext.DispatchCommand(action);
+            try {
+                PythonContext.DispatchCommand(action);
+            } catch (SystemExitException sx) {
+                object dummy;
+                return sx.GetExitCode(out dummy);
+            }
 
             return null;
         }
@@ -446,5 +477,10 @@ namespace IronPython.Hosting {
 
             return res;
         }
+
+        protected override void UnhandledException(Exception e) {
+            PythonOps.PrintException(new CodeContext(Scope, Language), e, Console);
+        }
     }
+#endif
 }

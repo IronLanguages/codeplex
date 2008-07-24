@@ -15,7 +15,11 @@
 
 using System;
 using System.Diagnostics;
+using System.Scripting.Actions;
+
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -37,10 +41,10 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(func.Type == typeof(PythonFunction));
             // Generator expressions always return functions.  We could do even better here when all PythonFunction's are in the same class.
 
-            return AstUtils.Call(
-                ag.Binder,
+            return Binders.Invoke(
+                ag.BinderState,
                 typeof(object),
-                Ast.CodeContext(),
+                new CallSignature(1),
                 func,
                 ag.TransformAsObject(_iterable)
             );

@@ -27,23 +27,33 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
 
-    class MetaOldClass : MetaPythonObject {
+    class MetaOldClass : MetaPythonObject, IPythonInvokable {
         public MetaOldClass(Expression/*!*/ expression, Restrictions/*!*/ restrictions, OldClass/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
+        #region IPythonInvokable Members
+
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return MakeCallRule(pythonInvoke, codeContext, ArrayUtils.RemoveFirst(args));
+        }
+
+        #endregion
+
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
-            return MakeCallRule(call, ArrayUtils.RemoveFirst(args));
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
         }
 
-#if FALSE
-        public override MetaObject/*!*/ Create(CreateAction/*!*/ create, params MetaObject/*!*/[]/*!*/ args) {
-            return Invoke(create, args);
+        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+            return MakeCallRule(call, Ast.Constant(BinderState.GetBinderState(call).Context), ArrayUtils.RemoveFirst(args));
         }
-#endif
+
+        public override MetaObject/*!*/ Create(CreateAction/*!*/ create, params MetaObject/*!*/[]/*!*/ args) {
+            return MakeCallRule(create, Ast.Constant(BinderState.GetBinderState(create).Context), args);
+        }
 
         public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
             return MakeGetMember(member, args);
@@ -79,7 +89,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Calls
 
-        private MetaObject/*!*/ MakeCallRule(InvokeAction/*!*/ call, MetaObject[] args) {
+        private MetaObject/*!*/ MakeCallRule(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject[] args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
 
@@ -99,7 +109,7 @@ namespace IronPython.Runtime.Binding {
                             instTmp,
                             Ast.New(
                                 typeof(OldInstance).GetConstructor(new Type[] { typeof(CodeContext), typeof(OldClass) }),
-                                Ast.Constant(BinderState.GetBinderState(call).Context),
+                                codeContext,
                                 self.Expression
                             )
                         ),
@@ -116,7 +126,7 @@ namespace IronPython.Runtime.Binding {
                                     signature
                                 ),
                                 typeof(object),
-                                ArrayUtils.Insert<Expression>(init, exprArgs)
+                                ArrayUtils.Insert<Expression>(codeContext, init, exprArgs)
                             ),
                             NoInitCheckNoArgs(signature, self, args)
                         ),

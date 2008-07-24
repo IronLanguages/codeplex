@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
             // 1. Create temp variable for the right value
-            MSAst.VariableExpression right_temp = ag.MakeTempExpression("assignment");
+            MSAst.VariableExpression right_temp = ag.GetTemporary("assignment");
 
             // 2. right_temp = right
             statements.Add(
@@ -124,7 +124,7 @@ namespace IronPython.Compiler.Ast {
 
                 for (int i = 0; i < cnt; i++) {
                     MSAst.Expression tmpVal = ag.Transform(seRight.Items[i]);
-                    tmps[i] = ag.MakeTempExpression("parallelAssign", tmpVal.Type);
+                    tmps[i] = ag.GetTemporary("parallelAssign", tmpVal.Type);
 
                     body[i] = Ast.Assign(tmps[i], tmpVal);
                     body[i + cnt] = seLeft.Items[i].TransformSet(ag, SourceSpan.None, tmps[i], Operators.None);

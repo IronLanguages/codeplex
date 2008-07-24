@@ -100,7 +100,7 @@ def test_negative_simply_derive():
     def f(): 
         class C(object, b): pass
     AssertErrorWithPartialMessage(TypeError, 
-        "C: unsupported base type for new-style class",
+        "metaclass conflict instance and type",
         f)
     
     def f():

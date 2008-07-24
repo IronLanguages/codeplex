@@ -148,19 +148,6 @@ namespace System.Scripting.Utils {
             return false;
         }
 
-        internal static bool CanAssign(Type to, Expression from) {
-            if (CanAssign(to, from.Type)) return true;
-
-            if (to.IsValueType && 
-                to.IsGenericType && 
-                to.GetGenericTypeDefinition() == typeof(Nullable<>) && 
-                ConstantCheck.IsConstant(from, null)) {
-                return true;
-            }
-
-            return false;
-        }
-
         //TODO: deprecate and use AreAssignable?
         internal static bool CanAssign(Type to, Type from) {
             if (to == from) {

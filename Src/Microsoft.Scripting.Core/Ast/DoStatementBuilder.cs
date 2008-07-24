@@ -23,6 +23,7 @@ namespace System.Linq.Expressions {
 
         internal DoStatementBuilder(Annotations annotations, LabelTarget label, Expression body) {
             ContractUtils.RequiresNotNull(body, "body");
+            ContractUtils.Requires(body.CanRead, "body");
 
             _body = body;
             _annotations = annotations;
@@ -30,21 +31,16 @@ namespace System.Linq.Expressions {
         }
 
         public DoStatement While(Expression condition) {
-            ContractUtils.RequiresNotNull(condition, "condition");
-            ContractUtils.Requires(condition.Type == typeof(bool), "condition", Strings.ConditionMustBeBoolean);
-
-            return new DoStatement(_annotations, _label, condition, _body);
+            return Expression.DoWhile(_body, condition, _label, _annotations);
         }
     }
 
     public partial class Expression {
         public static DoStatementBuilder Do(params Expression[] body) {
-            ContractUtils.RequiresNotNullItems(body, "body");
             return new DoStatementBuilder(Annotations.Empty, null, Block(body));
         }
 
         public static DoStatementBuilder Do(LabelTarget label, params Expression[] body) {
-            ContractUtils.RequiresNotNullItems(body, "body");
             return new DoStatementBuilder(Annotations.Empty, label, Block(body));
         }
 

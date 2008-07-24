@@ -49,12 +49,12 @@ namespace System.Scripting {
                 _dumpIL = ReadOption("DumpIL");
                 _lightweightScopes = ReadOption("LightweightScopes");
                 _trackPerformance = ReadOption("TrackPerformance");
-                
-                _preferComDispatch = ReadOption("PreferComDispatch", true);
+
+                _preferComInteropAssembly = ReadOption("PreferComInteropAssembly");
                 _cachePointersInApartment = ReadOption("CachePointersInApartment");
                 
                 if (_cachePointersInApartment) {
-                    _preferComDispatch = true;
+                    _preferComInteropAssembly = true;
                 }
             } catch (SecurityException) {
                 return;
@@ -70,15 +70,6 @@ namespace System.Scripting {
 #endif
         }
 
-        private static bool ReadOption(string name, bool defaultValue) {
-#if SILVERLIGHT
-            return defaultValue;
-#else
-            string envVar = Environment.GetEnvironmentVariable(EnvironmentVariablePrefix + name);
-            return (envVar != null) ? envVar == "TRUE" : defaultValue;
-#endif
-        }
-
         // These fields are actually readonly but FxCop gets confused if
         // they're marked that way
         private static bool _showTrees;
@@ -89,7 +80,7 @@ namespace System.Scripting {
         private static bool _dumpIL;
         private static bool _lightweightScopes;
         private static bool _cachePointersInApartment;
-        private static bool _preferComDispatch;
+        private static bool _preferComInteropAssembly;
         private static bool _trackPerformance;
 
         /// <summary>
@@ -159,8 +150,8 @@ namespace System.Scripting {
         /// Use pure IDispatch-based invocation when calling methods/properties
         /// on System.__ComObject
         /// </summary>
-        internal static bool PreferComDispatch {
-            get { return _preferComDispatch; }
+        internal static bool PreferComInteropAssembly {
+            get { return _preferComInteropAssembly; }
         }
 
         internal static bool TrackPerformance {

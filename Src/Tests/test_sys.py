@@ -42,7 +42,6 @@ def test_del_getframe():
     except AttributeError: pass
     else: raise AssertionError("Deletion of sys._getframe didn't take effect")
 
-@disabled("Merlin Work Item 148638")
 def test_assign_getframe():
     for val in [None, 0, 1L, str, False]:
         sys._getframe = val
@@ -52,11 +51,6 @@ def test_assign_getframe():
 def test_api_version():
     # api_version
     AreEqual(sys.api_version, 0)
-
-@skip("win32")
-def test_displayhook():
-    # displayhook
-    AssertError(NotImplementedError, sys.displayhook, None)
 
 @skip("win32")
 def test_settrace():

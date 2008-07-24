@@ -29,15 +29,47 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
 
-    class MetaBoundBuiltinFunction : MetaPythonObject, IInvokableWithContext {
+    class MetaBoundBuiltinFunction : MetaPythonObject, IPythonInvokable {
         public MetaBoundBuiltinFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BoundBuiltinFunction/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
-        #region IInvokableWithContext Members
+        #region IPythonInvokable Members
 
-        public MetaObject InvokeWithContext(InvokeAction call, Expression codeContext, MetaObject[] args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
+        #region MetaObject Overrides
+
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
+        }
+        
+        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+            // TODO: Context should come from BuiltinFunction
+            return InvokeWorker(call, BinderState.GetCodeContext(call), args);
+        }
+
+        private static CallSignature GetReversedSignature(CallSignature signature) {
+            return new CallSignature(ArrayUtils.Append(signature.GetArgumentInfos(), new ArgumentInfo(ArgumentKind.Simple)));
+        }
+
+        public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+            if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(BoundBuiltinFunction)));
+            }
+            return conversion.Fallback(args);
+        }
+
+        #endregion
+
+        #region Misc helpers
+
+        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             args = ArrayUtils.RemoveFirst(args);
 
             CallSignature signature = BindingHelpers.GetCallSignature(call);
@@ -114,29 +146,6 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        #endregion
-
-        #region MetaObject Overrides
-
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
-            return InvokeWithContext(call, Ast.Constant(BinderState.GetBinderState(call).Context), args);
-        }
-
-        private static CallSignature GetReversedSignature(CallSignature signature) {
-            return new CallSignature(ArrayUtils.Append(signature.GetArgumentInfos(), new ArgumentInfo(ArgumentKind.Simple)));
-        }
-
-        public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
-            if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(BoundBuiltinFunction)));
-            }
-            return conversion.Fallback(args);
-        }
-
-        #endregion
-
-        #region Misc helpers
-
         private MetaObject/*!*/ GetInstance(Expression/*!*/ instance, Type/*!*/ testType, Restrictions/*!*/ restrictions) {
             Assert.NotNull(instance, testType);
             object instanceValue = Value.__self__;
@@ -206,6 +215,6 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        #endregion        
+        #endregion            
     }
 }

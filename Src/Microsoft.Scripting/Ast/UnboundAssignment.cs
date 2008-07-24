@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
 
         internal UnboundAssignment(Annotations annotations, SymbolId name, Expression value)
-            : base(annotations, ExpressionType.Extension, typeof(object)) {
+            : base(typeof(object), true, annotations) {
             _name = name;
             _value = value;
         }
@@ -35,10 +35,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Value {
             get { return _value; }
-        }
-
-        public override bool IsReducible {
-            get { return true; }
         }
 
         public override Expression Reduce() {

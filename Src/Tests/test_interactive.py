@@ -151,6 +151,39 @@ def test_sys_exitfunc():
     AreEqual(output2.find('exitFuncRaises.py", line 19, in foo') > -1, True)
         
     ipi.End()
+    
+    # verify sys.exit(True) and sys.exit(False) return 1 and 0
+    
+    ipi = IronPythonInstance(executable, exec_prefix, '-c "import sys; sys.exit(False)"')
+    res = ipi.StartAndRunToCompletion()
+    AreEqual(res[0], True)  # should have started
+    AreEqual(res[1], '')    # no std out
+    AreEqual(res[2], '')    # no std err
+    AreEqual(res[3], 0)     # should return 0
+
+    ipi = IronPythonInstance(executable, exec_prefix, '-c "import sys; sys.exit(True)"')
+    res = ipi.StartAndRunToCompletion()
+    AreEqual(res[0], True)  # should have started
+    AreEqual(res[1], '')    # no std out
+    AreEqual(res[2], '')    # no std err
+    AreEqual(res[3], 1)     # should return 0
+    
+    # and verify it works at the interactive console as well
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    # parameterless exception
+    ipi.ExecuteLine("import sys")
+    AreEqual(ipi.ExecuteAndExit("sys.exit(False)"), 0)
+
+    # and verify it works at the interactive console as well
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    # parameterless exception
+    ipi.ExecuteLine("import sys")
+    AreEqual(ipi.ExecuteAndExit("sys.exit(True)"), 1)
+
 
 #############################################################################
 # verify we need to dedent to a previous valid indentation level
@@ -449,9 +482,8 @@ def test_global_values():
     ipi.ExecuteLine("import clr")
     response = ipi.ExecuteLine("[x for x in globals().values()]")
     Assert(response.startswith('['))
-    #CodePlex Work Item #6704
-    #d = eval(ipi.ExecuteLine("globals().fromkeys(['a', 'b'], 'c')"))
-    #AreEqual(d, {'a':'c', 'b':'c'})
+    d = eval(ipi.ExecuteLine("globals().fromkeys(['a', 'b'], 'c')"))
+    AreEqual(d, {'a':'c', 'b':'c'})
     
 def test_globals8961():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
@@ -711,6 +743,30 @@ def test_mta():
     response = ipi.ExecuteLine("str(System.Threading.Thread.CurrentThread.ApartmentState)")
     AreEqual(response, "'MTA'")
     ipi.End()
+
+def test_displayhook():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    # parameterless exception
+    ipi.ExecuteLine("import sys")
+    ipi.ExecutePartialLine("def f(x): print 'foo', x")
+    ipi.ExecuteLine("")
+    response = ipi.ExecuteLine("sys.displayhook = f")
+    response = ipi.ExecuteLine("42")
+    AreEqual(response, "foo 42")
+
+def test_excepthook():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    # parameterless exception
+    ipi.ExecuteLine("import sys")
+    ipi.ExecutePartialLine("def f(*args): print 'foo', args")
+    ipi.ExecuteLine("")
+    response = ipi.ExecuteLine("sys.excepthook = f")
+    response = ipi.ExecuteLine("raise Exception", True)
+    Assert(response.startswith("foo (<type 'exceptions.Exception', Exception(), <traceback object at"))
 
 #------------------------------------------------------------------------------
 run_test(__name__)

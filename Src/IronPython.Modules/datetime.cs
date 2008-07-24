@@ -21,12 +21,13 @@ using System.Runtime.InteropServices;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+
 using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math; 
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -189,13 +190,13 @@ namespace IronPython.Modules {
             public timedelta __abs__() { return (_days > 0) ? this : -this; }
 
             [SpecialName]
-            public timedelta FloorDivide(object y) {
-                return this / Converter.ConvertToInt32(y);
+            public timedelta FloorDivide(int y) {
+                return this / y;
             }
 
             [SpecialName]
-            public timedelta ReverseFloorDivide(object y) {
-                return this / Converter.ConvertToInt32(y);
+            public timedelta ReverseFloorDivide(int y) {
+                return this / y;
             }
 
             public bool __nonzero__() {
@@ -448,7 +449,7 @@ namespace IronPython.Modules {
             }
 
             // instance methods
-            public virtual date replace([ParamDictionary]IAttributesCollection dict) {
+            public virtual date replace(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection dict) {
                 int year2 = _dateTime.Year;
                 int month2 = _dateTime.Month;
                 int day2 = _dateTime.Day;
@@ -458,9 +459,9 @@ namespace IronPython.Modules {
                     if (strVal == null) continue;
 
                     switch (strVal) {
-                        case "year": year2 = Converter.ConvertToInt32(kvp.Value); break;
-                        case "month": month2 = Converter.ConvertToInt32(kvp.Value); break;
-                        case "day": day2 = Converter.ConvertToInt32(kvp.Value); break;
+                        case "year": year2 = PythonContext.GetContext(context).ConvertToInt32(kvp.Value); break;
+                        case "month": month2 = PythonContext.GetContext(context).ConvertToInt32(kvp.Value); break;
+                        case "day": day2 = PythonContext.GetContext(context).ConvertToInt32(kvp.Value); break;
                         default: throw PythonOps.TypeError("{0} is an invalid keyword argument for this function", kvp.Key);
                     }
                 }
@@ -731,7 +732,7 @@ namespace IronPython.Modules {
 
             public static datetime utcfromtimestamp(double timestamp) {
                 DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
-                dt = dt = dt.ToUniversalTime();
+                dt = dt.ToUniversalTime();
                 return new datetime(dt, 0, null);
             }
 
@@ -827,7 +828,7 @@ namespace IronPython.Modules {
             }
 
             [Documentation("gets a new datetime object with the fields provided as keyword arguments replaced.")]
-            public override date replace([ParamDictionary]IAttributesCollection dict) {
+            public override date replace(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection dict) {
                 int lyear = year;
                 int lmonth = month;
                 int lday = day;

@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         private static ComObject CreateComObject(object rcw) {
             IDispatch dispatchObject = rcw as IDispatch;
-            if (GlobalDlrOptions.PreferComDispatch && (dispatchObject != null)) {
+            if (!GlobalDlrOptions.PreferComInteropAssembly && (dispatchObject != null)) {
                 // We can do method invocations on IDispatch objects
                 return new IDispatchComObject(dispatchObject);
             }

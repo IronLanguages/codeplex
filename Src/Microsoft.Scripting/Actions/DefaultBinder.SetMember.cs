@@ -78,15 +78,17 @@ namespace Microsoft.Scripting.Actions {
 
         private MetaObject MakeSetMemberTarget(SetOrDeleteMemberInfo memInfo, MetaObject target, MetaObject value) {
             Type type = target.LimitType;
-            Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
-            memInfo.Body.Restrictions = restrictions.Merge(Restrictions.TypeRestriction(target.Expression, type));
+            
+            target = target.Restrict(type);
+
+            memInfo.Body.Restrictions = target.Restrictions;
 
             if (typeof(TypeTracker).IsAssignableFrom(type)) {
                 type = ((TypeTracker)target.Value).Type;
                 self = null;
 
-                restrictions = restrictions.Merge(
+                memInfo.Body.Restrictions = memInfo.Body.Restrictions.Merge(
                     Restrictions.InstanceRestriction(target.Expression, target.Value)
                 );
             }

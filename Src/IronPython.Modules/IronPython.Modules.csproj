@@ -78,7 +78,6 @@
     </Compile>
     <Compile Include="array.cs" />
     <Compile Include="binascii.cs" />
-    <Compile Include="ClrModule.cs" />
     <Compile Include="cmath.cs" />
     <Compile Include="codecs.cs" />
     <Compile Include="collections.cs" />

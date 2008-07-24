@@ -599,6 +599,78 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Expression must be readable"
+        /// </summary>
+        internal static string ExpressionMustBeReadable {
+            get {
+                return "Expression must be readable";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Expression must be writeable"
+        /// </summary>
+        internal static string ExpressionMustBeWriteable {
+            get {
+                return "Expression must be writeable";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Argument must be exception"
+        /// </summary>
+        internal static string ArgumentMustBeException {
+            get {
+                return "Argument must be exception";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "subtrees of nodes with non-null type must also have non-null type"
+        /// </summary>
+        internal static string SubtreesMustBeBound {
+            get {
+                return "subtrees of nodes with non-null type must also have non-null type";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "readable Expression must reduce to readable Expression"
+        /// </summary>
+        internal static string MustReduceToReadable {
+            get {
+                return "readable Expression must reduce to readable Expression";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "writeable Expression must reduce to writeable Expression"
+        /// </summary>
+        internal static string MustReduceToWriteable {
+            get {
+                return "writeable Expression must reduce to writeable Expression";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "must be reducible node"
+        /// </summary>
+        internal static string MustBeReducible {
+            get {
+                return "must be reducible node";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "must be readable or writeable"
+        /// </summary>
+        internal static string MustBeReadableOrWriteable {
+            get {
+                return "must be readable or writeable";
+            }
+        }
+
+        /// <summary>
         /// A string like  "type or bindingInfo must be non-null"
         /// </summary>
         internal static string TypeOrBindingInfoMustBeNonNull {
@@ -927,6 +999,13 @@ namespace System.Linq.Expressions {
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchReturn(object p0, object p1) {
             return string.Format("Expression of type '{0}' cannot be used for return type '{1}'", p0, p1);
+        }
+
+        /// <summary>
+        /// A string like  "Expression of type '{0}' cannot be used for assignment to type '{1}'"
+        /// </summary>
+        internal static string ExpressionTypeDoesNotMatchAssignment(object p0, object p1) {
+            return string.Format("Expression of type '{0}' cannot be used for assignment to type '{1}'", p0, p1);
         }
 
         /// <summary>
@@ -2439,6 +2518,13 @@ namespace System.Linq.Expressions {
         /// </summary>
         internal static Exception ExpressionTypeDoesNotMatchReturn(object p0, object p1) {
             return new ArgumentException(Strings.ExpressionTypeDoesNotMatchReturn(p0, p1));
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "Expression of type '{0}' cannot be used for assignment to type '{1}'"
+        /// </summary>
+        internal static Exception ExpressionTypeDoesNotMatchAssignment(object p0, object p1) {
+            return new ArgumentException(Strings.ExpressionTypeDoesNotMatchAssignment(p0, p1));
         }
 
         /// <summary>

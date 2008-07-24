@@ -22,9 +22,9 @@ namespace IronPython.Runtime.Exceptions {
     [PythonSystemType("traceback")]
     [Serializable]
     public class TraceBack {
-        private TraceBack _next;
-        private TraceBackFrame _frame;
-        private int _line, _offset;
+        private readonly TraceBack _next;
+        private readonly TraceBackFrame _frame;
+        private int _line;
 
         public TraceBack(TraceBack nextTraceBack, TraceBackFrame fromFrame) {
             _next = nextTraceBack;
@@ -51,16 +51,12 @@ namespace IronPython.Runtime.Exceptions {
 
         public int tb_lasti {
             get {
-                return _offset;
+                return 0;   // not presently tracked
             }
         }
 
         internal void SetLine(int lineNumber) {
             _line = lineNumber;
-        }
-
-        internal void SetOffset(int ilOffset) {
-            _offset = ilOffset;
         }
     }
 

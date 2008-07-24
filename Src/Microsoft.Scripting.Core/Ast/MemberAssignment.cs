@@ -43,7 +43,7 @@ namespace System.Linq.Expressions {
         //CONFORMING
         public static MemberAssignment Bind(MemberInfo member, Expression expression) {
             ContractUtils.RequiresNotNull(member, "member");
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             Type memberType;
             ValidateSettableFieldOrPropertyMember(member, out memberType);
             if (!TypeUtils.AreAssignable(memberType, expression.Type)) {

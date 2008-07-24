@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Calls
 
-        internal static MetaObject Call(InvokeAction/*!*/ call, MetaObject/*!*/[]/*!*/ args) {
+        internal static MetaObject Call(MetaAction/*!*/ call, MetaObject/*!*/[]/*!*/ args) {
             Assert.NotNull(call, args);
             Assert.NotNullItems(args);
 
@@ -176,7 +176,10 @@ namespace IronPython.Runtime.Binding {
             PythonTypeSlot callSlot;
             if (pt.TryResolveSlot(BinderState.GetBinderState(call).Context, Symbols.Call, out callSlot)) {
                 VariableExpression tmp = Ast.Variable(typeof(object), "callSlot");
-                Expression[] callArgs = ArrayUtils.Insert((Expression)tmp, MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args)));
+                Expression[] callArgs = ArrayUtils.Insert(
+                    BinderState.GetCodeContext(call), 
+                    (Expression)tmp, 
+                    MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args)));
 
                 body = Ast.Scope(
                     Ast.Condition(

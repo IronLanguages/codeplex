@@ -16,6 +16,7 @@
 from lib.assert_util import *
 skiptest("silverlight")
 import sys
+import nt
 
 # This module tests operations on the builtin file object. It is not yet complete, the tests cover read(),
 # read(size), readline() and write() for binary, text and universal newline modes.
@@ -441,8 +442,7 @@ def test_coverage():
     AreEqual(f.read(-1), '')
     f.close()
 
-    ## file op in nt
-    import nt
+    ## file op in nt    
     nt.unlink(temp_file)
 
     fd = nt.open(temp_file, nt.O_CREAT | nt.O_WRONLY)
@@ -513,7 +513,6 @@ if is_cli:
         def return_fd2():
             return nt.open(temp_file, 0)
         
-        import nt
         import System
 
         fd = return_fd1()
@@ -538,11 +537,9 @@ def test_sharing():
             x.close()
             y.close()
             
-    import nt
     nt.unlink('tempfile.txt')
 
 def test_overwrite_readonly():
-    import nt
     filename = "tmp.txt"
     f = file(filename, "w+")
     f.write("I am read-only")
@@ -569,7 +566,6 @@ def test_inheritance_kwarg_override():
     f=TEST(r'sometext.txt',VERBOSITY=1)
     AreEqual(f.VERBOSITY, 1)
     f.close()
-    import nt
     nt.unlink('sometext.txt')
 
 # file newline handling test
@@ -606,7 +602,6 @@ def test_creation():
 
 
 def test_repr():
-    import nt
     class x(file):
         def __repr__(self): return 'abc'
         
@@ -616,7 +611,6 @@ def test_repr():
     nt.unlink('repr_does_not_exist')
 
 def test_truncate():
-    import nt
     
     # truncate()
     a = file('abc.txt', 'w')
@@ -658,4 +652,32 @@ def test_truncate():
     # std-out
     AssertError(IOError, sys.stdout.truncate)
 
+def test_modes():
+    """test various strange mode combinations and error reporting"""
+    x = file('test_file', 'w')
+    x.close()
+    # don't allow empty modes
+    AssertErrorWithMessage(ValueError, 'empty mode string', file, 'abc', '')
+    
+    # mode must start with valid value
+    AssertErrorWithMessage(ValueError, "mode string must begin with one of 'r', 'w', 'a' or 'U', not 'p'", file, 'abc', 'p')
+    
+    # allow anything w/ U but r and w
+    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw')
+    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua')
+    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw+')
+    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua+')
+
+    x = file('test_file', 'pU')
+    AreEqual(x.mode, 'pU')
+    x.close()
+    
+    x = file('test_file', 'pU+')
+    AreEqual(x.mode, 'pU+')
+    x.close()
+
+    # extra info can be passed and is retained
+    x = file('test_file', 'rFOOBAR')
+    AreEqual(x.mode, 'rFOOBAR')
+    
 run_test(__name__)

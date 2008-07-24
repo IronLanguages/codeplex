@@ -135,10 +135,10 @@ namespace IronPython.Runtime.Binding {
             PythonTypeSlot slot;
             SlotOrFunction res;
             if (TryGetBinder(state, types, op, SymbolId.Empty, out res)) {
-                if (res != null) {                    
+                if (res != SlotOrFunction.Empty) {                    
                     return res;
                 }
-            } else if (DynamicHelpers.GetPythonType(types[0].Value).TryResolveSlot(state.Context, op, out slot)) {
+            } else if (MetaUserObject.GetPythonType(types[0]).TryResolveSlot(state.Context, op, out slot)) {
                 VariableExpression tmp = Ast.Variable(typeof(object), "slotVal");
 
                 Expression[] args = new Expression[types.Length - 1];
@@ -166,6 +166,7 @@ namespace IronPython.Runtime.Binding {
                                     ),
                                     typeof(object),
                                     ArrayUtils.Insert<Expression>(
+                                        Ast.Constant(state.Context),
                                         tmp,
                                         args
                                     )

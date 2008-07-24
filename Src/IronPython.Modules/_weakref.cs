@@ -20,9 +20,10 @@ using System.Scripting;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
-using IronPython.Compiler.Generation;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
@@ -55,10 +56,10 @@ namespace IronPython.Modules {
         }
 
         public static object proxy(CodeContext context, object @object, object callback) {
-            if (PythonOps.IsCallable(@object)) {
+            if (PythonOps.IsCallable(context, @object)) {
                 return weakcallableproxy.MakeNew(context, @object, callback);
             } else {
-                return weakproxy.MakeNew(@object, callback);
+                return weakproxy.MakeNew(context, @object, callback);
             }
         }
 
@@ -236,10 +237,11 @@ namespace IronPython.Modules {
 
         [PythonSystemType, DynamicBaseTypeAttribute]
         public sealed partial class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, IMembersList {
-            WeakHandle target;
+            private readonly WeakHandle _target;
+            private readonly CodeContext/*!*/ _context;
 
             #region Python Constructors
-            internal static object MakeNew(object @object, object callback) {
+            internal static object MakeNew(CodeContext/*!*/ context, object @object, object callback) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (callback == null) {
@@ -253,15 +255,16 @@ namespace IronPython.Modules {
                     }
                 }
 
-                return new weakproxy(@object, callback);
+                return new weakproxy(context, @object, callback);
             }
             #endregion
 
             #region Constructors
 
-            private weakproxy(object target, object callback) {
+            private weakproxy(CodeContext/*!*/ context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
-                this.target = new WeakHandle(target, false);
+                _target = new WeakHandle(target, false);
+                _context = context;
             }
             #endregion
 
@@ -269,13 +272,13 @@ namespace IronPython.Modules {
             ~weakproxy() {
                 // remove our self from the chain...
                 try {
-                    IWeakReferenceable iwr = target.Target as IWeakReferenceable;
+                    IWeakReferenceable iwr = _target.Target as IWeakReferenceable;
                     if (iwr != null) {
                         WeakRefTracker wrt = iwr.GetWeakRef();
                         wrt.RemoveHandler(this);
                     }
 
-                    target.Free();
+                    _target.Free();
                 } catch (InvalidOperationException) {
                     // target was freed
                 }
@@ -296,7 +299,7 @@ namespace IronPython.Modules {
 
             bool TryGetObject(out object result) {
                 try {
-                    result = target.Target;
+                    result = _target.Target;
                     if (result == null) return false;
                     GC.KeepAlive(this);
                     return true;
@@ -357,7 +360,7 @@ namespace IronPython.Modules {
             #region ICodeFormattable Members
 
             public string/*!*/ __repr__(CodeContext/*!*/ context) {
-                object obj = target.Target;
+                object obj = _target.Target;
                 GC.KeepAlive(this);
                 return String.Format("<weakproxy at {0} to {1} at {2}>",
                     IdDispenser.GetId(this),
@@ -419,9 +422,9 @@ namespace IronPython.Modules {
 
             bool IValueEquality.ValueEquals(object other) {
                 weakproxy wrp = other as weakproxy;
-                if (wrp != null) return PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
+                if (wrp != null) return PythonOps.EqualRetBool(_context, GetObject(), wrp.GetObject());
 
-                return PythonOps.EqualRetBool(GetObject(), other);
+                return PythonOps.EqualRetBool(_context, GetObject(), other);
             }
 
             #endregion
@@ -443,12 +446,12 @@ namespace IronPython.Modules {
             IValueEquality,
             IMembersList {
 
-            private DynamicSite<object, object[], object> _site;
             private WeakHandle _target;
+            private readonly CodeContext/*!*/ _context;
 
             #region Python Constructors
 
-            internal static object MakeNew(CodeContext context, object @object, object callback) {
+            internal static object MakeNew(CodeContext/*!*/ context, object @object, object callback) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (callback == null) {
@@ -474,7 +477,7 @@ namespace IronPython.Modules {
             private weakcallableproxy(CodeContext context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
                 _target = new WeakHandle(target, false);
-                _site = DynamicSite<object, object[], object>.Create(OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
+                _context = context;
             }
 
             #endregion
@@ -581,12 +584,12 @@ namespace IronPython.Modules {
 
             [SpecialName]
             public object Call(CodeContext/*!*/ context, params object[] args) {
-                return _site.Invoke(context, GetObject(), args);
+                return PythonContext.GetContext(context).Call(GetObject(), args);
             }
                         
             [SpecialName]
             public object Call(CodeContext/*!*/ context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
-                return PythonCalls.CallWithKeywordArgs(GetObject(), args, dict);
+                return PythonCalls.CallWithKeywordArgs(context, GetObject(), args, dict);
             }
 
             #region Custom members access
@@ -643,7 +646,7 @@ namespace IronPython.Modules {
                 weakcallableproxy wrp = other as weakcallableproxy;
                 if (wrp != null) return GetObject().Equals(wrp.GetObject());
 
-                return PythonOps.EqualRetBool(GetObject(), other);
+                return PythonOps.EqualRetBool(_context, GetObject(), other);
             }
 
             #endregion
@@ -724,7 +727,7 @@ namespace IronPython.Modules {
 
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
-            return PythonOps.InvokeWithContext(context, target.Target, name, args);
+            return PythonOps.Invoke(context, target.Target, name, args);
         }
 
 
@@ -736,7 +739,7 @@ namespace IronPython.Modules {
                     DynamicHelpers.GetPythonType(target.Target),
                     SymbolTable.IdToString(name));
 
-            return PythonCalls.CallWithKeywordArgs(targetMethod, args, dict);
+            return PythonCalls.CallWithKeywordArgs(context, targetMethod, args, dict);
         }
     }
 }

@@ -22,10 +22,10 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using IronPython.Runtime.Operations;
 
     class OperationBinder : OperationAction, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;

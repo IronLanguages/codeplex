@@ -37,8 +37,9 @@ namespace System.Linq.Expressions {
             get { return _expression; }
         }
 
-        internal MemberExpression(Annotations annotations, MemberInfo member, Expression expression, Type type, CallSiteBinder bindingInfo)
-            : base(annotations, ExpressionType.MemberAccess, type, bindingInfo) {
+        // param order: factories args in order, then other args
+        internal MemberExpression(Expression expression, MemberInfo member, Annotations annotations, Type type, bool canRead, bool canWrite, CallSiteBinder binder)
+            : base(ExpressionType.MemberAccess, type, false, annotations, canRead, canWrite, binder) {
             if (IsBound) {
                 RequiresBound(expression, "expression");
             }
@@ -114,12 +115,12 @@ namespace System.Linq.Expressions {
             if (field.IsStatic) {
                 ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
             } else {
-                ContractUtils.RequiresNotNull(expression, "expression");
+                RequiresCanRead(expression, "expression");
                 if (!TypeUtils.AreReferenceAssignable(field.DeclaringType, expression.Type)) {
                     throw Error.FieldNotDefinedForType(field, expression.Type);
                 }
             }
-            return new MemberExpression(annotations, field, expression, field.FieldType, null);
+            return new MemberExpression(expression, field, annotations, field.FieldType, true, !(field.IsLiteral | field.IsInitOnly), null);
         }
 
         //CONFORMING
@@ -129,7 +130,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static MemberExpression Field(Expression expression, string fieldName, Annotations annotations) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(annotations, "annotations");
 
             // bind to public names first
@@ -165,7 +166,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static MemberExpression Property(Expression expression, string propertyName) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             // bind to public names first
             PropertyInfo pi = expression.Type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
             if (pi == null) {
@@ -203,12 +204,12 @@ namespace System.Linq.Expressions {
             if (property.GetAccessors(true)[0].IsStatic) {
                 ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticPropertiesHaveNullExpr); 
             } else {
-                ContractUtils.RequiresNotNull(expression, "expression");
+                RequiresCanRead(expression, "expression");
                 if (!TypeUtils.IsValidInstanceType(property, expression.Type)) {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);
                 }
             }
-            return new MemberExpression(annotations, property, expression, property.PropertyType, null);
+            return new MemberExpression(expression, property, annotations, property.PropertyType, property.CanRead, property.CanWrite, null);
         }
         //CONFORMING
         public static MemberExpression Property(Expression expression, MethodInfo propertyAccessor) {
@@ -253,7 +254,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static MemberExpression PropertyOrField(Expression expression, string propertyOrFieldName) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             // bind to public names first
             PropertyInfo pi = expression.Type.GetProperty(propertyOrFieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
             if (pi != null)
@@ -290,12 +291,10 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// A dynamic or unbound get member
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static MemberExpression GetMember(Expression expression, Type result, CallSiteBinder bindingInfo) {
-            ContractUtils.RequiresNotNull(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            return new MemberExpression(Annotations.Empty, null, expression, result, bindingInfo);
+        public static MemberExpression GetMember(Expression expression, Type result, CallSiteBinder binder) {
+            RequiresCanRead(expression, "expression");
+            ContractUtils.RequiresNotNull(binder, "bindingInfo");
+            return new MemberExpression(expression, null, null, result, true, false, binder);
         }
-
     }
 }

@@ -424,14 +424,15 @@ def test_datetime():
     #AreEqual(x.hour, 18)
     #AreEqual(x.minute, 46)
     #AreEqual(x.second, 40)
+    
+    x = datetime.datetime.fromtimestamp(1000000000)
+    AreEqual(x.year, 2001)
+    AreEqual(x.month, 9)
+    AreEqual(x.day, 8)
     #CodePlex Work Item 4862
-    #x = datetime.datetime.fromtimestamp(1000000000)
-    #AreEqual(x.year, 2001)
-    #AreEqual(x.month, 9)
-    #AreEqual(x.day, 8)
     #AreEqual(x.hour, 18)
-    #AreEqual(x.minute, 46)
-    #AreEqual(x.second, 40)
+    AreEqual(x.minute, 46)
+    AreEqual(x.second, 40)
     
     #fromordinal
     x = datetime.datetime.fromordinal(1234567)

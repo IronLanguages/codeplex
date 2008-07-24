@@ -16,6 +16,9 @@
 using System;
 using System.Scripting;
 using System.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -44,11 +47,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return AstUtils.GetMember(
-                ag.Binder,
-                SymbolTable.IdToString(_name),
+            return Binders.Get(
+                ag.BinderState,
                 type,
-                Ast.CodeContext(),
+                SymbolTable.IdToString(_name),
                 ag.Transform(_target)
             );
         }
@@ -58,45 +60,50 @@ namespace IronPython.Compiler.Ast {
                 SourceSpan sspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
                 return AstUtils.Block(
                     span,
-                    AstUtils.SetMember(
-                        ag.Binder,
-                        SymbolTable.IdToString(_name),
+                    Binders.Set(
+                        ag.BinderState,
                         typeof(object),
-                        Ast.CodeContext(),
+                        SymbolTable.IdToString(_name),
                         ag.Transform(_target),
                         right
                     )
                 );
             } else {
-                MSAst.VariableExpression temp = ag.MakeTempExpression("inplace");
+                MSAst.VariableExpression temp = ag.GetTemporary("inplace");
                 return AstUtils.Block(
                     new SourceSpan(Span.Start, span.End),
                     Ast.Assign(temp, ag.Transform(_target)),
-                    AstUtils.SetMember(
-                        ag.Binder,
-                        SymbolTable.IdToString(_name),
-                        typeof(object),
-                        Ast.CodeContext(),
-                        temp,
-                        AstUtils.Operator(
-                            ag.Binder,
-                            op,
-                            typeof(object),
-                            Ast.CodeContext(),
-                            AstUtils.GetMember(ag.Binder, SymbolTable.IdToString(_name), typeof(object), Ast.CodeContext(), temp),
-                            right
-                        )
-                    )
+                    SetMemberOperator(ag, right, op, temp)
                 );
             }
         }
 
-        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return AstUtils.DeleteMember(
-                Span,
-                ag.Binder,
+        private MSAst.Expression SetMemberOperator(AstGenerator ag, MSAst.Expression right, Operators op, MSAst.VariableExpression temp) {
+            return Binders.Set(
+                ag.BinderState,
+                typeof(object),
                 SymbolTable.IdToString(_name),
-                Ast.CodeContext(),
+                temp,
+                Binders.Operation(
+                    ag.BinderState,
+                    typeof(object),
+                    StandardOperators.FromOperator(op),
+                    Binders.Get(
+                        ag.BinderState,
+                        typeof(object),
+                        SymbolTable.IdToString(_name),
+                        temp
+                    ),
+                    right
+                )
+            );
+        }
+
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
+            return Binders.Delete(
+                ag.BinderState,
+                typeof(object),
+                SymbolTable.IdToString(_name),
                 ag.Transform(_target)
             );
         }

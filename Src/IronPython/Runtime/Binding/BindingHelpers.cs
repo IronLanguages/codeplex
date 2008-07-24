@@ -14,8 +14,12 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
 using System.Linq.Expressions;
 
 using IronPython.Runtime.Binding;
@@ -24,8 +28,6 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using System.Collections.Generic;
-    using System.Diagnostics;
     
     /// <summary>
     /// Common helpers used by the various binding logic.
@@ -37,7 +39,7 @@ namespace IronPython.Runtime.Binding {
         /// Succeeds if the MetaObject is a BuiltinFunction, BuiltinMethodDescriptor, or BoundBuiltinFunction.
         /// </summary>
         internal static bool TryGetStaticFunction(BinderState/*!*/ state, SymbolId op, MetaObject/*!*/ mo, out BuiltinFunction function) {
-            PythonType type = DynamicHelpers.GetPythonType(mo.Value);
+            PythonType type = MetaPythonObject.GetPythonType(mo);
             function = null;
             if (op != SymbolId.Empty) {
                 PythonTypeSlot xSlot;
@@ -67,7 +69,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        internal static MetaObject/*!*/ FilterShowCls(MetaAction/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
+        internal static MetaObject/*!*/ FilterShowCls(Expression/*!*/ codeContext, MetaAction/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
             if (action is IPythonSite) {
                 Type resType = BindingHelpers.GetCompatibleType(res.Expression.Type, failure.Type);
 
@@ -75,7 +77,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Condition(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("IsClsVisible"),
-                            BindingHelpers.GetSiteCodeContext()
+                            codeContext
                         ),
                         Ast.ConvertHelper(res.Expression, resType),
                         Ast.ConvertHelper(failure, resType)
@@ -88,20 +90,73 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        internal static CallSignature GetCallSignature(InvokeAction/*!*/ action) {
-            InvokeBinder ib = action as InvokeBinder;
-            if (ib != null) {
-                return ib.Signature;
+        /// <summary>
+        /// Gets the best CallSignature from a MetaAction.
+        /// 
+        /// The MetaAction should be either a Python InvokeBinder, or a DLR InvokeAction or 
+        /// CreateAction.  For Python we can use a full-fidelity 
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        internal static CallSignature GetCallSignature(MetaAction/*!*/ action) {
+            // Python'so own InvokeBinder which has a real sig
+            InvokeBinder pib = action as InvokeBinder;
+            if (pib != null) {
+                return pib.Signature;
             }
 
-            ArgumentInfo[] ai = new ArgumentInfo[action.Arguments.Count];
+            // DLR Invoke which has a argument array
+            InvokeAction iac = action as InvokeAction;
+            if (iac != null) {
+                return ArgumentArrayToSignature(iac.Arguments);
+            }
+
+            // DLR Create action which we hand off to our call code, also
+            // has an argument array.
+            CreateAction ca = action as CreateAction;
+            Debug.Assert(ca != null);
+
+            return ArgumentArrayToSignature(ca.Arguments);
+        }
+
+        /// <summary>
+        /// Transforms a call into a Python GetMember/Invoke.  This isn't quite the correct semantic as
+        /// we shouldn't be returning Python members (e.g. object.__repr__) to non-Python callers.  This
+        /// can go away as soon as all of the classes implement the full fidelity of the protocol
+        /// </summary>
+        internal static MetaObject/*!*/ GenericCall(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            if (args[0].NeedsDeferral) {
+                return action.Defer(args);
+            }
+
+            return new MetaObject(
+                Binders.Invoke(
+                    BinderState.GetBinderState(action),
+                    typeof(object),
+                    GetCallSignature(action),
+                    ArrayUtils.Insert(
+                        Binders.Get(
+                            BinderState.GetBinderState(action),
+                            typeof(object),
+                            action.Name,
+                            args[0].Expression
+                        ),
+                        MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
+                    )
+                ),
+                Restrictions.Combine(args).Merge(args[0].Restrict(args[0].LimitType).Restrictions)
+            );
+        }
+
+        internal static CallSignature ArgumentArrayToSignature(ReadOnlyCollection<Argument/*!*/>/*!*/ args) {
+            ArgumentInfo[] ai = new ArgumentInfo[args.Count];
 
             for (int i = 0; i < ai.Length; i++) {
-                switch (action.Arguments[i].ArgumentType) {
+                switch (args[i].ArgumentType) {
                     case ArgumentType.Named:
                         ai[i] = new ArgumentInfo(
                             ArgumentKind.Named,
-                            SymbolTable.StringToId(((NamedArgument)action.Arguments[i]).Name)
+                            SymbolTable.StringToId(((NamedArgument)args[i]).Name)
                         );
                         break;
                     case ArgumentType.Positional:
@@ -111,27 +166,6 @@ namespace IronPython.Runtime.Binding {
             }
 
             return new CallSignature(ai);
-        }
-
-        internal static IList<Argument/*!*/>/*!*/ GetArguments(CallSignature signature) {
-            Argument[] args = new Argument[signature.ArgumentCount];
-            ArgumentInfo[] sigArgs = signature.GetArgumentInfos();
-            for (int i = 0; i < sigArgs.Length; i++) {
-                switch (sigArgs[i].Kind) {
-                    case ArgumentKind.Named:
-                        args[i] = Ast.NamedArg(SymbolTable.IdToString(sigArgs[i].Name));
-                        break;
-                    case ArgumentKind.Simple:
-                        args[i] = Ast.PositionalArg(i);
-                        break;
-                    default:
-                        // BUGBUG!                        
-                        args[i] = Ast.PositionalArg(Int32.MaxValue);
-                        break;
-                }
-            }
-
-            return args;
         }
 
         internal static Type/*!*/ GetCompatibleType(/*!*/Type t, Type/*!*/ otherType) {
@@ -154,8 +188,8 @@ namespace IronPython.Runtime.Binding {
         /// type associated with the second MetaObject.
         /// </summary>
         internal static bool IsSubclassOf(MetaObject/*!*/ xType, MetaObject/*!*/ yType) {
-            PythonType x = DynamicHelpers.GetPythonType(xType.Value);
-            PythonType y = DynamicHelpers.GetPythonType(yType.Value);
+            PythonType x = MetaPythonObject.GetPythonType(xType);
+            PythonType y = MetaPythonObject.GetPythonType(yType);
             return x.IsSubclassOf(y);
         }
         
@@ -355,6 +389,25 @@ namespace IronPython.Runtime.Binding {
 
         internal static Expression CreateBinderStateExpression() {
             return Ast.CodeContext();
+        }
+
+        /// <summary>
+        /// Helper to do fallback for Invoke's so we can handle both StandardAction and Python's 
+        /// InvokeBinder.
+        /// </summary>
+        internal static MetaObject/*!*/ InvokeFallback(MetaAction/*!*/ action, Expression codeContext, MetaObject/*!*/[]/*!*/ args) {
+            StandardAction act = action as StandardAction;
+            if (act != null) {
+                return act.Fallback(args);
+            }
+
+            InvokeBinder invoke = action as InvokeBinder;
+            if (invoke != null) {
+                return invoke.Fallback(codeContext, args);
+            }
+
+            // unreachable, we always have one of these binders
+            throw new InvalidOperationException();
         }
     }
 

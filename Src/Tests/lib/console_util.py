@@ -22,6 +22,7 @@ its statements.
 """
 from System.Diagnostics import Process, ProcessStartInfo
 from System.IO import StreamReader, StreamWriter
+from System.Threading import Thread
 
 class IronPythonInstance:
     """
@@ -130,6 +131,14 @@ console for testing purposes, and direct input to and from the instance.
     def ExecuteLine(self, line, readError=False):
         self.writer.Write(line+"\n")
         return self.EatToPrompt(readError)[0:-2]
+
+    def ExecuteAndExit(self, line):
+        self.writer.Write(line+"\n")
+        i = 0
+        while i < 10 and not self.proc.HasExited:
+            Thread.Sleep(100)
+            i += 1
+        return self.proc.ExitCode
 
     # Submit one line of a multi-line command to the console. There can be 
     # multiple calls to ExecutePartialLine before a final call to ExecuteLine

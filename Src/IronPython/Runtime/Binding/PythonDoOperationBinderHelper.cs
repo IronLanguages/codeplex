@@ -35,10 +35,6 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 
-#if !SILVERLIGHT
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-#endif
-
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -108,13 +104,6 @@ namespace IronPython.Runtime.Binding {
         }
         
         protected RuleBuilder<T> MakeNewRule(PythonType[] types) {
-
-#if !SILVERLIGHT
-            if (ComObject.IsGenericComObject(_args[0])) {
-                return null;
-            }
-#endif
-
             switch (Operation) {
                 case Operators.IsCallable:
                     // This will break in cross-language cases. Eg, if this rule applies to x,
@@ -1409,7 +1398,7 @@ namespace IronPython.Runtime.Binding {
                     // we need the length which we should only calculate once, calculate and
                     // store it in a temporary.  Note we only calculate the length if we'll
                     args[0] = Ast.Comma(
-                        Ast.Assign(_lengthVar, Ast.Constant(null)),
+                        Ast.Assign(_lengthVar, Ast.Constant(null, _lengthVar.Type)),
                         args[0]
                     );
                 }

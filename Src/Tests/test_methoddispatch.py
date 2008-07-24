@@ -1412,6 +1412,6 @@ def test_array_error_message():
 @skip("silverlight") #no AssertErrorWithMessage
 def test_max_args():
     """verify the correct number of max args are reported, this may need to be updated if file ever takes more args"""
-    AssertErrorWithMatch(TypeError, '.*takes at most 5 arguments.*', file, 2, 3, 4, 5, 6, 7, 8, 9)
+    AssertErrorWithMatch(TypeError, '.*takes at most 4 arguments.*', file, 2, 3, 4, 5, 6, 7, 8, 9)
 
 run_test(__name__)

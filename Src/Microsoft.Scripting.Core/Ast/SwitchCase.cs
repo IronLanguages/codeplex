@@ -42,12 +42,12 @@ namespace System.Linq.Expressions {
 
     public partial class Expression {
         public static SwitchCase DefaultCase(Expression body) {
-            ContractUtils.RequiresNotNull(body, "body");
+            RequiresCanRead(body, "body");
             return new SwitchCase(true, 0, body);
         }
 
         public static SwitchCase SwitchCase(int value, Expression body) {
-            ContractUtils.RequiresNotNull(body, "body");
+            RequiresCanRead(body, "body");
             return new SwitchCase(false, value, body);
         }
     }

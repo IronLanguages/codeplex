@@ -280,4 +280,50 @@ def test_cp11923():
         import nt
         nt.unlink(_t_test)
 
+###############################################################################
+##TESTS BEYOND THIS POINT SHOULD NOT DEPEND ON LINE NUMBERS IN THIS FILE#######
+###############################################################################
+@skip("silverlight")
+def test_cp11923():
+    import nt
+    import sys
+    old_path = [x for x in sys.path]
+    sys.path.append(nt.getcwd())
+        
+    try:
+        #Test setup
+        _t_test = testpath.public_testdir + "\\cp11116_main.py"
+        write_to_file(_t_test, """import cp11116_a
+try:
+    cp11116_a.a()
+except:
+    pass
+
+cp11116_a.a()
+""")
+       
+        _t_test_a = testpath.public_testdir + "\\cp11116_a.py"
+        write_to_file(_t_test_a, """def a():
+    raise None
+""") 
+        
+        #Actual test
+        t_out, t_in, t_err = nt.popen3(sys.executable + " " + nt.getcwd() + r"\cp11116_main.py")
+        lines = t_err.readlines()
+        t_err.close()
+        t_out.close()
+        t_in.close()
+                
+        #Verification
+        Assert("cp11116_main.py\", line 7, in" in lines[1], lines[1])
+        line_num = 3
+        if is_cli:
+            line_num -= 1
+        Assert(lines[line_num].rstrip().endswith("cp11116_a.py\", line 2, in a"), lines[line_num])
+        
+    finally:
+        sys.path = old_path
+        nt.unlink(_t_test)
+        nt.unlink(_t_test_a)
+
 run_test(__name__)

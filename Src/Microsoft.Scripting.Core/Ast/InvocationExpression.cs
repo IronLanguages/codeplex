@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _lambda;
 
         internal InvocationExpression(Annotations annotations, Expression lambda, Type returnType, CallSiteBinder bindingInfo, ReadOnlyCollection<Expression> arguments)
-            : base(annotations, ExpressionType.Invoke, returnType, bindingInfo) {
+            : base(ExpressionType.Invoke, returnType, annotations, bindingInfo) {
             if (IsBound) {
                 RequiresBound(lambda, "lambda");
                 RequiresBoundItems(arguments, "arguments");
@@ -72,7 +72,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static InvocationExpression Invoke(Expression expression, Annotations annotations, IEnumerable<Expression> arguments) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
 
             Type delegateType = expression.Type;
             if (delegateType == typeof(Delegate)) {
@@ -96,7 +96,7 @@ namespace System.Linq.Expressions {
             for (int i = 0, n = argList.Count; i < n; i++) {
                 Expression arg = argList[i];
                 ParameterInfo p = pis[i];
-                ContractUtils.RequiresNotNull(arg, "arguments");
+                RequiresCanRead(arg, "arguments");
                 Type pType = p.ParameterType;
                 if (pType.IsByRef) {
                     pType = pType.GetElementType();
@@ -135,9 +135,9 @@ namespace System.Linq.Expressions {
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
         public static InvocationExpression Invoke(Annotations annotations, Type returnType, Expression expression, OldCallAction bindingInfo, params Expression[] arguments) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.RequiresNotNullItems(arguments, "arguments");
+            RequiresCanRead(arguments, "arguments");
 
             // Validate ArgumentInfos. For now, excludes the target expression.
             // This needs to be reconciled with MethodCallExpression
@@ -156,9 +156,9 @@ namespace System.Linq.Expressions {
         }
 
         public static InvocationExpression Invoke(Annotations annotations, Type returnType, Expression expression, CallSiteBinder binder, params Expression[] arguments) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(binder, "binder");
-            ContractUtils.RequiresNotNullItems(arguments, "arguments");
+            RequiresCanRead(arguments, "arguments");
 
             return new InvocationExpression(annotations, expression, returnType, binder, arguments.ToReadOnly());
         }

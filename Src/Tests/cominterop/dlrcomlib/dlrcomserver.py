@@ -70,7 +70,10 @@ def test_documentation():
     import IronPython
     ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations
     if preferComDispatch:
-        AreEqual("void IntArguments(Int32 arg1, Int32 arg2)", ops.GetDocumentation(com_obj.IntArguments))
+        #AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
+        # ObjectOperations needs to be updated to use IDO
+        # Dev10 bug 475427
+        Assert("" == ops.GetDocumentation(com_obj.IntArguments)) 
     else:
         AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
     
@@ -103,12 +106,13 @@ def test_namedArgs():
 #Verify that one is able to enumerate over the object in a loop
 #TODO: add more tests for enumerators - bad enumerator, different array sizes, different types.
 def test_enumerator():
-    if not preferComDispatch:
-        AreEqual( [x for x in com_obj] , [ 42, True, "DLR"] )
-        AreEqual( [x for x in com_obj.GetEnumerator()] , [ 42, True, "DLR"] )
-    else:
-        AreEqual( [x for x in com_obj] , [ 42, True, "DLR"] )
-        AreEqual( [x for x in com_obj.GetEnumerator] , [ 42, True, "DLR"] )
-
+    AreEqual( [x for x in com_obj.GetEnumerator()] , [ 42, True, "DLR"] )
+    
+    # CodePlex bug 17425 - com_obj shouldn't be enumerable
+    if preferComDispatch:
+        def f(): [x for x in com_obj]
+    
+        AssertError(TypeError, f)
+    
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

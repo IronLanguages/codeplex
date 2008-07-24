@@ -16,9 +16,10 @@
 using System;
 using System.IO;
 using System.Scripting;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
-using IronPython.Runtime.Binding;
+
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
@@ -70,8 +71,9 @@ namespace IronPython.Runtime {
                 return;
             }
 
-            if (PythonOps.HasAttr(DefaultContext.Default, Sink, SymbolTable.StringToId("flush"))) {
-                PythonOps.Invoke(Sink, SymbolTable.StringToId("flush"));
+            CodeContext ctx = new CodeContext(new Scope(), _context);
+            if (PythonOps.HasAttr(ctx, Sink, SymbolTable.StringToId("flush"))) {
+                PythonOps.Invoke(ctx, Sink, SymbolTable.StringToId("flush"));
             }
         }
     }

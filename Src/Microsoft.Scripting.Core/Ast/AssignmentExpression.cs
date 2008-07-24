@@ -37,7 +37,7 @@ namespace System.Linq.Expressions {
         }
 
         internal AssignmentExpression(Annotations annotations, Expression expression, Expression value, Type result, CallSiteBinder bindingInfo)
-            : base(annotations, ExpressionType.Assign, result, bindingInfo) {
+            : base(ExpressionType.Assign, result, annotations, bindingInfo) {
             if (IsBound) {
                 RequiresBound(expression, "expression");
                 RequiresBound(value, "value");
@@ -73,7 +73,13 @@ namespace System.Linq.Expressions {
         /// Performs an assignment variable = value
         /// </summary>
         public static AssignmentExpression Assign(Expression left, Expression right, Annotations annotations) {
-            CheckLeftValue(left, right);
+            RequiresCanWrite(left, "left");
+            RequiresCanRead(right, "right");
+            TypeUtils.ValidateType(left.Type);
+            TypeUtils.ValidateType(right.Type);
+            if (!TypeUtils.AreReferenceAssignable(left.Type, right.Type)) {
+                throw Error.ExpressionTypeDoesNotMatchAssignment(right.Type, left.Type);
+            }
             return new AssignmentExpression(annotations, left, right);
         }
 
@@ -87,8 +93,7 @@ namespace System.Linq.Expressions {
         /// <param name="value">Value to set this field to.</param>
         /// <returns>New instance of Member expression</returns>
         public static AssignmentExpression AssignField(Expression expression, FieldInfo field, Expression value) {
-            CheckField(field, expression, value);
-            return new AssignmentExpression(Annotations.Empty, new MemberExpression(Annotations.Empty, field, expression, field.FieldType, null), value);
+            return Assign(Field(expression, field), value);
         }
 
         /// <summary>
@@ -101,29 +106,18 @@ namespace System.Linq.Expressions {
         /// <param name="value">Value to set this property to.</param>
         /// <returns>New instance of the MemberExpression.</returns>
         public static AssignmentExpression AssignProperty(Expression expression, PropertyInfo property, Expression value) {
-            CheckProperty(property, expression, value);
-            return new AssignmentExpression(Annotations.Empty, new MemberExpression(Annotations.Empty, property, expression, property.PropertyType, null), value);
+            return Assign(Property(expression, property), value);
         }
 
         public static AssignmentExpression AssignArrayIndex(Expression array, Expression index, Expression value) {
-            ContractUtils.RequiresNotNull(array, "array");
-            ContractUtils.RequiresNotNull(index, "index");
-            ContractUtils.RequiresNotNull(value, "value");
-            ContractUtils.Requires(index.Type == typeof(int), "index", Strings.ArrayIndexMustBeInt);
-
-            Type arrayType = array.Type;
-            ContractUtils.Requires(arrayType.IsArray, "array", Strings.ArrayArgumentMustBeArray);
-            ContractUtils.Requires(arrayType.GetArrayRank() == 1, "index", Strings.IncorrectIndicesCount);
-            ContractUtils.Requires(value.Type == arrayType.GetElementType(), "value", Strings.ValueTypeMustMatchElementType);
-
-            return new AssignmentExpression(Annotations.Empty, new BinaryExpression(Annotations.Empty, ExpressionType.ArrayIndex, array, index, array.Type.GetElementType()), value);
+            return Assign(ArrayIndex(array, index), value);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static AssignmentExpression AssignArrayIndex(Expression array, Expression index, Expression value, Type result, CallSiteBinder bindingInfo, Annotations annotations) {
-            ContractUtils.RequiresNotNull(array, "array");
-            ContractUtils.RequiresNotNull(index, "index");
-            ContractUtils.RequiresNotNull(value, "value");
+            RequiresCanRead(array, "array");
+            RequiresCanRead(index, "index");
+            RequiresCanRead(value, "value");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
 
             // TODO: don't pass bindinginfo to nested MemberExpression
@@ -141,49 +135,13 @@ namespace System.Linq.Expressions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static AssignmentExpression SetMember(Expression expression, Type result, OldSetMemberAction bindingInfo, Expression value, Annotations annotations) {
-            ContractUtils.RequiresNotNull(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.RequiresNotNull(expression, "value");
+        public static AssignmentExpression SetMember(Expression expression, Type result, OldSetMemberAction binder, Expression value, Annotations annotations) {
+            RequiresCanRead(expression, "expression");
+            ContractUtils.RequiresNotNull(binder, "binder");
+            RequiresCanRead(value, "value");
 
             // TODO: don't pass bindinginfo to nested MemberExpression
-            return new AssignmentExpression(annotations, new MemberExpression(Annotations.Empty, null, expression, expression.Type, bindingInfo), value, result, bindingInfo);
-        }
-
-        internal static void CheckLeftValue(Expression left, Expression right) {
-            ContractUtils.RequiresNotNull(left, "left");
-            ContractUtils.RequiresNotNull(right, "right");
-
-            switch (left.NodeType) {
-                case ExpressionType.Variable:
-                case ExpressionType.Parameter:
-                case ExpressionType.ArrayIndex:
-                    ContractUtils.Requires(TypeUtils.CanAssign(left.Type, right), "right", Strings.RhsMustBeAssignableToLhs);
-                    return;
-                case ExpressionType.MemberAccess:
-                    MemberExpression me = (MemberExpression)left;
-                    MemberInfo mi = me.Member;
-                    if (mi.MemberType == MemberTypes.Field) {
-                        CheckField((FieldInfo)mi, me.Expression, right);
-                        return;
-                    } else if (mi.MemberType == MemberTypes.Property) {
-                        CheckProperty((PropertyInfo)mi, me.Expression, right);
-                        return;
-                    }
-                    break;
-                case ExpressionType.IndexedProperty:
-                    IndexedPropertyExpression ip = (IndexedPropertyExpression)left;
-                    CheckPropertySet(ip.SetMethod, ip.Object, right);
-                    return;
-                case ExpressionType.Extension:
-                    // Allow reduicble nodes to be lvalues
-                    // TODO: can we do some check that it is in fact a valid lvalue?
-                    return;
-                default:
-                    break;
-            }
-
-            throw Error.LhsUnassignable();
+            return new AssignmentExpression(annotations, new MemberExpression(expression, null, null, expression.Type, true, false, binder), value, result, binder);
         }
     }
 }

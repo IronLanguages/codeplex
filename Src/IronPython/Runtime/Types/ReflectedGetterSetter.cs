@@ -17,11 +17,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -81,7 +84,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal object CallGetter(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object instance, object[] args) {
+        internal object CallGetter(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object instance, object[] args) {
             if (NeedToReturnProperty(instance, Getter)) {
                 return this;
             }
@@ -93,7 +96,7 @@ namespace IronPython.Runtime.Types {
             return CallTarget(context, storage, _getter, instance, args);
         }
 
-        internal object CallTarget(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, MethodInfo[] targets, object instance, params object[] args) {
+        internal object CallTarget(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, MethodInfo[] targets, object instance, params object[] args) {
             BuiltinFunction target = PythonTypeOps.GetBuiltinFunction(DeclaringType, __name__, targets);
 
             return target.Call(context, storage, instance, args);
@@ -114,7 +117,7 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        internal bool CallSetter(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object instance, object[] args, object value) {
+        internal bool CallSetter(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object instance, object[] args, object value) {
             if (NeedToReturnProperty(instance, Setter)) {
                 return false;
             }

@@ -27,7 +27,6 @@ ip_supported_encodings += ['Cp1252', 'asciI', 'uTF-8']
 #add in a few encodings with '-'s removed
 ip_supported_encodings += ['latin1', 'utf-16le', 'utf8']
 #replace '-'s with whitespace
-#--CodePlex 7276
-#ip_supported_encodings += ['unicode escape', 'utf 16 be']
+ip_supported_encodings += ['unicode escape', 'utf 16 be']
 
 #------------------------------------------------------------------------------

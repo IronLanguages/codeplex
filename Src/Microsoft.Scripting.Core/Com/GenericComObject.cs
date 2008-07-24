@@ -45,8 +45,7 @@ namespace System.Scripting.Com {
         #endregion
 
         public override MetaObject GetMetaObject(Expression parameter) {
-            // Fallback to the language on everything
-            return new MetaObject(parameter, Restrictions.Empty);
+            return new GenericComMetaObject(parameter, Restrictions.Empty, this);
         }
     }
 }

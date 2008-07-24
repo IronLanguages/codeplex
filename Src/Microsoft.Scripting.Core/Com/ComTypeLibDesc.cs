@@ -65,8 +65,9 @@ namespace System.Scripting.Com {
         /// </summary>
         /// <param name="typeLibGuid">Type Library Guid</param>
         /// <returns>ComTypeLibDesc object</returns>
+        [System.Runtime.Versioning.ResourceExposure(System.Runtime.Versioning.ResourceScope.Machine)]
+        [System.Runtime.Versioning.ResourceConsumption(System.Runtime.Versioning.ResourceScope.Machine, System.Runtime.Versioning.ResourceScope.Machine)]
         public static ComTypeLibInfo CreateFromGuid(Guid typeLibGuid) {
-
             // passing majorVersion = -1, minorVersion = -1 will always
             // load the latest typelib
             ComTypes.ITypeLib typeLib = ComRuntimeHelpers.UnsafeNativeMethods.LoadRegTypeLib(ref typeLibGuid, -1, -1, 0);

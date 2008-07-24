@@ -817,9 +817,7 @@ def test_int_minvalue():
     AreEqual(type(-2147483648), int)
     AreEqual(type(-(2147483648)), long)
     AreEqual(type(-2147483648L), long)
-    #CodePlex Work Item #10582
-    if sys.platform=="win32":
-        AreEqual(type(-0x80000000), int)
+    AreEqual(type(-0x80000000), int)
     
     AreEqual(type(int('-2147483648')), int)
     AreEqual(type(int('-80000000', 16)), int)

@@ -18,8 +18,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Compilers;
+
 using IronPython.Runtime;
+
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -73,13 +76,6 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        /// <summary>
-        /// Interactive code: expression statements print their value.
-        /// </summary>
-        public bool PrintExpressions {
-            get { return _printExpressions; }
-        }
-        
         public Statement Body {
             get { return _body; }
         }
@@ -170,13 +166,14 @@ namespace IronPython.Compiler.Ast {
 
             ag.Block.Body = Ast.Block(
                 Ast.Call(
-                    AstGenerator.GetHelperMethod("FlowLanguageFeatures"),
+                    AstGenerator.GetHelperMethod("ModuleStarted"),
                     Ast.CodeContext(),
+                    Ast.Constant(ag.BinderState, typeof(object)),
                     Ast.Constant(_languageFeatures)
                 ),
                 Ast.Assign(ag.LineNumberExpression, Ast.Constant(0)),
                 Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
-                ag.WrapScopeStatements(Transform(ag))
+                ag.WrapScopeStatements(Transform(ag))   // new ComboActionRewriter().VisitNode(Transform(ag))
             );
             if (_isModule) {
                 Debug.Assert(pco.ModuleName != null);

@@ -85,7 +85,7 @@ namespace IronPython.Modules {
                 return module.Scope;
             }
 
-            int type = Converter.ConvertToInt32(description[2]);
+            int type = PythonContext.GetContext(context).ConvertToInt32(description[2]);
             switch (type) {
                 case PythonSource:
                     return LoadPythonSource(pythonContext, name, file, filename);

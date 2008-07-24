@@ -28,28 +28,28 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
-            Restrictions restrictions =
-                Restrictions.Combine(
-                    args
-                ).Merge(
-                    Restrictions.TypeRestriction(
-                        Expression, typeof(ComTypeLibDesc)
-                    )
-                ).Merge(
-                    Restrictions.ExpressionRestriction(
-                        Expression.Equal(
-                            Expression.Property(
-                                Expression.ConvertHelper(
-                                    Expression, typeof(ComTypeLibDesc)
-                                ),
-                                typeof(ComTypeLibDesc).GetProperty("Guid")
-                            ),
-                            Expression.Constant(_lib.Guid.ToString())
-                        )
-                    )
-                );
-
             if (_lib.HasMember(action.Name)) {
+                Restrictions restrictions =
+                    Restrictions.Combine(
+                        args
+                    ).Merge(
+                        Restrictions.TypeRestriction(
+                            Expression, typeof(ComTypeLibDesc)
+                        )
+                    ).Merge(
+                        Restrictions.ExpressionRestriction(
+                            Expression.Equal(
+                                Expression.Property(
+                                    Expression.ConvertHelper(
+                                        Expression, typeof(ComTypeLibDesc)
+                                    ),
+                                    typeof(ComTypeLibDesc).GetProperty("Guid")
+                                ),
+                                Expression.Constant(_lib.Guid.ToString())
+                            )
+                        )
+                    );
+
                 return new MetaObject(
                     Expression.Call(
                         Expression.ConvertHelper(Expression, typeof(ComTypeLibDesc)),
@@ -58,13 +58,9 @@ namespace System.Scripting.Com {
                     ),
                     restrictions
                 );
-            } else {
-                return new ErrorMetaObject(
-                    typeof(MissingMemberException),
-                    "No member " + action.Name,
-                    restrictions
-                );
             }
+
+            return base.GetMember(action, args);
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
@@ -80,11 +76,7 @@ namespace System.Scripting.Com {
                     );
 
                 default:
-                    return new ErrorMetaObject(
-                        typeof(NotSupportedException),
-                        "Not supported: " + action.Operation,
-                        Restrictions.Combine(args)
-                    );
+                    return base.Operation(action, args);
             }
         }
     }

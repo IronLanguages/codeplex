@@ -20,6 +20,8 @@ using System.Scripting.Actions;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
 
+using Microsoft.Scripting.Generation;
+
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -28,7 +30,6 @@ using Utils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using Microsoft.Scripting.Generation;
 
     partial class MetaUserObject : MetaPythonObject {
         
@@ -374,6 +375,7 @@ namespace IronPython.Runtime.Binding {
                     new CallSignature(1)
                 ),
                 typeof(object),
+                BinderState.GetCodeContext(info.Action),
                 info.Result,
                 Ast.Constant(info.Action.Name)
             );
@@ -450,7 +452,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Constant(info.Action.Name),
                         Ast.Constant(slot, typeof(PythonTypeSlot)),
                         Ast.Constant(getattr, typeof(PythonTypeSlot)),
-                        Ast.Constant(new SiteLocalStorage<CallSite<DynamicSiteTarget<object, string, object>>>())
+                        Ast.Constant(new SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, string, object>>>())
                     ),
                     self.Restrictions
                 ),
@@ -502,6 +504,7 @@ namespace IronPython.Runtime.Binding {
                         new CallSignature(2)
                     ),
                     typeof(object),
+                    BinderState.GetCodeContext(bindingInfo.Action),
                     tmp,
                     Ast.Constant(bindingInfo.Action.Name),
                     bindingInfo.Args[1].Expression
@@ -687,6 +690,7 @@ namespace IronPython.Runtime.Binding {
                         new CallSignature(1)
                     ),
                     typeof(object),
+                    BinderState.GetCodeContext(info.Action),
                     tmp,
                     Ast.Constant(info.Action.Name)
                 )

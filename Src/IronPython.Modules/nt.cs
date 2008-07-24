@@ -117,6 +117,9 @@ namespace IronPython.Modules {
         }
 
         public static object fdopen(CodeContext/*!*/ context, int fd, string mode, int bufsize) {
+            // check for a valid file mode...
+            PythonFile.ValidateMode(mode);
+
             PythonContext pythonContext = PythonContext.GetContext(context);
             PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
             return pf;
@@ -203,6 +206,10 @@ namespace IronPython.Modules {
                 if (fs.CanRead && fs.CanWrite) mode2 = "w+";
                 else if (fs.CanWrite) mode2 = "w";
                 else mode2 = "r";
+
+                if ((flag & O_BINARY) != 0) {
+                    mode2 += "b";
+                }
 
                 return PythonContext.GetContext(context).FileManager.AddToStrongMapping(PythonFile.Create(context, fs, filename, mode2));
             } catch (Exception e) {
@@ -499,7 +506,7 @@ namespace IronPython.Modules {
                 nlink = 0;
             }
 
-            public stat_result(ISequence statResult, [DefaultParameterValue(null)]object dict) {
+            public stat_result(CodeContext/*!*/ context, ISequence statResult, [DefaultParameterValue(null)]object dict) {
                 // dict is allowed by CPython's stat_result, but doesn't seem to do anything, so we ignore it here.
 
                 if (statResult.__len__() < 10) {
@@ -510,8 +517,8 @@ namespace IronPython.Modules {
                 this.ino = Converter.ConvertToBigInteger(statResult[1]);
                 this.dev = Converter.ConvertToBigInteger(statResult[2]);
                 this.nlink = Converter.ConvertToBigInteger(statResult[3]);
-                this.uid = Converter.ConvertToInt32(statResult[4]);
-                this.gid = Converter.ConvertToInt32(statResult[5]);
+                this.uid = PythonContext.GetContext(context).ConvertToInt32(statResult[4]);
+                this.gid = PythonContext.GetContext(context).ConvertToInt32(statResult[5]);
                 this.size = Converter.ConvertToBigInteger(statResult[6]);
                 this.atime = Converter.ConvertToBigInteger(statResult[7]);
                 this.mtime = Converter.ConvertToBigInteger(statResult[8]);

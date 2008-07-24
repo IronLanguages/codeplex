@@ -20,38 +20,14 @@ using System.Diagnostics;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
+
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
+
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
-    // Since this uses [SpecialName] and the method binder, it must be publicly visible.
-    // This is conceptually nested in ArrayOps, but publicly visible types shouldn't be nested.
-    public class ArrayCallSlot : PythonTypeSlot {
-        private PythonType _type;
-
-        public ArrayCallSlot() { }
-
-        public ArrayCallSlot(PythonType type) {
-            _type = type;
-        }
-
-        internal override bool TryGetBoundValue(CodeContext context, object instance, PythonType owner, out object value) {
-            value = new ArrayCallSlot((PythonType)owner);
-            return true;
-        }
-
-        [SpecialName]
-        public object Call(CodeContext context, object sequence) {
-            return ArrayOps.__new__(context, _type, sequence);
-        }
-    }
-
     public static class ArrayOps {
         #region Python APIs
-
-        [SlotField, SpecialName]
-        public static readonly PythonTypeSlot Call = new ArrayCallSlot();
 
         [SpecialName]
         public static Array Add(Array data1, Array data2) {
@@ -77,13 +53,13 @@ namespace IronPython.Runtime.Operations {
             Array res = Array.CreateInstance(type, items.Count);
 
             int i = 0;
-            foreach(object item in items) {
+            foreach (object item in items) {
                 res.SetValue(Converter.Convert(item, type), i++);
             }
 
             return res;
         }
-        
+
         [StaticExtensionMethod]
         public static object __new__(CodeContext context, PythonType pythonType, object items) {
             Type type = pythonType.UnderlyingSystemType.GetElementType();
@@ -92,7 +68,7 @@ namespace IronPython.Runtime.Operations {
             if (!PythonOps.TryGetBoundAttr(items, Symbols.Length, out lenFunc))
                 throw PythonOps.TypeErrorForBadInstance("expected object with __len__ function, got {0}", items);
 
-            int len = Converter.ConvertToInt32(PythonOps.CallWithContext(context, lenFunc));
+            int len = PythonContext.GetContext(context).ConvertToInt32(PythonOps.CallWithContext(context, lenFunc));
 
             Array res = Array.CreateInstance(type, len);
 
@@ -258,7 +234,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Internal APIs
 
-       
+
         /// <summary>
         /// Multiply two object[] arrays - internal version used for objects backed by arrays
         /// </summary>
@@ -310,7 +286,7 @@ namespace IronPython.Runtime.Operations {
             slice.indices(data.Length, out start, out stop, out step);
 
             if (step == 1) return GetSlice(data, start, stop);
-            
+
             int size = GetSliceSize(start, stop, step);
             if (size <= 0) return ArrayUtils.EmptyObjects;
 
@@ -330,7 +306,7 @@ namespace IronPython.Runtime.Operations {
             if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
                 if (data.GetType().GetElementType() == typeof(object))
                     return ArrayUtils.EmptyObjects;
-                
+
                 return Array.CreateInstance(data.GetType().GetElementType(), 0);
             }
 
@@ -339,7 +315,7 @@ namespace IronPython.Runtime.Operations {
                 Array ret = Array.CreateInstance(data.GetType().GetElementType(), n);
                 Array.Copy(data, start + data.GetLowerBound(0), ret, 0, n);
                 return ret;
-            } else {                
+            } else {
                 int n = GetSliceSize(start, stop, step);
                 Array ret = Array.CreateInstance(data.GetType().GetElementType(), n);
                 int ri = 0;
@@ -353,36 +329,7 @@ namespace IronPython.Runtime.Operations {
         private static int GetSliceSize(int start, int stop, int step) {
             // could cause overflow (?)
             return step > 0 ? (stop - start + step - 1) / step : (stop - start + step + 1) / step;
-        }
-
-        internal static object GetIndex(Array a, object index) {
-            int iindex;
-
-            if (index is int) {
-                iindex = (int)index;
-                return a.GetValue(PythonOps.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
-            }
-
-            IParameterSequence ituple = index as IParameterSequence;
-            if (ituple != null && ituple.IsExpandable) {
-                int[] indices = TupleToIndices(a, ((IList<object>)ituple));
-                for (int i = 0; i < indices.Length; i++) indices[i] += a.GetLowerBound(i);
-
-                return a.GetValue(indices);
-            }
-
-            Slice slice = index as Slice;
-            if (slice != null) {
-                return GetSlice(a, a.Length, slice);
-            }
-
-            // last-ditch effort, try it as a a converted int (this can throw & catch an exception)
-            if (Converter.TryConvertToInt32(index, out iindex)) {
-                return a.GetValue(PythonOps.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
-            }
-
-            throw PythonOps.TypeErrorForBadInstance("bad array index: {0}", index);
-        }
+        }        
 
         internal static object[] CopyArray(object[] data, int newSize) {
             if (newSize == 0) return ArrayUtils.EmptyObjects;

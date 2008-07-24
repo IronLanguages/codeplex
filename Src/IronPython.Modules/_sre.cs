@@ -15,6 +15,7 @@
 
 using System;
 using IronPython.Runtime;
+using System.Scripting.Runtime;
 
 #if !SILVERLIGHT    // System.Text.RegularExpressions
 [assembly: PythonModule("_sre", typeof(IronPython.Modules.PythonSRegEx))]
@@ -23,9 +24,9 @@ namespace IronPython.Modules {
         public const int MAGIC = 20031017;
         public const int CODESIZE = 2;
 
-        public static object getlower(object val, object encoding) {
-            int encInt = Converter.ConvertToInt32(val);
-            int charVal = Converter.ConvertToInt32(val);
+        public static object getlower(CodeContext/*!*/ context, object val, object encoding) {
+            int encInt = PythonContext.GetContext(context).ConvertToInt32(val);
+            int charVal = PythonContext.GetContext(context).ConvertToInt32(val);
 
             if (encInt == (int)PythonRegex.UNICODE) {
                 return (int)Char.ToLower((char)charVal);

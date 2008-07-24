@@ -70,7 +70,13 @@ namespace IronPython.Runtime {
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {
-            List<KeyValuePair<object, object>> res = base.GetItems();
+            List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>();
+
+            foreach (KeyValuePair<object, object> kvp in base.GetItems()) {
+                if (kvp.Value != Uninitialized.Instance) {
+                    res.Add(kvp);
+                }
+            }
 
             MemberInfo[] members = _type.GetMembers();
             foreach (MemberInfo mi in members) {

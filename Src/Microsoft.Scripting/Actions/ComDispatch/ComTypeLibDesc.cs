@@ -61,10 +61,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// <param name="typeLibGuid">Type Library Guid</param>
         /// <returns>ComTypeLibDesc object</returns>
         public static ComTypeLibInfo CreateFromGuid(Guid typeLibGuid) {
-            if (!GlobalDlrOptions.PreferComDispatch) {
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-            }
-            
             // passing majorVersion = -1, minorVersion = -1 will always
             // load the latest typelib
             ComTypes.ITypeLib typeLib = ComRuntimeHelpers.UnsafeNativeMethods.LoadRegTypeLib(ref typeLibGuid, -1, -1, 0);
@@ -81,10 +77,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// <param name="rcw">OLE automation compatible RCW</param>
         /// <returns>ComTypeLibDesc object</returns>
         public static ComTypeLibInfo CreateFromObject(object rcw) {
-            if (GlobalDlrOptions.PreferComDispatch == false) {
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-            }
-            
             if (Marshal.IsComObject(rcw) == false) {
                 throw new ArgumentException("COM object is expected");
             }

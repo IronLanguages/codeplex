@@ -57,19 +57,19 @@ def wd_selection_change_eventhandler(range):
     #print "selected range - ", range.Start, range.End
 
 def add_wordapp_event(wdapp):
-    if isPiaInstalled : 
+    if isPiaInstalled and not preferComDispatch: 
         wdapp.WindowSelectionChange += wd_selection_change_eventhandler
     else: 
         wdapp.Event_WindowSelectionChange += wd_selection_change_eventhandler
 
 def remove_wordapp_event(wdapp):
-    if isPiaInstalled : 
+    if isPiaInstalled  and not preferComDispatch: 
         wdapp.WindowSelectionChange -= wd_selection_change_eventhandler
     else: 
         wdapp.Event_WindowSelectionChange -= wd_selection_change_eventhandler
     
 def get_range(doc, start, end):
-    if isPiaInstalled : 
+    if isPiaInstalled and not preferComDispatch: 
         return doc.Range(start, end)[0]
     else: 
         return doc.Range(start, end)
@@ -165,7 +165,7 @@ def test_wordevents():
     # running "tlbimp" for Word is VERY expensive and usually fails
     # let's disable the scenarios when Ipy attempts to generate
     # an interop assembly on the fly i.e. when there is no PIA
-    # and no -X:PreferComDispatch
+    # and -X:PreferComInteropAssembly
     if not isPiaInstalled and not preferComDispatch:
         print "Prefer COM dispatch is required when Word PIA is not installed!!!"
         return
@@ -195,10 +195,10 @@ def test_spellChecker():
     suggestions = word.GetSpellingSuggestions("waht")
     Assert(suggestions.Count > 5)
     # This tests for enumeration support over COM objects
-    suggestions = [s.Name for s in suggestions] 
+    suggestions = [s.Name for s in suggestions.GetEnumerator()] 
     # Check to see that some expected suggestions actually exist
-    Assert("what" in suggestions)
-    Assert("with" in suggestions)
+    Assert("what" in suggestions.GetEnumerator())
+    Assert("with" in suggestions.GetEnumerator())
 
 #------------------------------------------------------------------------------
 try:

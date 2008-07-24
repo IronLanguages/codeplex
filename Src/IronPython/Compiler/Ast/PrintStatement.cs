@@ -67,7 +67,7 @@ namespace IronPython.Compiler.Ast {
 
                 // Store destination in a temp, if we have one
                 if (destination != null) {
-                    MSAst.VariableExpression temp = ag.MakeTempExpression("destination");
+                    MSAst.VariableExpression temp = ag.GetTemporary("destination");
 
                     statements.Add(
                         AstGenerator.MakeAssignment(temp, destination)

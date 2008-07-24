@@ -3061,4 +3061,21 @@ def test_isinstance_recursion():
 
     sys.setrecursionlimit(reclimit)
 
+def test_metaclass_base_search():
+    class MetaClass(type):
+        def __init__(cls, clsname, bases, dict):
+            setattr(cls, "attr_%s" % clsname, "attribute set on %s by MetaClass" % clsname)
+            super(MetaClass, cls).__init__(clsname, bases, dict)
+    
+    class Mixin(object):
+        __metaclass__ = MetaClass
+    
+    class Parent(object):
+        pass
+    
+    class Child(Parent, Mixin):
+        pass
+        
+    AreEqual(Child.attr_Child, 'attribute set on Child by MetaClass')
+
 run_test(__name__)

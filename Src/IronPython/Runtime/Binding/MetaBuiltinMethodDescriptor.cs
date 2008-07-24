@@ -16,7 +16,10 @@
 using System;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
+
+using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
@@ -24,18 +27,37 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using System.Scripting.Generation;
-    using Microsoft.Scripting.Generation;
 
-    class MetaBuiltinMethodDescriptor : MetaPythonObject {
+    class MetaBuiltinMethodDescriptor : MetaPythonObject, IPythonInvokable {
         public MetaBuiltinMethodDescriptor(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinMethodDescriptor/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
+        #region IPythonInvokable Members
+
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
         #region MetaObject Overrides
 
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
+        }
+
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+            // TODO: Context should come from BuiltinFunction
+            return InvokeWorker(call, BinderState.GetCodeContext(call), args);
+        }
+
+        #endregion
+
+        #region Invoke Implementation
+
+        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
             args = ArrayUtils.RemoveFirst(args);
 
             CallSignature signature = BindingHelpers.GetCallSignature(call);
@@ -61,10 +83,10 @@ namespace IronPython.Runtime.Binding {
             BinderState state = BinderState.GetBinderState(call);
 
             MetaObject res = state.Binder.CallMethod(
-                Ast.Constant(state.Context),
-                Value.Template.Targets, 
-                args, 
-                signature, 
+                codeContext,
+                Value.Template.Targets,
+                args,
+                signature,
                 selfRestrict,
                 NarrowingLevel.None,
                 Value.Template.IsBinaryOperator ?

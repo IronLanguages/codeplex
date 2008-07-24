@@ -38,7 +38,7 @@ namespace System.Scripting.Actions {
             _hasValue = true;
         }
 
-        public virtual Expression Expression {
+        public Expression Expression {
             get {
                 return _expression;
             }

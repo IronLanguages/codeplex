@@ -19,8 +19,9 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime.Types {
+namespace IronPython.Runtime.Operations {
     public static class PythonAssemblyOps {
         private static readonly Dictionary<Assembly, TopNamespaceTracker> assemblyMap = new Dictionary<Assembly, TopNamespaceTracker>();
 
@@ -72,7 +73,7 @@ namespace IronPython.Runtime.Types {
                 reflectedAssembly = new TopNamespaceTracker(context.LanguageContext.DomainManager);
                 if (reflectedAssembly.LoadAssembly(assem)) {
 #if !SILVERLIGHT
-                    Microsoft.Scripting.Actions.ComDispatch.ComObjectWithTypeInfo.PublishComTypes(assem);
+                    System.Scripting.Com.ComObjectWithTypeInfo.PublishComTypes(assem);
 #endif
                 }
                 assemblyMap[assem] = reflectedAssembly;

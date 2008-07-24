@@ -20,7 +20,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _val;
 
         internal ThrowStatement(Annotations annotations, Expression value)
-            : base(annotations, ExpressionType.ThrowStatement, typeof(void)) {
+            : base(ExpressionType.ThrowStatement, typeof(void), annotations, null) {
             _val = value;
         }
 
@@ -48,7 +48,12 @@ namespace System.Linq.Expressions {
 
         public static ThrowStatement Throw(Expression value, Annotations annotations) {
             if (value != null) {
-                ContractUtils.Requires(TypeUtils.CanAssign(typeof(Exception), value.Type));
+                RequiresCanRead(value, "value");
+                ContractUtils.Requires(
+                    TypeUtils.AreReferenceAssignable(typeof(Exception), value.Type),
+                    "value",
+                    Strings.ArgumentMustBeException
+                );
             }
             return new ThrowStatement(annotations, value);
         }

@@ -45,6 +45,7 @@ namespace IronPython.Runtime.Types {
         ISerializable,
         IWeakReferenceable,
         IMembersList,
+        IDynamicObject,
         IOldDynamicObject
     {
 
@@ -60,12 +61,12 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        public OldInstance(OldClass _class) {
+        public OldInstance(CodeContext/*!*/ context, OldClass _class) {
             __class__ = _class;
             __dict__ = MakeDictionary(_class);
             if (__class__.HasFinalizer) {
                 // class defines finalizer, we get it automatically.
-                AddFinalizer();
+                AddFinalizer(context);
             }
         }
 
@@ -130,8 +131,8 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        public IEnumerator GetEnumerator() {
-            return PythonOps.GetEnumeratorForIteration(this);
+        public IEnumerator GetEnumerator() {            
+            return PythonOps.GetEnumeratorForIteration(DefaultContext.Default, this);
         }
 
 
@@ -613,7 +614,7 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (TryGetBoundCustomMember(context, Symbols.DivMod, out value)) {
-                return PythonCalls.Call(value, divmod);
+                return PythonCalls.Call(context, value, divmod);
             }
 
 
@@ -625,7 +626,7 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (self.TryGetBoundCustomMember(context, Symbols.ReverseDivMod, out value)) {
-                return PythonCalls.Call(value, divmod);
+                return PythonCalls.Call(context, value, divmod);
             }
 
             return NotImplementedType.Value;
@@ -635,7 +636,7 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (TryGetBoundCustomMember(context, Symbols.Coerce, out value)) {
-                return PythonCalls.Call(value, other);
+                return PythonCalls.Call(context, value, other);
             }
 
             return NotImplementedType.Value;
@@ -663,12 +664,12 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object GetItem(CodeContext context, object item) {
-            return PythonOps.InvokeWithContext(context, this, Symbols.GetItem, item);
+            return PythonOps.Invoke(context, this, Symbols.GetItem, item);
         }
 
         [SpecialName]
         public void SetItem(CodeContext context, object item, object value) {
-            PythonOps.InvokeWithContext(context, this, Symbols.SetItem, item, value);
+            PythonOps.Invoke(context, this, Symbols.SetItem, item, value);
         }
 
         [SpecialName]
@@ -676,7 +677,7 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (TryGetBoundCustomMember(context, Symbols.DelItem, out value)) {
-                return PythonCalls.Call(value, item);
+                return PythonCalls.Call(context, value, item);
             }
 
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.DelItem);
@@ -685,9 +686,9 @@ namespace IronPython.Runtime.Types {
         public object __getslice__(CodeContext context, int i, int j) {
             object callable;
             if (TryRawGetAttr(context, Symbols.GetSlice, out callable)) {
-                return PythonCalls.Call(callable, i, j);
+                return PythonCalls.Call(context, callable, i, j);
             } else if (TryRawGetAttr(context, Symbols.GetItem, out callable)) {
-                return PythonCalls.Call(callable, new Slice(i, j));
+                return PythonCalls.Call(context, callable, new Slice(i, j));
             }
 
             throw PythonOps.TypeError("instance {0} does not have __getslice__ or __getitem__", __class__.Name);
@@ -696,10 +697,10 @@ namespace IronPython.Runtime.Types {
         public void __setslice__(CodeContext context, int i, int j, object value) {
             object callable;
             if (TryRawGetAttr(context, Symbols.SetSlice, out callable)) {
-                PythonCalls.Call(callable, i, j, value);
+                PythonCalls.Call(context, callable, i, j, value);
                 return;
             } else if (TryRawGetAttr(context, Symbols.SetItem, out callable)) {
-                PythonCalls.Call(callable, new Slice(i, j), value);
+                PythonCalls.Call(context, callable, new Slice(i, j), value);
                 return;
             }
 
@@ -709,9 +710,9 @@ namespace IronPython.Runtime.Types {
         public object __delslice__(CodeContext context, int i, int j) {
             object callable;
             if (TryRawGetAttr(context, Symbols.DeleteSlice, out callable)) {
-                return PythonCalls.Call(callable, i, j);
+                return PythonCalls.Call(context, callable, i, j);
             } else if (TryRawGetAttr(context, Symbols.DelItem, out callable)) {
-                return PythonCalls.Call(callable, new Slice(i, j));
+                return PythonCalls.Call(context, callable, new Slice(i, j));
             }
 
             throw PythonOps.TypeError("instance {0} does not have __delslice__ or __delitem__", __class__.Name);
@@ -761,12 +762,12 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (TryGetBoundCustomMember(context, Symbols.Contains, out value)) {
-                return PythonCalls.Call(value, index);
+                return PythonCalls.Call(context, value, index);
             }
 
             IEnumerator ie = PythonOps.GetEnumerator(this);
             while (ie.MoveNext()) {
-                if (PythonOps.EqualRetBool(ie.Current, index)) return RuntimeHelpers.True;
+                if (PythonOps.EqualRetBool(context, ie.Current, index)) return RuntimeHelpers.True;
             }
 
             return RuntimeHelpers.False;
@@ -946,7 +947,7 @@ namespace IronPython.Runtime.Types {
                 object getattr;
                 if (TryRawGetAttr(context, Symbols.GetBoundAttr, out getattr)) {
                     try {
-                        value = PythonCalls.Call(getattr, SymbolTable.IdToString(name));
+                        value = PythonCalls.Call(context, getattr, SymbolTable.IdToString(name));
                         return true;
                     } catch (MissingMemberException) {
                         // __getattr__ raised AttributeError, return false.
@@ -963,26 +964,26 @@ namespace IronPython.Runtime.Types {
             if (nameId == Symbols.Class.Id) {
                 SetClass(value);
             } else if (nameId == Symbols.Dict.Id) {
-                SetDict(value);
+                SetDict(context, value);
             } else if (__class__.HasSetAttr && __class__.TryLookupSlot(Symbols.SetAttr, out setFunc)) {
-                PythonCalls.Call(__class__.GetOldStyleDescriptor(context, setFunc, this, __class__), name.ToString(), value);
+                PythonCalls.Call(context, __class__.GetOldStyleDescriptor(context, setFunc, this, __class__), name.ToString(), value);
             } else if (nameId == Symbols.Unassign.Id) {
-                SetFinalizer(name, value);
+                SetFinalizer(context, name, value);
             } else {
                 ((IAttributesCollection)__dict__)[name] = value;
             }
         }
 
-        private void SetFinalizer(SymbolId name, object value) {
+        private void SetFinalizer(CodeContext/*!*/ context, SymbolId name, object value) {
             if (!HasFinalizer()) {
                 // user is defining __del__ late bound for the 1st time
-                AddFinalizer();
+                AddFinalizer(context);
             }
 
             ((IAttributesCollection)__dict__)[name] = value;
         }
 
-        private void SetDict(object value) {
+        private void SetDict(CodeContext/*!*/ context, object value) {
             PythonDictionary dict = value as PythonDictionary;
             if (dict == null) {
                 throw PythonOps.TypeError("__dict__ must be set to a dictionary");
@@ -992,9 +993,8 @@ namespace IronPython.Runtime.Types {
                     ClearFinalizer();
                 }
             } else if (((IAttributesCollection)dict).ContainsKey(Symbols.Unassign)) {
-                AddFinalizer();
+                AddFinalizer(context);
             }
-
 
             __dict__ = dict;
         }
@@ -1013,7 +1013,7 @@ namespace IronPython.Runtime.Types {
 
             object delFunc;
             if (__class__.HasDelAttr && __class__.TryLookupSlot(Symbols.DelAttr, out delFunc)) {
-                PythonCalls.Call(__class__.GetOldStyleDescriptor(context, delFunc, this, __class__), name.ToString());
+                PythonCalls.Call(context, __class__.GetOldStyleDescriptor(context, delFunc, this, __class__), name.ToString());
                 return true;
             }
 
@@ -1184,8 +1184,8 @@ namespace IronPython.Runtime.Types {
                 return (int)ret;
             }
 
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.Cmp, out func) ||
-                PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEquals, out func)) {
+            if (TryGetBoundCustomMember(DefaultContext.Default, Symbols.Cmp, out func) ||
+                TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorEquals, out func)) {
                 throw PythonOps.TypeError("unhashable instance");
             }
 
@@ -1210,7 +1210,7 @@ namespace IronPython.Runtime.Types {
             }
             OldInstance oi = other as OldInstance;
             if (oi != null) {
-                res = InvokeOne(other, this, si);
+                res = InvokeOne(oi, this, si);
                 if (res != NotImplementedType.Value) {
                     return res;
                 }
@@ -1218,10 +1218,10 @@ namespace IronPython.Runtime.Types {
             return NotImplementedType.Value;
         }
 
-        private static object InvokeOne(object self, object other, SymbolId si) {
+        private static object InvokeOne(OldInstance self, object other, SymbolId si) {
             object func;
             try {
-                if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
+                if (!self.TryGetBoundCustomMember(DefaultContext.Default, si, out func)) {
                     return NotImplementedType.Value;
                 }
             } catch (MissingMemberException) {
@@ -1231,10 +1231,10 @@ namespace IronPython.Runtime.Types {
             return PythonOps.CallWithContext(DefaultContext.Default, func, other);
         }
 
-        private static object InvokeOne(object self, object other, object other2, SymbolId si) {
+        private static object InvokeOne(OldInstance self, object other, object other2, SymbolId si) {
             object func;
             try {
-                if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
+                if (!self.TryGetBoundCustomMember(DefaultContext.Default, si, out func)) {
                     return NotImplementedType.Value;
                 }
             } catch (MissingMemberException) {
@@ -1244,10 +1244,10 @@ namespace IronPython.Runtime.Types {
             return PythonOps.CallWithContext(DefaultContext.Default, func, other, other2);
         }
 
-        private static object InvokeOne(object self, SymbolId si) {
+        private static object InvokeOne(OldInstance self, SymbolId si) {
             object func;
             try {
-                if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
+                if (!self.TryGetBoundCustomMember(DefaultContext.Default, si, out func)) {
                     return NotImplementedType.Value;
                 }
             } catch (MissingMemberException) {
@@ -1310,8 +1310,8 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private void AddFinalizer() {
-            InstanceFinalizer oif = new InstanceFinalizer(this);
+        private void AddFinalizer(CodeContext/*!*/ context) {
+            InstanceFinalizer oif = new InstanceFinalizer(context, this);
             _weakRef = new WeakRefTracker(oif, oif);
         }
 
@@ -1377,6 +1377,14 @@ namespace IronPython.Runtime.Types {
 
         bool IValueEquality.ValueEquals(object other) {
             return Equals(other);
+        }
+
+        #endregion
+
+        #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaOldInstance(parameter, Restrictions.Empty, this);
         }
 
         #endregion

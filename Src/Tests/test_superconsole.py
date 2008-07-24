@@ -146,7 +146,9 @@ def test_string_exception():
 
     superConsole.SendKeys('raise "Some string exception"{ENTER}')
     print "CodePlex Work Item 12403"
-    expected = ["Traceback (most recent call last):",
+    expected = [
+                "warning: DeprecationWarning: raising a string exception is deprecated",
+                "Traceback (most recent call last):",
                 "  File ", #CodePlex Work Item 12403
                 "Some string exception",
                 "", #CodePlex Work Item 12401

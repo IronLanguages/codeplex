@@ -54,6 +54,9 @@ internal sealed class PythonConsoleHost : ConsoleHost {
 
     [STAThread]
     static int Main(string[] args) {
+        // off by default, DLR turns it on by default
+        Environment.SetEnvironmentVariable("COREDLR_PreferComDispatch", "FALSE");
+
         return new PythonConsoleHost().Run(args);
     }
 }

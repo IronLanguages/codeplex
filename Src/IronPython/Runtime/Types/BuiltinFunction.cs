@@ -47,7 +47,7 @@ namespace IronPython.Runtime.Types {
     /// </summary>    
     [PythonSystemType("builtin_function_or_method")]
     public class BuiltinFunction :
-        PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDelegateConvertible {
+        PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDynamicObject, IDelegateConvertible {
         private string/*!*/ _name;
         private MethodBase/*!*/[]/*!*/ _targets;
         private readonly Type/*!*/ _declType;
@@ -117,7 +117,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal object Call(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object instance, object[] args) {
+        internal object Call(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object instance, object[] args) {
             storage = GetInitializedStorage(context, storage);
             
             object callable;
@@ -125,44 +125,34 @@ namespace IronPython.Runtime.Types {
                 callable = this;
             }
 
-            return storage.Data.Invoke(context, callable, args);
+            return storage.Data.Target(storage.Data, context, callable, args);
         }
 
-        private static SiteLocalStorage<DynamicSite<object, object[], object>> GetInitializedStorage(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage) {
+        private static SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> GetInitializedStorage(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage) {
             if (storage == null) {
                 storage = PythonContext.GetContext(context).GetGenericCallSiteStorage();
             }
 
-            if (!storage.Data.IsInitialized) {
-                storage.Data.EnsureInitialized(
-                    OldCallAction.Make(
-                        context.LanguageContext.Binder,
-                        new CallSignature(ArgumentKind.List)
-                    )
-                );
+            if (storage.Data == null) {
+                storage.Data = PythonContext.GetContext(context).MakeSplatSite();
             }
             return storage;
         }
 
-        internal object Call(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, object instance, object[] args, IAttributesCollection keywordArgs) {
+        internal object Call(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, object instance, object[] args, IAttributesCollection keywordArgs) {
             if (storage == null) {
                 storage = PythonContext.GetContext(context).GetGenericKeywordCallSiteStorage();
             }
 
-            if (!storage.Data.IsInitialized) {
-                storage.Data.EnsureInitialized(
-                    OldCallAction.Make(
-                        context.LanguageContext.Binder,
-                        new CallSignature(ArgumentKind.List, ArgumentKind.Dictionary)
-                    )
-                );
+            if (storage.Data == null) {
+                storage.Data = PythonContext.GetContext(context).MakeKeywordSplatSite();
             }
 
             if (instance != null) {
-                return storage.Data.Invoke(context, this, ArrayUtils.Insert(instance, args), keywordArgs);
+                return storage.Data.Target(storage.Data, context, this, ArrayUtils.Insert(instance, args), keywordArgs);
             }
 
-            return storage.Data.Invoke(context, this, args, keywordArgs);
+            return storage.Data.Target(storage.Data, context, this, args, keywordArgs);
         }
         
         /// <summary>
@@ -300,6 +290,12 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
+        }
+
         #endregion                
 
         #region ICodeFormattable members
@@ -310,7 +306,15 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IOldDynamicObject Members
+         #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaBuiltinFunction(parameter, Restrictions.Empty, this);
+        }
+
+        #endregion
+
+        #region IDynamicObject Members
 
         RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind) {
@@ -336,9 +340,10 @@ namespace IronPython.Runtime.Types {
                 return IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All;
             }
         }
-        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+         private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            
             CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(context, action, args, Targets, Level, IsReversedOperator);
-            RuleBuilder<T> rule = helper.MakeRule();
+           RuleBuilder<T> rule = helper.MakeRule();
             if (IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 function + 2 args
                 // BinaryOperators return NotImplemented on failure.
                 rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Field(null, typeof(PythonOps), "NotImplemented"));
@@ -350,7 +355,7 @@ namespace IronPython.Runtime.Types {
         internal Expression MakeFunctionTest(Expression functionTarget) {
             return Ast.Equal(
                 functionTarget,
-                Ast.RuntimeConstant(this)
+                Ast.Constant(this)
             );
         }
 
@@ -428,7 +433,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public object __call__(CodeContext/*!*/ context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+        public object __call__(CodeContext/*!*/ context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
             return Call(context, storage, null, args, dictArgs);
         }
 

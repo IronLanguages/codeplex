@@ -438,5 +438,28 @@ def test_round():
     AreEqual(round(number=3.125, ndigits=3), 3.125)
     AreEqual(round(number=3.125, ndigits=0), 3)
 
+def test_cp16000():
+    class K(object):
+        FOO = 39
+        def fooFunc():
+            return K.FOO
+        def memberFunc(self):
+            return K.FOO * 3.14
+
+
+    temp_list = [   None, str, int, long, K,
+                    "", "abc", u"abc", 34, 1111111111111L, 3.14, K(), K.FOO,
+                    id, hex, K.fooFunc, K.memberFunc, K().memberFunc,
+                ]
+
+    if is_cli:
+        import System
+        temp_list += [  System.Exception, System.InvalidOperationException(),
+                        System.Single, System.UInt16(5), System.Version()]
+
+    for x in temp_list:
+        Assert(type(id(x)) in [int, long], 
+               str(type(id(x))))
+
 run_test(__name__)
 

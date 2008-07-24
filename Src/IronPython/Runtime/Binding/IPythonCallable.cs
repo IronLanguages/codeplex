@@ -14,19 +14,15 @@
  * ***************************************************************************/
 
 using System;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
 
 namespace IronPython.Runtime.Binding {
     /// <summary>
-    /// Provides an interface for MetaObject's which support being called and passing through a CodeContext.
-    /// 
-    /// This only gets used when a site has our special CallWithContextBinder.
+    /// Interface used to mark objects as being invokable from Python.  These objects support
+    /// calling with splatted positional and keyword arguments.
     /// </summary>
-    interface IInvokableWithContext {
-        MetaObject/*!*/ InvokeWithContext(InvokeAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args);
+    interface IPythonInvokable {
+        MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args);
     }
 }

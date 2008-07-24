@@ -16,9 +16,11 @@
 using System.Runtime.InteropServices;
 using System.Scripting;
 using System.Scripting.Runtime;
+
+using Microsoft.Scripting;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
     [PythonSystemType]
@@ -32,6 +34,12 @@ namespace IronPython.Runtime {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         #region IDescriptor Members
@@ -49,8 +57,8 @@ namespace IronPython.Runtime {
     public class classmethod : PythonTypeSlot {
         internal object func;
 
-        public classmethod(object func) {
-            if (!PythonOps.IsCallable(func))
+        public classmethod(CodeContext/*!*/ context, object func) {
+            if (!PythonOps.IsCallable(context, func))
                 throw PythonOps.TypeError("{0} object is not callable", PythonTypeOps.GetName(func));
             this.func = func;
         }
@@ -58,6 +66,12 @@ namespace IronPython.Runtime {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         #region IDescriptor Members
@@ -105,16 +119,22 @@ namespace IronPython.Runtime {
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-            value = __get__(instance, PythonOps.ToPythonType(owner));
+            value = __get__(context, instance, PythonOps.ToPythonType(owner));
             return true;
         }
 
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
+        }
+
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
-            return __set__(instance, value);
+            return __set__(context, instance, value);
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
-            return __delete__(instance);
+            return __delete__(context, instance);
         }
 
         internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
@@ -153,17 +173,17 @@ namespace IronPython.Runtime {
             }
         }
 
-        public object __get__(object instance) { return __get__(instance, null); }
+        public object __get__(CodeContext/*!*/ context, object instance) { return __get__(context, instance, null); }
 
-        public object __get__(object instance, object owner) {
+        public new object __get__(CodeContext/*!*/ context, object instance, object owner) {
             if (instance == null) return this;
-            if (fget != null) return PythonCalls.Call(fget, instance);
+            if (fget != null) return PythonCalls.Call(context, fget, instance);
             throw PythonOps.AttributeError("unreadable attribute");
         }
 
-        public bool __set__(object instance, object value) {
+        public bool __set__(CodeContext/*!*/ context, object instance, object value) {
             if (fset != null) {
-                PythonCalls.Call(fset, instance, value);
+                PythonCalls.Call(context, fset, instance, value);
                 return true;
             } else {
                 if (instance == null) return false;
@@ -172,9 +192,9 @@ namespace IronPython.Runtime {
             }
         }
 
-        public bool __delete__(object instance) {
+        public new bool __delete__(CodeContext/*!*/ context, object instance) {
             if (fdel != null) {
-                PythonCalls.Call(fdel, instance);
+                PythonCalls.Call(context, fdel, instance);
                 return true;
             } else {
                 if (instance == null) return false;

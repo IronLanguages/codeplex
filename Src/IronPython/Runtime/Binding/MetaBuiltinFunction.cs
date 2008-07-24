@@ -14,21 +14,22 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 
+using Microsoft.Scripting.Generation;
+
 using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using IronPython.Runtime.Operations;
-    using Microsoft.Scripting.Generation;
-    using System.Scripting.Generation;
-    using System.Diagnostics;
 
-    class MetaBuiltinFunction : MetaPythonObject, IInvokableWithContext {
+    class MetaBuiltinFunction : MetaPythonObject, IPythonInvokable {
         public MetaBuiltinFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinFunction/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
@@ -37,8 +38,8 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
-            // TODO: Context should come from BuiltinFunction object
-            return InvokeWithContext(call, Ast.Constant(BinderState.GetBinderState(call).Context), args);
+            // TODO: Context should come from BuiltinFunction
+            return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
         public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
@@ -50,9 +51,17 @@ namespace IronPython.Runtime.Binding {
 
         #endregion
 
-        #region IInvokableithConetxt
+        #region IPythonInvokable Members
 
-        public MetaObject/*!*/ InvokeWithContext(InvokeAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
+        #region Invoke Implementation
+
+        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             for (int i = 0; i < args.Length; i++) {
                 if (args[i].NeedsDeferral) {
                     return call.Defer(args);
@@ -81,7 +90,7 @@ namespace IronPython.Runtime.Binding {
                 Value.Name,
                 out target
             );
-            
+
             if (Value.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.ThrowStatement) {
                 // Binary Operators return NotImplemented on failure.
                 res = new MetaObject(

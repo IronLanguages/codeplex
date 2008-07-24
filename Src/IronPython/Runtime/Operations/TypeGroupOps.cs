@@ -16,7 +16,12 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
+
+using Microsoft.Scripting;
+
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
@@ -46,6 +51,25 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static PythonType GetItem(TypeGroup self, params PythonType[] types) {
             return GetItemHelper(self, types);
+        }
+
+        [SpecialName]
+        public static object Call(CodeContext/*!*/ context, TypeGroup/*!*/ self, params object[] args) {
+            return PythonCalls.Call(
+                context,
+                DynamicHelpers.GetPythonTypeFromType(self.NonGenericType),
+                args ?? ArrayUtils.EmptyObjects
+            );
+        }
+
+        [SpecialName]
+        public static object Call(CodeContext/*!*/ context, TypeGroup/*!*/ self, [ParamDictionary]PythonDictionary kwArgs, params object[] args) {
+            return PythonCalls.CallWithKeywordArgs(
+                context, 
+                DynamicHelpers.GetPythonTypeFromType(self.NonGenericType),
+                args ?? ArrayUtils.EmptyObjects,
+                kwArgs ?? new PythonDictionary()
+            );
         }
 
         [SpecialName]

@@ -20,11 +20,12 @@ using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
     //CONFORMING
+    // TODO: should support annotations
     public sealed class MemberInitExpression : Expression {
         NewExpression _newExpression;
         ReadOnlyCollection<MemberBinding> _bindings;
         internal MemberInitExpression(NewExpression newExpression, ReadOnlyCollection<MemberBinding> bindings)
-            : base(ExpressionType.MemberInit, newExpression.Type) {
+            : base(ExpressionType.MemberInit, newExpression.Type, null, null) {
             _newExpression = newExpression;
             _bindings = bindings;
         }

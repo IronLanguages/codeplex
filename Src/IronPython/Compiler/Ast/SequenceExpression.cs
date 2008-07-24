@@ -71,7 +71,7 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
             // 1. Evaluate the expression and assign the value to the temp.
-            MSAst.VariableExpression right_temp = ag.MakeTempExpression("unpacking");
+            MSAst.VariableExpression right_temp = ag.GetTemporary("unpacking");
 
             // 2. Add the assignment "right_temp = right" into the suite/block
             statements.Add(
@@ -82,18 +82,23 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression enumeratorValues = Ast.Call(
                 AstGenerator.GetHelperMethod("GetEnumeratorValues"),    // method
                 // arguments
+                Ast.CodeContext(),
                 right_temp,
                 Ast.Constant(_items.Length)
             );
 
             // 4. Create temporary variable for the array
-            MSAst.VariableExpression array_temp = ag.MakeTempExpression("array", typeof(object[]));
+            MSAst.VariableExpression array_temp = ag.GetTemporary("array", typeof(object[]));
 
             // 5. Assign the value of the method call (mce) into the array temp
             // And add the assignment "array_temp = Ops.GetEnumeratorValues(...)" into the block
             statements.Add(
-                AstGenerator.MakeAssignment(array_temp, enumeratorValues, rightSpan)
-                );
+                AstGenerator.MakeAssignment(
+                    array_temp, 
+                    enumeratorValues, 
+                    rightSpan
+                )
+            );
 
             List<MSAst.Expression> sets = new List<MSAst.Expression>();            
             for (int i = 0; i < _items.Length; i ++) {

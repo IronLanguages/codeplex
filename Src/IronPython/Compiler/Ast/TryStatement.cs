@@ -80,7 +80,7 @@ namespace IronPython.Compiler.Ast {
             if (_finally != null) {
                 // allocated here so it won't be shared w/ other locals allocated during
                 // the body or except blocks.
-                noNestedException = ag.MakeTempExpression("$noException", typeof(bool));
+                noNestedException = ag.GetTemporary("$noException", typeof(bool));
             }
 
             MSAst.Expression body = ag.Transform(_body);
@@ -98,8 +98,8 @@ namespace IronPython.Compiler.Ast {
             if (@else != null) {
                 Debug.Assert(@catch != null);
 
-                MSAst.VariableExpression runElse = ag.MakeTempExpression("run_else", typeof(bool));
-                MSAst.VariableExpression lineUpdated = ag.MakeTempExpression("$lineUpdated", typeof(bool));
+                MSAst.VariableExpression runElse = ag.GetTemporary("run_else", typeof(bool));
+                MSAst.VariableExpression lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
                 
 
                 //  run_else = true;
@@ -138,7 +138,7 @@ namespace IronPython.Compiler.Ast {
                 //  }
                 //
 
-                MSAst.VariableExpression lineUpdated = ag.MakeTempExpression("$lineUpdated", typeof(bool));
+                MSAst.VariableExpression lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
                 result = AstUtils.Try(
                         Ast.Block(
                             Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
@@ -163,7 +163,7 @@ namespace IronPython.Compiler.Ast {
             if (_finally != null) {
                 Debug.Assert(noNestedException != null);
 
-                MSAst.VariableExpression nestedFrames = ag.MakeTempExpression("$nestedFrames", typeof(List<DynamicStackFrame>));
+                MSAst.VariableExpression nestedFrames = ag.GetTemporary("$nestedFrames", typeof(List<DynamicStackFrame>));
 
                 MSAst.Expression @finally = ag.Transform(_finally);
                 if (@finally == null) {
@@ -237,8 +237,8 @@ namespace IronPython.Compiler.Ast {
                 return null;
             }
 
-            MSAst.VariableExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
-            MSAst.VariableExpression extracted = ag.MakeTempExpression("extracted", typeof(object));
+            MSAst.VariableExpression exception = ag.GetTemporary("exception", typeof(Exception));
+            MSAst.VariableExpression extracted = ag.GetTemporary("extracted", typeof(object));
 
             // The variable where the runtime will store the exception.
             variable = exception;
@@ -277,7 +277,7 @@ namespace IronPython.Compiler.Ast {
                         //      }
 
                         if (converted == null) {
-                            converted = ag.MakeTempExpression("converted");
+                            converted = ag.GetTemporary("converted");
                         }
 
                         ist = Ast.IfCondition(

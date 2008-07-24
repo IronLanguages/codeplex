@@ -15,7 +15,6 @@
 
 using System;
 using System.Scripting.Runtime;
-using IronPython.Compiler.Generation;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -45,7 +44,7 @@ namespace IronPython.Runtime.Exceptions {
         public partial class _SystemExit : BaseException {
             private object _code;
 
-            public _SystemExit() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_SystemExit))) { }
+            public _SystemExit() : base(SystemExit) { }
             public _SystemExit(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {
@@ -221,7 +220,7 @@ namespace IronPython.Runtime.Exceptions {
             private object _strerror;
             private object _filename;
 
-            public _EnvironmentError() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_EnvironmentError))) { }
+            public _EnvironmentError() : base(EnvironmentError) { }
             public _EnvironmentError(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {
@@ -290,7 +289,7 @@ namespace IronPython.Runtime.Exceptions {
         public partial class _WindowsError : _EnvironmentError {
             private object _winerror;
 
-            public _WindowsError() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_WindowsError))) { }
+            public _WindowsError() : base(WindowsError) { }
             public _WindowsError(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {
@@ -484,7 +483,7 @@ namespace IronPython.Runtime.Exceptions {
             private object _offset;
             private object _msg;
 
-            public _SyntaxError() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_SyntaxError))) { }
+            public _SyntaxError() : base(SyntaxError) { }
             public _SyntaxError(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {
@@ -624,7 +623,7 @@ namespace IronPython.Runtime.Exceptions {
             private object _end;
             private object _encoding;
 
-            public _UnicodeDecodeError() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_UnicodeDecodeError))) { }
+            public _UnicodeDecodeError() : base(UnicodeDecodeError) { }
             public _UnicodeDecodeError(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {
@@ -699,7 +698,7 @@ namespace IronPython.Runtime.Exceptions {
             private object _end;
             private object _encoding;
 
-            public _UnicodeEncodeError() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_UnicodeEncodeError))) { }
+            public _UnicodeEncodeError() : base(UnicodeEncodeError) { }
             public _UnicodeEncodeError(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {
@@ -772,7 +771,7 @@ namespace IronPython.Runtime.Exceptions {
             private object _end;
             private object _encoding;
 
-            public _UnicodeTranslateError() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_UnicodeTranslateError))) { }
+            public _UnicodeTranslateError() : base(UnicodeTranslateError) { }
             public _UnicodeTranslateError(PythonType type) : base(type) { }
 
             public new static object __new__(PythonType cls, params object[] args) {

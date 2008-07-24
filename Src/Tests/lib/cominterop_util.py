@@ -68,7 +68,7 @@ if sys.platform=="win32":
     
 windir = get_environ_variable("windir")
 if is_cli:
-    preferComDispatch = nt.environ.get("COREDLR_PreferComDispatch") == "TRUE"
+    preferComDispatch = nt.environ.get("COREDLR_PreferComInteropAssembly") != "TRUE"
 else:
     preferComDispatch = False
 
@@ -302,16 +302,19 @@ def overflowErrorTrigger(in_type):
     ret_val["ULONG"] +=  overflow_num_helper(System.UInt32)
                
     ret_val["ULONGLONG"] =  []
-    ret_val["ULONGLONG"] +=  overflow_num_helper(System.UInt64)
+    # Dev10 475426
+    #ret_val["ULONGLONG"] +=  overflow_num_helper(System.UInt64)
       
     ret_val["SHORT"] =  []
     ret_val["SHORT"] += overflow_num_helper(System.Int16)
       
     ret_val["LONG"] =  []
-    ret_val["LONG"] += overflow_num_helper(System.Int32)
+    # Dev10 475426
+    #ret_val["LONG"] += overflow_num_helper(System.Int32)
                 
     ret_val["LONGLONG"] =  []
-    ret_val["LONGLONG"] += overflow_num_helper(System.Int64)
+    # Dev10 475426
+    #ret_val["LONGLONG"] += overflow_num_helper(System.Int64)
     
     ############################################################
     return ret_val[in_type]    
@@ -327,7 +330,7 @@ def pythonToCOM(in_type):
     ret_val = {}
     
     ############################################################
-    temp_funcs = [int, long, bool, System.Boolean]
+    temp_funcs = [int, bool, System.Boolean]   # long, Dev10 475426
     temp_values = [ 0, 1, True, False]
     
     ret_val["VARIANT_BOOL"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
@@ -339,7 +342,7 @@ def pythonToCOM(in_type):
     ret_val["BYTE"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
 
     ############################################################
-    temp_funcs = [  str, Py_Str, unicode, Py_System_String, 
+    temp_funcs = [  str, unicode, # Py_Str, Py_System_String,  
                     System.String ]
     temp_values = shallow_copy(STRING_VALUES)
     
@@ -352,45 +355,45 @@ def pythonToCOM(in_type):
     ret_val["CHAR"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
 
     ############################################################
-    temp_funcs = [  float, Py_Float, 
+    temp_funcs = [  float, # Py_Float, 
                     System.Single]
     ret_val["FLOAT"] = [ [y(x) for y in temp_funcs] for x in FPN_VALUES]
     
     ############################################################
-    temp_funcs = [  float, Py_Double, Py_System_Double, System.Double]
+    temp_funcs = [  float, System.Double]  # Py_Double, Py_System_Double, 
     temp_values = [-1.0e+308,  1.0e308] + FPN_VALUES
 
     ret_val["DOUBLE"] = [ [y(x) for y in temp_funcs] for x in temp_values]
     ret_val["DOUBLE"] += ret_val["FLOAT"]
     
     ############################################################  
-    temp_funcs = [int, Py_UShort, System.UInt16]
+    temp_funcs = [int, System.UInt16]  # Py_UShort, 
     temp_values = pos_num_helper(System.UInt16)
     
     ret_val["USHORT"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
     
     ############################################################  
-    temp_funcs = [int, Py_ULong, System.UInt32]
+    temp_funcs = [int, System.UInt32]  # Py_ULong, 
     temp_values = pos_num_helper(System.UInt32) + pos_num_helper(System.UInt16)
         
     ret_val["ULONG"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
     ret_val["ULONG"] += ret_val["USHORT"]
     
     ############################################################  
-    temp_funcs = [int, long, Py_ULongLong, System.UInt64]
+    temp_funcs = [int, long, System.UInt64]  # Py_ULongLong, 
     temp_values = pos_num_helper(System.UInt64) + pos_num_helper(System.UInt32) + pos_num_helper(System.UInt16)
                 
     ret_val["ULONGLONG"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
     ret_val["ULONGLONG"] += ret_val["ULONG"]
     
     ############################################################  
-    temp_funcs = [int, Py_Short, System.Int16]
+    temp_funcs = [int, System.Int16]  # Py_Short, 
     temp_values = pos_num_helper(System.Int16)
                 
     ret_val["SHORT"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
     
     ############################################################  
-    temp_funcs = [int, Py_Long, System.Int32]
+    temp_funcs = [int, System.Int32] # Py_Long, Dev10 475426
     temp_values = pos_num_helper(System.Int32) + pos_num_helper(System.Int16)
     
     ret_val["LONG"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
@@ -398,7 +401,7 @@ def pythonToCOM(in_type):
     
     
     ############################################################  
-    temp_funcs = [int, long, Py_LongLong, System.Int64]
+    temp_funcs = [int, long, System.Int64] # Py_LongLong, Dev10 475426
     temp_values = pos_num_helper(System.Int64) + pos_num_helper(System.Int32) + pos_num_helper(System.Int16)
                 
     ret_val["LONGLONG"] =  [ [y(x) for y in temp_funcs] for x in temp_values]
@@ -751,8 +754,8 @@ def run_com_test(name, file):
     if not preferComDispatch and sys.platform!="win32" and file.lower() in RERUN_UNDER_PREFERCOMDISPATCH:
         print
         print "#" * 80
-        print "Re-running %s under '-X:PreferComDispatch' mode." % (file)
-        AreEqual(launch_ironpython_changing_extensions(file, add=["-X:PreferComDispatch"]), 0)
+        print "Re-running %s under w/o '-X:PreferComInteropAssembly' mode." % (file)
+        AreEqual(launch_ironpython_changing_extensions(file, remove=["-X:PreferComInteropAssembly"]), 0)
     
     genPeverifyInteropAsm(file)
     

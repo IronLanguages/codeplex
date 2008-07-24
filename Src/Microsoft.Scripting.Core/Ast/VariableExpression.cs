@@ -25,8 +25,8 @@ namespace System.Linq.Expressions {
     public sealed class VariableExpression : Expression {
         private readonly string _name;
 
-        internal VariableExpression(Annotations annotations, Type type, string name)
-            : base(annotations, ExpressionType.Variable, type) {
+        internal VariableExpression(Type type, string name, Annotations annotations)
+            : base(ExpressionType.Variable, type, false, annotations, true, true, null) {
             Debug.Assert(type != typeof(void));
 
             _name = name;
@@ -47,37 +47,10 @@ namespace System.Linq.Expressions {
             return Variable(type, name, Annotations.Empty);
         }
         public static VariableExpression Variable(Type type, string name, Annotations annotations) {
-            return new VariableExpression(annotations, GetNonVoidType(type), name);
-        }
-
-        // Converts typeof(void) to typeof(object), leaving other types unchanged.
-        //
-        // typeof(void) is allowed as the variable type to support this: 
-        //
-        // temp = CreateVariable(..., expression.Type, ...)
-        // Expression.Assign(temp, expression)
-        //
-        // where expression.Type is void.
-        private static Type GetNonVoidType(Type t) {
-            return (t != typeof(void)) ? t : typeof(object);
-        }
-
-        // TODO: remove obsolete factories:
-        [Obsolete("use Expression.Variable instead")]
-        public static VariableExpression Local(Type type, string name) {
-            return Variable(type, name, Annotations.Empty);
-        }
-        [Obsolete("use Expression.Variable instead")]
-        public static VariableExpression Local(Type type, string name, Annotations annotations) {
-            return Variable(type, name, annotations);
-        }
-        [Obsolete("use Expression.Variable instead")]
-        public static VariableExpression Temporary(Type type, string name) {
-            return Variable(type, name, Annotations.Empty);
-        }
-        [Obsolete("use Expression.Variable instead")]
-        public static VariableExpression Temporary(Type type, string name, Annotations annotations) {
-            return Variable(type, name, annotations);
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type != typeof(void), "type", Strings.ArgumentCannotBeOfTypeVoid);
+            ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
+            return new VariableExpression(type, name, annotations);
         }
     }
 }

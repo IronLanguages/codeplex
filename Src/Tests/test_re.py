@@ -150,8 +150,11 @@ def test_sanity_re_pattern():
     AreEqual(pattern.match("abc", 0).span(), (0,3))
     AreEqual(pattern.match("abc", 0, 3).span(), (0,3))
     AreEqual(pattern.match("abc", pos=0, endpos=3).span(), (0,3))
-    #CodePlex Work Item 6266
-    #AreEqual(pattern.match("abc", -5, 5).span(), (0,3))
+    for i in [-1, -2, -5, -7, -8, -65536]:
+        for j in [3, 4, 5, 7, 8, 65536]:
+            AreEqual(pattern.match("abc", i, j).span(), (0,3))
+    AssertError(OverflowError, lambda: pattern.match("abc", 0, 2**32).span())
+    AssertError(OverflowError, lambda: pattern.match("abc", -(2**32), 3).span())
     
     #search
     AreEqual(pattern.search(""), None)
@@ -235,10 +238,9 @@ def test_sanity_re_match():
     AreEqual(match_obj.groups(99), ('abc',))
     
     #groupdict
-    #CodePlex Work Item 6271
-    #AreEqual(match_obj.groupdict(), {})
-    #CodePlex Work Item 6271
-    #AreEqual(match_obj.groupdict(None), {})
+    AreEqual(match_obj.groupdict(), {})
+    AreEqual(match_obj.groupdict(None), {})
+    AreEqual(re.compile("(abc)").match("abcxyzabc123 and...").groupdict(), {})
     
     #start
     AreEqual(match_obj.start(), 0)
@@ -365,10 +367,11 @@ def test_span():
     AreEqual(re.match('(baz)(bar)(m)', "bazbarmxyz").span(2),(3, 6))
     
 def test_regs():
-    #CodePlex Work Item 6275
-    #AreEqual(re.match('(baz)(bar)(m)', "bazbarmxyz").regs,
-    #         ((0, 7), (0, 3), (3, 6), (6, 7)))
-    pass
+    AreEqual(re.match('(baz)(bar)(m)', "bazbarmxyz").regs,
+             ((0, 7), (0, 3), (3, 6), (6, 7)))
+
+    AreEqual(re.match('bazbar(mm)+(abc)(xyz)', "bazbarmmmmabcxyz123456abc").regs,
+             ((0, 16), (8, 10), (10, 13), (13, 16)))
              
 def test_endpos():
     AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").endpos, 8)

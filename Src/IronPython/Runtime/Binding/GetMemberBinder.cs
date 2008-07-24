@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
@@ -27,7 +28,6 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using System.Diagnostics;
 
     class GetMemberBinder : GetMemberAction, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;
@@ -45,6 +45,9 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
+            // Python always provides an extra arg to GetMember to flow the context.
+            Debug.Assert(args.Length == 2 && args[1].Expression.Type == typeof(CodeContext));
+
             if (args[0].NeedsDeferral) {
                 return Defer(args);
             }
@@ -63,12 +66,12 @@ namespace IronPython.Runtime.Binding {
                     MetaObject baseRes = Binder.Binder.GetMember(
                         Name, 
                         args[0],
-                        BindingHelpers.GetSiteCodeContext(),
+                        args[1].Expression,
                         _isNoThrow
                     );
                     Expression failure = GetFailureExpression(limitType);
 
-                    return BindingHelpers.FilterShowCls(this, baseRes, failure);
+                    return BindingHelpers.FilterShowCls(args[1].Expression, this, baseRes, failure);
                 }
             }
 
@@ -99,7 +102,7 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            return Binder.Binder.GetMember(Name, args[0], Ast.Constant(Binder.Context), _isNoThrow);
+            return Binder.Binder.GetMember(Name, args[0], args[1].Expression, _isNoThrow);
         }
 
         private Expression/*!*/ GetFailureExpression(Type/*!*/ limitType) {

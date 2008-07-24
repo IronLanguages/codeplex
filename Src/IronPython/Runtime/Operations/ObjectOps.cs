@@ -133,7 +133,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            if (Converter.ConvertToInt32(protocol) < 2) {
+            if (PythonContext.GetContext(context).ConvertToInt32(protocol) < 2) {
                 return ReduceProtocol0(context, self);
             } else {
                 return ReduceProtocol2(context, self);
@@ -210,7 +210,7 @@ namespace IronPython.Runtime.Operations {
             object slotValue;
             foreach (object type in mro) {
                 if (PythonOps.TryGetBoundAttr(type, Symbols.Slots, out slots)) {
-                    List<string> slotNames = IronPython.Compiler.Generation.NewTypeMaker.SlotsToList(slots);
+                    List<string> slotNames = NewTypeMaker.SlotsToList(slots);
                     foreach (string slotName in slotNames) {
                         if (slotName == "__dict__") continue;
                         // don't reassign same-named slots from types earlier in the MRO
@@ -250,7 +250,7 @@ namespace IronPython.Runtime.Operations {
             object funcArgs = PythonTuple.MakeTuple(
                 myType,
                 closestNonPythonBase,
-                TypeCache.Object == closestNonPythonBase ? null : PythonCalls.Call(closestNonPythonBase, self)
+                TypeCache.Object == closestNonPythonBase ? null : PythonCalls.Call(context, closestNonPythonBase, self)
             );
 
             object state;
@@ -334,7 +334,7 @@ namespace IronPython.Runtime.Operations {
 
             dictIterator = null;
             if (self is PythonDictionary || self is IAttributesCollection) {
-                dictIterator = PythonOps.InvokeWithContext(context, self, Symbols.IterItems, ArrayUtils.EmptyObjects);
+                dictIterator = PythonOps.Invoke(context, self, Symbols.IterItems, ArrayUtils.EmptyObjects);
             }
 
             return PythonTuple.MakeTuple(func, PythonTuple.MakeTuple(funcArgs), state, listIterator, dictIterator);

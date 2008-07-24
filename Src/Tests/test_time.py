@@ -83,7 +83,6 @@ def test_sleep():
         Assert(y-x > sleep_time*(1-(safe_deviation/2)))
         Assert(y-x < sleep_time*(1+safe_deviation))  # make sure we're close...
 
-@disabled("CodePlex Work Item 11733")
 def test_dst():
     AreEqual(time.altzone, time.timezone+[3600,-3600][time.daylight])
     t = time.time()

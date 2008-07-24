@@ -33,7 +33,7 @@ namespace System.Linq.Expressions {
             string name,
             Annotations annotations,
             ReadOnlyCollection<VariableExpression> variables)
-            : base(annotations, ExpressionType.Scope, body.Type) {
+            : base(ExpressionType.Scope, body.Type, annotations, null) {
 
             _body = body;
             _name = name;
@@ -87,9 +87,9 @@ namespace System.Linq.Expressions {
         }
 
         public static ScopeExpression Scope(Expression body, string name, Annotations annotations, IEnumerable<VariableExpression> variables) {
-            ContractUtils.RequiresNotNull(body, "body");
+            RequiresCanRead(body, "body");
 
-            ReadOnlyCollection<VariableExpression> varList = variables.ToReadOnly();
+            var varList = variables.ToReadOnly();
             ContractUtils.RequiresNotNullItems(varList, "variables");
 
             return new ScopeExpression(body, name, annotations, varList);

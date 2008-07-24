@@ -102,11 +102,12 @@ def test_interface_methods():
         AssertError(TypeError, IInterface110b.m110, x)
         AssertError(AttributeError, IInterface110c.m110, x)
         f = C.m110  # no AttributeError
-        AssertError(AttributeError, f, x)
-        AssertError(TypeError, f, x, 1)   # a hides b, type error calling a
+        # can't find either implementation at runtime
+        AssertError(AttributeError, f, x)       
+        AssertError(AttributeError, f, x, 1)   
         f = x.m110  # no AttributeError
-        AssertError(AttributeError, f)
-        AssertError(TypeError, f, 1)  # !!!
+        AssertError(AttributeError, f)        
+        AssertError(AttributeError, f, 1)  
     #
     # m110 is defined
     #

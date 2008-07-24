@@ -22,6 +22,7 @@ using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using System.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -55,6 +56,12 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
+        }
+
         internal override Type DeclaringType {
             get { return _info.DeclaringType; }
         }
@@ -65,21 +72,21 @@ namespace IronPython.Runtime.Types {
 
         #region Public APIs
 
-        public bool SetValue(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object[] keys, object value) {
+        public bool SetValue(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object[] keys, object value) {
             return CallSetter(context, storage, _instance, keys, value);
         }
 
-        public object GetValue(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], object>> storage, object[] keys) {
+        public object GetValue(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object[] keys) {
             return CallGetter(context, storage, _instance, keys);
         }
-        
-        public object __get__(object instance, object owner) {
+
+        public new object __get__(CodeContext context, object instance, object owner) {
             object val;
-            TryGetValue(DefaultContext.Default, instance, owner as PythonType, out val);
+            TryGetValue(context, instance, owner as PythonType, out val);
             return val;
         }
 
-        public object this[SiteLocalStorage<DynamicSite<object, object[], object>> storage, params object[] key] {
+        public object this[SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, params object[] key] {
             get {
                 return GetValue(DefaultContext.Default, storage, key);
             }

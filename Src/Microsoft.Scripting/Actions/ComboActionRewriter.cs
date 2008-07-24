@@ -125,8 +125,8 @@ namespace Microsoft.Scripting.Actions {
             private readonly Expression[] _inputs;
             private readonly List<BinderMappingInfo> _binders;
 
-            public ComboDynamicSiteExpression(Type type, List<BinderMappingInfo> binders, Expression[] inputs) :
-                base(ExpressionType.Extension, type) {
+            public ComboDynamicSiteExpression(Type type, List<BinderMappingInfo> binders, Expression[] inputs)
+                : base(type, true, null) {
 
                 _binders = binders;
                 _inputs = inputs;
@@ -141,12 +141,6 @@ namespace Microsoft.Scripting.Actions {
             public List<BinderMappingInfo> Binders {
                 get {
                     return _binders;
-                }
-            }
-
-            public override bool IsReducible {
-                get {
-                    return true;
                 }
             }
 

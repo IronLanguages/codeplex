@@ -17,6 +17,10 @@ using System.Diagnostics;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Threading;
+
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {
@@ -62,14 +66,22 @@ namespace IronPython.Runtime {
         }
 
         internal static void CreateContexts(ScriptDomainManager manager, PythonContext/*!*/ context) {
-            Interlocked.CompareExchange<CodeContext>(ref _default, CreateDefaultContext(context), null);
-            Interlocked.CompareExchange<CodeContext>(ref _defaultCLS, CreateDefaultCLSContext(context), null);
-            Interlocked.CompareExchange<PythonBinder>(ref _defaultBinder, new PythonBinder(manager, context, _default), null);
+            if (_default == null) {
+                Interlocked.CompareExchange(ref _default, CreateDefaultContext(context), null);
+                Interlocked.CompareExchange(ref _defaultBinder, new PythonBinder(manager, context, _default), null);
+            }
+        }
+
+        internal static void CreateClsContexts(ScriptDomainManager manager, PythonContext/*!*/ context) {
+            if (_defaultCLS == null) {
+                Interlocked.CompareExchange(ref _defaultCLS, CreateDefaultCLSContext(context), null);
+            }
         }
 
         private static CodeContext/*!*/ CreateDefaultContext(PythonContext/*!*/ context) {
-            PythonModule globalMod = context.CreateModule(ModuleOptions.NoBuiltins);
-            return new CodeContext(globalMod.Scope, context);
+            PythonModule module = new PythonModule(new Scope());
+            module.Scope.SetExtension(context.ContextId, module);
+            return new CodeContext(module.Scope, context);
         }
 
 
