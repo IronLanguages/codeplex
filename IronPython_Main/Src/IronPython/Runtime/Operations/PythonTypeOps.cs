@@ -22,16 +22,14 @@ using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Compiler.Generation;
+
+using Microsoft.Scripting;
+
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     internal static class PythonTypeOps {
-        [MultiRuntimeAware]
-        internal static object _DefaultNewInst;
         private static readonly Dictionary<FieldInfo, ReflectedField> _fieldCache = new Dictionary<FieldInfo, ReflectedField>();
         private static readonly Dictionary<BuiltinFunction, BuiltinMethodDescriptor> _methodCache = new Dictionary<BuiltinFunction, BuiltinMethodDescriptor>();
         private static readonly Dictionary<BuiltinFunction, ClassMethodDescriptor> _classMethodCache = new Dictionary<BuiltinFunction, ClassMethodDescriptor>();
@@ -159,7 +157,7 @@ namespace IronPython.Runtime.Operations {
                 IWeakReferenceable iwr = newObject as IWeakReferenceable;
                 Debug.Assert(iwr != null);
 
-                InstanceFinalizer nif = new InstanceFinalizer(newObject);
+                InstanceFinalizer nif = new InstanceFinalizer(context, newObject);
                 iwr.SetFinalizer(new WeakRefTracker(nif, nif));
             }
         }
@@ -356,7 +354,7 @@ namespace IronPython.Runtime.Operations {
             
             if (type.IsValueType && !hasDefaultConstructor && type != typeof(void)) {
                 try {
-                    MethodInfo mi = typeof(BinderOps).GetMethod("CreateInstance", Type.EmptyTypes).MakeGenericMethod(type);
+                    MethodInfo mi = typeof(RuntimeHelpers).GetMethod("CreateInstance", Type.EmptyTypes).MakeGenericMethod(type);
 
                     reflectedCtors = BuiltinFunction.MakeOrAdd(reflectedCtors, name, mi, type, FunctionType.Function);
                 } catch (BadImageFormatException) {
@@ -429,6 +427,18 @@ namespace IronPython.Runtime.Operations {
                 MethodBase mb = mi as MethodBase;
                 if (mb != null && !mb.Name.StartsWith(NewTypeMaker.BaseMethodPrefix)) {
                     res.Add(mb);
+                }
+            }
+
+            return res.ToArray();
+        }
+
+        public static MemberInfo[] GetNonBaseHelperMemberInfos(MemberInfo[] members) {
+            List<MemberInfo> res = new List<MemberInfo>(members.Length);
+            foreach (MemberInfo mi in members) {
+                MethodBase mb = mi as MethodBase;
+                if (mb == null || !mb.Name.StartsWith(NewTypeMaker.BaseMethodPrefix)) {
+                    res.Add(mi);
                 }
             }
 
@@ -710,7 +720,7 @@ namespace IronPython.Runtime.Operations {
 
             if (pt.TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
-                value = PythonCalls.Call(callable);
+                value = PythonCalls.Call(context, callable);
                 return true;
             }
 
@@ -726,7 +736,7 @@ namespace IronPython.Runtime.Operations {
             object callable;
             if (pt.TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
-                value = PythonCalls.Call(callable, arg1);
+                value = PythonCalls.Call(context, callable, arg1);
                 return true;
             }
 
@@ -742,7 +752,7 @@ namespace IronPython.Runtime.Operations {
             object callable;
             if (pt.TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
-                value = PythonCalls.Call(callable, arg1, arg2);
+                value = PythonCalls.Call(context, callable, arg1, arg2);
                 return true;
             }
 

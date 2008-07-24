@@ -71,5 +71,23 @@ namespace IronPython.Runtime.Operations {
 
             return name.Substring(lastDot + 1);
         }
+
+        [SpecialName]
+        public static object GetCustomMember(CodeContext/*!*/ context, NamespaceTracker/*!*/ self, string name) {
+            MemberTracker mt;
+            if (self.TryGetValue(SymbolTable.StringToId(name), out mt)) {
+                if (mt.MemberType == TrackerTypes.Namespace || mt.MemberType == TrackerTypes.TypeGroup) {
+                    return mt;
+                }
+
+                PythonTypeSlot pts = PythonTypeOps.GetSlot(new MemberGroup(mt), name, PythonContext.GetContext(context).Binder.PrivateBinding);
+                object value;
+                if (pts != null && pts.TryGetValue(context, null, TypeCache.PythonType, out value)) {
+                    return value;
+                }
+            }
+
+            return OperationFailed.Value;
+        }
     }
 }

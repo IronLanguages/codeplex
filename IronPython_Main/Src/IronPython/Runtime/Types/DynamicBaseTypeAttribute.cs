@@ -15,7 +15,7 @@
 
 using System;
 
-namespace IronPython.Compiler.Generation {
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// Marks a type as being a suitable type to be used for user-defined classes.
     /// 

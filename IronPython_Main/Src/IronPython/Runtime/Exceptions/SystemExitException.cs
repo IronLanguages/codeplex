@@ -53,13 +53,15 @@ namespace IronPython.Runtime.Exceptions {
             object pyObj = PythonExceptions.ToPython(this);
 
             object args;
-            if (!PythonOps.TryGetBoundAttr(pyObj, Symbols.Arguments, out args)) return 0;
-            PythonTuple t = args as PythonTuple;
+            PythonTuple t;
 
-            if (t == null || t.__len__() == 0) return 0;
-
-            if (TypeCache.Int32.IsInstanceOfType(t[0]))
+            if (!PythonOps.TryGetBoundAttr(pyObj, Symbols.Arguments, out args) ||
+                (t = args as PythonTuple) == null ||
+                t.__len__() == 0) {
+                return 0;
+            } else if (Builtin.isinstance(t[0], TypeCache.Int32)) {
                 return Converter.ConvertToInt32(t[0]);
+            }
 
             otherCode = t[0];
             return 1;

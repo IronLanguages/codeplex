@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         /// Null test means infinite loop.
         /// </summary>
         internal LoopStatement(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else)
-            : base(annotations, ExpressionType.LoopStatement, typeof(void)) {
+            : base(ExpressionType.LoopStatement, typeof(void), annotations, null) {
             _test = test;
             _increment = increment;
             _body = body;
@@ -66,8 +66,17 @@ namespace System.Linq.Expressions {
         }
 
         public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label, Annotations annotations) {
-            ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.Requires(test == null || test.Type == typeof(bool), "test");
+            RequiresCanRead(body, "body");
+            if (test != null) {
+                RequiresCanRead(test, "test");
+                ContractUtils.Requires(test.Type == typeof(bool), "test", Strings.ArgumentMustBeBoolean);
+            }
+            if (increment != null) {
+                RequiresCanRead(increment, "increment");
+            }
+            if (@else != null) {
+                RequiresCanRead(@else, "else");
+            }
             return new LoopStatement(annotations, label, test, increment, body, @else);
         }
     }

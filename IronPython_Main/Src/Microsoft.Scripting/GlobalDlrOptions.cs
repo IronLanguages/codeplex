@@ -35,11 +35,11 @@ namespace Microsoft.Scripting {
             try {
                 _frames = ReadOption("Frames");
 
-                _preferComDispatch = ReadCoreOption("PreferComDispatch");
+                _preferComInteropAssembly = ReadCoreOption("PreferComInteropAssembly");
                 _cachePointersInApartment = ReadCoreOption("CachePointersInApartment");
 
                 if (_cachePointersInApartment) {
-                    _preferComDispatch = true;
+                    _preferComInteropAssembly = false;
                 }
             } catch (SecurityException) {
                 return;
@@ -65,7 +65,7 @@ namespace Microsoft.Scripting {
         }
 
         private static bool _frames;
-        private static bool _preferComDispatch;
+        private static bool _preferComInteropAssembly;
         private static bool _cachePointersInApartment;
 
         /// <summary>
@@ -92,8 +92,8 @@ namespace Microsoft.Scripting {
         /// Use pure IDispatch-based invocation when calling methods/properties
         /// on System.__ComObject
         /// </summary>
-        internal static bool PreferComDispatch {
-            get { return _preferComDispatch; }
+        internal static bool PreferComInteropAssembly {
+            get { return _preferComInteropAssembly; }
         }
     }
 }

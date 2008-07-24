@@ -131,8 +131,8 @@ namespace IronPython.Runtime.Operations {
 
         #region ToString
 
-        public static string __str__(double x) {
-            StringFormatter sf = new StringFormatter("%.12g", x);
+        public static string __str__(CodeContext/*!*/ context, double x) {
+            StringFormatter sf = new StringFormatter(context, "%.12g", x);
             sf._TrailingZeroAfterWholeFloat = true;
             return sf.Format();
         }
@@ -325,8 +325,8 @@ namespace IronPython.Runtime.Operations {
             return x != y;
         }
 
-        public static string __repr__(double self) {
-            return DoubleOps.__str__(self);
+        public static string __repr__(CodeContext/*!*/ context, double self) {
+            return DoubleOps.__str__(context, self);
         }
 
         public static BigInteger/*!*/ __long__(double self) {
@@ -388,17 +388,17 @@ namespace IronPython.Runtime.Operations {
         public static float Power(float x, float y) {
             return (float)DoubleOps.Power(x, y);
         }
-        
-        public static string __str__(float x) {
+
+        public static string __str__(CodeContext/*!*/ context, float x) {
             // Python does not natively support System.Single. However, we try to provide
             // formatting consistent with System.Double.
-            StringFormatter sf = new StringFormatter("%.6g", x);
+            StringFormatter sf = new StringFormatter(context, "%.6g", x);
             sf._TrailingZeroAfterWholeFloat = true;
             return sf.Format();
         }
 
-        public static string __repr__(float self) {
-            return __str__(self);
+        public static string __repr__(CodeContext/*!*/ context, float self) {
+            return __str__(context, self);
         }
     }
 }

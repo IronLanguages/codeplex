@@ -81,12 +81,6 @@ class Operator(Symbol):
     def __repr__(self):
         return 'Operator(%s,%s,%s)' % (self.symbol, self.name, self.rname)
 
-    def generate_binop(self, cw):
-        if self.isCompare():
-            cw.write(CMPOP, name=self.clrName)
-        else:
-            cw.write(BINOP, name=self.clrName)
-    
     def genOperatorTable_Mapping(self, cw):
         cw.writeline("pyOp[Symbols.Operator%s] = new OperatorMapping(Operators.%s, false, true, false, true);" % (self.title_name(), self.title_name()))        
         
@@ -95,10 +89,6 @@ class Operator(Symbol):
         cw.writeline("pyOp[Symbols.OperatorReverse%s] = new OperatorMapping(Operators.Reverse%s, false, true, false, true);" % (self.title_name(), self.title_name()))        
         cw.writeline("pyOp[Symbols.OperatorInPlace%s] = new OperatorMapping(Operators.InPlace%s, false, true, false);" % (self.title_name(), self.title_name()))
 
-    def genOperatorTable_Normal(self, cw):
-        cw.writeline("///<summary>Operator for performing %s</summary>" % self.name)
-        cw.writeline("%s," % (self.title_name()))        
-        
     def genOperatorReversal_Forward(self, cw):
         if self.isCompare(): return
         
@@ -108,6 +98,10 @@ class Operator(Symbol):
         if self.isCompare(): return
 
         cw.writeline("case Operators.Reverse%s: return Operators.%s;" % (self.title_name(), self.title_name()))
+        
+    def genOperatorTable_Normal(self, cw):
+        cw.writeline("///<summary>Operator for performing %s</summary>" % self.name)
+        cw.writeline("%s," % (self.title_name()))        
         
     def genOperatorTable_Reverse(self, cw):
         if self.isCompare(): return
@@ -121,6 +115,19 @@ class Operator(Symbol):
         cw.writeline("///<summary>Operator for performing in-place %s</summary>" % self.name)
         cw.writeline("InPlace%s," % (self.title_name()))
     
+    def genOperatorTable_NormalString(self, cw):
+        cw.writeline("///<summary>Operator for performing %s</summary>" % self.name)
+        titleName = self.title_name()
+        if titleName.endswith('Equals'):
+            titleName = titleName[:-1]
+        cw.writeline('public const string %s = "%s";' % (titleName, titleName))
+        
+    def genOperatorTable_InPlaceString(self, cw):
+        if self.isCompare(): return
+        
+        cw.writeline("///<summary>Operator for performing in-place %s</summary>" % self.name)
+        cw.writeline('public const string InPlace%s = "InPlace%s";' % (self.title_name(), self.title_name()))
+
     def genOperatorToSymbol(self, cw): 
         cw.writeline("case Operators.%s: return Symbols.Operator%s;" % (self.title_name(), self.title_name()))
         
@@ -128,6 +135,14 @@ class Operator(Symbol):
         
         cw.writeline("case Operators.Reverse%s: return Symbols.OperatorReverse%s;" % (self.title_name(), self.title_name()))
         cw.writeline("case Operators.InPlace%s: return Symbols.OperatorInPlace%s;" % (self.title_name(), self.title_name()))
+
+    def genStringOperatorToSymbol(self, cw): 
+        cw.writeline("case StandardOperators.%s: return Symbols.Operator%s;" % (self.title_name(), self.title_name()))
+        
+        if self.isCompare(): return
+        
+        cw.writeline("case OperatorStrings.Reverse%s: return Symbols.OperatorReverse%s;" % (self.title_name(), self.title_name()))
+        cw.writeline("case StandardOperators.InPlace%s: return Symbols.OperatorInPlace%s;" % (self.title_name(), self.title_name()))
 
     def genOldStyleOp(self, cw):
         if self.isCompare(): return
@@ -408,26 +423,6 @@ def tokens_generator(cw):
     for l in dict_init: cw.write(l)
     cw.exit_block()
 
-IBINOP = """
-private static readonly DynamicSite<object, object, object> %(name)sSharedSite =
-    DynamicSite<object, object, object>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
-
-public static object %(name)s(object x, object y) {
-    return %(name)sSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
-}"""
-
-BINOP = IBINOP
-
-CMPOP2 = """
-private static readonly DynamicSite<object, object, bool> %(name)sBooleanSharedSite =
-    DynamicSite<object, object, bool>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.%(name)s));
-
-public static bool %(name)sRetBool(object x, object y) {
-    return %(name)sBooleanSharedSite.Invoke(DefaultContext.DefaultCLS, x, y);
-}"""
-
-CMPOP = BINOP + CMPOP2
-
 UBINOP = """
 public static object %(name)s(object x, object y) {
     throw new NotImplementedException("%(name)s");
@@ -465,12 +460,6 @@ MUL_EXTRA = """
         }
 """
 
-def python_sites_generator(cw):
-    for op in ops:
-        if not isinstance(op, Operator): continue
-        if op.symbol in ["<>", "=="]: continue
-        op.generate_binop(cw)
-
 def gen_SymbolTable_ops_symbols(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
@@ -487,6 +476,14 @@ def gen_OperatorTable(cw):
         if not isinstance(op, Operator): continue
         op.genOperatorTable_Reverse(cw)
         
+def gen_OperatorStringTable(cw):
+    for op in ops:
+        if not isinstance(op, Operator): continue
+        op.genOperatorTable_NormalString(cw)
+    for op in ops:
+        if not isinstance(op, Operator): continue
+        op.genOperatorTable_InPlaceString(cw)
+
 def gen_operatorMapping(cw):
     for op in ops:
         if isinstance(op, Operator): op.genOperatorTable_Mapping(cw)
@@ -495,6 +492,11 @@ def gen_OperatorToSymbol(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
         op.genOperatorToSymbol(cw)
+        
+def gen_StringOperatorToSymbol(cw):
+    for op in ops:
+        if not isinstance(op, Operator): continue
+        op.genStringOperatorToSymbol(cw)
 
 def weakref_operators(cw):
     for op in ops:
@@ -525,11 +527,12 @@ def main():
         ("Tokenize Ops", tokenize_generator),
         ("Token Kinds", tokenkinds_generator),
         ("Tokens", tokens_generator),
-        ("Python Sites", python_sites_generator),
         ("Symbols - Ops Symbols", gen_SymbolTable_ops_symbols),
         ("Table of Operators", gen_OperatorTable),
+        ("Table of Standard Operators", gen_OperatorStringTable),
         ("PythonOperator Mapping", gen_operatorMapping),
         ("OperatorToSymbol", gen_OperatorToSymbol),
+        ("StringOperatorToSymbol", gen_StringOperatorToSymbol),
         ("WeakRef Operators Initialization", weakref_operators),
         ("OldInstance Operators", oldinstance_operators),
         ("Operator Reversal", operator_reversal),

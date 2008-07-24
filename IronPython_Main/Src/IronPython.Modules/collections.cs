@@ -205,15 +205,15 @@ namespace IronPython.Modules {
                 }
             }
 
-            public void rotate() {
-                rotate(1);
+            public void rotate(CodeContext/*!*/ context) {
+                rotate(context, 1);
             }
 
-            public void rotate(object n) {
+            public void rotate(CodeContext/*!*/ context, object n) {
                 lock (_lockObj) {
                     // rotation is easy if we have no items!
                     if (_itemCnt == 0) return;
-                    int rot = Converter.ConvertToInt32(n) % _itemCnt;
+                    int rot = PythonContext.GetContext(context).ConvertToInt32(n) % _itemCnt;
 
                     // no need to rotate if we'll end back up where we started
                     if (rot != 0) {
@@ -248,34 +248,34 @@ namespace IronPython.Modules {
                 }
             }
 
-            public object this[object index] {
+            public object this[CodeContext/*!*/ context, object index] {
                 get {
                     lock (_lockObj) {
-                        return _data[IndexToSlot(index)];
+                        return _data[IndexToSlot(context, index)];
                     }
                 }
                 set {
                     lock (_lockObj) {
                         _version++;
-                        _data[IndexToSlot(index)] = value;
+                        _data[IndexToSlot(context, index)] = value;
                     }
                 }
             }
             #endregion
 
-            public object __copy__() {
+            public object __copy__(CodeContext/*!*/ context) {
                 if (GetType() == typeof(deque)) {
                     deque res = new deque();
                     res.extend(((IEnumerable)this).GetEnumerator());
                     return res;
                 } else {
-                    return PythonCalls.Call(DynamicHelpers.GetPythonType(this), ((IEnumerable)this).GetEnumerator());
+                    return PythonCalls.Call(context, DynamicHelpers.GetPythonType(this), ((IEnumerable)this).GetEnumerator());
                 }
             }
 
-            public void __delitem__(object index) {
+            public void __delitem__(CodeContext/*!*/ context, object index) {
                 lock (_lockObj) {
-                    int realIndex = IndexToSlot(index);
+                    int realIndex = IndexToSlot(context, index);
 
                     _version++;
                     if (realIndex == _head) {
@@ -413,14 +413,14 @@ namespace IronPython.Modules {
 
             [PythonSystemType]
             private class deque_iterator : IEnumerator {
-                deque deque;
-                int curIndex, moveCnt, version;
+                private readonly deque _deque;
+                private int _curIndex, _moveCnt, _version;
 
                 public deque_iterator(deque d) {
                     lock (d._lockObj) {
-                        deque = d;
-                        curIndex = d._head - 1;
-                        version = d._version;
+                        _deque = d;
+                        _curIndex = d._head - 1;
+                        _version = d._version;
                     }
                 }
 
@@ -428,19 +428,19 @@ namespace IronPython.Modules {
 
                 object IEnumerator.Current {
                     get {
-                        return this.deque._data[curIndex];
+                        return _deque._data[_curIndex];
                     }
                 }
 
                 bool IEnumerator.MoveNext() {
-                    lock (deque._lockObj) {
-                        if (version != deque._version) throw PythonOps.RuntimeError("deque mutated during iteration");
+                    lock (_deque._lockObj) {
+                        if (_version != _deque._version) throw PythonOps.RuntimeError("deque mutated during iteration");
 
-                        if (moveCnt < deque._itemCnt) {
-                            curIndex++;
-                            moveCnt++;
-                            if (curIndex == deque._data.Length) {
-                                curIndex = 0;
+                        if (_moveCnt < _deque._itemCnt) {
+                            _curIndex++;
+                            _moveCnt++;
+                            if (_curIndex == _deque._data.Length) {
+                                _curIndex = 0;
                             }
                             return true;
                         }
@@ -449,8 +449,61 @@ namespace IronPython.Modules {
                 }
 
                 void IEnumerator.Reset() {
-                    moveCnt = 0;
-                    curIndex = deque._head;
+                    _moveCnt = 0;
+                    _curIndex = _deque._head - 1;
+                }
+
+                #endregion
+            }
+
+            #endregion
+
+            #region __reverse__ implementation
+
+            public virtual IEnumerator __reverse__() {
+                return new deque_reverse_iterator(this);
+            }
+
+            [PythonSystemType]
+            private class deque_reverse_iterator : IEnumerator {
+                private readonly deque _deque;
+                private int _curIndex, _moveCnt, _version;
+
+                public deque_reverse_iterator(deque d) {
+                    lock (d._lockObj) {
+                        _deque = d;
+                        _curIndex = d._tail;
+                        _version = d._version;
+                    }
+                }
+
+                #region IEnumerator Members
+
+                object IEnumerator.Current {
+                    get {
+                        return _deque._data[_curIndex];
+                    }
+                }
+
+                bool IEnumerator.MoveNext() {
+                    lock (_deque._lockObj) {
+                        if (_version != _deque._version) throw PythonOps.RuntimeError("deque mutated during iteration");
+
+                        if (_moveCnt < _deque._itemCnt) {
+                            _curIndex--;
+                            _moveCnt++;
+                            if (_curIndex < 0) {
+                                _curIndex = _deque._data.Length - 1;
+                            }
+                            return true;
+                        }
+                        return false;
+                    }
+                }
+
+                void IEnumerator.Reset() {
+                    _moveCnt = 0;
+                    _curIndex = _deque._tail;
                 }
 
                 #endregion
@@ -482,10 +535,10 @@ namespace IronPython.Modules {
                 _data = newData;
             }
 
-            private int IndexToSlot(object index) {
+            private int IndexToSlot(CodeContext/*!*/ context, object index) {
                 if (_itemCnt == 0) throw PythonOps.IndexError("deque index out of range");
 
-                int intIndex = Converter.ConvertToInt32(index);
+                int intIndex = PythonContext.GetContext(context).ConvertToInt32(index);
                 if (intIndex >= 0) {
                     if (intIndex >= _itemCnt) throw PythonOps.IndexError("deque index out of range");
 
@@ -652,7 +705,16 @@ namespace IronPython.Modules {
         [PythonSystemType]
         public class defaultdict : PythonDictionary {
             private object _factory;
-            private DynamicSite<object, object> _missingSite;
+            private CallSite<DynamicSiteTarget<CodeContext, object, object>> _missingSite;
+
+            public defaultdict(CodeContext/*!*/ context) {
+                _missingSite = CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(
+                    new InvokeBinder(
+                        PythonContext.GetContext(context).DefaultBinderState,
+                        new CallSignature(0)
+                    )
+                );
+            }
 
             public void __init__(object default_factory) {
                 _factory = default_factory;
@@ -685,14 +747,11 @@ namespace IronPython.Modules {
             public object __missing__(CodeContext context, object key) {
                 object factory = _factory;
 
-                if (factory == null) throw PythonOps.KeyError(key);
-
-                if (!_missingSite.IsInitialized) {
-                    _missingSite.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 0));
+                if (factory == null) {
+                    throw PythonOps.KeyError(key);
                 }
 
-                // get the default value, store it in the dictionary and return it
-                return this[key] = _missingSite.Invoke(context, factory);
+                return this[key] = _missingSite.Target.Invoke(_missingSite, context, factory);
             }
 
             public object __copy__(CodeContext/*!*/ context) {
@@ -700,7 +759,7 @@ namespace IronPython.Modules {
             }
 
             public override PythonDictionary copy(CodeContext/*!*/ context) {
-                defaultdict res = new defaultdict();
+                defaultdict res = new defaultdict(context);
                 res.default_factory = this.default_factory;
                 res.update(context, this);
                 return res;

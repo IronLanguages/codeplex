@@ -32,19 +32,31 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
 
-    class MetaPythonFunction : MetaPythonObject {
+    class MetaPythonFunction : MetaPythonObject, IPythonInvokable {
         public MetaPythonFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonFunction/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
+        #region IPythonInvokable Members
+
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return new FunctionBinderHelper(pythonInvoke, BinderState.GetBinderState(pythonInvoke).Binder, this, args).MakeMetaObject();
+        }
+
+        #endregion
+        
         #region MetaObject Overrides
 
-        public override MetaObject Invoke(InvokeAction/*!*/ call, params MetaObject[] args) {
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
+        }
+
+        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject[] args) {
             return new FunctionBinderHelper(call, BinderState.GetBinderState(call).Binder, this, args).MakeMetaObject();
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
             if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(PythonFunction)));
             }
@@ -73,7 +85,7 @@ namespace IronPython.Runtime.Binding {
             private readonly MetaPythonFunction/*!*/ _func;         // the meta object for the function we're calling
             private readonly MetaObject/*!*/[]/*!*/ _args;          // the arguments for the function
             private readonly MetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
-            private readonly InvokeAction/*!*/ _call;               // the signature for the method call
+            private readonly MetaAction/*!*/ _call;               // the signature for the method call
             private readonly DefaultBinder/*!*/ _binder;            // the binder used for producing extra meta objects
 
             private List<VariableExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
@@ -86,7 +98,7 @@ namespace IronPython.Runtime.Binding {
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
             private Expression _paramlessCheck;                     // tests when we have no parameters
 
-            public FunctionBinderHelper(InvokeAction/*!*/ call, DefaultBinder/*!*/ binder, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
+            public FunctionBinderHelper(MetaAction/*!*/ call, DefaultBinder/*!*/ binder, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
                 _call = call;
                 _func = function;
                 _args = ArrayUtils.RemoveFirst(args);

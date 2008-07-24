@@ -63,7 +63,7 @@ namespace IronPython.Modules {
             + "(deprecated) bin parameters."
             )]
         public static void dump(CodeContext/*!*/ context, object obj, object file, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
-            Pickler pickler = new Pickler(file, protocol, bin);
+            Pickler pickler = new Pickler(context, file, protocol, bin);
             pickler.dump(context, obj);
         }
 
@@ -76,10 +76,10 @@ namespace IronPython.Modules {
         public static string dumps(CodeContext/*!*/ context, object obj, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
             //??? possible perf enhancement: use a C# TextWriter-backed IFileOutput and
             // thus avoid Python call overhead. Also do similar thing for LoadFromString.
-            object stringIO = PythonOps.InvokeWithContext(context, DynamicHelpers.GetPythonTypeFromType(typeof(PythonStringIO)), SymbolTable.StringToId("StringIO"));
-            Pickler pickler = new Pickler(stringIO, protocol, bin);
+            object stringIO = PythonOps.Invoke(context, DynamicHelpers.GetPythonTypeFromType(typeof(PythonStringIO)), SymbolTable.StringToId("StringIO"));
+            Pickler pickler = new Pickler(context, stringIO, protocol, bin);
             pickler.dump(context, obj);
-            return Converter.ConvertToString(PythonOps.Invoke(stringIO, SymbolTable.StringToId("getvalue")));
+            return Converter.ConvertToString(PythonOps.Invoke(context, stringIO, SymbolTable.StringToId("getvalue")));
         }
 
         [Documentation("load(file) -> unpickled object\n\n"
@@ -95,7 +95,7 @@ namespace IronPython.Modules {
             + "text mode."
             )]
         public static object load(CodeContext/*!*/ context, object file) {
-            return new Unpickler(file).load(context);
+            return new Unpickler(context, file).load(context);
         }
 
         [Documentation("loads(string) -> unpickled object\n\n"
@@ -105,11 +105,12 @@ namespace IronPython.Modules {
             )]
         public static object loads(CodeContext/*!*/ context, object @string) {
             object stringIO = PythonOps.Invoke(
+                context,
                 DynamicHelpers.GetPythonTypeFromType(typeof(PythonStringIO)),
                 SymbolTable.StringToId("StringIO"),
                 @string
             );
-            return new Unpickler(stringIO).load(context);
+            return new Unpickler(context, stringIO).load(context);
         }
 
         #endregion
@@ -121,8 +122,8 @@ namespace IronPython.Modules {
         /// This enables the creation of thin wrappers that make fast .NET types and slow Python types look the same.
         /// </summary>
         public interface IFileInput {
-            string Read(int size);
-            string ReadLine();
+            string Read(CodeContext/*!*/ context, int size);
+            string ReadLine(CodeContext/*!*/ context);
         }
 
         /// <summary>
@@ -130,61 +131,62 @@ namespace IronPython.Modules {
         /// This enables the creation of thin wrappers that make fast .NET types and slow Python types look the same.
         /// </summary>
         public interface IFileOutput {
-            void Write(string data);
+            void Write(CodeContext/*!*/ context, string data);
         }
 
         private class PythonFileInput : IFileInput {
             private object _readMethod;
             private object _readLineMethod;
 
-            public PythonFileInput(object file) {
-                if (!PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("read"), out _readMethod) ||
-                    !PythonOps.IsCallable(_readMethod) ||
-                    !PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("readline"), out _readLineMethod) ||
-                    !PythonOps.IsCallable(_readLineMethod)
+            public PythonFileInput(CodeContext/*!*/ context, object file) {
+                if (!PythonOps.TryGetBoundAttr(context, file, SymbolTable.StringToId("read"), out _readMethod) ||
+                    !PythonOps.IsCallable(context, _readMethod) ||
+                    !PythonOps.TryGetBoundAttr(context, file, SymbolTable.StringToId("readline"), out _readLineMethod) ||
+                    !PythonOps.IsCallable(context, _readLineMethod)
                 ) {
                     throw PythonOps.TypeError("argument must have callable 'read' and 'readline' attributes");
                 }
             }
 
-            public string Read(int size) {
-                return Converter.ConvertToString(PythonCalls.Call(_readMethod, size));
+            public string Read(CodeContext/*!*/ context, int size) {
+                return Converter.ConvertToString(PythonCalls.Call(context, _readMethod, size));
             }
 
-            public string ReadLine() {
-                return Converter.ConvertToString(PythonCalls.Call(_readLineMethod));
+            public string ReadLine(CodeContext/*!*/ context) {
+                return Converter.ConvertToString(PythonCalls.Call(context, _readLineMethod));
             }
         }
 
         private class PythonFileOutput : IFileOutput {
             private object _writeMethod;
 
-            public PythonFileOutput(object file) {
-                if (!PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("write"), out _writeMethod) ||
-                    !PythonOps.IsCallable(this._writeMethod)
+            public PythonFileOutput(CodeContext/*!*/ context, object file) {
+                if (!PythonOps.TryGetBoundAttr(context, file, SymbolTable.StringToId("write"), out _writeMethod) ||
+                    !PythonOps.IsCallable(context, this._writeMethod)
                 ) {
                     throw PythonOps.TypeError("argument must have callable 'write' attribute");
                 }
             }
 
-            public void Write(string data) {
-                PythonCalls.Call(_writeMethod, data);
+            public void Write(CodeContext/*!*/ context, string data) {
+                PythonCalls.Call(context, _writeMethod, data);
             }
         }
 
         private class PythonReadableFileOutput : PythonFileOutput {
             private object _getValueMethod;
 
-            public PythonReadableFileOutput(object file) : base(file) {
-                if (!PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("getvalue"), out _getValueMethod) ||
-                    !PythonOps.IsCallable(_getValueMethod)
+            public PythonReadableFileOutput(CodeContext/*!*/ context, object file)
+                : base(context, file) {
+                if (!PythonOps.TryGetBoundAttr(context, file, SymbolTable.StringToId("getvalue"), out _getValueMethod) ||
+                    !PythonOps.IsCallable(context, _getValueMethod)
                 ) {
                     throw PythonOps.TypeError("argument must have callable 'getvalue' attribute");
                 }
             }
 
-            public object GetValue() {
-                return PythonCalls.Call(_getValueMethod);
+            public object GetValue(CodeContext/*!*/ context) {
+                return PythonCalls.Call(context, _getValueMethod);
             }
         }
 
@@ -279,7 +281,6 @@ namespace IronPython.Modules {
             private int _protocol;
             private IDictionary _memo;
             private object _persist_id;
-            private DynamicSite<object, object, string> _persist_site;
 
             #region Public API
 
@@ -333,11 +334,11 @@ namespace IronPython.Modules {
                     // https://sourceforge.net/tracker/?func=detail&atid=105470&aid=939395&group_id=5470
                     int intProtocol;
                     if (file == null) {
-                        file = new PythonReadableFileOutput(new PythonStringIO.StringO());
+                        file = new PythonReadableFileOutput(context, new PythonStringIO.StringO());
                     } else if (Converter.TryConvertToInt32(file, out intProtocol)) {
-                        return new Pickler((IFileOutput) new PythonReadableFileOutput(new PythonStringIO.StringO()), intProtocol, bin);
+                        return new Pickler(context, (IFileOutput) new PythonReadableFileOutput(context, new PythonStringIO.StringO()), intProtocol, bin);
                     }
-                    return new Pickler(file, protocol, bin);
+                    return new Pickler(context, file, protocol, bin);
                 } else {
                     Pickler pickler = cls.CreateInstance(context, file, protocol, bin) as Pickler;
                     if (pickler == null) throw PythonOps.TypeError("{0} is not a subclass of Pickler", cls);
@@ -345,10 +346,10 @@ namespace IronPython.Modules {
                 }
             }
 
-            public Pickler(object file, object protocol, object bin)
-                : this(new PythonFileOutput(file), protocol, bin) { }
+            public Pickler(CodeContext/*!*/ context, object file, object protocol, object bin)
+                : this(context, new PythonFileOutput(context, file), protocol, bin) { }
 
-            public Pickler(IFileOutput file, object protocol, object bin) {
+            public Pickler(CodeContext/*!*/ context, IFileOutput file, object protocol, object bin) {
                 dispatchTable = new Dictionary<PythonType, PickleFunction>();
                 dispatchTable[TypeCache.Boolean] = SaveBoolean;
                 dispatchTable[TypeCache.Int32] = SaveInteger;
@@ -370,7 +371,7 @@ namespace IronPython.Modules {
 
                 if (protocol == null) protocol = PythonOps.IsTrue(bin) ? 1 : 0;
 
-                int intProtocol = Converter.ConvertToInt32(protocol);
+                int intProtocol = PythonContext.GetContext(context).ConvertToInt32(protocol);
                 if (intProtocol > highestProtocol) {
                     throw PythonOps.ValueError("pickle protocol {0} asked for; the highest available protocol is {1}", intProtocol, highestProtocol);
                 } else if (intProtocol < 0) {
@@ -394,9 +395,9 @@ namespace IronPython.Modules {
                 + "then create multiple references to a single object."
                 )]
             public void dump(CodeContext/*!*/ context, object obj) {
-                if (_protocol >= 2) WriteProto();
+                if (_protocol >= 2) WriteProto(context);
                 Save(context, obj);
-                Write(Opcode.Stop);
+                Write(context, Opcode.Stop);
             }
 
             [Documentation("clear_memo() -> None\n\n"
@@ -412,9 +413,9 @@ namespace IronPython.Modules {
                 + "Return the value of the internal string. Raises PicklingError if a file object\n"
                 + "was passed to this pickler's constructor."
                 )]
-            public object getvalue() {
+            public object getvalue(CodeContext/*!*/ context) {
                 if (_file is PythonReadableFileOutput) {
-                    return ((PythonReadableFileOutput)_file).GetValue();
+                    return ((PythonReadableFileOutput)_file).GetValue(context);
                 }
                 throw PythonExceptions.CreateThrowable(PicklingError, "Attempt to getvalue() a non-list-based pickler");
             }
@@ -425,10 +426,7 @@ namespace IronPython.Modules {
 
             private void Save(CodeContext/*!*/ context, object obj) {
                 if (_persist_id != null) {
-                    if (!_persist_site.IsInitialized) {
-                        _persist_site.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 1));
-                    }
-                    string res = _persist_site.Invoke(context, _persist_id, obj);
+                    string res = Converter.ConvertToString(PythonContext.GetContext(context).Call(_persist_id, obj));
                     if (res != null) {
                         SavePersId(context, res);
                         return;
@@ -436,7 +434,7 @@ namespace IronPython.Modules {
                 }
 
                 if (_memo.Contains(PythonOps.Id(obj))) {
-                    WriteGet(obj);
+                    WriteGet(context, obj);
                 } else {                    
                     PickleFunction pickleFunction;
                     PythonType objType = DynamicHelpers.GetPythonType(obj);
@@ -455,25 +453,25 @@ namespace IronPython.Modules {
             private void SavePersId(CodeContext/*!*/ context, string res) {
                 if (this.binary != 0) {
                     Save(context, res);
-                    Write(Opcode.BinPersid);
+                    Write(context, Opcode.BinPersid);
                 } else {
-                    Write(Opcode.PersId);
-                    Write(res);
-                    Write("\n");
+                    Write(context, Opcode.PersId);
+                    Write(context, res);
+                    Write(context, "\n");
                 }
             }
 
             private void SaveBoolean(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Boolean), "arg must be bool");
                 if (_protocol < 2) {
-                    Write(Opcode.Int);
-                    Write(String.Format("0{0}", ((bool)obj) ? 1 : 0));
-                    Write(Newline);
+                    Write(context, Opcode.Int);
+                    Write(context, String.Format("0{0}", ((bool)obj) ? 1 : 0));
+                    Write(context, Newline);
                 } else {
                     if ((bool)obj) {
-                        Write(Opcode.NewTrue);
+                        Write(context, Opcode.NewTrue);
                     } else {
-                        Write(Opcode.NewFalse);
+                        Write(context, Opcode.NewFalse);
                     }
                 }
             }
@@ -484,13 +482,13 @@ namespace IronPython.Modules {
                 Memoize(obj);
 
                 if (_protocol < 1) {
-                    Write(Opcode.Mark);
-                    Write(Opcode.Dict);
+                    Write(context, Opcode.Mark);
+                    Write(context, Opcode.Dict);
                 } else {
-                    Write(Opcode.EmptyDict);
+                    Write(context, Opcode.EmptyDict);
                 }
 
-                WritePut(obj);
+                WritePut(context, obj);
                 BatchSetItems(context, (DictionaryOps.iteritems((IDictionary<object, object>)obj)));
             }
 
@@ -498,11 +496,11 @@ namespace IronPython.Modules {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Double), "arg must be float");
 
                 if (_protocol < 1) {
-                    Write(Opcode.Float);
-                    WriteFloatAsString(obj);
+                    Write(context, Opcode.Float);
+                    WriteFloatAsString(context, obj);
                 } else {
-                    Write(Opcode.BinFloat);
-                    WriteFloat64(obj);
+                    Write(context, Opcode.BinFloat);
+                    WriteFloat64(context, obj);
                 }
             }
 
@@ -533,15 +531,15 @@ namespace IronPython.Modules {
                     object code;
                     if (((IDictionary<object, object>)PythonCopyReg.GetExtensionRegistry(context)).TryGetValue(PythonTuple.MakeTuple(moduleName, name), out code)) {
                         int intCode = (int)code;
-                        if (IsUInt8(code)) {
-                            Write(Opcode.Ext1);
-                            WriteUInt8(code);
-                        } else if (IsUInt16(code)) {
-                            Write(Opcode.Ext2);
-                            WriteUInt16(code);
-                        } else if (IsInt32(code)) {
-                            Write(Opcode.Ext4);
-                            WriteInt32(code);
+                        if (IsUInt8(context, code)) {
+                            Write(context, Opcode.Ext1);
+                            WriteUInt8(context, code);
+                        } else if (IsUInt16(context, code)) {
+                            Write(context, Opcode.Ext2);
+                            WriteUInt16(context, code);
+                        } else if (IsInt32(context, code)) {
+                            Write(context, Opcode.Ext4);
+                            WriteInt32(context, code);
                         } else {
                             throw PythonOps.RuntimeError("unrecognized integer format");
                         }
@@ -551,16 +549,16 @@ namespace IronPython.Modules {
 
                 Memoize(obj);
 
-                Write(Opcode.Global);
-                WriteStringPair(moduleName, name);
-                WritePut(obj);
+                Write(context, Opcode.Global);
+                WriteStringPair(context, moduleName, name);
+                WritePut(context, obj);
             }
 
             private void SaveInstance(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.OldInstance), "arg must be old-class instance");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
 
-                Write(Opcode.Mark);
+                Write(context, Opcode.Mark);
 
                 // Memoize() call isn't in the usual spot to allow class to be memoized before
                 // instance (when using proto other than 0) to match CPython's bytecode output
@@ -579,42 +577,42 @@ namespace IronPython.Modules {
 
                     Memoize(obj);
                     WriteInitArgs(context, obj);
-                    Write(Opcode.Inst);
-                    WriteStringPair(classModuleName, className);
+                    Write(context, Opcode.Inst);
+                    WriteStringPair(context, classModuleName, className);
                 } else {
                     Save(context, objClass);
                     Memoize(obj);
                     WriteInitArgs(context, obj);
-                    Write(Opcode.Obj);
+                    Write(context, Opcode.Obj);
                 }
 
-                WritePut(obj);
+                WritePut(context, obj);
 
                 object getStateCallable;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetState, out getStateCallable)) {
-                    Save(context, PythonCalls.Call(getStateCallable));
+                    Save(context, PythonCalls.Call(context, getStateCallable));
                 } else {
                     Save(context, PythonOps.GetBoundAttr(context, obj, Symbols.Dict));
                 }
 
-                Write(Opcode.Build);
+                Write(context, Opcode.Build);
             }
 
             private void SaveInteger(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Int32), "arg must be int");
                 if (_protocol < 1) {
-                    Write(Opcode.Int);
-                    WriteIntAsString(obj);
+                    Write(context, Opcode.Int);
+                    WriteIntAsString(context, obj);
                 } else {
-                    if (IsUInt8(obj)) {
-                        Write(Opcode.BinInt1);
-                        WriteUInt8(obj);
-                    } else if (IsUInt16(obj)) {
-                        Write(Opcode.BinInt2);
-                        WriteUInt16(obj);
-                    } else if (IsInt32(obj)) {
-                        Write(Opcode.BinInt);
-                        WriteInt32(obj);
+                    if (IsUInt8(context, obj)) {
+                        Write(context, Opcode.BinInt1);
+                        WriteUInt8(context, obj);
+                    } else if (IsUInt16(context, obj)) {
+                        Write(context, Opcode.BinInt2);
+                        WriteUInt16(context, obj);
+                    } else if (IsInt32(context, obj)) {
+                        Write(context, Opcode.BinInt);
+                        WriteInt32(context, obj);
                     } else {
                         throw PythonOps.RuntimeError("unrecognized integer format");
                     }
@@ -626,13 +624,13 @@ namespace IronPython.Modules {
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
                 if (_protocol < 1) {
-                    Write(Opcode.Mark);
-                    Write(Opcode.List);
+                    Write(context, Opcode.Mark);
+                    Write(context, Opcode.List);
                 } else {
-                    Write(Opcode.EmptyList);
+                    Write(context, Opcode.EmptyList);
                 }
 
-                WritePut(obj);
+                WritePut(context, obj);
                 BatchAppends(context, ((IEnumerable)obj).GetEnumerator());
             }
 
@@ -640,24 +638,24 @@ namespace IronPython.Modules {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.BigInteger), "arg must be long");
 
                 if (_protocol < 2) {
-                    Write(Opcode.Long);
-                    WriteLongAsString(obj);
+                    Write(context, Opcode.Long);
+                    WriteLongAsString(context, obj);
                 } else {
                     if (((BigInteger)obj).IsZero()) {
-                        Write(Opcode.Long1);
-                        WriteUInt8(0);
+                        Write(context, Opcode.Long1);
+                        WriteUInt8(context, 0);
                     } else {
                         byte[] dataBytes = ((BigInteger)obj).ToByteArray();
                         if (dataBytes.Length < 256) {
-                            Write(Opcode.Long1);
-                            WriteUInt8(dataBytes.Length);
+                            Write(context, Opcode.Long1);
+                            WriteUInt8(context, dataBytes.Length);
                         } else {
-                            Write(Opcode.Long4);
-                            WriteInt32(dataBytes.Length);
+                            Write(context, Opcode.Long4);
+                            WriteInt32(context, dataBytes.Length);
                         }
 
                         foreach (byte b in dataBytes) {
-                            WriteUInt8(b);
+                            WriteUInt8(context, b);
                         }
                     }
                 }
@@ -665,7 +663,7 @@ namespace IronPython.Modules {
 
             private void SaveNone(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.None), "arg must be None");
-                Write(Opcode.NoneValue);
+                Write(context, Opcode.NoneValue);
             }
 
             /// <summary>
@@ -681,7 +679,7 @@ namespace IronPython.Modules {
                 PythonType objType = DynamicHelpers.GetPythonType(obj);
 
                 if (((IDictionary<object, object>)PythonCopyReg.GetDispatchTable(context)).TryGetValue(objType, out reduceCallable)) {
-                    result = PythonCalls.Call(reduceCallable, obj);
+                    result = PythonCalls.Call(context, reduceCallable, obj);
                 } else if (PythonOps.TryGetBoundAttr(context, obj, Symbols.ReduceExtended, out reduceCallable)) {
                     if (obj is PythonType) {
                         result = PythonOps.CallWithContext(context, reduceCallable, obj, _protocol);
@@ -700,7 +698,7 @@ namespace IronPython.Modules {
 
                 if (objType.Equals(TypeCache.String)) {
                     if (_memo.Contains(PythonOps.Id(obj))) {
-                        WriteGet(obj);
+                        WriteGet(context, obj);
                     } else {
                         SaveGlobalByName(context, obj, result);
                     }
@@ -733,7 +731,7 @@ namespace IronPython.Modules {
             /// Only context, obj, func, and reduceCallable are required; all other arguments may be null.
             /// </summary>
             private void SaveReduce(CodeContext/*!*/ context, object obj, object reduceCallable, object func, object args, object state, object listItems, object dictItems) {
-                if (!PythonOps.IsCallable(func)) {
+                if (!PythonOps.IsCallable(context, func)) {
                     throw CannotPickle(obj, "func from reduce() should be callable");
                 } else if (!(args is PythonTuple) && args != null) {
                     throw CannotPickle(obj, "args from reduce() should be a tuple");
@@ -763,18 +761,18 @@ namespace IronPython.Modules {
                     }
                     Save(context, argsTuple[0]);
                     Save(context, argsTuple[new Slice(1, null)]);
-                    Write(Opcode.NewObj);
+                    Write(context, Opcode.NewObj);
                 } else {
                     Save(context, func);
                     Save(context, args);
-                    Write(Opcode.Reduce);
+                    Write(context, Opcode.Reduce);
                 }
 
-                WritePut(obj);
+                WritePut(context, obj);
 
                 if (state != null) {
                     Save(context, state);
-                    Write(Opcode.Build);
+                    Write(context, Opcode.Build);
                 }
 
                 if (listItems != null) {
@@ -805,13 +803,13 @@ namespace IronPython.Modules {
                     needMark = true;
                 }
 
-                if (needMark) Write(Opcode.Mark);
+                if (needMark) Write(context, Opcode.Mark);
                 foreach (object o in t) Save(context, o);
-                Write(opcode);
+                Write(context, opcode);
 
                 if (t.__len__() > 0) {
                     Memoize(t);
-                    WritePut(t);
+                    WritePut(context, t);
                 }
             }
 
@@ -820,14 +818,14 @@ namespace IronPython.Modules {
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
                 if (_protocol < 1) {
-                    Write(Opcode.Unicode);
-                    WriteUnicodeStringRaw(obj);
+                    Write(context, Opcode.Unicode);
+                    WriteUnicodeStringRaw(context, obj);
                 } else {
-                    Write(Opcode.BinUnicode);
-                    WriteUnicodeStringUtf8(obj);
+                    Write(context, Opcode.BinUnicode);
+                    WriteUnicodeStringUtf8(context, obj);
                 }
 
-                WritePut(obj);
+                WritePut(context, obj);
             }
 
             #endregion
@@ -837,97 +835,97 @@ namespace IronPython.Modules {
             /// <summary>
             /// Write value in pickle decimalnl_short format.
             /// </summary>
-            private void WriteFloatAsString(object value) {
+            private void WriteFloatAsString(CodeContext/*!*/ context, object value) {                
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.Double));
                 // 17 digits of precision are necessary for accurate roundtripping
-                StringFormatter sf = new StringFormatter("%.17g", value);
+                StringFormatter sf = new StringFormatter(context, "%.17g", value);
                 sf._TrailingZeroAfterWholeFloat = true;
-                Write(sf.Format());
-                Write(Newline);
+                Write(context, sf.Format());
+                Write(context, Newline);
             }
 
             /// <summary>
             /// Write value in pickle float8 format.
             /// </summary>
-            private void WriteFloat64(object value) {
+            private void WriteFloat64(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.Double));
-                Write(PythonStruct.pack(">d", value));
+                Write(context, PythonStruct.pack(">d", value));
             }
 
             /// <summary>
             /// Write value in pickle uint1 format.
             /// </summary>
-            private void WriteUInt8(object value) {
-                Debug.Assert(IsUInt8(value));
-                Write(PythonStruct.pack("B", value));
+            private void WriteUInt8(CodeContext/*!*/ context, object value) {
+                Debug.Assert(IsUInt8(context, value));
+                Write(context, PythonStruct.pack("B", value));
             }
 
             /// <summary>
             /// Write value in pickle uint2 format.
             /// </summary>
-            private void WriteUInt16(object value) {
-                Debug.Assert(IsUInt16(value));
-                Write(PythonStruct.pack("<H", value));
+            private void WriteUInt16(CodeContext/*!*/ context, object value) {
+                Debug.Assert(IsUInt16(context, value));
+                Write(context, PythonStruct.pack("<H", value));
             }
 
             /// <summary>
             /// Write value in pickle int4 format.
             /// </summary>
-            private void WriteInt32(object value) {
-                Debug.Assert(IsInt32(value));
-                Write(PythonStruct.pack("<i", value));
+            private void WriteInt32(CodeContext/*!*/ context, object value) {
+                Debug.Assert(IsInt32(context, value));
+                Write(context, PythonStruct.pack("<i", value));
             }
 
             /// <summary>
             /// Write value in pickle decimalnl_short format.
             /// </summary>
-            private void WriteIntAsString(object value) {
-                Debug.Assert(IsInt32(value));
-                Write(PythonOps.StringRepr(value));
-                Write(Newline);
+            private void WriteIntAsString(CodeContext/*!*/ context, object value) {
+                Debug.Assert(IsInt32(context, value));
+                Write(context, PythonOps.StringRepr(value));
+                Write(context, Newline);
             }
 
             /// <summary>
             /// Write value in pickle decimalnl_long format.
             /// </summary>
-            private void WriteLongAsString(object value) {
+            private void WriteLongAsString(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.BigInteger));
-                Write(PythonOps.StringRepr(value));
-                Write(Newline);
+                Write(context, PythonOps.StringRepr(value));
+                Write(context, Newline);
             }
 
             /// <summary>
             /// Write value in pickle unicodestringnl format.
             /// </summary>
-            private void WriteUnicodeStringRaw(object value) {
+            private void WriteUnicodeStringRaw(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.String));
                 // manually escape backslash and newline
-                Write(StringOps.RawUnicodeEscapeEncode(((string)value).Replace("\\", "\\u005c").Replace("\n", "\\u000a")));
-                Write(Newline);
+                Write(context, StringOps.RawUnicodeEscapeEncode(((string)value).Replace("\\", "\\u005c").Replace("\n", "\\u000a")));
+                Write(context, Newline);
             }
 
             /// <summary>
             /// Write value in pickle unicodestring4 format.
             /// </summary>
-            private void WriteUnicodeStringUtf8(object value) {
+            private void WriteUnicodeStringUtf8(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.String));
                 string encodedString = StringOps.FromByteArray(System.Text.Encoding.UTF8.GetBytes((string)value));
-                WriteInt32(encodedString.Length);
-                Write(encodedString);
+                WriteInt32(context, encodedString.Length);
+                Write(context, encodedString);
             }
 
             /// <summary>
             /// Write value in pickle stringnl_noescape_pair format.
             /// </summary>
-            private void WriteStringPair(object value1, object value2) {
+            private void WriteStringPair(CodeContext/*!*/ context, object value1, object value2) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value1).Equals(TypeCache.String));
                 Debug.Assert(DynamicHelpers.GetPythonType(value2).Equals(TypeCache.String));
                 Debug.Assert(IsPrintableAscii(value1));
                 Debug.Assert(IsPrintableAscii(value2));
-                Write((string)value1);
-                Write(Newline);
-                Write((string)value2);
-                Write(Newline);
+                Write(context, (string)value1);
+                Write(context, Newline);
+                Write(context, (string)value2);
+                Write(context, Newline);
             }
 
             #endregion
@@ -937,22 +935,28 @@ namespace IronPython.Modules {
             /// <summary>
             /// Return true if value is appropriate for formatting in pickle uint1 format.
             /// </summary>
-            private bool IsUInt8(object value) {
-                return PythonSites.LessThanOrEqualRetBool(0, value) && PythonSites.LessThanRetBool(value, 1 << 8);
+            private bool IsUInt8(CodeContext/*!*/ context, object value) {
+                PythonContext pc = PythonContext.GetContext(context);
+
+                return pc.LessThanOrEqual(0, value) && pc.LessThan(value, 1 << 8);
             }
 
             /// <summary>
             /// Return true if value is appropriate for formatting in pickle uint2 format.
             /// </summary>
-            private bool IsUInt16(object value) {
-                return PythonSites.LessThanOrEqualRetBool(1 << 8, value) && PythonSites.LessThanRetBool(value, 1 << 16);
+            private bool IsUInt16(CodeContext/*!*/ context, object value) {
+                PythonContext pc = PythonContext.GetContext(context);
+
+                return pc.LessThanOrEqual(1 << 8, value) && pc.LessThan(value, 1 << 16);
             }
 
             /// <summary>
             /// Return true if value is appropriate for formatting in pickle int4 format.
             /// </summary>
-            private bool IsInt32(object value) {
-                return PythonSites.LessThanOrEqualRetBool(Int32.MinValue, value) && PythonSites.LessThanOrEqualRetBool(value, Int32.MaxValue);
+            private bool IsInt32(CodeContext/*!*/ context, object value) {
+                PythonContext pc = PythonContext.GetContext(context);
+
+                return pc.LessThanOrEqual(Int32.MinValue, value) && pc.LessThanOrEqual(value, Int32.MaxValue);
             }
 
             /// <summary>
@@ -971,27 +975,27 @@ namespace IronPython.Modules {
 
             #region Output generation helpers
 
-            private void Write(string data) {
-                _file.Write(data);
+            private void Write(CodeContext/*!*/ context, string data) {
+                _file.Write(context, data);
             }
 
-            private void WriteGet(object obj) {
+            private void WriteGet(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(_memo.Contains(PythonOps.Id(obj)));
                 // Memo entries are tuples, and the first element is the memo index
                 IList<object> memoEntry = (IList<object>)_memo[PythonOps.Id(obj)];
 
                 object index = memoEntry[0];
-                Debug.Assert(PythonSites.GreaterThanOrEqualRetBool(index, 0));
+                Debug.Assert(PythonContext.GetContext(context).GreaterThanOrEqual(index, 0));
                 if (_protocol < 1) {
-                    Write(Opcode.Get);
-                    WriteIntAsString(index);
+                    Write(context, Opcode.Get);
+                    WriteIntAsString(context, index);
                 } else {
-                    if (IsUInt8(index)) {
-                        Write(Opcode.BinGet);
-                        WriteUInt8(index);
+                    if (IsUInt8(context, index)) {
+                        Write(context, Opcode.BinGet);
+                        WriteUInt8(context, index);
                     } else {
-                        Write(Opcode.LongBinGet);
-                        WriteInt32(index);
+                        Write(context, Opcode.LongBinGet);
+                        WriteInt32(context, index);
                     }
                 }
             }
@@ -999,7 +1003,7 @@ namespace IronPython.Modules {
             private void WriteInitArgs(CodeContext/*!*/ context, object obj) {
                 object getInitArgsCallable;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetInitArgs, out getInitArgsCallable)) {
-                    object initArgs = PythonCalls.Call(getInitArgsCallable);
+                    object initArgs = PythonCalls.Call(context, getInitArgsCallable);
                     if (!(initArgs is PythonTuple)) {
                         throw CannotPickle(obj, "__getinitargs__() must return tuple");
                     }
@@ -1009,30 +1013,31 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void WritePut(object obj) {
+            private void WritePut(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(_memo.Contains(PythonOps.Id(obj)));
                 // Memo entries are tuples, and the first element is the memo index
                 IList<object> memoEntry = (IList<object>)_memo[PythonOps.Id(obj)];
 
                 object index = memoEntry[0];
-                Debug.Assert(PythonSites.GreaterThanOrEqualRetBool(index, 0));
+                Debug.Assert(PythonContext.GetContext(context).GreaterThanOrEqual(index, 0));
+                
                 if (_protocol < 1) {
-                    Write(Opcode.Put);
-                    WriteIntAsString(index);
+                    Write(context, Opcode.Put);
+                    WriteIntAsString(context, index);
                 } else {
-                    if (IsUInt8(index)) {
-                        Write(Opcode.BinPut);
-                        WriteUInt8(index);
+                    if (IsUInt8(context, index)) {
+                        Write(context, Opcode.BinPut);
+                        WriteUInt8(context, index);
                     } else {
-                        Write(Opcode.LongBinPut);
-                        WriteInt32(index);
+                        Write(context, Opcode.LongBinPut);
+                        WriteInt32(context, index);
                     }
                 }
             }
 
-            private void WriteProto() {
-                Write(Opcode.Proto);
-                WriteUInt8(_protocol);
+            private void WriteProto(CodeContext/*!*/ context) {
+                Write(context, Opcode.Proto);
+                WriteUInt8(context, _protocol);
             }
 
             /// <summary>
@@ -1044,7 +1049,7 @@ namespace IronPython.Modules {
                 if (_protocol < 1) {
                     while (enumerator.MoveNext()) {
                         Save(context, enumerator.Current);
-                        Write(Opcode.Append);
+                        Write(context, Opcode.Append);
                     }
                 } else {
                     object next;
@@ -1064,12 +1069,12 @@ namespace IronPython.Modules {
                         next = enumerator.Current;
 
                         if (batchCompleted == _BATCHSIZE) {
-                            Write(Opcode.Appends);
+                            Write(context, Opcode.Appends);
                             batchCompleted = 0;
                         }
 
                         if (batchCompleted == 0) {
-                            Write(Opcode.Mark);
+                            Write(context, Opcode.Mark);
                         }
 
                         Save(context, current);
@@ -1077,16 +1082,16 @@ namespace IronPython.Modules {
                     }
 
                     if (batchCompleted == _BATCHSIZE) {
-                        Write(Opcode.Appends);
+                        Write(context, Opcode.Appends);
                         batchCompleted = 0;
                     }
                     Save(context, next);
                     batchCompleted++;
 
                     if (batchCompleted > 1) {
-                        Write(Opcode.Appends);
+                        Write(context, Opcode.Appends);
                     } else {
-                        Write(Opcode.Append);
+                        Write(context, Opcode.Append);
                     }
                 }
             }
@@ -1103,7 +1108,7 @@ namespace IronPython.Modules {
                         kvTuple = (PythonTuple)enumerator.Current;
                         Save(context, kvTuple[0]);
                         Save(context, kvTuple[1]);
-                        Write(Opcode.SetItem);
+                        Write(context, Opcode.SetItem);
                     }
                 } else {
                     object nextKey, nextValue;
@@ -1128,12 +1133,12 @@ namespace IronPython.Modules {
                         nextValue = kvTuple[1];
 
                         if (batchCompleted == _BATCHSIZE) {
-                            Write(Opcode.SetItems);
+                            Write(context, Opcode.SetItems);
                             batchCompleted = 0;
                         }
 
                         if (batchCompleted == 0) {
-                            Write(Opcode.Mark);
+                            Write(context, Opcode.Mark);
                         }
 
                         Save(context, curKey);
@@ -1142,7 +1147,7 @@ namespace IronPython.Modules {
                     }
 
                     if (batchCompleted == _BATCHSIZE) {
-                        Write(Opcode.SetItems);
+                        Write(context, Opcode.SetItems);
                         batchCompleted = 0;
                     }
                     Save(context, nextKey);
@@ -1150,9 +1155,9 @@ namespace IronPython.Modules {
                     batchCompleted++;
 
                     if (batchCompleted > 1) {
-                        Write(Opcode.SetItems);
+                        Write(context, Opcode.SetItems);
                     } else {
-                        Write(Opcode.SetItem);
+                        Write(context, Opcode.SetItem);
                     }
                 }
             }
@@ -1257,10 +1262,9 @@ namespace IronPython.Modules {
             private List _stack;
             private IDictionary<object, object> _memo;
             private object _pers_loader;
-            private DynamicSite<object, object, object> _pers_site;
 
-            public Unpickler(object file)
-                : this(new PythonFileInput(file)) { }
+            public Unpickler(CodeContext/*!*/ context, object file)
+                : this(new PythonFileInput(context, file)) { }
 
             public Unpickler(IFileInput file) {
                 this._file = file;
@@ -1329,14 +1333,14 @@ namespace IronPython.Modules {
             public object load(CodeContext/*!*/ context) {
                 _stack = new List();
 
-                string opcode = Read(1);
+                string opcode = Read(context, 1);
 
                 while (opcode != Opcode.Stop) {
                     if (!_dispatch.ContainsKey(opcode)) {
                         throw CannotUnpickle("invalid opcode: {0}", PythonOps.StringRepr(opcode));
                     }
                     _dispatch[opcode](context);
-                    opcode = Read(1);
+                    opcode = Read(context, 1);
                 }
 
                 return _stack.pop();
@@ -1393,56 +1397,56 @@ namespace IronPython.Modules {
                 }
             }
 
-            private string Read(int size) {
-                return _file.Read(size);
+            private string Read(CodeContext/*!*/ context, int size) {
+                return _file.Read(context, size);
             }
 
-            private string ReadLine() {
-                return _file.ReadLine();
+            private string ReadLine(CodeContext/*!*/ context) {
+                return _file.ReadLine(context);
             }
 
-            private string ReadLineNoNewline() {
-                string raw = _file.ReadLine();
+            private string ReadLineNoNewline(CodeContext/*!*/ context) {
+                string raw = _file.ReadLine(context);
                 return raw.Substring(0, raw.Length - 1);
             }
 
             private object ReadFloatString(CodeContext/*!*/ context) {
-                return DoubleOps.__new__(context, TypeCache.Double, ReadLineNoNewline());
+                return DoubleOps.__new__(context, TypeCache.Double, ReadLineNoNewline(context));
             }
 
-            private double ReadFloat64() {
+            private double ReadFloat64(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateDoubleValue(ref index, false, Read(8));
+                return PythonStruct.CreateDoubleValue(ref index, false, Read(context, 8));
             }
 
             private object ReadIntFromString(CodeContext/*!*/ context) {
-                string raw = ReadLineNoNewline();
+                string raw = ReadLineNoNewline(context);
                 if ("00" == raw) return RuntimeHelpers.False;
                 else if ("01" == raw) return RuntimeHelpers.True;
                 return Int32Ops.__new__(context, TypeCache.Int32, raw);
             }
 
-            private int ReadInt32() {
+            private int ReadInt32(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateIntValue(ref index, true, Read(4));
+                return PythonStruct.CreateIntValue(ref index, true, Read(context, 4));
             }
 
             private object ReadLongFromString(CodeContext/*!*/ context) {
-                return BigIntegerOps.__new__(context, TypeCache.BigInteger, ReadLineNoNewline());
+                return BigIntegerOps.__new__(context, TypeCache.BigInteger, ReadLineNoNewline(context));
             }
 
-            private object ReadLong(int size) {
-                return BigInteger.Create(StringOps.ToByteArray(Read(size)));
+            private object ReadLong(CodeContext/*!*/ context, int size) {
+                return BigInteger.Create(StringOps.ToByteArray(Read(context, size)));
             }
 
-            private char ReadUInt8() {
+            private char ReadUInt8(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateCharValue(ref index, Read(1));
+                return PythonStruct.CreateCharValue(ref index, Read(context, 1));
             }
 
-            private ushort ReadUInt16() {
+            private ushort ReadUInt16(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateUShortValue(ref index, true, Read(2));
+                return PythonStruct.CreateUShortValue(ref index, true, Read(context, 2));
             }
 
             public object find_global(CodeContext/*!*/ context, object module, object attr) {
@@ -1457,7 +1461,7 @@ namespace IronPython.Modules {
             private object MakeInstance(CodeContext/*!*/ context, object cls, object[] args) {
                 OldClass oc = cls as OldClass;
                 if (oc != null) {
-                    OldInstance inst = new OldInstance(oc);
+                    OldInstance inst = new OldInstance(context, oc);
                     if (args.Length != 0 || PythonOps.HasAttr(context, cls, Symbols.GetInitArgs)) {
                         PythonOps.CallWithContext(context, PythonOps.GetBoundAttr(context, inst, Symbols.Init), args);
                     }
@@ -1492,7 +1496,7 @@ namespace IronPython.Modules {
                 if (seq is List) {
                     ((List)seq).append(item);
                 } else {
-                    PythonCalls.Call(PythonOps.GetBoundAttr(context, seq, Symbols.Append), item);
+                    PythonCalls.Call(context, PythonOps.GetBoundAttr(context, seq, Symbols.Append), item);
                 }
             }
 
@@ -1509,45 +1513,42 @@ namespace IronPython.Modules {
             }
 
             private void LoadBinFloat(CodeContext/*!*/ context) {
-                _stack.append(ReadFloat64());
+                _stack.append(ReadFloat64(context));
             }
 
             private void LoadBinGet(CodeContext/*!*/ context) {
-                _stack.append(MemoGet((long)ReadUInt8()));
+                _stack.append(MemoGet((long)ReadUInt8(context)));
             }
 
             private void LoadBinInt(CodeContext/*!*/ context) {
-                _stack.append(ReadInt32());
+                _stack.append(ReadInt32(context));
             }
 
             private void LoadBinInt1(CodeContext/*!*/ context) {
-                _stack.append((int)ReadUInt8());
+                _stack.append((int)ReadUInt8(context));
             }
 
             private void LoadBinInt2(CodeContext/*!*/ context) {
-                _stack.append((int)ReadUInt16());
+                _stack.append((int)ReadUInt16(context));
             }
 
             private void LoadBinPersid(CodeContext/*!*/ context) {
                 if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
 
-                if (!_pers_site.IsInitialized) {
-                    _pers_site.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 1));
-                }
-                _stack.append(_pers_site.Invoke(context, _pers_loader, _stack.pop()));
+                _stack.append(PythonContext.GetContext(context).Call(_pers_loader, _stack.pop()));
             }
 
             private void LoadBinPut(CodeContext/*!*/ context) {
-                MemoPut((long)ReadUInt8(), _stack[-1]);
+                MemoPut((long)ReadUInt8(context), _stack[-1]);
             }
 
             private void LoadBinString(CodeContext/*!*/ context) {
-                _stack.append(Read(ReadInt32()));
+                _stack.append(Read(context, ReadInt32(context)));
             }
 
             private void LoadBinUnicode(CodeContext/*!*/ context) {
 #if !SILVERLIGHT    // Encoding
-                _stack.append(StringOps.decode(context, Read(ReadInt32()), "utf-8", "strict"));
+                _stack.append(StringOps.decode(context, Read(context, ReadInt32(context)), "utf-8", "strict"));
 #else
                 throw new NotImplementedException("SILVERLIGHT - not supported - encoding");
 #endif
@@ -1629,17 +1630,17 @@ namespace IronPython.Modules {
             }
 
             private void LoadExt1(CodeContext/*!*/ context) {
-                PythonTuple global = (PythonTuple)PythonCopyReg.GetInvertedRegistry(context)[(int)ReadUInt8()];
+                PythonTuple global = (PythonTuple)PythonCopyReg.GetInvertedRegistry(context)[(int)ReadUInt8(context)];
                 _stack.append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt2(CodeContext/*!*/ context) {
-                PythonTuple global = (PythonTuple)PythonCopyReg.GetInvertedRegistry(context)[(int)ReadUInt16()];
+                PythonTuple global = (PythonTuple)PythonCopyReg.GetInvertedRegistry(context)[(int)ReadUInt16(context)];
                 _stack.append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt4(CodeContext/*!*/ context) {
-                PythonTuple global = (PythonTuple)PythonCopyReg.GetInvertedRegistry(context)[ReadInt32()];
+                PythonTuple global = (PythonTuple)PythonCopyReg.GetInvertedRegistry(context)[ReadInt32(context)];
                 _stack.append(find_global(context, global[0], global[1]));
             }
 
@@ -1656,8 +1657,8 @@ namespace IronPython.Modules {
             }
 
             private void LoadGlobal(CodeContext/*!*/ context) {
-                string module = ReadLineNoNewline();
-                string attr = ReadLineNoNewline();
+                string module = ReadLineNoNewline(context);
+                string attr = ReadLineNoNewline(context);
                 _stack.append(find_global(context, module, attr));
             }
 
@@ -1691,19 +1692,19 @@ namespace IronPython.Modules {
             }
 
             private void LoadLong1(CodeContext/*!*/ context) {
-                _stack.append(ReadLong(ReadUInt8()));
+                _stack.append(ReadLong(context, ReadUInt8(context)));
             }
 
             private void LoadLong4(CodeContext/*!*/ context) {
-                _stack.append(ReadLong(ReadInt32()));
+                _stack.append(ReadLong(context, ReadInt32(context)));
             }
 
             private void LoadLongBinGet(CodeContext/*!*/ context) {
-                _stack.append(MemoGet((long)(int)ReadInt32()));
+                _stack.append(MemoGet((long)(int)ReadInt32(context)));
             }
 
             private void LoadLongBinPut(CodeContext/*!*/ context) {
-                MemoPut((long)(int)ReadInt32(), _stack[-1]);
+                MemoPut((long)(int)ReadInt32(context), _stack[-1]);
             }
 
             private void LoadMark(CodeContext/*!*/ context) {
@@ -1764,12 +1765,7 @@ namespace IronPython.Modules {
                 if (_pers_loader == null) {
                     throw CannotUnpickle("A load persistent ID instruction is present but no persistent_load function is available");
                 }
-
-                if (!_pers_site.IsInitialized) {
-                    _pers_site.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 1));
-                }
-
-                _stack.append(_pers_site.Invoke(context, _pers_loader, ReadLineNoNewline()));
+                _stack.append(PythonContext.GetContext(context).Call(_pers_loader, ReadLineNoNewline(context)));
             }
 
             private void LoadPop(CodeContext/*!*/ context) {
@@ -1781,7 +1777,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadProto(CodeContext/*!*/ context) {
-                int proto = ReadUInt8();
+                int proto = ReadUInt8(context);
                 if (proto > 2) throw PythonOps.ValueError("unsupported pickle protocol: {0}", proto);
                 // discard result
             }
@@ -1794,7 +1790,7 @@ namespace IronPython.Modules {
                 object args = _stack.pop();
                 object callable = _stack.pop();
                 if (args == null) {
-                    _stack.append(PythonCalls.Call(PythonOps.GetBoundAttr(context, callable, SymbolTable.StringToId("__basicnew__"))));
+                    _stack.append(PythonCalls.Call(context, PythonOps.GetBoundAttr(context, callable, SymbolTable.StringToId("__basicnew__"))));
                 } else if (!DynamicHelpers.GetPythonType(args).Equals(TypeCache.PythonTuple)) {
                     throw PythonOps.TypeError(
                         "while executing REDUCE, expected tuple at the top of the stack, but got {0}",
@@ -1830,11 +1826,11 @@ namespace IronPython.Modules {
             }
 
             private void LoadShortBinstring(CodeContext/*!*/ context) {
-                _stack.append(Read(ReadUInt8()));
+                _stack.append(Read(context, ReadUInt8(context)));
             }
 
             private void LoadString(CodeContext/*!*/ context) {
-                string repr = ReadLineNoNewline();
+                string repr = ReadLineNoNewline(context);
                 if (repr.Length < 2 ||
                     !(
                     repr[0] == '"' && repr[repr.Length - 1] == '"' ||
@@ -1877,7 +1873,7 @@ namespace IronPython.Modules {
 
             private void LoadUnicode(CodeContext/*!*/ context) {
 #if !SILVERLIGHT    // Encoding
-                _stack.append(StringOps.decode(context, ReadLineNoNewline(), "raw-unicode-escape", "strict"));
+                _stack.append(StringOps.decode(context, ReadLineNoNewline(context), "raw-unicode-escape", "strict"));
 #else
                 throw new NotImplementedException("SILVERLIGHT - not supported - encoding");
 #endif

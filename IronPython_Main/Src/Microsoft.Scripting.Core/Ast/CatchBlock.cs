@@ -71,8 +71,11 @@ namespace System.Linq.Expressions {
         public static CatchBlock Catch(Type type, VariableExpression target, Expression body, Expression filter, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(target == null || TypeUtils.CanAssign(target.Type, type), "target");
-            ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.Requires(filter == null || filter.Type == typeof(bool));
+            RequiresCanRead(body, "body");
+            if (filter != null) {
+                RequiresCanRead(filter, "filter");
+                ContractUtils.Requires(filter.Type == typeof(bool), Strings.ArgumentMustBeBoolean);
+            }
 
             return new CatchBlock(annotations, type, target, body, filter);
         }

@@ -14,9 +14,10 @@
  * ***************************************************************************/
 
 using System;
+
 using System.Collections.Generic;
 
-namespace IronPython.Compiler.Generation {
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// TypeInfo captures the minimal CLI information required by NewTypeMaker for a Python object
     /// that inherits from a CLI type.

@@ -214,7 +214,7 @@ namespace System.Linq.Expressions {
                 if (!node.IsReducible) {
                     Expressions.Add(node);
                 } else {
-                    return VisitNode(Expression.ReduceToKnown(node));
+                    return VisitNode(node.ReduceToKnown());
                 }
                 return node;
             }

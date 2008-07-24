@@ -99,13 +99,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected virtual void AfterParse() {
-#if !SILVERLIGHT
-            // TODO:
-            // Dynamic languages prefer type info over com IDispatch
-            if (Environment.GetEnvironmentVariable("COREDLR_PreferComDispatch") == null) {
-                Environment.SetEnvironmentVariable("COREDLR_PreferComDispatch", "TRUE");
-            }
-#endif
         }
 
         protected abstract void ParseArgument(string arg);
@@ -221,14 +214,17 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 case "-X:ShowTrees": 
                 case "-X:ShowScopes":
                 case "-X:LightweightScopes":
-                case "-X:PreferComDispatch":
+                case "-X:PreferComInteropAssembly":
                 case "-X:CachePointersInApartment":
                 case "-X:TrackPerformance": 
                     SetCoreDlrOption(arg.Substring(3));
                     break;
 
-                case "-X:ExceptionDetail":
                 case "-X:Interpret":
+                    LanguageSetup.Options["InterpretedMode"] = RuntimeHelpers.True;
+                    break;
+                
+                case "-X:ExceptionDetail":
                 case "-X:ShowClrExceptions":
                 case "-X:PerfStats":
                     // TODO: separate options dictionary?

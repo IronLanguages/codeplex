@@ -63,7 +63,7 @@ namespace System.Scripting.Com {
                     ),
                     typeof(ComMethodDesc).GetProperty("Signature")
                 ),
-                Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(DispCallable)))
+                Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, Value.GetType()))
             );
         }
 
@@ -71,7 +71,7 @@ namespace System.Scripting.Com {
             return new MetaObject(
                 // DispCallable is always callable
                 Expression.True(),
-                Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(DispCallable)))
+                Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, Value.GetType()))
             );
         }
     }

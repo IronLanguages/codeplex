@@ -20,11 +20,12 @@ using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
@@ -34,13 +35,13 @@ namespace IronPython.Runtime {
     {
         [MultiRuntimeAware]
         private static object DefaultGetItem;   // our cached __getitem__ method
-        [MultiRuntimeAware]
-        private static DynamicSite<PythonType, object> _fromkeysSite;
         internal DictionaryStorage _storage;
         
-        internal static object MakeDict(PythonType cls) {
-            if (cls == TypeCache.Dict) return new PythonDictionary();
-            return PythonCalls.Call(cls);
+        internal static object MakeDict(CodeContext/*!*/ context, PythonType cls) {
+            if (cls == TypeCache.Dict) {
+                return new PythonDictionary();
+            }
+            return PythonCalls.Call(context, cls);
         }
 
         #region Constructors
@@ -351,7 +352,7 @@ namespace IronPython.Runtime {
             DictionaryOps.update(context, this, f);
         }
 
-        private static object fromkeysAny(PythonType cls, object o, object value) {
+        private static object fromkeysAny(CodeContext/*!*/ context, PythonType cls, object o, object value) {
             PythonDictionary pyDict;
             object dict;
 
@@ -376,7 +377,7 @@ namespace IronPython.Runtime {
                 return pyDict;
             } else {
                 // call the user type constructor
-                dict = MakeDict(cls);
+                dict = MakeDict(context, cls);
                 pyDict = dict as PythonDictionary;
             }
 
@@ -406,12 +407,8 @@ namespace IronPython.Runtime {
         public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {            
             XRange xr = seq as XRange;
             if (xr != null) {
-                if (!_fromkeysSite.IsInitialized) {
-                    _fromkeysSite.EnsureInitialized(OldCallAction.Make(DefaultContext.DefaultPythonBinder, 0));
-                }
-
                 int n = xr.__len__();
-                object ret = _fromkeysSite.Invoke(DefaultContext.Default, cls);
+                object ret = PythonContext.GetContext(context).Call(cls);
                 if (ret.GetType() == typeof(PythonDictionary)) {
                     PythonDictionary dr = ret as PythonDictionary;
                     for (int i = 0; i < n; i++) {
@@ -425,7 +422,7 @@ namespace IronPython.Runtime {
                 }
                 return ret;
             }
-            return fromkeysAny(cls, seq, value);
+            return fromkeysAny(context, cls, seq, value);
         }
 
         public virtual PythonDictionary copy(CodeContext/*!*/ context) {
@@ -468,16 +465,16 @@ namespace IronPython.Runtime {
 
                 // user-defined dictionary...
                 int lcnt = __len__();
-                int rcnt = Converter.ConvertToInt32(PythonOps.CallWithContext(context, len));
+                int rcnt = PythonContext.GetContext(context).ConvertToInt32(PythonOps.CallWithContext(context, len));
 
                 if (lcnt != rcnt) return lcnt > rcnt ? 1 : -1;
 
-                return DictionaryOps.CompareToWorker(this, new List(PythonOps.CallWithContext(context, iteritems)));
+                return DictionaryOps.CompareToWorker(context, this, new List(PythonOps.CallWithContext(context, iteritems)));
             }
 
             CompareUtil.Push(this, oth);
             try {
-                return DictionaryOps.CompareTo(this, oth);
+                return DictionaryOps.CompareTo(context, this, oth);
             } finally {
                 CompareUtil.Pop(this, oth);
             }

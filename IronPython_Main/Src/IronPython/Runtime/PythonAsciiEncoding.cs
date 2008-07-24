@@ -195,6 +195,9 @@ namespace IronPython.Runtime {
         }
 
         public override char GetNextChar() {
+            if (_index == _bytes.Count) {
+                return char.MinValue;
+            }
             return (char)_bytes[_index++];
         }
 

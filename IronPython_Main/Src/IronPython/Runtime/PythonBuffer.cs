@@ -17,6 +17,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {
     [PythonSystemType("buffer")]
@@ -28,19 +29,21 @@ namespace IronPython.Runtime {
         private bool _isbuffer;      /*buffer of buffer*/
         private bool _isstring;
         private bool _isarray;
+        private readonly CodeContext/*!*/ _context;
 
-        public PythonBuffer(object @object)
-            : this(@object, 0) {
+        public PythonBuffer(CodeContext/*!*/ context, object @object)
+            : this(context, @object, 0) {
         }
 
-        public PythonBuffer(object @object, int offset)
-            : this(@object, offset, -1) {
+        public PythonBuffer(CodeContext/*!*/ context, object @object, int offset)
+            : this(context, @object, offset, -1) {
         }
 
-        public PythonBuffer(object @object, int offset, int size) {
+        public PythonBuffer(CodeContext/*!*/ context, object @object, int offset, int size) {
             if (!InitBufferObject(@object, offset, size)) {
                 throw PythonOps.TypeError("expected buffer object");
             }
+            _context = context;
         }
 
         private bool InitBufferObject(object o, int offset, int size) {
@@ -119,14 +122,34 @@ namespace IronPython.Runtime {
             return new Slice(_offset, end);
         }
 
+        public object __getslice__(object start, object stop) {
+            return this[new Slice(start, stop)];
+        }
+
+        private Exception ReadOnlyError() {
+            return PythonOps.TypeError("buffer is read-only");
+        }
+
+        public object __setslice__(object start, object stop, object value) {
+            throw ReadOnlyError();
+        }
+
+        public void __delitem__(int index) {
+            throw ReadOnlyError();
+        }
+
+        public void __delslice__(object start, object stop) {
+           throw ReadOnlyError();
+        }
+
         public object this[object s] {
             [SpecialName]
             get {
-                return PythonOps.GetIndex(GetSelectedRange(), s);
+                return PythonOps.GetIndex(_context, GetSelectedRange(), s);
             }
             [SpecialName]
             set {
-                throw PythonOps.TypeError("buffer is read-only");
+                throw ReadOnlyError();
             }
         }
 
@@ -137,11 +160,17 @@ namespace IronPython.Runtime {
                     return arr.tostring();
                 }
             }
-            return PythonOps.GetIndex(_object, GetSlice());
+            return PythonOps.GetIndex(_context, _object, GetSlice());
         }
 
         public static object operator +(PythonBuffer a, PythonBuffer b) {
-            return PythonSites.Add(PythonOps.GetIndex(a._object, a.GetSlice()), PythonOps.GetIndex(b._object, b.GetSlice()));
+            PythonContext context = PythonContext.GetContext(a._context);
+
+            return context.Operation(
+                StandardOperators.Add,
+                PythonOps.GetIndex(a._context, a._object, a.GetSlice()), 
+                PythonOps.GetIndex(a._context, b._object, b.GetSlice())
+            );
         }
 
         public static object operator +(PythonBuffer a, string b) {
@@ -149,11 +178,23 @@ namespace IronPython.Runtime {
         }
 
         public static object operator *(PythonBuffer b, int n) {
-            return PythonSites.Multiply(PythonOps.GetIndex(b._object, b.GetSlice()), n);
+            PythonContext context = PythonContext.GetContext(b._context);
+
+            return context.Operation(
+                StandardOperators.Multiply,
+                PythonOps.GetIndex(b._context, b._object, b.GetSlice()),
+                n
+            );
         }
 
         public static object operator *(int n, PythonBuffer b) {
-            return PythonSites.Multiply(PythonOps.GetIndex(b._object, b.GetSlice()), n);
+            PythonContext context = PythonContext.GetContext(b._context);
+
+            return context.Operation(
+                StandardOperators.Multiply,
+                PythonOps.GetIndex(b._context, b._object, b.GetSlice()),
+                n
+            );                
         }
 
         public static bool operator ==(PythonBuffer a, PythonBuffer b) {

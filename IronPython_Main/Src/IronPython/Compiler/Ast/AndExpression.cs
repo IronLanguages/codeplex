@@ -17,6 +17,8 @@ using System;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -49,12 +51,13 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression right = ag.Transform(_right);
 
             Type t = left.Type == right.Type ? left.Type : typeof(object);
-            MSAst.VariableExpression tmp = ag.MakeTemp(Symbols.All, t);
+            MSAst.VariableExpression tmp = ag.GetTemporary("__all__", t);
             
             return Ast.Condition(
-                AstUtils.ConvertTo(
-                    OldConvertToAction.Make(ag.Binder, typeof(bool), ConversionResultKind.ExplicitCast),
-                    Ast.CodeContext(),
+                Binders.Convert(
+                    ag.BinderState,
+                    typeof(bool),
+                    ConversionResultKind.ExplicitCast,
                     Ast.Assign(
                         tmp,
                         Ast.ConvertHelper(

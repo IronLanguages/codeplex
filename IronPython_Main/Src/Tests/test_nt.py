@@ -187,26 +187,23 @@ def test_fdopen():
     #CodePlex Work Item #8617
     # AssertError(ValueError,nt.fdopen,0,"p")
  
-    #CodePlex 5633
-    if not is_cli:
-        stuff = "\x00a\x01\x02b\x03 \x04  \x05\n\x06_\0xFE\0xFFxyz"
-        name = "cp5633.txt"
-        fd = nt.open(name, nt.O_CREAT | nt.O_BINARY | nt.O_TRUNC | nt.O_WRONLY)
-        f = nt.fdopen(fd, 'wb')
-        f.write(stuff)
+    stuff = "\x00a\x01\x02b\x03 \x04  \x05\n\x06_\0xFE\0xFFxyz"
+    name = "cp5633.txt"
+    fd = nt.open(name, nt.O_CREAT | nt.O_BINARY | nt.O_TRUNC | nt.O_WRONLY)
+    f = nt.fdopen(fd, 'wb')
+    f.write(stuff)
+    f.close()
+    f = file(name, 'rb')
+    try:
+        AreEqual(stuff, f.read())
+    finally:
         f.close()
-        f = file(name, 'rb')
-        try:
-            AreEqual(stuff, f.read())
-        finally:
-            f.close()
-            nt.remove(name)
+        nt.remove(name)
         
 # fstat,unlink tests
 def test_fstat():
-    #CodePlex Work Item #8618
-    #result = nt.fstat(1)
-    #Assert(result!=0,"0,The file stat object was not returned correctly")
+    result = nt.fstat(1)
+    Assert(result!=0,"0,The file stat object was not returned correctly")
     
     result = None
     tmpfile = "tmpfile1.tmp"
@@ -225,15 +222,15 @@ def test_fstat():
     AssertError(OSError,nt.fstat,3)
     AssertError(OSError,nt.fstat,-1)
 
-# chmod tests:
-# BUG 828,830
-#nt.mkdir('tmp2')
-#nt.chmod('tmp2', 256) # NOTE: change to flag when stat is implemented
-#AssertError(IOError, lambda:nt.rmdir('tmp2'))
-#nt.chmod('tmp2', 128)
-#nt.rmdir('tmp2')
-# /BUG
-
+def test_chmod():
+    # chmod tests:
+    # BUG 828,830
+    nt.mkdir('tmp2')
+    nt.chmod('tmp2', 256) # NOTE: change to flag when stat is implemented
+    AssertError(OSError, lambda:nt.rmdir('tmp2'))
+    nt.chmod('tmp2', 128)
+    nt.rmdir('tmp2')
+    # /BUG
 
 ################################################################################################
 # popen/popen2/popen3/unlink tests
@@ -703,11 +700,10 @@ def test_open():
     pass
 
 def test_system_minimal():
-    #if sys.platform=="win32":
     Assert(hasattr(nt, "system"))
-    #else:
-    #    print "CodePlex Work Item 2982"
-    #    Assert(not hasattr(nt, "system"), "Please modify test_system_minimal now that nt.system has been implemented")
+    AreEqual(nt.system("ping localhost"), 0)
+    AreEqual(nt.system("ping"), 1)
+    
 
 # flags test
 def test_flags():

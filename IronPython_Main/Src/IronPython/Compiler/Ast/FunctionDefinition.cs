@@ -17,10 +17,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
+using System.Scripting.Actions;
 using System.Threading;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -259,7 +262,7 @@ namespace IronPython.Compiler.Ast {
             if (!IsGenerator && _canSetSysExcInfo) {
                 // need to allocate the exception here so we don't share w/ exceptions made & freed
                 // during the body.
-                extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
+                extracted = bodyGen.GetTemporary("$ex", typeof(Exception));
             }
 
             // Transform the body and add the resulting statements into the list
@@ -337,12 +340,13 @@ namespace IronPython.Compiler.Ast {
             if (_decorators != null) {
                 for (int i = _decorators.Count - 1; i >= 0; i--) {
                     Expression decorator = _decorators[i];
-                    ret = AstUtils.Call(
-                        ag.Binder,
+                    ret = Binders.Invoke(
+                        ag.BinderState,
                         typeof(object),
-                        Ast.CodeContext(),
+                        new CallSignature(1),
                         ag.Transform(decorator),
-                        ret);
+                        ret
+                    );
                 }
             }
 

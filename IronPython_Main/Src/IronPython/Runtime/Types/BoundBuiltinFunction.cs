@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Types {
     using System.Reflection;
 
     [PythonSystemType("builtin_function_or_method")]
-    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IValueEquality, IDelegateConvertible {
+    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable, IValueEquality, IDelegateConvertible {
         private readonly BuiltinFunction/*!*/ _target;
         private readonly object _instance;
 
@@ -66,6 +66,12 @@ namespace IronPython.Runtime.Types {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = this;
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         #endregion
@@ -213,7 +219,33 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public object __call__(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+        public object __module__ {
+            get {
+                return null;
+            }
+            set {
+                // Do nothing but don't return an error
+            }
+        }
+
+        public int __cmp__(CodeContext context, object other) {
+            BoundBuiltinFunction bbf = other as BoundBuiltinFunction;
+            if (bbf == null) {
+                BuiltinFunction bf = other as BuiltinFunction;
+                if (bf != null) {
+                    return _target.__cmp__(context, bf);
+                }
+                throw PythonOps.TypeError("builtin_function_or_method.__cmp__(x,y) requires y to be a 'builtin_function_or_method', not a {0}", PythonTypeOps.GetName(other));
+            }
+
+            long result = PythonOps.Id(__self__) - PythonOps.Id(bbf.__self__);
+            if (result != 0) {
+                return (result > 0) ? 1 : -1;
+            }
+            return (int)StringOps.__cmp__(__name__, bbf.__name__);
+        }
+
+        public object __call__(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
             return Target.Call(context, storage, __self__, args, dictArgs);
         }
 
@@ -264,7 +296,7 @@ namespace IronPython.Runtime.Types {
         #region IValueEquality Members
 
         int IValueEquality.GetValueHashCode() {
-            return PythonOps.Hash(_instance) ^ _target.GetHashCode();
+            return PythonOps.Hash(DefaultContext.Default, _instance) ^ _target.GetHashCode();
         }
 
         bool IValueEquality.ValueEquals(object other) {
@@ -275,6 +307,14 @@ namespace IronPython.Runtime.Types {
         }
 
         #endregion
+
+        #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaBoundBuiltinFunction(parameter, Restrictions.Empty, this);
+        }
+
+         #endregion
 
         #region IDelegateConvertible Members
 
@@ -306,6 +346,6 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        #endregion
+       #endregion
     }
 }

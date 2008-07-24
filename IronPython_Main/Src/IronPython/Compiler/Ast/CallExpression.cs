@@ -15,7 +15,12 @@
 
 using System;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
+using System.Linq.Expressions;
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
+
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -82,10 +87,11 @@ namespace IronPython.Compiler.Ast {
                 kinds[i] = _args[i].Transform(ag, out values[i + 2]);
             }
 
-            return AstUtils.Call(
-                OldCallAction.Make(ag.Binder, new CallSignature(kinds)),
+            return Binders.Invoke(
+                ag.BinderState,
                 type,
-                values
+                new CallSignature(kinds),
+                ArrayUtils.RemoveFirst(values)
             );
         }
 

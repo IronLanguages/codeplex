@@ -174,10 +174,16 @@ def test_cp13405():
         X = property(_getX, _setX)
 
     example = PropertyExample(3)
-    try:
-        grid.SelectedObject = example
-    except NotImplementedError, e:
-        pass
-
+    grid.SelectedObject = example
+    
+    def close_form():
+        while not form.Visible:
+            System.Threading.Thread.Sleep(100)
+        System.Threading.Thread.Sleep(3000)
+        form.Close()
+        
+    th = System.Threading.Thread(System.Threading.ThreadStart(close_form))
+    th.Start()
+    SWF.Application.Run(form)
 
 run_test(__name__)

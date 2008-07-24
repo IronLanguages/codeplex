@@ -15,6 +15,7 @@
 
 using System;
 using IronPython.Runtime;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -43,7 +44,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.VariableExpression list = ag.MakeTempExpression("list_comprehension_list", typeof(List));
+            MSAst.VariableExpression list = ag.GetTemporary("list_comprehension_list", typeof(List));
 
             // 1. Initialization code - create list and store it in the temp variable
             MSAst.AssignmentExpression initialize =

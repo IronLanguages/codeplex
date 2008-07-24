@@ -624,8 +624,13 @@ def test_iterator_sequence():
         target.M620(x)
         AreEqual(Flag.Value, len(x)); Flag.Value = 0
         
-        target.M621(x)
-        AreEqual(Flag.Value, len(x))
+        # str is not an enumerator, technically neither are list1 and tuple but that's a bug.
+        # CodePlex bug #17425
+        if type(x) is str:
+            AssertError(TypeError, target.M621, x)
+        else:
+            target.M621(x)
+            AreEqual(Flag.Value, len(x))
 
         # IEnumerable<char> / IEnumerator<char>
         target.M630(x)

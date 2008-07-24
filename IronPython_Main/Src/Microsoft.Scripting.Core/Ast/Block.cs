@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         }
 
         internal Block(Annotations annotations, ReadOnlyCollection<Expression> expressions, Type type)
-            : base(annotations, ExpressionType.Block, type) {
+            : base(ExpressionType.Block, type, annotations, null) {
             _expressions = expressions;
         }
     }
@@ -50,10 +50,9 @@ namespace System.Linq.Expressions {
         }
 
         public static Block Block(Annotations annotations, IEnumerable<Expression> expressions) {
-            ReadOnlyCollection<Expression> expressionList = expressions.ToReadOnly();
-            ContractUtils.RequiresNotNullItems(expressionList, "expressions");
+            RequiresCanRead(expressions, "expressions");
 
-            return new Block(annotations, expressionList, typeof(void));
+            return new Block(annotations, expressions.ToReadOnly(), typeof(void));
         }
 
         /// <summary>
@@ -72,10 +71,9 @@ namespace System.Linq.Expressions {
         }
 
         public static Block Comma(Annotations annotations, IEnumerable<Expression> expressions) {
-            ReadOnlyCollection<Expression> expressionList = expressions.ToReadOnly();
-
+            RequiresCanRead(expressions, "expressions");
+            var expressionList = expressions.ToReadOnly();
             ContractUtils.RequiresNotEmpty(expressionList, "expressions");
-            ContractUtils.RequiresNotNullItems(expressionList, "expressions");
 
             //TODO: there could be some optimizations for blocks containing single nodes.
             return new Block(annotations, expressionList, expressionList[expressionList.Count - 1].Type);

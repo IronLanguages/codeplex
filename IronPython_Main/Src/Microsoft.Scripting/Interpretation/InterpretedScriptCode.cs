@@ -16,9 +16,25 @@
 using System.Linq.Expressions;
 using System.Scripting;
 using System.Scripting.Runtime;
+using System.Collections.Generic;
+using System.Scripting.Actions;
+using System.Threading;
 
 namespace Microsoft.Scripting.Interpretation {
     public class InterpretedScriptCode : ScriptCode {
+        // call sites allocated for the tree:
+        private Dictionary<Expression, CallSite> _callSites;
+
+        internal Dictionary<Expression, CallSite> CallSites {
+            get {
+                if (_callSites == null) {
+                    Interlocked.CompareExchange(ref _callSites, new Dictionary<Expression, CallSite>(), null);
+                }
+
+                return _callSites;
+            }
+        }
+
         public InterpretedScriptCode(LambdaExpression code, SourceUnit sourceUnit)
             : base(code, sourceUnit) {
         }
@@ -28,7 +44,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         protected override object InvokeTarget(LambdaExpression code, Scope scope) {
-            return Interpreter.TopLevelExecute(code, scope, LanguageContext);
+            return Interpreter.TopLevelExecute(this, scope, LanguageContext);
         }
     }
 }

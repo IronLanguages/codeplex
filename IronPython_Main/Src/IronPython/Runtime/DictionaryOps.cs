@@ -21,6 +21,7 @@ using System.Runtime.CompilerServices;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
+
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -42,7 +43,7 @@ namespace IronPython.Runtime {
 
         [SpecialName]
         [return: MaybeNotImplemented]
-        public static object __cmp__(IDictionary<object, object> self, object other) {
+        public static object __cmp__(CodeContext/*!*/ context, IDictionary<object, object> self, object other) {
             IDictionary<object, object> oth = other as IDictionary<object, object>;
             // CompareTo is allowed to throw (string, int, etc... all do it if they don't get a matching type)
             if (oth == null) {
@@ -58,12 +59,12 @@ namespace IronPython.Runtime {
 
                 if (lcnt != rcnt) return lcnt > rcnt ? 1 : -1;
 
-                return DictionaryOps.CompareToWorker(self, new List(PythonOps.CallWithContext(DefaultContext.Default, iteritems)));
+                return DictionaryOps.CompareToWorker(context, self, new List(PythonOps.CallWithContext(context, iteritems)));
             }
 
             CompareUtil.Push(self, oth);
             try {
-                return DictionaryOps.CompareTo(self, oth);
+                return DictionaryOps.CompareTo(context, self, oth);
             } finally {
                 CompareUtil.Pop(self, oth);
             }
@@ -83,8 +84,8 @@ namespace IronPython.Runtime {
 
         [return: MaybeNotImplemented]
         [SpecialName]
-        public static object GreaterThanOrEqual(IDictionary<object, object> self, object other) {
-            object res = __cmp__(self, other);
+        public static object GreaterThanOrEqual(CodeContext/*!*/ context, IDictionary<object, object> self, object other) {
+            object res = __cmp__(context, self, other);
             if (res == NotImplementedType.Value) return res;
 
             return ((int)res) >= 0;
@@ -92,8 +93,8 @@ namespace IronPython.Runtime {
 
         [return: MaybeNotImplemented]
         [SpecialName]
-        public static object GreaterThan(IDictionary<object, object> self, object other) {
-            object res = __cmp__(self, other);
+        public static object GreaterThan(CodeContext/*!*/ context, IDictionary<object, object> self, object other) {
+            object res = __cmp__(context, self, other);
             if (res == NotImplementedType.Value) return res;
 
             return ((int)res) > 0;
@@ -112,8 +113,8 @@ namespace IronPython.Runtime {
 
         [return: MaybeNotImplemented]
         [SpecialName]
-        public static object LessThanOrEqual(IDictionary<object, object> self, object other) {
-            object res = __cmp__(self, other);
+        public static object LessThanOrEqual(CodeContext/*!*/ context, IDictionary<object, object> self, object other) {
+            object res = __cmp__(context, self, other);
             if (res == NotImplementedType.Value) return res;
 
             return ((int)res) <= 0;
@@ -126,8 +127,8 @@ namespace IronPython.Runtime {
 
         [return: MaybeNotImplemented]
         [SpecialName]
-        public static object LessThan(IDictionary<object, object> self, object other) {
-            object res = __cmp__(self, other);
+        public static object LessThan(CodeContext/*!*/ context, IDictionary<object, object> self, object other) {
+            object res = __cmp__(context, self, other);
             if (res == NotImplementedType.Value) return res;
 
             return ((int)res) < 0;
@@ -298,9 +299,9 @@ namespace IronPython.Runtime {
                 }
             } else if (PythonOps.TryGetBoundAttr(b, Symbols.Keys, out keysFunc)) {
                 // user defined dictionary
-                IEnumerator i = PythonOps.GetEnumerator(PythonCalls.Call(keysFunc));
+                IEnumerator i = PythonOps.GetEnumerator(PythonCalls.Call(context, keysFunc));
                 while (i.MoveNext()) {
-                    self._storage.Add(i.Current, PythonOps.GetIndex(b, i.Current));
+                    self._storage.Add(i.Current, PythonOps.GetIndex(context, b, i.Current));
                 }
             } else {
                 // list of lists (key/value pairs), list of tuples,
@@ -372,21 +373,21 @@ namespace IronPython.Runtime {
             return false;
         }
        
-        internal static int CompareTo(IDictionary<object, object> left, IDictionary<object, object> right) {
+        internal static int CompareTo(CodeContext/*!*/ context, IDictionary<object, object> left, IDictionary<object, object> right) {
             int lcnt = left.Count;
             int rcnt = right.Count;
 
             if (lcnt != rcnt) return lcnt > rcnt ? 1 : -1;
 
             List ritems = DictionaryOps.items(right);
-            return CompareToWorker(left, ritems);
+            return CompareToWorker(context, left, ritems);
         }
 
-        internal static int CompareToWorker(IDictionary<object, object> left, List ritems) {
+        internal static int CompareToWorker(CodeContext/*!*/ context, IDictionary<object, object> left, List ritems) {
             List litems = DictionaryOps.items(left);
 
-            litems.sort();
-            ritems.sort();
+            litems.sort(context);
+            ritems.sort(context);
 
             return litems.CompareToWorker(ritems);
         }

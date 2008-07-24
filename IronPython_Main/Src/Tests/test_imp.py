@@ -903,6 +903,59 @@ def test_import_list_empty_string():
     x = __import__('lib', {}, {}, [''])
     Assert(not '' in dir(x))
 
+def test_cp7050():
+    '''
+    This test case complements CPython's test_import.py
+    '''
+    try:
+        import Nt
+        AssertUnreachable("Should not have been able to import 'Nt'")
+    except:
+        pass
+
+    AssertError(ImportError, __import__, "Nt")
+    #CodePlex 7050
+    #AssertError(ImportError, __import__, "Lib")
+    #AssertError(ImportError, __import__, "lib.Assert_Util")
+            
+
+def test_meta_path_before_builtins():
+    """the meta path should be consulted before builtins are loaded"""
+    class MyException(Exception): pass
+    
+    class K:
+        def find_module(self, name, path):
+            if name == "time": return self
+            return None
+        def load_module(self, name):
+            raise MyException
+    
+    if 'time' in sys.modules:
+        del sys.modules["time"]
+    
+    loader = K()
+    sys.meta_path.append(loader)
+    
+    try:
+        import time
+        AssertUnreachable()
+    except MyException:
+        pass    
+    
+    sys.meta_path.remove(loader)
+    
+    import time
+
+@skip("silverlight") # no nt module on silverlight
+def test_file_coding():
+    import nt
+    f = file('test_coding_mod.py', 'wb+')
+    f.write("# coding: utf-8\nx = '\xe6ble'\n")
+    f.close()
+    import test_coding_mod
+    AreEqual(test_coding_mod.x[0], '\xe6')
+    nt.unlink('test_coding_mod.py')
+
 #------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:

@@ -36,13 +36,25 @@ namespace IronPython.Runtime.Binding {
     /// 
     /// TODO: Lots of CodeConetxt references, need to move CodeContext onto OldClass and pull it from there.
     /// </summary>
-    class MetaOldInstance : MetaPythonObject {        
+    class MetaOldInstance : MetaPythonObject, IPythonInvokable {        
         public MetaOldInstance(Expression/*!*/ expression, Restrictions/*!*/ restrictions, OldInstance/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
+        #region IPythonInvokable Members
+
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
         #region MetaObject Overrides
+
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
+        }
 
         public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
             return MakeMemberAccess(member, member.Name, MemberAccess.Get, args);
@@ -99,19 +111,23 @@ namespace IronPython.Runtime.Binding {
             return base.Convert(conversion, args);
         }
 
+        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ invoke, params MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(invoke, BinderState.GetCodeContext(invoke), args);
+        }
+
         #endregion
 
-        #region Calls
+        #region Invoke Implementation
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ invoke, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
             MetaObject self = Restrict(typeof(OldInstance));
             args = ArrayUtils.RemoveFirst(args);
-           
+
             Expression[] exprArgs = new Expression[args.Length + 1];
-            for(int i = 0; i<args.Length; i++) {
+            for (int i = 0; i < args.Length; i++) {
                 exprArgs[i + 1] = args[i].Expression;
             }
-            
+
             VariableExpression tmp = Ast.Variable(typeof(object), "callFunc");
 
             exprArgs[0] = tmp;
@@ -123,7 +139,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Condition(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                            Ast.Constant(BinderState.GetBinderState(call).Context),
+                            codeContext,
                             self.Expression,
                             Ast.Constant(Symbols.Call),
                             tmp
@@ -135,11 +151,11 @@ namespace IronPython.Runtime.Binding {
                                     tmp,
                                     Ast.ActionExpression(
                                         new InvokeBinder(
-                                            BinderState.GetBinderState(call),
-                                            BindingHelpers.GetCallSignature(call)
+                                            BinderState.GetBinderState(invoke),
+                                            BindingHelpers.GetCallSignature(invoke)
                                         ),
                                         typeof(object),
-                                        exprArgs
+                                        ArrayUtils.Insert(codeContext, exprArgs)
                                     )
                                 )
                             ).Finally(
@@ -147,12 +163,12 @@ namespace IronPython.Runtime.Binding {
                             ),
                             tmp
                         ),
-                        call.Fallback(ArrayUtils.Insert((MetaObject)this, args)).Expression
+                        BindingHelpers.InvokeFallback(invoke, codeContext, ArrayUtils.Insert((MetaObject)this, args)).Expression
                     ),
                     tmp
                 ),
                 self.Restrictions.Merge(Restrictions.Combine(args))
-            );            
+            );
         }        
 
         #endregion
@@ -431,7 +447,7 @@ namespace IronPython.Runtime.Binding {
                             ),
                             tmp,
                             Ast.ConvertHelper(
-                                member.Fallback(ArrayUtils.Insert((MetaObject)this, args)).Expression,
+                                member.Fallback(args).Expression,
                                 typeof(object)
                             )
                         ),

@@ -17,6 +17,9 @@ using System;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -81,7 +84,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 1. mgr = (EXPR)
             //******************************************************************
-            MSAst.VariableExpression manager = ag.MakeTempExpression("with_manager");
+            MSAst.VariableExpression manager = ag.GetTemporary("with_manager");
             statements[0] = AstGenerator.MakeAssignment(
                 manager,
                 ag.Transform(_contextManager),
@@ -91,14 +94,13 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 2. exit = mgr.__exit__  # Not calling it yet
             //******************************************************************
-            MSAst.VariableExpression exit = ag.MakeTempExpression("with_exit");
+            MSAst.VariableExpression exit = ag.GetTemporary("with_exit");
             statements[1] = AstGenerator.MakeAssignment(
                 exit,
-                AstUtils.GetMember(
-                    ag.Binder,
-                    "__exit__",
+                Binders.Get(
+                    ag.BinderState,
                     typeof(object),
-                    Ast.CodeContext(),
+                    "__exit__",
                     manager
                 )
             );
@@ -106,27 +108,26 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 3. value = mgr.__enter__()
             //******************************************************************
-            MSAst.VariableExpression value = ag.MakeTempExpression("with_value");
+            MSAst.VariableExpression value = ag.GetTemporary("with_value");
             statements[2] = AstGenerator.MakeAssignment(
                 value,
-                AstUtils.Call(
-                    ag.Binder,
+                Binders.Invoke(
+                    ag.BinderState,
                     typeof(object),
-                    Ast.CodeContext(),
-                    AstUtils.GetMember(
-                        ag.Binder,
-                        "__enter__",
+                    new CallSignature(0),
+                    Binders.Get(
+                        ag.BinderState,
                         typeof(object),
-                        Ast.CodeContext(),
+                        "__enter__",
                         manager
-                    )                
+                    )
                 )
             );
 
             //******************************************************************
             // 4. exc = True
             //******************************************************************
-            MSAst.VariableExpression exc = ag.MakeTempExpression("with_exc", typeof(bool));
+            MSAst.VariableExpression exc = ag.GetTemporary("with_exc", typeof(bool));
             statements[3] = AstGenerator.MakeAssignment(
                 exc,
                 Ast.True()
@@ -150,7 +151,7 @@ namespace IronPython.Compiler.Ast {
             //          exit(None, None, None)
             //******************************************************************
 
-            MSAst.VariableExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
+            MSAst.VariableExpression exception = ag.GetTemporary("exception", typeof(Exception));
 
             statements[4] =
                 // try:
@@ -158,40 +159,53 @@ namespace IronPython.Compiler.Ast {
                     _var != null ?
                         AstUtils.Block(
                             _body.Span,
-                            // VAR = value
+                // VAR = value
                             _var.TransformSet(ag, SourceSpan.None, value, Operators.None),
-                            // BLOCK
+                // BLOCK
                             ag.Transform(_body)
                         ) :
-                        // BLOCK
+                // BLOCK
                         ag.Transform(_body), // except:, // try statement location
                         Span, _header
                 ).Catch(typeof(Exception), exception,
                     Ast.Block(
-                        // Python specific exception handling code
+                // Python specific exception handling code
                         Ast.Call(
                             AstGenerator.GetHelperMethod("ClearDynamicStackFrames")
                         ),
-                        // exc = False
+                // exc = False
                         AstGenerator.MakeAssignment(
                             exc,
                             Ast.False()
                         ),
-                        //  if not exit(*sys.exc_info()):
-                        //      raise
+                //  if not exit(*sys.exc_info()):
+                //      raise
                         Ast.IfThen(
-                            AstUtils.Operator(ag.Binder, Operators.Not, typeof(bool), Ast.CodeContext(), MakeExitCall(ag, exit, exception)),
+                            Binders.Convert(
+                                ag.BinderState,
+                                typeof(bool),
+                                ConversionResultKind.ExplicitCast,
+                                Binders.Operation(
+                                    ag.BinderState,
+                                    typeof(object),
+                                    StandardOperators.Not,
+                                    MakeExitCall(ag, exit, exception)
+                                )
+                            ),
                             Ast.Rethrow()
                         )
                     )
                 // finally:
                 ).Finally(
-                    //  if exc:
-                    //      exit(None, None, None)
+                //  if exc:
+                //      exit(None, None, None)
                     Ast.IfThen(
                         exc,
                         Ast.ActionExpression(
-                            OldCallAction.Make(ag.Binder, 3),  // signature doesn't include code context / function
+                            new InvokeBinder(
+                                ag.BinderState,
+                                new CallSignature(3)        // signature doesn't include function
+                            ),
                             typeof(object),
                             MSAst.Expression.Annotate(_contextManager.Span),
                             new MSAst.Expression[] {
@@ -214,15 +228,20 @@ namespace IronPython.Compiler.Ast {
             //    exit(*sys.exc_info())
             // we'll actually do:
             //    exit(*PythonOps.GetExceptionInfoLocal($exception))
-            return AstUtils.Call(
-                OldCallAction.Make(ag.Binder, new CallSignature(MSAst.ArgumentKind.List)),
+            return Binders.Convert(
+                ag.BinderState,
                 typeof(bool),
-                Ast.CodeContext(),
-                exit,
-                Ast.Call(
-                    AstGenerator.GetHelperMethod("GetExceptionInfoLocal"), 
-                    Ast.CodeContext(),
-                    exception
+                ConversionResultKind.ExplicitCast,
+                Binders.Invoke(
+                    ag.BinderState,
+                    typeof(object),
+                    new CallSignature(MSAst.ArgumentKind.List),
+                    exit,
+                    Ast.Call(
+                        AstGenerator.GetHelperMethod("GetExceptionInfoLocal"),
+                        Ast.CodeContext(),
+                        exception
+                    )
                 )
             );
         }

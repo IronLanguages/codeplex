@@ -15,13 +15,17 @@
 
 using System.Runtime.CompilerServices;
 using System.Scripting;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Threading;
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("_functools", typeof(IronPython.Modules.FunctionTools))]
 namespace IronPython.Modules {
@@ -36,8 +40,9 @@ namespace IronPython.Modules {
             private object/*!*/ _function;                                                  // the callable function to dispatch to
             private object[]/*!*/ _args;                                                    // the initially provided arguments
             private IAttributesCollection _keywordArgs;                                     // the initially provided keyword arguments or null
-            private DynamicSite<object, object[], IAttributesCollection, object> _dictSite; // the dictionary call site if ever called w/ keyword args
-            private DynamicSite<object, object[], object> _splatSite;                       // the position only call site
+            private CodeContext/*!*/ _context;                                              // code context from the caller who created us
+            private CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>> _dictSite; // the dictionary call site if ever called w/ keyword args
+            private CallSite<DynamicSiteTarget<CodeContext, object, object[], object>> _splatSite;      // the position only call site
             private IAttributesCollection _dict;                                            // dictionary for storing extra attributes
             private WeakRefTracker _tracker;                                                // tracker so users can use Python weak references
                 
@@ -46,21 +51,22 @@ namespace IronPython.Modules {
             /// <summary>
             /// Creates a new partial object with the provided positional arguments.
             /// </summary>
-            public partial(object func, [NotNull]params object[]/*!*/ args)
-                : this(func, null, args) {
+            public partial(CodeContext/*!*/ context, object func, [NotNull]params object[]/*!*/ args)
+                : this(context, func, null, args) {
             }
 
             /// <summary>
             /// Creates a new partial object with the provided positional and keyword arguments.
             /// </summary>
-            public partial(object func, [ParamDictionary]IAttributesCollection keywords, [NotNull]params object[]/*!*/ args) {
-                if (!PythonOps.IsCallable(func)) {
+            public partial(CodeContext/*!*/ context, object func, [ParamDictionary]IAttributesCollection keywords, [NotNull]params object[]/*!*/ args) {
+                if (!PythonOps.IsCallable(context, func)) {
                     throw PythonOps.TypeError("the first argument must be callable");
                 }
 
                 _function = func;
                 _keywordArgs = keywords;
                 _args = args;
+                _context = context;
             }
 
             #endregion
@@ -131,12 +137,11 @@ namespace IronPython.Modules {
             public object Call(CodeContext/*!*/ context, params object [] args) {
                 if (_keywordArgs == null) {
                     EnsureSplatSite();
-
-                    return _splatSite.Invoke(context, _function, ArrayUtils.AppendRange(_args, args));
+                    return _splatSite.Target(_splatSite, context, _function, ArrayUtils.AppendRange(_args, args));
                 }
 
                 EnsureDictSplatSite();
-                return _dictSite.Invoke(context, _function, ArrayUtils.AppendRange(_args, args), _keywordArgs);
+                return _dictSite.Target(_dictSite, context, _function, ArrayUtils.AppendRange(_args, args), _keywordArgs);
             }
 
             /// <summary>
@@ -144,7 +149,6 @@ namespace IronPython.Modules {
             /// </summary>
             [SpecialName]
             public object Call(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection dict, params object[] args) {
-                EnsureDictSplatSite();
 
                 IAttributesCollection finalDict;
                 if (_keywordArgs != null) {
@@ -156,8 +160,9 @@ namespace IronPython.Modules {
                 } else {
                     finalDict = dict;
                 }
-
-                return _dictSite.Invoke(context, _function, ArrayUtils.AppendRange(_args, args), finalDict);
+                
+                EnsureDictSplatSite();
+                return _dictSite.Target(_dictSite, context, _function, ArrayUtils.AppendRange(_args, args), finalDict);
             }
             
             /// <summary>
@@ -203,14 +208,26 @@ namespace IronPython.Modules {
             #region Internal implementation details
 
             private void EnsureSplatSite() {
-                if (!_splatSite.IsInitialized) {
-                    _splatSite.EnsureInitialized(PythonCalls.MakeSplatAction());
+                if (_splatSite == null) {
+                    Interlocked.CompareExchange(
+                        ref _splatSite,
+                        CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>.Create(
+                            Binders.InvokeSplat(PythonContext.GetContext(_context).DefaultBinderState)
+                        ),
+                        null
+                    );
                 }
             }
 
             private void EnsureDictSplatSite() {
-                if (!_dictSite.IsInitialized) {
-                    _dictSite.EnsureInitialized(PythonCalls.MakeDictSplatAction());
+                if (_dictSite == null) {
+                    Interlocked.CompareExchange(
+                        ref _dictSite,
+                        CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>.Create(
+                            Binders.InvokeKeywords(PythonContext.GetContext(_context).DefaultBinderState)
+                        ),
+                        null
+                    );
                 }
             }
 

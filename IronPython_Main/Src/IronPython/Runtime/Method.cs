@@ -17,12 +17,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -31,10 +32,10 @@ namespace IronPython.Runtime {
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     [PythonSystemType("instancemethod")]
-    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, ICodeFormattable {
-        private object _func;
-        private object _inst;
-        private object _declaringClass;
+    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {
+        private readonly object _func;
+        private readonly object _inst;
+        private readonly object _declaringClass;
         private WeakRefTracker _weakref;
 
         public Method(object function, object instance, object @class) {
@@ -134,9 +135,9 @@ namespace IronPython.Runtime {
         }
 
         public override int GetHashCode() {
-            if (_inst == null) return PythonOps.Hash(_func);
+            if (_inst == null) return PythonOps.Hash(DefaultContext.Default, _func);
 
-            return PythonOps.Hash(_inst) ^ PythonOps.Hash(_func);
+            return PythonOps.Hash(DefaultContext.Default, _inst) ^ PythonOps.Hash(DefaultContext.Default, _func);
         }
         
         #endregion
@@ -214,13 +215,19 @@ namespace IronPython.Runtime {
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             if (this.im_self == null) {
-                if (owner == null || owner == im_class || PythonOps.IsSubClass((PythonType)owner, im_class)) {
+                if (owner == null || owner == im_class || PythonOps.IsSubClass(owner, im_class)) {
                     value = new Method(_func, instance, owner);
                     return true;
                 }
             }
             value = this;
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         #endregion
@@ -375,6 +382,14 @@ namespace IronPython.Runtime {
             } else {
                 return string.Format("<unbound method {0}.{1}>", DeclaringClassAsString(), name);
             }
+        }
+
+        #endregion
+
+        #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaMethod(parameter, Restrictions.Empty, this);
         }
 
         #endregion

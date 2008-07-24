@@ -19,39 +19,34 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
-using IronPython.Runtime;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 #if !SILVERLIGHT
-using ComTypeLibInfo = Microsoft.Scripting.Actions.ComDispatch.ComTypeLibInfo;
-using ComTypeLibDesc = Microsoft.Scripting.Actions.ComDispatch.ComTypeLibDesc;
-using ComObjectWithTypeInfo = Microsoft.Scripting.Actions.ComDispatch.ComObjectWithTypeInfo;
+using ComTypeLibInfo = System.Scripting.Com.ComTypeLibInfo;
+using ComTypeLibDesc = System.Scripting.Com.ComTypeLibDesc;
+using ComObjectWithTypeInfo = System.Scripting.Com.ComObjectWithTypeInfo;
 #endif
 
-[assembly: PythonModule("clr", typeof(IronPython.Modules.ClrModule))]
-namespace IronPython.Modules {
+[assembly: PythonModule("clr", typeof(IronPython.Runtime.ClrModule))]
+namespace IronPython.Runtime {
     /// <summary>
     /// this class contains objecs and static methods used for
     /// .NET/CLS interop with Python.  
     /// </summary>
     public static class ClrModule {
-        public static readonly object _referencesKey = new object();
-
         [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
-            if (!context.HasModuleState(_referencesKey)) {
-                ReferencesList rl = new ReferencesList();
-
-                dict[SymbolTable.StringToId("References")] = rl;
-                context.SetModuleState(_referencesKey, rl);
+            if (!dict.ContainsKey(SymbolTable.StringToId("References"))) {
+                dict[SymbolTable.StringToId("References")] = context.ReferencedAssemblies;
             }
         }
 
@@ -108,20 +103,24 @@ import Namespace.")]
 #if !SILVERLIGHT // files, paths
 
         public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, object rcw) {
+            CheckPreferComDispatch();
             return ComTypeLibDesc.CreateFromObject(rcw);
         }
 
         public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
+            CheckPreferComDispatch();
             return ComTypeLibDesc.CreateFromGuid(typeLibGuid);
         }
 
         public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, object rcw) {
+            CheckPreferComDispatch();
             ComTypeLibInfo typeLibInfo;
             typeLibInfo = ComTypeLibDesc.CreateFromObject(rcw);
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
         }
 
         public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
+            CheckPreferComDispatch();
             ComTypeLibInfo typeLibInfo;
             typeLibInfo = ComTypeLibDesc.CreateFromGuid(typeLibGuid);
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
@@ -201,7 +200,7 @@ the assembly object.")]
             try {
                 return context.LanguageContext.DomainManager.UseModule(name);
             } catch (AmbiguousFileNameException e) {
-                throw new ArgumentException(String.Format("found multiple modules of the same name '{0}' to use: '{1}' and '{2}'", 
+                throw new ArgumentException(String.Format("found multiple modules of the same name '{0}' to use: '{1}' and '{2}'",
                     name, e.FirstPath, e.SecondPath));
             } catch (FileNotFoundException) {
                 throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
@@ -209,11 +208,11 @@ the assembly object.")]
         }
 
         public static object/*!*/ Use(CodeContext/*!*/ context, string/*!*/ path, string/*!*/ language) {
-            ContractUtils.RequiresNotNull(context, "context"); 
-            
+            ContractUtils.RequiresNotNull(context, "context");
+
             if (path == null) {
                 throw new ArgumentTypeException("Use: arg 1 must be a string");
-            } 
+            }
             if (language == null) {
                 throw new ArgumentTypeException("Use: arg 2 must be a string");
             }
@@ -233,7 +232,7 @@ the assembly object.")]
         }
 
         #endregion
-        
+
         #region Private implementation methods
 
         private static void AddReference(CodeContext/*!*/ context, object reference) {
@@ -261,13 +260,13 @@ the assembly object.")]
 
                 // Add it to the references tuple if we
                 // loaded a new assembly.
-                ReferencesList rl = (ReferencesList)PythonContext.GetContext(context).GetModuleState(_referencesKey);
+                ReferencesList rl = PythonContext.GetContext(context).ReferencedAssemblies;
                 lock (rl) {
                     rl.Add(assembly);
                 }
             }
 
-            LoadScriptCode(PythonContext.GetContext(context), assembly);            
+            LoadScriptCode(PythonContext.GetContext(context), assembly);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
@@ -328,6 +327,12 @@ the assembly object.")]
             context.LanguageContext.DomainManager.Globals.SetName(symbol, typeLibDesc);
         }
 
+        private static void CheckPreferComDispatch() {
+            if (Environment.GetEnvironmentVariable("COREDLR_PreferComInteropAssembly") == "TRUE") {
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+            }
+        }
+
 #endif
         private static void AddReferenceByName(CodeContext/*!*/ context, string name) {
             if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
@@ -341,7 +346,7 @@ the assembly object.")]
             AddReference(context, asm);
         }
 
-        #endregion       
+        #endregion
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public sealed class ReferencesList : List<Assembly>, ICodeFormattable {
@@ -351,7 +356,7 @@ the assembly object.")]
             }
 
             [SpecialName]
-            public ClrModule.ReferencesList Add(object other) {                
+            public ClrModule.ReferencesList Add(object other) {
                 IEnumerator ie = PythonOps.GetEnumerator(other);
                 while (ie.MoveNext()) {
                     Assembly cur = ie.Current as Assembly;
@@ -531,15 +536,21 @@ import Namespace.")]
                 return true;
             }
 
+            internal override bool GetAlwaysSucceeds {
+                get {
+                    return true;
+                }
+            }
+
             #region IFancyCallable Members
             [SpecialName]
             public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
                 ValidateArgs(args);
 
                 if (_inst != null) {
-                    return PythonCalls.CallWithKeywordArgs(_func, ArrayUtils.Insert(_inst, args), dict);
+                    return PythonCalls.CallWithKeywordArgs(context, _func, ArrayUtils.Insert(_inst, args), dict);
                 } else {
-                    return PythonCalls.CallWithKeywordArgs(_func, args, dict);
+                    return PythonCalls.CallWithKeywordArgs(context, _func, args, dict);
                 }
             }
 
@@ -613,6 +624,7 @@ import Namespace.")]
                 return new RuntimeReturnChecker(instance, _func, _retType);
             }
 
+
             #endregion
 
             internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -620,14 +632,20 @@ import Namespace.")]
                 return true;
             }
 
+            internal override bool GetAlwaysSucceeds {
+                get {
+                    return true;
+                }
+            }
+
             #region IFancyCallable Members
             [SpecialName]
             public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
                 object ret;
                 if (_inst != null) {
-                    ret = PythonCalls.CallWithKeywordArgs(_func, ArrayUtils.Insert(_inst, args), dict);
+                    ret = PythonCalls.CallWithKeywordArgs(context, _func, ArrayUtils.Insert(_inst, args), dict);
                 } else {
-                    return PythonCalls.CallWithKeywordArgs(_func, args, dict);
+                    return PythonCalls.CallWithKeywordArgs(context, _func, args, dict);
                 }
                 ValidateReturn(ret);
                 return ret;
@@ -673,7 +691,7 @@ import Namespace.")]
             object mainModule;
             if (kwArgs != null && kwArgs.TryGetValue(SymbolTable.StringToId("mainModule"), out mainModule)) {
                 string strModule = mainModule as string;
-                if(strModule != null) {
+                if (strModule != null) {
                     SourceUnit su = pc.DomainManager.Host.TryGetSourceFileUnit(pc, strModule, pc.DefaultEncoding, SourceCodeKind.File);
                     if (su == null) {
                         throw PythonOps.IOError("Couldn't find main file for compilation: {0}", strModule);

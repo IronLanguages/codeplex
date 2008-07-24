@@ -29,7 +29,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _expression;
 
         internal DeleteExpression(Annotations annotations, Expression expression, CallSiteBinder bindingInfo)
-            : base(annotations, ExpressionType.Delete, typeof(object), bindingInfo) { // TODO: typeof(void) ?
+            : base(ExpressionType.Delete, typeof(object), annotations, bindingInfo) { // TODO: typeof(void) ?
             if (IsBound) {
                 RequiresBound(expression, "expression");
             }
@@ -42,10 +42,10 @@ namespace System.Linq.Expressions {
     }
 
     public partial class Expression {
-        public static DeleteExpression DeleteMember(Expression expression, CallSiteBinder bindingInfo, Annotations annotations) {
-            ContractUtils.RequiresNotNull(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            return new DeleteExpression(annotations, new MemberExpression(Annotations.Empty, null, expression, expression.Type, bindingInfo), bindingInfo);
+        public static DeleteExpression DeleteMember(Expression expression, CallSiteBinder binder, Annotations annotations) {
+            RequiresCanRead(expression, "expression");
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new DeleteExpression(annotations, new MemberExpression(expression, null, null, expression.Type, true, false, binder), binder);
         }
     }
 }

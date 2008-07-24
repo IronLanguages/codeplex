@@ -36,7 +36,7 @@ namespace System.Linq.Expressions {
             MethodInfo method,
             Expression instance,
             ReadOnlyCollection<Expression> arguments)
-            : base(annotations, ExpressionType.Call, returnType, bindingInfo) {
+            : base(ExpressionType.Call, returnType, annotations, bindingInfo) {
 
             if (IsBound) {
                 RequiresBound(instance, "instance");
@@ -157,7 +157,7 @@ namespace System.Linq.Expressions {
             if (method.IsStatic) {
                 ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr);
             } else {
-                ContractUtils.RequiresNotNull(instance, "instance");
+                RequiresCanRead(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }
             ValidateArgumentTypes(method, ref arguments);
@@ -181,7 +181,7 @@ namespace System.Linq.Expressions {
                 for (int i = 0, n = pis.Length; i < n; i++) {
                     Expression arg = arguments[i];
                     ParameterInfo pi = pis[i];
-                    ContractUtils.RequiresNotNull(arg, "arguments");
+                    RequiresCanRead(arg, "arguments");
                     Type pType = pi.ParameterType;
                     if (pType.IsByRef) {
                         pType = pType.GetElementType();
@@ -310,11 +310,11 @@ namespace System.Linq.Expressions {
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
         public static MethodCallExpression Call(Type returnType, Expression instance, OldInvokeMemberAction bindingInfo, Annotations annotations, IEnumerable<Expression> arguments) {
-            ContractUtils.RequiresNotNull(instance, "instance");
+            RequiresCanRead(instance, "instance");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
 
-            ReadOnlyCollection<Expression> argumentList = arguments.ToReadOnly();
-            ContractUtils.RequiresNotNullItems(argumentList, "arguments");
+            RequiresCanRead(arguments, "arguments");
+            var argumentList = arguments.ToReadOnly();
 
             // Validate ArgumentInfos. For now, includes the instance.
             // This needs to be reconciled with InvocationExpression
@@ -518,7 +518,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) {
-            ContractUtils.RequiresNotNull(array, "array");
+            RequiresCanRead(array, "array");
             ContractUtils.RequiresNotNull(indexes, "indexes");
 
             Type arrayType = array.Type;
@@ -530,9 +530,10 @@ namespace System.Linq.Expressions {
                 throw Error.IncorrectNumberOfIndexes();
 
             foreach (Expression e in indexList) {
-                ContractUtils.RequiresNotNull(e, "indexes");
-                if (e.Type != typeof(int))
+                RequiresCanRead(e, "indexes");
+                if (e.Type != typeof(int)) {
                     throw Error.ArgumentMustBeArrayIndexType();
+                }
             }
 
             MethodInfo mi = array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance);

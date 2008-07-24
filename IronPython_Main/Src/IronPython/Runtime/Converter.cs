@@ -35,28 +35,28 @@ namespace IronPython.Runtime {
     public static partial class Converter {
         #region Conversion Sites
 
-        private static readonly DynamicSite<object, int> _intSite = MakeExplicitConvertSite<int>();
-        private static readonly DynamicSite<object, double> _doubleSite = MakeExplicitConvertSite<double>();
-        private static readonly DynamicSite<object, Complex64> _complexSite = MakeExplicitConvertSite<Complex64>();
-        private static readonly DynamicSite<object, BigInteger> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
-        private static readonly DynamicSite<object, string> _stringSite = MakeExplicitConvertSite<string>();
-        private static readonly DynamicSite<object, bool> _boolSite = MakeExplicitConvertSite<bool>();
-        private static readonly DynamicSite<object, char> _charSite = MakeImplicitConvertSite<char>();
-        private static readonly DynamicSite<object, char> _explicitCharSite = MakeExplicitConvertSite<char>();
-        private static readonly DynamicSite<object, IEnumerable> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
-        private static readonly DynamicSite<object, IEnumerator> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
-        private static readonly Dictionary<Type, DynamicSite<object, object>> _siteDict = new Dictionary<Type, DynamicSite<object, object>>();
-        private static readonly DynamicSite<object, byte> _byteSite = MakeExplicitConvertSite<byte>();
-        private static readonly DynamicSite<object, sbyte> _sbyteSite = MakeExplicitConvertSite<sbyte>();
-        private static readonly DynamicSite<object, Int16> _int16Site = MakeExplicitConvertSite<Int16>();
-        private static readonly DynamicSite<object, UInt16> _uint16Site = MakeExplicitConvertSite<UInt16>();
-        private static readonly DynamicSite<object, UInt32> _uint32Site = MakeExplicitConvertSite<UInt32>();
-        private static readonly DynamicSite<object, Int64> _int64Site = MakeExplicitConvertSite<Int64>();
-        private static readonly DynamicSite<object, UInt64> _uint64Site = MakeExplicitConvertSite<UInt64>();
-        private static readonly DynamicSite<object, decimal> _decimalSite = MakeExplicitConvertSite<decimal>();
-        private static readonly DynamicSite<object, float> _floatSite = MakeExplicitConvertSite<float>();
+        private static readonly CallSite<DynamicSiteTarget<object, int>> _intSite = MakeExplicitConvertSite<int>();
+        private static readonly CallSite<DynamicSiteTarget<object, double>> _doubleSite = MakeExplicitConvertSite<double>();
+        private static readonly CallSite<DynamicSiteTarget<object, Complex64>> _complexSite = MakeExplicitConvertSite<Complex64>();
+        private static readonly CallSite<DynamicSiteTarget<object, BigInteger>> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
+        private static readonly CallSite<DynamicSiteTarget<object, string>> _stringSite = MakeExplicitConvertSite<string>();
+        private static readonly CallSite<DynamicSiteTarget<object, bool>> _boolSite = MakeExplicitConvertSite<bool>();
+        private static readonly CallSite<DynamicSiteTarget<object, char>> _charSite = MakeImplicitConvertSite<char>();
+        private static readonly CallSite<DynamicSiteTarget<object, char>> _explicitCharSite = MakeExplicitConvertSite<char>();
+        private static readonly CallSite<DynamicSiteTarget<object, IEnumerable>> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
+        private static readonly CallSite<DynamicSiteTarget<object, IEnumerator>> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
+        private static readonly Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>> _siteDict = new Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>>();
+        private static readonly CallSite<DynamicSiteTarget<object, byte>> _byteSite = MakeExplicitConvertSite<byte>();
+        private static readonly CallSite<DynamicSiteTarget<object, sbyte>> _sbyteSite = MakeExplicitConvertSite<sbyte>();
+        private static readonly CallSite<DynamicSiteTarget<object, Int16>> _int16Site = MakeExplicitConvertSite<Int16>();
+        private static readonly CallSite<DynamicSiteTarget<object, UInt16>> _uint16Site = MakeExplicitConvertSite<UInt16>();
+        private static readonly CallSite<DynamicSiteTarget<object, UInt32>> _uint32Site = MakeExplicitConvertSite<UInt32>();
+        private static readonly CallSite<DynamicSiteTarget<object, Int64>> _int64Site = MakeExplicitConvertSite<Int64>();
+        private static readonly CallSite<DynamicSiteTarget<object, UInt64>> _uint64Site = MakeExplicitConvertSite<UInt64>();
+        private static readonly CallSite<DynamicSiteTarget<object, decimal>> _decimalSite = MakeExplicitConvertSite<decimal>();
+        private static readonly CallSite<DynamicSiteTarget<object, float>> _floatSite = MakeExplicitConvertSite<float>();
 
-        private static readonly DynamicSite<object, object> 
+        private static readonly CallSite<DynamicSiteTarget<object, object>> 
             _tryByteSite       = MakeExplicitTrySite<Byte>(),
             _trySByteSite      = MakeExplicitTrySite<SByte>(),
             _tryInt16Site      = MakeExplicitTrySite<Int16>(),
@@ -72,53 +72,66 @@ namespace IronPython.Runtime {
             _tryComplex64Site  = MakeExplicitTrySite<Complex64>(),
             _tryStringSite     = MakeExplicitTrySite<String>();
 
-        private static DynamicSite<object, T> MakeImplicitConvertSite<T>() {
+        private static CallSite<DynamicSiteTarget<object, T>> MakeImplicitConvertSite<T>() {
             return MakeConvertSite<T>(ConversionResultKind.ImplicitCast);
         }
 
-        private static DynamicSite<object, T> MakeExplicitConvertSite<T>() {
+        private static CallSite<DynamicSiteTarget<object, T>> MakeExplicitConvertSite<T>() {
             return MakeConvertSite<T>(ConversionResultKind.ExplicitCast);
         }
 
-        private static DynamicSite<object, T> MakeConvertSite<T>(ConversionResultKind kind) {
-            return DynamicSite<object, T>.Create(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(T), kind));
+        private static CallSite<DynamicSiteTarget<object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
+            return CallSite<DynamicSiteTarget<object, T>>.Create(
+                new ConversionBinder(
+                    DefaultContext.DefaultPythonContext.DefaultBinderState,
+                    typeof(T),
+                    kind
+                )
+            );
         }
 
-        private static DynamicSite<object, object> MakeImplicitTrySite<T>() {
+        private static CallSite<DynamicSiteTarget<object, object>> MakeImplicitTrySite<T>() {
             return MakeTrySite<T>(ConversionResultKind.ImplicitTry);
         }
 
-        private static DynamicSite<object, object> MakeExplicitTrySite<T>() {
+        private static CallSite<DynamicSiteTarget<object, object>> MakeExplicitTrySite<T>() {
             return MakeTrySite<T>(ConversionResultKind.ExplicitTry);
         }
 
-        private static DynamicSite<object, object> MakeTrySite<T>(ConversionResultKind kind) {
-            return DynamicSite<object, object>.Create(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(T), kind));
+        private static CallSite<DynamicSiteTarget<object, object>> MakeTrySite<T>(ConversionResultKind kind) {
+            return CallSite<DynamicSiteTarget<object, object>>.Create(
+                new ConversionBinder(
+                    DefaultContext.DefaultPythonContext.DefaultBinderState,
+                    typeof(T),
+                    kind
+                )
+            );
         }
 
         #endregion
 
         #region Conversion entry points
 
-        public static Int32 ConvertToInt32(object value) { return _intSite.Invoke(DefaultContext.Default, value); }
-        public static Double ConvertToDouble(object value) { return _doubleSite.Invoke(DefaultContext.Default, value); }
-        public static BigInteger ConvertToBigInteger(object value) { return _bigIntSite.Invoke(DefaultContext.Default, value); }
-        public static Complex64 ConvertToComplex64(object value) { return _complexSite.Invoke(DefaultContext.Default, value); }
-        public static String ConvertToString(object value) { return _stringSite.Invoke(DefaultContext.Default, value); }
-        public static Char ConvertToChar(object value) { return _charSite.Invoke(DefaultContext.Default, value); }
-        public static Boolean ConvertToBoolean(object value) { return _boolSite.Invoke(DefaultContext.Default, value); }
-        public static Byte ConvertToByte(object value) { return _byteSite.Invoke(DefaultContext.Default, value); }
-        public static SByte ConvertToSByte(object value) { return _sbyteSite.Invoke(DefaultContext.Default, value); }
-        public static Int16 ConvertToInt16(object value) { return _int16Site.Invoke(DefaultContext.Default, value); }
-        public static UInt16 ConvertToUInt16(object value) { return _uint16Site.Invoke(DefaultContext.Default, value); }
-        public static UInt32 ConvertToUInt32(object value) { return _uint32Site.Invoke(DefaultContext.Default, value); }
-        public static Int64 ConvertToInt64(object value) { return _int64Site.Invoke(DefaultContext.Default, value); }
-        public static UInt64 ConvertToUInt64(object value) { return _uint64Site.Invoke(DefaultContext.Default, value); }
-        public static Single ConvertToSingle(object value) { return _floatSite.Invoke(DefaultContext.Default, value); }
-        public static Decimal ConvertToDecimal(object value) { return _decimalSite.Invoke(DefaultContext.Default, value); }
+        public static Int32 ConvertToInt32(object value) { return _intSite.Target(_intSite, value); }
+        public static String ConvertToString(object value) { return _stringSite.Target(_stringSite, value); }
+        public static BigInteger ConvertToBigInteger(object value) { return _bigIntSite.Target(_bigIntSite, value); }
+        public static Double ConvertToDouble(object value) { return _doubleSite.Target(_doubleSite, value); }
+        public static Complex64 ConvertToComplex64(object value) { return _complexSite.Target(_complexSite, value); }
+        public static Boolean ConvertToBoolean(object value) { return _boolSite.Target(_boolSite, value); }
+        public static Int64 ConvertToInt64(object value) { return _int64Site.Target(_int64Site, value); }
+
+        public static Byte ConvertToByte(object value) { return _byteSite.Target(_byteSite, value); }
+        public static SByte ConvertToSByte(object value) { return _sbyteSite.Target(_sbyteSite, value); }
+        public static Int16 ConvertToInt16(object value) { return _int16Site.Target(_int16Site, value); }
+        public static UInt16 ConvertToUInt16(object value) { return _uint16Site.Target(_uint16Site, value); }
+        public static UInt32 ConvertToUInt32(object value) { return _uint32Site.Target(_uint32Site, value); }
+        public static UInt64 ConvertToUInt64(object value) { return _uint64Site.Target(_uint64Site, value); }
+        public static Single ConvertToSingle(object value) { return _floatSite.Target(_floatSite, value); }
+        public static Decimal ConvertToDecimal(object value) { return _decimalSite.Target(_decimalSite, value); }
+        public static Char ConvertToChar(object value) { return _charSite.Target(_charSite, value); }
 
         internal static bool TryConvertToByte(object value, out Byte result) {
-            object res = _tryByteSite.Invoke(DefaultContext.Default, value);
+            object res = _tryByteSite.Target(_tryByteSite, value);
             if (res != null) {
                 result = (Byte)res;
                 return true;
@@ -128,7 +141,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToSByte(object value, out SByte result) {
-            object res = _trySByteSite.Invoke(DefaultContext.Default, value);
+            object res = _trySByteSite.Target(_trySByteSite, value);
             if (res != null) {
                 result = (SByte)res;
                 return true;
@@ -138,7 +151,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToInt16(object value, out Int16 result) {
-            object res = _tryInt16Site.Invoke(DefaultContext.Default, value);
+            object res = _tryInt16Site.Target(_tryInt16Site, value);
             if (res != null) {
                 result = (Int16)res;
                 return true;
@@ -148,7 +161,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToInt32(object value, out Int32 result) {
-            object res = _tryInt32Site.Invoke(DefaultContext.Default, value);
+            object res = _tryInt32Site.Target(_tryInt32Site, value);
             if (res != null) {
                 result = (Int32)res;
                 return true;
@@ -158,7 +171,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToInt64(object value, out Int64 result) {
-            object res = _tryInt64Site.Invoke(DefaultContext.Default, value);
+            object res = _tryInt64Site.Target(_tryInt64Site, value);
             if (res != null) {
                 result = (Int64)res;
                 return true;
@@ -168,7 +181,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToUInt16(object value, out UInt16 result) {
-            object res = _tryUInt16Site.Invoke(DefaultContext.Default, value);
+            object res = _tryUInt16Site.Target(_tryUInt16Site, value);
             if (res != null) {
                 result = (UInt16)res;
                 return true;
@@ -178,7 +191,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToUInt32(object value, out UInt32 result) {
-            object res = _tryUInt32Site.Invoke(DefaultContext.Default, value);
+            object res = _tryUInt32Site.Target(_tryUInt32Site, value);
             if (res != null) {
                 result = (UInt32)res;
                 return true;
@@ -188,7 +201,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToUInt64(object value, out UInt64 result) {
-            object res = _tryUInt64Site.Invoke(DefaultContext.Default, value);
+            object res = _tryUInt64Site.Target(_tryUInt64Site, value);
             if (res != null) {
                 result = (UInt64)res;
                 return true;
@@ -198,7 +211,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToDouble(object value, out Double result) {
-            object res = _tryDoubleSite.Invoke(DefaultContext.Default, value);
+            object res = _tryDoubleSite.Target(_tryDoubleSite, value);
             if (res != null) {
                 result = (Double)res;
                 return true;
@@ -208,7 +221,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToBigInteger(object value, out BigInteger result) {
-            object res = _tryBigIntegerSite.Invoke(DefaultContext.Default, value);
+            object res = _tryBigIntegerSite.Target(_tryBigIntegerSite, value);
             if (res != null) {
                 result = (BigInteger)res;
                 return true;
@@ -218,7 +231,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToComplex64(object value, out Complex64 result) {
-            object res = _tryComplex64Site.Invoke(DefaultContext.Default, value);
+            object res = _tryComplex64Site.Target(_tryComplex64Site, value);
             if (res != null) {
                 result = (Complex64)res;
                 return true;
@@ -228,7 +241,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToString(object value, out String result) {
-            object res = _tryStringSite.Invoke(DefaultContext.Default, value);
+            object res = _tryStringSite.Target(_tryStringSite, value);
             if (res != null) {
                 result = (String)res;
                 return true;
@@ -238,7 +251,7 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryConvertToChar(object value, out Char result) {
-            object res = _tryCharSite.Invoke(DefaultContext.Default, value);
+            object res = _tryCharSite.Target(_tryCharSite, value);
             if (res != null) {
                 result = (Char)res;
                 return true;
@@ -250,7 +263,7 @@ namespace IronPython.Runtime {
         #endregion
 
         internal static Char ExplicitConvertToChar(object value) {
-            return _explicitCharSite.Invoke(DefaultContext.Default, value);
+            return _explicitCharSite.Target(_explicitCharSite, value);
         }
 
         public static T Convert<T>(object value) {
@@ -272,14 +285,20 @@ namespace IronPython.Runtime {
         }
 
         internal static object Convert(object value, Type to) {
-            DynamicSite<object, object> site;
+            CallSite<DynamicSiteTarget<object, object>> site;
             lock (_siteDict) {
                 if (!_siteDict.TryGetValue(to, out site)) {
-                    _siteDict[to] = site = DynamicSite<object, object>.Create(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, to, ConversionResultKind.ExplicitCast));
+                    _siteDict[to] = site = CallSite<DynamicSiteTarget<object, object>>.Create(
+                        new ConversionBinder(
+                            DefaultContext.DefaultPythonContext.DefaultBinderState, 
+                            to, 
+                            ConversionResultKind.ExplicitCast
+                        )
+                    );
                 }
             }
 
-            object res = site.Invoke(DefaultContext.Default, value);
+            object res = site.Target(site, value);
             if (to.IsValueType && res == null && 
                 (!to.IsGenericType || to.GetGenericTypeDefinition() != typeof(Nullable<>))) {
                 throw MakeTypeError(to, value);
@@ -293,7 +312,7 @@ namespace IronPython.Runtime {
         /// </summary>
         internal static bool TryConvertToIEnumerator(object o, out IEnumerator e) {
             try {
-                e = _ienumeratorSite.Invoke(DefaultContext.Default, o);
+                e = _ienumeratorSite.Target(_ienumeratorSite, o);
                 return e != null;
             } catch {
                 e = null;
@@ -306,11 +325,11 @@ namespace IronPython.Runtime {
         /// Do not use this function directly. It is only meant to be used by Ops.GetEnumerator.
         /// </summary>
         internal static IEnumerator ConvertToIEnumerator(object o) {
-            return _ienumeratorSite.Invoke(DefaultContext.Default, o);
+            return _ienumeratorSite.Target(_ienumeratorSite, o);
         }
 
         public static IEnumerable ConvertToIEnumerable(object o) {
-            return _ienumerableSite.Invoke(DefaultContext.Default, o);
+            return _ienumerableSite.Target(_ienumerableSite, o);
         }
 
         internal static bool TryConvertToIndex(object value, out int index) {
@@ -809,7 +828,8 @@ namespace IronPython.Runtime {
                     Type genTo = toType.GetGenericTypeDefinition();
                     if (genTo == IEnumerableOfTType) {
                         return IEnumerableOfObjectType.IsAssignableFrom(fromType) ||
-                            IEnumerableType.IsAssignableFrom(fromType);
+                            IEnumerableType.IsAssignableFrom(fromType) ||
+                            fromType == typeof(OldInstance);
                     } else if (genTo == typeof(System.Collections.Generic.IEnumerator<>)) {
                         if (IsPythonType(fromType)) return true;
                     }
@@ -902,7 +922,7 @@ namespace IronPython.Runtime {
         }
 
         private static bool HasPythonProtocol(Type t, SymbolId name) {
-            if (t.FullName.StartsWith(Compiler.Generation.NewTypeMaker.TypePrefix)) return true;
+            if (t.FullName.StartsWith(NewTypeMaker.TypePrefix)) return true;
             if (t == typeof(OldInstance)) return true;
             PythonType dt = DynamicHelpers.GetPythonTypeFromType(t);
             if (dt == null) return false;

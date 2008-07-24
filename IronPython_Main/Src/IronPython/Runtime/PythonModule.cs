@@ -16,6 +16,7 @@
 using System;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {
     [Flags]
@@ -39,6 +40,7 @@ namespace IronPython.Runtime {
         private bool _showCls;
         private bool _withStatement;
         private bool _absoluteImports;
+        private BinderState _binderState;
 
         internal PythonModule(Scope scope)
             : base(scope) {
@@ -53,7 +55,7 @@ namespace IronPython.Runtime {
 
             _trueDivision = module._trueDivision;
             _withStatement = module._withStatement;
-            _isPythonCreatedModule = module._isPythonCreatedModule;
+            _isPythonCreatedModule = module._isPythonCreatedModule;              
         }
 
         public bool TrueDivision {
@@ -98,6 +100,15 @@ namespace IronPython.Runtime {
             }
             set {
                 _showCls = value;
+            }
+        }
+
+        internal BinderState BinderState {
+            get {
+                return _binderState;
+            }
+            set {
+                _binderState = value;
             }
         }
 

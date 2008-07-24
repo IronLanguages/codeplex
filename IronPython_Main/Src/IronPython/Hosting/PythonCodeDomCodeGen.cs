@@ -19,7 +19,7 @@ using Microsoft.Scripting.Runtime;
 
 #if !SILVERLIGHT // CodeDom objects are not available
 
-namespace IronPython.Compiler.Generation {
+namespace IronPython.Hosting {
     internal class PythonCodeDomCodeGen : CodeDomCodeGen {
 
         // Tracks the indents found in user provided snippets

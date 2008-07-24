@@ -31,7 +31,7 @@ namespace System.Linq.Expressions {
     public class DynamicNodeRewriter : ExpressionTreeVisitor {
 
         protected override Expression VisitExtension(Expression node) {
-            return VisitNode(Expression.ReduceToKnown(node));
+            return VisitNode(node.ReduceToKnown());
         }
 
         protected override Expression Visit(ActionExpression node) {

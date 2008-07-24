@@ -19,8 +19,22 @@ using System.Scripting;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {
+
+    internal sealed class LambdaState {
+        internal Dictionary<Expression, object> SpilledStack;
+        internal YieldStatement CurrentYield;
+
+        // not-null
+        internal readonly InterpretedScriptCode ScriptCode;
+
+        public LambdaState(InterpretedScriptCode scriptCode) {
+            Assert.NotNull(scriptCode);
+            ScriptCode = scriptCode;
+        }
+    }
 
     /// <summary>
     /// Represents variable storage for one lambda/scope expression in the
@@ -28,33 +42,33 @@ namespace Microsoft.Scripting.Interpretation {
     /// </summary>
     internal sealed class InterpreterState {
 
-        private class LambdaState {
-            internal Dictionary<Expression, object> SpilledStack;
-            internal YieldStatement CurrentYield;
-        }
-
         private readonly InterpreterState _parent;
         private readonly Dictionary<Expression, object> _vars = new Dictionary<Expression, object>();
         internal SourceLocation CurrentLocation;
 
-        // per-lambda state
+        // per-lambda state, not-null
         private readonly LambdaState _lambdaState;
 
+        internal LambdaState LambdaState {
+            get { return _lambdaState; }
+        }
+
         private InterpreterState(InterpreterState parent, LambdaState lambdaState) {
+            Assert.NotNull(lambdaState);
             _parent = parent;
             _lambdaState = lambdaState;
         }
 
-        public static InterpreterState CreateForTopLambda(LambdaExpression lambda, params object[] args) {
-            return CreateForLambda(null, lambda, args);
+        public static InterpreterState CreateForTopLambda(InterpretedScriptCode scriptCode, LambdaExpression lambda, params object[] args) {
+            return CreateForLambda(scriptCode, null, lambda, args);
         }
 
         public InterpreterState CreateForLambda(LambdaExpression lambda, object[] args) {
-            return CreateForLambda(this, lambda, args);
+            return CreateForLambda(_lambdaState.ScriptCode, this, lambda, args);
         }
 
-        private static InterpreterState CreateForLambda(InterpreterState parent, LambdaExpression lambda, object[] args) {
-            InterpreterState state = new InterpreterState(parent, new LambdaState());
+        private static InterpreterState CreateForLambda(InterpretedScriptCode scriptCode, InterpreterState parent, LambdaExpression lambda, object[] args) {
+            InterpreterState state = new InterpreterState(parent, new LambdaState(scriptCode));
 
             Debug.Assert(args.Length == lambda.Parameters.Count, "number of parameters should match number of arguments");
             

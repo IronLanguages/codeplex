@@ -16,11 +16,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -152,12 +155,13 @@ namespace IronPython.Runtime {
     /// </summary>
     internal sealed class InstanceFinalizer {
         private object _instance;
-        private DynamicSite<object, object> _site = CallSiteFactory.CreateSimpleCallSite<object, object>(DefaultContext.DefaultPythonBinder);
+        private CallSite<DynamicSiteTarget<CodeContext, object, object>> _newSite;
 
-        internal InstanceFinalizer(object inst) {
+        internal InstanceFinalizer(CodeContext/*!*/ context, object inst) {
             Debug.Assert(inst != null);
 
             _instance = inst;
+            _newSite = PythonContext.GetContext(context).FinalizerSite;
         }
 
         // This corresponds to a __del__ method on a class. 
@@ -168,7 +172,7 @@ namespace IronPython.Runtime {
             IronPython.Runtime.Types.OldInstance oi = _instance as IronPython.Runtime.Types.OldInstance;
             if (oi != null) {
                 if (oi.TryGetBoundCustomMember(context, Symbols.Unassign, out o)) {
-                    return _site.Invoke(context, o);
+                    return PythonContext.GetContext(context).Call(o);
                 }
             } else {
                 PythonTypeOps.TryInvokeUnaryOperator(context, _instance, Symbols.Unassign, out o);

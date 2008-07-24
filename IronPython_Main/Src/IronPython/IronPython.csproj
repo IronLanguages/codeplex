@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30428</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -82,6 +82,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
@@ -156,10 +157,9 @@
     <Compile Include="Compiler\Ast\YieldExpression.cs" />
     <Compile Include="Runtime\Binding\Binders.cs" />
     <Compile Include="Runtime\Binding\BinderState.cs" />
-    <Compile Include="Runtime\Binding\InvokeWithContextBinder.cs" />
-    <Compile Include="Runtime\Binding\DeleteMemberBinder.cs" />
     <Compile Include="Runtime\Binding\GetMemberBinder.cs" />
-    <Compile Include="Runtime\Binding\IInvokableWithContext.cs" />
+    <Compile Include="Runtime\Binding\DeleteMemberBinder.cs" />
+    <Compile Include="Runtime\Binding\IPythonCallable.cs" />
     <Compile Include="Runtime\Binding\IPythonSite.cs" />
     <Compile Include="Runtime\Binding\PythonProtocol.cs" />
     <Compile Include="Runtime\Binding\PythonProtocol.Operations.cs" />
@@ -170,6 +170,7 @@
     <Compile Include="Runtime\Binding\MetaUserObject.Members.cs" />
     <Compile Include="Runtime\Binding\OperatorStrings.cs" />
     <Compile Include="Runtime\Binding\SlotOrFunction.cs" />
+    <Compile Include="Runtime\ClrModule.cs" />
     <Compile Include="Runtime\Types\DynamicBaseTypeAttribute.cs" />
     <Compile Include="Runtime\Types\NameConverter.cs" />
     <Compile Include="Runtime\Types\NewSubtypeMaker.cs" />
@@ -307,8 +308,6 @@
     <Compile Include="Runtime\Operations\PythonOps.cs" />
     <Compile Include="Runtime\Operations\PythonOps.Generated.cs" />
     <Compile Include="Runtime\Operations\PythonCalls.cs" />
-    <Compile Include="Runtime\Operations\PythonCalls.Generated.cs" />
-    <Compile Include="Runtime\Operations\PythonSites.Generated.cs" />
     <Compile Include="Runtime\Operations\ReflectedPackageOps.cs" />
     <Compile Include="Runtime\Operations\StringOps.cs" />
     <Compile Include="Runtime\Operations\TypeTrackerOps.cs" />

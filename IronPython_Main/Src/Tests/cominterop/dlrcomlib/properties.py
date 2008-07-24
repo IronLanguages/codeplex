@@ -92,10 +92,8 @@ def test_default_property():
 @skip_comdispatch("Merlin 381591")
 def test_propeties_as_methods():
     for propName, val in test_sanity_types_data:
-        setterFunc = getattr(com_obj, "set_" + propName)
-        getterFunc = getattr(com_obj, "get_" + propName)
-        setterFunc(val)
-        AreEqual(getterFunc(), val)
+        Assert(not hasattr(com_obj, "set_" + propName))
+        Assert(not hasattr(com_obj, "get_" + propName))
     
     AssertError(AttributeError, getattr, com_obj, "set_ReadOnlyProperty")
     AssertError(AttributeError, getattr, com_obj, "get_WriteOnlyProperty")

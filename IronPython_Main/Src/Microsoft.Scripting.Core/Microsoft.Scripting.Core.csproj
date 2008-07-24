@@ -183,6 +183,7 @@
     <Compile Include="Com\DispPropertyGet.cs" />
     <Compile Include="Com\DispPropertyPut.cs" />
     <Compile Include="Com\ExcepInfo.cs" />
+    <Compile Include="Com\GenericComMetaObject.cs" />
     <Compile Include="Com\GenericComObject.cs" />
     <Compile Include="Com\IDispatchComObject.cs" />
     <Compile Include="Com\IDispatchMetaObject.cs" />

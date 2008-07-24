@@ -74,8 +74,8 @@ namespace IronPython.Modules {
             + "compatibility."
             )]
         public static void pickle(CodeContext/*!*/ context, object type, object function, [DefaultParameterValue(null)] object ctor) {
-            EnsureCallable(function, "reduction functions must be callable");
-            if (ctor != null) constructor(ctor);
+            EnsureCallable(context, function, "reduction functions must be callable");
+            if (ctor != null) constructor(context, ctor);
             GetDispatchTable(context)[type] = function;
         }
 
@@ -84,15 +84,15 @@ namespace IronPython.Modules {
             + "backwards compatibility; for details, see\n"
             + "http://mail.python.org/pipermail/python-dev/2006-June/066831.html."
             )]
-        public static void constructor(object callable) {
-            EnsureCallable(callable, "constructors must be callable");
+        public static void constructor(CodeContext/*!*/ context, object callable) {
+            EnsureCallable(context, callable, "constructors must be callable");
         }
 
         /// <summary>
         /// Throw TypeError with a specified message if object isn't callable.
         /// </summary>
-        private static void EnsureCallable(object @object, string message) {
-            if (!PythonOps.IsCallable(@object)) {
+        private static void EnsureCallable(CodeContext/*!*/ context, object @object, string message) {
+            if (!PythonOps.IsCallable(context, @object)) {
                 throw PythonOps.TypeError(message);
             }
         }
@@ -116,7 +116,7 @@ namespace IronPython.Modules {
         [Documentation("Register an extension code.")]
         public static void add_extension(CodeContext/*!*/ context, object moduleName, object objectName, object value) {
             PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
-            int code = GetCode(value);
+            int code = GetCode(context, value);
 
             bool keyExists = GetExtensionRegistry(context).__contains__(key);
             bool codeExists = GetInvertedRegistry(context).__contains__(code);
@@ -125,8 +125,8 @@ namespace IronPython.Modules {
                 GetExtensionRegistry(context)[key] = code;
                 GetInvertedRegistry(context)[code] = key;
             } else if (keyExists && codeExists &&
-                PythonOps.EqualRetBool(GetExtensionRegistry(context)[key], code) &&
-                PythonOps.EqualRetBool(GetInvertedRegistry(context)[code], key)
+                PythonOps.EqualRetBool(context, GetExtensionRegistry(context)[key], code) &&
+                PythonOps.EqualRetBool(context, GetInvertedRegistry(context)[code], key)
             ) {
                 // nop
             } else {
@@ -141,15 +141,15 @@ namespace IronPython.Modules {
         [Documentation("Unregister an extension code. (only for testing)")]
         public static void remove_extension(CodeContext/*!*/ context, object moduleName, object objectName, object value) {
             PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
-            int code = GetCode(value);
+            int code = GetCode(context, value);
 
             object existingKey;
             object existingCode;
 
             if (((IDictionary<object, object>)GetExtensionRegistry(context)).TryGetValue(key, out existingCode) &&
                 ((IDictionary<object, object>)GetInvertedRegistry(context)).TryGetValue(code, out existingKey) &&
-                PythonOps.EqualRetBool(existingCode, code) &&
-                PythonOps.EqualRetBool(existingKey, key)
+                PythonOps.EqualRetBool(context, existingCode, code) &&
+                PythonOps.EqualRetBool(context, existingKey, key)
             ) {
                 GetExtensionRegistry(context).__delitem__(key);
                 GetInvertedRegistry(context).__delitem__(code);
@@ -162,11 +162,11 @@ namespace IronPython.Modules {
             + "Helper function for unpickling. Creates a new object of a given class.\n"
             + "See PEP 307 section \"The __newobj__ unpickling function\" for details."
             )]
-        public static object __newobj__(object cls, params object[] args) {
+        public static object __newobj__(CodeContext/*!*/ context, object cls, params object[] args) {
             object[] newArgs = new object[1 + args.Length];
             newArgs[0] = cls;
             for (int i = 0; i < args.Length; i++) newArgs[i + 1] = args[i];
-            return PythonOps.Invoke(cls, Symbols.NewInst, newArgs);
+            return PythonOps.Invoke(context, cls, Symbols.NewInst, newArgs);
         }
 
         [Documentation("_reconstructor(basetype, objtype, basestate) -> object\n\n"
@@ -174,9 +174,9 @@ namespace IronPython.Modules {
             + "class. See PEP 307 section \"Case 2: pickling new-style class instances using\n"
             + "protocols 0 or 1\" for details."
             )]
-        public static object _reconstructor(object objType, object baseType, object baseState) {
-            object obj = PythonOps.Invoke(baseType, Symbols.NewInst, objType, baseState);
-            PythonOps.Invoke(baseType, Symbols.Init, obj, baseState);
+        public static object _reconstructor(CodeContext/*!*/ context, object objType, object baseType, object baseState) {
+            object obj = PythonOps.Invoke(context, baseType, Symbols.NewInst, objType, baseState);
+            PythonOps.Invoke(context, baseType, Symbols.Init, obj, baseState);
             return obj;
         }
 
@@ -187,9 +187,9 @@ namespace IronPython.Modules {
         /// <summary>
         /// Convert object to ushort, throwing ValueError on overflow.
         /// </summary>
-        private static int GetCode(object value) {
+        private static int GetCode(CodeContext/*!*/ context, object value) {
             try {
-                int intValue = Converter.ConvertToInt32(value);
+                int intValue = PythonContext.GetContext(context).ConvertToInt32(value);
                 if (intValue > 0) return intValue;
                 // fall through and throw below
             } catch (OverflowException) {

@@ -195,24 +195,6 @@ public static object Call(%(params)s) {
     return PythonCalls.Call(func, %(argsArray)s);
 }"""
 
-
-def gen_call_meth(nparams, cw):
-    cw.enter_block("public static object CallWithContext(CodeContext context, object func" + gen_args_comma(nparams, ", ") + ")")
-    if nparams == 0:
-        cw.write("return _callSite0.Invoke(DefaultContext.Default, func);")
-    else:
-        cw.write("return _callSite%d.Invoke(DefaultContext.Default, func, %s);" % (nparams, gen_args_call(nparams)))
-    cw.exit_block()
-    cw.write("")
-
-def gen_python_methods(cw):
-    for nparams in range(MAX_ARGS+1):
-        types = ', '.join(['object'] * (nparams + 2))
-        cw.write("private static readonly DynamicSite<%s> _callSite%d = CallSiteFactory.CreateSimpleCallSite<%s>(DefaultContext.DefaultPythonBinder);" % (types, nparams, types ))
-    cw.write("")
-    for nparams in range(MAX_ARGS+1):
-        gen_call_meth(nparams, cw)
-
 def gen_python_switch(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("case %d: return typeof(CallTarget%d);" % (nparams, nparams))
@@ -225,7 +207,6 @@ def main():
     return generate(
         ("Python Call Targets", call_targets),
         ("Python Generator Targets", generator_targets),
-        ("Python Call Operations", gen_python_methods),
         ("Python Call Target Switch", gen_python_switch),
         ("Python Generator Target Switch", gen_python_generator_switch),
     )

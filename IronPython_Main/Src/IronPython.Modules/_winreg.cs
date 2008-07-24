@@ -153,7 +153,7 @@ namespace IronPython.Modules {
             // CPython does the wrong thing and returns the unexpanded value. Should we put in a 
             // hack to return the wrong value that CPython does?
 
-            return new PythonTuple(true, new object[] { valueName, value, valueKind });
+            return PythonTuple.MakeTuple(valueName, value, valueKind);
         }
 
         public static void FlushKey(object key) {
@@ -219,7 +219,7 @@ namespace IronPython.Modules {
             }
 
             try {
-                return new PythonTuple(true, new object[] { rootKey.key.SubKeyCount, rootKey.key.ValueCount, 0 });
+                return PythonTuple.MakeTuple(rootKey.key.SubKeyCount, rootKey.key.ValueCount, 0);
             } catch (ObjectDisposedException e) {
                 throw new ExternalException(e.Message);
             }
@@ -241,7 +241,7 @@ namespace IronPython.Modules {
                 value = encoding.GetString((byte[])value);
             }
 
-            return new PythonTuple(true, new object[] { value, valueKind });
+            return PythonTuple.MakeTuple(value, valueKind);
         }
 
         public static void SetValue(object key, string subKeyName, int type, string value) {

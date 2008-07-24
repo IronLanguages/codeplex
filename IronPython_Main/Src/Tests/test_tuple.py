@@ -112,12 +112,7 @@ def test_sequence_assign():
         a, b = None
         AssertUnreachable()
     except TypeError, e:
-        if sys.platform!="win32":
-            Assert(str(e).find('unpack non-sequence') != -1)
-        else:
-            #Dev10 467757
             AreEqual(e.message, "'NoneType' object is not iterable")
-            
 
 def test_sort():
     # very simple test for sorting lists of tuples

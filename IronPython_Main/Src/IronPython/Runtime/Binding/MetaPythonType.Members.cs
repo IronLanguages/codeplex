@@ -15,6 +15,7 @@
 
 
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
@@ -164,7 +165,7 @@ namespace IronPython.Runtime.Binding {
 
             // have the default binder perform it's operation against a TypeTracker and then
             // replace the test w/ our own.
-            MetaObject result = GetFallbackGet(member, state);
+            MetaObject result = GetFallbackGet(member, state, args);
 
             for (int i = Value.ResolutionOrder.Count - 1; i >= 0; i--) {
                 PythonType pt = Value.ResolutionOrder[i];
@@ -229,7 +230,7 @@ namespace IronPython.Runtime.Binding {
             return result;
         }
 
-        private MetaObject/*!*/ GetFallbackGet(GetMemberAction/*!*/ member, BinderState/*!*/ state) {
+        private MetaObject/*!*/ GetFallbackGet(GetMemberAction/*!*/ member, BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ args) {
             MemberTracker tt = MemberTracker.FromMemberInfo(Value.UnderlyingSystemType);
 
             MetaObject res = new MetaObject(
@@ -247,9 +248,13 @@ namespace IronPython.Runtime.Binding {
                 Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions)
             );
 
-            
-            if (Value.IsHiddenMember(member.Name)) {
+
+            if (Value.IsHiddenMember(member.Name) && member is IPythonSite) {
+                Debug.Assert(args.Length == 2 && args[1].Expression.Type == typeof(CodeContext));
+                Expression codeContext = args[1].Expression;
+
                 res = BindingHelpers.FilterShowCls(
+                    codeContext,
                     member,
                     res, 
                     Ast.Throw(
@@ -396,6 +401,7 @@ namespace IronPython.Runtime.Binding {
                                 new CallSignature(1)
                             ),
                             typeof(object),
+                            BinderState.GetCodeContext(member),
                             tmp,
                             Ast.Constant(member.Name)
                         ),

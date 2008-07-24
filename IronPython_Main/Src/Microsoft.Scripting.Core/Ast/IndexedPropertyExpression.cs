@@ -35,9 +35,9 @@ namespace System.Linq.Expressions {
                 MethodInfo setter,
                 ReadOnlyCollection<Expression> arguments,
                 Type type,
-                CallSiteBinder bindingInfo
+                CallSiteBinder binder
             )
-            : base(annotations, ExpressionType.IndexedProperty, type, bindingInfo) {
+            : base(ExpressionType.IndexedProperty, type, false, annotations, getter != null, setter != null, binder) {
 
             if (IsBound) {
                 RequiresBound(instance, "instance");
@@ -204,7 +204,7 @@ namespace System.Linq.Expressions {
             if (method.IsStatic) {
                 ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr); 
             } else {
-                ContractUtils.RequiresNotNull(instance, "instance");
+                RequiresCanRead(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }
 
@@ -220,7 +220,7 @@ namespace System.Linq.Expressions {
                 for (int i = 0, n = indexes.Length; i < n; i++) {
                     Expression arg = arguments[i];
                     ParameterInfo pi = indexes[i];
-                    ContractUtils.RequiresNotNull(arg, "arguments");
+                    RequiresCanRead(arg, "arguments");
 
                     Type pType = pi.ParameterType;
                     ContractUtils.Requires(!pType.IsByRef, "indexes", Strings.AccessorsCannotHaveByRefArgs);

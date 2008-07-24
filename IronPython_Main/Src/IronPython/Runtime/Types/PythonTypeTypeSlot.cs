@@ -34,6 +34,12 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
+        }
+
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
             if (instance == null) return false;
 

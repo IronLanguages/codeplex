@@ -21,11 +21,12 @@ using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
     //CONFORMING
+    // TODO: should support annotations
     public sealed class ListInitExpression : Expression {
         NewExpression _newExpression;
         ReadOnlyCollection<ElementInit> _initializers;
         internal ListInitExpression(NewExpression newExpression, ReadOnlyCollection<ElementInit> initializers)
-            : base(ExpressionType.ListInit, newExpression.Type) {
+            : base(ExpressionType.ListInit, newExpression.Type, null, null) {
             _newExpression = newExpression;
             _initializers = initializers;
         }

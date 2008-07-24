@@ -475,11 +475,11 @@ def test_dict_to_idict():
                     {object:object},
                     {1:100, 2:200},
                     {1:100, 2:200, 3:300, 4:400},
-                    MyDict.__dict__,  #CodePlex 15471
+                    MyDict.__dict__,
                     KOld.__dict__,
-                    KNew.__dict__, #CodePlex 15471
+                    KNew.__dict__, 
                     KOldDerived.__dict__,
-                    KNewDerived.__dict__, #CodePlex 15471
+                    KNewDerived.__dict__,
                     ]
     
     for temp_dict in test_dicts:
@@ -953,8 +953,7 @@ def test_dict_class_dictionary():
         
         #class member has the correct value?
         AreEqual(K.__dict__["KLASS_MEMBER"], 3.14)
-        #CodePlex 14501
-        #AreEqual(temp_dict["KLASS_MEMBER"], 3.14)
+        AreEqual(temp_dict["KLASS_MEMBER"], 3.14)
         
         #methods show up?
         for func_name in ["aFunc", "aMethod"]:
@@ -962,7 +961,7 @@ def test_dict_class_dictionary():
             Assert(func_name in temp_dict.keys())
         
     expected_keys = [   '__module__', 'KLASS_MEMBER', 'aFunc', 'aMethod',
-                        #'__dict__', #CodePlex 14501
+                        '__dict__',
                         '__weakref__', '__doc__']
     for expected_key in expected_keys:
         Assert(KNew.__dict__.has_key(expected_key), expected_key)

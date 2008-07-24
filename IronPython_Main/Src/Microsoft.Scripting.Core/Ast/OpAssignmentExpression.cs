@@ -25,7 +25,7 @@ namespace System.Linq.Expressions {
         private readonly ExpressionType _op;
 
         internal OpAssignmentExpression(Annotations annotations, ExpressionType op, Expression left, Expression right, Type type, MethodInfo method)
-            : base(annotations, ExpressionType.Extension, type, null) {
+            : base(type, true, annotations) {
             if (IsBound) {
                 RequiresBound(left, "left");
                 RequiresBound(right, "right");
@@ -52,12 +52,6 @@ namespace System.Linq.Expressions {
         public ExpressionType Op {
             get {
                 return _op;
-            }
-        }
-
-        public override bool IsReducible {
-            get {
-                return true;
             }
         }
 
@@ -227,8 +221,9 @@ namespace System.Linq.Expressions {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Op")]
         public static Expression OpAssign(ExpressionType op, Expression left, Expression right, MethodInfo method) {
-            ContractUtils.RequiresNotNull(left, "left");
-            ContractUtils.RequiresNotNull(right, "right");
+            RequiresCanRead(left, "left");
+            RequiresCanWrite(left, "left");
+            RequiresCanRead(right, "right");
             ContractUtils.Requires(left.Type == right.Type, "right");
 
             switch (op) {

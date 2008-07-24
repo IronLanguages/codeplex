@@ -48,7 +48,7 @@ namespace IronPython.Runtime.Types {
 
             if (instance == null) {
                 foreach (MethodInfo mi in Setter) {
-                    if(mi.IsStatic && DeclaringType != ((PythonType)owner).UnderlyingSystemType) {
+                    if(mi.IsStatic && DeclaringType != owner.UnderlyingSystemType) {
                         return false;
                     }
                 }
@@ -82,6 +82,12 @@ namespace IronPython.Runtime.Types {
 
             value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects);
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
@@ -123,9 +129,9 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public void __set__(object instance, object value) {
+        public void __set__(CodeContext context, object instance, object value) {
             // TODO: Throw?  currently we have a test that verifies we never throw when this is called directly.
-            TrySetValue(DefaultContext.Default, instance, DynamicHelpers.GetPythonType(instance), value);
+            TrySetValue(context, instance, DynamicHelpers.GetPythonType(instance), value);
         }
 
         public void __delete__(object instance) {

@@ -235,7 +235,7 @@ namespace System.Linq.Expressions {
             if (e == node.Expression) {
                 return node;
             }
-            return new MemberExpression(node.Annotations, node.Member, e, node.Type, node.BindingInfo);
+            return new MemberExpression(e, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite, node.BindingInfo);
         }
 
         protected virtual Expression Visit(IndexedPropertyExpression node) {

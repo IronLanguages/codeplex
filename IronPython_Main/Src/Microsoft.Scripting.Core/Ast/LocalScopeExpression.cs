@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
         internal LocalScopeExpression(
             Annotations annotations,
             ReadOnlyCollection<Expression> variables)
-            : base(annotations, ExpressionType.LocalScope, typeof(ILocalVariables)) {
+            : base(ExpressionType.LocalScope, typeof(ILocalVariables), annotations, null) {
             _variables = variables;
         }
 

@@ -116,8 +116,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             try {
                 _language.Shutdown();
             } catch (Exception e) {
-                _console.WriteLine("", Style.Error);
-                _console.Write(_language.FormatException(e), Style.Error);
+                UnhandledException(e);
             }
         }
 
@@ -140,7 +139,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 try {
                     result = source.ExecuteProgram();
                 } catch (Exception e) {
-                    Console.Write(_language.FormatException(e), Style.Error);
+                    UnhandledException(e);
                 }
             } else {
                 result = source.ExecuteProgram();
@@ -190,7 +189,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                         // There should be no unhandled exceptions in the interactive session
                         // We catch all exceptions here, and just display it,
                         // and keep on going
-                        _console.WriteLine(_language.FormatException(e), Style.Error);
+                        UnhandledException(e);
                     }
                 } else {
                     res = TryInteractiveAction();
@@ -199,6 +198,10 @@ namespace Microsoft.Scripting.Hosting.Shell {
             } while (res == null);
 
             return res.Value;
+        }
+
+        protected virtual void UnhandledException(Exception e) {
+            _console.WriteLine(_language.FormatException(e), Style.Error);
         }
 
         /// <summary>
@@ -219,7 +222,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             } catch (ThreadAbortException tae) {
                 KeyboardInterruptException pki = tae.ExceptionState as KeyboardInterruptException;
                 if (pki != null) {
-                    _console.WriteLine(_language.FormatException(tae), Style.Error);
+                    UnhandledException(tae);
                     Thread.ResetAbort();
                 }
 #endif

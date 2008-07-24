@@ -16,6 +16,9 @@
 using System;
 using System.Scripting;
 using System.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -73,7 +76,13 @@ namespace IronPython.Compiler.Ast {
             Type vt = variable != null ? variable.Type : typeof(object);
 
             if (op != Operators.None) {
-                right = AstUtils.Operator(ag.Binder, op, vt, Ast.CodeContext(), Transform(ag, vt),  right);
+                right = Binders.Operation(
+                    ag.BinderState,
+                    vt,
+                    StandardOperators.FromOperator(op),
+                    Transform(ag, vt),
+                    right
+                );
             }
 
             if (variable != null) {

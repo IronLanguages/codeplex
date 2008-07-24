@@ -18,8 +18,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Runtime.Operations {
+namespace IronPython.Runtime.Types {
 
     // Used to map signatures to specific targets on the embedded reflected method.
     public class BuiltinFunctionOverloadMapper : ICodeFormattable {
@@ -134,8 +135,10 @@ namespace IronPython.Runtime.Operations {
             // return a function that's bound to the overloads, we'll
             // the user then calls this w/ the dynamic type, and the bound
             // function drops the class & calls the overload.
-            if (bf.Targets[0].DeclaringType != typeof(InstanceOps))
+            if (bf.Targets[0].DeclaringType != typeof(InstanceOps)) {
                 return new BoundBuiltinFunction(new ConstructorFunction(InstanceOps.OverloadedNew, bf.Targets), bf);
+            }
+
             return base.GetTargetFunction(bf);
         }
     }

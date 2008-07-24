@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly ReadOnlyCollection<Expression> _expressions;
 
         internal NewArrayExpression(Annotations annotations, ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(annotations, nodeType, type) {
+            : base(nodeType, type, annotations, null) {
             _expressions = expressions;
         }
 
@@ -71,7 +71,7 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// Creates a new array expression of the specified type from the provided initializers.
         /// </summary>
-        /// <param name="type">The type of the array (e.g. object[]).</param>
+        /// <param name="type">A Type that represents the element type of the array.</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) {
             return NewArrayInit(type, Annotations.Empty, (IEnumerable<Expression>)initializers);
@@ -84,7 +84,7 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// Creates a new array expression of the specified type from the provided initializers.
         /// </summary>
-        /// <param name="type">The type of the array (e.g. object[]).</param>
+        /// <param name="type">A Type that represents the element type of the array.</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) {
             return NewArrayInit(type, Annotations.Empty, initializers);
@@ -103,7 +103,7 @@ namespace System.Linq.Expressions {
             Expression[] newList = null;
             for (int i = 0, n = initializerList.Count; i < n; i++) {
                 Expression expr = initializerList[i];
-                ContractUtils.RequiresNotNull(expr, "initializers");
+                RequiresCanRead(expr, "initializers");
 
                 if (!TypeUtils.AreReferenceAssignable(type, expr.Type)) {
                     if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && TypeUtils.AreAssignable(type, expr.GetType())) {
@@ -157,7 +157,7 @@ namespace System.Linq.Expressions {
 
             for (int i = 0; i < dimensions; i++) {
                 Expression expr = boundsList[i];
-                ContractUtils.RequiresNotNull(expr, "bounds");
+                RequiresCanRead(expr, "bounds");
                 if (!TypeUtils.IsInteger(expr.Type)) {
                     throw Error.ArgumentMustBeInteger();
                 }
@@ -181,7 +181,7 @@ namespace System.Linq.Expressions {
             Expression[] clone = null;
             for (int i = 0; i < initializerList.Count; i++) {
                 Expression initializer = initializerList[i];
-                ContractUtils.RequiresNotNull(initializer, "initializers");
+                RequiresCanRead(initializer, "initializers");
 
                 if (!TypeUtils.AreReferenceAssignable(type, initializer.Type)) {
                     if (clone == null) {

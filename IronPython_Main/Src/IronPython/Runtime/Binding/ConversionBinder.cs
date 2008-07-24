@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Scripting;
@@ -32,15 +33,13 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
     using RuntimeHelpers = System.Scripting.Runtime.RuntimeHelpers;
-    using System.Diagnostics;
-
+    
     class ConversionBinder : ConvertAction, IPythonSite, IExpressionSerializable  {
         private readonly BinderState/*!*/ _state;
         private readonly ConversionResultKind/*!*/ _kind;
 
         public ConversionBinder(BinderState/*!*/ state, Type/*!*/ type, ConversionResultKind resultKind)
             : base(type, resultKind == ConversionResultKind.ExplicitCast || resultKind == ConversionResultKind.ExplicitTry) {
-            Debug.Assert(false);
             _state = state;
             _kind = resultKind;
         }
@@ -51,8 +50,13 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {            
             MetaObject arg = args[0];
+
+            if (arg.NeedsDeferral) {
+                return Defer(args);
+            }
+
             Type type = ToType;
 
             MetaObject res = null;
@@ -107,7 +111,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override int GetHashCode() {
-            return base.GetHashCode() ^ _state.Binder.GetHashCode();
+            return base.GetHashCode() ^ _state.Binder.GetHashCode() ^ _kind.GetHashCode();
         }
 
         public override bool Equals(object obj) {
@@ -116,7 +120,7 @@ namespace IronPython.Runtime.Binding {
                 return false;
             }
 
-            return ob._state.Binder == _state.Binder && base.Equals(obj);
+            return ob._state.Binder == _state.Binder && _kind == ob._kind && base.Equals(obj);
         }
 
         public BinderState/*!*/ Binder {

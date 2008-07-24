@@ -26,13 +26,15 @@ using System.Runtime.InteropServices;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
+
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
+
 using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
+
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
@@ -172,8 +174,8 @@ namespace IronPython.Modules {
                 + "set port to 0, the system will assign an available port number between 1024\n"
                 + "and 5000."
                 )]
-            public void bind(PythonTuple address) {
-                IPEndPoint localEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
+            public void bind(CodeContext/*!*/ context, PythonTuple address) {
+                IPEndPoint localEP = TupleToEndPoint(context, address, _socket.AddressFamily, out _hostName);
                 try {
                     _socket.Bind(localEP);
                 } catch (Exception e) {
@@ -223,8 +225,8 @@ namespace IronPython.Modules {
                 + "If a timeout is set and the socket is in blocking mode, connect() will block\n"
                 + "indefinitely until a connection is made or an error occurs."
                 )]
-            public void connect(PythonTuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
+            public void connect(CodeContext/*!*/ context, PythonTuple address) {
+                IPEndPoint remoteEP = TupleToEndPoint(context, address, _socket.AddressFamily, out _hostName);
                 try {
                     _socket.Connect(remoteEP);
                 } catch (Exception e) {
@@ -244,8 +246,8 @@ namespace IronPython.Modules {
                 + "mode. If a timeout is set and the socket is in blocking mode, connect_ex() will\n"
                 + "block indefinitely until a connection is made or an error occurs."
                 )]
-            public int connect_ex(PythonTuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
+            public int connect_ex(CodeContext/*!*/ context, PythonTuple address) {
+                IPEndPoint remoteEP = TupleToEndPoint(context, address, _socket.AddressFamily, out _hostName);
                 try {
                     _socket.Connect(remoteEP);
                 } catch (SocketException e) {
@@ -461,9 +463,9 @@ namespace IronPython.Modules {
                 + "successful completion of the Send method means that the underlying system has\n"
                 + "had room to buffer your data for a network send"
                 )]
-            public int sendto(string data, int flags, PythonTuple address) {
+            public int sendto(CodeContext/*!*/ context, string data, int flags, PythonTuple address) {
                 byte[] buffer = StringOps.ToByteArray(data);
-                EndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily, out _hostName);
+                EndPoint remoteEP = TupleToEndPoint(context, address, _socket.AddressFamily, out _hostName);
                 try {
                     return _socket.SendTo(buffer, (SocketFlags)flags, remoteEP);
                 } catch (Exception e) {
@@ -472,8 +474,8 @@ namespace IronPython.Modules {
             }
 
             [Documentation("")]
-            public int sendto(string data, PythonTuple address) {
-                return sendto(data, 0, address);
+            public int sendto(CodeContext/*!*/ context, string data, PythonTuple address) {
+                return sendto(context, data, 0, address);
             }
 
             [Documentation("setblocking(flag) -> None\n\n"
@@ -1495,7 +1497,7 @@ namespace IronPython.Modules {
         ///  - address[0] is not a string
         ///  - address[1] is not an int
         /// </summary>
-        private static IPEndPoint TupleToEndPoint(PythonTuple address, AddressFamily family, out string host) {
+        private static IPEndPoint TupleToEndPoint(CodeContext/*!*/ context, PythonTuple address, AddressFamily family, out string host) {
             if (address.__len__() != 2 && address.__len__() != 4) {
                 throw PythonOps.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
             }
@@ -1508,7 +1510,7 @@ namespace IronPython.Modules {
 
             int port;
             try {
-                port = Converter.ConvertToInt32(address[1]);
+                port = PythonContext.GetContext(context).ConvertToInt32(address[1]);
             } catch (ArgumentTypeException) {
                 throw PythonOps.TypeError("port must be integer");
             }
@@ -1565,8 +1567,6 @@ namespace IronPython.Modules {
             private int _dataSize;
             private readonly int _bufSize;
             private readonly bool _close;
-            private static readonly DynamicSite<object, object, object> _sendAllSite = CallSiteFactory.CreateSimpleCallSite<object, object, object>(DefaultContext.DefaultPythonBinder);
-            private static readonly DynamicSite<object, object, string> _recvSite = CallSiteFactory.CreateSimpleCallSite<object, object, string>(DefaultContext.DefaultPythonBinder);
 
             public PythonUserSocketStream(object userSocket, int bufferSize, bool close) {
                 _userSocket = userSocket;
@@ -1592,7 +1592,7 @@ namespace IronPython.Modules {
                     foreach (string s in _data) {
                         res.Append(s);
                     }
-                    _sendAllSite.Invoke(DefaultContext.Default, PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("sendall")), res.ToString());
+                    DefaultContext.DefaultPythonContext.Call(PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("sendall")), res.ToString());
                     _data.Clear();
                 }
             }
@@ -1612,7 +1612,8 @@ namespace IronPython.Modules {
 
             public override int Read(byte[] buffer, int offset, int count) {
                 int size = count;
-                string data = _recvSite.Invoke(DefaultContext.Default, PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("recv")), count);
+                object received = DefaultContext.DefaultPythonContext.Call(PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("recv")), count);
+                string data = Converter.ConvertToString(received);
 
                 return PythonAsciiEncoding.Instance.GetBytes(data, 0, data.Length, buffer, offset);
             }

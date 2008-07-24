@@ -56,6 +56,7 @@ namespace IronPython.Runtime.Types {
 #endif
  ICodeFormattable,
         IMembersList,
+        IDynamicObject,
         IOldDynamicObject {
 
         [NonSerialized]
@@ -282,7 +283,7 @@ namespace IronPython.Runtime.Types {
         // If our IOldDynamicObject implementation is complete, we can then remove these Call methods.
         [SpecialName]
         public object Call(CodeContext context, [NotNull]params object[] args\u00F8) {
-            OldInstance inst = new OldInstance(this);
+            OldInstance inst = new OldInstance(context, this);
             object value;
             // lookup the slot directly - we don't go through __getattr__
             // until after the instance is created.
@@ -296,10 +297,10 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict\u00F8, [NotNull]params object[] args\u00F8) {
-            OldInstance inst = new OldInstance(this);
+            OldInstance inst = new OldInstance(context, this);
             object meth;
             if (PythonOps.TryGetBoundAttr(inst, Symbols.Init, out meth)) {
-                PythonCalls.CallWithKeywordArgs(meth, args\u00F8, dict\u00F8);
+                PythonCalls.CallWithKeywordArgs(context, meth, args\u00F8, dict\u00F8);
             } else if (dict\u00F8.Count > 0 || args\u00F8.Length > 0) {
                 MakeCallError();
             }
@@ -529,7 +530,8 @@ namespace IronPython.Runtime.Types {
                         Ast.Assign(
                             instTmp,
                             Ast.New(
-                                typeof(OldInstance).GetConstructor(new Type[] { typeof(OldClass) }),
+                                typeof(OldInstance).GetConstructor(new Type[] { typeof(CodeContext), typeof(OldClass) }),
+                                rule.Context,
                                 Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass))
                             )
                         ),
@@ -739,6 +741,14 @@ namespace IronPython.Runtime.Types {
             HasDelAttr = true;
             HasSetAttr = true;
         }
+        #endregion
+
+        #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaOldClass(parameter, Restrictions.Empty, this);
+        }
+
         #endregion
     }
 }

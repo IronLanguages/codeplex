@@ -1003,7 +1003,13 @@ namespace IronPython.Compiler {
             string encName = line.Substring(encodingStart, encodingEnd - encodingStart);
 
             // and we have the magic ending as well...
-            return StringOps.TryGetEncoding(encName, out enc);
+            if (StringOps.TryGetEncoding(encName, out enc)) {
+#if !SILVERLIGHT
+                enc.DecoderFallback = new NonStrictDecoderFallback();
+#endif
+                return true;
+            }
+            return false;
         }
 
         private void ReportSyntaxError(SourceSpan span, string message, int errorCode) {

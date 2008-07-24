@@ -15,7 +15,7 @@
 
 using System;
 
-namespace Microsoft.Scripting.Runtime {
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// Represents an ops-extension which adds a new slot.  The slot can have arbitrary
     /// get/set behavior above and beyond normal .NET methods or properties.  This is

@@ -139,7 +139,7 @@ namespace IronPython.Modules {
             if (!Converter.TryConvertToInt64(obj, out handle)) {
                 object userSocket = obj;
                 object filenoCallable = PythonOps.GetBoundAttr(context, userSocket, SymbolTable.StringToId("fileno"));
-                object fileno = PythonCalls.Call(filenoCallable);
+                object fileno = PythonCalls.Call(context, filenoCallable);
                 handle = Converter.ConvertToInt64(fileno);
             }
             if (handle < 0) {

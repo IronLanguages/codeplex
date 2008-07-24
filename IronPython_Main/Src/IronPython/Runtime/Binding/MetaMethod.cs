@@ -14,6 +14,8 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
 using System.Scripting.Utils;
@@ -23,28 +25,46 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using System.Collections.Generic;
-    using System.Collections;
 
-    class MetaMethod : MetaPythonObject {
+    class MetaMethod : MetaPythonObject, IPythonInvokable {
         public MetaMethod(Expression/*!*/ expression, Restrictions/*!*/ restrictions, Method/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
+        #region IPythonInvokable Members
+
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(pythonInvoke, args);
+        }
+
+        #endregion
+
         #region MetaObject Overrides
 
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
+        }
+
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ callAction, params MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(callAction, args);
+        }
+
+        #endregion
+
+        #region Invoke Implementation
+
+        private MetaObject InvokeWorker(MetaAction/*!*/ callAction, MetaObject/*!*/[] args) {
             args = ArrayUtils.RemoveFirst(args);
 
             CallSignature signature = BindingHelpers.GetCallSignature(callAction);
             MetaObject self = Restrict(typeof(Method));
             Restrictions restrictions = self.Restrictions;
 
-            MetaObject func = GetMetaFunction(self);            
+            MetaObject func = GetMetaFunction(self);
             MetaObject call;
-            
-            if (Value.im_self == null) {                
+
+            if (Value.im_self == null) {
                 // restrict to null self (Method is immutable so this is an invariant test)
                 restrictions = restrictions.Merge(
                     Restrictions.ExpressionRestriction(
@@ -76,11 +96,11 @@ namespace IronPython.Runtime.Binding {
                                     BindingHelpers.GetCallSignature(callAction)
                                 ),
                                 typeof(object),
-                                MetaObject.GetExpressions(ArrayUtils.Insert(func, args))
+                                ArrayUtils.Insert(BinderState.GetCodeContext(callAction), MetaObject.GetExpressions(ArrayUtils.Insert(func, args)))
                             )
                         ),
                         Restrictions.Empty
-                    ); 
+                    );
                     /*call = func.Invoke(callAction, ArrayUtils.Insert(func, args));
                     call =  new MetaObject(
                         Ast.Comma(
@@ -117,7 +137,7 @@ namespace IronPython.Runtime.Binding {
                             newSig
                         ),
                         typeof(object),
-                        MetaObject.GetExpressions(newArgs)
+                        ArrayUtils.Insert(BinderState.GetCodeContext(callAction), MetaObject.GetExpressions(newArgs))
                     ),
                     Restrictions.Empty
                 );
@@ -131,7 +151,7 @@ namespace IronPython.Runtime.Binding {
                     newArgs
                 );*/
             }
-            
+
             if (call.HasValue) {
                 return new MetaObject(
                     call.Expression,

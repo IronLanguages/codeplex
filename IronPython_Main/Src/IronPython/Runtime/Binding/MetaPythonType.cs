@@ -22,6 +22,7 @@ using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
 
     partial class MetaPythonType : MetaPythonObject {
         public MetaPythonType(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonType/*!*/ value)
@@ -29,9 +30,9 @@ namespace IronPython.Runtime.Binding {
             Assert.NotNull(value);
         }
 
-        /*public override MetaObject Create(CreateAction create, params MetaObject[] args) {
-            return Call(create, args);
-        }*/
+        public override MetaObject Create(CreateAction create, params MetaObject[] args) {
+            return InvokeWorker(create, args, Ast.Constant(BinderState.GetBinderState(create).Context));
+        }
 
         public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
             if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {

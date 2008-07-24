@@ -60,6 +60,8 @@ namespace System.Scripting.Actions {
             return args[0].Call(this, args);
         }
 
+        public abstract MetaObject FallbackInvoke(MetaObject[] args);
+
         [Confined]
         public override bool Equals(object obj) {
             CallAction ca = obj as CallAction;

@@ -21,11 +21,12 @@ using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
     // TODO: remove or rename
+    // TODO: needs the full callsite delegate type
     public sealed class ActionExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _arguments;
 
         internal ActionExpression(Annotations annotations, CallSiteBinder binder, ReadOnlyCollection<Expression> arguments, Type result)
-            : base(annotations, ExpressionType.ActionExpression, result, binder) {
+            : base(ExpressionType.ActionExpression, result, annotations, binder) {
             _arguments = arguments;
         }
 
@@ -51,11 +52,9 @@ namespace System.Linq.Expressions {
         public static ActionExpression ActionExpression(CallSiteBinder action, Type resultType, Annotations annotations, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(action, "action");
             ContractUtils.RequiresNotNull(resultType, "result");
+            RequiresCanRead(arguments, "arguments");
 
-            ReadOnlyCollection<Expression> args = arguments.ToReadOnly();
-            ContractUtils.RequiresNotNullItems(args, "arguments");
-
-            return new ActionExpression(annotations, action, args, resultType);
+            return new ActionExpression(annotations, action, arguments.ToReadOnly(), resultType);
         }
     }
 }

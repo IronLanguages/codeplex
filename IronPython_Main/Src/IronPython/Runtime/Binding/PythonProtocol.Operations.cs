@@ -177,7 +177,7 @@ namespace IronPython.Runtime.Binding {
                         Restrictions.Combine(types)
                     );
                 } else {
-                    sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.Iter, types);
+                    sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.Iterator, types[0]);
                     if (sf.Success) {
                         // iterate using __iter__
                         res = new MetaObject(
@@ -193,7 +193,7 @@ namespace IronPython.Runtime.Binding {
                                     typeof(IEnumerator),
                                     sf.Target.Expression
                                 ),
-                                types[0].Expression
+                                Ast.ConvertHelper(types[1].Expression, typeof(object))
                             ),
                             Restrictions.Combine(types)
                         );
@@ -305,6 +305,7 @@ namespace IronPython.Runtime.Binding {
 
             return new MetaObject(
                 Binders.Get(
+                    BinderState.GetCodeContext(operation),
                     state,
                     typeof(string),
                     "__doc__",
@@ -409,6 +410,7 @@ namespace IronPython.Runtime.Binding {
             BinderState state = BinderState.GetBinderState(operation);
             Expression isCallable = Ast.NotEqual(
                 Binders.TryGet(
+                    BinderState.GetCodeContext(operation),
                     state,
                     typeof(object),
                     "__call__",
@@ -430,12 +432,22 @@ namespace IronPython.Runtime.Binding {
         private static MetaObject/*!*/ MakeSimpleOperation(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation) {
             RestrictTypes(types);
 
-            SymbolId op, rop;
-            string oper = NormalizeOperator(operation.Operation);
+            SlotOrFunction fbinder;
+            SlotOrFunction rbinder;
+            PythonTypeSlot fSlot;
+            PythonTypeSlot rSlot;
+            GetOpreatorMethods(types, operation.Operation, BinderState.GetBinderState(operation), out fbinder, out rbinder, out fSlot, out rSlot);
+
+            return MakeBinaryOperatorResult(types, operation, fbinder, rbinder, fSlot, rSlot);
+        }
+
+        private static void GetOpreatorMethods(MetaObject/*!*/[] types, string oper, BinderState state, out SlotOrFunction fbinder, out SlotOrFunction rbinder, out PythonTypeSlot fSlot, out PythonTypeSlot rSlot) {
+            oper = NormalizeOperator(oper);
             if (IsInPlace(oper)) {
                 oper = DirectOperation(oper);
             }
 
+            SymbolId op, rop;
             if (!TypeInfo.IsReverseOperator(oper)) {
                 op = Symbols.OperatorToSymbol(oper);
                 rop = Symbols.OperatorToReversedSymbol(oper);
@@ -445,9 +457,9 @@ namespace IronPython.Runtime.Binding {
                 op = Symbols.OperatorToReversedSymbol(oper);
             }
 
-            BinderState state = BinderState.GetBinderState(operation);
-            SlotOrFunction fbinder, rbinder;
-            PythonTypeSlot fSlot = null, rSlot = null;
+            fSlot = null;
+            rSlot = null;
+
             if (!SlotOrFunction.TryGetBinder(state, types, op, SymbolId.Empty, out fbinder)) {
                 MetaPythonObject.GetPythonType(types[0]).TryResolveSlot(state.Context, op, out fSlot);
             }
@@ -460,7 +472,14 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            return MakeBinaryOperatorResult(types, operation, fbinder, rbinder, fSlot, rSlot);
+            if (!fbinder.Success && !rbinder.Success && fSlot == null && rSlot == null) {
+                if (op == Symbols.OperatorTrueDivide || op == Symbols.OperatorReverseTrueDivide) {
+                    // true div on a type which doesn't support it, go ahead and try normal divide
+                    string newOp = op == Symbols.OperatorTrueDivide ? StandardOperators.Divide : OperatorStrings.ReverseDivide;
+
+                    GetOpreatorMethods(types, newOp, state, out fbinder, out rbinder, out fSlot, out rSlot);
+                }
+            }
         }
 
         private static MetaObject/*!*/ MakeBinaryOperatorResult(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation, SlotOrFunction/*!*/ fCand, SlotOrFunction/*!*/ rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
@@ -658,7 +677,7 @@ namespace IronPython.Runtime.Binding {
                                     new CallSignature(args.Length)
                                 ),
                                 typeof(object),
-                                ArrayUtils.Insert((Expression)callable, args)
+                                ArrayUtils.Insert(Ast.Constant(state.Context), (Expression)callable, args)
                             )
                         ),
                         Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))
@@ -1365,7 +1384,7 @@ namespace IronPython.Runtime.Binding {
                         new CallSignature(exprArgs.Length)
                     ),
                     typeof(object),
-                    ArrayUtils.Insert((Expression)callable, exprArgs)
+                    ArrayUtils.Insert(Ast.Constant(BinderState.Context), (Expression)callable, exprArgs)
                 );
 
                 if (IsSetter) {
@@ -1485,7 +1504,9 @@ namespace IronPython.Runtime.Binding {
                                             new CallSignature(0)
                                         ),
                                         typeof(object),
+                                        Ast.Constant(binder.Context),
                                         Binders.Get(
+                                            Ast.Constant(binder.Context),
                                             binder,
                                             typeof(object),
                                             "__index__",
@@ -1507,7 +1528,7 @@ namespace IronPython.Runtime.Binding {
                     return new MetaObject(
                         Ast.Scope(
                             Ast.Comma(
-                                Ast.Assign(_lengthVar, Ast.Constant(null)),
+                                Ast.Assign(_lengthVar, Ast.Constant(null, _lengthVar.Type)),
                                 res.Expression
                             ),
                             _lengthVar
@@ -1581,7 +1602,9 @@ namespace IronPython.Runtime.Binding {
                                     new CallSignature(0)
                                 ),
                                 typeof(int),
+                                Ast.Constant(binder.Context),
                                 Binders.Get(
+                                    Ast.Constant(binder.Context),
                                     binder,
                                     typeof(object),
                                     "__index__",

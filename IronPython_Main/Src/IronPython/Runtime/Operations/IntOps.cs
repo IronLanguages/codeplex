@@ -23,14 +23,10 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
-
 namespace IronPython.Runtime.Operations {
 
     public static partial class Int32Ops {
-        private static readonly DynamicSite<object, object> _intSite =
-            new DynamicSite<object, object>(OldConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(int)));
-
-        private static object FastNew(object o) {
+        private static object FastNew(CodeContext/*!*/ context, object o) {
             Extensible<BigInteger> el;
 
             if (o is string) return __new__(null, (string)o, 10);
@@ -107,7 +103,7 @@ namespace IronPython.Runtime.Operations {
                 return __new__(null, es.Value, 10);
             }
 
-            return _intSite.Invoke(DefaultContext.Default, o);
+            return PythonContext.GetContext(context).ImplicitConvertTo<int>(o);
         }
 
         [StaticExtensionMethod]
@@ -147,7 +143,7 @@ namespace IronPython.Runtime.Operations {
 
         [StaticExtensionMethod]
         public static object __new__(CodeContext context, PythonType cls, object x) {
-            if (cls == TypeCache.Int32) return FastNew(x); // TODO: Call site?
+            if (cls == TypeCache.Int32) return FastNew(context, x); // TODO: Call site?
 
             ValidateType(cls);
 

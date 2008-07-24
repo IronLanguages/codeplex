@@ -24,13 +24,16 @@ using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute; 
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {
 
@@ -80,7 +83,7 @@ namespace IronPython.Runtime {
             try {
                 object len;
                 if (PythonTypeOps.TryInvokeUnaryOperator(context, sequence, Symbols.Length, out len)) {
-                    int ilen = Converter.ConvertToInt32(len);
+                    int ilen = PythonContext.GetContext(context).ConvertToInt32(len);
                     _data = new object[ilen];
                     _size = 0;
                     extend(sequence);
@@ -248,6 +251,10 @@ namespace IronPython.Runtime {
             // user overrides this we'll place a conversion in the wrapper
             // helper
             return new listiterator(this);
+        }
+
+        public virtual IEnumerator __reverse__() {
+            return new listreverseiterator(this);
         }
 
         public virtual bool __contains__(object value) {
@@ -707,7 +714,13 @@ namespace IronPython.Runtime {
 
         private class DefaultPythonComparer : IComparer {
             public static readonly DefaultPythonComparer Instance = new DefaultPythonComparer();
-            private DynamicSite<object, object, int> site = DynamicSite<object, object, int>.Create(OldDoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Compare));
+            private CallSite<DynamicSiteTarget<object, object, int>> site = CallSite<DynamicSiteTarget<object, object, int>>.Create(
+                Binders.BinaryOperationRetType(
+                    DefaultContext.DefaultPythonContext.DefaultBinderState,
+                    StandardOperators.Compare,
+                    typeof(int)
+                )
+            );
             public DefaultPythonComparer() { }
 
             public int Compare(object x, object y) {
@@ -718,7 +731,7 @@ namespace IronPython.Runtime {
                 //					return xi == yi ? 0 : (xi < yi ? -1 : +1);
                 //				}
 
-                return site.Invoke(DefaultContext.DefaultCLS, x, y);
+                return site.Target(site, x, y);
             }
         }
 
@@ -726,39 +739,45 @@ namespace IronPython.Runtime {
             //??? optimized version when we know we have a Function
             private object cmpfunc;
 
-            private DynamicSite<object, object, object, int> FuncSite = 
-                CallSiteFactory.CreateSimpleCallSite<object, object, object, int>(DefaultContext.DefaultPythonBinder);
+            private CallSite<DynamicSiteTarget<CodeContext, object, object, object, int>> FuncSite = CallSite<DynamicSiteTarget<CodeContext, object, object, object, int>>.Create(
+                Binders.InvokeAndConvert(
+                    DefaultContext.DefaultPythonContext.DefaultBinderState,
+                    2,
+                    typeof(int)
+                )
+            );
 
             public FunctionComparer(object cmpfunc) { this.cmpfunc = cmpfunc; }
 
             public int Compare(object o1, object o2) {
-                return FuncSite.Invoke(DefaultContext.Default, cmpfunc, o1, o2);
+                return FuncSite.Target(FuncSite, DefaultContext.Default, cmpfunc, o1, o2);
             }
         }
 
-        public void sort() {
-            sort(null, null, false);
+        public void sort(CodeContext/*!*/ context) {
+            sort(context, null, null, false);
         }
 
-        public void sort(object cmp) {
-            sort(cmp, null, false);
+        public void sort(CodeContext/*!*/ context, object cmp) {
+            sort(context, cmp, null, false);
         }
 
-        public void sort(object cmp, object key) {
-            sort(cmp, key, false);
+        public void sort(CodeContext/*!*/ context, object cmp, object key) {
+            sort(context, cmp, key, false);
         }
 
-        public void sort([DefaultParameterValue(null)] object cmp,
+        public void sort(CodeContext/*!*/ context, 
+                         [DefaultParameterValue(null)] object cmp,
                          [DefaultParameterValue(null)] object key,
                          [DefaultParameterValue(false)] bool reverse) {
             IComparer comparer = (cmp == null) ?
                 (IComparer)new DefaultPythonComparer() :
                 (IComparer)new FunctionComparer(cmp);
 
-            DoSort(comparer, key, reverse, 0, _size);
+            DoSort(context, comparer, key, reverse, 0, _size);
         }
 
-        internal void DoSort(IComparer cmp, object key, bool reverse, int index, int count) {
+        internal void DoSort(CodeContext/*!*/ context, IComparer cmp, object key, bool reverse, int index, int count) {
             lock (this) {
                 object[] sortData = _data;
                 int sortSize = _size;
@@ -772,7 +791,7 @@ namespace IronPython.Runtime {
                         object[] keys = new object[sortSize];
                         for (int i = 0; i < sortSize; i++) {
                             Debug.Assert(_data.Length == 0);
-                            keys[i] = PythonCalls.Call(key, sortData[i]);
+                            keys[i] = PythonCalls.Call(context, key, sortData[i]);
                             if (_data.Length != 0) throw PythonOps.ValueError("list mutated while determing keys");
                         }
 
@@ -1208,16 +1227,20 @@ namespace IronPython.Runtime {
     }
 
     public class listiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
-        private int _index = -1;
-        private List _list;
-        private bool _iterating = true;
+        private int _index;
+        private readonly List _list;
+        private bool _iterating;
 
-        public listiterator(List l) { _list = l; }
+        public listiterator(List l) {
+            _list = l;
+            Reset();
+        }
 
         #region IEnumerator Members
 
         public void Reset() {
             _index = -1;
+            _iterating = true;
         }
 
         public object Current {
@@ -1229,7 +1252,73 @@ namespace IronPython.Runtime {
         public bool MoveNext() {
             if (_iterating) {
                 _index++;
-                _iterating = _index <= _list._size - 1;
+                _iterating = (_index <= _list._size - 1);
+            }
+            return _iterating;
+        }
+
+        public object __iter__() {
+            return this;
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return this;
+        }
+
+        #endregion
+
+        #region IDisposable Members
+
+        public void Dispose() {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing) {
+        }
+
+        #endregion
+
+        #region IEnumerable<object> Members
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() {
+            return this;
+        }
+
+        #endregion
+    }
+
+    public class listreverseiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
+        private int _index;
+        private readonly List _list;
+        private bool _iterating;
+
+        public listreverseiterator(List l) {
+            _list = l;
+            Reset();
+        }
+
+        #region IEnumerator Members
+
+        public void Reset() {
+            _index = 0;
+            _iterating = true;
+        }
+
+        public object Current {
+            get {
+                return _list._data[_list._size - _index];
+            }
+        }
+
+        public bool MoveNext() {
+            if (_iterating) {
+                _index++;
+                _iterating = (_index <= _list._size);
             }
             return _iterating;
         }

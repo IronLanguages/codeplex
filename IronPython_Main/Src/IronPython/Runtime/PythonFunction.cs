@@ -17,20 +17,22 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using IronPython.Compiler;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {
@@ -40,7 +42,7 @@ namespace IronPython.Runtime {
     /// Created for a user-defined function.  
     /// </summary>
     [PythonSystemType("function")]
-    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, ICodeFormattable {
+    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {
         private readonly CodeContext/*!*/ _context;     // the creating code context of the function
         [PythonHidden]
         public readonly Delegate Target;              // the target delegate to be invoked when called (should come from function code)
@@ -208,12 +210,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        public object __call__(params object[] args) {
-            return PythonCalls.Call(this, args);
+        public object __call__(CodeContext/*!*/ context, params object[] args) {
+            return PythonCalls.Call(context, this, args);
         }
 
-        public object __call__([ParamDictionary]IAttributesCollection dict, params object[] args) {
-            return PythonCalls.CallWithKeywordArgs(this, args, dict);
+        public object __call__(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection dict, params object[] args) {
+            return PythonCalls.CallWithKeywordArgs(context, this, args, dict);
         }
 
         #endregion
@@ -527,7 +529,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private void EnsureID() {
+        internal void EnsureID() {
             if (_id == 0) {
                 Interlocked.CompareExchange(ref _id, Interlocked.Increment(ref _CurrentId), 0);
             }
@@ -540,6 +542,12 @@ namespace IronPython.Runtime {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = new Method(this, instance, owner);
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         #endregion
@@ -1082,7 +1090,7 @@ namespace IronPython.Runtime {
             /// </summary>
             private Expression[] GetArgumentsForTargetType(Expression[] exprArgs) {
                 Type target = _func.Target.GetType();
-                if (target == typeof(CallTargetN) || target == typeof(GeneratorTargetN)) {
+                if (target == typeof(IronPython.Compiler.CallTargetN) || target == typeof(IronPython.Compiler.GeneratorTargetN)) {
                     exprArgs = new Expression[] {
                         Ast.NewArrayHelper(typeof(object), exprArgs) 
                     };
@@ -1347,6 +1355,14 @@ namespace IronPython.Runtime {
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<function {0} at {1}>", func_name, PythonOps.HexId(this));
+        }
+
+        #endregion
+
+        #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaPythonFunction(parameter, Restrictions.Empty, this);
         }
 
         #endregion

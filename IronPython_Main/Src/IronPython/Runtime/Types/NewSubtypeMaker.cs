@@ -19,10 +19,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting.Generation;
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-namespace IronPython.Compiler.Generation {
+namespace IronPython.Runtime.Types {
 
     /// <summary>
     /// Creates sub-types of new-types.  Sub-types of new types are created when

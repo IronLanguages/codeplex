@@ -18,6 +18,9 @@ using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -93,7 +96,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression rleft = ag.Transform(bright.Left);
 
             // Store it in the temp
-            MSAst.VariableExpression temp = ag.MakeTempExpression("chained_comparison");
+            MSAst.VariableExpression temp = ag.GetTemporary("chained_comparison");
 
             // Create binary operation: left <_op> (temp = rleft)
             MSAst.Expression comparison = MakeBinaryOperation(
@@ -146,9 +149,19 @@ namespace IronPython.Compiler.Ast {
         }
 
         private static MSAst.Expression MakeBinaryOperation(AstGenerator ag, PythonOperator op, MSAst.Expression left, MSAst.Expression right, Type type, SourceSpan span) {
-            if (op == PythonOperator.NotIn) {
-                return
-                    Ast.ConvertHelper(Ast.Not(AstUtils.Operator(ag.Binder, Operators.Contains, typeof(bool), Ast.CodeContext(), left, right)), type);
+            if (op == PythonOperator.NotIn) {                
+                return Ast.ConvertHelper(
+                    Ast.Not(
+                        Binders.Operation(
+                            ag.BinderState,
+                            typeof(bool),
+                            StandardOperators.Contains,
+                            left,
+                            right
+                        )                            
+                    ),
+                    type
+                );
             }
 
             Operators action = PythonOperatorToAction(op);
@@ -156,8 +169,8 @@ namespace IronPython.Compiler.Ast {
                 // Create action expression
                 if (op == PythonOperator.Divide &&
                     (ag.DivisionOptions == PythonDivisionOptions.Warn || ag.DivisionOptions == PythonDivisionOptions.WarnAll)) {
-                    MSAst.VariableExpression tempLeft = ag.MakeTempExpression("left", left.Type);
-                    MSAst.VariableExpression tempRight = ag.MakeTempExpression("right", right.Type);
+                    MSAst.VariableExpression tempLeft = ag.GetTemporary("left", left.Type);
+                    MSAst.VariableExpression tempRight = ag.GetTemporary("right", right.Type);
                     return Ast.Comma(
                         Ast.Call(
                             AstGenerator.GetHelperMethod("WarnDivision"),
@@ -172,11 +185,23 @@ namespace IronPython.Compiler.Ast {
                                 typeof(object)
                             )
                         ),
-                        AstUtils.Operator(ag.Binder, action, type, Ast.CodeContext(), left, right)
+                        Binders.Operation(
+                            ag.BinderState,
+                            type,
+                            StandardOperators.FromOperator(action),
+                            tempLeft,
+                            tempRight
+                        )
                     );
                 }
 
-                return AstUtils.Operator(ag.Binder, action, type, Ast.CodeContext(), left, right);
+                return Binders.Operation(
+                    ag.BinderState,
+                    type,
+                    StandardOperators.FromOperator(action),
+                    left,
+                    right
+                );
             } else {
                 // Call helper method
                 return Ast.Call(

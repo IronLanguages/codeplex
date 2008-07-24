@@ -25,7 +25,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _label;
 
         internal LabeledStatement(Annotations annotations, LabelTarget label, Expression expression)
-            : base(annotations, ExpressionType.LabeledStatement, typeof(void)) {
+            : base(ExpressionType.LabeledStatement, typeof(void), annotations, null) {
             _label = label;
             _expression = expression;
         }
@@ -48,7 +48,7 @@ namespace System.Linq.Expressions {
 
         public static LabeledStatement Labeled(LabelTarget label, Expression body, Annotations annotations) {
             ContractUtils.RequiresNotNull(label, "label");
-            ContractUtils.RequiresNotNull(body, "body");
+            RequiresCanRead(body, "body");
             return new LabeledStatement(annotations, label, body);
         }
     }

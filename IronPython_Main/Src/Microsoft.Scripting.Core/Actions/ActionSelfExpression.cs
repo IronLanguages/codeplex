@@ -15,24 +15,31 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Linq.Expressions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
     /// <summary>
     /// Provides access to the MetaAction instance within the code generated
     /// by a MetaObject.
+    /// 
+    /// TODO: public, rename to CallSiteBinderExpression. Add factory somewhere
+    /// (on CallSiteBinder?). This should be exposed for all binders if it's
+    /// supported, not just MetaActions.
     /// </summary>
     internal class ActionSelfExpression : Expression {
-        public ActionSelfExpression() : 
-            base(ExpressionType.Extension, typeof(MetaAction)) {
+        internal ActionSelfExpression() :
+            base(typeof(CallSiteBinder), false, null) {
         }
     }
 
-    class ActionSelfRewriter : ExpressionTreeVisitor {
+    internal sealed class ActionSelfRewriter : ExpressionTreeVisitor {
         private readonly Expression _self;
 
-        public ActionSelfRewriter(Expression self) {
+        internal ActionSelfRewriter(Expression self) {
+            Debug.Assert(TypeUtils.AreReferenceAssignable(typeof(CallSiteBinder), self.Type));
             _self = self;
         }
 

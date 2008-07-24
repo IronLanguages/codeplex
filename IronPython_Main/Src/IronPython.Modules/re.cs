@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -65,9 +66,9 @@ namespace IronPython.Modules {
             }
         }
 
-        public static RE_Pattern compile(object pattern, object flags) {
+        public static RE_Pattern compile(CodeContext/*!*/ context, object pattern, object flags) {
             try {
-                return new RE_Pattern(ValidatePattern(pattern), Converter.ConvertToInt32(flags), true);
+                return new RE_Pattern(ValidatePattern(pattern), PythonContext.GetContext(context).ConvertToInt32(flags), true);
             } catch (ArgumentException e) {
                 throw PythonExceptions.CreateThrowable(error, e.Message);
             }
@@ -107,15 +108,15 @@ namespace IronPython.Modules {
             return text;
         }
 
-        public static object findall(object pattern, string @string) {
-            return findall(pattern, @string, 0);
+        public static object findall(CodeContext/*!*/ context, object pattern, string @string) {
+            return findall(context, pattern, @string, 0);
         }
 
-        public static object findall(object pattern, string @string, int flags) {
+        public static object findall(CodeContext/*!*/ context, object pattern, string @string, int flags) {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
             ValidateString(@string, "string");
 
-            MatchCollection mc = pat.FindAllWorker(@string, 0, @string.Length);
+            MatchCollection mc = pat.FindAllWorker(context, @string, 0, @string.Length);
             return FixFindAllMatch(pat, mc);
         }
 
@@ -158,15 +159,15 @@ namespace IronPython.Modules {
             return List.FromArrayNoCopy(matches);
         }
 
-        public static object finditer(object pattern, object @string) {
-            return finditer(pattern, @string, 0);
+        public static object finditer(CodeContext/*!*/ context, object pattern, object @string) {
+            return finditer(context, pattern, @string, 0);
         }
 
-        public static object finditer(object pattern, object @string, int flags) {
+        public static object finditer(CodeContext/*!*/ context, object pattern, object @string, int flags) {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
 
             string str = ValidateString(@string, "string");
-            return MatchIterator(pat.FindAllWorker(str, 0, str.Length), pat, str);
+            return MatchIterator(pat.FindAllWorker(context, str, 0, str.Length), pat, str);
         }
 
         public static object match(object pattern, object @string) {
@@ -194,20 +195,20 @@ namespace IronPython.Modules {
                 maxsplit);
         }
 
-        public static object sub(object pattern, object repl, object @string) {
-            return sub(pattern, repl, @string, Int32.MaxValue);
+        public static object sub(CodeContext/*!*/ context, object pattern, object repl, object @string) {
+            return sub(context, pattern, repl, @string, Int32.MaxValue);
         }
 
-        public static object sub(object pattern, object repl, object @string, int count) {
-            return new RE_Pattern(ValidatePattern(pattern)).sub(repl, ValidateString(@string, "string"), count);
+        public static object sub(CodeContext/*!*/ context, object pattern, object repl, object @string, int count) {
+            return new RE_Pattern(ValidatePattern(pattern)).sub(context, repl, ValidateString(@string, "string"), count);
         }
 
-        public static object subn(object pattern, object repl, object @string) {
-            return subn(pattern, repl, @string, Int32.MaxValue);
+        public static object subn(CodeContext/*!*/ context, object pattern, object repl, object @string) {
+            return subn(context, pattern, repl, @string, Int32.MaxValue);
         }
 
-        public static object subn(object pattern, object repl, object @string, int count) {
-            return new RE_Pattern(ValidatePattern(pattern)).subn(repl, ValidateString(@string, "string"), count);
+        public static object subn(CodeContext/*!*/ context, object pattern, object repl, object @string, int count) {
+            return new RE_Pattern(ValidatePattern(pattern)).subn(context, repl, ValidateString(@string, "string"), count);
 
         }
 
@@ -294,42 +295,42 @@ namespace IronPython.Modules {
                 return RE_Match.make(_re.Match(input, pos, Math.Max(endpos - pos, 0)), this, input);
             }
 
-            public object findall(string @string) {
-                return findall(@string, 0, null);
+            public object findall(CodeContext/*!*/ context, string @string) {
+                return findall(context, @string, 0, null);
             }
 
-            public object findall(string @string, int pos) {
-                return findall(@string, pos, null);
+            public object findall(CodeContext/*!*/ context, string @string, int pos) {
+                return findall(context, @string, pos, null);
             }
 
-            public object findall(object @string, int pos, object endpos) {
-                MatchCollection mc = FindAllWorker(ValidateString(@string, "text"), pos, endpos);
+            public object findall(CodeContext/*!*/ context, object @string, int pos, object endpos) {
+                MatchCollection mc = FindAllWorker(context, ValidateString(@string, "text"), pos, endpos);
 
                 return FixFindAllMatch(this, mc);
             }
 
-            internal MatchCollection FindAllWorker(string str, int pos, object endpos) {
+            internal MatchCollection FindAllWorker(CodeContext/*!*/ context, string str, int pos, object endpos) {
                 string against = str;
                 if (endpos != null) {
-                    int end = Converter.ConvertToInt32(endpos);
+                    int end = PythonContext.GetContext(context).ConvertToInt32(endpos);
                     against = against.Substring(0, Math.Max(end, 0));
                 }
                 return _re.Matches(against, pos);
             }
 
-            public object finditer(object @string) {
+            public object finditer(CodeContext/*!*/ context, object @string) {
                 string input = ValidateString(@string, "string");
-                return MatchIterator(FindAllWorker(input, 0, input.Length), this, input);
+                return MatchIterator(FindAllWorker(context, input, 0, input.Length), this, input);
             }
 
-            public object finditer(object @string, int pos) {
+            public object finditer(CodeContext/*!*/ context, object @string, int pos) {
                 string input = ValidateString(@string, "string");
-                return MatchIterator(FindAllWorker(input, pos, input.Length), this, input);
+                return MatchIterator(FindAllWorker(context, input, pos, input.Length), this, input);
             }
 
-            public object finditer(object @string, int pos, int endpos) {
+            public object finditer(CodeContext/*!*/ context, object @string, int pos, int endpos) {
                 string input = ValidateString(@string, "string");
-                return MatchIterator(FindAllWorker(input, pos, endpos), this, input);
+                return MatchIterator(FindAllWorker(context, input, pos, endpos), this, input);
             }
 
             public object split(object @string) {
@@ -371,11 +372,11 @@ namespace IronPython.Modules {
                 return result;
             }
 
-            public string sub(object repl, object @string) {
-                return sub(repl, ValidateString(@string, "string"), Int32.MaxValue);
+            public string sub(CodeContext/*!*/ context, object repl, object @string) {
+                return sub(context, repl, ValidateString(@string, "string"), Int32.MaxValue);
             }
 
-            public string sub(object repl, object @string, int count) {
+            public string sub(CodeContext/*!*/ context, object repl, object @string, int count) {
                 if (repl == null) throw PythonOps.TypeError("NoneType is not valid repl");
                 //  if 'count' is omitted or 0, all occurrences are replaced
                 if (count == 0) count = Int32.MaxValue;
@@ -401,16 +402,16 @@ namespace IronPython.Modules {
                         prev = match;
 
                         if (replacement != null) return UnescapeGroups(match, replacement);
-                        return PythonCalls.Call(repl, RE_Match.make(match, this, input)) as string;
+                        return PythonCalls.Call(context, repl, RE_Match.make(match, this, input)) as string;
                     },
                     count);
             }
 
-            public object subn(object repl, string @string) {
-                return subn(repl, @string, Int32.MaxValue);
+            public object subn(CodeContext/*!*/ context, object repl, string @string) {
+                return subn(context, repl, @string, Int32.MaxValue);
             }
 
-            public object subn(object repl, object @string, int count) {
+            public object subn(CodeContext/*!*/ context, object repl, object @string, int count) {
                 if (repl == null) throw PythonOps.TypeError("NoneType is not valid repl");
                 //  if 'count' is omitted or 0, all occurrences are replaced
                 if (count == 0) count = Int32.MaxValue;
@@ -441,7 +442,7 @@ namespace IronPython.Modules {
                         totalCount++;
                         if (replacement != null) return UnescapeGroups(match, replacement);
 
-                        return PythonCalls.Call(repl, RE_Match.make(match, this, input)) as string;
+                        return PythonCalls.Call(context, repl, RE_Match.make(match, this, input)) as string;
                     },
                     count);
 

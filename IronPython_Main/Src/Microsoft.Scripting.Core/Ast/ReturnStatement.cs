@@ -18,7 +18,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _expr;
 
         internal ReturnStatement(Annotations annotations, Expression expression)
-            : base(annotations, ExpressionType.ReturnStatement, typeof(void)) {
+            : base(ExpressionType.ReturnStatement, typeof(void), annotations, null) {
             _expr = expression;
         }
 
@@ -40,6 +40,9 @@ namespace System.Linq.Expressions {
         }
 
         public static ReturnStatement Return(Expression expression, Annotations annotations) {
+            if (expression != null) {
+                RequiresCanRead(expression, "expression");
+            }
             return new ReturnStatement(annotations, expression);
         }
     }

@@ -16,6 +16,7 @@
 ### make this file platform neutral as much as possible
 
 import sys
+import time
 
 is_silverlight = sys.platform == 'silverlight'
 is_cli = sys.platform == 'cli' 
@@ -412,7 +413,7 @@ def exit_module():
     #Have to catch exception for below call. Any better way to exit?
     sys.exit(0)
 
-def print_failures(failures):
+def print_failures(total, failures):
     print
     for failure in failures:
         name, (extype, ex, tb) = failure
@@ -430,7 +431,9 @@ def print_failures(failures):
                 print 'CLR Exception: ',
                 print TestHelpers.GetContext().FormatException(ex.clsException)
 
-
+    print
+    failcount = len(failures)
+    print '%d total, %d passed, %d failed' % (total, total - failcount, failcount)
 		
 def run_test(mod_name, noOutputPlease=False):
     import sys
@@ -438,7 +441,8 @@ def run_test(mod_name, noOutputPlease=False):
     stdout = sys.stdout
     stderr = sys.stderr
     failures = []
-		
+    total = 0
+    
     includedTests = [arg[4:] for arg in sys.argv if arg.startswith('run:test_') and not arg.endswith('.py')]
     for name in dir(module): 
         obj = getattr(module, name)
@@ -446,34 +450,41 @@ def run_test(mod_name, noOutputPlease=False):
             if name.endswith("_clionly") and not is_cli: continue
             if name.startswith("test_"): 
                 if not includedTests or name in includedTests:
-					for i in xrange( get_num_iterations()):
-						if not noOutputPlease and (mod_name == '__main__'): 
-							print ">>> testing %-40s" % name,
+                    for i in xrange( get_num_iterations()):
+                        if not noOutputPlease and (mod_name == '__main__'): 
+                            if hasattr(time, 'clock'):
+                                print ">>> %6.2fs testing %-40s" % (round(time.clock(), 2), name, ), 
+                            else:
+                                print ">>> testing %-40s" % name, 
 						#obj()
 						#catches the error and exit at the end of each test
-						try:
-							try:
-								obj()
-							finally:
-								# restore std-in / std-err incase the test corrupted it                
-								sys.stdout = stdout
-								sys.stderr = stderr
-							print
-	                            
-						except:
-							failures.append( (name, sys.exc_info()) )
-							print "FAIL (%s)" % str(sys.exc_info()[0])
+                        total += 1
+                        try:
+                            try:
+                                obj()
+                            finally:
+                                # restore std-in / std-err incase the test corrupted it                
+                                sys.stdout = stdout
+                                sys.stderr = stderr
+                            print
+                                
+                        except:
+                            failures.append( (name, sys.exc_info()) )
+                            print "FAIL (%s)" % str(sys.exc_info()[0])
 					
                 elif not noOutputPlease:
                     print ">>> skipping %-40s" % name
     if failures:
-        print_failures(failures)
+        print_failures(total, failures)
         if is_cli:
             cmd_line = System.Environment.CurrentDirectory + "> " + System.Environment.CommandLine
             print "Please run the following command to repro:"
             print "\t" + cmd_line
         
         sys.exit(len(failures))
+    else:
+        print
+        print '%d tests passed' % total
 
 def run_class(mod_name, verbose=False): 
     pass

@@ -23,7 +23,7 @@ namespace System.Linq.Expressions {
         private readonly bool _isByRef;
 
         internal ParameterExpression(Type type, string name, Annotations annotations, bool isByRef)
-            : base(annotations, ExpressionType.Parameter, type) {
+            : base(ExpressionType.Parameter, type, false, annotations, true, true, null) {
             _name = name;
             _isByRef = isByRef;
         }

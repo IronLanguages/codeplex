@@ -913,7 +913,6 @@ namespace IronPython.Runtime {
             FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
-            string inMode = mode;
 
             if (name == null) {
                 throw PythonOps.TypeError("file name must be string, found NoneType");
@@ -927,35 +926,8 @@ namespace IronPython.Runtime {
                 throw PythonOps.ValueError("empty mode string");
             }
 
-            bool seekEnd = false;
-
-            int modeLen = mode.Length;
-            char lastChar = mode[modeLen - 1];
-            if (lastChar == 't' || lastChar == 'b')
-                mode = mode.Substring(0, modeLen - 1);
-            else if (lastChar == '+' && modeLen >= 2) {
-                char secondToLastChar = mode[modeLen - 2];
-                if (secondToLastChar == 't' || secondToLastChar == 'b') {
-                    mode = mode.Substring(0, modeLen - 2) + "+";
-                }
-            }
-
-            if (mode == "r" || mode == "rU" || mode == "U" || mode == "Ur") {
-                fmode = FileMode.Open; faccess = FileAccess.Read;
-            } else if (mode == "r+" || mode == "rU+" || mode == "U+" || mode == "Ur+") {
-                fmode = FileMode.Open; faccess = FileAccess.ReadWrite;
-            } else if (mode == "w") {
-                fmode = FileMode.Create; faccess = FileAccess.Write;
-            } else if (mode == "w+") {
-                fmode = FileMode.Create; faccess = FileAccess.ReadWrite;
-            } else if (mode == "a") {
-                fmode = FileMode.Append; faccess = FileAccess.Write;
-            } else if (mode == "a+") {
-                fmode = FileMode.OpenOrCreate; faccess = FileAccess.ReadWrite;
-                seekEnd = true;
-            } else {
-                throw new NotImplementedException("bad mode: " + inMode);
-            }
+            bool seekEnd;
+            TranslateAndValidateMode(mode, out fmode, out faccess, out seekEnd);
 
             try {
                 Stream stream;
@@ -969,10 +941,65 @@ namespace IronPython.Runtime {
 
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
-                __init__(stream, PythonContext.GetContext(context).DefaultEncoding, name, inMode);
+                __init__(stream, PythonContext.GetContext(context).DefaultEncoding, name, mode);
                 this._isOpen = true;
             } catch (UnauthorizedAccessException e) {
                 throw new IOException(e.Message, e);
+            }
+        }
+
+        internal static void ValidateMode(string mode) {
+            FileMode fmode;
+            FileAccess access;
+            bool seekEnd;
+            TranslateAndValidateMode(mode, out fmode, out access, out seekEnd);
+        }
+
+        private static void TranslateAndValidateMode(string mode, out FileMode fmode, out FileAccess faccess, out bool seekEnd) {
+            if (mode.Length == 0) {
+                throw PythonOps.ValueError("empty mode string");
+            }
+
+            // remember the original mode for error reporting
+            string inMode = mode;
+
+            if (mode.IndexOf('U') != -1) {
+                mode = mode.Replace("U", String.Empty);
+                if (mode.Length == 0) {
+                    mode = "r";
+                } else if (mode == "+") {
+                    mode = "r+";
+                } else if (mode[0] == 'w' || mode[0] == 'a') {
+                    throw PythonOps.ValueError("universal newline mode can only be used with modes starting with 'r'");
+                } else {
+                    mode = "r" + mode;
+                }
+            }
+
+            // process read/write/append
+            seekEnd = false;
+            switch (mode[0]) {
+                case 'r': fmode = FileMode.Open; break;
+                case 'w': fmode = FileMode.Create; break;
+                case 'a': fmode = FileMode.Append; break;
+                default:
+                    throw PythonOps.ValueError("mode string must begin with one of 'r', 'w', 'a' or 'U', not '{0}'", inMode);
+            }
+
+            // process +
+            if (mode.IndexOf('+') != -1) {
+                faccess = FileAccess.ReadWrite;
+                if (fmode == FileMode.Append) {
+                    fmode = FileMode.OpenOrCreate;
+                    seekEnd = true;
+                }
+            } else {
+                switch (fmode) {
+                    case FileMode.Create: faccess = FileAccess.Write; break;
+                    case FileMode.Open: faccess = FileAccess.Read; break;
+                    case FileMode.Append: faccess = FileAccess.Write; break;
+                    default: throw new InvalidOperationException();
+                }
             }
         }
 

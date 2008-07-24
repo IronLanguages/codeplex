@@ -44,7 +44,7 @@ namespace System.Linq.Expressions {
             Expression body,
             ReadOnlyCollection<ParameterExpression> parameters
         )
-            : base(annotations, nodeType, delegateType) {
+            : base(nodeType, delegateType, annotations, null) {
 
             Assert.NotNull(delegateType);
 
@@ -134,7 +134,6 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            ContractUtils.RequiresNotNull(body, "body");
             ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
             ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
             return new Expression<TDelegate>(annotations, ExpressionType.Lambda, name, body, parameterList);
@@ -206,8 +205,6 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static LambdaExpression Lambda(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            ContractUtils.RequiresNotNull(delegateType, "delegateType");
-            ContractUtils.RequiresNotNull(body, "body");
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
@@ -217,7 +214,7 @@ namespace System.Linq.Expressions {
         //CONFORMING
         private static void ValidateLambdaArgs(Type delegateType, ref Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
-            ContractUtils.RequiresNotNull(body, "body");
+            RequiresCanRead(body, "body");
 
             if (!TypeUtils.AreAssignable(typeof(Delegate), delegateType) || delegateType == typeof(Delegate)) {
                 throw Error.LambdaTypeMustBeDerivedFromSystemDelegate();
@@ -231,7 +228,7 @@ namespace System.Linq.Expressions {
                 for (int i = 0, n = pis.Length; i < n; i++) {
                     Expression pex = parameters[i];
                     ParameterInfo pi = pis[i];
-                    ContractUtils.RequiresNotNull(pex, "parameters");
+                    RequiresCanRead(pex, "parameters");
                     Type pType = pi.ParameterType;
                     if (pType.IsByRef || pex.Type.IsByRef) {
                         throw Error.ExpressionMayNotContainByrefParameters();
@@ -272,7 +269,6 @@ namespace System.Linq.Expressions {
         }
 
         public static Expression<TDelegate> Generator<TDelegate>(Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            ContractUtils.RequiresNotNull(body, "body");
             ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
             ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
             return new Expression<TDelegate>(annotations, ExpressionType.Generator, name, body, parameterList);
@@ -287,8 +283,6 @@ namespace System.Linq.Expressions {
         }
 
         public static LambdaExpression Generator(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            ContractUtils.RequiresNotNull(delegateType, "delegateType");
-            ContractUtils.RequiresNotNull(body, "body");
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 

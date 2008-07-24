@@ -70,7 +70,7 @@ namespace IronPython.Runtime {
             get { return _selfClass; }
         }
 
-        public object __get__(object instance, object owner) {
+        public new object __get__(CodeContext/*!*/ context, object instance, object owner) {
             PythonType selfType = PythonType;
 
             if (selfType == TypeCache.Super) {
@@ -79,7 +79,7 @@ namespace IronPython.Runtime {
                 return res;
             }
 
-            return PythonCalls.Call(selfType, _thisClass, instance);
+            return PythonCalls.Call(context, selfType, _thisClass, instance);
         }
 
         #endregion
@@ -198,8 +198,14 @@ namespace IronPython.Runtime {
         #endregion
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-            value = __get__(instance, owner);
+            value = __get__(context, instance, owner);
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         #region ICodeFormattable Members

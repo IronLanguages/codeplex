@@ -26,7 +26,7 @@ using System.Xml.XPath;
 using IronPython.Runtime.Types;
 using System.Xml;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Types {
     static class DocBuilder {
         
         internal static string GetDefaultDocumentation(string methodName) {

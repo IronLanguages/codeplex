@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
     /// </summary>
     public sealed class CodeContextExpression : Expression {
         internal CodeContextExpression(Annotations annotations)
-            : base(annotations, ExpressionType.Extension, typeof(CodeContext)) {
+            : base(typeof(CodeContext), false, annotations) {
         }
     }
 
@@ -43,7 +43,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _body;
 
         internal CodeContextScopeExpression(Annotations annotations, Expression body, Expression newContext)
-            : base(annotations, ExpressionType.Extension, body.Type) {
+            : base(body.Type, false, annotations) {
             _body = body;
             _newContext = newContext;
         }
@@ -80,7 +80,7 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(newContext, "newContext");
             ContractUtils.Requires(TypeUtils.AreAssignable(typeof(CodeContext), newContext.Type), "newContext");
-
+            ContractUtils.Requires(newContext.CanRead, "newContext");
             return new CodeContextScopeExpression(annotations, body, newContext);
         }
     }

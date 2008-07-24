@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _label;
 
         internal SwitchStatement(Expression testValue, LabelTarget label, Annotations annotations, ReadOnlyCollection<SwitchCase> cases)
-            : base(annotations, ExpressionType.SwitchStatement, typeof(void)) {
+            : base(ExpressionType.SwitchStatement, typeof(void), annotations, null) {
             Assert.NotNullItems(cases);
 
             _label = label;
@@ -62,7 +62,7 @@ namespace System.Linq.Expressions {
             return Switch(value, label, annotations, (IEnumerable<SwitchCase>)cases);
         }
         public static SwitchStatement Switch(Expression value, LabelTarget label, Annotations annotations, IEnumerable<SwitchCase> cases) {
-            ContractUtils.RequiresNotNull(value, "value");
+            RequiresCanRead(value, "value");
             ContractUtils.Requires(value.Type == typeof(int), "value", Strings.ValueMustBeInt);
             ContractUtils.RequiresNotNull(cases, "cases");
             var caseList = cases.ToReadOnly();

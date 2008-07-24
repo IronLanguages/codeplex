@@ -14,19 +14,22 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Scripting;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using IronPython.Compiler.Generation;
+
+using Microsoft.Scripting;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
 
 [assembly: PythonModule("exceptions", typeof(IronPython.Runtime.Exceptions.PythonExceptions))]
 namespace IronPython.Runtime.Exceptions {
@@ -86,7 +89,7 @@ namespace IronPython.Runtime.Exceptions {
         /// from this and have their own .NET class.
         /// </summary>
         [PythonSystemType("BaseException"), DynamicBaseTypeAttribute, Serializable]
-        public class BaseException : ICodeFormattable, IPythonObject, IOldDynamicObject {
+        public class BaseException : ICodeFormattable, IPythonObject, IOldDynamicObject, IDynamicObject {
             private PythonType/*!*/ _type;          // the actual Python type of the Exception object
             private object _message = String.Empty; // the message object, cached at __init__ time, not updated on args assignment
             private PythonTuple _args;              // the tuple of args provided at creation time
@@ -181,6 +184,15 @@ namespace IronPython.Runtime.Exceptions {
                     }
 
                     _dict = value;
+                }
+            }
+
+            /// <summary>
+            /// Updates the exception's state (dictionary) with the new values
+            /// </summary>
+            public void __setstate__(IAttributesCollection state) {
+                foreach (KeyValuePair<object, object> pair in state) {
+                    __dict__.AddObjectKey(pair.Key, pair.Value);
                 }
             }
 
@@ -365,6 +377,14 @@ namespace IronPython.Runtime.Exceptions {
 
             RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
                 return UserTypeOps.GetRuleHelper<T>(action, context, args);
+            }
+
+            #endregion
+
+            #region IDynamicObject Members
+
+            MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+                return new Binding.MetaUserObject(parameter, Restrictions.Empty, null, this);
             }
 
             #endregion
@@ -555,7 +575,7 @@ namespace IronPython.Runtime.Exceptions {
         /// Used at runtime when creating the exception from a user provided type via the raise statement.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Throwable")]
-        internal static System.Exception CreateThrowableForRaise(PythonType type, object value) {
+        internal static System.Exception CreateThrowableForRaise(CodeContext/*!*/ context, PythonType/*!*/ type, object value) {
             object pyEx;
 
             if (PythonOps.IsInstance(value, type)) {
@@ -563,9 +583,9 @@ namespace IronPython.Runtime.Exceptions {
             } else if (value is PythonTuple) {
                 pyEx = PythonOps.CallWithArgsTuple(type, ArrayUtils.EmptyObjects, value);
             } else if (value != null) {
-                pyEx = PythonCalls.Call(type, value);
+                pyEx = PythonCalls.Call(context, type, value);
             } else {
-                pyEx = PythonCalls.Call(type);
+                pyEx = PythonCalls.Call(context, type);
             }
 
             if (PythonOps.IsInstance(pyEx, type)) {
@@ -585,7 +605,7 @@ namespace IronPython.Runtime.Exceptions {
         /// Used at runtime when creating the exception form a user provided type that's an old class (via the raise statement).
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Throwable")]
-        internal static System.Exception CreateThrowableForRaise(OldClass type, object value) {
+        internal static System.Exception CreateThrowableForRaise(CodeContext/*!*/ context, OldClass type, object value) {
             object pyEx;
 
             if (PythonOps.IsInstance(value, type)) {
@@ -593,7 +613,7 @@ namespace IronPython.Runtime.Exceptions {
             } else if (value is PythonTuple) {
                 pyEx = PythonOps.CallWithArgsTuple(type, ArrayUtils.EmptyObjects, value);
             } else {
-                pyEx = PythonCalls.Call(type, value);
+                pyEx = PythonCalls.Call(context, type, value);
             }
 
             return new OldInstanceException((OldInstance)pyEx);

@@ -54,17 +54,17 @@ namespace Microsoft.Scripting.Hosting.Shell {
             set { _creatingThread = value; }
         }
 
-        private ConsoleColor _promptColor = ConsoleColor.Gray;
-        private ConsoleColor _outColor = ConsoleColor.Gray;
-        private ConsoleColor _errorColor = ConsoleColor.Gray;
-        private ConsoleColor _warningColor = ConsoleColor.Gray;
+        private ConsoleColor _promptColor;
+        private ConsoleColor _outColor;
+        private ConsoleColor _errorColor;
+        private ConsoleColor _warningColor;
 
-        public BasicConsole(bool colorful) {
+        public BasicConsole(bool colorful) {            
             _output = System.Console.Out;
             _errorOutput = System.Console.Error;
             SetupColors(colorful);
 
-            _creatingThread = Thread.CurrentThread;
+            _creatingThread = Thread.CurrentThread;            
 
 #if !SILVERLIGHT // ConsoleCancelEventHandler
             Console.CancelKeyPress += new ConsoleCancelEventHandler(delegate(object sender, ConsoleCancelEventArgs e) {
@@ -81,15 +81,27 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private void SetupColors(bool colorful) {
 
             if (colorful) {
-                _promptColor = ConsoleColor.Gray;
-                _outColor = ConsoleColor.Green;
-                _errorColor = ConsoleColor.Red;
-                _warningColor = ConsoleColor.Yellow;
+                _promptColor = PickColor(ConsoleColor.Gray, ConsoleColor.White);
+                _outColor = PickColor(ConsoleColor.Green, ConsoleColor.White);
+                _errorColor = PickColor(ConsoleColor.Red, ConsoleColor.White);
+                _warningColor = PickColor(ConsoleColor.Yellow, ConsoleColor.White);
             } else {
 #if !SILVERLIGHT
                 _promptColor = _outColor = _errorColor = _warningColor = Console.ForegroundColor;
 #endif
             }
+        }
+
+        private static ConsoleColor PickColor(ConsoleColor best, ConsoleColor other) {
+#if SILVERLIGHT
+            return best;
+#else
+            if (Console.BackgroundColor != best) {
+                return best;
+            }
+
+            return other;
+#endif
         }
 
         protected void WriteColor(TextWriter output, string str, ConsoleColor c) {

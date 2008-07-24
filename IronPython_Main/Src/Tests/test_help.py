@@ -403,4 +403,13 @@ def test_bound_builtin_func():
     if is_cli:   # Cpython and IronPython display different help
         Assert(out.find('append(self, ') != -1)
 
+@skip("win32")
+def test_clr_addreference():
+    sys.stdout = stdout_reader()
+    help(clr.AddReference)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    
+    Assert(x.find("Adds a reference to a .NET assembly.") != -1)
+
 run_test(__name__)

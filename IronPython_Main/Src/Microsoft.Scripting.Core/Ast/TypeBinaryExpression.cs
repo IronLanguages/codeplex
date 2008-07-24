@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly Type _typeOperand;
 
         internal TypeBinaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type typeOperand)
-            : base(annotations, nodeType, typeof(bool)) {
+            : base(nodeType, typeof(bool), annotations, null) {
             _expression = expression;
             _typeOperand = typeOperand;
         }
@@ -59,7 +59,7 @@ namespace System.Linq.Expressions {
 
         //CONFORMING
         public static TypeBinaryExpression TypeIs(Expression expression, Type type, Annotations annotations) {
-            ContractUtils.RequiresNotNull(expression, "expression");
+            RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
 

@@ -29,7 +29,7 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
 
-    partial class MetaUserObject : MetaPythonObject {
+    partial class MetaUserObject : MetaPythonObject, IPythonInvokable {
         private readonly MetaObject _baseMetaObject;            // if we're a subtype of MetaObject this is the base class MO
 
         public MetaUserObject(Expression/*!*/ expression, Restrictions/*!*/ restrictions, MetaObject baseMetaObject, IPythonObject value)
@@ -37,7 +37,19 @@ namespace IronPython.Runtime.Binding {
             _baseMetaObject = baseMetaObject;
         }
 
+        #region IPythonInvokable Members
+
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            return InvokeWorker(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
         #region MetaObject Overrides
+
+        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            return BindingHelpers.GenericCall(action, args);
+        }
 
         public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
             Type type = conversion.ToType;
@@ -56,11 +68,31 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            Expression context = Ast.Call(
+                typeof(PythonOps).GetMethod("GetPythonTypeContext"),
+                Ast.Property(
+                    Ast.Convert(args[0].Expression, typeof(IPythonObject)),
+                    "PythonType"
+                )
+            );
+
+            return InvokeWorker(
+                action, 
+                context, 
+                args
+            );
+        }
+
+        #endregion
+
+        #region Invoke Implementation
+
+        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ action, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
             ValidationInfo typeTest = BindingHelpers.GetValidationInfo(Expression, Value.PythonType);
 
             return BindingHelpers.AddDynamicTestAndDefer(
                 action,
-                PythonProtocol.Call(action, args) ?? base.Invoke(action, args),
+                PythonProtocol.Call(action, args) ?? BindingHelpers.InvokeFallback(action, codeContext, args),
                 args,
                 typeTest
             );
@@ -116,6 +148,7 @@ namespace IronPython.Runtime.Binding {
                             new CallSignature(0)
                         ),
                         typeof(object),
+                        BinderState.GetCodeContext(convertToAction),
                         tmp
                     )
                 );

@@ -36,12 +36,6 @@ using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-#if !SILVERLIGHT
-
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-
-#endif
-
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -152,19 +146,13 @@ namespace IronPython.Runtime.Binding {
 
             Type visType = CompilerHelpers.GetVisibleType(toType);
 
-            return AstUtils.ConvertTo(
-                OldConvertToAction.Make(this, visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : kind),
+            return Binders.Convert(
                 context,
-                expr
-            );
-
-            /*return Binders.Convert(
-                context,
-                ((PythonContext)this.DomainManager.GetLanguageContext(typeof(PythonContext))).DefaultBinderState,
+                _context.DefaultBinderState,
                 visType,
                 visType == typeof(char) ? ConversionResultKind.ImplicitCast : kind,
                 expr
-            );*/
+            );
         }
 
         internal static MethodInfo GetGenericConvertMethod(Type toType) {
@@ -773,6 +761,14 @@ namespace IronPython.Runtime.Binding {
             res[typeof(Assembly)] = new Type[] { typeof(PythonAssemblyOps) };
             res[typeof(Enum)] = new Type[] { typeof(EnumOps) };
             res[typeof(Delegate)] = new Type[] { typeof(DelegateOps) };
+            res[typeof(Byte)] = new Type[] { typeof(ByteOps) };
+            res[typeof(SByte)] = new Type[] { typeof(SByteOps) };
+            res[typeof(Int16)] = new Type[] { typeof(Int16Ops) };
+            res[typeof(UInt16)] = new Type[] { typeof(UInt16Ops) };
+            res[typeof(UInt32)] = new Type[] { typeof(UInt32Ops) };
+            res[typeof(Int64)] = new Type[] { typeof(Int64Ops) };
+            res[typeof(UInt64)] = new Type[] { typeof(UInt64Ops) };
+            res[typeof(char)] = new Type[] { typeof(CharOps) };
 
             return res;
         }
@@ -793,14 +789,6 @@ namespace IronPython.Runtime.Binding {
             res[typeof(double)] = new ExtensionTypeInfo(typeof(DoubleOps), "float");
             res[typeof(decimal)] = new ExtensionTypeInfo(typeof(DecimalOps), "decimal");
             res[typeof(ValueType)] = new ExtensionTypeInfo(typeof(ValueType), "ValueType");   // just hiding it's methods in the inheritance hierarchy
-            res[typeof(Byte)] = new ExtensionTypeInfo(typeof(ByteOps), "Byte");
-            res[typeof(SByte)] = new ExtensionTypeInfo(typeof(SByteOps), "SByte");
-            res[typeof(Int16)] = new ExtensionTypeInfo(typeof(Int16Ops), "Int16");
-            res[typeof(UInt16)] = new ExtensionTypeInfo(typeof(UInt16Ops), "UInt16");
-            res[typeof(UInt32)] = new ExtensionTypeInfo(typeof(UInt32Ops), "UInt32");
-            res[typeof(Int64)] = new ExtensionTypeInfo(typeof(Int64Ops), "Int64");
-            res[typeof(UInt64)] = new ExtensionTypeInfo(typeof(UInt64Ops), "UInt64");
-            res[typeof(char)] = new ExtensionTypeInfo(typeof(CharOps), "Char");
 
             // MS.Math types
             res[typeof(BigInteger)] = new ExtensionTypeInfo(typeof(BigIntegerOps), "long");
@@ -816,7 +804,7 @@ namespace IronPython.Runtime.Binding {
             res[typeof(Scope)] = new ExtensionTypeInfo(typeof(ScopeOps), "module");
             res[typeof(ScriptScope)] = new ExtensionTypeInfo(typeof(ScriptScopeOps), "module");
 #if !SILVERLIGHT
-            res[ComObject.ComObjectType] = new ExtensionTypeInfo(typeof(ComOps), ComObject.ComObjectType.Name);
+            res[Type.GetType("System.__ComObject")] = new ExtensionTypeInfo(typeof(ComOps), "__ComObject");
 #endif
 
             return res;

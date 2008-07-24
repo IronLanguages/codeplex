@@ -26,6 +26,8 @@ using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
+
     class BinderState : IExpressionSerializable {
         private readonly PythonBinder/*!*/ _binder;
         private CodeContext _context;
@@ -67,6 +69,10 @@ namespace IronPython.Runtime.Binding {
 
             Debug.Assert(Default != null);
             return Default;
+        }
+
+        public static Expression/*!*/ GetCodeContext(MetaAction/*!*/ action) {
+            return Ast.Constant(BinderState.GetBinderState(action).Context);
         }
 
         #region IExpressionSerializable Members

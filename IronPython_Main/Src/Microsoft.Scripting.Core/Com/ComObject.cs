@@ -36,7 +36,7 @@ namespace System.Scripting.Com {
         #region Constructor(s)/Initialization
 
         protected ComObject(object rcw) {
-            Debug.Assert(ComMetaObject.IsGenericComObject(rcw));
+            Debug.Assert(ComMetaObject.IsComObject(rcw));
             _rcw = rcw;
         }
 
@@ -54,13 +54,6 @@ namespace System.Scripting.Com {
 
         #region Static Members
 
-        // TODO: Remove !!!
-        public static Type ComObjectType {
-            get {
-                return ComMetaObject.ComObjectType;
-            }
-        }
-
         private readonly static object _ComObjectInfoKey = new object();
 
         /// <summary>
@@ -69,7 +62,7 @@ namespace System.Scripting.Com {
         /// <returns></returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         public static ComObject ObjectToComObject(object rcw) {
-            Debug.Assert(ComMetaObject.IsGenericComObject(rcw));
+            Debug.Assert(ComMetaObject.IsComObject(rcw));
 
             // Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
             // a full demand. We could avoid this by making this method SecurityCritical
@@ -95,7 +88,7 @@ namespace System.Scripting.Com {
 
         private static ComObject CreateComObject(object rcw) {
             IDispatch dispatchObject = rcw as IDispatch;
-            if (GlobalDlrOptions.PreferComDispatch && (dispatchObject != null)) {
+            if (!GlobalDlrOptions.PreferComInteropAssembly && (dispatchObject != null)) {
                 // We can do method invocations on IDispatch objects
                 return new IDispatchComObject(dispatchObject);
             }

@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         /// Called by <see cref="DoStatementBuilder"/>.
         /// </summary>
         internal DoStatement(Annotations annotations, LabelTarget label, Expression test, Expression body)
-            : base(annotations, ExpressionType.DoStatement, typeof(void)) {
+            : base(ExpressionType.DoStatement, typeof(void), annotations, null) {
             _test = test;
             _body = body;
             _label = label;
@@ -54,8 +54,8 @@ namespace System.Linq.Expressions {
             return DoWhile(body, test, label, Annotations.Empty);
         }
         public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label, Annotations annotations) {
-            ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.RequiresNotNull(test, "test");
+            RequiresCanRead(body, "body");
+            RequiresCanRead(test, "test");
             return new DoStatement(annotations, label, test, body);
         }
     }

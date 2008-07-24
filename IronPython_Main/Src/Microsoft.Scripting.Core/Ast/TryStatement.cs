@@ -34,7 +34,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _fault;
 
         internal TryStatement(Annotations annotations, Expression body, ReadOnlyCollection<CatchBlock> handlers, Expression @finally, Expression fault)
-            : base(annotations, ExpressionType.TryStatement, typeof(void)) {
+            : base(ExpressionType.TryStatement, typeof(void), annotations, null) {
             _body = body;
             _handlers = handlers;
             _finally = @finally;
@@ -106,17 +106,20 @@ namespace System.Linq.Expressions {
 
         // MakeTry: the one factory that creates TryStatement
         public static TryStatement MakeTry(Expression body, Expression @finally, Expression fault, Annotations annotations, IEnumerable<CatchBlock> handlers) {
-            ContractUtils.RequiresNotNull(body, "body");
+            RequiresCanRead(body, "body");
 
             if (@finally != null && fault != null) {
                 throw Error.CannotHaveFinallyAndFault();
             }
-            
 
             var @catch = handlers.ToReadOnly();
             ContractUtils.RequiresNotNullItems(@catch, "handlers");
 
-            if (@catch.Count == 0 && @finally == null && fault == null){
+            if (@finally != null) {
+                RequiresCanRead(@finally, "finally");
+            } else if (fault != null) {
+                RequiresCanRead(fault, "fault");
+            } else if (@catch.Count == 0) {
                 throw Error.TryMustHaveCatchFinallyOrFault();
             }
 

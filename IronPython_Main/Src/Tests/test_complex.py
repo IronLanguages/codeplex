@@ -15,6 +15,7 @@
 
 from lib.assert_util import *
 from lib.type_util import *
+from lib.warning_util import warning_trapper
 
 def test_from_string():
     # complex from string: negative
@@ -68,6 +69,21 @@ def test_repr():
 def test_infinite():
     AreEqual(repr(1.0e340j),  '1.#INFj')
     AreEqual(repr(-1.0e340j),'-1.#INFj')
-        
+
+# Test must sort alphabetically ahead of other uses of the deprecated functions
+def test_deprecations():
+    w = warning_trapper()
+    a = 3j
+    b = 5j
+    c = 2j
+    x = a // 4
+    x = b % c
+    x = divmod(b, a)
+    m = w.finish()
+    
+    AreEqual(len(m), 3)
+    for msg in m:
+        AreEqual(msg.category, DeprecationWarning)
+        AreEqual(msg.message, 'complex divmod(), // and % are deprecated')
 
 run_test(__name__)

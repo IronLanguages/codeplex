@@ -15,234 +15,129 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-
-using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Scripting;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+using System.Text;
+
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using Microsoft.Scripting.Actions;
 
     static class Binders {
-        internal static bool UseNewSites = false;
-
         public static Expression/*!*/ Invoke(BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new InvokeBinder(
-                        binder,
-                        signature
-                    ),
-                    resultType,
-                    args
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldCallAction.Make(
-                        binder.Binder,
-                        signature
-                    ),
-                    resultType,
-                    ArrayUtils.Insert(Ast.CodeContext(), args)
-                );
-            }
-        }
-
-        public static Expression/*!*/ InvokeWithContext(BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new InvokeWithContextBinder(
-                        binder,
-                        signature
-                    ),
-                    resultType,
-                    args
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldCallAction.Make(
-                        binder.Binder,
-                        signature
-                    ),
-                    resultType,
-                    args            // context is already present
-                );
-            }
+            return Ast.ActionExpression(
+                new InvokeBinder(
+                    binder,
+                    signature
+                ),
+                resultType,
+                ArrayUtils.Insert(Ast.CodeContext(), args)
+            );
         }
 
         public static Expression/*!*/ Convert(BinderState/*!*/ binder, Type/*!*/ type, ConversionResultKind resultKind, Expression/*!*/ target) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new ConversionBinder(
-                        binder,
-                        type,
-                        resultKind
-                    ),
+            return Ast.ActionExpression(
+                new ConversionBinder(
+                    binder,
                     type,
-                    target
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldConvertToAction.Make(
-                        binder.Binder,
-                        type
-                    ),
-                    type,
-                    Ast.CodeContext(),
-                    target
-                );
-            }
+                    resultKind
+                ),
+                type,
+                target
+            );
         }
 
         /// <summary>
         /// Backwards compatible Convert for the old sites that need to flow CodeContext
         /// </summary>
         public static Expression/*!*/ Convert(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ type, ConversionResultKind resultKind, Expression/*!*/ target) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new ConversionBinder(
-                        binder,
-                        type,
-                        resultKind
-                    ),
+            return Ast.ActionExpression(
+                new ConversionBinder(
+                    binder,
                     type,
-                    target
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldConvertToAction.Make(
-                        binder.Binder,
-                        type
-                    ),
-                    type,
-                    codeContext,
-                    target
-                );
-            }
+                    resultKind
+                ),
+                type,
+                target
+            );
         }
 
         public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, params Expression[] args) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new OperationBinder(
-                        binder,
-                        operation
-                    ),
-                    resultType,
-                    args
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldDoOperationAction.Make(
-                        binder.Binder,
-                        StandardOperators.ToOperator(operation)
-                    ),
-                    resultType,
-                    ArrayUtils.Insert(Ast.CodeContext(), args)
-                );
-            }
+            return Ast.ActionExpression(
+                new OperationBinder(
+                    binder,
+                    operation
+                ),
+                resultType,
+                args
+            );
         }
 
         public static Expression/*!*/ Set(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target, Expression/*!*/ value) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new SetMemberBinder(
-                        binder,
-                        name
-                    ),
-                    resultType,
-                    target,
-                    value
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldSetMemberAction.Make(
-                        binder.Binder,
-                        name
-                    ),
-                    resultType,
-                    Ast.CodeContext(),
-                    target,
-                    value
-                );
-            }
+            return Ast.ActionExpression(
+                new SetMemberBinder(
+                    binder,
+                    name
+                ),
+                resultType,
+                target,
+                value
+            );
         }
 
         public static Expression/*!*/ Get(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new GetMemberBinder(
-                        binder,
-                        name
-                    ),
-                    resultType,
-                    target
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldGetMemberAction.Make(
-                        binder.Binder,
-                        name
-                    ),
-                    resultType,
-                    Ast.CodeContext(),
-                    target
-                );
-            }
+            return Get(Ast.CodeContext(), binder, resultType, name, target);
+        }
+
+        public static Expression/*!*/ Get(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
+            return Ast.ActionExpression(
+                new GetMemberBinder(
+                    binder,
+                    name
+                ),
+                resultType,
+                target,
+                codeContext
+            );
+        }
+
+        public static Expression/*!*/ TryGet(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
+            return Ast.ActionExpression(
+                new GetMemberBinder(
+                    binder,
+                    name,
+                    true
+                ),
+                resultType,
+                target,
+                codeContext
+            );
         }
 
         public static Expression/*!*/ TryGet(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new GetMemberBinder(
-                        binder,
-                        name,
-                        true
-                    ),
-                    resultType,
-                    target
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldGetMemberAction.Make(
-                        binder.Binder,
-                        name,
-                        GetMemberBindingFlags.NoThrow
-                    ),
-                    resultType,
-                    Ast.CodeContext(),
-                    target
-                );
-            }
+            return TryGet(Ast.CodeContext(), binder, resultType, name, target);
         }
 
-        public static Expression/*!*/ Delete(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            if (UseNewSites) {
-                return Ast.ActionExpression(
-                    new DeleteMemberBinder(
-                        binder,
-                        name
-                    ),
-                    resultType,
-                    target
-                );
-            } else {
-                return Ast.ActionExpression(
-                    OldDeleteMemberAction.Make(
-                        binder.Binder,
-                        name
-                    ),                    
-                    resultType,
-                    Ast.CodeContext(),
-                    target
-                );
-            }
+        public static Expression/*!*/ Delete(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {        
+            return Ast.ActionExpression(
+                new DeleteMemberBinder(
+                    binder,
+                    name
+                ),
+                resultType,
+                target
+            );
         }
 
         public static MetaAction/*!*/ BinaryOperationRetBool(BinderState/*!*/ state, string operatorName) {
+            return BinaryOperationRetType(state, operatorName, typeof(bool));
+        }
+
+        public static MetaAction/*!*/ BinaryOperationRetType(BinderState/*!*/ state, string operatorName, Type retType) {
             return new ComboBinder(
                 new BinderMappingInfo(
                     new OperationBinder(
@@ -253,7 +148,29 @@ namespace IronPython.Runtime.Binding {
                     ParameterMappingInfo.Parameter(1)
                 ),
                 new BinderMappingInfo(
-                    new ConversionBinder(state, typeof(bool), ConversionResultKind.ExplicitCast),
+                    new ConversionBinder(state, retType, ConversionResultKind.ExplicitCast),
+                    ParameterMappingInfo.Action(0)
+                )
+            );
+        }
+
+        public static MetaAction/*!*/ InvokeAndConvert(BinderState/*!*/ state, int argCount, Type retType) {
+            // +2 for the target object and CodeContext which InvokeBinder recevies
+            ParameterMappingInfo[] args = new ParameterMappingInfo[argCount + 2];   
+            for (int i = 0; i < argCount + 2; i++) {
+                args[i] = ParameterMappingInfo.Parameter(i);
+            }
+
+            return new ComboBinder(
+                new BinderMappingInfo(
+                    new InvokeBinder(
+                        state,
+                        new CallSignature(argCount)
+                    ),
+                    args
+                ),
+                new BinderMappingInfo(
+                    new ConversionBinder(state, retType, ConversionResultKind.ExplicitCast),
                     ParameterMappingInfo.Action(0)
                 )
             );

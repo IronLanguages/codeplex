@@ -23,15 +23,15 @@ namespace SbsTest {
         //def f2(arg0, arg1, arg2=6, arg3=7): print "same##", arg0, arg1, arg2, arg3 
         //def f3(arg0, arg1, arg2, *arg3): print "same##", arg0, arg1, arg2, arg3 
 
-        public void M1(int arg0, int arg1, int arg2, int arg3) {
-            Console.WriteLine("same## {0} {1} {2} {3}", arg0, arg1, arg2, arg3);
+        public string M1(int arg0, int arg1, int arg2, int arg3) {
+            return String.Format("same## {0} {1} {2} {3}", arg0, arg1, arg2, arg3);
         }
 
-        public void M2(int arg0, int arg1, [DefaultParameterValue(6)]int arg2, [DefaultParameterValue(7)]int arg3) {
-            Console.WriteLine("same## {0} {1} {2} {3}", arg0, arg1, arg2, arg3);
+        public string M2(int arg0, int arg1, [DefaultParameterValue(6)]int arg2, [DefaultParameterValue(7)]int arg3) {
+            return String.Format("same## {0} {1} {2} {3}", arg0, arg1, arg2, arg3);
         }
 
-        public void M3(int arg0, int arg1, int arg2, params int[] arg3) {
+        public string M3(int arg0, int arg1, int arg2, params int[] arg3) {
             StringBuilder buf = new StringBuilder();
             buf.Append("(");
             for (int i = 0; i < arg3.Length; i++) {
@@ -41,7 +41,7 @@ namespace SbsTest {
             if (arg3.Length == 1) buf.Append(",");
             buf.Append(")");
 
-            Console.WriteLine("same## {0} {1} {2} ({3})", arg0, arg1, arg2, buf);
+            return String.Format("same## {0} {1} {2} {3}", arg0, arg1, arg2, buf);
         }
     }
 }

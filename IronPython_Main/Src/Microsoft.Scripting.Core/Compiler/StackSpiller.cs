@@ -355,7 +355,7 @@ namespace System.Linq.Expressions {
                 return cr.Finish(
                     new AssignmentExpression(
                         node.Annotations,
-                        new MemberExpression(lvalue.Annotations, lvalue.Member, cr[0], lvalue.Type, lvalue.BindingInfo as OldMemberAction),
+                        new MemberExpression(cr[0], lvalue.Member, lvalue.Annotations, lvalue.Type, lvalue.CanRead, lvalue.CanWrite, lvalue.BindingInfo),
                         cr[1],
                         node.Type,
                         node.BindingInfo as OldSetMemberAction
@@ -372,7 +372,7 @@ namespace System.Linq.Expressions {
             // Expression is emitted on top of the stack in current state
             Result expression = RewriteExpression(self, node.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = new MemberExpression(node.Annotations, node.Member, expression.Node, node.Type, node.BindingInfo as OldGetMemberAction);
+                expr = new MemberExpression(expression.Node, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite, node.BindingInfo);
             }
             return new Result(expression.Action, expr);
         }

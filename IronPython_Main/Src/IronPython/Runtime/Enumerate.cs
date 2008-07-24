@@ -135,14 +135,16 @@ namespace IronPython.Runtime {
     public sealed class SentinelIterator : IEnumerator, IEnumerator<object> {
         private readonly object _target;
         private readonly object _sentinel;
+        private readonly CodeContext/*!*/ _context;
         private object _current;
         private bool _sinkState;
 
-        public SentinelIterator(object target, object sentinel) {
-            this._target = target;
-            this._sentinel = sentinel;
-            this._current = null;
-            this._sinkState = false;
+        public SentinelIterator(CodeContext/*!*/ context, object target, object sentinel) {
+            _target = target;
+            _sentinel = sentinel;
+            _current = null;
+            _sinkState = false;
+            _context = context;
         }
 
         public object __iter__() {
@@ -176,7 +178,7 @@ namespace IronPython.Runtime {
 
             _current = PythonCalls.Call(_target);
 
-            bool hit = PythonOps.EqualRetBool(_sentinel, _current);
+            bool hit = PythonOps.EqualRetBool(_context, _sentinel, _current);
             if (hit) _sinkState = true;
 
             return !hit;

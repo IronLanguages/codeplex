@@ -14,10 +14,18 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -42,13 +50,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return AstUtils.Operator(
-                ag.Binder,
-                GetOperator,
+            return Binders.Operation(
+                ag.BinderState,
                 type,
-                GetActionArgumentsForGetOrDelete(ag)
+                GetOperatorString,
+                ArrayUtils.RemoveFirst(GetActionArgumentsForGetOrDelete(ag))
             );
-
         }
 
         private MSAst.Expression[] GetActionArgumentsForGetOrDelete(AstGenerator ag) {
@@ -94,39 +101,40 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op != Operators.None) {
-                right = AstUtils.Operator(
-                    ag.Binder,
-                    op,
+                right = Binders.Operation(
+                    ag.BinderState,
                     typeof(object),
-                    Ast.CodeContext(),
-                    AstUtils.Operator(
-                        ag.Binder,
-                        GetOperator,
+                    StandardOperators.FromOperator(op),
+                    Binders.Operation(
+                        ag.BinderState,
                         typeof(object),
-                        GetActionArgumentsForGetOrDelete(ag)
+                        GetOperatorString,
+                        ArrayUtils.RemoveFirst(GetActionArgumentsForGetOrDelete(ag))
                     ),
                     right
-                );
+                );                
             }
-
+            
             return AstUtils.Block(
                 Span,
-                AstUtils.Operator(
-                    ag.Binder,
-                    SetOperator,
+                Binders.Operation(
+                    ag.BinderState,
                     typeof(object),
-                    GetActionArgumentsForSet(ag, right)
+                    SetOperatorString,
+                    ArrayUtils.RemoveFirst(GetActionArgumentsForSet(ag, right))
                 )
             );
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return AstUtils.Operator(
-                Span,
-                ag.Binder,
-                DeleteOperator,
-                typeof(object),
-                GetActionArgumentsForGetOrDelete(ag)
+            return AstUtils.Block(
+                Span, 
+                Binders.Operation(
+                    ag.BinderState,
+                    typeof(object),
+                    DeleteOperatorString,
+                    ArrayUtils.RemoveFirst(GetActionArgumentsForGetOrDelete(ag))
+                )
             );
         }
 
@@ -142,33 +150,33 @@ namespace IronPython.Compiler.Ast {
             walker.PostWalk(this);
         }
 
-        private Operators GetOperator {
+        private string GetOperatorString {
             get {
                 if (_index is SliceExpression) {
-                    return Operators.GetSlice;
+                    return StandardOperators.GetSlice;
                 }
 
-                return Operators.GetItem;
+                return StandardOperators.GetItem;
             }
         }
 
-        private Operators SetOperator {
+        private string SetOperatorString {
             get {
                 if (_index is SliceExpression) {
-                    return Operators.SetSlice;
+                    return StandardOperators.SetSlice;
                 }
 
-                return Operators.SetItem;
+                return StandardOperators.SetItem;
             }
         }
 
-        private Operators DeleteOperator {
+        private string DeleteOperatorString {
             get {
                 if (_index is SliceExpression) {
-                    return Operators.DeleteSlice;
+                    return StandardOperators.DeleteSlice;
                 }
 
-                return Operators.DeleteItem;
+                return StandardOperators.DeleteItem;
             }
         }
     }

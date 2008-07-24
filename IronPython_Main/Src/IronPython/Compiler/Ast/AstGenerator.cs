@@ -21,26 +21,33 @@ using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Compilers;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = System.Linq.Expressions.Expression;
+    using System.Linq.Expressions;
+    using Microsoft.Scripting.Actions;
 
     internal class AstGenerator {
-        private readonly LambdaBuilder _block;                 // the DLR lambda that we are building
-        private List<MSAst.VariableExpression> _temps;               // temporary variables allocated against the lambda so we can re-use them
-        private readonly CompilerContext _context;                   // compiler context (source unit, etc...) that we are compiling against
-        private readonly bool _print;                                // true if we should print expression statements
-        private readonly Stack<MSAst.LabelTarget> _loopStack;        // the current stack of loops labels for break/continue
-        private MSAst.VariableExpression _lineNoVar, _lineNoUpdated; // the variable used for storing current line # and if we need to store to it
-        private int? _curLine;                                       // tracks what the current line we've emitted at code-gen time
-        private readonly bool _generator;                            // true if we're transforming for a generator functino
-        private MSAst.ParameterExpression _generatorParameter;       // the extra parameter receiving the instance of PythonGenerator
+        private readonly LambdaBuilder/*!*/ _block;                     // the DLR lambda that we are building
+        private readonly CompilerContext/*!*/ _context;                 // compiler context (source unit, etc...) that we are compiling against
+        private readonly Stack<MSAst.LabelTarget/*!*/>/*!*/ _loopStack; // the current stack of loops labels for break/continue
+        private readonly bool _print;                                   // true if we should print expression statements
+        private readonly bool _generator;                               // true if we're transforming for a generator functino
+        private int? _curLine;                                          // tracks what the current line we've emitted at code-gen time
+        private MSAst.VariableExpression _lineNoVar, _lineNoUpdated;    // the variable used for storing current line # and if we need to store to it
+        private List<MSAst.VariableExpression/*!*/> _temps;             // temporary variables allocated against the lambda so we can re-use them
+        private MSAst.ParameterExpression _generatorParameter;          // the extra parameter receiving the instance of PythonGenerator
+        private readonly BinderState/*!*/ _binderState;                 // the state stored for the binder
 
         private AstGenerator(MSAst.Annotations annotations, string name, bool generator, bool print) {
             _loopStack = new Stack<MSAst.LabelTarget>();
@@ -50,16 +57,18 @@ namespace IronPython.Compiler.Ast {
             _block = AstUtils.Lambda(typeof(object), name, annotations);
         }
 
-        internal AstGenerator(AstGenerator parent, MSAst.Annotations annotations, string name, bool generator, bool print)
-            : this(annotations, name, generator, print) {
+        internal AstGenerator(AstGenerator/*!*/ parent, MSAst.Annotations annotations, string name, bool generator, bool print)
+            : this(annotations, name, generator, false) {
             Assert.NotNull(parent);
             _context = parent.Context;
+            _binderState = parent.BinderState;
         }
 
-        internal AstGenerator(CompilerContext context, MSAst.Annotations annotations, string name, bool generator, bool print)
+        internal AstGenerator(CompilerContext/*!*/ context, MSAst.Annotations annotations, string name, bool generator, bool print)
             : this(annotations, name, generator, print) {
             Assert.NotNull(context);
             _context = context;
+            _binderState = new BinderState(Binder);
         }
 
         public bool Optimize {
@@ -86,16 +95,20 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        public LambdaBuilder Block {
+        public LambdaBuilder/*!*/ Block {
             get { return _block; }
         }
 
-        public CompilerContext Context {
+        public CompilerContext/*!*/ Context {
             get { return _context; }
         }
 
-        public ActionBinder Binder {
-            get { return _context.SourceUnit.LanguageContext.Binder; }
+        public PythonBinder/*!*/ Binder {
+            get { return (PythonBinder)_context.SourceUnit.LanguageContext.Binder; }
+        }
+
+        public BinderState/*!*/ BinderState {
+            get { return _binderState; }
         }
 
         public bool PrintExpressions {
@@ -110,7 +123,7 @@ namespace IronPython.Compiler.Ast {
             get { return _generatorParameter; }
         }
 
-        public MSAst.LabelTarget EnterLoop() {
+        public MSAst.LabelTarget/*!*/ EnterLoop() {
             MSAst.LabelTarget label = Ast.Label();
             _loopStack.Push(label);
             return label;
@@ -124,7 +137,7 @@ namespace IronPython.Compiler.Ast {
             get { return _loopStack.Count > 0; }
         }
 
-        public MSAst.LabelTarget LoopLabel {
+        public MSAst.LabelTarget/*!*/ LoopLabel {
             get { return _loopStack.Peek(); }
         }
 
@@ -133,7 +146,11 @@ namespace IronPython.Compiler.Ast {
             _context.Errors.Add(_context.SourceUnit, message, span, -1, Severity.Error);
         }
 
-        public MSAst.VariableExpression MakeTemp(SymbolId name, Type type) {
+        public MSAst.VariableExpression/*!*/ GetTemporary(string name) {
+            return GetTemporary(name, typeof(object));
+        }
+
+        public MSAst.VariableExpression/*!*/ GetTemporary(string name, Type type) {
             if (_temps != null) {
                 foreach (MSAst.VariableExpression temp in _temps) {
                     if (temp.Type == type) {
@@ -142,38 +159,29 @@ namespace IronPython.Compiler.Ast {
                     }
                 }
             }
-            return _block.HiddenVariable(type, SymbolTable.IdToString(name));
+            return _block.HiddenVariable(type, name);
         }
 
-
-        public MSAst.VariableExpression MakeTempExpression(string name) {
-            return MakeTempExpression(name, typeof(object));
-        }
-
-        public MSAst.VariableExpression MakeTempExpression(string name, Type type) {
-            return MakeTemp(SymbolTable.StringToId(name), type);
-        }
-
-        public void FreeTemp(MSAst.VariableExpression temp) {
+        public void FreeTemp(MSAst.VariableExpression/*!*/ temp) {
             if (IsGenerator) {
                 return;
             }
 
             if (_temps == null) {
-                _temps = new List<MSAst.VariableExpression>();
+                _temps = new List<MSAst.VariableExpression/*!*/>();
             }
             _temps.Add(temp);
         }
 
-        internal static MSAst.Expression MakeAssignment(MSAst.VariableExpression variable, MSAst.Expression right) {
+        internal static MSAst.Expression/*!*/ MakeAssignment(MSAst.VariableExpression/*!*/ variable, MSAst.Expression/*!*/ right) {
             return MakeAssignment(variable, right, SourceSpan.None);
         }
 
-        internal static MSAst.Expression MakeAssignment(MSAst.VariableExpression variable, MSAst.Expression right, SourceSpan span) {
+        internal static MSAst.Expression/*!*/ MakeAssignment(MSAst.VariableExpression/*!*/ variable, MSAst.Expression/*!*/ right, SourceSpan span) {
             return AstUtils.Assign(variable, Ast.Convert(right, variable.Type), span);
         }
 
-        internal static MSAst.Expression ConvertIfNeeded(MSAst.Expression expression, Type type) {
+        internal static MSAst.Expression/*!*/ ConvertIfNeeded(MSAst.Expression/*!*/ expression, Type/*!*/ type) {
             Debug.Assert(expression != null);
             // Do we need conversion?
             if (!CanAssign(type, expression.Type)) {
@@ -183,21 +191,54 @@ namespace IronPython.Compiler.Ast {
             return expression;
         }
 
-        internal MSAst.Expression DynamicConvertIfNeeded(MSAst.Expression expression, Type type) {
+        internal MSAst.Expression/*!*/ DynamicConvertIfNeeded(MSAst.Expression/*!*/ expression, Type/*!*/ type) {
             Debug.Assert(expression != null);
             // Do we need conversion?
             if (!CanAssign(type, expression.Type)) {
                 // Add conversion step to the AST
-                expression = AstUtils.ConvertTo(Binder, type, ConversionResultKind.ExplicitCast, Ast.CodeContext(), expression);
+                /*ActionExpression ae = expression as ActionExpression;
+                if (ae != null) {
+                    // create a combo site which does the conversion
+                    ParameterMappingInfo[] infos = new ParameterMappingInfo[ae.Arguments.Count];
+                    for (int i = 0; i<infos.Length; i++) {
+                        infos[i] = ParameterMappingInfo.Parameter(i);
+                    }
+
+                    expression = Ast.ActionExpression(
+                        new ComboBinder(
+                            new BinderMappingInfo(
+                                (MetaAction)ae.BindingInfo,
+                                infos
+                            ),
+                            new BinderMappingInfo(
+                                new ConversionBinder(
+                                    BinderState,
+                                    type,
+                                    ConversionResultKind.ExplicitCast
+                                ),
+                                ParameterMappingInfo.Action(0)
+                            )
+                        ),
+                        type,
+                        ae.Arguments
+                    );
+                } else*/ {
+                    expression = Binders.Convert(
+                        BinderState,
+                        type,
+                        ConversionResultKind.ExplicitCast,
+                        expression
+                    );
+                }
             }
             return expression;
         }
 
-        internal static bool CanAssign(Type to, Type from) {
+        internal static bool CanAssign(Type/*!*/ to, Type/*!*/ from) {
             return to.IsAssignableFrom(from) && (to.IsValueType == from.IsValueType);
         }
 
-        public string GetDocumentation(Statement stmt) {
+        public string GetDocumentation(Statement/*!*/ stmt) {
             if (StripDocStrings) {
                 return null;
             }
@@ -210,7 +251,7 @@ namespace IronPython.Compiler.Ast {
         /// <summary>
         /// A temporary variable to track the current line number
         /// </summary>
-        internal MSAst.VariableExpression LineNumberExpression {
+        internal MSAst.VariableExpression/*!*/ LineNumberExpression {
             get {
                 if (_lineNoVar == null) {
                     _lineNoVar = _block.HiddenVariable(typeof(int), "$lineNo");
@@ -236,7 +277,7 @@ namespace IronPython.Compiler.Ast {
         /// 
         /// We also sometimes directly check _lineNoUpdated to avoid creating this unless we have nested exceptions.
         /// </summary>
-        internal MSAst.VariableExpression LineNumberUpdated {
+        internal MSAst.VariableExpression/*!*/ LineNumberUpdated {
             get {
                 if (_lineNoUpdated == null) {
                     _lineNoUpdated = _block.HiddenVariable(typeof(bool), "$lineUpdated");
@@ -250,7 +291,7 @@ namespace IronPython.Compiler.Ast {
         /// Wraps the body of a statement which should result in a frame being available during
         /// exception handling.  This ensures the line number is updated as the stack is unwound.
         /// </summary>
-        internal MSAst.Expression WrapScopeStatements(MSAst.Expression body) {
+        internal MSAst.Expression/*!*/ WrapScopeStatements(MSAst.Expression/*!*/ body) {
             if (_lineNoVar == null) {
                 // we have nothing that can throw, so don't emit the fault block at all
                 return body;
@@ -320,7 +361,7 @@ namespace IronPython.Compiler.Ast {
             return Transform(from, typeof(object));
         }
 
-        public MSAst.Expression Transform(Expression from, Type type) {
+        public MSAst.Expression Transform(Expression from, Type/*!*/ type) {
             if (from != null) {
                 return from.Transform(this, type);
             }
@@ -331,7 +372,7 @@ namespace IronPython.Compiler.Ast {
             return TransformAndConvert(from, typeof(object));
         }
 
-        public MSAst.Expression TransformAndConvert(Expression from, Type type) {
+        public MSAst.Expression TransformAndConvert(Expression from, Type/*!*/ type) {
             if (from != null) {
                 MSAst.Expression transformed = from.Transform(this, type);
                 transformed = ConvertIfNeeded(transformed, type);
@@ -340,7 +381,7 @@ namespace IronPython.Compiler.Ast {
             return null;
         }
 
-        internal MSAst.Expression TransformOrConstantNull(Expression expression, Type type) {
+        internal MSAst.Expression TransformOrConstantNull(Expression expression, Type/*!*/ type) {
             if (expression == null) {
                 return Ast.Null(type);
             } else {
@@ -348,9 +389,9 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        public MSAst.Expression TransformAndDynamicConvert(Expression from, Type type) {
+        public MSAst.Expression TransformAndDynamicConvert(Expression from, Type/*!*/ type) {
             if (from != null) {
-                MSAst.Expression transformed = from.Transform(this, type);
+                MSAst.Expression transformed = from.Transform(this, typeof(object));
                 transformed = DynamicConvertIfNeeded(transformed, type);
                 return transformed;
             }
@@ -369,7 +410,7 @@ namespace IronPython.Compiler.Ast {
             return Transform(expressions, typeof(object));
         }
 
-        internal MSAst.Expression[] Transform(Expression[] expressions, Type type) {
+        internal MSAst.Expression[] Transform(Expression[] expressions, Type/*!*/ type) {
             Debug.Assert(expressions != null);
             MSAst.Expression[] to = new MSAst.Expression[expressions.Length];
             for (int i = 0; i < expressions.Length; i++) {
@@ -379,7 +420,7 @@ namespace IronPython.Compiler.Ast {
             return to;
         }
 
-        internal MSAst.Expression[] TransformAndConvert(Expression[] expressions, Type type) {
+        internal MSAst.Expression[] TransformAndConvert(Expression[] expressions, Type/*!*/ type) {
             Debug.Assert(expressions != null);
             MSAst.Expression[] to = new MSAst.Expression[expressions.Length];
             for (int i = 0; i < expressions.Length; i++) {
@@ -389,7 +430,7 @@ namespace IronPython.Compiler.Ast {
             return to;
         }
 
-        internal MSAst.Expression[] Transform(Statement[] from) {
+        internal MSAst.Expression[] Transform(Statement/*!*/[]/*!*/ from) {
             Debug.Assert(from != null);
             MSAst.Expression[] to = new MSAst.Expression[from.Length];
 
@@ -401,7 +442,7 @@ namespace IronPython.Compiler.Ast {
             return to;
         }
 
-        private MSAst.Expression TransformWithLineNumberUpdate(Statement fromStmt) {
+        private MSAst.Expression TransformWithLineNumberUpdate(Statement/*!*/ fromStmt) {
             // add line number tracking when the line changes...  First we see if the
             // line number changes and then we transform the body.  This prevents the body
             // from updating the line info first.
@@ -437,7 +478,7 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         /// <param name="name">Method name to find.</param>
         /// <returns></returns>
-        internal static MethodInfo GetHelperMethod(string name) {
+        internal static MethodInfo GetHelperMethod(string/*!*/ name) {
             MethodInfo mi = typeof(PythonOps).GetMethod(name);
             Debug.Assert(mi != null, "Missing Python helper: " + name);
             return mi;
@@ -449,7 +490,7 @@ namespace IronPython.Compiler.Ast {
         /// <param name="name">Name of the method to return</param>
         /// <param name="types">Parameter types</param>
         /// <returns></returns>
-        internal static MethodInfo GetHelperMethod(string name, params Type[] types) {
+        internal static MethodInfo GetHelperMethod(string/*!*/ name, params Type/*!*/[]/*!*/ types) {
             MethodInfo mi = typeof(PythonOps).GetMethod(name, types);
 #if DEBUG
             if (mi == null) {

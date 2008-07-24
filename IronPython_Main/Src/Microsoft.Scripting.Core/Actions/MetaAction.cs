@@ -49,7 +49,7 @@ namespace System.Scripting.Actions {
                 if (ido != null) {
                     mos[i] = ido.GetMetaObject(expressions[i]);
 #if !SILVERLIGHT
-                } else if (ComMetaObject.IsGenericComObject(arg)) {
+                } else if (ComMetaObject.IsComObject(arg)) {
                     mos[i] = ComMetaObject.GetComMetaObject(expressions[i], arg);
 #endif
                 } else {
@@ -102,6 +102,25 @@ namespace System.Scripting.Actions {
                     );
                 case ExpressionType.ThrowStatement:
                     return body;
+                case ExpressionType.Block:
+                    // block could have a throw which we need to run through to avoid 
+                    // trying to convert it
+                    Block block = (Block)body;
+                    if (block.Expressions.Count > 0) {
+                        Expression[] nodes = new Expression[block.Expressions.Count];
+                        for (int i = 0; i < nodes.Length - 1; i++) {
+                            nodes[i] = block.Expressions[i];
+                        }
+                        nodes[nodes.Length - 1] = AddReturn(block.Expressions[block.Expressions.Count - 1], retType);
+
+                        if (block.Type == typeof(void)) {
+                            return Expression.Block(nodes);
+                        } else {
+                            return Expression.Comma(nodes);
+                        }
+                    }
+
+                    goto default;                    
                 default:
                     return Expression.Return(Expression.ConvertHelper(body, retType));
             }

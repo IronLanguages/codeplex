@@ -22,6 +22,7 @@ using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
@@ -243,7 +244,7 @@ namespace IronPython.Runtime {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
 
-            PythonOps.Hash(value);    // make sure we have a hashable item
+            PythonOps.Hash(DefaultContext.Default, value);    // make sure we have a hashable item
             return items.__contains__(value);
         }
 
@@ -349,7 +350,7 @@ namespace IronPython.Runtime {
         }
 
         public void add(object o) {
-            PythonOps.Hash(o);// make sure we're hashable
+            PythonOps.Hash(DefaultContext.Default, o);// make sure we're hashable
             if (!items.__contains__(o)) {
                 items[o] = o;
             }
@@ -383,7 +384,7 @@ namespace IronPython.Runtime {
         public void remove(object o) {
             o = SetHelpers.GetHashableSetIfSet(o);
 
-            PythonOps.Hash(o);
+            PythonOps.Hash(DefaultContext.Default, o);
             if (!items.__contains__(o)) throw PythonOps.KeyError(o);
 
             items.__delitem__(o);
@@ -737,7 +738,7 @@ namespace IronPython.Runtime {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
 
-            PythonOps.Hash(value);// make sure we have a hashable item
+            PythonOps.Hash(DefaultContext.Default, value);// make sure we have a hashable item
             return items.__contains__(value);
         }
 
@@ -766,14 +767,14 @@ namespace IronPython.Runtime {
         }
 
         void ISet.PrivAdd(object adding) {
-            PythonOps.Hash(adding);// make sure we're hashable
+            PythonOps.Hash(DefaultContext.Default, adding);// make sure we're hashable
             if (!items.__contains__(adding)) {
                 items[adding] = adding;
             }
         }
 
         void ISet.PrivRemove(object removing) {
-            PythonOps.Hash(removing);// make sure we're hashable
+            PythonOps.Hash(DefaultContext.Default, removing);// make sure we're hashable
             items.__delitem__(removing);
         }
 
@@ -912,7 +913,7 @@ namespace IronPython.Runtime {
 
             int i = 0;
             foreach (object o in items.keys()) {
-                hash_codes[i++] = PythonOps.Hash(o);
+                hash_codes[i++] = PythonOps.Hash(DefaultContext.Default, o);
             }
 
             Array.Sort(hash_codes);

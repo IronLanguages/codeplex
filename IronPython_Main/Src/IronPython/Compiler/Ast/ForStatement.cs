@@ -16,6 +16,9 @@
 using System.Collections;
 using System.Scripting;
 using System.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -60,7 +63,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // Temporary variable for the IEnumerator object
-            MSAst.VariableExpression enumerator = ag.MakeTemp(SymbolTable.StringToId("foreach_enumerator"), typeof(IEnumerator));
+            MSAst.VariableExpression enumerator = ag.GetTemporary("foreach_enumerator", typeof(IEnumerator));
 
             // Only the body is "in the loop" for the purposes of break/continue
             // The "else" clause is outside
@@ -101,6 +104,7 @@ namespace IronPython.Compiler.Ast {
                 enumerator, 
                 Ast.Call(
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
+                    Ast.CodeContext(),
                     ag.TransformAsObject(list)
                 ), 
                 list.Span

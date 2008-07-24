@@ -29,7 +29,7 @@ namespace IronPython.Runtime.Types {
         public abstract PythonTypeSlot/*!*/ GetSlot();
 
         public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
-            return Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot));
+            return Ast.Constant(GetSlot(), typeof(PythonTypeSlot));
         }
 
         public override MemberTracker BindToInstance(Expression instance) {
@@ -44,12 +44,12 @@ namespace IronPython.Runtime.Types {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotGetValue"),
                 context,
-                Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot)),
+                Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
                 Ast.ConvertHelper(
                     instance,
                     typeof(object)
                 ),
-                Ast.RuntimeConstant(DynamicHelpers.GetPythonTypeFromType(type))
+                Ast.Constant(DynamicHelpers.GetPythonTypeFromType(type))
             );
         }
         
@@ -57,12 +57,12 @@ namespace IronPython.Runtime.Types {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotSetValue"),
                 context,
-                Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot)),
+                Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
                 Ast.ConvertHelper(
                     instance,
                     typeof(object)
                 ),
-                Ast.RuntimeConstant(DynamicHelpers.GetPythonTypeFromType(type)),
+                Ast.Constant(DynamicHelpers.GetPythonTypeFromType(type)),
                 value
             );
         }
@@ -71,9 +71,9 @@ namespace IronPython.Runtime.Types {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotGetValue"),
                 builder.Context,
-                Ast.RuntimeConstant(GetSlot(), typeof(PythonTypeSlot)),
+                Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
                 Ast.Null(),
-                Ast.RuntimeConstant(accessing)
+                Ast.Constant(accessing)
             );
         }
 

@@ -16,19 +16,22 @@
 using System;
 using System.Scripting;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     using Ast = System.Linq.Expressions.Expression;
 
     [PythonSystemType("method_descriptor")]
-    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, ICodeFormattable {
+    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable {
         internal readonly BuiltinFunction/*!*/ _template;
 
         internal BuiltinMethodDescriptor(BuiltinFunction/*!*/ function) {
@@ -49,6 +52,12 @@ namespace IronPython.Runtime.Types {
             }
             value = this;
             return true;
+        }
+
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
         }
 
         internal override bool TryGetBoundValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -149,7 +158,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public object __call__(CodeContext context, SiteLocalStorage<DynamicSite<object, object[], IAttributesCollection, object>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+        public object __call__(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
             return _template.__call__(context, storage, dictArgs, args);
         }
 
@@ -157,6 +166,19 @@ namespace IronPython.Runtime.Types {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(_template.DeclaringType);
             }
+        }
+
+        public int __cmp__(object other) {
+            BuiltinMethodDescriptor bmd = other as BuiltinMethodDescriptor;
+            if (bmd == null) {
+                throw PythonOps.TypeError("instancemethod.__cmp__(x,y) requires y to be a 'instancemethod', not a {0}", PythonTypeOps.GetName(other));
+            }
+
+            long result = PythonOps.Id(__objclass__) - PythonOps.Id(bmd.__objclass__);
+            if (result != 0) {
+                return (result > 0) ? 1 : -1;
+            }
+            return (int)StringOps.__cmp__(__name__, bmd.__name__);
         }
 
         #endregion
@@ -167,6 +189,14 @@ namespace IronPython.Runtime.Types {
             return String.Format("<method {0} of {1} objects>",
                 PythonOps.StringRepr(Template.Name),
                 PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name));
+        }
+
+        #endregion
+
+        #region IDynamicObject Members
+
+        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaBuiltinMethodDescriptor(parameter, Restrictions.Empty, this);
         }
 
         #endregion

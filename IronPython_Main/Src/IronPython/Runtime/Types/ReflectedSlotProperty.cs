@@ -51,6 +51,12 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        internal override bool GetAlwaysSucceeds {
+            get {
+                return true;
+            }
+        }
+
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
             if (instance != null) {
                 Setter(instance, value);
@@ -62,6 +68,10 @@ namespace IronPython.Runtime.Types {
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             return TrySetValue(context, instance, owner, Uninitialized.Instance);
+        }
+
+        internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
+            return true;
         }
 
         #region ICodeFormattable Members

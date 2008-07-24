@@ -25,6 +25,7 @@ using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using System.Security;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("sys", typeof(IronPython.Runtime.SysModule))]
 namespace IronPython.Runtime {
@@ -47,12 +48,25 @@ namespace IronPython.Runtime {
 #endif
         }
 
-        public static void displayhook(object value) {
-            throw PythonOps.NotImplementedError("IronPython does not support sys.displayhook");
+        /// <summary>
+        /// Handles output of the expression statement.
+        /// Prints the value and sets the __builtin__._
+        /// </summary>
+        public static void displayhook  (CodeContext/*!*/ context, object value) {
+            if (value != null) {
+                PythonOps.Print(context, PythonOps.StringRepr(value));
+                ScopeOps.SetMember(context, PythonContext.GetContext(context).BuiltinModuleInstance, "_", value);
+            }
         }
 
-        public static void excepthook(object exctype, object value, object traceback) {
-            throw PythonOps.NotImplementedError("IronPython does not support sys.displayhook");
+        public static void excepthook(CodeContext/*!*/ context, object exctype, object value, object traceback) {
+            PythonContext pc = PythonContext.GetContext(context);
+
+            PythonOps.PrintWithDest(
+                context,
+                pc.SystemStandardError,
+                pc.FormatException(PythonExceptions.ToClr(value))
+            );
         }
 
         public static int getcheckinterval() {
@@ -102,13 +116,16 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        public static object _getframe() {
-            throw PythonOps.ValueError("_getframe is not implemented");
+        public static TraceBackFrame/*!*/ _getframe(CodeContext/*!*/ context) {
+            return new TraceBackFrame(Builtin.globals(context), Builtin.locals(context), null);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "depth")]
-        public static object _getframe(int depth) {
-            throw PythonOps.ValueError("_getframe is not implemented");
+        public static TraceBackFrame/*!*/ _getframe(CodeContext/*!*/ context, int depth) {
+            if (depth == 0) {
+                return _getframe(context);
+            }
+
+            throw PythonOps.ValueError("_getframe is not implemented for non-zero depth");
         }
 
         // hex_version is set by PythonContext

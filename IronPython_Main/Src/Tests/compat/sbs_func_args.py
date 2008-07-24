@@ -16,22 +16,22 @@
 from common import *
 import sys
 
-def f1(arg0, arg1, arg2, arg3): print "same##", arg0, arg1, arg2, arg3
-def f2(arg0, arg1, arg2=6, arg3=7): print "same##", arg0, arg1, arg2, arg3 
-def f3(arg0, arg1, arg2, *arg3): print "same##", arg0, arg1, arg2, arg3 
+def f1(arg0, arg1, arg2, arg3): return "same## %s %s %s %s" % (arg0, arg1, arg2, arg3)
+def f2(arg0, arg1, arg2=6, arg3=7): return "same## %s %s %s %s" % (arg0, arg1, arg2, arg3)
+def f3(arg0, arg1, arg2, *arg3): return "same## %s %s %s %s" % (arg0, arg1, arg2, arg3)
 
 if is_cli: 
     import clr
     clr.AddReference("sbs_library")
     from SbsTest import C
-    o = C
+    o = C()
     g1 = o.M1
     g2 = o.M2
     g3 = o.M3
 else:
     g1 = f1
     g2 = f2
-    g3 = f3    
+    g3 = f3
 
 # combinations
 choices = [(), (0,), (1,), (2,), (3,), (0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3), (0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3), (0, 1, 2, 3) ]
@@ -78,7 +78,8 @@ class func_arg(object):
                         
                         try: 
                             printwith("case", s)
-                            eval(s)
+                            x = eval(s)
+                            print x
                         except: 
                             printwith("same", sys.exc_type)
                             

@@ -40,7 +40,7 @@ namespace System.Linq.Expressions {
 
         protected override Expression VisitExtension(Expression node) {
             if (node.IsReducible) {
-                return VisitNode(Expression.ReduceToKnown(node));
+                return VisitNode(node.ReduceToKnown());
             } else {
                 CodeContextScopeExpression ccse = node as CodeContextScopeExpression;
                 if (ccse != null) {

@@ -18,6 +18,8 @@ using System.Diagnostics;
 using System.Scripting.Runtime;
 using MSAst = System.Linq.Expressions;
 
+using IronPython.Runtime.Binding;
+
 namespace IronPython.Compiler.Ast {
     using Ast = System.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -41,11 +43,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return AstUtils.Operator(
-                ag.Binder,
-                PythonOperatorToAction(_op),
+            return Binders.Operation(
+                ag.BinderState,
                 type,
-                Ast.CodeContext(),
+                PythonOperatorToOperatorString(_op),
                 ag.Transform(_expression)
             );
         }
@@ -73,6 +74,23 @@ namespace IronPython.Compiler.Ast {
                 default:
                     Debug.Assert(false, "Unexpected PythonOperator: " + op.ToString());
                     return Operators.None;
+            }
+        }
+
+        private static string PythonOperatorToOperatorString(PythonOperator op) {
+            switch (op) {
+                // Unary
+                case PythonOperator.Not:
+                    return StandardOperators.Not;
+                case PythonOperator.Pos:
+                    return StandardOperators.Positive;
+                case PythonOperator.Invert:
+                    return StandardOperators.OnesComplement;
+                case PythonOperator.Negate:
+                    return StandardOperators.Negate;
+                default:
+                    Debug.Assert(false, "Unexpected PythonOperator: " + op.ToString());
+                    return StandardOperators.None;
             }
         }
     }

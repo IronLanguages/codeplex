@@ -372,7 +372,7 @@ def test_file_encodings():
     try:
         #positive cases
         for coding in ip_supported_encodings:
-            temp_mod_name = "test_encoding_" + coding.replace("-", "_")
+            temp_mod_name = "test_encoding_" + coding.replace("-", "_").replace(" ", "_")
             f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py",
                     "w")
             f.write("# coding: %s" % (coding))

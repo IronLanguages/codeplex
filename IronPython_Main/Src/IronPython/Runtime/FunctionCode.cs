@@ -16,9 +16,13 @@
 using System;
 using System.Collections.Generic;
 using System.Scripting;
+using System.Scripting.Actions;
 using System.Scripting.Runtime;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Actions;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -39,7 +43,6 @@ namespace IronPython.Runtime {
         private int _lineNo;
         private FunctionAttributes _flags;      // future division, generator
         #endregion
-        private static readonly DynamicSite<PythonFunction, object> _callSite = CallSiteFactory.CreateSimpleCallSite<PythonFunction, object>(DefaultContext.DefaultPythonBinder);
 
         internal FunctionCode(Delegate target) {
             _target = target;            
@@ -196,11 +199,12 @@ namespace IronPython.Runtime {
             _flags = flags;
         }
 
-        internal object Call(Scope/*!*/ scope, bool tryEvaluate) {
+        internal object Call(Scope/*!*/ scope) {
             if (_code != null) {
-                return PythonOps.RunScriptCode(scope, _code, tryEvaluate);
+                return _code.Run(scope);
             } else if (_func != null) {
-                return _callSite.Invoke(DefaultContext.Default, _func);
+                CallSite<DynamicSiteTarget<CodeContext, PythonFunction, object>> site = PythonContext.GetContext(_func.Context).FunctionCallSite;
+                return site.Target(site, DefaultContext.Default, _func);
             }
 
             throw PythonOps.TypeError("bad code");

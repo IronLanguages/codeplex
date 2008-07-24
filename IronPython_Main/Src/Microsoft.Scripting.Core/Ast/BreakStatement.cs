@@ -23,7 +23,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _target;
 
         internal BreakStatement(Annotations annotations, LabelTarget target)
-            : base(annotations, ExpressionType.BreakStatement, typeof(void)) {
+            : base(ExpressionType.BreakStatement, typeof(void), annotations, null) {
             _target = target;
         }
 

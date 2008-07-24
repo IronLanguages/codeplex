@@ -28,7 +28,7 @@ namespace System.Linq.Expressions {
         private readonly ReadOnlyCollection<MemberInfo> _members;
 
         internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, CallSiteBinder bindingInfo)
-            : base(annotations, ExpressionType.New, type, bindingInfo) {
+            : base(ExpressionType.New, type, annotations, bindingInfo) {
             if (IsBound) {
                 RequiresBoundItems(arguments, "arguments");
             }
@@ -231,7 +231,7 @@ namespace System.Linq.Expressions {
                 for (int i = 0, n = arguments.Count; i < n; i++) {
                     Expression arg = arguments[i];
                     ParameterInfo pi = pis[i];
-                    ContractUtils.RequiresNotNull(arg, "arguments");
+                    RequiresCanRead(arg, "arguments");
                     Type pType = pi.ParameterType;
                     if (pType.IsByRef) {
                         pType = pType.GetElementType();
@@ -301,7 +301,7 @@ namespace System.Linq.Expressions {
 
         public static NewExpression New(Type result, CallSiteBinder bindingInfo, IList<Expression> arguments) {
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.RequiresNotNullItems(arguments, "arguments");
+            RequiresCanRead(arguments, "arguments");
             return new NewExpression(Annotations.Empty, result, null, arguments.ToReadOnly(), bindingInfo);
         }
 

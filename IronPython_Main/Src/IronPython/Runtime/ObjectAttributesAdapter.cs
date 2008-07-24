@@ -15,14 +15,18 @@
 
 using System.Collections.Generic;
 using System.Scripting;
+using System.Scripting.Runtime;
+
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     class ObjectAttributesAdapter  : DictionaryStorage {
-        private object _backing;
+        private readonly object _backing;
+        private readonly CodeContext/*!*/ _context;
 
-        public ObjectAttributesAdapter(object backing) {
+        public ObjectAttributesAdapter(CodeContext/*!*/ context, object backing) {
             _backing = backing;
+            _context = context;
         }
 
         internal object Backing {
@@ -128,7 +132,7 @@ namespace IronPython.Runtime {
 
         public override bool TryGetValue(object key, out object value) {
             try {
-                value = PythonOps.GetIndex(_backing, key);
+                value = PythonOps.GetIndex(_context, _backing, key);
                 return true;
             } catch (KeyNotFoundException) {
                 // return false
@@ -142,7 +146,7 @@ namespace IronPython.Runtime {
         }
 
         public override void Clear() {
-            PythonOps.Invoke(_backing, SymbolTable.StringToId("clear"));
+            PythonOps.Invoke(_context, _backing, SymbolTable.StringToId("clear"));
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {
@@ -157,7 +161,7 @@ namespace IronPython.Runtime {
         }
 
         private ICollection<object> Keys {
-            get { return (ICollection<object>)Converter.Convert(PythonOps.Invoke(_backing, Symbols.Keys), typeof(ICollection<object>)); }
+            get { return (ICollection<object>)Converter.Convert(PythonOps.Invoke(_context, _backing, Symbols.Keys), typeof(ICollection<object>)); }
         }
     }
 }

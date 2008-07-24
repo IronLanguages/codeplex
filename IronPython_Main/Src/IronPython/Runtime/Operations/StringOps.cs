@@ -281,7 +281,7 @@ namespace IronPython.Runtime.Operations {
         [StaticExtensionMethod]
         public static object __new__(CodeContext/*!*/ context, PythonType cls, double @object) {
             if (cls == TypeCache.String) {
-                return DoubleOps.__str__(@object);
+                return DoubleOps.__str__(context, @object);
             } else {
                 return cls.CreateInstance(context, @object);
             }
@@ -290,7 +290,7 @@ namespace IronPython.Runtime.Operations {
         [StaticExtensionMethod]
         public static object __new__(CodeContext/*!*/ context, PythonType cls, float @object) {
             if (cls == TypeCache.String) {
-                return SingleOps.__str__(@object);
+                return SingleOps.__str__(context, @object);
             } else {
                 return cls.CreateInstance(context, @object);
             }
@@ -413,10 +413,17 @@ namespace IronPython.Runtime.Operations {
         public static int count(string self, string ssub, int start, int end) {
             if (ssub == null) throw PythonOps.TypeError("expected string for 'sub' argument, got NoneType");
             string v = self;
-            if (v.Length == 0) return 0;
+
+            if (start > self.Length) {
+                return 0;
+            }
 
             start = PythonOps.FixSliceIndex(start, self.Length);
             end = PythonOps.FixSliceIndex(end, self.Length);
+
+            if (ssub.Length == 0) {
+                return Math.Max((end - start) + 1, 0);
+            }
 
             int count = 0;
             while (true) {
@@ -503,13 +510,17 @@ namespace IronPython.Runtime.Operations {
 
         public static int find(string self, string sub, int start) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
-            return self.IndexOf(sub, PythonOps.FixSliceIndex(start, self.Length));
+            if (start > self.Length) return -1;
+            start = PythonOps.FixSliceIndex(start, self.Length);
+            return self.IndexOf(sub, start);
         }
 
         public static int find(string self, string sub, int start, int end) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
+            if (start > self.Length) return -1;
             start = PythonOps.FixSliceIndex(start, self.Length);
             end = PythonOps.FixSliceIndex(end, self.Length);
+            if (end < start) return -1;
 
             return self.IndexOf(sub, start, end - start);
         }
@@ -736,16 +747,30 @@ namespace IronPython.Runtime.Operations {
             return new PythonTuple(obj);
         }
 
-        public static string replace(string self, string old, string new_) {
-            if (old == null) throw PythonOps.TypeError("expected string for 'old' argument, got NoneType");
-            if (old.Length == 0) return ReplaceEmpty(self, new_, self.Length + 1);
-            return self.Replace(old, new_);
+        private static string StringOrBuffer(object input) {
+            string result = (input as string);
+            if (result != null) {
+                return result;
+            }
+            PythonBuffer buffer = (input as PythonBuffer);
+            if (buffer != null) {
+                return buffer.ToString();
+            }
+            throw PythonOps.TypeError("expected a character buffer object");
         }
 
-        public static string replace(string self, string old, string new_, int maxsplit) {
-            if (old == null) throw PythonOps.TypeError("expected string for 'old' argument, got NoneType");
+        public static string replace(string self, object old, object new_) {
+            string oldString = StringOrBuffer(old);
+            string newString = StringOrBuffer(new_);
+            if (oldString.Length == 0) return ReplaceEmpty(self, newString, self.Length + 1);
+            return self.Replace(oldString, newString);
+        }
+
+        public static string replace(string self, object old, object new_, int maxsplit) {
             if (maxsplit == -1) return replace(self, old, new_);
-            if (old.Length == 0) return ReplaceEmpty(self, new_, maxsplit);
+            string oldString = StringOrBuffer(old);
+            string newString = StringOrBuffer(new_);
+            if (oldString.Length == 0) return ReplaceEmpty(self, newString, maxsplit);
 
             string v = self;
             StringBuilder ret = new StringBuilder(v.Length);
@@ -753,10 +778,10 @@ namespace IronPython.Runtime.Operations {
             int index;
             int start = 0;
 
-            while (maxsplit > 0 && (index = v.IndexOf(old, start)) != -1) {
+            while (maxsplit > 0 && (index = v.IndexOf(oldString, start)) != -1) {
                 ret.Append(v.Substring(start, index - start));
-                ret.Append(new_);
-                start = index + old.Length;
+                ret.Append(newString);
+                start = index + oldString.Length;
                 maxsplit--;
             }
             ret.Append(v.Substring(start));
@@ -771,11 +796,13 @@ namespace IronPython.Runtime.Operations {
 
         public static int rfind(string self, string sub, int start) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
+            if (start > self.Length) return -1;
             return rfind(self, sub, start, self.Length);
         }
 
         public static int rfind(string self, string sub, int start, int end) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
+            if (start > self.Length) return -1;
 
             start = PythonOps.FixSliceIndex(start, self.Length);
             end = PythonOps.FixSliceIndex(end, self.Length);
@@ -841,7 +868,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static List rsplit(string self, string sep) {
-            return split(self, sep, -1);
+            return rsplit(self, sep, -1);
         }
 
         public static List rsplit(string self, string sep, int maxsplit) {
@@ -878,7 +905,17 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static List split(string self, string sep, int maxsplit) {
-            if (sep == null) return SplitInternal(self, (char[])null, maxsplit);
+            if (sep == null) {
+                if (maxsplit == 0) {
+                    // Corner case for CPython compatibility
+                    List result = PythonOps.MakeEmptyList(1);
+                    result.AddNoLock(self.TrimStart());
+                    return result;
+                        
+                } else {
+                    return SplitInternal(self, (char[])null, maxsplit);
+                }
+            }
 
             if (sep.Length == 0) {
                 throw PythonOps.ValueError("empty separator");
@@ -1062,21 +1099,21 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
-        public static string Mod(string self, object other) {
-            return new StringFormatter(self, other).Format();
+        public static string Mod(CodeContext/*!*/ context, string self, object other) {
+            return new StringFormatter(context, self, other).Format();
         }
 
         [SpecialName]
         [return: MaybeNotImplemented]
-        public static object Mod(object other, string self) {
+        public static object Mod(CodeContext/*!*/ context, object other, string self) {
             string str = other as string;
             if (str != null) {
-                return new StringFormatter(str, self).Format();
+                return new StringFormatter(context, str, self).Format();
             }
 
             Extensible<string> es = other as Extensible<string>;
             if (es != null) {
-                return new StringFormatter(es.Value, self).Format();
+                return new StringFormatter(context, es.Value, self).Format();
             }
 
             return NotImplementedType.Value;
@@ -1321,6 +1358,9 @@ namespace IronPython.Runtime.Operations {
             StringBuilder ret = new StringBuilder(v.Length * (new_.Length + 1));
             for (int i = 0; i < max; i++) {
                 ret.Append(new_);
+                ret.Append(v[i]);
+            }
+            for (int i = max; i < v.Length; i++) {
                 ret.Append(v[i]);
             }
             if (maxsplit > max) {

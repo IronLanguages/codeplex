@@ -21,9 +21,10 @@ using System.Globalization;
 using System.Scripting;
 using System.Scripting.Runtime;
 using System.Text;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Math;
+
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -32,6 +33,7 @@ namespace IronPython.Runtime {
     internal class StringFormatter {
         const int UnspecifiedPrecision = -1; // Use the default precision
 
+        private readonly CodeContext/*!*/ _context;
         private object _data;
         private int _dataIndex;
 
@@ -66,9 +68,10 @@ namespace IronPython.Runtime {
         }
 
         #region Constructors
-        public StringFormatter(string str, object data) {
-            this._str = str;
-            this._data = data;
+        public StringFormatter(CodeContext/*!*/ context, string str, object data) {
+            _str = str;
+            _data = data;
+            _context = context;
         }
         #endregion
 
@@ -225,7 +228,7 @@ namespace IronPython.Runtime {
             if (_curCh == '*') {
                 if (!(_data is PythonTuple)) { throw PythonOps.TypeError("* requires a tuple for values"); }
                 _curCh = _str[_index++];
-                res = Converter.ConvertToInt32(GetData(_dataIndex++));
+                res = PythonContext.GetContext(_context).ConvertToInt32(GetData(_dataIndex++));
             } else {
                 if (Char.IsDigit(_curCh)) {
                     res = 0;
@@ -331,7 +334,7 @@ namespace IronPython.Runtime {
                 IAttributesCollection iac = _data as IAttributesCollection;
                 if (iac == null) {
                     if (PythonOps.IsMappingType(DefaultContext.Default, _data) == RuntimeHelpers.True) {
-                        return PythonOps.GetIndex(_data, key);
+                        return PythonOps.GetIndex(_context, _data, key);
                     }
 
                     throw PythonOps.TypeError("format requires a mapping");
@@ -353,7 +356,7 @@ namespace IronPython.Runtime {
             object val;
             int intVal;
 
-            if (Converter.TryConvertToInt32(_opts.Value, out intVal)) {
+            if (PythonContext.GetContext(_context).TryConvertToInt32(_opts.Value, out intVal)) {
                 val = intVal;
                 fPos = intVal >= 0;
             } else {
