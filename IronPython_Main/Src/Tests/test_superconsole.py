@@ -53,7 +53,6 @@ def getTestOutput():
     '''
     Returns stdout and stderr output for a console test.
     '''
-    
     #On some platforms 'ip_session.log' is not immediately created after
     #calling the 'close' method of the file object writing to 'ip_session.log'.
     #Give it a few seconds to catch up.
@@ -136,6 +135,7 @@ def test_newlines():
     for lines in getTestOutput():
         AreEqual(removePrompts(lines), [])
 
+@disabled("CodePlex Work Item 12403")
 def test_string_exception():
     '''
     An exception thrown should appear in stderr.
@@ -474,6 +474,30 @@ def unverified_raw_input():
     superConsole.SendKeys('{ENTER}')
 #Run this first to corrupt other test cases if it's broken.
 unverified_raw_input()
+
+@disabled("CodePlex 16497")
+def test_cp16497():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('import sys{ENTER}')
+    superConsole.SendKeys('print sys.ps1{ENTER}')
+    superConsole.SendKeys('print sys.ps2{ENTER}')
+    
+    superConsole.SendKeys('sys.ps1 = "abc "{ENTER}')
+    superConsole.SendKeys('sys.ps2 = "xyz "{ENTER}')
+    superConsole.SendKeys('def f{(}{)}:{ENTER}    pass{ENTER}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    lines = getTestOutput()[0]
+    expected_lines = ['>>> import sys\n', 
+                      '>>> print sys.ps1\n', '>>> \n', 
+                      '>>> print sys.ps2\n', '... \n', 
+                      '>>> sys.ps1 = "abc "\n', 'abc sys.ps2 = "xyz "\n', 
+                      'abc def f():\n', 'xyz         pass\n', 'xyz         \n', 
+                      'abc outputRedirectStop()\n']
+    
+    for i in xrange(len(lines)):
+        AreEqual(lines[i], expected_lines[i])
+    AreEqual(len(lines), len(expected_lines))            
+    
     
 #------------------------------------------------------------------------------
 #--__main__

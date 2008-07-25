@@ -18,7 +18,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-
 using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace System.Scripting.Com {
@@ -31,8 +30,7 @@ namespace System.Scripting.Com {
         private readonly bool _hasTypeInfo;
         private readonly int _memid;  // this is the member id extracted from FUNCDESC.memid
         private readonly string _name;
-        private readonly bool _isPropertyGet;
-        private readonly bool _isPropertyPut;
+        internal readonly INVOKEKIND InvokeKind;
         private readonly ComParamDesc _returnValue;
         private readonly ComParamDesc[] _parameters;
 
@@ -52,17 +50,14 @@ namespace System.Scripting.Com {
 
         public ComMethodDesc(string name, int dispId, INVOKEKIND invkind)
             : this(name, dispId) {
-            _isPropertyGet = (invkind & INVOKEKIND.INVOKE_PROPERTYGET) != 0;
-            _isPropertyPut = (invkind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;
+            InvokeKind = invkind;
         }
 
         public ComMethodDesc(ITypeInfo typeInfo, FUNCDESC funcDesc)
             : this(funcDesc.memid) {
 
             _hasTypeInfo = true;
-
-            _isPropertyGet = (funcDesc.invkind & INVOKEKIND.INVOKE_PROPERTYGET) != 0;
-            _isPropertyPut = (funcDesc.invkind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;
+            InvokeKind = funcDesc.invkind;
 
             ELEMDESC returnValue = funcDesc.elemdescFunc;
             _returnValue = new ComParamDesc(ref returnValue);
@@ -70,7 +65,7 @@ namespace System.Scripting.Com {
             int cNames;
             string[] rgNames = new string[1 + funcDesc.cParams];
             typeInfo.GetNames(_memid, rgNames, rgNames.Length, out cNames);
-            if (_isPropertyPut) {
+            if (IsPropertyPut) {
                 rgNames[rgNames.Length - 1] = "value";
                 cNames++;
             }
@@ -119,15 +114,24 @@ namespace System.Scripting.Com {
         }
 
         public bool IsPropertyGet {
-            get { return _isPropertyGet; }
+            get {
+                return (InvokeKind & INVOKEKIND.INVOKE_PROPERTYGET) != 0;
+            }
         }
 
         public bool IsPropertyPut {
-            get { return _isPropertyPut; }
+            get {
+                return (InvokeKind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;
+            }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: Remove this when ComMethodDesc is made internal
-        public ComParamDesc[] Parameters {
+        public bool IsPropertyPutRef {
+            get {
+                return (InvokeKind & INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0;
+            }
+        }
+
+        internal ComParamDesc[] Parameters {
             get {
                 Debug.Assert((_parameters != null) == _hasTypeInfo);
                 return _parameters;  

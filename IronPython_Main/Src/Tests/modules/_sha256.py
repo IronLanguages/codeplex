@@ -31,11 +31,12 @@ import _sha256
 def test_sanity():
     #CodePlex 16866
     #Assert("__doc__" in dir(_sha256))
+    #if is_cli:
+    #    AreEqual(_sha256.__doc__, "SHA256 hash algorithm")
     Assert("__name__" in dir(_sha256))
     Assert("sha224" in dir (_sha256))
     Assert("sha256" in dir(_sha256))
-    #CodePlex 16865
-    #AreEqual(len(dir(_sha256)), 4, "There should only be four attributes in the _sha256 module!")
+    AreEqual(len(dir(_sha256)), 4)#, "There should only be four attributes in the _sha256 module!")
 
 def test_sha256_sanity():
     x = _sha256.sha256()

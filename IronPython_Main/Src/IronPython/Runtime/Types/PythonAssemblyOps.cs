@@ -71,11 +71,7 @@ namespace IronPython.Runtime.Operations {
                     return reflectedAssembly;
 
                 reflectedAssembly = new TopNamespaceTracker(context.LanguageContext.DomainManager);
-                if (reflectedAssembly.LoadAssembly(assem)) {
-#if !SILVERLIGHT
-                    System.Scripting.Com.ComObjectWithTypeInfo.PublishComTypes(assem);
-#endif
-                }
+                reflectedAssembly.LoadAssembly(assem);
                 assemblyMap[assem] = reflectedAssembly;
 
                 return reflectedAssembly;

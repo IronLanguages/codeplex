@@ -16,19 +16,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-#if !SILVERLIGHT
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-#endif
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -303,13 +299,11 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private bool TryComConversion(Type toType, Type knownType) {
 #if !SILVERLIGHT // ComObject
-            if (ComObject.IsGenericComObjectType(knownType)) {
-                if (toType.IsInterface) {
-                    // Converting a COM object to any interface is always considered possible - it will result in 
-                    // a QueryInterface at runtime
-                    MakeSimpleConversionTarget(toType, knownType);
-                    return true;
-                }
+            if (knownType.IsCOMObject && (toType.IsInterface)) {
+                // Converting a COM object to any interface is always considered possible - it will result in 
+                // a QueryInterface at runtime
+                MakeSimpleConversionTarget(toType, knownType);
+                return true;
             }
 #endif
             return false;
@@ -573,7 +567,7 @@ namespace Microsoft.Scripting.Actions {
             if (!canConvert) {
                 // Converting a COM object to any interface is always considered possible - it will result in 
                 // a QueryInterface at runtime
-                canConvert = ComObject.IsGenericComObjectType(knownType);
+                canConvert = knownType.IsCOMObject;
             }
 #endif
             if (canConvert) {

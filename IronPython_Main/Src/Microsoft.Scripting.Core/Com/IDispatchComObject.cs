@@ -240,6 +240,11 @@ namespace System.Scripting.Com {
             return true;
         }
 
+        internal bool TryGetIDOfName(string name) {
+            int dispId;
+            return GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId) == ComHresults.S_OK;
+        }
+
         internal bool TryGetMemberMethod(string name, out ComMethodDesc method) {
             EnsureScanDefinedMethods();
             return _comTypeDesc.Funcs.TryGetValue(name, out method);
@@ -273,53 +278,16 @@ namespace System.Scripting.Com {
             }
         }
 
-        [Obsolete("Called from generated code only", true)]
-        public bool TrySetAttr(string name, object value, out Exception exception) {
-
-            exception = null;
-
-            if (value is BoundDispEvent) {
-                // CONSIDER: 
-                // SetAttr on BoundDispEvent is the last operator that is called
-                // during += on an actual event handler.
-                // In practice, we can do nothing here and just ingore this operation.
-                // But is it syntactically correct?
-                return true;
-            }
-
-            int dispId;
-            int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
-            if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
-                exception = System.Runtime.InteropServices.Marshal.GetExceptionForHR(hresult);
-                return false;
-            }
-
-            try {
-                // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
-                // have to worry about marshalling the arguments. Type.InvokeMember will use
-                // IDispatch.Invoke under the hood.
-                // This technique also only works on types declared with 
-                // InterfaceType(ComInterfaceType.InterfaceIsIDispatch) attribute. This is
-                // why IDispatchForReflection type is used instead of IDispatch.
-
-                BindingFlags bindingFlags = 0;
-                bindingFlags |= System.Reflection.BindingFlags.SetProperty;
-                bindingFlags |= System.Reflection.BindingFlags.Instance;
-
-                typeof(IDispatchForReflection).InvokeMember(
-                    name,
-                    bindingFlags,
-                    Type.DefaultBinder,
-                    Obj,
-                    new object[1] { value },
-                    CultureInfo.InvariantCulture
-                    );
-            } catch (TargetInvocationException e) {
-                exception = e;
-                return false;
-            }
-
-            return true;
+        [Obsolete("Call from generated code only", true)]
+        public void SetAttr(string name, object value) {
+            typeof(IDispatchForReflection).InvokeMember(
+                name,
+                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance,
+                Type.DefaultBinder,
+                Obj,
+                new object[1] { value },
+                CultureInfo.InvariantCulture
+            );
         }
 
         #endregion
@@ -546,7 +514,8 @@ namespace System.Scripting.Com {
             ComMethodDesc getItem = null;
             ComMethodDesc setItem = null;
             Dictionary<string, ComMethodDesc> funcs = new Dictionary<string, ComMethodDesc>(typeAttr.cFuncs);
-            List<ComMethodDesc> writable = new List<ComMethodDesc>();
+            List<ComMethodDesc> put = new List<ComMethodDesc>();
+            List<ComMethodDesc> putref = new List<ComMethodDesc>();
             Set<int> usedDispIds = new Set<int>();
 
             for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
@@ -563,19 +532,12 @@ namespace System.Scripting.Com {
 
                     ComMethodDesc method = new ComMethodDesc(typeInfo, funcDesc);
 
-                    // since we need to store only on function description per dispId, we might
-                    // not need to store any info for a property_put as it typically shares its
-                    // dispId with a property_get - as such, we will wait for a corresponding 
-                    // property_get to come along.  But if it's a write only property, we'll 
-                    // have to capture it later...
-                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
-                        (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
-                        // exception to the rule: for the special dispId == 0, we need to store
-                        // the method descriptor for the Do(SetItem) action. 
-                        if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
-                            setItem = method;
-                        }
-                        writable.Add(method);
+                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0) {
+                        put.Add(method);
+                        continue;
+                    }
+                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
+                        putref.Add(method);
                         continue;
                     }
 
@@ -600,12 +562,13 @@ namespace System.Scripting.Com {
                 }
             }
 
-            foreach (ComMethodDesc cmd in writable) {
-                if (!usedDispIds.Contains(cmd.DispId)) {
-                    funcs.Add(cmd.Name, cmd);
-                    usedDispIds.Add(cmd.DispId);
-                }
-            }
+            ProcessPut(funcs, put, usedDispIds, ref setItem);
+            ProcessPut(funcs, putref, usedDispIds, ref setItem);
+
+            Dictionary<string, ComMethodDesc> puts = new Dictionary<string, ComMethodDesc>();
+
+            AddPuts(puts, putref);
+            AddPuts(puts, put);
 
             lock (_CacheComTypeDesc) {
                 ComTypeDesc cachedTypeDesc;
@@ -616,9 +579,41 @@ namespace System.Scripting.Com {
                     _CacheComTypeDesc.Add(typeAttr.guid, _comTypeDesc);
                 }
                 _comTypeDesc.Funcs = funcs;
+                _comTypeDesc.Puts = puts;
                 _comTypeDesc.GetItem = getItem;
                 _comTypeDesc.SetItem = setItem;
             }
+        }
+
+        private static void AddPuts(Dictionary<string, ComMethodDesc> puts, List<ComMethodDesc> put) {
+            foreach (var p in put) {
+                puts[p.Name] = p;
+            }
+        }
+
+        private static void ProcessPut(Dictionary<string, ComMethodDesc> funcs, List<ComMethodDesc> methods, Set<int> usedDispIds, ref ComMethodDesc setItem) {
+            foreach (ComMethodDesc method in methods) {
+                if (!usedDispIds.Contains(method.DispId)) {
+                    funcs.Add(method.Name, method);
+                    usedDispIds.Add(method.DispId);
+                }
+
+                // for the special dispId == 0, we need to store
+                // the method descriptor for the Do(SetItem) action. 
+                if (method.DispId == ComDispIds.DISPID_VALUE && setItem == null) {
+                    setItem = method;
+                }
+            }
+        }
+        
+        internal bool TryGetPropertySetter(string name, out ComMethodDesc method) {
+            EnsureScanDefinedMethods();
+            return _comTypeDesc.Puts.TryGetValue(name, out method);
+        }
+
+        internal bool TryGetEventHandler(string name, out ComEventDesc @event) {
+            EnsureScanDefinedEvents();
+            return _comTypeDesc.Events.TryGetValue(name, out @event);
         }
     }
 }

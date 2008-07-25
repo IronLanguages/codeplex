@@ -26,7 +26,9 @@ namespace System.Scripting.Com {
     /// </summary>
     public class GenericComObject : ComObject {
 
-        internal GenericComObject(object rcw) : base(rcw) { }
+        internal GenericComObject(object rcw)
+            : base(rcw) {
+        }
 
         public override string ToString() {
             return Obj.ToString();

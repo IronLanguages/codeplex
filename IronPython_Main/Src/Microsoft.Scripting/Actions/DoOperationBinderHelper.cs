@@ -16,10 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
 using System.Scripting.Utils;
@@ -27,10 +27,6 @@ using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-#if !SILVERLIGHT
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-#endif
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -49,14 +45,6 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public RuleBuilder<T> MakeRule() {
-
-#if !SILVERLIGHT
-            if (ComObject.IsGenericComObjectType(_types[0])) {
-                _rule.Target = ComObject.GetTargetForDoOperation(_rule, Action);
-                return _rule;
-            }
-#endif
-
             if (Action.Operation == Operators.GetItem || 
                 Action.Operation == Operators.SetItem) {
                 // try default member first, then look for special name methods.

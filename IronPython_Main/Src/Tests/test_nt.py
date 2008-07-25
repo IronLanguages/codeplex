@@ -743,6 +743,27 @@ def test_access():
     nt.rmdir('new_dir_name')
     
     AssertError(TypeError, nt.access, None, 1)
+
+def test_umask():
+    orig = nt.umask(0)
+    try:
+        for i in [0, 1, 5, 3.14, int((2**(31))-1)]:
+            AreEqual(nt.umask(i), 0)
+            
+        AssertError(OverflowError, nt.umask, 2**31)
+        for i in [None,  "abc", 3j, int]:
+            AssertError(TypeError, nt.umask, i)
+                    
+    finally:
+        nt.umask(orig)
+
+def test_cp16413():
+    tmpfile = 'tmpfile.tmp'
+    f = open(tmpfile, 'w')
+    f.close()
+    nt.chmod(tmpfile, 0777)
+    nt.unlink(tmpfile)
+    
     
 try:
     run_test(__name__)

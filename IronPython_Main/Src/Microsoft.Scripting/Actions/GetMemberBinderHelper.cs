@@ -14,15 +14,11 @@
  * ***************************************************************************/
 
 using System;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-
-#if !SILVERLIGHT
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-#endif
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -72,13 +68,6 @@ namespace Microsoft.Scripting.Actions {
             if (typeof(NamespaceTracker).IsAssignableFrom(type)) {
                 Rule.AddTest(Ast.Equal(Rule.Parameters[0], Ast.Constant(Arguments[0])));
             }
-
-#if !SILVERLIGHT
-            if (StrongBoxType == null && ComObject.IsGenericComObjectType(type)) {
-                AddToBody(ComObject.GetTargetForGetMember(Rule, Action));
-                return Body;
-            }
-#endif
 
             MemberGroup members = Binder.GetMember(Action, type, StringName);
 
