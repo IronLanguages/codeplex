@@ -20,7 +20,7 @@ using System.Scripting.Utils;
 
 namespace System.Scripting.Runtime {
 
-    public struct TypeName {
+    internal struct TypeName {
         private readonly string _namespace;
         private readonly string _typeName;
 
@@ -63,7 +63,7 @@ namespace System.Scripting.Runtime {
     }
 
     // TODO: Only used by ComObjectWityTypeInfo. Remove when gone!
-    public static class AssemblyTypeNames {
+    internal static class AssemblyTypeNames {
         public static IEnumerable<TypeName> GetTypeNames(Assembly assem, bool includePrivateTypes) {
 #if !SILVERLIGHT
             AssemblyName assemblyName = new AssemblyName(assem.FullName);

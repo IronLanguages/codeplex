@@ -14,16 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Scripting.Actions;
 using System.Scripting.Generation;
 using System.Scripting.Runtime;
-using System.Runtime.CompilerServices;
-
-#if !SILVERLIGHT
-using ComObject = Microsoft.Scripting.Actions.ComDispatch.ComObject;
-#endif
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -46,17 +42,7 @@ namespace Microsoft.Scripting.Actions {
                 Rule.AddTest(Ast.Equal(Rule.Parameters[0], Ast.Constant(Arguments[0])));
             } 
 
-
-#if !SILVERLIGHT
-            if (StrongBoxType == null && ComObject.IsGenericComObjectType(targetType)) {
-                AddToBody(ComObject.GetTargetForSetMember(Rule, Action));
-            } else {
-                MakeSetMemberRule(targetType);
-            }
-#else
             MakeSetMemberRule(targetType);
-#endif
-
             Rule.Target = Body;
 
             return Rule;

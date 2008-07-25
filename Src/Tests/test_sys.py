@@ -74,6 +74,14 @@ def test_winver():
     #E.g., "2.5"
     Assert(re.match("^\d\.\d$", sys.winver) != None)
 
+@disabled("CodePlex 16497")
+def test_ps1():
+    Assert(not hasattr(sys, "ps1"))
+
+@disabled("CodePlex 16497")
+def test_ps2():
+    Assert(not hasattr(sys, "ps2"))    
+    
 
 testDelGetFrame = "Test_Del_GetFrame" in sys.argv
 if testDelGetFrame:

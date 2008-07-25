@@ -214,11 +214,10 @@ def test_date():
     AreEqual(x.day, 16)
     
     #fromtimestamp
-    #UNIMPLEMENTED
-    #x = datetime.date.fromtimestamp(1000000000.0)
-    #AreEqual(x.year, 2001)
-    #AreEqual(x.month, 9)
-    #AreEqual(x.day, 8)
+    x = datetime.date.fromtimestamp(1000000000.0)
+    AreEqual(x.year, 2001)
+    AreEqual(x.month, 9)
+    AreEqual(x.day, 8)
     
     #max
     x = datetime.date.max
@@ -417,13 +416,14 @@ def test_datetime():
     
     #fromtimestamp
     #Merlin Work Item 148717
-    #x = datetime.datetime.fromtimestamp(1000000000.0)
-    #AreEqual(x.year, 2001)
-    #AreEqual(x.month, 9)
-    #AreEqual(x.day, 8)
+    x = datetime.datetime.fromtimestamp(1000000000.0)
+    AreEqual(x.year, 2001)
+    AreEqual(x.month, 9)
+    AreEqual(x.day, 8)
+    #CodePlex 4862
     #AreEqual(x.hour, 18)
-    #AreEqual(x.minute, 46)
-    #AreEqual(x.second, 40)
+    AreEqual(x.minute, 46)
+    AreEqual(x.second, 40)
     
     x = datetime.datetime.fromtimestamp(1000000000)
     AreEqual(x.year, 2001)
@@ -441,14 +441,14 @@ def test_datetime():
     AreEqual(x.day, 16)
     
     #fromtimestamp
-    #UNIMPLEMENTED
-    #x = datetime.datetime.utcfromtimestamp(1000000000.0)
-    #AreEqual(x.year, 2001)
-    #AreEqual(x.month, 9)
-    #AreEqual(x.day, 9)
+    x = datetime.datetime.utcfromtimestamp(1000000000.0)
+    AreEqual(x.year, 2001)
+    AreEqual(x.month, 9)
+    AreEqual(x.day, 9)
+    #CodePlex 4862
     #AreEqual(x.hour, 1)
-    #AreEqual(x.minute, 46)
-    #AreEqual(x.second, 40)
+    AreEqual(x.minute, 46)
+    AreEqual(x.second, 40)
     
     #combine
     x = datetime.datetime.combine(datetime.date(2005, 3, 22), datetime.time(2,28,3,99))

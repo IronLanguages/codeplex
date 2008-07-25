@@ -108,6 +108,13 @@ namespace System.Scripting.Actions {
             }
         }
 
+        public bool IsByRef {
+            get {
+                ParameterExpression pe = _expression as ParameterExpression;
+                return pe != null && pe.IsByRef;
+            }
+        }
+
         public virtual MetaObject Restrict(Type type) {
             if (type == Expression.Type && CompilerHelpers.IsSealed(type)) {
                 return this;

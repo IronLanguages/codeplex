@@ -206,15 +206,29 @@ def contains(d, *attrs):
 
 
 def repeat_on_class(C):
+    newStyle = "__class__" in dir(C)
+
     c = C()
     d = C.__dict__
     contains(d, '__doc__', 'x1', 'f1')
     
     ## recursive entries & repr
     C.abc = d
-    x = repr(d) # shouldn't stack overflow
+    if not newStyle:
+        x = repr(d) # shouldn't stack overflow
+    else:
+        x = str(d)
+    
+    if newStyle and (is_cli or is_silverlight):
+        #http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=17527
+        print "CodePlex 17527"
+        return
+        
     Assert(x.find("'abc'") != -1)
-    Assert(x.find("{...}") != -1)
+    if not newStyle:
+        Assert(x.find("{...}") != -1)
+    else:
+        Assert(x.find("'abc': <dictproxy object at") != -1)
     del C.abc
     
     keys, values = d.keys(), d.values()
@@ -229,58 +243,72 @@ def repeat_on_class(C):
     def f2(self): return 22
     def f3(self): return 33
     
-    d['f2'] = f2
-    d['x2'] = 20
+    if not newStyle:
+        d['f2'] = f2
+        d['x2'] = 20
     
-    AreEqual(len(d), l + 2)
-    AreEqual(d.__len__(), l + 2)
+        AreEqual(len(d), l + 2)
+        AreEqual(d.__len__(), l + 2)
     
-    contains(d, '__doc__', 'x1', 'x2', 'f1', 'f2')
-    contains(d.keys(), '__doc__', 'x1', 'x2', 'f1', 'f2')
-    
+    if not newStyle:
+        contains(d, '__doc__', 'x1', 'x2', 'f1', 'f2')
+        contains(d.keys(), '__doc__', 'x1', 'x2', 'f1', 'f2')
+    else:
+        contains(d, '__doc__', 'x1', 'f1')
+        contains(d.keys(), '__doc__', 'x1', 'f1')
+        
     AreEqual(d['x1'], 10)
-    AreEqual(d['x2'], 20)
+    if not newStyle:
+        AreEqual(d['x2'], 20)
     AreEqual(d['f1'](c), 11)
-    AreEqual(d['f2'](c), 22)
+    if not newStyle:
+        AreEqual(d['f2'](c), 22)
     AssertError(KeyError, lambda : d['x3'])
     AssertError(KeyError, lambda : d['f3'])
     
     ## get
     AreEqual(d.get('x1'), 10)
-    AreEqual(d.get('x2'), 20)
+    if not newStyle: 
+        AreEqual(d.get('x2'), 20)
     AreEqual(d.get('f1')(c), 11)
-    AreEqual(d.get('f2')(c), 22)
+    if not newStyle:
+        AreEqual(d.get('f2')(c), 22)
     
     AreEqual(d.get('x3'), None)
     AreEqual(d.get('x3', 30), 30)
     AreEqual(d.get('f3'), None)
     AreEqual(d.get('f3', f3)(c), 33)
     
+    if not newStyle:
+        ## setdefault
+        AreEqual(d.setdefault('x1'), 10)
+        AreEqual(d.setdefault('x1', 30), 10)
+        AreEqual(d.setdefault('f1')(c), 11)
+        AreEqual(d.setdefault('f1', f3)(c), 11)
+        AreEqual(d.setdefault('x2'), 20)
+        AreEqual(d.setdefault('x2', 30), 20)
+        AreEqual(d.setdefault('f2')(c), 22)
+        AreEqual(d.setdefault('f2', f3)(c), 22)
+        AreEqual(d.setdefault('x3', 30), 30)
+        AreEqual(d.setdefault('f3', f3)(c), 33)
     
-    ## setdefault
-    AreEqual(d.setdefault('x1'), 10)
-    AreEqual(d.setdefault('x1', 30), 10)
-    AreEqual(d.setdefault('f1')(c), 11)
-    AreEqual(d.setdefault('f1', f3)(c), 11)
-    AreEqual(d.setdefault('x2'), 20)
-    AreEqual(d.setdefault('x2', 30), 20)
-    AreEqual(d.setdefault('f2')(c), 22)
-    AreEqual(d.setdefault('f2', f3)(c), 22)
-    AreEqual(d.setdefault('x3', 30), 30)
-    AreEqual(d.setdefault('f3', f3)(c), 33)
-    
-    ## pop
-    l1 = len(d); AreEqual(d.pop('x1', 30), 10)
-    AreEqual(len(d), l1-1)
-    l1 = len(d); AreEqual(d.pop('x2', 30), 20)
-    AreEqual(len(d), l1-1)
-    l1 = len(d); AreEqual(d.pop("xx", 70), 70)
-    AreEqual(len(d), l1)
+    if not newStyle:
+        ## pop
+        l1 = len(d)
+        AreEqual(d.pop('x1', 30), 10)
+        AreEqual(len(d), l1-1)
+        l1 = len(d)
+        AreEqual(d.pop('x2', 30), 20)
+        AreEqual(len(d), l1-1)
+        l1 = len(d)
+        AreEqual(d.pop("xx", 70), 70)
+        AreEqual(len(d), l1)
     
     ## has_key
     Assert(d.has_key('f1'))
-    Assert(d.has_key('f2'))
-    Assert(d.has_key('f3'))
+    if not newStyle:
+        Assert(d.has_key('f2'))
+        Assert(d.has_key('f3'))
     Assert(d.has_key('fx') == False)
     
     # subclassing, overriding __getitem__, and passing to
@@ -294,7 +322,10 @@ def repeat_on_class(C):
                     return 'def'
                 return super(self, dictType).__getitem__(key)
     except TypeError, ex:
-        Assert(ex.message.find('cannot derive from sealed or value types') != -1)
+        if not newStyle:
+            Assert(ex.message.find('cannot derive from sealed or value types') != -1, ex.message)
+        else:
+            Assert(ex.message.find('Error when calling the metaclass bases') != -1, ex.message)
     else:
         try:
             nd = newDict()
@@ -321,14 +352,20 @@ def repeat_on_class(C):
         if exp <> None:
             AreEqual(v(c), exp)
     
-    contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
-    
+    if not newStyle:
+        contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+    else:
+        contains(lk, 'f1', '__module__', '__dict__', 'x1', '__weakref__', '__doc__')
+        
     # iterkeys
     lk = []
     for k in d.iterkeys():
         lk.append(k)
     
-    contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+    if not newStyle:
+        contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+    else:
+        contains(lk, 'f1', '__module__', '__dict__', 'x1', '__weakref__', '__doc__')
     
     # itervalues
     for v in d.itervalues():
@@ -339,48 +376,57 @@ def repeat_on_class(C):
             Assert(v == 'This is comment')
         elif v is int:
             Assert(v == 30)
-            
-    ## something fun before destorying it
-    l1 = len(d); d[dict] = 3    # object as key
-    AreEqual(len(d), l1+1)
     
-    l1 = len(d); d[int] = 4     # object as key
-    AreEqual(len(d), l1+1)
+    if not newStyle:        
+        ## something fun before destorying it
+        l1 = len(d)
+        d[dict] = 3    # object as key
+        AreEqual(len(d), l1+1)
     
-    l1 = len(d); del d[int]
-    AreEqual(len(d), l1-1)
+        l1 = len(d)
+        d[int] = 4     # object as key
+        if is_cli or is_silverlight:
+            print "CodePlex 16811"
+            return
+        AreEqual(len(d), l1+1)
     
-    l1 = len(d); del d[dict]
-    AreEqual(len(d), l1-1)
+        l1 = len(d)
+        del d[int]
+        AreEqual(len(d), l1-1)
     
-    l1 = len(d); del d['x3']
-    AreEqual(len(d), l1-1)
+        l1 = len(d)
+        del d[dict]
+        AreEqual(len(d), l1-1)
     
-    l1 = len(d); d.popitem()
-    AreEqual(len(d), l1-1)
+        l1 = len(d)
+        del d['x3']
+        AreEqual(len(d), l1-1)
     
-    ## object as key
-    d[int] = int
-    d[str] = "str"
+        l1 = len(d)
+        d.popitem()
+        AreEqual(len(d), l1-1)
     
-    AreEqual(d[int], int)
-    AreEqual(d[str], "str")
+        ## object as key
+        d[int] = int
+        d[str] = "str"
     
-    d.clear()
-    AreEqual(len(d), 0)
-    AreEqual(d.__len__(), 0)
+        AreEqual(d[int], int)
+        AreEqual(d[str], "str")
+    
+        d.clear()
+        AreEqual(len(d), 0)
+        AreEqual(d.__len__(), 0)
 
 
 #------------------------------------------------------------------------------        
-#@skip("win32")
-@disabled("CodePlex 16811")
-def test_customfieldiddict():
+def test_customfieldiddict_old():
     class C:
         '''This is comment'''
         x1 = 10
         def f1(self): return 11
     repeat_on_class(C)
-    
+
+def test_customfieldiddict_new():    
     class C(object):
         '''This is comment'''
         x1 = 10
@@ -388,7 +434,6 @@ def test_customfieldiddict():
     repeat_on_class(C)
 
 #------------------------------------------------------------------------------
-@disabled("CodePlex 16811")
 def test_customfieldiddict_fromkeys():
     def new_repeat_on_class(C):
         d1 = C.__dict__

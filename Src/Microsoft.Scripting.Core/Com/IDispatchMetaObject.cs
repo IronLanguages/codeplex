@@ -17,6 +17,7 @@
 
 using System.Linq.Expressions;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
 
@@ -47,7 +48,7 @@ namespace System.Scripting.Com {
                 ).Invoke();
             }
 
-            return action.Fallback(args);
+            return action.Fallback(Unwrap(args));
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
@@ -98,7 +99,7 @@ namespace System.Scripting.Com {
             }
 
             // 4. Fallback
-            return action.Fallback(args);
+            return action.Fallback(Unwrap(args));
         }
 
         private MetaObject BindGetMember(ComMethodDesc method, MetaObject[] args) {
@@ -183,7 +184,7 @@ namespace System.Scripting.Com {
         }
 
         private MetaObject IndexOperation(OperationAction action, MetaObject[] args, string method) {
-            MetaObject fallback = action.Fallback(args);
+            MetaObject fallback = action.Fallback(Unwrap(args));
 
             VariableExpression callable = Expression.Variable(typeof(DispCallable), "callable");
 
@@ -253,32 +254,49 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
-            MetaObject fallback = action.Fallback(args);
+            return 
+                // 1. Check for simple property put
+                TryPropertyPut(action, args) ??
 
-            VariableExpression exception = Expression.Variable(typeof(Exception), "exception");
-            Expression result =
-                Expression.Scope(
-                    Expression.Condition(
-                        Expression.Call(
-                            Expression.Convert(Expression, typeof(IDispatchComObject)),
-                            typeof(IDispatchComObject).GetMethod("TrySetAttr"),
-                            Expression.Constant(action.Name),
-                            Expression.ConvertHelper(
-                                args[1].Expression,
-                                typeof(object)
-                            ),
-                            exception
-                        ),
-                        Expression.Null(),              // true
-                        MakeObject(fallback.Expression) // false
-                    ),
-                    exception
+                // 2. Check for event handler hookup where the put is dropped
+                TryEventHandlerNoop(action, args) ??
+
+                // 3. Go back to language
+                action.Fallback(Unwrap(args));
+        }
+
+        private MetaObject TryPropertyPut(SetMemberAction action, MetaObject[] args) {
+            ComMethodDesc method;
+            if (_self.TryGetPropertySetter(action.Name, out method) || _self.TryGetIDOfName(action.Name)) {
+                Expression result = Expression.Call(
+                    Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
+                    typeof(IDispatchComObject).GetMethod("SetAttr"),
+                    Expression.Constant(action.Name),
+                    Expression.ConvertHelper(args[1].Expression, typeof(object))
                 );
 
-            return new MetaObject(
-                result,
-                Restrictions.Combine(args).Merge(IDispatchRestriction()).Merge(fallback.Restrictions)
-            );
+                return new MetaObject(
+                     result,
+                     Restrictions.Combine(args).Merge(IDispatchRestriction())
+                 );
+            }
+
+            return null;
+        }
+
+        private MetaObject TryEventHandlerNoop(SetMemberAction action, MetaObject[] args) {
+            ComEventDesc @event;
+            if (_self.TryGetEventHandler(action.Name, out @event) && args[1].LimitType == typeof(BoundDispEvent)) {
+                // Drop the event property set.
+                MetaObject bound = args[1].Restrict(typeof(BoundDispEvent));
+
+                return new MetaObject(
+                    Expression.Null(),
+                    Restrictions.Combine(args).Merge(IDispatchRestriction()).Merge(bound.Restrictions)
+                );
+            }
+
+            return null;
         }
 
         private Restrictions IDispatchRestriction() {
@@ -298,15 +316,18 @@ namespace System.Scripting.Com {
             );
         }
 
-        private static Expression MakeObject(Expression e) {
-            if (e.Type == typeof(void)) {
-                return Expression.Comma(
-                    e,
-                    Expression.Null()
-                );
-            } else {
-                return Expression.ConvertHelper(e, typeof(object));
-            }
+        private MetaObject[] Unwrap(MetaObject[] args) {
+            MetaObject[] unwrap = ArrayUtils.Copy(args);
+            unwrap[0] = new MetaObject(
+                Expression.Property(
+                    Expression.ConvertHelper(Expression, typeof(ComObject)),
+                    typeof(ComObject).GetProperty("Obj")
+                ),
+                IDispatchRestriction(),
+                _self.Obj
+            );
+
+            return unwrap;
         }
     }
 }

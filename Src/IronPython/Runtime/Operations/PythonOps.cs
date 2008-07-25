@@ -1091,8 +1091,8 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && System.Runtime.InteropServices.Marshal.IsComObject(o)) {
-                    foreach (SymbolId symbol in System.Scripting.Com.ComObject.ObjectToComObject(o).GetMemberNames()) {
-                        res.AddNoLock(SymbolTable.IdToString(symbol));
+                    foreach (string name in System.Scripting.Com.ComObject.ObjectToComObject(o).GetMemberNames()) {
+                        res.AddNoLock(name);
                     }
                 }
 #endif

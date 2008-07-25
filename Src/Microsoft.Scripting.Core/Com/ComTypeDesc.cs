@@ -27,6 +27,7 @@ namespace System.Scripting.Com {
         private string _documentation;
         private Guid _guid;
         private Dictionary<string, ComMethodDesc> _funcs;
+        private Dictionary<string, ComMethodDesc> _puts;
         private Dictionary<string, ComEventDesc> _events;
         private ComMethodDesc _getItem;
         private ComMethodDesc _setItem;
@@ -64,18 +65,20 @@ namespace System.Scripting.Com {
             return typeDesc;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
         internal static Dictionary<string, ComEventDesc> EmptyEvents {
             get { return _EmptyEventsDict; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
         internal Dictionary<string, ComMethodDesc> Funcs {
             get { return _funcs; }
             set { _funcs = value; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
+        internal Dictionary<string, ComMethodDesc> Puts {
+            get { return _puts; }
+            set { _puts = value; }
+        }
+
         internal Dictionary<string, ComEventDesc> Events {
             get { return _events; }
             set { _events = value; }
