@@ -24,13 +24,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {

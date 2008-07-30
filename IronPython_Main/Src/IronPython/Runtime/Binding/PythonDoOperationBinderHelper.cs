@@ -18,22 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
-using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -177,7 +171,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
                         Ast.Block(                                                // body
                             // getItemRes = param0.__getitem__(curIndex)
-                            Ast.Try(
+                            AstUtils.Try(
                                 Ast.Assign(
                                     getItemRes,
                                     sf.MakeCall(
@@ -195,7 +189,7 @@ namespace IronPython.Runtime.Binding {
                                 res.MakeReturn(binder, Ast.Constant(false))
                             ),
                             // if(getItemRes == param1) return true
-                            Ast.If(
+                            AstUtils.If(
                                 AstUtils.Operator(
                                     binder,
                                     Operators.Equals,
@@ -661,7 +655,7 @@ namespace IronPython.Runtime.Binding {
 
             if (target.MaybeNotImplemented) {
                 stmts.Add(
-                    Ast.IfThen(
+                    AstUtils.IfThen(
                         Ast.NotEqual(
                             assign,
                             Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))
@@ -785,7 +779,7 @@ namespace IronPython.Runtime.Binding {
             if (test.Type != typeof(bool)) {
                 test = AstUtils.ConvertTo(PythonBinder, typeof(bool), ConversionResultKind.ExplicitCast, rule.Context, test);
             }
-            return Ast.IfThen(
+            return AstUtils.IfThen(
                 test,
                 rule.MakeReturn(Binder, Ast.Constant(val))
             );
@@ -924,7 +918,7 @@ namespace IronPython.Runtime.Binding {
             SlotOrFunction slot = GetSlotOrFunction(types, Symbols.Coerce);
             
             if (slot.Success) {
-                return Ast.If(
+                return AstUtils.If(
                     Ast.AndAlso(
                         Ast.Not(
                             Ast.TypeIs(
@@ -1690,7 +1684,7 @@ namespace IronPython.Runtime.Binding {
 
         private Expression MakeSlotCallWorker(PythonTypeSlot slotTarget, RuleBuilder<T> block, Expression self, params Expression[] args) {
             VariableExpression callable = block.GetTemporary(typeof(object), "slot");
-            return Ast.IfThen(
+            return AstUtils.IfThen(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("SlotTryGetValue"),
                     block.Context,
@@ -1720,7 +1714,7 @@ namespace IronPython.Runtime.Binding {
         private Expression CheckNotImplemented(RuleBuilder<T> block, Expression call) {
             VariableExpression tmp = block.GetTemporary(call.Type, "tmp");
 
-            Expression notImplCheck = Ast.IfThen(
+            Expression notImplCheck = AstUtils.IfThen(
                 Ast.NotEqual(
                     Ast.Assign(tmp, call),
                     Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))),

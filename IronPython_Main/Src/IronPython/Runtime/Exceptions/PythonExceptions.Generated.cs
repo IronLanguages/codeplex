@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Runtime;
+using System.Scripting;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -963,7 +963,7 @@ namespace IronPython.Runtime.Exceptions {
             if (clrException is IronPython.Runtime.Exceptions.PendingDeprecationWarningException) return new BaseException(PendingDeprecationWarning);
             if (clrException is IronPython.Runtime.Exceptions.RuntimeWarningException) return new BaseException(RuntimeWarning);
             if (clrException is IronPython.Runtime.Exceptions.SyntaxWarningException) return new BaseException(SyntaxWarning);
-            if (clrException is System.Scripting.Runtime.UnboundLocalException) return new BaseException(UnboundLocalError);
+            if (clrException is Microsoft.Scripting.Runtime.UnboundLocalException) return new BaseException(UnboundLocalError);
             if (clrException is IronPython.Runtime.Exceptions.UnicodeTranslateException) return new _UnicodeTranslateError();
             if (clrException is IronPython.Runtime.Exceptions.UnicodeWarningException) return new BaseException(UnicodeWarning);
             if (clrException is IronPython.Runtime.Exceptions.UserWarningException) return new BaseException(UserWarning);
@@ -974,15 +974,15 @@ namespace IronPython.Runtime.Exceptions {
             if (clrException is IronPython.Runtime.Exceptions.FloatingPointException) return new BaseException(FloatingPointError);
             if (clrException is IronPython.Runtime.Exceptions.GeneratorExitException) return new BaseException(GeneratorExit);
             if (clrException is IronPython.Runtime.Exceptions.ImportException) return new BaseException(ImportError);
-            if (clrException is System.Scripting.KeyboardInterruptException) return new BaseException(KeyboardInterrupt);
+            if (clrException is Microsoft.Scripting.KeyboardInterruptException) return new BaseException(KeyboardInterrupt);
             if (clrException is IronPython.Runtime.Exceptions.LookupException) return new BaseException(LookupError);
             if (clrException is IronPython.Runtime.Exceptions.ReferenceException) return new BaseException(ReferenceError);
             if (clrException is IronPython.Runtime.Exceptions.RuntimeException) return new BaseException(RuntimeError);
             if (clrException is IronPython.Runtime.Exceptions.StopIterationException) return new BaseException(StopIteration);
-            if (clrException is System.Scripting.SyntaxErrorException) return new _SyntaxError();
+            if (clrException is Microsoft.Scripting.SyntaxErrorException) return new _SyntaxError();
             if (clrException is System.SystemException) return new BaseException(SystemError);
             if (clrException is IronPython.Runtime.Exceptions.SystemExitException) return new _SystemExit();
-            if (clrException is System.Scripting.Runtime.UnboundNameException) return new BaseException(NameError);
+            if (clrException is Microsoft.Scripting.Runtime.UnboundNameException) return new BaseException(NameError);
             if (clrException is IronPython.Runtime.Exceptions.UnicodeException) return new BaseException(UnicodeError);
             return new BaseException(Exception);
         }
@@ -1017,7 +1017,7 @@ namespace IronPython.Runtime.Exceptions {
             if (type == PendingDeprecationWarning) return new IronPython.Runtime.Exceptions.PendingDeprecationWarningException(message);
             if (type == RuntimeWarning) return new IronPython.Runtime.Exceptions.RuntimeWarningException(message);
             if (type == SyntaxWarning) return new IronPython.Runtime.Exceptions.SyntaxWarningException(message);
-            if (type == UnboundLocalError) return new System.Scripting.Runtime.UnboundLocalException(message);
+            if (type == UnboundLocalError) return new Microsoft.Scripting.Runtime.UnboundLocalException(message);
             if (type == UnicodeTranslateError) return new IronPython.Runtime.Exceptions.UnicodeTranslateException(message);
             if (type == UnicodeWarning) return new IronPython.Runtime.Exceptions.UnicodeWarningException(message);
             if (type == UserWarning) return new IronPython.Runtime.Exceptions.UserWarningException(message);
@@ -1028,15 +1028,15 @@ namespace IronPython.Runtime.Exceptions {
             if (type == FloatingPointError) return new IronPython.Runtime.Exceptions.FloatingPointException(message);
             if (type == GeneratorExit) return new IronPython.Runtime.Exceptions.GeneratorExitException(message);
             if (type == ImportError) return new IronPython.Runtime.Exceptions.ImportException(message);
-            if (type == KeyboardInterrupt) return new System.Scripting.KeyboardInterruptException(message);
+            if (type == KeyboardInterrupt) return new Microsoft.Scripting.KeyboardInterruptException(message);
             if (type == LookupError) return new IronPython.Runtime.Exceptions.LookupException(message);
             if (type == ReferenceError) return new IronPython.Runtime.Exceptions.ReferenceException(message);
             if (type == RuntimeError) return new IronPython.Runtime.Exceptions.RuntimeException(message);
             if (type == StopIteration) return new IronPython.Runtime.Exceptions.StopIterationException(message);
-            if (type == SyntaxError) return new System.Scripting.SyntaxErrorException(message);
+            if (type == SyntaxError) return new Microsoft.Scripting.SyntaxErrorException(message);
             if (type == SystemError) return new System.SystemException(message);
             if (type == SystemExit) return new IronPython.Runtime.Exceptions.SystemExitException(message);
-            if (type == NameError) return new System.Scripting.Runtime.UnboundNameException(message);
+            if (type == NameError) return new Microsoft.Scripting.Runtime.UnboundNameException(message);
             if (type == UnicodeError) return new IronPython.Runtime.Exceptions.UnicodeException(message);
             if (type == Exception) return new System.Exception(message);
             return new Exception(message);

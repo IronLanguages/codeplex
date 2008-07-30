@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Scripting;
+using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 

@@ -15,7 +15,6 @@
 
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
@@ -145,7 +144,7 @@ namespace System.Scripting.Actions {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
 
-            if (expression.Type == type && CompilerHelpers.IsSealed(type)) {
+            if (expression.Type == type && type.IsSealedOrValueType()) {
                 return Restrictions.Empty;
             }
 

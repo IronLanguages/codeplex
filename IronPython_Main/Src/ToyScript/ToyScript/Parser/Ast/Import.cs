@@ -34,7 +34,7 @@ namespace ToyScript.Parser.Ast {
                 var, 
                 Ast.Call(
                     typeof(ToyHelpers).GetMethod("Import"),
-                    Ast.CodeContext(),
+                    AstUtils.CodeContext(),
                     Ast.Constant(_name)
                 ), 
                 Span

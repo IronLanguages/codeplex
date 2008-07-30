@@ -16,14 +16,12 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 

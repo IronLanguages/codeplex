@@ -17,26 +17,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Compiler;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
@@ -940,6 +934,25 @@ namespace IronPython.Runtime {
                 }
             }
         
+            return ret;
+        }
+
+        public static List map(CodeContext/*!*/ context, object func, [NotNull]string enumerator) {
+            List ret = new List();
+            CallSite<DynamicSiteTarget<CodeContext, object, object, object>> mapSite = null;
+
+            if (func != null) {
+                mapSite = MakeMapSite<object, object>(context);
+            }
+
+            foreach (char o in enumerator) {
+                if (func == null) {
+                    ret.AddNoLock(RuntimeHelpers.CharToString(o));
+                } else {
+                    ret.AddNoLock(mapSite.Target(mapSite, context, func, RuntimeHelpers.CharToString(o)));
+                }
+            }
+
             return ret;
         }
 

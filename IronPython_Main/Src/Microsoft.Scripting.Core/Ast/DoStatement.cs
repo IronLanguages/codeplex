@@ -23,9 +23,6 @@ namespace System.Linq.Expressions {
 
         private readonly LabelTarget _label;
 
-        /// <summary>
-        /// Called by <see cref="DoStatementBuilder"/>.
-        /// </summary>
         internal DoStatement(Annotations annotations, LabelTarget label, Expression test, Expression body)
             : base(ExpressionType.DoStatement, typeof(void), annotations, null) {
             _test = test;
@@ -56,6 +53,7 @@ namespace System.Linq.Expressions {
         public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label, Annotations annotations) {
             RequiresCanRead(body, "body");
             RequiresCanRead(test, "test");
+            ContractUtils.Requires(test.Type == typeof(bool), "test", "Condition must be boolean");
             return new DoStatement(annotations, label, test, body);
         }
     }

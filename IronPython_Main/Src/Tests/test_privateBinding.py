@@ -62,8 +62,8 @@ else:
         #x = Generation.Namespace(None)
         
         # mixed namespace
-        import System.Scripting
-        x = System.Scripting.Actions.TopNamespaceTracker
+        import Microsoft.Scripting
+        x = Microsoft.Scripting.Actions.TopNamespaceTracker
         
         clsPart._ClsPart__privateField = 1
         AreEqual(clsPart._ClsPart__privateField, 1)

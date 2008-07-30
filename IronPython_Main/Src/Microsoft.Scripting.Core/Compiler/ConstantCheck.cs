@@ -16,7 +16,8 @@
 using System.Diagnostics;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
+    // TODO: internal or move to Microsoft.Scripting
     public static class ConstantCheck {
 
         /// <summary>

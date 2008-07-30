@@ -19,17 +19,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime {
-    using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     [PythonSystemType("instancemethod")]
     public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {

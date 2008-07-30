@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
+using System.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace ToyScript.Binders {
     public class ErrorMetaObject : MetaObject {

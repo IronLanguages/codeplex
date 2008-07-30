@@ -21,26 +21,19 @@ namespace Microsoft.Scripting {
     /// <summary>
     /// This class holds onto internal debugging options used in this assembly. 
     /// These options can be set via environment variables DLR_{option-name}.
-    /// Boolean options map "TRUE" to true and other values to false.
+    /// Boolean options map "true" to true and other values to false.
     /// 
     /// These options are for internal debugging only, and should not be
     /// exposed through any public APIs.
     /// </summary>
     internal static class GlobalDlrOptions {
         private const string EnvironmentVariablePrefix = "DLR_";
-        private const string CoreDlrEnvironmentVariablePrefix = "COREDLR_";
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static GlobalDlrOptions() {
             try {
                 _frames = ReadOption("Frames");
-
-                _preferComInteropAssembly = ReadCoreOption("PreferComInteropAssembly");
-                _cachePointersInApartment = ReadCoreOption("CachePointersInApartment");
-
-                if (_cachePointersInApartment) {
-                    _preferComInteropAssembly = false;
-                }
+                _lightweightScopes = ReadOption("LightweightScopes");
             } catch (SecurityException) {
                 return;
             }
@@ -51,22 +44,12 @@ namespace Microsoft.Scripting {
             return false;
 #else
             string envVar = Environment.GetEnvironmentVariable(EnvironmentVariablePrefix + name);
-            return envVar != null && envVar == "TRUE";
+            return envVar != null && envVar.ToLowerInvariant() == "true";
 #endif
         }
 
-        private static bool ReadCoreOption(string name) {
-#if SILVERLIGHT
-            return false;
-#else
-            string envVar = Environment.GetEnvironmentVariable(CoreDlrEnvironmentVariablePrefix + name);
-            return envVar != null && envVar == "TRUE";
-#endif
-        }
-
-        private static bool _frames;
-        private static bool _preferComInteropAssembly;
-        private static bool _cachePointersInApartment;
+        private readonly static bool _frames;
+        private readonly static bool _lightweightScopes;
 
         /// <summary>
         /// Generate functions using custom frames. Allocate the locals on frames.
@@ -77,23 +60,12 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// An RCW object represents a COM object which could potentially be in another apartment. So access
-        /// to the COM interface pointer needs to be done in an apartment-safe way. Marshal.GetIDispatchForObject
-        /// gives out the the appropriate interface pointer (and doing marshalling of the COM object to the current
-        /// aparment if necessary). However, this is expensive and we would like to cache the returned interface pointer.
-        /// This is a prototype of the caching optimization. It is not ready for primte-time use. Currently, it will
-        /// leak COM objects as it does not call Marshal.Release when it should.
+        /// Generate optimized scopes that can be garbage collected
+        /// (globals are stored in an array instead of static fields on a
+        /// generated type)
         /// </summary>
-        internal static bool CachePointersInApartment {
-            get { return _cachePointersInApartment; }
-        }
-
-        /// <summary>
-        /// Use pure IDispatch-based invocation when calling methods/properties
-        /// on System.__ComObject
-        /// </summary>
-        internal static bool PreferComInteropAssembly {
-            get { return _preferComInteropAssembly; }
+        internal static bool LightweightScopes {
+            get { return _lightweightScopes; }
         }
     }
 }

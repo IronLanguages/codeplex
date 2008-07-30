@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System;
+using System.Linq.Expressions;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -45,85 +45,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Expression Operator(Annotations annotations, ActionBinder binder, Operators op, Type resultType, params Expression[] arguments) {
-            OldDoOperationAction bindingInfo = OldDoOperationAction.Make(binder, op);
-
-            if (arguments.Length > 0 && !TypeUtils.CanAssign(typeof(CodeContext), arguments[0].Type)) {
-                Expression result = null;
-
-                // map operator onto UnaryExpression/BinaryExpression where possible
-                if (arguments.Length == 1) {
-                    result = GetUnaryOperator(annotations, resultType, bindingInfo, arguments[0]);
-                } else if (arguments.Length == 2) {
-                    result = GetBinaryOperator(annotations, resultType, bindingInfo, arguments[0], arguments[1]);
-                } else if (arguments.Length == 3 && op == Operators.SetItem) {
-                    result = Expression.AssignArrayIndex(arguments[0], arguments[1], arguments[2], resultType, bindingInfo, annotations);
-                }
-
-                if (result != null) {
-                    return result;
-                }
-            }
-
-            // otherwise, return a custom action
-            return Expression.ActionExpression(bindingInfo, resultType, annotations, arguments);
+            return Expression.ActionExpression(OldDoOperationAction.Make(binder, op), resultType, annotations, arguments);
         }
-
-        private static Expression GetBinaryOperator(Annotations annotations, Type result, OldDoOperationAction bindingInfo, Expression left, Expression right) {
-            switch (bindingInfo.Operation) {
-                case Operators.GetItem:
-                    return Expression.ArrayIndex(annotations, left, right, result, bindingInfo);
-                case Operators.Equals:
-                    return Expression.Equal(annotations, left, right, result, bindingInfo);
-                case Operators.NotEquals:
-                    return Expression.NotEqual(annotations, left, right, result, bindingInfo);
-                case Operators.GreaterThan:
-                    return Expression.GreaterThan(annotations, left, right, result, bindingInfo);
-                case Operators.LessThan:
-                    return Expression.LessThan(annotations, left, right, result, bindingInfo);
-                case Operators.GreaterThanOrEqual:
-                    return Expression.GreaterThanOrEqual(annotations, left, right, result, bindingInfo);
-                case Operators.LessThanOrEqual:
-                    return Expression.LessThanOrEqual(annotations, left, right, result, bindingInfo);
-                case Operators.Add:
-                    return Expression.Add(annotations, left, right, result, bindingInfo);
-                case Operators.Subtract:
-                    return Expression.Subtract(annotations, left, right, result, bindingInfo);
-                case Operators.Multiply:
-                    return Expression.Multiply(annotations, left, right, result, bindingInfo);
-                case Operators.Divide:
-                    return Expression.Divide(annotations, left, right, result, bindingInfo);
-                case Operators.Mod:
-                    return Expression.Modulo(annotations, left, right, result, bindingInfo);
-                case Operators.LeftShift:
-                    return Expression.LeftShift(annotations, left, right, result, bindingInfo);
-                case Operators.RightShift:
-                    return Expression.RightShift(annotations, left, right, result, bindingInfo);
-                case Operators.BitwiseAnd:
-                    return Expression.And(annotations, left, right, result, bindingInfo);
-                case Operators.BitwiseOr:
-                    return Expression.Or(annotations, left, right, result, bindingInfo);
-                case Operators.ExclusiveOr:
-                    return Expression.ExclusiveOr(annotations, left, right, result, bindingInfo);
-                // TODO: case Operators.Power
-                default:
-                    return null;
-            }
-        }
-
-        private static Expression GetUnaryOperator(Annotations annotations, Type result, OldDoOperationAction bindingInfo, Expression operand) {
-            switch (bindingInfo.Operation) {
-                case Operators.Not:
-                    return Expression.Not(annotations, operand, result, bindingInfo);
-                case Operators.OnesComplement:
-                    return Expression.OnesComplement(annotations, operand, result, bindingInfo);
-                case Operators.Negate:
-                    return Expression.Negate(annotations, operand, result, bindingInfo);
-                // TODO: case Operators.Positive:
-                default:
-                    return null;
-            }
-        }
-
 
         /// <summary>
         /// Creates ActionExpression representing a GetMember action.
@@ -181,7 +104,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="expression">Target of the set member expression</param>
         /// <param name="value">The value to set</param>
         /// <returns>New instance of the ActionExpression</returns>
-        public static AssignmentExpression SetMember(ActionBinder binder, string name, Type result, Expression expression, Expression value) {
+        public static Expression SetMember(ActionBinder binder, string name, Type result, Expression expression, Expression value) {
             return SetMember(Annotations.Empty, binder, name, result, expression, value);
         }
 
@@ -200,8 +123,8 @@ namespace Microsoft.Scripting.Ast {
             return Expression.ActionExpression(OldSetMemberAction.Make(binder, name), result, arguments);
         }
 
-        public static AssignmentExpression SetMember(Annotations annotations, ActionBinder binder, string name, Type result, Expression expression, Expression value) {
-            return Expression.SetMember(expression, result, OldSetMemberAction.Make(binder, name), value, annotations);
+        public static Expression SetMember(Annotations annotations, ActionBinder binder, string name, Type result, Expression expression, Expression value) {
+            return Expression.ActionExpression(OldSetMemberAction.Make(binder, name), result, annotations, expression, value);
         }
 
         public static Expression DeleteMember(ActionBinder binder, string name, params Expression[] arguments) {
@@ -227,35 +150,22 @@ namespace Microsoft.Scripting.Ast {
             return Expression.ActionExpression(OldDeleteMemberAction.Make(binder, name), typeof(object), annotations, arguments);
         }
 
-        public static Expression InvokeMember(OldInvokeMemberAction action, Type result, params Expression[] arguments) {
+        public static Expression InvokeMember(CallSiteBinder action, Type result, params Expression[] arguments) {
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
             ContractUtils.RequiresNotNull(arguments.Length > 0, "arguments");
 
-            if (TypeUtils.CanAssign(typeof(CodeContext), arguments[0].Type)) {
-                return Expression.ActionExpression(action, result, Annotations.Empty, arguments);
-            } else {
-                return Expression.Call(result, arguments[0], action, ArrayUtils.RemoveFirst(arguments));
-            }
+            return Expression.ActionExpression(action, result, Annotations.Empty, arguments);
         }
 
         public static Expression InvokeMember(ActionBinder binder, string name, Type result, CallSignature signature,
             params Expression[] arguments) {
             ContractUtils.RequiresNotNull(arguments, "arguments");
 
-            if (arguments.Length > 0 && arguments[0] != null && TypeUtils.CanAssign(typeof(CodeContext), arguments[0].Type)) {
-                return Expression.ActionExpression(
-                    OldInvokeMemberAction.Make(binder, name, signature),
-                    result,
-                    arguments
-                );
-            } else {
-                return Expression.Call(
-                    result,
-                    arguments[0],
-                    OldInvokeMemberAction.Make(binder, name, signature),
-                    ArrayUtils.RemoveFirst(arguments)
-                );
-            }
+            return Expression.ActionExpression(
+                OldInvokeMemberAction.Make(binder, name, signature),
+                result,
+                arguments
+            );
         }
 
         // TODO: This helper should go. It does too much number magic.

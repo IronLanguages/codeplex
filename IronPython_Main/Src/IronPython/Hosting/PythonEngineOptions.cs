@@ -15,9 +15,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Scripting;
-using System.Scripting.Utils;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython {
 

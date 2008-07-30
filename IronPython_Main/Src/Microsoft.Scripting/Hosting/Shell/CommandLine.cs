@@ -16,11 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Text;
 using System.Threading;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 

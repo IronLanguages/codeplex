@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
-using System.Scripting.Actions;
 using IronPython.Runtime;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -48,9 +48,9 @@ namespace IronPython.Compiler.Ast {
             if (_name == SymbolId.Empty) {
                 return ArgumentInfo.Simple;
             } else if (_name == Symbols.Star) {
-                return new ArgumentInfo(MSAst.ArgumentKind.List);
+                return new ArgumentInfo(ArgumentKind.List);
             } else if (_name == Symbols.StarStar) {
-                return new ArgumentInfo(MSAst.ArgumentKind.Dictionary);
+                return new ArgumentInfo(ArgumentKind.Dictionary);
             } else {
                 return new ArgumentInfo(_name);
             }

@@ -18,14 +18,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Text.RegularExpressions;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {

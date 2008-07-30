@@ -13,17 +13,16 @@
  *
  * ***************************************************************************/
 
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 
 namespace System.Scripting.Utils {
 
     internal static class TypeUtils {
         private const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-
-        // TODO: this helper is needed to dynamically load ExtensionAttribute 
-        // until we can get the type statically via typeof(ExtensionAttribute)
-        internal static readonly Type ExtensionAttributeType = Type.GetType("System.Runtime.CompilerServices.ExtensionAttribute");
+        internal const MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
 
         //CONFORMING
         internal static Type GetNonNullableType(Type type) {
@@ -658,5 +657,65 @@ namespace System.Scripting.Utils {
             } while (type != null);
             return null;
         }
+
+        /// <summary>
+        /// Returns the System.Type for any object, including null.  The type of null
+        /// is represented by None.Type and all other objects just return the 
+        /// result of Object.GetType
+        /// </summary>
+        internal static Type GetTypeForBinding(object obj) {
+            return obj == null ? None.Type : obj.GetType();
+        }
+
+        /// <summary>
+        /// Simply returns a Type[] from calling GetTypeForBinding on each element
+        /// </summary>
+        internal static Type[] GetTypesForBinding(IEnumerable<object> args) {
+            return args.Select(a => GetTypeForBinding(a)).ToArray();
+        }
+
+        // TODO: should not be using this anymore
+        internal static Type GetVisibleTypeForBinding(object value) {
+            return GetVisibleType(GetTypeForBinding(value));
+        }
+
+        // TODO: should not be using this anymore
+        internal static Type GetVisibleType(Type t) {
+            while (!t.IsVisible) {
+                t = t.BaseType;
+            }
+            return t;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        internal static IEnumerable<Type> LoadTypesFromAssembly(Assembly asm) {
+            try {
+                return asm.GetExportedTypes();
+            } catch (NotSupportedException) {
+                // GetExportedTypes does not work with dynamic assemblies
+            } catch (Exception) {
+                // Some type loads may cause exceptions. Unfortunately, there is no way to ask GetExportedTypes
+                // for just the list of types that we successfully loaded.
+            }
+
+            return GetAllTypesFromAssembly(asm).Where(t => t != null && t.IsPublic);
+        }
+
+        private static Type[] GetAllTypesFromAssembly(Assembly asm) {
+#if SILVERLIGHT // ReflectionTypeLoadException
+            try {
+                return asm.GetTypes();
+            } catch (Exception) {
+                return Type.EmptyTypes;
+            }
+#else
+            try {
+                return asm.GetTypes();
+            } catch (ReflectionTypeLoadException rtlException) {
+                return rtlException.Types;
+            }
+#endif
+        }
+
     }
 }

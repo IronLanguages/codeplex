@@ -16,7 +16,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     
     /// <summary>
     /// A simple hashset, built on Dictionary{K, V}

@@ -14,10 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Scripting;
-using System.Scripting.Runtime;
-
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     class ObjectAttributesAdapter  : DictionaryStorage {

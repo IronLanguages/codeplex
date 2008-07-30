@@ -17,12 +17,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using System.Reflection;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;

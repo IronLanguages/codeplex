@@ -34,7 +34,7 @@ namespace ToyScript.Binders {
             return base.Equals(obj as ConvertBinder);
         }
 
-        public override MetaObject Fallback(MetaObject[] args) {
+        public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
             throw new NotImplementedException();
         }
     }

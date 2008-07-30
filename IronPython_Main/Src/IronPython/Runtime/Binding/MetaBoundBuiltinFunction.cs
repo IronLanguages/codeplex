@@ -17,16 +17,13 @@ using System;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
+    using Microsoft.Scripting.Actions;
     using Ast = System.Linq.Expressions.Expression;
 
     class MetaBoundBuiltinFunction : MetaPythonObject, IPythonInvokable {

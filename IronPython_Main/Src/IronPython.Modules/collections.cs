@@ -16,9 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
 using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
@@ -26,6 +24,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]

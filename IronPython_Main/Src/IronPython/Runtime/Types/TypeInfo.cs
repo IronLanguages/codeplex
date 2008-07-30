@@ -19,20 +19,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Threading;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Compiler;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

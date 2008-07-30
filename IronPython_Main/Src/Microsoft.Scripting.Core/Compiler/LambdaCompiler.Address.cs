@@ -17,10 +17,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     partial class LambdaCompiler {
 

@@ -18,9 +18,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using CompilerServices = System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
 
@@ -34,7 +33,7 @@ namespace System.Scripting.Com {
 
         internal ReferenceArgBuilder(int index, Type parameterType)
             : base(index, parameterType) {
-            Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(CompilerServices.StrongBox<>));
+            Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(StrongBox<>));
             _elementType = parameterType.GetGenericArguments()[0];
         }
 
@@ -48,7 +47,7 @@ namespace System.Scripting.Com {
 
             // arg is boxType ? &_tmp : throw new ArgumentTypeException()
             //   IncorrectBoxType throws the exception to avoid stack imbalance issues.
-            Type boxType = typeof(CompilerServices.StrongBox<>).MakeGenericType(_elementType);
+            Type boxType = typeof(StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
                 Expression.TypeIs(parameters[Index], BoxType),
                 Expression.Comma(
@@ -62,7 +61,7 @@ namespace System.Scripting.Com {
                     _tmp
                 ),
                 Expression.Call(
-                    typeof(RuntimeHelpers).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
+                    typeof(RuntimeOps).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
                     Expression.ConvertHelper(parameters[Index], typeof(object))
                 )
             );
@@ -102,17 +101,17 @@ namespace System.Scripting.Com {
             object arg = args[Index];
 
             if (arg == null) {
-                throw RuntimeHelpers.SimpleTypeError("expected StrongBox, but found null");
+                throw new ArgumentTypeException("expected StrongBox, but found null");
             }
             Type argType = arg.GetType();
-            if (!argType.IsGenericType || argType.GetGenericTypeDefinition() != typeof(CompilerServices.StrongBox<>)) {
-                throw RuntimeHelpers.SimpleTypeError("expected StrongBox<>");
+            if (!argType.IsGenericType || argType.GetGenericTypeDefinition() != typeof(StrongBox<>)) {
+                throw new ArgumentTypeException("expected StrongBox<>");
             }
             if (argType.GetGenericArguments()[0] != _elementType) {
-                throw RuntimeHelpers.SimpleTypeError(String.Format("Expected type {0}, got {1}", typeof(CompilerServices.StrongBox<>).MakeGenericType(_elementType).FullName, CompilerHelpers.GetType(arg).FullName));
+                throw new ArgumentTypeException(String.Format("Expected type {0}, got {1}", typeof(StrongBox<>).MakeGenericType(_elementType).FullName, TypeUtils.GetTypeForBinding(arg).FullName));
             }
 
-            object value = ((CompilerServices.IStrongBox)arg).Value;
+            object value = ((IStrongBox)arg).Value;
 
             if (value == null) {
                 return null;
@@ -122,7 +121,17 @@ namespace System.Scripting.Com {
         }
 
         internal override void UpdateFromReturn(object callArg, object[] args) {
-            ((CompilerServices.IStrongBox)args[Index]).Value = callArg;
+            ((IStrongBox)args[Index]).Value = callArg;
+        }
+    }
+}
+
+namespace System.Runtime.CompilerServices {
+    public static partial class RuntimeOps {
+        // TODO: just emit this in the generated code?
+        // Having a helper for this one error is overkill
+        public static T IncorrectBoxType<T>(object received) {
+            throw Error.UnexpectedType("StrongBox<" + typeof(T).Name + ">", TypeUtils.GetTypeForBinding(received).Name);
         }
     }
 }

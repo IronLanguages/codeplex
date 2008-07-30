@@ -15,11 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace ToyScript.Runtime {
     using Ast = System.Linq.Expressions.Expression;

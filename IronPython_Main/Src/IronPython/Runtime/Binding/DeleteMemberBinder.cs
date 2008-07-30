@@ -14,10 +14,10 @@
 * ***************************************************************************/
 
 using System;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Binding {
             _state = binder;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
             if (args[0].NeedsDeferral) {
                 return Defer(args);
             }

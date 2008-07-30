@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;

@@ -15,8 +15,8 @@
 
 using System;
 using System.Reflection;
-using System.Scripting.Runtime;
-using Utils = System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -39,14 +39,14 @@ namespace IronPython.Runtime.Types {
                 return false;
             }
 
-            value = CallGetter(context, null, instance, Utils.ArrayUtils.EmptyObjects);
+            value = CallGetter(context, null, instance, ArrayUtils.EmptyObjects);
             return true;
         }
 
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
             if (Setter.Length == 0 || instance == null) return false;
 
-            return CallSetter(context, null, instance, Utils.ArrayUtils.EmptyObjects, value);
+            return CallSetter(context, null, instance, ArrayUtils.EmptyObjects, value);
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {

@@ -134,7 +134,7 @@ def test_1_param_array():
 def test_5_args():
     class C(CCtor40): pass
     C(1, 2, arg4=4, *(3, ), **{'arg5':5})
-    Flag.Check(12435)
+    Flag.Check(12345)
     
     class C(CCtor40):
         def __new__(cls, *args): 

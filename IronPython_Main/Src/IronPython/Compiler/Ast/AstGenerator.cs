@@ -16,26 +16,22 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Compilers;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = System.Linq.Expressions.Expression;
-    using System.Linq.Expressions;
-    using Microsoft.Scripting.Actions;
 
     internal class AstGenerator {
         private readonly LambdaBuilder/*!*/ _block;                     // the DLR lambda that we are building
@@ -297,7 +293,7 @@ namespace IronPython.Compiler.Ast {
                 return body;
             }
 
-            return Ast.Try(
+            return AstUtils.Try(
                 body
             ).Fault(
                 GetUpdateTrackbackExpression()
@@ -312,7 +308,7 @@ namespace IronPython.Compiler.Ast {
             if (_lineNoUpdated == null) {
                 return Ast.Call(
                     typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
-                    Ast.CodeContext(),
+                    AstUtils.CodeContext(),
                     Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")),
                     Ast.Constant(_block.Name),
                     Ast.Constant(Context.SourceUnit.Path ?? "<string>"),
@@ -332,13 +328,13 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         internal MSAst.Expression GetLineNumberUpdateExpression(bool preventAdditionalAdds) {
             return Ast.Block(
-                Ast.If(
+                AstUtils.If(
                     Ast.Not(
                         LineNumberUpdated
                     ),
                     AstUtils.Call(
-                        typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"), 
-                        SourceSpan.None, Ast.CodeContext(), 
+                        typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
+                        SourceSpan.None, AstUtils.CodeContext(), 
                         Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")), 
                         Ast.Constant(_block.Name), 
                         Ast.Constant(Context.SourceUnit.Path ?? "<string>"), 

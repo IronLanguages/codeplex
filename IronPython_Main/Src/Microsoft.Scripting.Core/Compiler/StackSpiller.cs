@@ -18,7 +18,7 @@ using System.Diagnostics;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     /// <summary>
     /// Expression rewriting to spill the CLR stack into temporary variables
@@ -195,7 +195,7 @@ namespace System.Linq.Expressions {
                         pExpression.SetMethod,
                         cr[1, -2],                          // arguments
                         node.Type,
-                        node.BindingInfo as OldInvokeMemberAction
+                        node.BindingInfo
                     ),
                     cr[pExpression.Arguments.Count + 1],    // value
                     node.Type,
@@ -358,7 +358,7 @@ namespace System.Linq.Expressions {
                         new MemberExpression(cr[0], lvalue.Member, lvalue.Annotations, lvalue.Type, lvalue.CanRead, lvalue.CanWrite, lvalue.BindingInfo),
                         cr[1],
                         node.Type,
-                        node.BindingInfo as OldSetMemberAction
+                        node.BindingInfo
                     )
                 );
             }
@@ -396,7 +396,7 @@ namespace System.Linq.Expressions {
                     node.SetMethod,
                     cr[1, -1],
                     node.Type,
-                    node.BindingInfo as OldInvokeMemberAction
+                    node.BindingInfo
                 );
             }
 
@@ -417,7 +417,7 @@ namespace System.Linq.Expressions {
 
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo as OldInvokeMemberAction, node.Method, cr[0], cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo, node.Method, cr[0], cr[1, -1]) : expr);
         }
 
         // NewArrayExpression
@@ -451,7 +451,7 @@ namespace System.Linq.Expressions {
             // rest of arguments have non-empty stack (delegate instance on the stack)
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new InvocationExpression(node.Annotations, cr[0], node.Type, node.BindingInfo as OldCallAction, cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? new InvocationExpression(node.Annotations, cr[0], node.Type, node.BindingInfo, cr[1, -1]) : expr);
         }
 
         // NewExpression
@@ -463,7 +463,7 @@ namespace System.Linq.Expressions {
             ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count);
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.BindingInfo as OldCreateInstanceAction) : expr);
+            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.BindingInfo) : expr);
         }
 
         // TypeBinaryExpression
@@ -657,7 +657,7 @@ namespace System.Linq.Expressions {
             // Operand is emitted on top of the stack as is
             Result expression = RewriteExpression(self, lvalue.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = Expression.DeleteMember(expression.Node, (OldDeleteMemberAction)node.BindingInfo, node.Annotations);
+                expr = Expression.DeleteMember(expression.Node, (DeleteMemberAction)node.BindingInfo, node.Annotations);
             }
             return new Result(expression.Action, expr);
         }

@@ -14,21 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-
+using System.Scripting.Actions;
+using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
+using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
-    using Ast = System.Linq.Expressions.Expression;
 
     [PythonSystemType("method_descriptor")]
     public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable {

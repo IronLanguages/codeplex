@@ -17,8 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
-using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 

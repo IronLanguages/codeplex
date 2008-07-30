@@ -17,13 +17,13 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
-
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
+    
     public sealed class SetMemberBinderHelper<T> : MemberBinderHelper<T, OldSetMemberAction> where T : class {
         private bool _isStatic;
 
@@ -242,7 +242,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression ret;
 
                 if (setMem.ReturnType == typeof(bool)) {
-                    ret = Ast.If(call, Rule.MakeReturn(Binder, Rule.Parameters[1]));
+                    ret = AstUtils.If(call, Rule.MakeReturn(Binder, Rule.Parameters[1]));
                 } else {
                     ret = Rule.MakeReturn(Binder, Ast.Comma(call, Rule.Parameters[1]));
                 }

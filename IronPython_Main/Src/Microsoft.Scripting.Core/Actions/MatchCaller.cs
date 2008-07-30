@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
 
 namespace System.Scripting.Actions {
     internal delegate object MatchCallerTarget(object target, CallSite site, object[] args);
@@ -144,7 +144,7 @@ namespace System.Scripting.Actions {
                 il.EmitLoadArg(1);
                 il.Emit(OpCodes.Castclass, siteType);
                 il.Emit(OpCodes.Ldfld, siteType.GetField("Update"));
-                il.EmitCall(typeof(RuntimeHelpers).GetMethod("RuleMatched"));
+                il.EmitCall(typeof(RuntimeOps).GetMethod("RuleMatched"));
                 il.Emit(OpCodes.Brfalse, nomatch);
 
                 foreach (RefFixer rf in fixers) {
@@ -174,8 +174,8 @@ namespace System.Scripting.Actions {
     }
 }
 
-namespace System.Scripting.Runtime {
-    public static partial class RuntimeHelpers {
+namespace System.Runtime.CompilerServices {
+    public static partial class RuntimeOps {
         /// <summary>
         /// Called by generated code.
         /// </summary>

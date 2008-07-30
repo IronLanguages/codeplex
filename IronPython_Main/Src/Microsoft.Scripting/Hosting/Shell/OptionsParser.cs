@@ -16,11 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq.Expressions.Compiler;
 using System.Runtime.Serialization;
-using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -217,7 +216,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 case "-X:PreferComInteropAssembly":
                 case "-X:CachePointersInApartment":
                 case "-X:TrackPerformance": 
-                    SetCoreDlrOption(arg.Substring(3));
+                    SetDlrOption(arg.Substring(3));
                     break;
 
                 case "-X:Interpret":
@@ -235,14 +234,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     ConsoleOptions.FileName = arg.Trim();
                     break;
             }
-        }
-
-        // Note: this works because it runs before the compiler picks up the
-        // environment variable
-        internal static void SetCoreDlrOption(string option) {
-#if !SILVERLIGHT
-            Environment.SetEnvironmentVariable("COREDLR_" + option, "TRUE");
-#endif
         }
 
         // Note: this works because it runs before the compiler picks up the

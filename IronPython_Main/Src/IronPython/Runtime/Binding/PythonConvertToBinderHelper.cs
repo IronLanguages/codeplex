@@ -20,23 +20,18 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using RuntimeHelpers = System.Scripting.Runtime.RuntimeHelpers;
+    using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
     class PythonConvertToBinderHelper<T> : BinderHelper<T, OldConvertToAction> where T : class {
         private object _argument;

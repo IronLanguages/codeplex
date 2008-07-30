@@ -17,13 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
-using System.Scripting.Actions;
 using System.Threading;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -287,7 +286,7 @@ namespace IronPython.Compiler.Ast {
             //  before it's invoked. This is because the restoration must occur at every place the function returns from 
             //  a yield point. That's different than the finally semantics in a generator.
             if (extracted != null) {
-                MSAst.Expression s = Ast.Try(
+                MSAst.Expression s = AstUtils.Try(
                     Ast.Assign(
                         extracted,
                         Ast.Call(
@@ -321,7 +320,7 @@ namespace IronPython.Compiler.Ast {
 
             MSAst.Expression ret = Ast.Call(
                 typeof(PythonOps).GetMethod("MakeFunction"),                                    // method
-                Ast.CodeContext(),                                                              // 1. Emit CodeContext
+                AstUtils.CodeContext(),                                                              // 1. Emit CodeContext
                 Ast.Constant(name),                                                             // 2. FunctionName
                 code,                                                                           // 3. delegate
                 names.Count == 0 ?                                                              // 4. parameter names

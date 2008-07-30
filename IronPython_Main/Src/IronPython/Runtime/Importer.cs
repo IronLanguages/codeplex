@@ -21,8 +21,8 @@ using System.IO;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
 using Microsoft.Scripting;

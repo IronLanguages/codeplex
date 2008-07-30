@@ -20,22 +20,19 @@ namespace System.Scripting {
 
     /// <summary>
     /// This class holds onto internal debugging options of the compiler and
-    /// dynamic sites. These options can be set via environment variables COREDLR_{option-name}.
-    /// Boolean options map "TRUE" to true and other values to false.
+    /// dynamic sites. These options can be set via environment variables DLR_{option-name}.
+    /// Boolean options map "true" to true and other values to false.
     /// 
     /// These options are for internal debugging only, and should not be
     /// exposed through any public APIs.
     /// 
-    /// TODO: Should these be debug only? If so, should this whole class, and
-    /// all associated types (ExpressionWriter, DebugILGen) become debug only?
-    /// 
-    /// TODO: can we enable this in Silverlight builds somehow? Possibly
-    /// something like late binding to a known type name that holds onto
-    /// options?
+    /// TODO: These should be #if DEBUG, along with all associated types
+    /// (ExpressionWriter, DebugILGen)
+    /// TODO: needs a better name, like DebugOptions
     /// </summary>
     internal static class GlobalDlrOptions {
 
-        private const string EnvironmentVariablePrefix = "COREDLR_";
+        private const string EnvironmentVariablePrefix = "DLR_";
 
         // Add to global suppression?
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
@@ -47,7 +44,6 @@ namespace System.Scripting {
                 _showScopes = ReadOption("ShowScopes");
                 _showIL = ReadOption("ShowIL");
                 _dumpIL = ReadOption("DumpIL");
-                _lightweightScopes = ReadOption("LightweightScopes");
                 _trackPerformance = ReadOption("TrackPerformance");
 
                 _preferComInteropAssembly = ReadOption("PreferComInteropAssembly");
@@ -66,22 +62,19 @@ namespace System.Scripting {
             return false;
 #else
             string envVar = Environment.GetEnvironmentVariable(EnvironmentVariablePrefix + name);
-            return envVar != null && envVar == "TRUE";
+            return envVar != null && envVar.ToLowerInvariant() == "true";
 #endif
         }
 
-        // These fields are actually readonly but FxCop gets confused if
-        // they're marked that way
-        private static bool _showTrees;
-        private static bool _dumpTrees;
-        private static bool _showRules;
-        private static bool _showScopes;
-        private static bool _showIL;
-        private static bool _dumpIL;
-        private static bool _lightweightScopes;
-        private static bool _cachePointersInApartment;
-        private static bool _preferComInteropAssembly;
-        private static bool _trackPerformance;
+        private readonly static bool _showTrees;
+        private readonly static bool _dumpTrees;
+        private readonly static bool _showRules;
+        private readonly static bool _showScopes;
+        private readonly static bool _showIL;
+        private readonly static bool _dumpIL;
+        private readonly static bool _cachePointersInApartment;
+        private readonly static bool _preferComInteropAssembly;
+        private readonly static bool _trackPerformance;
 
         /// <summary>
         /// Print generated Abstract Syntax Trees to the console
@@ -123,15 +116,6 @@ namespace System.Scripting {
         /// </summary>
         internal static bool ShowIL {
             get { return _showIL; }
-        }
-
-        /// <summary>
-        /// Generate optimized scopes that can be garbage collected
-        /// (globals are stored in an array instead of static fields on a
-        /// generated type)
-        /// </summary>
-        internal static bool LightweightScopes {
-            get { return _lightweightScopes; }
         }
 
         /// <summary>

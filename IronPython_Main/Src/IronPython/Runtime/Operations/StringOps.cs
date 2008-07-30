@@ -20,13 +20,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute; 
 
 namespace IronPython.Runtime.Operations {

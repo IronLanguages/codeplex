@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
 

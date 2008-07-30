@@ -13,10 +13,11 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using System.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundAssignment : Expression {
@@ -43,8 +44,8 @@ namespace Microsoft.Scripting.Ast {
                 typeof(RuntimeHelpers).GetMethod("SetName"),
                 Annotations,
                 new Expression[] {
-                    Expression.CodeContext(), 
-                    Expression.Constant(_name),
+                    Utils.CodeContext(), 
+                    AstUtils.Constant(_name),
                     Expression.Convert(_value, typeof(object))
                 }
             );

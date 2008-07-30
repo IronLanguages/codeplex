@@ -15,7 +15,6 @@
 
 using System;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
 
 namespace ToyScript.Binders {
     internal class OperationBinder : OperationAction {
@@ -35,7 +34,7 @@ namespace ToyScript.Binders {
             return base.Equals(obj as OperationBinder);
         }
 
-        public override MetaObject Fallback(MetaObject[] args) {
+        public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
             throw new NotImplementedException();
         }
     }

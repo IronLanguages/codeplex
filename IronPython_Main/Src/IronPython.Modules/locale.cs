@@ -17,15 +17,12 @@ using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {

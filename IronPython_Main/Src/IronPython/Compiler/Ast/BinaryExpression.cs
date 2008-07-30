@@ -16,11 +16,9 @@
 using System;
 using System.Diagnostics;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
 using IronPython.Runtime.Binding;
-
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -174,7 +172,7 @@ namespace IronPython.Compiler.Ast {
                     return Ast.Comma(
                         Ast.Call(
                             AstGenerator.GetHelperMethod("WarnDivision"),
-                            Ast.CodeContext(),
+                            AstUtils.CodeContext(),
                             Ast.Constant(ag.DivisionOptions),
                             Ast.ConvertHelper(
                                 Ast.Assign(tempLeft, left),

@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 

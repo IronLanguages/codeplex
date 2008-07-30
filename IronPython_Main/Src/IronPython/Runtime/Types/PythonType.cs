@@ -17,27 +17,25 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using IronPython.Compiler;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Types {
-    using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Represents a PythonType.  Instances of PythonType are created via PythonTypeBuilder.  
@@ -1751,11 +1749,11 @@ namespace IronPython.Runtime.Types {
                     // mixed new-style/old-style class, search the one slot in it's MRO for the member
                     body = CombineBody(
                         body,
-                        Ast.If(
+                        AstUtils.If(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("OldClassTryLookupOneSlot"),
                                 Ast.Constant(pt.OldClass),
-                                Ast.Constant(action.Name),
+                                AstUtils.Constant(action.Name),
                                 tmp
                             ),
                             rule.MakeReturn(context.LanguageContext.Binder, tmp)
@@ -1765,7 +1763,7 @@ namespace IronPython.Runtime.Types {
                     // user defined new style class, see if we have a slot.
                     body = CombineBody(
                         body,
-                        Ast.If(
+                        AstUtils.If(
                             Ast.Call(
                                 TypeInfo._PythonOps.SlotTryGetBoundValue,
                                 rule.Context,
@@ -1808,7 +1806,7 @@ namespace IronPython.Runtime.Types {
                         rule.Parameters[0],
                         typeof(PythonType)
                     ),
-                    Ast.Constant(action.Name),
+                    AstUtils.Constant(action.Name),
                     Ast.ConvertHelper(
                         rule.Parameters[1],
                         typeof(object)
@@ -1838,7 +1836,7 @@ namespace IronPython.Runtime.Types {
                             rule.Parameters[0],
                             typeof(PythonType)
                         ),
-                        Ast.Constant(action.Name)
+                        AstUtils.Constant(action.Name)
                     )
                 );
             }
@@ -1969,7 +1967,7 @@ namespace IronPython.Runtime.Types {
                 } else if (pt.TryLookupSlot(context, action.Name, out pts)) {
                     // user defined new style class, see if we have a slot.
                     Expression tmp = rule.GetTemporary(typeof(object), "slotRes");
-                    return Ast.If(
+                    return AstUtils.If(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
                             rule.Context,
@@ -1990,7 +1988,7 @@ namespace IronPython.Runtime.Types {
             // we define __getattr__ on our meta type.
             if (metaType.TryResolveSlot(context, Symbols.GetBoundAttr, out pts)) {
                 Expression tmp = rule.GetTemporary(typeof(object), "slotRes");
-                return Ast.If(
+                return AstUtils.If(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
                         rule.Context,
@@ -2020,7 +2018,7 @@ namespace IronPython.Runtime.Types {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                         Ast.Constant(DynamicHelpers.GetPythonType(this).Name),
-                        Ast.Constant(action.Name)
+                        AstUtils.Constant(action.Name)
                     )
                 );
             } else {
@@ -2087,7 +2085,7 @@ namespace IronPython.Runtime.Types {
                         error = context.LanguageContext.Binder.MakeMissingMemberErrorInfo(UnderlyingSystemType, name).MakeErrorForRule(rule, ab);
                     }
 
-                    target = Ast.IfThenElse(
+                    target = AstUtils.IfThenElse(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("IsClsVisible"),
                                     rule.Context

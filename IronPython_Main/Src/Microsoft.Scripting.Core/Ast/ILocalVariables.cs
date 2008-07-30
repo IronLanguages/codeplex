@@ -14,11 +14,8 @@
  * ***************************************************************************/
 
 using System.Collections.ObjectModel;
-using System.Runtime.CompilerServices;
 
-// TODO: move to System.Runtime.CompilerServices
-// (This class is intended to be used by compilers and language runtimes)
-namespace System.Linq.Expressions {
+namespace System.Runtime.CompilerServices {
 
     /// <summary>
     /// Provides read/write access to variables in a scope.

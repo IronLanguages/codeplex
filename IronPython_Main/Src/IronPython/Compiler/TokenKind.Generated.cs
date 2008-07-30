@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 
 namespace IronPython.Compiler {
 

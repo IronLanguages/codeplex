@@ -19,14 +19,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -485,14 +481,19 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         private static MetaObject[] GetArgumentTypes(CallSignature signature, IList<MetaObject> args) {
             List<MetaObject> res = new List<MetaObject>();
+            List<MetaObject> namedObjects = null;
             for (int i = 0; i < args.Count; i++) {
                 switch (signature.GetArgumentKind(i)) {
+                    case ArgumentKind.Named:
+                        if (namedObjects == null) {
+                            namedObjects = new List<MetaObject>();
+                        }
+                        namedObjects.Add(args[i]);
+                        break;
                     case ArgumentKind.Simple:
                     case ArgumentKind.Instance:
-                    case ArgumentKind.Named:
                         res.Add(args[i]);
-                        continue;
-
+                        break;
                     case ArgumentKind.List:
                         IList<object> list = args[i].Value as IList<object>;
                         if (list == null) return null;
@@ -514,15 +515,18 @@ namespace Microsoft.Scripting.Actions {
                             );
                         }
                         break;
-
                     case ArgumentKind.Dictionary:
                         // caller needs to process these...
                         break;
-
                     default:
                         throw new NotImplementedException();
                 }
             }
+
+            if (namedObjects != null) {
+                res.AddRange(namedObjects);
+            }
+
             return res.ToArray();
         }
 

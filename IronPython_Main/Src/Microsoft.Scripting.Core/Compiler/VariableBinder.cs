@@ -16,10 +16,9 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Scripting;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     /// <summary>
     /// Determines if variables are closed over in nested lambdas and need to
     /// be hoisted.
@@ -226,13 +225,7 @@ namespace System.Linq.Expressions {
 
             // If we don't have an outer scope, than it's an unbound reference
             if (_parentScope == null) {
-                throw new InvalidOperationException(
-                    string.Format(
-                        "Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope",
-                        CompilerHelpers.GetVariableName(variable),
-                        CompilerScope.GetName(_currentLambda) ?? "<unnamed>"
-                    )
-                );
+                throw Error.UnboundVariable(CompilerScope.GetName(variable), CompilerScope.GetName(_currentLambda) ?? "<unnamed>");
             }
 
             // It belongs to an outer scope. Mark this scope as a closure
@@ -300,10 +293,7 @@ namespace System.Linq.Expressions {
 
                 // Validation: yield cannot appear outside of a generator
                 if (_expression.NodeType == ExpressionType.Lambda) {
-                    throw new InvalidOperationException(string.Format(
-                        "yield outside of generator in lambda '{0}'",
-                        CompilerScope.GetName(_expression) ?? "<unnamed>"
-                    ));
+                    throw Error.YieldOutsideOfGenerator(CompilerScope.GetName(_expression) ?? "<unnamed>");
                 }
 
                 // Create a generator temp for storing each scope's environment
@@ -333,19 +323,18 @@ namespace System.Linq.Expressions {
             // If we're binding the lambda, and we're in it or in ones of its
             // scopes, check return
             if (_currentLambda == _expression) {
-                Type returnType = CompilerHelpers.GetReturnType(_currentLambda);
+                Type returnType = _currentLambda.ReturnType;
 
                 if (node.Expression != null) {
-                    if (_expression.NodeType == ExpressionType.Lambda) {
-                        if (!returnType.IsAssignableFrom(node.Expression.Type)) {
-                            throw InvalidReturnStatement("Invalid type of return expression value", node);
-                        }
+                    // BUG: should be TypeUtils.AreReferenceAssignable !!!
+                    if (_currentLambda.NodeType == ExpressionType.Lambda &&
+                        !returnType.IsAssignableFrom(node.Expression.Type)) {
+
+                        throw Error.InvalidReturnTypeOfLambda(node.Expression.Type, returnType, _currentLambda.Name);
                     }
-                } else {
+                } else if (returnType != typeof(void)) {
                     // return without expression can be only from lambda with void return type
-                    if (returnType != typeof(void)) {
-                        throw InvalidReturnStatement("Missing return expression", node);
-                    }
+                    throw Error.MissingReturnForLambda(_currentLambda.Name, returnType);
                 }
             }
 
@@ -361,27 +350,11 @@ namespace System.Linq.Expressions {
             get { return _topLambda != _currentLambda || _topLambda.NodeType == ExpressionType.Generator; }
         }
 
-        private static ArgumentException InvalidReturnStatement(string message, ReturnStatement node) {
-            SourceSpan span = node.Annotations.Get<SourceSpan>();
-            return new ArgumentException(
-                String.Format(
-                    "{0} at {1}:{2}-{3}:{4}", message,
-                    span.Start.Line, span.Start.Column, span.End.Line, span.End.Column
-                )
-            );
-        }
-
         // Cannot close over ref parameters
         private void EnsureNotByRef(Expression variable) {
             ParameterExpression pe = variable as ParameterExpression;
             if (pe != null && pe.IsByRef) {
-                throw new InvalidOperationException(
-                    string.Format(
-                        "Can not close over byref parameter '{0}' referenced in lambda '{1}'",
-                        CompilerHelpers.GetVariableName(variable),
-                        CompilerScope.GetName(_currentLambda) ?? "<unnamed>"
-                    )
-                );
+                throw Error.CannotCloseOverByRef(CompilerScope.GetName(variable), CompilerScope.GetName(_currentLambda) ?? "<unnamed>");
             }
         }
     }

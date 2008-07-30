@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
+using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Ast {
     public class ModuleName : DottedName {

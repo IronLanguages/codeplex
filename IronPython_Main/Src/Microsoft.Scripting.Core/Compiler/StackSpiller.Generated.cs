@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     internal partial class StackSpiller {
 
         private delegate Result Rewriter(StackSpiller ar, Expression expr, Stack stack);

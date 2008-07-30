@@ -16,13 +16,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Scripting;
-using System.Scripting.Utils;
 using System.Threading;
 using System.Windows;
 using System.Windows.Resources;
 using System.Xml;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Silverlight {
 

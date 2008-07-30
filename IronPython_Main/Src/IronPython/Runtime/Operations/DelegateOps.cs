@@ -14,11 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Runtime;
-
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
 

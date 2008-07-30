@@ -22,7 +22,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
@@ -187,12 +186,11 @@ namespace System.Scripting.Com {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         private static Type ConvertTypeLibToAssembly(IntPtr typeInfoPtr, Guid typeInfoGuid) {
             Debug.WriteLine("Generating Interop assembly for type " + typeInfoGuid);
-
             // This can be very slow. If this is taking a long time, you need to add a reference
             // to the Primary Interop Assembly using clr.AddReference
             Type interfaceType = Marshal.GetTypeForITypeInfo(typeInfoPtr);
 
-            
+
             if (interfaceType == null) {
                 Debug.WriteLine("Could not find COM interface " + typeInfoGuid, "COM");
             } else {
@@ -273,7 +271,7 @@ namespace System.Scripting.Com {
 
             lock (rawComTypeCache) { // We lock over the entire operation so that we can publish a consistent view
 
-                foreach (Type type in AssemblyTypeNames.LoadTypesFromAssembly(interopAssembly, false)) {
+                foreach (Type type in TypeUtils.LoadTypesFromAssembly(interopAssembly)) {
                     if (type.IsImport && type.IsInterface) {
                         Type existing;
                         if (rawComTypeCache.TryGetValue(type.GUID, out existing)) {

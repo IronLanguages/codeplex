@@ -16,7 +16,7 @@
 using System;
 using System.Runtime.Remoting;
 using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
