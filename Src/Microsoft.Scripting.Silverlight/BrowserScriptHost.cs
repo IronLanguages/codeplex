@@ -15,9 +15,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Scripting;
+using System.Scripting.Utils;
 using System.Text;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Silverlight {
 

@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 [assembly: ExtensionType(typeof(IronPythonTest.ExtendedClass), typeof(IronPythonTest.ExtensionClass))]
 namespace IronPythonTest {

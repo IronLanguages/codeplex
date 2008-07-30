@@ -17,8 +17,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection.Emit;
+using System.Scripting.Generation;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
     partial class LambdaCompiler {
         private static void EmitBlock(LambdaCompiler lc, Expression expr) {
             lc.Emit((Block)expr, EmitAs.Default);

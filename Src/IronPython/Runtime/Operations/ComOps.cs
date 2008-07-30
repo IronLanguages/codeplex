@@ -17,8 +17,8 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 using ComObject = System.Scripting.Com.ComObject;

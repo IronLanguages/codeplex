@@ -15,6 +15,7 @@
 
 using System.Reflection;
 using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -456,26 +457,26 @@ namespace System.Linq.Expressions {
         }
 
 
-        public static UnaryExpression Negate(Annotations annotations, Expression expression, Type result, OperationAction bindingInfo) {
+        public static UnaryExpression Negate(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == "Negate", "bindingInfo", Strings.OperationKindMustMatchNodeType);
+            ContractUtils.Requires(bindingInfo.Operation == Operators.Negate, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
             return new UnaryExpression(annotations, ExpressionType.Negate, expression, result, null, bindingInfo);
         }
 
-        public static UnaryExpression Not(Annotations annotations, Expression expression, Type result, OperationAction bindingInfo) {
+        public static UnaryExpression Not(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == "Not", "bindingInfo", Strings.OperationKindMustMatchNodeType);
+            ContractUtils.Requires(bindingInfo.Operation == Operators.Not, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
             return new UnaryExpression(annotations, ExpressionType.Not, expression, result, null, bindingInfo);
         }
 
-        public static UnaryExpression OnesComplement(Annotations annotations, Expression expression, Type result, OperationAction bindingInfo) {
+        public static UnaryExpression OnesComplement(Annotations annotations, Expression expression, Type result, OldDoOperationAction bindingInfo) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == "OnesComplement", "bindingInfo", Strings.OperationKindMustMatchNodeType);
+            ContractUtils.Requires(bindingInfo.Operation == Operators.OnesComplement, "bindingInfo", Strings.OperationKindMustMatchNodeType);
 
             return new UnaryExpression(annotations, ExpressionType.OnesComplement, expression, result, null, bindingInfo);
         }

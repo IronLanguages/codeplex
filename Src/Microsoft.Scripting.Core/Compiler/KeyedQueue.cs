@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Scripting.Utils {
     
     /// <summary>
     /// A simple dictionary of queues, keyed off a particular type

@@ -16,7 +16,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Scripting.Utils {
 
     /// <summary>
     /// Dictionary[TKey, TValue] is not thread-safe in the face of concurrent reads and writes. SynchronizedDictionary

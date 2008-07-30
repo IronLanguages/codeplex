@@ -16,8 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

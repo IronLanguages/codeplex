@@ -14,8 +14,9 @@
  * ***************************************************************************/
 
 using System.Runtime.CompilerServices;
+using System.Scripting;
+
 using IronPython.Runtime;
-using Microsoft.Scripting;
 
 [assembly: PythonModule("errno", typeof(IronPython.Modules.PythonErrorNumber))]
 namespace IronPython.Modules {

@@ -51,14 +51,14 @@ namespace IronPython.Compiler.Ast {
                     return AstUtils.Call(
                         AstGenerator.GetHelperMethod("PrintNewlineWithDest"), 
                         Span, 
-                        AstUtils.CodeContext(), 
+                        Ast.CodeContext(), 
                         destination
                     );
                 } else {
                     return AstUtils.Call(
                         AstGenerator.GetHelperMethod("PrintNewline"), 
                         Span, 
-                        AstUtils.CodeContext()
+                        Ast.CodeContext()
                     );
                 }
             } else {
@@ -83,14 +83,14 @@ namespace IronPython.Compiler.Ast {
                     if (destination != null) {
                         mce = Ast.Call(
                             AstGenerator.GetHelperMethod(method + "WithDest"),
-                            AstUtils.CodeContext(),
+                            Ast.CodeContext(),
                             destination,
                             ag.TransformAsObject(current)
                         );
                     } else {
                         mce = Ast.Call(
                             AstGenerator.GetHelperMethod(method),
-                            AstUtils.CodeContext(),
+                            Ast.CodeContext(),
                             ag.TransformAsObject(current)
                         );
                     }

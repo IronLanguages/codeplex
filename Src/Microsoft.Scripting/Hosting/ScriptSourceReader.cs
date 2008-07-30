@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.IO;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 

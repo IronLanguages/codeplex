@@ -29,7 +29,6 @@ namespace System.Scripting.Com {
             _comType = comType;
         }
 
-        
         public Restrictions MakeComRestrictions(Type type, PropertyInfo testProperty, object targetObject) {
             Restrictions r1 = Restrictions.TypeRestriction(Expression, type);
             Restrictions r2 = Restrictions.ExpressionRestriction(
@@ -81,7 +80,7 @@ namespace System.Scripting.Com {
         }
 
         private MetaObject[] UnwrapComObject(MetaObject[] args) {
-            MetaObject[] copy = args.Copy();
+            MetaObject[] copy = ArrayUtils.Copy(args);
 
             // Replace self with unwrapped Com object value
             copy[0] = new MetaUnwrappedComObject(

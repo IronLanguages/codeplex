@@ -20,7 +20,7 @@ clr.AddReference("Microsoft.Scripting.Core")
 clr.AddReference("Microsoft.Scripting")
 clr.AddReference("IronPython")
 
-from System.Linq.Expressions.Compiler import Snippets
+from System.Scripting.Generation import Snippets
 from IronPython.Compiler import CallTarget0
 
 paramTypes = System.Array[System.Type]([])

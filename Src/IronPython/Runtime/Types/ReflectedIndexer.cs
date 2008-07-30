@@ -16,8 +16,8 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Actions;

@@ -20,9 +20,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Scripting;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
     partial class LambdaCompiler {
         /// <summary>
         /// Generates code for this expression in a value position.
@@ -136,7 +137,7 @@ namespace System.Linq.Expressions.Compiler {
             expr = node.Expression;
             if (typeof(LambdaExpression).IsAssignableFrom(expr.Type)) {
                 // if the invoke target is a lambda expression tree, first compile it into a delegate
-                expr = Expression.Call(expr, expr.Type.GetMethod("Compile", new Type[0]));
+                expr = Expression.Call(expr, expr.Type.GetMethod("Compile", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
             }
             expr = Expression.Call(expr, expr.Type.GetMethod("Invoke"), node.Arguments);
 
@@ -191,7 +192,7 @@ namespace System.Linq.Expressions.Compiler {
                 _ilg.Emit(OpCodes.Constrained, objectType);
             }
             if (mi.CallingConvention == CallingConventions.VarArgs) {
-                _ilg.EmitCall(callOp, mi, args.Map(a => a.Type));
+                _ilg.EmitCall(callOp, mi, CompilerHelpers.GetTypes(args));
             } else {
                 _ilg.Emit(callOp, mi);
             }

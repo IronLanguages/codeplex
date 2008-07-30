@@ -19,7 +19,7 @@ using System.Reflection.Emit;
 using System.Scripting;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
 
     partial class LambdaCompiler {
 

@@ -18,11 +18,13 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using System.Threading;
 using System.Runtime.CompilerServices;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
 
     /// <summary>
     /// Dynamic Language Runtime Compiler.
@@ -179,7 +181,7 @@ namespace System.Linq.Expressions.Compiler {
             }
 
             implName = GetGeneratedName(lambda.Name);
-            returnType = lambda.ReturnType;
+            returnType = CompilerHelpers.GetReturnType(lambda);
         }
 
         private static string GetGeneratedName(string prefix) {
@@ -200,7 +202,7 @@ namespace System.Linq.Expressions.Compiler {
 
             EmitLambdaStart(_lambda);
 
-            Type returnType = _method.GetReturnType();
+            Type returnType = CompilerHelpers.GetReturnType(_method);
             if (returnType == typeof(void)) {
                 EmitExpressionAsVoid(_lambda.Body);
                 EmitLambdaEnd(_lambda);

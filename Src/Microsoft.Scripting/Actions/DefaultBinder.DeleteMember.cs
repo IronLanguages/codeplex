@@ -17,8 +17,8 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;

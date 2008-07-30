@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Threading;
 
@@ -87,7 +87,7 @@ namespace System.Scripting.Actions {
                 }
             }
 
-            return target.CreateDelegate<T>(this);
+            return (T)(object)ReflectionUtils.CreateDelegate(target, typeof(T), this);
         }
 
         private static MethodInfo CreateCustomMatchmakerDelegate<T>(MethodInfo invoke) where T : class {

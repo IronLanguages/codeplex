@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
+using System.Scripting.Utils;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {

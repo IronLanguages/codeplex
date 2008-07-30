@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using CompilerServices = System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Generation {
@@ -49,6 +49,7 @@ namespace Microsoft.Scripting.Generation {
             // a bug in partial trust we can't access the generic field.
 
             // arg is boxType ? &_tmp : throw new ArgumentTypeException()
+            //   IncorrectBoxType throws the exception to avoid stack imbalance issues.
             Type boxType = typeof(CompilerServices.StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
                 Expression.TypeIs(parameters[Index], BoxType),

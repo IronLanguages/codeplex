@@ -16,9 +16,9 @@
 using System;
 using System.Collections;
 using System.Linq.Expressions;
-using Microsoft.Scripting;
+using System.Scripting;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;

@@ -16,23 +16,26 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Types;
-using Microsoft.Scripting;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
+    using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
     
     // These operations get linked into all new-style classes. 
     public static class UserTypeOps {
@@ -191,7 +194,7 @@ namespace IronPython.Runtime.Operations {
 
                 rule.Target =
                     Ast.Block(
-                        AstUtils.If(
+                        Ast.If(
                             PythonBinderHelper.MakeTryGetTypeMember<T>(rule, pts, tmp),
                             rule.MakeReturn(
                                 context.LanguageContext.Binder,
@@ -237,7 +240,7 @@ namespace IronPython.Runtime.Operations {
 
                 rule.Target =
                     Ast.Block(
-                        AstUtils.If(
+                        Ast.If(
                             PythonBinderHelper.MakeTryGetTypeMember<T>(rule, pts, tmp),
                             rule.MakeReturn(
                                 context.LanguageContext.Binder,
@@ -317,7 +320,7 @@ namespace IronPython.Runtime.Operations {
                 callArgs[1] = tmp;
 
                 body = Ast.Block(
-                    AstUtils.If(
+                    Ast.If(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("SlotTryGetValue"),
                             rule.Context,
@@ -433,7 +436,7 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 if (action.IsNoThrow) {
-                    body = AstUtils.Try(body).Catch(typeof(MissingMemberException), ReturnOperationFailed<T>(context, rule));
+                    body = Ast.Try(body).Catch(typeof(MissingMemberException), ReturnOperationFailed<T>(context, rule));
                 }
             }
 
@@ -496,7 +499,7 @@ namespace IronPython.Runtime.Operations {
                 // if the type also defines __getattr__ we need to fallback to that when __getattribute__ fails.                
                 templateName += "and __getattr__";
                 getAttribute =
-                    AstUtils.Try(
+                    Ast.Try(
                         getAttribute
                     ).Catch(
                         typeof(MissingMemberException),
@@ -506,7 +509,7 @@ namespace IronPython.Runtime.Operations {
 
             if (action.IsNoThrow) {
                 templateName += " nothrow";
-                getAttribute = AstUtils.Try(
+                getAttribute = Ast.Try(
                     getAttribute
                 ).Catch(
                     typeof(MissingMemberException),
@@ -532,7 +535,7 @@ namespace IronPython.Runtime.Operations {
                 Ast.Call(
                     typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                     Ast.Constant(typeName),
-                    AstUtils.Constant(action.Name)
+                    Ast.Constant(action.Name)
                 )
             );
         }
@@ -598,12 +601,12 @@ namespace IronPython.Runtime.Operations {
         private static Expression MakeOldStyleAccess<T>(CodeContext context, RuleBuilder<T> rule, SymbolId name, IPythonObject sdo, Expression body, VariableExpression tmp) where T : class {
             return Ast.Block(
                 body,
-                AstUtils.If(
+                Ast.If(
                     Ast.Call(
                         typeof(UserTypeOps).GetMethod("TryGetMixedNewStyleOldStyleSlot"),
                         rule.Context,
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                        AstUtils.Constant(name),
+                        Ast.Constant(name),
                         tmp
                     ),
                     rule.MakeReturn(context.LanguageContext.Binder, tmp)
@@ -617,7 +620,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static Expression MakeGetAttrRule<T>(CodeContext context, OldGetMemberAction action, RuleBuilder<T> rule, Expression body, VariableExpression tmp, Expression getattr) where T : class {
-            Expression getAttr = AstUtils.If(
+            Expression getAttr = Ast.If(
                 Ast.Call(
                     TypeInfo._PythonOps.SlotTryGetBoundValue,
                     rule.Context,
@@ -669,7 +672,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                         Ast.Constant(type.Name),
-                        AstUtils.Constant(action.Name)
+                        Ast.Constant(action.Name)
                     )
                 )
 
@@ -709,7 +712,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             return
-                AstUtils.If(
+                Ast.If(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTrySetValue"),
                         rule.Context,
@@ -732,7 +735,7 @@ namespace IronPython.Runtime.Operations {
 
         private static Expression MakeSlotDelete<T>(CodeContext context, RuleBuilder<T> rule, PythonTypeSlot dts) where T : class {
             return
-                AstUtils.If(
+                Ast.If(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryDeleteValue"),
                         rule.Context,
@@ -757,7 +760,7 @@ namespace IronPython.Runtime.Operations {
             if (rsp != null) {
                 // we need to fall back to __getattr__ if the value is not defined, so call it and check the result.
                 templateType = null;
-                return AstUtils.If(
+                return Ast.If(
                     Ast.NotEqual(
                         Ast.Assign(
                             tmp,
@@ -843,7 +846,7 @@ namespace IronPython.Runtime.Operations {
             templateType = null;
             return Ast.Block(
                 body,
-                AstUtils.If(
+                Ast.If(
                     Ast.Call(
                         TypeInfo._PythonOps.SlotTryGetBoundValue,
                         rule.Context,
@@ -863,7 +866,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static IfStatementBuilder MakeDictionaryAccess<T>(CodeContext context, OldGetMemberAction action, RuleBuilder<T> rule, VariableExpression tmp) where T : class {
-            return AstUtils.If(
+            return Ast.If(
                 Ast.AndAlso(
                     Ast.NotEqual(
                         Ast.Property(
@@ -878,7 +881,7 @@ namespace IronPython.Runtime.Operations {
                             TypeInfo._IPythonObject.Dict
                         ),
                         TypeInfo._IAttributesCollection.TryGetvalue,
-                        AstUtils.Constant(action.Name),
+                        Ast.Constant(action.Name),
                         tmp
                     )
                 ),
@@ -1015,7 +1018,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         typeof(UserTypeOps).GetMethod("RemoveDictionaryValue"),
                         Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                        AstUtils.Constant(action.Name)
+                        Ast.Constant(action.Name)
                     )
                 );
         }
@@ -1027,7 +1030,7 @@ namespace IronPython.Runtime.Operations {
                 Ast.Call(
                     typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
                     Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                    AstUtils.Constant(action.Name),
+                    Ast.Constant(action.Name),
                     Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 )
             );
@@ -1037,7 +1040,7 @@ namespace IronPython.Runtime.Operations {
             VariableExpression tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __setattr__
             rule.Target =
-                AstUtils.IfThenElse(
+                Ast.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetValue"),
                         rule.Context,
@@ -1065,7 +1068,7 @@ namespace IronPython.Runtime.Operations {
             VariableExpression tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __delattr__
             rule.Target =
-                AstUtils.IfThenElse(
+                Ast.IfThenElse(
                     Ast.Call(
                         TypeInfo._PythonOps.SlotTryGetBoundValue,
                         rule.Context,

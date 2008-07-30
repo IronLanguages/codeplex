@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 

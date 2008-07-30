@@ -16,8 +16,8 @@
 using System;
 using System.Collections.Generic;
 using System.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
+using Microsoft.Scripting.Compilers;
 
 namespace Microsoft.Scripting.Hosting {
     public sealed class TokenCategorizer

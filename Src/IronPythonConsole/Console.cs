@@ -59,6 +59,7 @@ internal sealed class PythonConsoleHost : ConsoleHost {
         if (Environment.GetEnvironmentVariable("TERM") == null) {
             Environment.SetEnvironmentVariable("TERM", "dumb");
         }
+
         return new PythonConsoleHost().Run(args);
     }
 }

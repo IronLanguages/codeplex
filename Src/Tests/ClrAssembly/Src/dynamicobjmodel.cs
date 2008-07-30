@@ -17,7 +17,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 namespace Merlin.Testing.DynamicObjectModel
 {

@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

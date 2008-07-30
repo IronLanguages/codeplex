@@ -15,7 +15,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Scripting;
 using System.Threading;
 
 namespace IronPython.Runtime {

@@ -15,9 +15,9 @@
 
 using System.Collections;
 using System.Runtime.CompilerServices;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     public static class TypeTrackerOps {

@@ -13,11 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using Microsoft.Scripting.Interpretation;
+using System;
+using System.Scripting.Utils;
 using System.Threading;
 
 namespace Microsoft.Scripting.Interpretation {

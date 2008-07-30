@@ -47,19 +47,22 @@ def make_exception_item(line1, line2):
     exception_item = ExceptionItem(type, ID, text ,num)
     return exception_item
 
-def collect_exceptions(filename):
+
+def collect_exceptions():
+	filename = generate.root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\System\\Linq\\Expressions\\System.Linq.Expressions.txt"
 	thefile = open(filename)
 	text = thefile.read()
 	lines = text.splitlines()
 	items = []
 	for i in range(len(lines)):
 		line1 = lines[i]
-		if line1.startswith("## "):
+		if line1.startswith("##"):
 			line2 = lines[i+1]
 			items.append(make_exception_item(line1, line2))			
 	return items
 
-def collect_strings(filename):
+def collect_strings():
+	filename = generate.root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\System\\Linq\\Expressions\\System.Linq.Expressions.txt"
 	thefile = open(filename)
 	text = thefile.read()
 	lines = text.splitlines()
@@ -110,9 +113,9 @@ def escape(s):
 	s = s.replace('"', '\\"')
 	return s
 	
-def gen_expr_factory(cw, source):
-	strings = collect_strings(source)
-	exceptions = collect_exceptions(source)
+def gen_expr_factory(cw):
+	strings = collect_strings()
+	exceptions = collect_exceptions()
 
 	result = ""
 	result += "/// <summary>" + "\n"
@@ -176,16 +179,9 @@ def gen_expr_factory(cw, source):
 			
 	cw.exit_block()
 
-def gen_expr_factory_core(cw):
-    gen_expr_factory(cw, generate.root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\System\\Linq\\Expressions\\System.Linq.Expressions.txt")
-
-def gen_expr_factory_scripting(cw):
-    gen_expr_factory(cw, generate.root_dir + "\\Runtime\\Microsoft.Scripting\\Microsoft.Scripting.txt")
-
 def main():
     return generate.generate(
-        ("Exception Factory", gen_expr_factory_core),
-        ("Microsoft.Scripting Exception Factory", gen_expr_factory_scripting),
+        ("Exception Factory", gen_expr_factory),
     )
 
 if __name__ == "__main__":

@@ -16,12 +16,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
     /// <summary>
     /// GeneratorInfo is a data structure in which Compiler keeps information related co compiling
     /// GeneartorLambdaExpression. It's created by YieldLabelBuilder which is invoked by VariableBinder
     /// </summary>
-    internal sealed class GeneratorInfo {
+    class GeneratorInfo {
         /// <summary>
         /// Try statements in this generator
         /// </summary>

@@ -20,7 +20,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using System.Security.Cryptography.X509Certificates;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;

@@ -16,8 +16,8 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 

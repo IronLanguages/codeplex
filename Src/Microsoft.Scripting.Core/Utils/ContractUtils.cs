@@ -15,21 +15,18 @@
 
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq.Expressions;
 
 namespace System.Scripting.Utils {
+    public static class ContractUtils {
 
-    // TODO: Update with the newest version of the managed contracts stuff
-    internal static class ContractUtils {
-
-        internal static void Requires(bool precondition) {
+        public static void Requires(bool precondition) {
             if (!precondition) {
                 throw new ArgumentException(Strings.MethodPreconditionViolated);
             }
         }
 
-        internal static void Requires(bool precondition, string paramName) {
+        public static void Requires(bool precondition, string paramName) {
             Assert.NotEmpty(paramName);
 
             if (!precondition) {
@@ -37,7 +34,7 @@ namespace System.Scripting.Utils {
             }
         }
 
-        internal static void Requires(bool precondition, string paramName, string message) {
+        public static void Requires(bool precondition, string paramName, string message) {
             Assert.NotEmpty(paramName);
 
             if (!precondition) {
@@ -45,7 +42,7 @@ namespace System.Scripting.Utils {
             }
         }
 
-        internal static void RequiresNotNull(object value, string paramName) {
+        public static void RequiresNotNull(object value, string paramName) {
             Assert.NotEmpty(paramName);
 
             if (value == null) {
@@ -53,14 +50,14 @@ namespace System.Scripting.Utils {
             }
         }
 
-        internal static void RequiresNotEmpty(string str, string paramName) {
+        public static void RequiresNotEmpty(string str, string paramName) {
             RequiresNotNull(str, paramName);
             if (str.Length == 0) {
                 throw new ArgumentException(Strings.NonEmptyStringRequired, paramName);
             }
         }
 
-        internal static void RequiresNotEmpty<T>(ICollection<T> collection, string paramName) {
+        public static void RequiresNotEmpty<T>(ICollection<T> collection, string paramName) {
             RequiresNotNull(collection, paramName);
             if (collection.Count == 0) {
                 throw new ArgumentException(Strings.NonEmptyCollectionRequired, paramName);
@@ -72,7 +69,7 @@ namespace System.Scripting.Utils {
         /// </summary>
         /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Index is outside the array.</exception>
-        internal static void RequiresArrayIndex<T>(IList<T> array, int index, string indexName) {
+        public static void RequiresArrayIndex<T>(IList<T> array, int index, string indexName) {
             Assert.NotEmpty(indexName);
             Assert.NotNull(array);
 
@@ -84,7 +81,7 @@ namespace System.Scripting.Utils {
         /// </summary>
         /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Index is outside the array.</exception>
-        internal static void RequiresArrayInsertIndex<T>(IList<T> array, int index, string indexName) {
+        public static void RequiresArrayInsertIndex<T>(IList<T> array, int index, string indexName) {
             Assert.NotEmpty(indexName);
             Assert.NotNull(array);
 
@@ -96,7 +93,7 @@ namespace System.Scripting.Utils {
         /// </summary>
         /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Offset or count are out of range.</exception>
-        internal static void RequiresArrayRange<T>(IList<T> array, int offset, int count, string offsetName, string countName) {
+        public static void RequiresArrayRange<T>(IList<T> array, int offset, int count, string offsetName, string countName) {
             Assert.NotEmpty(offsetName);
             Assert.NotEmpty(countName);
             Assert.NotNull(array);
@@ -110,7 +107,7 @@ namespace System.Scripting.Utils {
         /// </summary>
         /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Offset or count are out of range.</exception>
-        internal static void RequiresListRange(IList array, int offset, int count, string offsetName, string countName) {
+        public static void RequiresListRange(IList array, int offset, int count, string offsetName, string countName) {
             Assert.NotEmpty(offsetName);
             Assert.NotEmpty(countName);
             Assert.NotNull(array);
@@ -124,7 +121,7 @@ namespace System.Scripting.Utils {
         /// </summary>
         /// <exception cref="ArgumentNullException">String is <c>null</c>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Offset or count are out of range.</exception>
-        internal static void RequiresArrayRange(string str, int offset, int count, string offsetName, string countName) {
+        public static void RequiresArrayRange(string str, int offset, int count, string offsetName, string countName) {
             Assert.NotEmpty(offsetName);
             Assert.NotEmpty(countName);
             Assert.NotNull(str);
@@ -136,13 +133,13 @@ namespace System.Scripting.Utils {
         /// <summary>
         /// Requires the array and all its items to be non-null.
         /// </summary>
-        internal static void RequiresNotNullItems<T>(IList<T> array, string arrayName) {
+        public static void RequiresNotNullItems<T>(IList<T> array, string arrayName) {
             Assert.NotNull(arrayName);
             RequiresNotNull(array, arrayName);
 
             for (int i = 0; i < array.Count; i++) {
                 if (array[i] == null) {
-                    throw new ArgumentNullException(string.Format("{0}[{1}]", arrayName, i));
+                    throw ExceptionUtils.MakeArgumentItemNullException(i, arrayName);
                 }
             }
         }

@@ -13,9 +13,8 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 using ToyScript.Parser;
 using ToyScript.Runtime;
 using MSAst = System.Linq.Expressions;
@@ -44,7 +43,7 @@ namespace ToyScript {
                     break;
             }
 
-            ast = new GlobalLookupRewriter().RewriteLambda(ast);
+            ast = new System.Scripting.Generation.GlobalLookupRewriter().RewriteLambda(ast);
 
             return new ScriptCode(ast, sourceUnit);
         }

@@ -14,19 +14,20 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using System.Scripting;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
+using System.Linq.Expressions;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
     
     /// <summary>
     /// Common helpers used by the various binding logic.
@@ -372,7 +373,7 @@ namespace IronPython.Runtime.Binding {
 
                 expr = Ast.Scope(
                     Ast.Comma(
-                        AstUtils.Try(
+                        Ast.Try(
                             Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                             Ast.Assign(tmp, expr)
                         ).Finally(
@@ -387,7 +388,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         internal static Expression CreateBinderStateExpression() {
-            return AstUtils.CodeContext();
+            return Ast.CodeContext();
         }
 
         /// <summary>

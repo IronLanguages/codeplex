@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;

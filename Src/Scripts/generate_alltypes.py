@@ -41,7 +41,7 @@ class NumType:
         toObj = "(%s)" % self.name
         toObjFooter = ""
         if self.name == "Int32":
-            toObj = "Microsoft.Scripting.Runtime.RuntimeHelpers.Int32ToObject((Int32)"
+            toObj = "System.Scripting.Runtime.RuntimeHelpers.Int32ToObject((Int32)"
             toObjFooter = ")"
         if self.get_overflow_type() == bigint:
             op_type = 'BigInteger'

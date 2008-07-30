@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {

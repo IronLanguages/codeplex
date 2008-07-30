@@ -15,11 +15,12 @@
 
 using System;
 using System.IO;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
+
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     internal sealed class OutputWriter : TextWriter {

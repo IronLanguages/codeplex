@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
+using System.Scripting;
 using System.Linq.Expressions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundExpression : Expression {
@@ -34,8 +34,8 @@ namespace Microsoft.Scripting.Ast {
         public override Expression Reduce() {
             return Expression.Call(
                 typeof(RuntimeHelpers).GetMethod("LookupName"),
-                Utils.CodeContext(),
-                AstUtils.Constant(_name)
+                Expression.CodeContext(),
+                Expression.Constant(_name)
             );
         }
     }

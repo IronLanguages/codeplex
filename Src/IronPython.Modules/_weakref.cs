@@ -16,8 +16,13 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;

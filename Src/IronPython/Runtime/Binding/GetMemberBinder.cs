@@ -18,7 +18,7 @@ using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 using Microsoft.Scripting.Actions;
 
@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Binding {
             _isNoThrow = isNoThrow;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
             // Python always provides an extra arg to GetMember to flow the context.
             Debug.Assert(args.Length == 2 && args[1].Expression.Type == typeof(CodeContext));
 

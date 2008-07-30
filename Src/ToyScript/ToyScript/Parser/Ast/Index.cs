@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using MSAst = System.Linq.Expressions;
 
 namespace ToyScript.Parser.Ast {

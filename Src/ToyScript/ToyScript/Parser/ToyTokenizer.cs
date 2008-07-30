@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Scripting;
 using System.Text;
-using Microsoft.Scripting;
 
 namespace ToyScript.Parser {
     class ToyTokenizer {

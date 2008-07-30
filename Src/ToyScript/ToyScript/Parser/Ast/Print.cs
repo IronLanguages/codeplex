@@ -31,8 +31,8 @@ namespace ToyScript.Parser.Ast {
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             return AstUtils.Call(
                 typeof(ToyHelpers).GetMethod("Print"), 
-                Span,
-                AstUtils.CodeContext(), 
+                Span, 
+                Ast.CodeContext(), 
                 Ast.ConvertHelper(
                     _expression.Generate(tg),
                     typeof(object)

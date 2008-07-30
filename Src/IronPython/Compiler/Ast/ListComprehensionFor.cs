@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections;
-using Microsoft.Scripting;
+using System.Scripting;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {

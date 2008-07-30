@@ -22,10 +22,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Scripting;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
 
     /// <summary>
     /// LambdaCompiler is responsible for compiling individual lambda (LambdaExpression). The complete tree may
@@ -124,9 +125,9 @@ namespace System.Linq.Expressions.Compiler {
 
             // Create the ILGen instance, debug or not
             if (GlobalDlrOptions.DumpIL || GlobalDlrOptions.ShowIL) {
-                _ilg = CreateDebugILGen(ilg, mi, paramTypes);
+                _ilg = CreateDebugILGen(ilg, typeGen, mi, paramTypes);
             } else {
-                _ilg = new ILGen(ilg);
+                _ilg = new ILGen(ilg, typeGen);
             }
 
             // Initialize constant pool
@@ -264,14 +265,22 @@ namespace System.Linq.Expressions.Compiler {
             return (T)(object)CompileLambda(lambda, typeof(T), false, forceDynamic, out method);
         }
 
+        internal static T CompileLambda<T>(LambdaExpression lambda) {
+            MethodInfo method;
+            return (T)(object)CompileLambda(lambda, typeof(T), false, false, out method);
+        }
+
+        internal static Delegate CompileLambda(LambdaExpression lambda) {
+            MethodInfo method;
+            return CompileLambda(lambda, lambda.Type, false, false, out method);
+        }
+
+        /// <summary>
+        /// Used by ScriptCode for generating the top level target
+        /// </summary>
         internal static T CompileLambda<T>(LambdaExpression lambda, bool emitDebugSymbols) {
             MethodInfo method;
             return (T)(object)CompileLambda(lambda, typeof(T), emitDebugSymbols, false, out method);
-        }
-
-        internal static Delegate CompileLambda(LambdaExpression lambda, bool emitDebugSymbols) {
-            MethodInfo method;
-            return CompileLambda(lambda, lambda.Type, emitDebugSymbols, false, out method);
         }
 
         /// <summary>
@@ -373,7 +382,7 @@ namespace System.Linq.Expressions.Compiler {
 
             if (_returnBlock.HasValue) {
                 _ilg.MarkLabel(_returnBlock.Value.ReturnStart);
-                if (_method.GetReturnType() != typeof(void)) {
+                if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
                     _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value.ReturnValue);
                 }
                 _ilg.Emit(OpCodes.Ret);
@@ -437,9 +446,9 @@ namespace System.Linq.Expressions.Compiler {
             method = CreateDelegateMethodInfo();
 
             if (_boundConstants != null) {
-                return method.CreateDelegate(delegateType, new Closure(_boundConstants.ToArray(), null));
+                return ReflectionUtils.CreateDelegate(method, delegateType, new Closure(_boundConstants.ToArray(), null));
             } else {
-                return method.CreateDelegate(delegateType);
+                return ReflectionUtils.CreateDelegate(method, delegateType);
             }
         }
 
@@ -472,21 +481,21 @@ namespace System.Linq.Expressions.Compiler {
 
         #region IL Debugging Support
 
-        private static DebugILGen CreateDebugILGen(ILGenerator il, MethodBase method, IList<Type> paramTypes) {
+        private static DebugILGen CreateDebugILGen(ILGenerator il, TypeGen tg, MethodBase method, IList<Type> paramTypes) {
             TextWriter txt = Console.Out;
 #if !SILVERLIGHT
             if (GlobalDlrOptions.DumpIL) {
                 txt = new StreamWriter(Snippets.Shared.GetMethodILDumpFile(method));
             }
 #endif
-            DebugILGen dig = new DebugILGen(il, txt);
+            DebugILGen dig = new DebugILGen(il, tg, txt);
 
             StringBuilder sb = new StringBuilder("\n\n");
-            sb.Append(method.GetReturnType().FormatTypeName());
+            ReflectionUtils.FormatTypeName(sb, CompilerHelpers.GetReturnType(method));
             sb.AppendFormat(" {0} {1} (\n", method.Name, method.Attributes);
             foreach (Type type in paramTypes) {
                 sb.Append("\t");
-                sb.Append(type.FormatTypeName());
+                ReflectionUtils.FormatTypeName(sb, type);
                 sb.Append("\n");
             }
             sb.Append(")\n");
@@ -572,7 +581,7 @@ namespace System.Linq.Expressions.Compiler {
 
             Type[] parameterTypes = MakeParameterTypeArray(paramTypes, dynamicMethod, closure);
 
-            MethodBuilder mb = tg.TypeBuilder.DefineMethod(name, TypeUtils.PublicStatic, retType, parameterTypes);
+            MethodBuilder mb = tg.TypeBuilder.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
             LambdaCompiler lc = new LambdaCompiler(
                 scope,
                 tg,

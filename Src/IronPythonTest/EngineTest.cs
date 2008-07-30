@@ -18,12 +18,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
+using IronPython.Hosting;
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT

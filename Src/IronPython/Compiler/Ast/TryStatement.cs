@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -125,7 +125,7 @@ namespace IronPython.Compiler.Ast {
                             @catch,
                             Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
                         ),
-                        AstUtils.IfThen(runElse,
+                        Ast.IfThen(runElse,
                             @else
                         )
                     );
@@ -180,7 +180,7 @@ namespace IronPython.Compiler.Ast {
                 //          line numbers.
                 body = AstUtils.Try(// we use a filter to know when we have an exception and when control leaves normally (via
                     // either a return or the body completing successfully).
-                    AstUtils.Try(
+                    Ast.Try(
                         Ast.Assign(noNestedException, Ast.Constant(true)),
                         body
                     ).Filter(
@@ -195,7 +195,7 @@ namespace IronPython.Compiler.Ast {
                     Span, _header
                 ).Finally(
                     // if we had an exception save the line # that was last executing during the try
-                    AstUtils.If(
+                    Ast.If(
                         Ast.Not(noNestedException),
                         ag.GetLineNumberUpdateExpression(false)
                     ),
@@ -243,7 +243,7 @@ namespace IronPython.Compiler.Ast {
             // The variable where the runtime will store the exception.
             variable = exception;
 
-            var tests = new List<Microsoft.Scripting.Ast.IfStatementTest>(_handlers.Length);
+            List<MSAst.IfStatementTest> tests = new List<MSAst.IfStatementTest>(_handlers.Length);
             MSAst.VariableExpression converted = null;
             MSAst.Expression catchAll = null;
 
@@ -251,7 +251,7 @@ namespace IronPython.Compiler.Ast {
                 TryStatementHandler tsh = _handlers[index];
 
                 if (tsh.Test != null) {
-                    Microsoft.Scripting.Ast.IfStatementTest ist;
+                    MSAst.IfStatementTest ist;
 
                     //  translating:
                     //      except Test ...
@@ -280,7 +280,7 @@ namespace IronPython.Compiler.Ast {
                             converted = ag.GetTemporary("converted");
                         }
 
-                        ist = AstUtils.IfCondition(
+                        ist = Ast.IfCondition(
                             Ast.NotEqual(
                                 Ast.Assign(converted, test),
                                 Ast.Null()
@@ -304,7 +304,7 @@ namespace IronPython.Compiler.Ast {
                         //          traceback-header
                         //          <body>
                         //      }
-                        ist = AstUtils.IfCondition(
+                        ist = Ast.IfCondition(
                             Ast.NotEqual(
                                 test,
                                 Ast.Null()
@@ -345,7 +345,7 @@ namespace IronPython.Compiler.Ast {
                     catchAll = Ast.Throw(exception);
                 } 
 
-                body = AstUtils.If(
+                body = Ast.If(
                     tests.ToArray(),
                     catchAll
                 );
@@ -368,7 +368,7 @@ namespace IronPython.Compiler.Ast {
                     extracted,
                     Ast.Call(
                         AstGenerator.GetHelperMethod("SetCurrentException"),
-                        AstUtils.CodeContext(),
+                        Ast.CodeContext(),
                         exception
                     )
                 ),
@@ -389,7 +389,7 @@ namespace IronPython.Compiler.Ast {
                 ag.GetLineNumberUpdateExpression(false),    // pass false so if we take another exception we'll add it to the frame list
                 Ast.Call(
                     AstGenerator.GetHelperMethod("BuildExceptionInfo"),
-                    AstUtils.CodeContext(),
+                    Ast.CodeContext(),
                     exception
                 ),
                 body

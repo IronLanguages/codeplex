@@ -15,7 +15,7 @@
 
 using System;
 using IronPython.Runtime;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 #if !SILVERLIGHT    // System.Text.RegularExpressions
 [assembly: PythonModule("_sre", typeof(IronPython.Modules.PythonSRegEx))]

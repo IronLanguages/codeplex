@@ -16,10 +16,10 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
     partial class LambdaCompiler {
 
         private static void EmitQuoteUnaryExpression(LambdaCompiler lc, Expression expr) {
@@ -39,7 +39,7 @@ namespace System.Linq.Expressions.Compiler {
                 // HoistedLocals is internal so emit as System.Object
                 EmitConstant(hoistedLocals, typeof(object));
                 _scope.EmitGet(hoistedLocals.SelfVariable);
-                _ilg.EmitCall(typeof(RuntimeOps).GetMethod("Quote"));
+                _ilg.EmitCall(typeof(RuntimeHelpers).GetMethod("Quote"));
 
                 if (quote.Type != typeof(Expression)) {
                     _ilg.Emit(OpCodes.Castclass, quote.Type);

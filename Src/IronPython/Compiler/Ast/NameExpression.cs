@@ -15,9 +15,10 @@
 
 using System;
 using System.Scripting;
+using System.Scripting.Runtime;
+
 using IronPython.Runtime.Binding;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -61,7 +62,7 @@ namespace IronPython.Compiler.Ast {
                 read = Ast.Call(
                     AstGenerator.GetHelperMethod("CheckUninitialized"),
                     read,
-                    AstUtils.Constant(_name)
+                    Ast.Constant(_name)
                 );
             }
 

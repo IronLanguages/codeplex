@@ -19,8 +19,7 @@ using System.Reflection;
 using System.Scripting.Utils;
 using System.Text;
 
-// TODO: Remove dependencies:
-using System.Linq.Expressions.Compiler;
+// TODO: Remove dependency
 using System.Scripting.Actions;
 
 namespace System.Linq.Expressions {

@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;

@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
+using System.Scripting.Generation;
 using System.Text;
 using System.Threading;
 
@@ -217,7 +217,7 @@ namespace System.Scripting.Actions {
             //
             // Level 2 cache lookup
             //
-            Type[] argTypes = TypeUtils.GetTypesForBinding(args);
+            Type[] argTypes = CompilerHelpers.GetTypes(args);
             applicable = _cache.FindApplicableRules(_binder, argTypes, startingTarget);
 
             //
@@ -339,7 +339,7 @@ namespace System.Scripting.Actions {
             sb.Append(binder.ToString());
             sb.Append(" ");
             foreach (object arg in args) {
-                sb.Append(TypeUtils.GetTypeForBinding(arg).Name);
+                sb.Append(CompilerHelpers.GetType(arg).Name);
                 sb.Append(" ");
             }
 

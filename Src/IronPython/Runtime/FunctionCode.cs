@@ -15,10 +15,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Scripting;
 using System.Scripting.Actions;
+using System.Scripting.Runtime;
+
+using Microsoft.Scripting.Actions;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     /// <summary>

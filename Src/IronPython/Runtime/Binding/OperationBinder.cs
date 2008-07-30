@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Binding {
             _state = state;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
             return PythonProtocol.Operation(this, args);
         }
 

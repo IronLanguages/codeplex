@@ -19,9 +19,12 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -393,7 +396,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private Expression WrapForThrowingTry(bool isImplicit, Expression ret) {
             if (!isImplicit && Action.ResultKind == ConversionResultKind.ExplicitTry) {
-                ret = AstUtils.Try(ret).Catch(typeof(Exception), CompilerHelpers.GetTryConvertReturnValue(Context, _rule));
+                ret = Ast.Try(ret).Catch(typeof(Exception), CompilerHelpers.GetTryConvertReturnValue(Context, _rule));
             }
             return ret;
         }
@@ -503,7 +506,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression conversion = AstUtils.ConvertTo(Binder, valueType, Action.ResultKind, typeof(object), _rule.Context, _rule.Parameters[0]);
                 VariableExpression tmp = _rule.GetTemporary(typeof(object), "tmp");
                 _rule.Target =
-                    AstUtils.If(
+                    Ast.If(
                         Ast.NotEqual(
                             Ast.Assign(tmp, conversion),
                             Ast.Constant(null)

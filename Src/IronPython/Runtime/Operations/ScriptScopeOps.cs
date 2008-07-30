@@ -15,7 +15,7 @@
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Hosting;
 

@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using Microsoft.Scripting.Math; 
 
 namespace IronPython.Runtime.Operations {

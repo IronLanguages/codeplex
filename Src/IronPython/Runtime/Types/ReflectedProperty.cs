@@ -17,10 +17,10 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
+using System.Scripting.Runtime;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using Utils = System.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("getset_descriptor")]
@@ -60,7 +60,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            return CallSetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, ArrayUtils.EmptyObjects, value);
+            return CallSetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects, value);
         }
 
         internal override Type DeclaringType {
@@ -80,7 +80,7 @@ namespace IronPython.Runtime.Types {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
 
-            value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, ArrayUtils.EmptyObjects);
+            value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects);
             return true;
         }
 

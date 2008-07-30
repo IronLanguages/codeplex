@@ -14,14 +14,18 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Scripting;
 using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Text;
+
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
 
     static class Binders {
         public static Expression/*!*/ Invoke(BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
@@ -31,7 +35,7 @@ namespace IronPython.Runtime.Binding {
                     signature
                 ),
                 resultType,
-                ArrayUtils.Insert(AstUtils.CodeContext(), args)
+                ArrayUtils.Insert(Ast.CodeContext(), args)
             );
         }
 
@@ -86,7 +90,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Get(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            return Get(AstUtils.CodeContext(), binder, resultType, name, target);
+            return Get(Ast.CodeContext(), binder, resultType, name, target);
         }
 
         public static Expression/*!*/ Get(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
@@ -115,7 +119,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ TryGet(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            return TryGet(AstUtils.CodeContext(), binder, resultType, name, target);
+            return TryGet(Ast.CodeContext(), binder, resultType, name, target);
         }
 
         public static Expression/*!*/ Delete(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {        

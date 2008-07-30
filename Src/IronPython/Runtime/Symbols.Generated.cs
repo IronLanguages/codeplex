@@ -14,10 +14,10 @@
  * ***************************************************************************/
 
 using System;
+using System.Scripting;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Binding;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     public static partial class Symbols {

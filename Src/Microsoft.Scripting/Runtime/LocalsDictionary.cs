@@ -15,8 +15,13 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Utils;
+using System.Linq.Expressions;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+
+// importing full namespace causes conflicts due to RuntimeHelpers
+using IStrongBox = System.Runtime.CompilerServices.IStrongBox;
 
 namespace Microsoft.Scripting.Runtime {
 
@@ -68,7 +73,7 @@ namespace Microsoft.Scripting.Runtime {
             return _symbols;
         }
 
-        protected internal override bool TrySetExtraValue(SymbolId key, object value) {
+        protected override bool TrySetExtraValue(SymbolId key, object value) {
             EnsureBoxes();
 
             IStrongBox box;
@@ -80,7 +85,7 @@ namespace Microsoft.Scripting.Runtime {
             return false;
         }
 
-        protected internal override bool TryGetExtraValue(SymbolId key, out object value) {
+        protected override bool TryGetExtraValue(SymbolId key, out object value) {
             EnsureBoxes();
 
             IStrongBox box;

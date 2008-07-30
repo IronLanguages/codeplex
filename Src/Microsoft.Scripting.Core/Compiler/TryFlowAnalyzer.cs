@@ -15,13 +15,13 @@
 
 using System.Diagnostics;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
 
     /// <summary>
     /// The structure to capture the result of the control flow for the
     /// try statement code generation.
     /// </summary>
-    internal struct TryFlowResult {
+    struct TryFlowResult {
         /// <summary>
         /// There is a top level "break" in the analyzed statement.
         /// Breaks nested in "switch" or loops do not count because they

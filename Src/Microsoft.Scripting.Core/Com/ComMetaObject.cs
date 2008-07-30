@@ -62,7 +62,7 @@ namespace System.Scripting.Com {
         #endregion
 
         private MetaObject[] Wrap(MetaObject[] args) {
-            MetaObject[] wrap = args.Copy();
+            MetaObject[] wrap = ArrayUtils.Copy(args);
             wrap[0] = new MetaObject(
                 Expression.Call(
                     typeof(ComObject).GetMethod("ObjectToComObject"),

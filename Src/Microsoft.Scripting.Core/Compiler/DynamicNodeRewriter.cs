@@ -17,9 +17,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting.Actions;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
 
     /// <summary>
     /// Walks the DLR tree and reduces dynamic AST nodes
@@ -65,8 +66,7 @@ namespace System.Linq.Expressions.Compiler {
 
         protected override Expression Visit(InvocationExpression node) {
             if (node.IsDynamic) {
-                var e = VisitNode(node.Expression);
-                return RewriteSite(node.BindingInfo, node.Type, VisitNodes(node.Arguments).AddFirst(e));
+                return RewriteSite(node.BindingInfo, node.Type, ArrayUtils.Insert(VisitNode(node.Expression), VisitNodes(node.Arguments)));
             }
 
             return base.Visit(node);
@@ -122,7 +122,7 @@ namespace System.Linq.Expressions.Compiler {
         // args must be visited before calling this
         // (We do this to save stack space)
         private Expression RewriteSite(CallSiteBinder bindingInfo, Type retType, IList<Expression> args) {
-            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(args.Map(a => a.Type).AddLast(retType));
+            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(CompilerHelpers.GetSiteTypes(args, retType));
 
             // Rewrite the site as a constant
             Expression siteExpr = Expression.Constant(DynamicSiteHelpers.MakeSite(bindingInfo, siteType));

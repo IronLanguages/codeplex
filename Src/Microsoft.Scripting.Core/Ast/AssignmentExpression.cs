@@ -130,12 +130,12 @@ namespace System.Linq.Expressions {
             );
         }
 
-        public static AssignmentExpression SetMember(Expression expression, Type result, SetMemberAction bindingInfo, Expression value) {
+        public static AssignmentExpression SetMember(Expression expression, Type result, OldSetMemberAction bindingInfo, Expression value) {
             return SetMember(expression, result, bindingInfo, value, Annotations.Empty);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static AssignmentExpression SetMember(Expression expression, Type result, SetMemberAction binder, Expression value, Annotations annotations) {
+        public static AssignmentExpression SetMember(Expression expression, Type result, OldSetMemberAction binder, Expression value, Annotations annotations) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(binder, "binder");
             RequiresCanRead(value, "value");

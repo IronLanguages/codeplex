@@ -16,7 +16,7 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace IronPython.Runtime {
 

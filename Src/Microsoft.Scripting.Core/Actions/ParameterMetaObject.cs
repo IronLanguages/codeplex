@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Linq.Expressions;
+using System.Scripting.Generation;
 
 namespace System.Scripting.Actions {
     internal class ParameterMetaObject : MetaObject {

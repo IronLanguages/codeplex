@@ -16,9 +16,9 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Scripting.Generation;
 
-namespace System.Linq.Expressions.Compiler {
-
+namespace System.Linq.Expressions {
     internal sealed partial class CompilerScope {
 
         private abstract class Storage {
@@ -45,7 +45,7 @@ namespace System.Linq.Expressions.Compiler {
 
             internal LocalStorage(LambdaCompiler compiler, Expression variable)
                 : base(compiler, variable) {
-                _local = compiler.GetNamedLocal(variable.Type, CompilerScope.GetName(variable));
+                _local = compiler.GetNamedLocal(variable.Type, CompilerHelpers.GetVariableName(variable));
             }
 
             internal override void EmitLoad() {
@@ -138,7 +138,7 @@ namespace System.Linq.Expressions.Compiler {
                 : base(compiler, variable) {
                 _boxType = typeof(StrongBox<>).MakeGenericType(variable.Type);
                 _boxValueField = _boxType.GetField("Value");
-                _boxLocal = compiler.GetNamedLocal(_boxType, CompilerScope.GetName(variable));
+                _boxLocal = compiler.GetNamedLocal(_boxType, CompilerHelpers.GetVariableName(variable));
             }
 
             internal override void EmitLoad() {

@@ -16,13 +16,16 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
 using System.Text;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
+    using System.Runtime.CompilerServices;
+    using System.Scripting;
+    using System.Scripting.Actions;
+    using System.Scripting.Generation;
+    using System.Scripting.Utils;
     using Ast = System.Linq.Expressions.Expression;
 
     public class MemberBinderHelper<T, TActionKind> : BinderHelper<T, TActionKind>
