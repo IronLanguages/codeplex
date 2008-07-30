@@ -142,13 +142,12 @@ def test_package_subpackage():
     AreEqual(subPackage.b.f(), 'kthxbye')    
     AreEqual(subPackage.b.c.f(), 20)
 
-@disabled("Codeplex 17328")
 #TODO add some more tests for main after this bug is fixed.
 def test_main():
     compileCode("mainTest", "def f(): return __name__")
     #this probably won't work. Need to verify once bug is fixed.
     import mainTest
-    AreEqual(mainTest.f(), "__main__")
+    AreEqual(mainTest.f(), "mainTest")
     
 #-------------------- P2 scenarios --------------------------------------------------------------------------
 

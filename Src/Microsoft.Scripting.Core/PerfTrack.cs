@@ -15,7 +15,6 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting.Runtime;
 
 namespace System.Scripting {
     /// <summary>
@@ -23,6 +22,8 @@ namespace System.Scripting {
     /// operations.  Usually this means operations involving either reflection or
     /// code gen.  Long-term we need to see if this can be plugged better into the
     /// standard performance counter architecture.
+    /// 
+    /// TODO: internal !!!
     /// </summary>
     public static class PerfTrack {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1717:OnlyFlagsEnumsShouldHavePluralNames")] // TODO: fix
@@ -58,7 +59,7 @@ namespace System.Scripting {
         private static Dictionary<Categories, Dictionary<string, int>> MakeEventsDictionary() {
             Dictionary<Categories, Dictionary<string, int>> result = new Dictionary<Categories, Dictionary<string, int>>();
             
-            // We do not use Enum.GetValues here since it is n ot available in SILVERLIGHT 
+            // We do not use Enum.GetValues here since it is not available in SILVERLIGHT 
             for (int i = 0; i <= (int)Categories.Count; i++) {
                 result[(Categories)i] = new Dictionary<string, int>();
             }

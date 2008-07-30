@@ -15,21 +15,19 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Runtime;
-
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Ast = System.Linq.Expressions.Expression;
 using Utils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
 
     partial class MetaUserObject : MetaPythonObject {
         
@@ -256,7 +254,7 @@ namespace IronPython.Runtime.Binding {
                             TypeInfo._IPythonObject.Dict
                         ),
                         TypeInfo._IAttributesCollection.TryGetvalue,
-                        Ast.Constant(SymbolTable.StringToId(info.Action.Name)),
+                        Utils.Constant(SymbolTable.StringToId(info.Action.Name)),
                         info.Result
                     )
                 ),
@@ -335,7 +333,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(UserTypeOps).GetMethod("TryGetMixedNewStyleOldStyleSlot"),
                     Ast.Constant(BinderState.GetBinderState(info.Action).Context),
                     Ast.ConvertHelper(info.Self, typeof(object)),
-                    Ast.Constant(SymbolTable.StringToId(info.Action.Name)),
+                    Utils.Constant(SymbolTable.StringToId(info.Action.Name)),
                     info.Result
                 ),
                 info.Result
@@ -393,7 +391,7 @@ namespace IronPython.Runtime.Binding {
 
                 expr = Ast.Scope(
                     Ast.Comma(
-                        Ast.Try(
+                        Utils.Try(
                             Ast.Assign(tmp, Ast.ConvertHelper(expr, t))
                         ).Catch(
                             typeof(MissingMemberException),
@@ -470,7 +468,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                     Ast.Constant(type.Name),
-                    Ast.Constant(SymbolTable.StringToId(name))
+                    Utils.Constant(SymbolTable.StringToId(name))
                 )
             );
         }
@@ -577,7 +575,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
                     Ast.Convert(info.Args[0].Expression, typeof(IPythonObject)),
-                    Ast.Constant(SymbolTable.StringToId(info.Action.Name)),
+                    Utils.Constant(SymbolTable.StringToId(info.Action.Name)),
                     Ast.ConvertHelper(info.Args[1].Expression, typeof(object))
                 )
             );
@@ -702,7 +700,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(UserTypeOps).GetMethod("RemoveDictionaryValue"),
                     Ast.Convert(info.Args[0].Expression, typeof(IPythonObject)),
-                    Ast.Constant(SymbolTable.StringToId(info.Action.Name))
+                    Utils.Constant(SymbolTable.StringToId(info.Action.Name))
                 )
             );
         }

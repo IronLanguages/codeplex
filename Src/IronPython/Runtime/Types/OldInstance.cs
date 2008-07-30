@@ -18,21 +18,21 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.Serialization;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using System.Runtime.Serialization;
+using System.Scripting.Actions;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
-    using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     [PythonSystemType("instance")]
     [Serializable]
@@ -253,12 +253,12 @@ namespace IronPython.Runtime.Types {
         }
 
         private static Expression MakeIterRule<T>(CodeContext context, RuleBuilder<T> res, SymbolId symbolId, VariableExpression tmp, Expression @else, Expression call) where T : class {
-            return Ast.IfThenElse(
+            return AstUtils.IfThenElse(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                     res.Context,
                     Ast.Convert(res.Parameters[0], typeof(OldInstance)),
-                    Ast.Constant(symbolId),
+                    AstUtils.Constant(symbolId),
                     tmp
                 ),
                 res.MakeReturn(context.LanguageContext.Binder, call),
@@ -297,12 +297,12 @@ namespace IronPython.Runtime.Types {
         }
 
         private static Expression MakeConvertCallBody<T>(CodeContext context, OldConvertToAction convertToAction, SymbolId symbolId, string returner, RuleBuilder<T> rule, VariableExpression tmp, Expression @else) where T : class {
-            return Ast.IfThenElse(
+            return AstUtils.IfThenElse(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                     rule.Context,
                     Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
-                    Ast.Constant(symbolId),
+                    AstUtils.Constant(symbolId),
                     tmp
                 ),
                 rule.MakeReturn(context.LanguageContext.Binder,
@@ -341,12 +341,12 @@ namespace IronPython.Runtime.Types {
             }
 
             rule.Target =
-                Ast.IfThenElse(
+                AstUtils.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                         rule.Context,
                         Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
-                        Ast.Constant(Symbols.NonZero),
+                        AstUtils.Constant(Symbols.NonZero),
                         tmp
                     ),
                     rule.MakeReturn(context.LanguageContext.Binder,
@@ -360,12 +360,12 @@ namespace IronPython.Runtime.Types {
                             )
                         )
                     ),
-                    Ast.IfThenElse(
+                    AstUtils.IfThenElse(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                             rule.Context,
                             Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
-                            Ast.Constant(Symbols.Length),
+                            AstUtils.Constant(Symbols.Length),
                             tmp
                         ),
                         rule.MakeReturn(context.LanguageContext.Binder,
@@ -388,16 +388,16 @@ namespace IronPython.Runtime.Types {
             Expression[] callParams = ArrayUtils.MakeArray(rule.Parameters);
             callParams[0] = tmp;
             rule.Target =
-                Ast.IfThenElse(
+                AstUtils.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                         rule.Context,
                         Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
-                        Ast.Constant(Symbols.Call),
+                        AstUtils.Constant(Symbols.Call),
                         tmp
                     ),
                     Ast.Block(
-                        Ast.Try(
+                        AstUtils.Try(
                             Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                             rule.MakeReturn(context.LanguageContext.Binder,
                                 AstUtils.Call(
@@ -483,7 +483,7 @@ namespace IronPython.Runtime.Types {
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
                         rule.Context,
                         Ast.ConvertHelper(rule.Parameters[0], typeof(OldInstance)),
-                        Ast.Constant(action.Name)
+                        AstUtils.Constant(action.Name)
                     );
                     break;
                 default:
@@ -511,7 +511,7 @@ namespace IronPython.Runtime.Types {
                                         typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                                         rule.Context,
                                         instance,
-                                        Ast.Constant(action.Name),
+                                        AstUtils.Constant(action.Name),
                                         tmp
                                     ),
                                     tmp,
@@ -525,7 +525,7 @@ namespace IronPython.Runtime.Types {
                             instance,
                             typeof(OldInstance).GetMethod("GetBoundMember"),
                             rule.Context,
-                            Ast.Constant(action.Name)
+                            AstUtils.Constant(action.Name)
                         );
                     }
                     break;
@@ -534,7 +534,7 @@ namespace IronPython.Runtime.Types {
                         typeof(PythonOps).GetMethod("OldInstanceSetCustomMember"),
                         rule.Context,
                         instance,
-                        Ast.Constant(action.Name),
+                        AstUtils.Constant(action.Name),
                         Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                     );
                     break;
@@ -543,7 +543,7 @@ namespace IronPython.Runtime.Types {
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
                         rule.Context,
                         instance,
-                        Ast.Constant(action.Name)
+                        AstUtils.Constant(action.Name)
                     );
                     break;
                 default:

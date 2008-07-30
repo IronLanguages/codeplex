@@ -148,6 +148,7 @@ def test_map():
     Assert(map(lambda x,y: x+y, [1,1],[2,2]) == [3,3])
     Assert(map(None, [1,2,3]) == [1,2,3])
     Assert(map(None, [1,2,3], [4,5,6]) == [(1,4),(2,5),(3,6)])
+    AreEqual(map(lambda x:'a' + x + 'c', 'b'), ['abc'])
     
 def test_sorted():
     a = [6,9,4,5,3,1,2,7,8]

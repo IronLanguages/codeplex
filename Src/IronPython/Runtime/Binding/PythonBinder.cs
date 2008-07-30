@@ -21,10 +21,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;

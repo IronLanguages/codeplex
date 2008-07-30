@@ -20,15 +20,13 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT
 using ComTypeLibInfo = System.Scripting.Com.ComTypeLibInfo;
@@ -328,7 +326,8 @@ the assembly object.")]
         }
 
         private static void CheckPreferComDispatch() {
-            if (Environment.GetEnvironmentVariable("COREDLR_PreferComInteropAssembly") == "TRUE") {
+            string envVar = Environment.GetEnvironmentVariable("DLR_PreferComInteropAssembly");
+            if (envVar != null && envVar.ToLowerInvariant() == "true") {
                 throw new InvalidOperationException("this method is only available in ComDispatch mode");
             }
         }

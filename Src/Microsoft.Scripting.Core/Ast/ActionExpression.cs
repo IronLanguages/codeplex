@@ -42,11 +42,15 @@ namespace System.Linq.Expressions {
     public partial class Expression {
         // TODO: remove or rename
         public static ActionExpression ActionExpression(CallSiteBinder action, Type resultType, params Expression[] arguments) {
-            return ActionExpression(action, resultType, Annotations.Empty, arguments);
+            return ActionExpression(action, resultType, Annotations.Empty, (IEnumerable<Expression>)arguments);
         }
         // TODO: remove or rename
         public static ActionExpression ActionExpression(CallSiteBinder action, Type resultType, IEnumerable<Expression> arguments) {
             return ActionExpression(action, resultType, Annotations.Empty, arguments);
+        }
+        // TODO: remove or rename
+        public static ActionExpression ActionExpression(CallSiteBinder action, Type resultType, Annotations annotations, params Expression[] arguments) {
+            return ActionExpression(action, resultType, annotations, (IEnumerable<Expression>)arguments);
         }
         // TODO: remove or rename
         public static ActionExpression ActionExpression(CallSiteBinder action, Type resultType, Annotations annotations, IEnumerable<Expression> arguments) {

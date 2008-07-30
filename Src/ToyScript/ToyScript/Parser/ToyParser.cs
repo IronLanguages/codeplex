@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Scripting;
+using Microsoft.Scripting;
 using ToyScript.Parser.Ast;
 
 namespace ToyScript.Parser {

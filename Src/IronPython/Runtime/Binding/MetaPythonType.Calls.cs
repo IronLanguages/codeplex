@@ -15,21 +15,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     partial class MetaPythonType : MetaPythonObject, IPythonInvokable {
 
@@ -173,7 +171,7 @@ namespace IronPython.Runtime.Binding {
                 if (!Value.UnderlyingSystemType.IsAssignableFrom(createExpr.Expression.Type)) {
                     // return type of object, we need to check the return type before calling __init__.
                     body.Add(
-                        Ast.IfThen(
+                        AstUtils.IfThen(
                             Ast.TypeIs(allocatedInst, Value.UnderlyingSystemType),
                             initStmt.Expression
                         )
@@ -322,7 +320,7 @@ namespace IronPython.Runtime.Binding {
                         CodeContext,
                         Ast.ConvertHelper(Arguments.Self.Expression, typeof(PythonType)),
                         Ast.Null(),
-                        Ast.Constant(Symbols.NewInst)
+                        AstUtils.Constant(Symbols.NewInst)
                     )
                 );
             }
@@ -460,7 +458,7 @@ namespace IronPython.Runtime.Binding {
                         CodeContext,
                         Arguments.Self.Expression,
                         Ast.Constant(null),
-                        Ast.Constant(Symbols.NewInst)
+                        AstUtils.Constant(Symbols.NewInst)
                     )
                 );
             }
@@ -557,7 +555,7 @@ namespace IronPython.Runtime.Binding {
                     CodeContext,
                     Ast.Convert(Arguments.Self.Expression, typeof(PythonType)),
                     Ast.ConvertHelper(createExpr.Expression, typeof(object)),
-                    Ast.Constant(Symbols.Init)
+                    AstUtils.Constant(Symbols.Init)
                 );
 
                 return MakeDefaultInit(binder, createExpr, init);

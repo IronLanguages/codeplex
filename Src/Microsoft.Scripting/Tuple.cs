@@ -17,11 +17,11 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     public abstract class Tuple {

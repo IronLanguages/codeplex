@@ -18,13 +18,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
@@ -151,7 +149,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            DynamicSiteHelpers.InitializeFields(ret, true);
+            OptimizedScriptCode.InitializeFields(ret, true);
 
             return ret;
         }

@@ -13,18 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
-
-using IronPython.Runtime.Binding;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
 
     class MetaMethod : MetaPythonObject, IPythonInvokable {
         public MetaMethod(Expression/*!*/ expression, Restrictions/*!*/ restrictions, Method/*!*/ value)

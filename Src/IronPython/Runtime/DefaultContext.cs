@@ -14,14 +14,10 @@
  * ***************************************************************************/
 
 using System.Diagnostics;
-using System.Scripting.Actions;
-using System.Scripting.Runtime;
+using System.Scripting;
 using System.Threading;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime.Binding;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     public static class DefaultContext {

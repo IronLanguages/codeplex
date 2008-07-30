@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting;
 using IronPython.Runtime;
+using Microsoft.Scripting;
 
 namespace IronPython.Compiler {
     [Flags]

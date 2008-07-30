@@ -18,21 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {

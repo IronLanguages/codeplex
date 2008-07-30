@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Scripting;
+using Microsoft.Scripting.Ast;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -33,7 +34,7 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            MSAst.IfStatementBuilder ifb = Ast.If(
+            IfStatementBuilder ifb = AstUtils.If(
                 AstUtils.Comma(new SourceSpan(Span.Start, _test.End),
                     tg.ConvertTo(typeof(bool), _test.Generate(tg))
                 ),

@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Reflection;
-using System.Scripting.Generation;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
 

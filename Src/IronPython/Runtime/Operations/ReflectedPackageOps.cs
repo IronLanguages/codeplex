@@ -16,10 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     public static class ReflectedPackageOps {

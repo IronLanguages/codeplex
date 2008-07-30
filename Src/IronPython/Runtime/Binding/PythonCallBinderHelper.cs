@@ -16,18 +16,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
+using System.Scripting;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     using Ast = System.Linq.Expressions.Expression;
@@ -112,7 +109,7 @@ namespace IronPython.Runtime {
                 if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.Type)) {
                     // return type of object, we need to check the return type before calling __init__.
                     body.Add(
-                        Ast.IfThen(
+                        AstUtils.IfThen(
                             Ast.TypeIs(allocatedInst, creating.UnderlyingSystemType),
                             initStmt
                         )
@@ -250,7 +247,7 @@ namespace IronPython.Runtime {
                                 rule.Context,
                                 Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.Null(),
-                                Ast.Constant(Symbols.NewInst)
+                                AstUtils.Constant(Symbols.NewInst)
                             ),                        
                             rule.Parameters
                         )
@@ -379,7 +376,7 @@ namespace IronPython.Runtime {
                                 rule.Context,
                                 Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.Constant(null),
-                                Ast.Constant(Symbols.NewInst)
+                                AstUtils.Constant(Symbols.NewInst)
                             ),
                             rule.Parameters
                         )
@@ -491,7 +488,7 @@ namespace IronPython.Runtime {
                                 rule.Context,
                                 Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.ConvertHelper(createExpr, typeof(object)),
-                                Ast.Constant(Symbols.Init)
+                                AstUtils.Constant(Symbols.Init)
                             ),
                             ArrayUtils.RemoveFirst(rule.Parameters)
                         )

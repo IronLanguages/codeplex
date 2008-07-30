@@ -15,6 +15,8 @@
 
 using System;
 using System.Linq.Expressions;
+using System.Linq.Expressions.Compiler;
+using System.Reflection;
 using System.Scripting;
 
 namespace Microsoft.Scripting.Utils {
@@ -220,6 +222,67 @@ namespace Microsoft.Scripting.Utils {
 
         private static bool NullVsNullable(Type left, Type right) {
             return IsNullableType(left) && right == typeof(None);
+        }
+
+        // keep in sync with System.Core version
+        internal static bool AreReferenceAssignable(Type dest, Type src) {
+            // WARNING: This actually implements "Is this identity assignable and/or reference assignable?"
+            if (dest == src) {
+                return true;
+            }
+            if (!dest.IsValueType && !src.IsValueType && AreAssignable(dest, src)) {
+                return true;
+            }
+            return false;
+        }
+
+        // keep in sync with System.Core version
+        internal static bool AreAssignable(Type dest, Type src) {
+            if (dest == src) {
+                return true;
+            }
+            if (dest.IsAssignableFrom(src)) {
+                return true;
+            }
+            if (dest.IsArray && src.IsArray && dest.GetArrayRank() == src.GetArrayRank() && AreReferenceAssignable(dest.GetElementType(), src.GetElementType())) {
+                return true;
+            }
+            if (src.IsArray && dest.IsGenericType &&
+                (dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IEnumerable<>)
+                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IList<>)
+                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.ICollection<>))
+                && dest.GetGenericArguments()[0] == src.GetElementType()) {
+                return true;
+            }
+            return false;
+        }
+
+        // keep in sync with System.Core version
+        internal static Type GetConstantType(Type type) {
+            // If it's a visible type, we're done
+            if (type.IsVisible) {
+                return type;
+            }
+
+            // Get the visible base type
+            Type bt = type;
+            do {
+                bt = bt.BaseType;
+            } while (!bt.IsVisible);
+
+            // If it's one of the known reflection types,
+            // return the known type.
+            if (bt == typeof(Type) ||
+                bt == typeof(ConstructorInfo) ||
+                bt == typeof(EventInfo) ||
+                bt == typeof(FieldInfo) ||
+                bt == typeof(MethodInfo) ||
+                bt == typeof(PropertyInfo)) {
+                return bt;
+            }
+
+            // else return the original type
+            return type;
         }
     }
 }

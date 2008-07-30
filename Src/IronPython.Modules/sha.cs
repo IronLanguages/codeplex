@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using System.Security.Cryptography;
 using System.Text;
 using IronPython.Runtime;

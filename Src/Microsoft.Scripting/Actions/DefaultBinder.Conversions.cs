@@ -20,15 +20,13 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public partial class DefaultBinder : ActionBinder {
         public MetaObject ConvertTo(Type toType, ConversionResultKind kind, MetaObject arg) {
@@ -345,7 +343,7 @@ namespace Microsoft.Scripting.Actions {
                 VariableExpression tmp = Ast.Variable(convFailed.Type == typeof(object) ? typeof(object) : ret.Type, "tmp");
                 ret = Ast.Scope(
                     Ast.Comma(
-                        Ast.Try(
+                        AstUtils.Try(
                             Ast.Assign(tmp, Ast.ConvertHelper(ret, tmp.Type))
                         ).Catch(
                             typeof(Exception),

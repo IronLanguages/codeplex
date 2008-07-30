@@ -204,7 +204,7 @@ def test_dump_exception():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -X:ExceptionDetail")
     AreEqual(ipi.Start(), True)
     response = ipi.ExecuteLine("raise 'goodbye'", True)
-    AreEqual(response.count("System.Scripting") >= 1, True)
+    AreEqual(response.count("Microsoft.Scripting") >= 1, True)
     ipi.End()
 
 #############################################################################

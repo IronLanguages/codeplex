@@ -19,14 +19,11 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
+using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
 

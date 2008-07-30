@@ -17,17 +17,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime.Binding;
+using System.Reflection;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;

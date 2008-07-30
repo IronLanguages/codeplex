@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     internal sealed class YieldLabelBuilder : ExpressionTreeVisitor {
         sealed class ExceptionBlock {
             public enum TryStatementState {

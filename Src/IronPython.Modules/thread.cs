@@ -15,9 +15,9 @@
 
 using System;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using System.Threading;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;

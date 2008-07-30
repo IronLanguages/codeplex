@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using System.Linq.Expressions;
 using System.Diagnostics;
-using System.Scripting.Utils;
+using System.Linq.Expressions;
+using System.Linq.Expressions.Compiler;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     // Modifies a quoted Expression instance by changing hoisted variables and
     // parameters into hoisted local references. The variable's StrongBox is
@@ -62,8 +62,8 @@ namespace System.Linq.Expressions {
     }
 }
 
-namespace System.Scripting.Runtime {
-    public partial class RuntimeHelpers {
+namespace System.Runtime.CompilerServices {
+    public partial class RuntimeOps {
         [Obsolete("used by generated code", true)]
         public static Expression Quote(Expression expression, object hoistedLocals, object[] locals) {
             Debug.Assert(hoistedLocals != null && locals != null);

@@ -15,8 +15,9 @@
 
 using System.Collections.Generic;
 using System.Scripting;
-using System.Scripting.Utils;
 using IronPython.Runtime;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -130,7 +131,7 @@ namespace IronPython.Compiler.Ast {
                 docStmt = Ast.Empty();
             }
 
-            MSAst.Expression returnStmt = Ast.Return(Ast.CodeContext());
+            MSAst.Expression returnStmt = Ast.Return(AstUtils.CodeContext());
 
             body.Block.Dictionary = true;
             body.Block.Visible = false;
@@ -147,7 +148,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.LambdaExpression lambda = body.Block.MakeLambda(typeof(IronPython.Compiler.CallTarget0));
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
-                Ast.CodeContext(),
+                AstUtils.CodeContext(),
                 Ast.Constant(SymbolTable.IdToString(_name)),
                 bases,
                 Ast.Constant(FindSelfNames()),

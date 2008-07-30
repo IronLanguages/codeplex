@@ -16,12 +16,12 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Builds a rule for a GetMemberAction.  Supports all built-in .NET members, the OperatorMethod 
@@ -160,7 +160,7 @@ namespace Microsoft.Scripting.Actions {
             if (getMem != null && getMem.IsSpecialName) {
                 VariableExpression tmp = Rule.GetTemporary(typeof(object), "getVal");
                 AddToBody(
-                    Ast.If(
+                    AstUtils.If(
                         Ast.NotEqual(
                             Ast.Assign(
                                 tmp,

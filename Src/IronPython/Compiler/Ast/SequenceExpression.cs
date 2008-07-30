@@ -15,8 +15,8 @@
 
 using System.Collections.Generic;
 using System.Scripting;
-using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -82,7 +82,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression enumeratorValues = Ast.Call(
                 AstGenerator.GetHelperMethod("GetEnumeratorValues"),    // method
                 // arguments
-                Ast.CodeContext(),
+                AstUtils.CodeContext(),
                 right_temp,
                 Ast.Constant(_items.Length)
             );

@@ -17,11 +17,11 @@
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
 using System.Xml;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 [assembly: ExtensionType(typeof(XmlElement), typeof(IronPythonTest.AttrInjectorTest.SimpleXmlAttrInjector))]
 namespace IronPythonTest {

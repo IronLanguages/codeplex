@@ -15,7 +15,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>

@@ -32,7 +32,7 @@ import clr
 if is_peverify_run:
     clr.AddReference("Microsoft.Scripting.Core")
     clr.AddReference("Microsoft.Scripting")
-    from System.Scripting.Runtime import ScriptDomainManager
+    from Microsoft.Scripting.Runtime import ScriptDomainManager
     from System.IO import Path
 
     tempMauiDir = Path.GetTempPath()

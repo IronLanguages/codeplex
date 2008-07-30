@@ -24,7 +24,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Scripting;
-using System.Scripting.Runtime;
 using System.Text;
 
 using Microsoft.Scripting.Actions;
@@ -34,7 +33,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]

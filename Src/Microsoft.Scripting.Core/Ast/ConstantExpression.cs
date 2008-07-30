@@ -15,6 +15,7 @@
 
 using System.Scripting.Utils;
 using System.Text;
+using System.Scripting;
 
 namespace System.Linq.Expressions {
     //CONFORMING
@@ -71,7 +72,7 @@ namespace System.Linq.Expressions {
             ContractUtils.Requires(!type.IsValueType, "type");
             return new ConstantExpression(Annotations.Empty, null, type);
         }
-
+        
         //CONFORMING
         public static ConstantExpression Constant(object value) {
             return new ConstantExpression(Annotations.Empty, value, value == null ? typeof(object) : value.GetType());

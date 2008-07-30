@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using ToyScript.Binders;
 using ToyScript.Parser.Ast;
 using MSAst = System.Linq.Expressions;
@@ -81,7 +81,7 @@ namespace ToyScript.Parser {
                     _tlc.Binder,
                     typeof(bool),
                     ConversionResultKind.ExplicitCast,
-                    MSAst.Expression.CodeContext(),
+                    Utils.CodeContext(),
                     expression
                 );
             }
@@ -101,7 +101,7 @@ namespace ToyScript.Parser {
                     _tlc.Binder,
                     typeof(object),
                     ArrayUtils.Insert(
-                        MSAst.Expression.CodeContext(),
+                        Utils.CodeContext(),
                         target,
                         arguments
                    )
@@ -121,7 +121,7 @@ namespace ToyScript.Parser {
                     _tlc.Binder,
                     member,
                     typeof(object),
-                    MSAst.Expression.CodeContext(),
+                    Utils.CodeContext(),
                     target
                 );
             }
@@ -140,7 +140,7 @@ namespace ToyScript.Parser {
                     _tlc.Binder,
                     op,
                     typeof(object),
-                    MSAst.Expression.CodeContext(),
+                    Utils.CodeContext(),
                     left,
                     right
                 );
@@ -155,7 +155,7 @@ namespace ToyScript.Parser {
                     _tlc.Binder,
                     Operators.SetItem,
                     typeof(object),
-                    MSAst.Expression.CodeContext(),
+                    Utils.CodeContext(),
                     target,
                     index,
                     right
@@ -167,7 +167,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.Add(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Add));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.Add, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.Add, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -175,7 +175,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.Subtract(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Subtract));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.Subtract, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.Subtract, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -183,7 +183,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.Multiply(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Multiply));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.Multiply, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.Multiply, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -191,7 +191,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.Divide(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Divide));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.Divide, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.Divide, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -199,7 +199,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.LessThan(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.LessThan));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.LessThan, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.LessThan, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -207,7 +207,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.LessThanOrEqual(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.LessThanOrEqual));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.LessThanOrEqual, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.LessThanOrEqual, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -215,7 +215,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.GreaterThan(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.GreaterThan));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.GreaterThan, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.GreaterThan, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -223,7 +223,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.GreaterThanOrEqual(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.GreaterThanOrEqual));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.GreaterThanOrEqual, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.GreaterThanOrEqual, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -231,7 +231,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.Equal(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.Equals));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.Equals, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.Equals, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -239,7 +239,7 @@ namespace ToyScript.Parser {
             if (UseNewBinders) {
                 return MSAst.Expression.NotEqual(MSAst.Annotations.Empty, left, right, typeof(object), Binder.Operation(Operators.NotEquals));
             } else {
-                return Utils.Operator(_tlc.Binder, Operators.NotEquals, typeof(object), MSAst.Expression.CodeContext(), left, right);
+                return Utils.Operator(_tlc.Binder, Operators.NotEquals, typeof(object), Utils.CodeContext(), left, right);
             }
         }
 
@@ -250,7 +250,7 @@ namespace ToyScript.Parser {
                 return Utils.Create(
                     _tlc.Binder,
                     typeof(object),
-                    ArrayUtils.Insert(MSAst.Expression.CodeContext(), target, arguments)
+                    ArrayUtils.Insert(Utils.CodeContext(), target, arguments)
                 );
             }
         }

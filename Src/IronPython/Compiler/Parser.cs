@@ -18,12 +18,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Scripting;
-using System.Scripting.Utils;
 using IronPython.Compiler.Ast;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Compilers;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
 

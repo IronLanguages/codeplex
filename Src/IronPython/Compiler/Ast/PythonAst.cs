@@ -16,13 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Compilers;
-
 using IronPython.Runtime;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -167,7 +165,7 @@ namespace IronPython.Compiler.Ast {
             ag.Block.Body = Ast.Block(
                 Ast.Call(
                     AstGenerator.GetHelperMethod("ModuleStarted"),
-                    Ast.CodeContext(),
+                    AstUtils.CodeContext(),
                     Ast.Constant(ag.BinderState, typeof(object)),
                     Ast.Constant(_languageFeatures)
                 ),
@@ -186,12 +184,12 @@ namespace IronPython.Compiler.Ast {
 
                 if ((pco.Module & ModuleOptions.Initialize) != 0) {
                     // TODO: Should be try/fault
-                    ag.Block.Body = Ast.Try(
-                        Ast.Call(AstGenerator.GetHelperMethod("PublishModule"), Ast.CodeContext(), Ast.Constant(pco.ModuleName)),
+                    ag.Block.Body = AstUtils.Try(
+                        Ast.Call(AstGenerator.GetHelperMethod("PublishModule"), AstUtils.CodeContext(), Ast.Constant(pco.ModuleName)),
                         ag.Block.Body
                     ).Catch(
                         typeof(Exception),
-                        Ast.Call(AstGenerator.GetHelperMethod("RemoveModule"), Ast.CodeContext(), Ast.Constant(pco.ModuleName)),
+                        Ast.Call(AstGenerator.GetHelperMethod("RemoveModule"), AstUtils.CodeContext(), Ast.Constant(pco.ModuleName)),
                         Ast.Rethrow()
                     );
                 }

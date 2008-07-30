@@ -17,8 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Utils {
     public partial class ReflectedCaller {

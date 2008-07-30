@@ -55,7 +55,7 @@ namespace System.Scripting.Com {
 
         internal override VariableExpression[] TemporaryVariables {
             get {
-                return ArrayUtils.Insert(_unmanagedTemp, base.TemporaryVariables);
+                return base.TemporaryVariables.AddFirst(_unmanagedTemp);
             }
         }
 

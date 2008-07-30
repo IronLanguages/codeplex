@@ -16,8 +16,8 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
-using System.Scripting.Utils;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

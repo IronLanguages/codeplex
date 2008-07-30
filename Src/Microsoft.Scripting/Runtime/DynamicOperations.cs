@@ -16,12 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
 

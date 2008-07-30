@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     // Suppose we have something like:
     //
@@ -70,7 +70,7 @@ namespace System.Linq.Expressions {
         internal HoistedLocals(HoistedLocals parent, VariableExpression selfVar, ReadOnlyCollection<Expression> vars) {
             if (parent != null) {
                 // Add the parent locals array as the 0th element in the array
-                vars = new ReadOnlyCollection<Expression>(ArrayUtils.Insert(parent.SelfVariable, vars));
+                vars = new ReadOnlyCollection<Expression>(vars.AddFirst(parent.SelfVariable));
             }
 
             Dictionary<Expression, int> indexes = new Dictionary<Expression, int>(vars.Count);

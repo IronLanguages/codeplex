@@ -21,22 +21,20 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
+using IronPython.Compiler;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using IronPython.Compiler;
 
     static partial class PythonProtocol {
         private const string DisallowCoerce = "DisallowCoerce";
@@ -140,7 +138,7 @@ namespace IronPython.Runtime.Binding {
                                     Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
                                     Ast.Block(                                                // body
                         // getItemRes = param0.__getitem__(curIndex)
-                                        Ast.Try(
+                                        Utils.Try(
                                             Ast.Assign(
                                                 getItemRes,
                                                 sf.Target.Expression
@@ -151,7 +149,7 @@ namespace IronPython.Runtime.Binding {
                                             Ast.Break(target)
                                         ),
                         // if(getItemRes == param1) return true
-                                        Ast.If(
+                                        Utils.If(
                                             Ast.ActionExpression(
                                                 new OperationBinder(
                                                     state,

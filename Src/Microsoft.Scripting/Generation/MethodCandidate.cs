@@ -16,9 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
 using System.Text;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;

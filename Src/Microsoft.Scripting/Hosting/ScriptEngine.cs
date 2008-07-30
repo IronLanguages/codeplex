@@ -17,14 +17,11 @@ using System;
 using System.CodeDom;
 using System.Diagnostics;
 using System.Runtime.Remoting;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Security.Permissions;
 using System.Text;
 using System.Threading;
-using Microsoft.Scripting.Compilers;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 

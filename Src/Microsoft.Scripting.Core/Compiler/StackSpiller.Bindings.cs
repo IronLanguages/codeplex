@@ -16,7 +16,7 @@
 using System.Collections.ObjectModel;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     internal partial class StackSpiller {
 

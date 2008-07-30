@@ -81,7 +81,7 @@ namespace System.Scripting.Com {
         }
 
         private MetaObject[] UnwrapComObject(MetaObject[] args) {
-            MetaObject[] copy = ArrayUtils.Copy(args);
+            MetaObject[] copy = args.Copy();
 
             // Replace self with unwrapped Com object value
             copy[0] = new MetaUnwrappedComObject(

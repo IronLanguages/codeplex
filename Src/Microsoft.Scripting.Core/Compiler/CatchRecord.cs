@@ -15,21 +15,21 @@
 
 using System.Reflection.Emit;
 
-namespace System.Linq.Expressions {
-    struct CatchRecord {
+namespace System.Linq.Expressions.Compiler {
+    internal struct CatchRecord {
         private LocalBuilder _local;
         private CatchBlock _block;
 
-        public CatchRecord(LocalBuilder local, CatchBlock block) {
+        internal CatchRecord(LocalBuilder local, CatchBlock block) {
             _local = local;
             _block = block;
         }
 
-        public LocalBuilder Local {
+        internal LocalBuilder Local {
             get { return _local; }
         }
 
-        public CatchBlock Block {
+        internal CatchBlock Block {
             get { return _block; }
         }
     }

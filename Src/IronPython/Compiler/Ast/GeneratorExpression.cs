@@ -15,16 +15,12 @@
 
 using System;
 using System.Diagnostics;
-using System.Scripting.Actions;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
-
+using Microsoft.Scripting.Actions;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class GeneratorExpression : Expression {
         private readonly FunctionDefinition _function;

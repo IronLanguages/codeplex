@@ -16,8 +16,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
