@@ -14,10 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
-using Microsoft.Scripting.Generation;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {

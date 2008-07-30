@@ -23,14 +23,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Security.Cryptography;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {

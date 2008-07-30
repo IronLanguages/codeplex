@@ -19,10 +19,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {

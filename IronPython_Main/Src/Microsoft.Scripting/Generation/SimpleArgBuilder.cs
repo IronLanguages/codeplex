@@ -16,10 +16,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Reflection;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

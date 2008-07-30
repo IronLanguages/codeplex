@@ -17,8 +17,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Text;
 
@@ -67,9 +67,13 @@ namespace System.Linq.Expressions {
             int start = 0;
             Expression ob = _instance;
 
-            if (Attribute.GetCustomAttribute(_method, typeof(ExtensionAttribute)) != null) {
-                start = 1;
-                ob = _arguments[0];
+            // TODO: we go through a dynamic helper untill we can guarantee
+            // that ExtensionAttribute is always available.
+            if (TypeUtils.ExtensionAttributeType != null) {
+                if (Attribute.GetCustomAttribute(_method, TypeUtils.ExtensionAttributeType) != null) {
+                    start = 1;
+                    ob = _arguments[0];
+                }
             }
 
             if (ob != null) {
@@ -217,7 +221,7 @@ namespace System.Linq.Expressions {
 
             MethodInfo method;
 
-            var methodInfos = members.Map(t => (MethodInfo)t);
+            MethodInfo[] methodInfos = ArrayUtils.ConvertAll<MemberInfo, MethodInfo>(members, delegate(MemberInfo t) { return (MethodInfo)t; });
             int count = FindBestMethod(methodInfos, typeArgs, args, out method);
 
             if (count == 0)
@@ -292,7 +296,7 @@ namespace System.Linq.Expressions {
         /// <param name="bindingInfo">call binding information (method name, named arguments, etc)</param>
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
-        public static MethodCallExpression Call(Type returnType, Expression instance, CallAction bindingInfo, params Expression[] arguments) {
+        public static MethodCallExpression Call(Type returnType, Expression instance, OldInvokeMemberAction bindingInfo, params Expression[] arguments) {
             return Call(returnType, instance, bindingInfo, Annotations.Empty, arguments);
         }
 
@@ -305,23 +309,23 @@ namespace System.Linq.Expressions {
         /// <param name="annotations">annotations for the node</param>
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
-        public static MethodCallExpression Call(Type returnType, Expression instance, CallAction bindingInfo, Annotations annotations, IEnumerable<Expression> arguments) {
+        public static MethodCallExpression Call(Type returnType, Expression instance, OldInvokeMemberAction bindingInfo, Annotations annotations, IEnumerable<Expression> arguments) {
             RequiresCanRead(instance, "instance");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
 
             RequiresCanRead(arguments, "arguments");
-            var args = arguments.ToReadOnly();
+            var argumentList = arguments.ToReadOnly();
 
             // Validate ArgumentInfos. For now, includes the instance.
             // This needs to be reconciled with InvocationExpression
-            if (bindingInfo.Arguments.Count > 0 && bindingInfo.Arguments.Count != args.Count + 1) {
+            if (bindingInfo.Signature.ArgumentCount != argumentList.Count + 1) {
                 throw Error.ArgumentCountMustMatchBinding(
-                    args.Count + 1,
-                    bindingInfo.Arguments.Count
+                        argumentList.Count + 1,
+                        bindingInfo.Signature.ArgumentCount
                 );
             }
 
-            return new MethodCallExpression(annotations, returnType, bindingInfo, null, instance, args);
+            return new MethodCallExpression(annotations, returnType, bindingInfo, null, instance, argumentList);
         }
 
         /// <summary>
@@ -424,7 +428,7 @@ namespace System.Linq.Expressions {
             ContractUtils.Requires(instance != null ^ method.IsStatic, "instance");
 
             ParameterInfo[] parameters = method.GetParameters();
-            bool hasParamArray = parameters.Length > 0 && parameters[parameters.Length - 1].IsParamArray();
+            bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]);
 
             if (instance != null) {
                 instance = ConvertHelper(instance, method.DeclaringType);
@@ -467,7 +471,7 @@ namespace System.Linq.Expressions {
                         argument = arguments[consumed++];
                     } else {
                         // Missing argument, try default value.
-                        ContractUtils.Requires(!parameter.IsMandatoryParameter(), "arguments", Strings.ArgumentNotProvided);
+                        ContractUtils.Requires(!CompilerHelpers.IsMandatoryParameter(parameter), "arguments", Strings.ArgumentNotProvided);
                         argument = CreateDefaultValueExpression(parameter);
                     }
                 }
@@ -495,7 +499,7 @@ namespace System.Linq.Expressions {
         }
 
         private static Expression CreateDefaultValueExpression(ParameterInfo parameter) {
-            if (parameter.HasDefaultValue()) {
+            if (CompilerHelpers.HasDefaultValue(parameter)) {
                 return Constant(parameter.DefaultValue, parameter.ParameterType);
             } else {
                 // TODO: Handle via compiler constant.

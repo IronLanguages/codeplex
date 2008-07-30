@@ -17,9 +17,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 

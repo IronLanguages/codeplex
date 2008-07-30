@@ -16,10 +16,11 @@
 using System;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Threading;
 using Microsoft.Scripting.Utils;
 

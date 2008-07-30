@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
     partial class LambdaCompiler {
 
         private delegate void Emitter(LambdaCompiler lc, Expression expression);

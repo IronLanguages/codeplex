@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Scripting;
+using System.Scripting.Runtime;
 using System.Text;
 
 using Microsoft.Scripting.Math;
@@ -26,8 +28,7 @@ using Microsoft.Scripting.Math;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("array", typeof(IronPython.Modules.ArrayModule))]

@@ -41,8 +41,8 @@ namespace System.Scripting.Com {
             return base.Equals(obj as ComInvokeAction);
         }
 
-        public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
-            return onBindingError ?? new ErrorMetaObject(typeof(NotSupportedException), "Cannot perform call", Restrictions.Combine(args));
+        public override MetaObject Fallback(MetaObject[] args) {
+            return new ErrorMetaObject(typeof(NotSupportedException), "Cannot perform call", Restrictions.Combine(args));
         }
     }
 }

@@ -28,10 +28,6 @@ namespace System.Scripting.Actions {
             }
         }
 
-        public MetaObject Fallback(MetaObject[] args) {
-            return Fallback(args, null);
-        }
-
-        public abstract MetaObject Fallback(MetaObject[] args, MetaObject onBindingError);
+        public abstract MetaObject Fallback(MetaObject[] args);
     }
 }

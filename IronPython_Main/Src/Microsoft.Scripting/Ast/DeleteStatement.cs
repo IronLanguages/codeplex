@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Linq.Expressions;
 using System.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>

@@ -17,9 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Remoting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Security.Permissions;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 

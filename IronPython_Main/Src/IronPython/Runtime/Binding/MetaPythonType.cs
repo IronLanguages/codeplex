@@ -14,10 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Linq.Expressions;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Utils;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;

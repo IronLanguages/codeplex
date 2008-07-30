@@ -15,18 +15,20 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -113,7 +115,7 @@ namespace IronPython.Runtime.Binding {
                         AddClsCheck(
                             parent, 
                             clsOnly, 
-                            Utils.IfThenElse(
+                            Ast.IfThenElse(
                                 Ast.Call(
                                     TypeInfo._PythonOps.SlotTryGetBoundValue,
                                     Rule.Context,
@@ -188,7 +190,7 @@ namespace IronPython.Runtime.Binding {
             if (clsOnly) {
                 body =
                     Ast.Block(
-                        Utils.IfThenElse(
+                        Ast.IfThenElse(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("IsClsVisible"),
                                 Rule.Context
@@ -209,7 +211,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                         Ast.Constant(argType.Name, typeof(string)),
-                        AstUtils.Constant(Action.Name)
+                        Ast.Constant(Action.Name)
                     )
                 );
             }

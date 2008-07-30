@@ -16,16 +16,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using System.Scripting;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+
+using Microsoft.Scripting.Math;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -140,11 +141,11 @@ namespace IronPython.Runtime.Binding {
                             typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                             codeContext,
                             self.Expression,
-                            AstUtils.Constant(Symbols.Call),
+                            Ast.Constant(Symbols.Call),
                             tmp
                         ),
                         Ast.Comma(
-                            Utils.Try(
+                            Ast.Try(
                                 Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                                 Ast.Assign(
                                     tmp,
@@ -300,7 +301,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("OldInstanceConvertNonThrowing"),
                         Ast.Constant(BinderState.GetBinderState(conversion).Context),
                         self.Expression,
-                        AstUtils.Constant(symbolId)
+                        Ast.Constant(symbolId)
                     )
                 ),
                 Ast.Null()
@@ -392,7 +393,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         Ast.ConvertHelper(Expression, typeof(OldInstance)),
-                        AstUtils.Constant(SymbolTable.StringToId(name))
+                        Ast.Constant(SymbolTable.StringToId(name))
                     );
                     break;
                 default:
@@ -441,7 +442,7 @@ namespace IronPython.Runtime.Binding {
                                 typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
                                 Ast.Constant(BinderState.GetBinderState(member).Context),
                                 self.Expression,
-                                AstUtils.Constant(symName),
+                                Ast.Constant(symName),
                                 tmp
                             ),
                             tmp,
@@ -458,7 +459,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("OldInstanceSetCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
-                        AstUtils.Constant(symName),
+                        Ast.Constant(symName),
                         Ast.ConvertHelper(args[1].Expression, typeof(object))
                     );
                     break;
@@ -467,7 +468,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
-                        AstUtils.Constant(symName)
+                        Ast.Constant(symName)
                     );
                     break;
                 default:

@@ -15,9 +15,9 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq.Expressions.Compiler;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Scripting.Generation;
 
 namespace Microsoft.Scripting.Generation {
     sealed class ReturnFixer {

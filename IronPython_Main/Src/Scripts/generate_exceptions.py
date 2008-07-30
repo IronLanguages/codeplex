@@ -100,7 +100,7 @@ class ExceptionInfo(object):
     # format is name, args, (fields, ...), (subclasses, ...)
 exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, None, (
             ExceptionInfo('SystemExit', 'IronPython.Runtime.Exceptions.SystemExitException', None, ('code',), ()),
-            ExceptionInfo('KeyboardInterrupt', 'Microsoft.Scripting.KeyboardInterruptException', None, (), ()),
+            ExceptionInfo('KeyboardInterrupt', 'System.Scripting.KeyboardInterruptException', None, (), ()),
             ExceptionInfo('Exception', 'System.Exception', None, (), (
                     ExceptionInfo('GeneratorExit', 'IronPython.Runtime.Exceptions.GeneratorExitException', None, (), ()),
                     ExceptionInfo('StopIteration', 'IronPython.Runtime.Exceptions.StopIterationException', None, (), ()),
@@ -130,8 +130,8 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                                 ),
                             ),
                             ExceptionInfo('MemoryError', 'System.OutOfMemoryException', None, (), ()),
-                            ExceptionInfo('NameError', 'Microsoft.Scripting.Runtime.UnboundNameException', None, (), (
-                                    ExceptionInfo('UnboundLocalError', 'Microsoft.Scripting.Runtime.UnboundLocalException', None, (), ()),
+                            ExceptionInfo('NameError', 'System.Scripting.Runtime.UnboundNameException', None, (), (
+                                    ExceptionInfo('UnboundLocalError', 'System.Scripting.Runtime.UnboundLocalException', None, (), ()),
                                 ),
                             ),
                             ExceptionInfo('ReferenceError', 'IronPython.Runtime.Exceptions.ReferenceException', None, (), ()),
@@ -139,7 +139,7 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                                     ExceptionInfo('NotImplementedError', 'System.NotImplementedException', None, (), ()),
                                 ),
                             ),
-                            ExceptionInfo('SyntaxError', 'Microsoft.Scripting.SyntaxErrorException', None, ('text', 'print_file_and_line', 'filename', 'lineno', 'offset', 'msg'), (
+                            ExceptionInfo('SyntaxError', 'System.Scripting.SyntaxErrorException', None, ('text', 'print_file_and_line', 'filename', 'lineno', 'offset', 'msg'), (
                                     ExceptionInfo('IndentationError', 'IronPython.Runtime.Exceptions.IndentationException', None, (), (
                                             ExceptionInfo('TabError', 'IronPython.Runtime.Exceptions.TabException', None, (), ()),
                                         ),
@@ -192,14 +192,12 @@ def get_all_exceps(l, curHierarchy):
     return l
 
 ip = clr.LoadAssemblyByPartialName('ironpython')
-msc = clr.LoadAssemblyByPartialName('Microsoft.Scripting.Core')
-ms = clr.LoadAssemblyByPartialName('Microsoft.Scripting')
+ms = clr.LoadAssemblyByPartialName('Microsoft.Scripting.Core')
 sysdll = clr.LoadAssemblyByPartialName('System')
 
 def get_type(name):
     if name.startswith('IronPython'):            return ip.GetType(name)
-    if name.startswith('Microsoft.Scripting'):   return ms.GetType(name)
-    if name.startswith('System.Scripting'):      return msc.GetType(name)
+    if name.startswith('System.Scripting'):      return ms.GetType(name)
     if name.startswith('System.ComponentModel'): return sysdll.GetType(name)
     
     return System.Type.GetType(name)

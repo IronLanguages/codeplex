@@ -15,9 +15,9 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq.Expressions.Compiler;
+using System.Diagnostics;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Text;
 
@@ -64,10 +64,6 @@ namespace System.Linq.Expressions {
         public Expression Body {
             get { return _body; }
         }
-        
-        public Type ReturnType {
-            get { return Type.GetMethod("Invoke").ReturnType; }
-        }
 
         internal override void BuildString(StringBuilder builder) {
             ContractUtils.RequiresNotNull(builder, "builder");
@@ -88,32 +84,7 @@ namespace System.Linq.Expressions {
         }
 
         public Delegate Compile() {
-            return LambdaCompiler.CompileLambda(this, false);
-        }
-
-        public Delegate Compile(bool emitDebugSymbols) {
-            return LambdaCompiler.CompileLambda(this, emitDebugSymbols);
-        }
-
-        // TODO: remove TypeGen parameter
-        public void Compile(MethodBuilder method, TypeGen typeGen, bool emitDebugSymbols) {
-            LambdaCompiler.CompileLambda(this, typeGen, method, emitDebugSymbols);
-        }
-
-        // TODO: Remove the Compile<T> overloads
-        //
-        // They allow compiling an Expression<T> with a different
-        // (but compatible) delegate signature.
-        //
-        // Instead, Expression<T> should be created with the right
-        // delegate type.
-
-        public T Compile<T>() {
-            return LambdaCompiler.CompileLambda<T>(this, false);
-        }
-
-        public T Compile<T>(bool emitDebugSymbols) {
-            return LambdaCompiler.CompileLambda<T>(this, emitDebugSymbols);
+            return LambdaCompiler.CompileLambda(this);
         }
     }
 
@@ -130,11 +101,7 @@ namespace System.Linq.Expressions {
         }
 
         public new TDelegate Compile() {
-            return Compile<TDelegate>();
-        }
-
-        public new TDelegate Compile(bool emitDebugSymbols) {
-            return Compile<TDelegate>(emitDebugSymbols);
+            return LambdaCompiler.CompileLambda<TDelegate>(this);
         }
     }
 

@@ -18,8 +18,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;

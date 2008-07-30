@@ -15,8 +15,9 @@
 
 using System;
 using System.Collections;
+using System.Scripting;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {

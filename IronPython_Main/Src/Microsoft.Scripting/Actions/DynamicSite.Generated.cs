@@ -15,8 +15,8 @@
 
 using System.CodeDom.Compiler;
 using System.Scripting.Actions;
+using System.Scripting.Runtime;
 using System.Threading;
-using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     #region Generated Easy Dynamic Sites

@@ -14,15 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Linq.Expressions;
+using System.Diagnostics;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
+
+using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
 
     class MetaBuiltinFunction : MetaPythonObject, IPythonInvokable {
         public MetaBuiltinFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinFunction/*!*/ value)

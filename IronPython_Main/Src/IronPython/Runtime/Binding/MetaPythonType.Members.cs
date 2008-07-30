@@ -16,18 +16,18 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Reflection;
+using System.Scripting;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Ast = System.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = System.Linq.Expressions.Expression;
 
     partial class MetaPythonType : MetaPythonObject {
 
@@ -188,7 +188,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldClassTryLookupOneSlot"),
                                     Ast.Constant(pt.OldClass),
-                                    AstUtils.Constant(SymbolTable.StringToId(member.Name)),
+                                    Ast.Constant(SymbolTable.StringToId(member.Name)),
                                     tmp
                                 ),
                                 tmp,
@@ -261,7 +261,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[]{ typeof(string), typeof(SymbolId) }),
                             Ast.Constant(Value.Name),
-                            AstUtils.Constant(SymbolTable.StringToId(member.Name))
+                            Ast.Constant(SymbolTable.StringToId(member.Name))
                         )
                     )
                 );
@@ -510,7 +510,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("PythonTypeSetCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
-                        AstUtils.Constant(SymbolTable.StringToId(member.Name)),
+                        Ast.Constant(SymbolTable.StringToId(member.Name)),
                         Ast.ConvertHelper(
                             args[1].Expression,
                             typeof(object)
@@ -536,7 +536,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("PythonTypeDeleteCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
-                        AstUtils.Constant(SymbolTable.StringToId(member.Name))
+                        Ast.Constant(SymbolTable.StringToId(member.Name))
                     ),
                     self.Restrictions
                 ),

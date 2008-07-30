@@ -14,13 +14,16 @@
  * ***************************************************************************/
 
 using System;
+using System.Scripting.Actions;
+using System.Scripting.Utils;
+using IronPython.Runtime;
 using IronPython.Runtime.Binding;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
+
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class AndExpression : Expression {
         private readonly Expression _left, _right;

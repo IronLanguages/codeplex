@@ -17,8 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Scripting.Runtime;
 using System.Text;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPythonTest {
 

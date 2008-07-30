@@ -18,9 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -111,7 +109,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression body = VisitNode(contextScope.Body);
 
                 if (body != contextScope.Body) {
-                    node = AstUtils.CodeContextScope(body, contextScope.NewContext);
+                    node = CodeContextScopeExpression.CodeContextScope(body, contextScope.NewContext);
                 }
             }
             return node;

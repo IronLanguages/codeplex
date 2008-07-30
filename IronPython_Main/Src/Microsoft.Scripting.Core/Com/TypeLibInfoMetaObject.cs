@@ -69,7 +69,7 @@ namespace System.Scripting.Com {
         }
 
         private static MetaObject[] RestrictThisToType(MetaObject[] args) {
-            MetaObject[] copy = args.Copy();
+            MetaObject[] copy = ArrayUtils.Copy(args);
             args[0] = args[0].Restrict(typeof(ComTypeLibInfo));
             return copy;
         }

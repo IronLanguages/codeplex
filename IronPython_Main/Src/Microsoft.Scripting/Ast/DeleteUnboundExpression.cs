@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Linq.Expressions;
 using System.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class DeleteUnboundExpression : Expression {
@@ -36,9 +35,9 @@ namespace Microsoft.Scripting.Ast {
             return Expression.Call(
                 typeof(ExpressionHelpers).GetMethod("RemoveName"),
                 Annotations,
-                new [] {
-                    Utils.CodeContext(),
-                    AstUtils.Constant(_name)
+                new Expression[] {
+                    Expression.CodeContext(),
+                    Expression.Constant(_name)
                 }
             );
         }

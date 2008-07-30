@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -54,7 +54,7 @@ namespace IronPython.Compiler.Ast {
                 call = AstUtils.Call(
                     AstGenerator.GetHelperMethod("UnqualifiedExec"), 
                     Span, 
-                    AstUtils.CodeContext(), 
+                    Ast.CodeContext(), 
                     ag.TransformAsObject(_code)
                 );
             } else {
@@ -64,7 +64,7 @@ namespace IronPython.Compiler.Ast {
                 call = AstUtils.Call(
                     AstGenerator.GetHelperMethod("QualifiedExec"), 
                     Span, 
-                    AstUtils.CodeContext(), 
+                    Ast.CodeContext(), 
                     ag.TransformAsObject(_code), 
                     ag.TransformAndDynamicConvert(_globals, typeof(IAttributesCollection)), 
                     ag.TransformOrConstantNull(_locals, typeof(object))

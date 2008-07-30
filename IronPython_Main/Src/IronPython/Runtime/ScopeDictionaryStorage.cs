@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     internal abstract class ScopeDictionaryStorage : DictionaryStorage {

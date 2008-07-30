@@ -16,11 +16,16 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
 namespace IronPython.Modules {

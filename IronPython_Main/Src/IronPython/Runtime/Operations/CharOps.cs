@@ -15,7 +15,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {

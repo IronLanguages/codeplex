@@ -15,10 +15,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Scripting;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {
 

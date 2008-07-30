@@ -16,7 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;

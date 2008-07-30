@@ -15,8 +15,8 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Scripting.Utils;
 using System.Security.Permissions;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     [Serializable]

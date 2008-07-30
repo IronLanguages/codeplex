@@ -68,7 +68,7 @@ if sys.platform=="win32":
     
 windir = get_environ_variable("windir")
 if is_cli:
-    preferComDispatch = nt.environ.get("DLR_PreferComInteropAssembly") != "TRUE"
+    preferComDispatch = nt.environ.get("COREDLR_PreferComInteropAssembly") != "TRUE"
 else:
     preferComDispatch = False
 

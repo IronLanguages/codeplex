@@ -14,9 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Linq.Expressions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Actions;
+using System.Linq.Expressions; 
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;

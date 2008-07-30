@@ -15,18 +15,20 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Reflection;
+using System.Scripting;
 using System.Scripting.Actions;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
+    using Ast = System.Linq.Expressions.Expression;
+    using System.Reflection;
 
     [PythonSystemType("builtin_function_or_method")]
     public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable, IValueEquality, IDelegateConvertible {

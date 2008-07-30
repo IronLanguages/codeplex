@@ -17,10 +17,11 @@
 
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
@@ -362,7 +363,7 @@ namespace System.Scripting.Com {
                     throw Error.GetIDsOfNamesInvalid(names[0]);
                 }
 
-                int[] keywordArgDispIds = dispIds.RemoveFirst(); // Remove the dispId of the method name
+                int[] keywordArgDispIds = ArrayUtils.RemoveFirst(dispIds); // Remove the dispId of the method name
 
                 pinningHandle.Target = keywordArgDispIds;
                 return Marshal.UnsafeAddrOfPinnedArrayElement(keywordArgDispIds, 0);
@@ -632,7 +633,7 @@ namespace System.Scripting.Com {
 
         private static void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
             VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
-            object[] allArgs = explicitArgs.AddFirst(null);
+            object[] allArgs = ArrayUtils.Insert<object>(null, explicitArgs);
             for (int i = 0; i < variantBuilders.Length; i++) {
                 variantBuilders[i].ArgBuilder.UpdateFromReturn(argsForCall[i], allArgs);
             }
@@ -641,7 +642,7 @@ namespace System.Scripting.Com {
         public static object UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs) {
             try {
                 VarEnumSelector varEnumSelector = new VarEnumSelector(typeof(object), explicitArgs);
-                object[] allArgs = explicitArgs.AddFirst(null);
+                object[] allArgs = ArrayUtils.Insert<object>(null, explicitArgs);
                 ParameterModifier parameterModifiers;
                 object[] argsForCall = varEnumSelector.BuildArguments(allArgs, out parameterModifiers);
 
@@ -661,7 +662,7 @@ namespace System.Scripting.Com {
                     memberName = method.Name;
 
                     namedParams = keywordArgNames;
-                    argsForCall = argsForCall.RotateRight(namedParams.Length);
+                    argsForCall = ArrayUtils.RotateRight(argsForCall, namedParams.Length);
                 }
 
                 // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
@@ -695,7 +696,7 @@ namespace System.Scripting.Com {
                 }
 
                 // Unwrap the real (inner) exception and raise it
-                throw Helpers.UpdateForRethrow(e.InnerException);
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
             }
         }
 

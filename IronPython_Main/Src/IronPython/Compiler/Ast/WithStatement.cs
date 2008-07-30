@@ -15,9 +15,11 @@
 
 using System;
 using System.Scripting;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+
 using IronPython.Runtime.Binding;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -178,7 +180,7 @@ namespace IronPython.Compiler.Ast {
                         ),
                 //  if not exit(*sys.exc_info()):
                 //      raise
-                        AstUtils.IfThen(
+                        Ast.IfThen(
                             Binders.Convert(
                                 ag.BinderState,
                                 typeof(bool),
@@ -197,7 +199,7 @@ namespace IronPython.Compiler.Ast {
                 ).Finally(
                 //  if exc:
                 //      exit(None, None, None)
-                    AstUtils.IfThen(
+                    Ast.IfThen(
                         exc,
                         Ast.ActionExpression(
                             new InvokeBinder(
@@ -207,7 +209,7 @@ namespace IronPython.Compiler.Ast {
                             typeof(object),
                             MSAst.Expression.Annotate(_contextManager.Span),
                             new MSAst.Expression[] {
-                                AstUtils.CodeContext(),
+                                Ast.CodeContext(),
                                 exit,
                                 Ast.Null(),
                                 Ast.Null(),
@@ -233,11 +235,11 @@ namespace IronPython.Compiler.Ast {
                 Binders.Invoke(
                     ag.BinderState,
                     typeof(object),
-                    new CallSignature(ArgumentKind.List),
+                    new CallSignature(MSAst.ArgumentKind.List),
                     exit,
                     Ast.Call(
                         AstGenerator.GetHelperMethod("GetExceptionInfoLocal"),
-                        AstUtils.CodeContext(),
+                        Ast.CodeContext(),
                         exception
                     )
                 )

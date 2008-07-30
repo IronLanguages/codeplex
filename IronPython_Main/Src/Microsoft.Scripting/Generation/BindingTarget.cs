@@ -15,12 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using System.Linq.Expressions;
+using System.Scripting.Generation;
+using System.Scripting.Utils;
+using System.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

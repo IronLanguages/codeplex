@@ -16,6 +16,7 @@
 using System;
 using System.Scripting;
 using System.Linq.Expressions;
+using System.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -33,7 +34,7 @@ namespace Microsoft.Scripting.Runtime {
             get { return false; }
         }
 
-        protected internal override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
+        protected override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
             // invariant langauge doesn't have a grammar:
             throw new NotSupportedException();
         }

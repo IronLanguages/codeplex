@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
+using System.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 

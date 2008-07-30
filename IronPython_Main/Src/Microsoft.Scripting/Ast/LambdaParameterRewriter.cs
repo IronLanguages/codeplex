@@ -16,9 +16,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq.Expressions;
 
-namespace Microsoft.Scripting.Ast {
+namespace System.Linq.Expressions {
     internal class LambdaParameterRewriter : ExpressionTreeVisitor {
         private Dictionary<ParameterExpression, Expression> _paramMapping;
 
@@ -58,7 +57,7 @@ namespace Microsoft.Scripting.Ast {
             Expression body = VisitNode(node.Body);
 
             if (newcontext != node.NewContext || body != node.Body) {
-                node = Utils.CodeContextScope(
+                node = Expression.CodeContextScope(
                     body,
                     newcontext,
                     node.Annotations

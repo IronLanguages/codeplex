@@ -14,11 +14,18 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Scripting;
-using IronPython.Runtime;
-using IronPython.Runtime.Binding;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Binding;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -54,14 +61,14 @@ namespace IronPython.Compiler.Ast {
         private MSAst.Expression[] GetActionArgumentsForGetOrDelete(AstGenerator ag) {
             TupleExpression te = _index as TupleExpression;
             if (te != null && te.IsExpandable) {
-                return ArrayUtils.Insert(AstUtils.CodeContext(), ag.Transform(_target), ag.Transform(te.Items));
+                return ArrayUtils.Insert(Ast.CodeContext(), ag.Transform(_target), ag.Transform(te.Items));
             }
 
             SliceExpression se = _index as SliceExpression;
             if (se != null) {
                 if (se.StepProvided) {
                     return new MSAst.Expression[] { 
-                        AstUtils.CodeContext(),
+                        Ast.CodeContext(),
                         ag.Transform(_target),
                         GetSliceValue(ag, se.SliceStart),
                         GetSliceValue(ag, se.SliceStop),
@@ -70,14 +77,14 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 return new MSAst.Expression[] { 
-                    AstUtils.CodeContext(),
+                    Ast.CodeContext(),
                     ag.Transform(_target),
                     GetSliceValue(ag, se.SliceStart),
                     GetSliceValue(ag, se.SliceStop)
                 };
             }
 
-            return new MSAst.Expression[] { AstUtils.CodeContext(), ag.Transform(_target), ag.Transform(_index) };
+            return new MSAst.Expression[] { Ast.CodeContext(), ag.Transform(_target), ag.Transform(_index) };
         }
 
         private static MSAst.Expression GetSliceValue(AstGenerator ag, Expression expr) {

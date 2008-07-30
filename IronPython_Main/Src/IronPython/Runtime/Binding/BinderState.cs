@@ -13,12 +13,17 @@
  *
  * ***************************************************************************/
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Scripting.Runtime;
 using System.Scripting.Actions;
-using IronPython.Runtime.Operations;
+using System.Text;
+
 using Microsoft.Scripting.Runtime;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+using Microsoft.Scripting.Actions;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -76,7 +81,7 @@ namespace IronPython.Runtime.Binding {
             return Expression.Call(
                 null,
                 typeof(PythonOps).GetMethod("GetInitialBinderState"),
-                AstUtils.CodeContext()
+                Expression.CodeContext()
             );
         }
 

@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System.Scripting;
+using System.Scripting.Runtime;
 using System.Threading;
-using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
 

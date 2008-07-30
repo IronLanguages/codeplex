@@ -189,7 +189,7 @@ namespace System.Linq.Expressions {
                     }
                 } else {
                     propertyType = valueType;
-                    ValidateAccessor(instance, setter, setParameters.RemoveLast(), ref argList);
+                    ValidateAccessor(instance, setter, ArrayUtils.RemoveLast(setParameters), ref argList);
                 }
             }
             ContractUtils.Requires(propertyType != typeof(void), getter != null ? "getter" : "setter", Strings.PropertyTypeCannotBeVoid);

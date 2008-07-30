@@ -16,7 +16,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;

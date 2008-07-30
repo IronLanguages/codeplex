@@ -22,6 +22,9 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting;
 using System.Scripting.Actions;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
 using IronPython.Compiler;
@@ -31,12 +34,11 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Interpretation;
 
 namespace IronPython.Runtime.Operations {
 
@@ -3059,7 +3061,7 @@ namespace IronPython.Runtime.Operations {
 
         public static OldCallAction MakeListCallAction(int count) {
             ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count);
-            infos[count - 1] = new ArgumentInfo(ArgumentKind.List);
+            infos[count - 1] = new ArgumentInfo(System.Linq.Expressions.ArgumentKind.List);
             return OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(infos));
         }
 

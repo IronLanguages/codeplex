@@ -16,10 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Scripting;
+using System.Scripting.Runtime;
 using System.Text;
 using System.Windows.Browser;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Silverlight {
 

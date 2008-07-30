@@ -17,6 +17,9 @@
 
 using System.Linq.Expressions;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
+using System.Collections;
+using System.Scripting.Runtime;
 
 namespace System.Scripting.Com {
     internal class GenericComMetaObject : MetaObject {

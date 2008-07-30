@@ -16,7 +16,7 @@
 using System;
 using System.IO;
 using System.Scripting;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 using System.Threading;
 
 namespace Microsoft.Scripting.Hosting.Shell {

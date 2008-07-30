@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Threading;
 
@@ -38,7 +38,7 @@ namespace System.Scripting.Actions {
                     method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1));
                 }
                 if (method != null) {
-                    return (T)(object)Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));
+                    return (T)(object)Delegate.CreateDelegate(target, method.MakeGenericMethod(ArrayUtils.Insert(target, args)));
                 }
             }
 
@@ -77,11 +77,11 @@ namespace System.Scripting.Actions {
             return (T)target;
         }
 
-        private static T CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
+        private static Delegate CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
             Type siteOfT = typeof(CallSite<T>);
 
             ParameterInfo[] parameters = invoke.GetParameters();
-            Type[] signature = parameters.Map(p => p.ParameterType);
+            Type[] signature = ReflectionUtils.GetParameterTypes(parameters);
 
             DynamicILGen il = DynamicSiteHelpers.CreateDynamicMethod(siteOfT.IsVisible, "Update", invoke.ReturnType, signature);
             LocalBuilder array = il.DeclareLocal(typeof(object[]));
@@ -147,7 +147,8 @@ namespace System.Scripting.Actions {
 
             il.Emit(OpCodes.Ret);
 
-            return il.Finish().CreateDelegate<T>();
+            MethodInfo mi = il.Finish();
+            return ReflectionUtils.CreateDelegate(mi, typeof(T));
         }
     }
 }

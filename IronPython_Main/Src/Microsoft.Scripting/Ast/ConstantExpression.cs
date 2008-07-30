@@ -15,7 +15,7 @@
 
 using System;
 using System.Linq.Expressions;
-using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Math; 
 
 namespace Microsoft.Scripting.Ast {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1724:TypeNamesShouldNotMatchNamespaces")]
@@ -33,10 +33,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Expression Constant(object value) {
-            if (value is SymbolId) {
-                return new SymbolConstantExpression((SymbolId)value);
-            }
             BigInteger bi = value as BigInteger;
+
             if ((object)bi != null) {
                 return BigIntegerConstant(bi);
             } else if (value is Complex64) {

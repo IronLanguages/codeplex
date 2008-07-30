@@ -16,13 +16,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Scripting;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -266,7 +265,7 @@ namespace Microsoft.Scripting.Ast {
         public Expression ClosedOverVariable(Type type, string name) {
             if (_global) {
                 // special treatment of lambdas marked as global
-                return Utils.GlobalVariable(type, name, true);
+                return Expression.GlobalVariable(type, name, true);
             }
 
             VariableExpression result = Expression.Variable(type, name);
@@ -282,7 +281,7 @@ namespace Microsoft.Scripting.Ast {
         public Expression Variable(Type type, string name) {
             if (_global) {
                 // special treatment of lambdas marked as global
-                return Utils.GlobalVariable(type, name, true);
+                return Expression.GlobalVariable(type, name, true);
             }
 
             VariableExpression result = Expression.Variable(type, name);
@@ -484,7 +483,7 @@ namespace Microsoft.Scripting.Ast {
                     paramMapping.Add(mappedParameter, backingVariable);
 
                     // Call the helper
-                    MethodInfo shifter = typeof(RuntimeHelpers).GetMethod("ShiftParamsArray");
+                    MethodInfo shifter = typeof(RuntimeOps).GetMethod("ShiftParamsArray");
                     shifter = shifter.MakeGenericMethod(delegateParamarrayPi.ParameterType.GetElementType());
 
                     preambuleExpressions.Add(
@@ -569,12 +568,12 @@ namespace Microsoft.Scripting.Ast {
                 }
 
                 if (vars.Count > 0) {
-                    body = Utils.CodeContextScope(
+                    body = Expression.CodeContextScope(
                         body,
                         Expression.Call(
-                            typeof(RuntimeHelpers).GetMethod("CreateNestedCodeContext"),
+                            typeof(RuntimeOps).GetMethod("CreateNestedCodeContext"),
                             Expression.AllVariables(vars),
-                            Utils.CodeContext(),
+                            Expression.CodeContext(),
                             Expression.Constant(_visible)
                         )
                     );
@@ -664,7 +663,7 @@ namespace Microsoft.Scripting.Ast {
 }
 
 namespace Microsoft.Scripting.Runtime {
-    public static partial class RuntimeHelpers {
+    public static partial class RuntimeOps {
         public static CodeContext CreateNestedCodeContext(ILocalVariables locals, CodeContext context, bool visible) {
             Debug.Assert(locals.Count != 0);
             return new CodeContext(new Scope(context.Scope, new LocalsDictionary(locals), visible), context.LanguageContext, context);

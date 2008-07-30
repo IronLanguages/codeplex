@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Runtime.CompilerServices;
+using System.Scripting.Runtime;
 using System.Windows;
 using System.Windows.Browser;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Silverlight;
 
 [assembly: ExtensionType(typeof(HtmlDocument), typeof(HtmlDocumentExtension))]

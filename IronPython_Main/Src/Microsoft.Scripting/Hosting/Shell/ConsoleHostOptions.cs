@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 

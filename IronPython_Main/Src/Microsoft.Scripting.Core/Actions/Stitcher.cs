@@ -56,7 +56,7 @@ namespace System.Scripting.Actions {
             if (length == 1) {
                 // only one rule, use its parameters and don't stitch..
                 Rule<T> rule = rules[0];
-                lp = rule.Parameters.ToArray();
+                lp = ArrayUtils.ToArray(rule.Parameters);
                 body[0] = rule.Binding;
             } else {
                 // Many rules, stitch them together on a new set of parameters

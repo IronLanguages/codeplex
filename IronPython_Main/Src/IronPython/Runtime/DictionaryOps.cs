@@ -18,8 +18,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
 using System.Text;
 
 using IronPython.Runtime.Binding;

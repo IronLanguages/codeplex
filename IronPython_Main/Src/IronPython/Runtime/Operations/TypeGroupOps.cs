@@ -15,12 +15,14 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Scripting.Actions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Text;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     public static class TypeGroupOps {

@@ -22,9 +22,9 @@ clr.AddReference("Microsoft.Scripting.Core.dll")
 clr.AddReference("IronPython.dll")
 clr.AddReference("IronPython.Modules.dll")
 
-from Microsoft.Scripting import SourceCodeKind, ErrorSink
+from System.Scripting import SourceCodeKind, ErrorSink
 from Microsoft.Scripting.Hosting import ScriptRuntime, HostingHelpers
-from Microsoft.Scripting.Runtime import CompilerContext
+from Microsoft.Scripting.Compilers import CompilerContext
 from IronPython import PythonEngineOptions
 from IronPython.Runtime import PythonContext, ModuleOptions, Symbols
 from IronPython.Compiler import Parser, PythonCompilerOptions

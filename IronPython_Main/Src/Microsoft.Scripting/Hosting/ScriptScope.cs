@@ -18,8 +18,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>

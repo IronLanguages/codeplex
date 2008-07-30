@@ -15,10 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Linq.Expressions;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;

@@ -46,9 +46,9 @@ namespace IronPython.Compiler.Ast {
             // } else {
             //     RaiseAssertionError(_message);
             // }
-            return AstUtils.Unless(                                 // if
+            return Ast.Unless(                                      // if
                 ag.TransformAndDynamicConvert(_test, typeof(bool)), // _test
-                Ast.Call(                                           // else branch
+                Ast.Call(                                       // else branch
                     AstGenerator.GetHelperMethod("RaiseAssertionError"),
                     ag.TransformOrConstantNull(_message, typeof(object))
                 )

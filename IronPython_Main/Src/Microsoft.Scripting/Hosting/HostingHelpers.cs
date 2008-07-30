@@ -15,8 +15,8 @@
 
 using System.ComponentModel;
 using System.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 // TODO: Move this to a separate namespace to hide it from ordinary hosts?
 namespace Microsoft.Scripting.Hosting {

@@ -15,8 +15,8 @@
 
 using System;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

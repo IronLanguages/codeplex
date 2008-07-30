@@ -15,10 +15,11 @@
 
 using System.Diagnostics;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
+using System.Scripting.Generation;
+using System.Scripting.Runtime;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace System.Linq.Expressions {
 
     // The part of the LambdaCompiler dealing with low level control flow
     // break, contiue, return, exceptions, etc
@@ -169,7 +170,7 @@ namespace System.Linq.Expressions.Compiler {
 
                     EnsureReturnBlock();
                     Debug.Assert(_returnBlock.HasValue);
-                    if (_method.GetReturnType() != typeof(void)) {
+                    if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
                         _ilg.Emit(OpCodes.Stloc, _returnBlock.Value.ReturnValue);
                     }
 
@@ -193,7 +194,7 @@ namespace System.Linq.Expressions.Compiler {
                 case TargetBlockType.Finally: {
                         Targets t = _targets.Peek();
                         EnsureReturnBlock();
-                        if (_method.GetReturnType() != typeof(void)) {
+                        if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
                             _ilg.Emit(OpCodes.Stloc, _returnBlock.Value.ReturnValue);
                         }
                         // Assert check ensures that those who pushed the block with finallyReturns as null 
@@ -210,7 +211,7 @@ namespace System.Linq.Expressions.Compiler {
 
         private void EmitReturnValue() {
             EnsureReturnBlock();
-            if (_method.GetReturnType() != typeof(void)) {
+            if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
                 _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value.ReturnValue);
             }
         }
@@ -220,9 +221,9 @@ namespace System.Linq.Expressions.Compiler {
                 EmitReturnInGenerator(expr);
             } else {
                 if (expr == null) {
-                    Debug.Assert(_method.GetReturnType() == typeof(void));
+                    Debug.Assert(CompilerHelpers.GetReturnType(_method) == typeof(void));
                 } else {
-                    Type result = _method.GetReturnType();
+                    Type result = CompilerHelpers.GetReturnType(_method);
                     Debug.Assert(result.IsAssignableFrom(expr.Type));
                     EmitExpression(expr);
                     if (!TypeUtils.CanAssign(result, expr.Type)) {
@@ -277,8 +278,8 @@ namespace System.Linq.Expressions.Compiler {
             if (!_returnBlock.HasValue) {
                 ReturnBlock val = new ReturnBlock();
 
-                if (_method.GetReturnType() != typeof(void)) {
-                    val.ReturnValue = GetNamedLocal(_method.GetReturnType(), "retval");
+                if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
+                    val.ReturnValue = GetNamedLocal(CompilerHelpers.GetReturnType(_method), "retval");
                 }
                 val.ReturnStart = _ilg.DefineLabel();
 

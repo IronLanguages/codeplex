@@ -15,7 +15,7 @@
 
 using System.Runtime.InteropServices;
 using System.Scripting;
-using Microsoft.Scripting.Runtime;
+using System.Scripting.Runtime;
 
 using Microsoft.Scripting;
 

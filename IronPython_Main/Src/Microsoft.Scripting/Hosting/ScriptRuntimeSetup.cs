@@ -14,10 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Hosting {
     [Serializable]
@@ -68,7 +68,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
 #if SIGNED
-        private const string IronPythonAssembly = "IronPython, Version=2.0.0.3000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+        private const string IronPythonAssembly = "IronPython, Version=2.0.0.4000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
         private const string JScriptAssembly = "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
         private const string IronRubyAssembly = "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
         private const string VisualBasicAssembly = "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";

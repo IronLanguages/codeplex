@@ -18,6 +18,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Scripting.Runtime;
 using System.Threading;
 
 namespace System.Scripting.Com {
@@ -27,11 +28,14 @@ namespace System.Scripting.Com {
     /// 
     /// 
     /// TODO: This should inherit from ComObject once ComObject is moved to the DLR
+    /// 
+    /// 
     /// </summary>
     public class IDispatchObject {
 
         private readonly IDispatch _dispatchObject;  // The RCW object
         private Dictionary<Thread, IntPtr> _dispatchPointersByApartment;  // This is valid only if ScriptDomainManager.Options.CachePointersInApartment==true
+
 
         [CLSCompliant(false)]
         public IDispatchObject(IDispatch rcw) {

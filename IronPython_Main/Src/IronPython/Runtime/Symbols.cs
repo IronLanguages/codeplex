@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
+using System.Scripting;
 
 namespace IronPython.Runtime {
     public static partial class Symbols {

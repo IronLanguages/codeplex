@@ -18,7 +18,6 @@ using System.Collections.Generic;
 using System.Scripting;
 using System.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
@@ -69,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
         private Expression[] ConstantNames() {
             Expression[] res = new Expression[_names.Length];
             for (int i = 0; i < _names.Length; i++) {
-                res[i] = AstUtils.Constant(_names[i]);
+                res[i] = Ast.Constant(_names[i]);
             }
             return res;
         }

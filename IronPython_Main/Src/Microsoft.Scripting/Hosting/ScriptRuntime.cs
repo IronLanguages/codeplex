@@ -18,10 +18,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Scripting;
+using System.Scripting.Runtime;
+using System.Scripting.Utils;
 using System.Security.Permissions;
 using System.Threading;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>

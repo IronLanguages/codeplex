@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
                 return AstUtils.Call(
                     AstGenerator.GetHelperMethod("ImportStar"), 
                     Span, 
-                    AstUtils.CodeContext(), 
+                    Ast.CodeContext(), 
                     Ast.Constant(_root.MakeString()), 
                     Ast.Constant(GetLevel())
                 );
@@ -92,7 +92,7 @@ namespace IronPython.Compiler.Ast {
                         module, 
                         Ast.Call(
                             AstGenerator.GetHelperMethod("ImportWithNames"),
-                            AstUtils.CodeContext(),
+                            Ast.CodeContext(),
                             Ast.Constant(_root.MakeString()),
                             Ast.NewArrayInit(typeof(string), names),
                             Ast.Constant(GetLevel())
@@ -108,7 +108,7 @@ namespace IronPython.Compiler.Ast {
                             _variables[i].Variable, 
                             Ast.Call(
                                 AstGenerator.GetHelperMethod("ImportFrom"),
-                                AstUtils.CodeContext(),
+                                Ast.CodeContext(),
                                 module,
                                 names[i]
                             ), 
