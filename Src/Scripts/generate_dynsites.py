@@ -36,10 +36,15 @@ def gargs(size):
     
     return ", " + ", ".join(["arg%d" % i for i in range(size)])
 
-def gargsindex(size):
+def gargs_index(size):
     if size == 0: return ''
     
     return ", " + ", ".join(["args[%d]" % i for i in range(size)])
+
+def gargs_indexwithcast(size):
+    if size == 0: return ''
+    
+    return ", " + ", ".join(["(T%d)args[%d]" % (i, i) for i in range(size)])
 
 def gonlyargs(size):
     if size == 0: return ''
@@ -135,7 +140,7 @@ public static object CallHelper%(size)d(CallSite<DynamicSiteTarget<object%(ts)s>
 def gen_splatsite(cw):
     cw.write("//\n// Splatting targets for dynamic sites\n//\n")
     for n in range(1, MaxSiteArity + 2):
-        cw.write(splatcaller, size = n, ts = ", object" * n, args = gargsindex(n))
+        cw.write(splatcaller, size = n, ts = ", object" * n, args = gargs_index(n))
 
 construction_helper="""[GeneratedCode("DLR", "2.0")]
 public static DynamicSite<%(generic)s> CreateSimpleCallSite<%(generic)s>(ActionBinder binder) {
@@ -185,6 +190,29 @@ def gen_void_update_targets(cw):
     for n in range(1, MaxSiteArity + 2):
         cw.write(update_target_void, ts = gsig_noret(n), tparams = gparms(n), targs = gonlyargs(n), arity = n)
 
+
+
+matchcaller_target="""/// Matchcaller - arity %(arity)d
+public static object Call%(arity)d<%(ts)s>(Func<CallSite, %(ts)s> target, CallSite site, object[] args) {
+    return (object)target(site%(targs)s);
+}
+"""
+
+def gen_matchcaller_targets(cw):
+    for n in range(1, MaxSiteArity):
+        cw.write(matchcaller_target, ts = gsig(n), targs = gargs_indexwithcast(n), arity = n)
+
+matchcaller_target_void = """// Matchcaller - arity %(arity)d
+public static object CallVoid%(arity)d<%(ts)s>(Action<CallSite, %(ts)s> target, CallSite site, object[] args) {
+    target(site%(targs)s);
+    return null;
+}
+"""
+
+def gen_void_matchcaller_targets(cw):
+    for n in range(1, MaxSiteArity):
+        cw.write(matchcaller_target_void, ts = gsig_noret(n), targs = gargs_indexwithcast(n), arity = n)
+
 def main():
     return generate(
         ("Predefined Update Targets", gen_update_targets),
@@ -194,6 +222,8 @@ def main():
         ("Maximum Site Target Arity", gen_max_arity),
         ("Matchmaker", gen_matchmaker),
         ("Void Matchmaker", gen_void_matchmaker),
+        ("Matchcaller Targets", gen_matchcaller_targets),
+        ("Matchcaller Void Targets", gen_void_matchcaller_targets),
         ("SplatCallSite call helpers", gen_splatsite),
         ("Dynamic Sites Construction Helpers", gen_construction_helpers),
         ("Dynamic Site Target Type Maker", gen_site_target_maker)

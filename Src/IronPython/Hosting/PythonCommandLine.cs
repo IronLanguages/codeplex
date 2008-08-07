@@ -17,8 +17,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Runtime;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using System.Threading;
 using IronPython.Compiler;
 using IronPython.Runtime;
@@ -44,15 +44,19 @@ namespace IronPython.Hosting {
 
         protected override string/*!*/ Logo {
             get {
-                return GetLogoDisplay();
+                return GetLogoDisplay().Replace("\n", Environment.NewLine);
             }
         }
 
+        /// <summary>
+        /// Returns the display look for IronPython.  
+        /// 
+        /// The returned string uses This \n instead of Environment.NewLine for it's line seperator 
+        /// because it is intended to be outputted through the Python I/O system.
+        /// </summary>
         public static string GetLogoDisplay() {
             return GetVersionString() +
-                            Environment.NewLine +
-                            "Type \"help\", \"copyright\", \"credits\" or \"license\" for more information." +
-                            Environment.NewLine;
+                   "\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\n";
         }
 
         private string/*!*/ VersionString {

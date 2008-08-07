@@ -14,12 +14,15 @@
  * ***************************************************************************/
 
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Scripting;
-using System.Scripting.Runtime;
 using System.Text;
 using System.Windows.Browser;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
 
 namespace Microsoft.Scripting.Silverlight {
 
@@ -118,35 +121,41 @@ namespace Microsoft.Scripting.Silverlight {
 
         // Print the line with the error plus some context lines
         private static string FormatSourceCode(DynamicExceptionInfo err) {
-            var source = err.Source;
+            var sourceFile = err.SourceFileName;
             int line = err.SourceLine;
 
-            if (source == null || line <= 0) {
+            if (sourceFile == null || line <= 0) {
                 return "";
             }
 
+            var stream = DynamicApplication.Download(sourceFile);
+            if (stream == null) {
+                return "";
+            }
+
+            int maxLen = (line + 2).ToString().Length;
             var text = new StringBuilder();
 
-            var reader = source.GetReader();
-            int maxLen = (line + 2).ToString().Length;
-            for (int i = 1; i <= line + 2; ++i) {
-                string lineText = reader.ReadLine();
-                if (null == lineText) {
-                    break;
-                }
-                if (i < line - 2) {
-                    continue;
-                }
-                string lineNum = i.ToString();
-                text.Append("Line ").Append(' ', maxLen - lineNum.Length).Append(lineNum).Append(": ");
-                lineText = EscapeHtml(lineText);
-                if (i == line) {
-                    text.AppendFormat(_ErrorLineTemplate, lineText);
-                } else {
-                    text.Append(lineText);
-                }
-                if (i != line + 2) {
-                    text.Append("<br />");
+            using (StreamReader reader = new StreamReader(stream)) {
+                for (int i = 1; i <= line + 2; ++i) {
+                    string lineText = reader.ReadLine();
+                    if (null == lineText) {
+                        break;
+                    }
+                    if (i < line - 2) {
+                        continue;
+                    }
+                    string lineNum = i.ToString();
+                    text.Append("Line ").Append(' ', maxLen - lineNum.Length).Append(lineNum).Append(": ");
+                    lineText = EscapeHtml(lineText);
+                    if (i == line) {
+                        text.AppendFormat(_ErrorLineTemplate, lineText);
+                    } else {
+                        text.Append(lineText);
+                    }
+                    if (i != line + 2) {
+                        text.Append("<br />");
+                    }
                 }
             }
 
@@ -219,10 +228,6 @@ namespace Microsoft.Scripting.Silverlight {
                 get { return _sourceLine; }
             }
 
-            public ScriptSource Source {
-                get { return _source; }
-            }
-
             public string Message {
                 get { return _message; }
             }
@@ -234,10 +239,11 @@ namespace Microsoft.Scripting.Silverlight {
             private Exception _exception;
             private DynamicStackFrame[] _dynamicStackFrames;
             private string _sourceFileName, _message, _errorTypeName;
-            private ScriptSource _source;
             private int _sourceLine;
 
             public DynamicExceptionInfo(Exception e) {
+                ContractUtils.RequiresNotNull(e, "e");
+
                 _exception = e;
                 _dynamicStackFrames = RuntimeHelpers.GetDynamicStackFrames(e);
 
@@ -252,46 +258,14 @@ namespace Microsoft.Scripting.Silverlight {
                     _sourceLine = _dynamicStackFrames[0].GetFileLineNumber();
                 }
 
-                if (_sourceFileName != null) {
-                    // TODO: this might be the real file name in languages that have line pragmas,
-                    // instead of the source unit id, which will cause this lookup to fail.
-                    // We need to do the reverse lookup.
-                    _source = SourceCache.Get(_sourceFileName);
-                }
-
-                // If we don't have an associated source unit (typically, this means the
-                // exception doesn't have a dynamic stack frame), just return the .NET exception message
-                if (_source == null) {
+                ScriptEngine engine;
+                if (_sourceFileName != null &&
+                    DynamicApplication.Current.Environment.TryGetEngineByFileExtension(System.IO.Path.GetExtension(_sourceFileName), out engine)) {
+                    ExceptionService es = engine.GetService<ExceptionService>();
+                    es.GetExceptionMessage(_exception, out _message, out _errorTypeName);
+                } else {
                     _errorTypeName = _exception.GetType().Name;
                     _message = _errorTypeName + ": " + _exception.Message;
-                } else {
-                    // Otherwise, format the exception using the language's engine
-                    _source.Engine.GetExceptionMessage(_exception, out _message, out _errorTypeName);
-                }
-            }
-
-        }
-    }
-
-    /// <summary>
-    /// Utility class to track source units by name, so we can look them up later given only the name
-    /// </summary>
-    internal static class SourceCache {
-        private static readonly Dictionary<string, ScriptSource> _sources = new Dictionary<string, ScriptSource>();
-
-        internal static ScriptSource Get(string sourceUnitId) {
-            lock (_sources) {
-                ScriptSource src;
-                _sources.TryGetValue(sourceUnitId, out src);
-                return src;
-            }
-        }
-
-        internal static void Add(ScriptSource src) {
-            // Error reporting needs the source text to be useful
-            if (DynamicApplication.Current.ReportUnhandledErrors) {
-                lock (_sources) {
-                    _sources[src.Path] = src;
                 }
             }
         }

@@ -17,7 +17,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
 #if !SILVERLIGHT
@@ -68,7 +67,7 @@ namespace System.Scripting.Actions {
                     "<rule>"
                 ),
                 null,
-                new ReadOnlyCollection<ParameterExpression>(ArrayUtils.Insert(siteExpr, pes))
+                new ReadOnlyCollection<ParameterExpression>(pes.AddFirst(siteExpr))
             );
         }
 

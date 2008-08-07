@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -100,7 +100,7 @@ namespace IronPython.Compiler.Ast {
 
                 MSAst.VariableExpression runElse = ag.GetTemporary("run_else", typeof(bool));
                 MSAst.VariableExpression lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
-                
+
 
                 //  run_else = true;
                 //  try {
@@ -118,14 +118,14 @@ namespace IronPython.Compiler.Ast {
                         Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated, we could choose to do this only for nested exception handlers.
                         Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
                         AstUtils.Try(
-                            body, 
-                            Span, _header
+                            Ast.Annotate(Span, _header),
+                            body
                         ).Catch(exception.Type, exception,
                             Ast.Assign(runElse, Ast.False()),
                             @catch,
                             Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
                         ),
-                        Ast.IfThen(runElse,
+                        AstUtils.IfThen(runElse,
                             @else
                         )
                     );
@@ -140,12 +140,12 @@ namespace IronPython.Compiler.Ast {
 
                 MSAst.VariableExpression lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
                 result = AstUtils.Try(
+                        Ast.Annotate(Span, _header),
                         Ast.Block(
                             Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
                             Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
                             body
-                        ), 
-                        Span, _header
+                        )
                     ).Catch(exception.Type, exception,
                         @catch,
                         Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
@@ -159,7 +159,7 @@ namespace IronPython.Compiler.Ast {
             return AddFinally(ag, result, noNestedException);
         }
 
-        private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.VariableExpression noNestedException) {            
+        private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.VariableExpression noNestedException) {
             if (_finally != null) {
                 Debug.Assert(noNestedException != null);
 
@@ -180,22 +180,22 @@ namespace IronPython.Compiler.Ast {
                 //          line numbers.
                 body = AstUtils.Try(// we use a filter to know when we have an exception and when control leaves normally (via
                     // either a return or the body completing successfully).
-                    Ast.Try(
+                    Ast.Annotate(Span, _header),
+                    AstUtils.Try(
                         Ast.Assign(noNestedException, Ast.Constant(true)),
                         body
                     ).Filter(
                         typeof(Exception),
-                        // condition is never true, just note the exception and let it propagate
+                    // condition is never true, just note the exception and let it propagate
                         Ast.Equal(
                             Ast.Assign(noNestedException, Ast.Constant(false)),
                             Ast.Constant(true)
                         ),
                         Ast.Empty()
-                    ), 
-                    Span, _header
+                    )
                 ).Finally(
                     // if we had an exception save the line # that was last executing during the try
-                    Ast.If(
+                    AstUtils.If(
                         Ast.Not(noNestedException),
                         ag.GetLineNumberUpdateExpression(false)
                     ),
@@ -243,7 +243,7 @@ namespace IronPython.Compiler.Ast {
             // The variable where the runtime will store the exception.
             variable = exception;
 
-            List<MSAst.IfStatementTest> tests = new List<MSAst.IfStatementTest>(_handlers.Length);
+            var tests = new List<Microsoft.Scripting.Ast.IfStatementTest>(_handlers.Length);
             MSAst.VariableExpression converted = null;
             MSAst.Expression catchAll = null;
 
@@ -251,7 +251,7 @@ namespace IronPython.Compiler.Ast {
                 TryStatementHandler tsh = _handlers[index];
 
                 if (tsh.Test != null) {
-                    MSAst.IfStatementTest ist;
+                    Microsoft.Scripting.Ast.IfStatementTest ist;
 
                     //  translating:
                     //      except Test ...
@@ -280,7 +280,7 @@ namespace IronPython.Compiler.Ast {
                             converted = ag.GetTemporary("converted");
                         }
 
-                        ist = Ast.IfCondition(
+                        ist = AstUtils.IfCondition(
                             Ast.NotEqual(
                                 Ast.Assign(converted, test),
                                 Ast.Null()
@@ -289,8 +289,8 @@ namespace IronPython.Compiler.Ast {
                                 tsh.Target.TransformSet(ag, SourceSpan.None, converted, Operators.None),
                                 GetTracebackHeader(
                                     new SourceSpan(tsh.Start, tsh.Header),
-                                    ag, 
-                                    exception, 
+                                    ag,
+                                    exception,
                                     ag.Transform(tsh.Body)
                                 )
                             )
@@ -304,15 +304,15 @@ namespace IronPython.Compiler.Ast {
                         //          traceback-header
                         //          <body>
                         //      }
-                        ist = Ast.IfCondition(
+                        ist = AstUtils.IfCondition(
                             Ast.NotEqual(
                                 test,
                                 Ast.Null()
                             ),
                             GetTracebackHeader(
                                 new SourceSpan(tsh.Start, tsh.Header),
-                                ag, 
-                                exception, 
+                                ag,
+                                exception,
                                 ag.Transform(tsh.Body)
                             )
                         );
@@ -343,9 +343,9 @@ namespace IronPython.Compiler.Ast {
                 // rethrow the exception if we have no catch-all block
                 if (catchAll == null) {
                     catchAll = Ast.Throw(exception);
-                } 
+                }
 
-                body = Ast.If(
+                body = AstUtils.If(
                     tests.ToArray(),
                     catchAll
                 );
@@ -368,7 +368,7 @@ namespace IronPython.Compiler.Ast {
                     extracted,
                     Ast.Call(
                         AstGenerator.GetHelperMethod("SetCurrentException"),
-                        Ast.CodeContext(),
+                        AstUtils.CodeContext(),
                         exception
                     )
                 ),
@@ -389,7 +389,7 @@ namespace IronPython.Compiler.Ast {
                 ag.GetLineNumberUpdateExpression(false),    // pass false so if we take another exception we'll add it to the frame list
                 Ast.Call(
                     AstGenerator.GetHelperMethod("BuildExceptionInfo"),
-                    Ast.CodeContext(),
+                    AstUtils.CodeContext(),
                     exception
                 ),
                 body

@@ -16,23 +16,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Actions;
-
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Ast = System.Linq.Expressions.Expression;
+using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
-    using RuntimeHelpers = System.Scripting.Runtime.RuntimeHelpers;
     
     class ConversionBinder : ConvertAction, IPythonSite, IExpressionSerializable  {
         private readonly BinderState/*!*/ _state;
@@ -50,7 +46,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {            
+        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {            
             MetaObject arg = args[0];
 
             if (arg.NeedsDeferral) {
@@ -102,7 +98,6 @@ namespace IronPython.Runtime.Binding {
         private static bool IsIndexless(MetaObject/*!*/ arg) {
             return arg.LimitType != typeof(OldInstance) &&
                 arg.LimitType != typeof(BuiltinFunction) &&
-                arg.LimitType != typeof(BoundBuiltinFunction) &&
                 arg.LimitType != typeof(BuiltinMethodDescriptor);
         }
 

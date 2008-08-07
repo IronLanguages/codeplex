@@ -127,7 +127,7 @@ namespace System.Scripting.Com {
             }
 
             // Add a dummy instance argument - it will not really be used
-            Type[] testTypes = ArrayUtils.Insert(typeof(DispCallable), explicitArgTypes);
+            Type[] testTypes = explicitArgTypes.AddFirst(typeof(DispCallable));
             FinishTestForCandidate(testTypes, explicitArgTypes);
 
             if (explicitArgTypes.Length > VariantArray.NumberOfElements ||
@@ -179,7 +179,7 @@ namespace System.Scripting.Com {
             Expression expr;
 
             if (_keywordArgNames.Length > 0) {
-                string[] names = ArrayUtils.Insert(_methodDesc.Name, _keywordArgNames);
+                string[] names = _keywordArgNames.AddFirst(_methodDesc.Name);
 
                 expr = Expression.AssignField(
                     DispParamsVariable,
@@ -471,7 +471,7 @@ namespace System.Scripting.Com {
                 for (int i = 0; i < exprArgs.Length; i++) {
                     if (exprArgs[i] == _instance) {
                         // We found the instance, so remove it
-                        exprArgsWithoutInstance = ArrayUtils.RemoveAt(exprArgs, i);
+                        exprArgsWithoutInstance = exprArgs.RemoveAt(i);
                         testTypesWithoutInstance.RemoveAt(i);
                         break;
                     }

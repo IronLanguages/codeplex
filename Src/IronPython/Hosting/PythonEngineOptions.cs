@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Scripting;
 using System.Scripting.Utils;
 using Microsoft.Scripting;
+using System.Collections.ObjectModel;
 
 namespace IronPython {
 
@@ -34,15 +35,15 @@ namespace IronPython {
     [Serializable]
     public sealed class PythonEngineOptions : EngineOptions {
 
-        private readonly string[]/*!*/ _arguments;
-        private readonly string[]/*!*/ _warningFilters;
+        private readonly ReadOnlyCollection<string>/*!*/ _arguments;
+        private readonly ReadOnlyCollection<string>/*!*/ _warningFilters;
         private readonly int _recursionLimit;
         private readonly Severity _indentationInconsistencySeverity;
         private readonly PythonDivisionOptions _division;
         private readonly bool _stripDocStrings;
         private readonly bool _optimize;
 
-        public string[]/*!*/ Arguments {
+        public ReadOnlyCollection<string>/*!*/ Arguments {
             get { return _arguments; }
         }
 
@@ -63,7 +64,7 @@ namespace IronPython {
         /// <summary>
         ///  List of -W (warning filter) options collected from the command line.
         /// </summary>
-        public string[]/*!*/ WarningFilters {
+        public ReadOnlyCollection<string>/*!*/ WarningFilters {
             get { return _warningFilters; }
         }
 
@@ -92,8 +93,8 @@ namespace IronPython {
         public PythonEngineOptions(IDictionary<string, object> options) 
             : base(options) {
 
-            _arguments = ArrayUtils.Copy(GetOption(options, "Arguments", ArrayUtils.EmptyStrings));
-            _warningFilters = ArrayUtils.Copy(GetOption(options, "WarningFilters", ArrayUtils.EmptyStrings));
+            _arguments = GetStringCollectionOption(options, "Arguments") ?? EmptyStringCollection;
+            _warningFilters = GetStringCollectionOption(options, "WarningFilters") ?? EmptyStringCollection;
 
             _optimize = GetOption(options, "Optimize", false);
             _stripDocStrings = GetOption(options, "StripDocStrings", false);

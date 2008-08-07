@@ -19,14 +19,14 @@ using System.Scripting.Utils;
 namespace System.Scripting.Actions {
     public abstract class GetMemberAction : StandardAction {
         private readonly string _name;
-        private readonly bool _caseInsensitive;
+        private readonly bool _ignoreCase;
 
-        protected GetMemberAction(string name, bool caseInsensitive)
+        protected GetMemberAction(string name, bool ignoreCase)
             : base(StandardActionKind.GetMember) {
             ContractUtils.RequiresNotNull(name, "name");
 
             _name = name;
-            _caseInsensitive = caseInsensitive;
+            _ignoreCase = ignoreCase;
         }
 
         public string Name {
@@ -35,9 +35,9 @@ namespace System.Scripting.Actions {
             }
         }
 
-        public bool CaseInsensitive {
+        public bool IgnoreCase {
             get {
-                return _caseInsensitive;
+                return _ignoreCase;
             }
         }
 
@@ -50,12 +50,12 @@ namespace System.Scripting.Actions {
         [Confined]
         public override bool Equals(object obj) {
             GetMemberAction gma = obj as GetMemberAction;
-            return gma != null && gma._name == _name && gma._caseInsensitive == _caseInsensitive;
+            return gma != null && gma._name == _name && gma._ignoreCase == _ignoreCase;
         }
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_caseInsensitive ? unchecked((int)0x80000000) : 0);
+            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);
         }
     }
 }

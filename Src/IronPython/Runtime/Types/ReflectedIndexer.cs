@@ -16,13 +16,13 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Runtime;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using System.Scripting.Actions;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -38,10 +38,10 @@ namespace IronPython.Runtime.Types {
         private readonly object _instance;
         private readonly PropertyInfo/*!*/ _info;
 
-        public ReflectedIndexer(PropertyInfo/*!*/ info, NameType nt)
-            : base(new MethodInfo[] { info.GetGetMethod() }, new MethodInfo[] { info.GetSetMethod() }, nt) {
+        public ReflectedIndexer(PropertyInfo/*!*/ info, NameType nt, bool privateBinding)
+            : base(new MethodInfo[] { info.GetGetMethod(privateBinding) }, new MethodInfo[] { info.GetSetMethod(privateBinding) }, nt) {
             Debug.Assert(info != null);
-
+            
             _info = info;
         }
 

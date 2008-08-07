@@ -16,7 +16,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
 
@@ -372,7 +372,7 @@ namespace IronPython.Runtime.Operations {
             // The python spec says __int__  should return a long if needed, rather than overflow.
             int i32;
             if (x.AsInt32(out i32)) {
-                return System.Scripting.Runtime.RuntimeHelpers.Int32ToObject(i32);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.Int32ToObject(i32);
             }
 
             return x;
@@ -513,6 +513,12 @@ namespace IronPython.Runtime.Operations {
 
         public static string __repr__([NotNull]BigInteger/*!*/ self) {
             return self.ToString() + "L";
+        }
+
+        // provided for backwards compatibility...
+        [PythonHidden]
+        public static float ToFloat(BigInteger/*!*/ self) {
+            return checked((float)self.ToFloat64());
         }
     }
 }

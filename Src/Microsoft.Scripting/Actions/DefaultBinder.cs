@@ -17,15 +17,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -198,6 +194,34 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public virtual ErrorInfo MakeUndeletableMemberError(Type type, string name) {
             return MakeReadOnlyMemberError(type, name);
+        }
+
+        /// <summary>
+        /// Called when the user is accessing a protected or private member on a get.
+        /// 
+        /// The default implementation allows access to the fields or properties using reflection.
+        /// </summary>
+        public virtual ErrorInfo MakeNonPublicMemberGetError(Expression codeContext, MemberTracker member, Type type, Expression instance) {
+            switch (member.MemberType) {
+                case TrackerTypes.Field:
+                    FieldTracker ft = (FieldTracker)member;
+
+                    return ErrorInfo.FromValueNoError(
+                        Ast.Call(
+                            Ast.ConvertHelper(Ast.Constant(ft.Field), typeof(FieldInfo)),
+                            typeof(FieldInfo).GetMethod("GetValue"),
+                            Ast.ConvertHelper(instance, typeof(object))
+                        )
+                    );
+                case TrackerTypes.Property:
+                    PropertyTracker pt = (PropertyTracker)member;
+
+                    return ErrorInfo.FromValueNoError(
+                        MemberTracker.FromMemberInfo(pt.GetGetMethod(true)).Call(codeContext, this, instance)
+                    );
+                default:
+                    throw new InvalidOperationException();
+            }
         }
 
         /// <summary>

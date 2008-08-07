@@ -29,6 +29,13 @@ namespace System.Scripting.Com {
             _comType = comType;
         }
 
+        /// <summary>
+        /// The rule test now checks to ensure that the wrapper is of the correct type so that any cast against on the RCW will succeed.
+        /// Note that the test must NOT test the wrapper itself since the wrapper is a surrogate for the RCW instance and would cause a  
+        /// memory leak when a wrapped RCW goes out of scope.  So, the test asks the argument (which is an RCW wrapper) to identify its 
+        /// RCW's type.  On the rule creation side, the type is encoded in the test so that when the rule cache is searched the test will 
+        /// succeed only if the wrapper's returned RCW type matches that expected by the test. 
+        /// </summary>
         public Restrictions MakeComRestrictions(Type type, PropertyInfo testProperty, object targetObject) {
             Restrictions r1 = Restrictions.TypeRestriction(Expression, type);
             Restrictions r2 = Restrictions.ExpressionRestriction(
@@ -80,7 +87,7 @@ namespace System.Scripting.Com {
         }
 
         private MetaObject[] UnwrapComObject(MetaObject[] args) {
-            MetaObject[] copy = ArrayUtils.Copy(args);
+            MetaObject[] copy = args.Copy();
 
             // Replace self with unwrapped Com object value
             copy[0] = new MetaUnwrappedComObject(

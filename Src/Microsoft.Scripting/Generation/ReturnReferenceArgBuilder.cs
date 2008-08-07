@@ -31,12 +31,12 @@ namespace Microsoft.Scripting.Generation {
             : base(index, type) {
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             if (_tmp == null) {
                 _tmp = context.GetTemporary(Type, "outParam");
             }
 
-            return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(context, parameters)), _tmp);
+            return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(context, parameters, hasBeenUsed)), _tmp);
         }
 
         internal override Expression ToReturnExpression(MethodBinderContext context) {

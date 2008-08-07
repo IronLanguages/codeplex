@@ -16,20 +16,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using System.Scripting.Actions;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("exceptions", typeof(IronPython.Runtime.Exceptions.PythonExceptions))]
 namespace IronPython.Runtime.Exceptions {
@@ -340,6 +338,7 @@ namespace IronPython.Runtime.Exceptions {
             /// Initializes the Python exception from a .NET exception
             /// </summary>
             /// <param name="exception"></param>
+            [PythonHidden]
             protected internal virtual void InitializeFromClr(System.Exception/*!*/ exception) {
                 if (exception.Message != null) {
                     __init__(exception.Message);
@@ -766,7 +765,7 @@ namespace IronPython.Runtime.Exceptions {
 
             se.message = e.Message;
 
-            string sourceLine = e.GetCodeLine();
+            string sourceLine = PythonContext.GetSourceLine(e);
             string fileName = e.GetSymbolDocumentName();
             object column = e.Column == 0 ? null : (object)e.Column;
 

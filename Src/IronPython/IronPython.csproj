@@ -155,6 +155,7 @@
     <Compile Include="Compiler\Ast\WhileStatement.cs" />
     <Compile Include="Compiler\Ast\WithStatement.cs" />
     <Compile Include="Compiler\Ast\YieldExpression.cs" />
+    <Compile Include="Hosting\PythonService.cs" />
     <Compile Include="Runtime\Binding\Binders.cs" />
     <Compile Include="Runtime\Binding\BinderState.cs" />
     <Compile Include="Runtime\Binding\GetMemberBinder.cs" />
@@ -171,6 +172,8 @@
     <Compile Include="Runtime\Binding\OperatorStrings.cs" />
     <Compile Include="Runtime\Binding\SlotOrFunction.cs" />
     <Compile Include="Runtime\ClrModule.cs" />
+    <Compile Include="Runtime\CompiledLoader.cs" />
+    <Compile Include="Runtime\ModuleLoader.cs" />
     <Compile Include="Runtime\Types\DynamicBaseTypeAttribute.cs" />
     <Compile Include="Runtime\Types\NameConverter.cs" />
     <Compile Include="Runtime\Types\NewSubtypeMaker.cs" />
@@ -190,7 +193,7 @@
     <Compile Include="Hosting\PythonOptionsParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Visibility.cs" />
-    <Compile Include="Hosting\PythonEngine.cs" />
+    <Compile Include="Hosting\Python.cs" />
     <Compile Include="Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -236,7 +239,6 @@
     <Compile Include="Runtime\Exceptions\WarningException.Generated.cs" />
     <Compile Include="Runtime\IParameterSequence.cs" />
     <Compile Include="Runtime\KwCallInfo.cs" />
-    <Compile Include="Runtime\Binding\MetaBoundBuiltinFunction.cs" />
     <Compile Include="Runtime\Binding\MetaBuiltinFunction.cs" />
     <Compile Include="Runtime\Binding\MetaBuiltinMethodDescriptor.cs" />
     <Compile Include="Runtime\Binding\MetaMethod.cs" />
@@ -354,7 +356,6 @@
     <Compile Include="Runtime\Types\TypeInfo.cs" />
     <Compile Include="Runtime\Types\TypeInfo.Generated.cs" />
     <Compile Include="Runtime\Types\TypePrepender.cs" />
-    <Compile Include="Runtime\Types\BoundBuiltinFunction.cs" />
     <Compile Include="Runtime\Types\BuiltinFunction.cs" />
     <Compile Include="Runtime\Types\BuiltinMethodDescriptor.cs" />
     <Compile Include="Runtime\Types\ConstructorFunction.cs" />

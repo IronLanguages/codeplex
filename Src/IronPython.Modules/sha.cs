@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using System.Security.Cryptography;
 using System.Text;
 using IronPython.Runtime;
@@ -35,6 +35,11 @@ namespace IronPython.Modules {
         private const int blockSize = 1;
 
         public static int digest_size {
+            [Documentation("Size of the resulting digest in bytes (constant)")]
+            get { return digestSize; }
+        }
+
+        public static int digestsize {
             [Documentation("Size of the resulting digest in bytes (constant)")]
             get { return digestSize; }
         }

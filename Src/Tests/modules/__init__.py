@@ -14,4 +14,4 @@
 #####################################################################################
 
 from lib.cominterop_util import run_pkg_helper
-run_pkg_helper(__file__)
+run_pkg_helper(__file__, __name__)

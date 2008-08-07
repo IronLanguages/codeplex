@@ -18,12 +18,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Reflection;
-using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>

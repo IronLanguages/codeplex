@@ -20,10 +20,9 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         /// <summary>
         /// Generates code for this expression in a value position.
@@ -32,25 +31,6 @@ namespace System.Linq.Expressions {
         /// </summary>
         internal void EmitExpression(Expression node) {
             EmitExpression(node, true);
-        }
-
-        private void EmitExpression(Expression node, bool emitDebugMarkers) {
-            Debug.Assert(node != null);
-
-            if (node.IsDynamic) {
-                throw Error.DynamicNotReduced();
-            }
-
-            bool startEmitted = emitDebugMarkers && EmitExpressionStart(node);
-
-            int kind = (int)node.NodeType;
-            Debug.Assert(kind < _Emitters.Length);
-
-            _Emitters[kind](this, node);
-
-            if (startEmitted) {
-                EmitExpressionEnd();
-            }
         }
 
         /// <summary>
@@ -137,7 +117,7 @@ namespace System.Linq.Expressions {
             expr = node.Expression;
             if (typeof(LambdaExpression).IsAssignableFrom(expr.Type)) {
                 // if the invoke target is a lambda expression tree, first compile it into a delegate
-                expr = Expression.Call(expr, expr.Type.GetMethod("Compile", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+                expr = Expression.Call(expr, expr.Type.GetMethod("Compile", new Type[0]));
             }
             expr = Expression.Call(expr, expr.Type.GetMethod("Invoke"), node.Arguments);
 
@@ -192,7 +172,7 @@ namespace System.Linq.Expressions {
                 _ilg.Emit(OpCodes.Constrained, objectType);
             }
             if (mi.CallingConvention == CallingConventions.VarArgs) {
-                _ilg.EmitCall(callOp, mi, CompilerHelpers.GetTypes(args));
+                _ilg.EmitCall(callOp, mi, args.Map(a => a.Type));
             } else {
                 _ilg.Emit(callOp, mi);
             }
@@ -669,14 +649,20 @@ namespace System.Linq.Expressions {
             lc._scope = lc._scope.Parent;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitActionExpression(LambdaCompiler lc, Expression expr) {
             throw Error.ActionNotReduced();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitDeleteExpression(LambdaCompiler lc, Expression expr) {
             throw Error.DeleteNotReduced();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitExtensionExpression(LambdaCompiler lc, Expression expr) {
             throw Error.ExtensionNotReduced();
         }

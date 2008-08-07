@@ -16,21 +16,21 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq.Expressions;
 using System.Runtime.Serialization;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Threading;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
-    using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     // OldClass represents the type of old-style Python classes (which could not inherit from 
     // built-in Python types). 
@@ -608,7 +608,7 @@ namespace IronPython.Runtime.Types {
                 call = Ast.Call(
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                     typeof(OldClass).GetMethod("SetNameHelper"),
-                    Ast.Constant(action.Name),
+                    AstUtils.Constant(action.Name),
                     Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 );
             }
@@ -653,7 +653,7 @@ namespace IronPython.Runtime.Types {
                     typeof(PythonOps).GetMethod("OldClassDeleteMember"),
                     rule.Context,
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    Ast.Constant(action.Name)
+                    AstUtils.Constant(action.Name)
                 )
             );
             return rule;
@@ -695,7 +695,7 @@ namespace IronPython.Runtime.Types {
                                 Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                                 typeof(OldClass).GetMethod("TryLookupValue"),
                                 rule.Context,
-                                Ast.Constant(action.Name),
+                                AstUtils.Constant(action.Name),
                                 tmp
                             ),
                             tmp,
@@ -709,7 +709,7 @@ namespace IronPython.Runtime.Types {
                         Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                         typeof(OldClass).GetMethod("LookupValue"),
                         rule.Context,
-                        Ast.Constant(action.Name)
+                        AstUtils.Constant(action.Name)
                     );
                 }
             }

@@ -17,9 +17,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
@@ -196,7 +196,11 @@ namespace IronPython.Modules {
             // TODO: is this supposed to open PythonFile with Python-specific behavior?
             // we may need to insert additional layer to SourceUnit content provider if so
             PythonContext pc = PythonContext.GetContext(context);
-            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, pathname, pc.DefaultEncoding, SourceCodeKind.File);
+            if (!pc.DomainManager.Platform.FileExists(pathname)) {
+                throw PythonOps.IOError("Couldn't find file: {0}", pathname);
+            }
+
+            SourceUnit sourceUnit = pc.CreateFileUnit(pathname, pc.DefaultEncoding, SourceCodeKind.File);
             return pc.CompileModule(pathname, name, sourceUnit, ModuleOptions.Initialize).Scope;
         }
 

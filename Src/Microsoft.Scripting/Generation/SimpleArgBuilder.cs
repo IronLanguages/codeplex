@@ -16,12 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
+using System.Reflection;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -72,9 +70,11 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             Debug.Assert(_index < parameters.Count);
+            Debug.Assert(_index < hasBeenUsed.Length);
             Debug.Assert(parameters[_index] != null);
+            hasBeenUsed[_index] = true;
             return context.ConvertExpression(parameters[_index], _parameterType);
         }
 

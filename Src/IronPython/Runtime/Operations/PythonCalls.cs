@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Actions;
 using DefaultContext = IronPython.Runtime.DefaultContext;
 using IronPython.Runtime.Binding;

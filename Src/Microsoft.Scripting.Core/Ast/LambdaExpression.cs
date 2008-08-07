@@ -15,9 +15,9 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
-using System.Scripting.Generation;
+using System.Reflection.Emit;
 using System.Scripting.Utils;
 using System.Text;
 
@@ -64,6 +64,10 @@ namespace System.Linq.Expressions {
         public Expression Body {
             get { return _body; }
         }
+        
+        public Type ReturnType {
+            get { return Type.GetMethod("Invoke").ReturnType; }
+        }
 
         internal override void BuildString(StringBuilder builder) {
             ContractUtils.RequiresNotNull(builder, "builder");
@@ -84,7 +88,38 @@ namespace System.Linq.Expressions {
         }
 
         public Delegate Compile() {
-            return LambdaCompiler.CompileLambda(this);
+            return LambdaCompiler.CompileLambda(this, false);
+        }
+
+        public Delegate Compile(bool emitDebugSymbols) {
+            return LambdaCompiler.CompileLambda(this, emitDebugSymbols);
+        }
+
+        // TODO: add an overload that returns a DynamicMethod?
+        // TODO: this method doesn't expose the full power of TypeBuilder.DefineMethod
+        public MethodBuilder CompileToMethod(TypeBuilder type, MethodAttributes attributes, bool emitDebugSymbols) {
+            ContractUtils.RequiresNotNull(type, "type");
+            if (emitDebugSymbols) {
+                var module = type.Module as ModuleBuilder;
+                ContractUtils.Requires(module != null, "method", Strings.InvalidTypeBuilder);
+            }
+            return LambdaCompiler.CompileLambda(this, type, attributes, emitDebugSymbols);
+        }
+
+        // TODO: Remove the Compile<T> overloads
+        //
+        // They allow compiling an Expression<T> with a different
+        // (but compatible) delegate signature.
+        //
+        // Instead, Expression<T> should be created with the right
+        // delegate type.
+
+        public T Compile<T>() {
+            return LambdaCompiler.CompileLambda<T>(this, false);
+        }
+
+        public T Compile<T>(bool emitDebugSymbols) {
+            return LambdaCompiler.CompileLambda<T>(this, emitDebugSymbols);
         }
     }
 
@@ -101,7 +136,11 @@ namespace System.Linq.Expressions {
         }
 
         public new TDelegate Compile() {
-            return LambdaCompiler.CompileLambda<TDelegate>(this);
+            return Compile<TDelegate>();
+        }
+
+        public new TDelegate Compile(bool emitDebugSymbols) {
+            return Compile<TDelegate>(emitDebugSymbols);
         }
     }
 

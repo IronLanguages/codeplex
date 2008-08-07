@@ -15,7 +15,7 @@
 
 using System;
 using System.Reflection;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
 
@@ -30,36 +30,36 @@ namespace IronPython.Runtime.Types {
         public ExtensionPropertyInfo(Type logicalDeclaringType, MethodInfo mi) {
             _declaringType = logicalDeclaringType;
 
-            string propname = mi.Name.Substring(3);
+            string methodName = mi.Name;
+            string prefix = "";
+            if (methodName.StartsWith(NewTypeMaker.BaseMethodPrefix)) {
+                methodName = methodName.Substring(NewTypeMaker.BaseMethodPrefix.Length);
+                prefix = NewTypeMaker.BaseMethodPrefix;
+            }
 
-            _deleter = mi.DeclaringType.GetMethod("Delete" + propname);
+            if (methodName.StartsWith("Get") || methodName.StartsWith("Set")) {
+                GetPropertyMethods(mi, methodName, prefix, "Get", "Set", "Delete");
+            } else if(methodName.StartsWith("get_") || methodName.StartsWith("set_")) {
+                GetPropertyMethods(mi, methodName, prefix, "get_", "set_", null);
+            } else if (methodName.StartsWith(NewTypeMaker.FieldGetterPrefix) || methodName.StartsWith(NewTypeMaker.FieldSetterPrefix)) {
+                GetPropertyMethods(mi, methodName, prefix, NewTypeMaker.FieldGetterPrefix, NewTypeMaker.FieldSetterPrefix, null);
+            }
+        }
 
-            if (String.Compare(mi.Name, 0, "Get", 0, 3) == 0) {
+        private void GetPropertyMethods(MethodInfo mi, string methodName, string prefix, string get, string set, string delete) {
+            string propname = methodName.Substring(get.Length);
+
+            if (String.Compare(mi.Name, 0, get, 0, get.Length) == 0) {
                 _getter = mi;
-                _setter = mi.DeclaringType.GetMethod("Set" + propname);
+                _setter = mi.DeclaringType.GetMethod(prefix + set + propname);
             } else {
-                _getter = mi.DeclaringType.GetMethod("Get" + propname);
+                _getter = mi.DeclaringType.GetMethod(prefix + get + propname);
                 _setter = mi;
             }
 
-            if (_setter != null && GetEffectiveParameterCount(_setter) != 2) { System.Diagnostics.Debug.Assert(false, _setter.Name); throw new InvalidOperationException("setter must take 2 parameters"); }
-            if (_getter != null && GetEffectiveParameterCount(_getter) != 1) throw new InvalidOperationException("getter must take 2 parameters");
-            if (_deleter != null && GetEffectiveParameterCount(_deleter) != 1) throw new InvalidOperationException("deleter must take 2 parameters");
-        }
-
-        private int GetEffectiveParameterCount(MethodInfo mi) {
-            int cnt = mi.IsStatic ? 0 : 1;
-            if (mi.IsDefined(typeof(StaticExtensionMethodAttribute), false)) {
-                // this is only used for checking the correct number of args,
-                // so just bump it up for the instance which isn't there.
-                cnt++;
+            if (delete != null) {
+                _deleter = mi.DeclaringType.GetMethod(prefix + delete + propname);
             }
-            ParameterInfo[] pis = mi.GetParameters();
-            cnt += pis.Length;
-            if (pis.Length > 0 && pis[0].ParameterType == typeof(CodeContext)) {
-                return cnt - 1;
-            }
-            return cnt;
         }
 
         public MethodInfo Getter {

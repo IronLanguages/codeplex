@@ -18,9 +18,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Scripting.Utils;
 using System.Text;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Math {
     /// <summary>

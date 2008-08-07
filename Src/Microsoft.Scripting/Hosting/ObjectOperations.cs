@@ -17,10 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Remoting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Security.Permissions;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -363,6 +362,8 @@ namespace Microsoft.Scripting.Hosting {
         /// Though delegates are preferable for calls they may not always be usable for remote objects.
         /// </summary>
         public ObjectHandle Call(ObjectHandle obj, params ObjectHandle[] parameters) {
+            ContractUtils.RequiresNotNull(parameters, "parameters");
+
             return new ObjectHandle(Call(GetLocalObject(obj), GetLocalObjects(parameters)));
         }
 
@@ -614,10 +615,10 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Helper to unwrap an object - in the future maybe we should validate the current app domain.
         /// </summary>
-        private static object GetLocalObject(ObjectHandle oh) {
-            Debug.Assert(oh != null);
+        private static object GetLocalObject(ObjectHandle obj) {
+            ContractUtils.RequiresNotNull(obj, "obj");
 
-            return oh.Unwrap();
+            return obj.Unwrap();
         }
 
         /// <summary>

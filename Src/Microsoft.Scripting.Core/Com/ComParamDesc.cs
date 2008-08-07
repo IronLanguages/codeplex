@@ -118,8 +118,7 @@ namespace System.Scripting.Com {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        private Type GetTypeForVarEnum(VarEnum vt) {
+        private static Type GetTypeForVarEnum(VarEnum vt) {
             Type type;
 
             switch (vt) {
@@ -131,7 +130,6 @@ namespace System.Scripting.Com {
 
                 // VarEnums which are not used in VARIANTs, but which can occur in a TYPEDESC
                 case VarEnum.VT_VOID:
-                    Debug.Assert(_name == String.Empty); // Only return values can have this
                     type = null;
                     break;
 

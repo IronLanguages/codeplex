@@ -15,9 +15,8 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

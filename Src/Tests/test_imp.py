@@ -129,7 +129,7 @@ def test_imp_package():
     AreEqual(module.my_name, 'imp package test')
 
 if is_silverlight==False:
-    _f_module = path_combine(_imptestdir, "imptestmod.py")
+    _f_module  = path_combine(_imptestdir, "imptestmod.py")
 
 @skip('silverlight')
 def test_imp_module():
@@ -301,7 +301,7 @@ def test_is_builtin():
     imp.init_builtin("__builtin__")
     imp.init_builtin("exceptions")
 
-@skip("win32", "multiple_execute")
+@skip("win32", "multiple_execute", "stdlib")
 def test_sys_path_none_builtins():
     prevPath = sys.path
 
@@ -455,6 +455,7 @@ def test_constructed_module():
 
     del sys.modules['TopModule']
 
+@skip("multiple_execute")
 def test_import_from_custom():
     import __builtin__
     try:
@@ -955,6 +956,48 @@ def test_file_coding():
     import test_coding_mod
     AreEqual(test_coding_mod.x[0], '\xe6')
     nt.unlink('test_coding_mod.py')
+
+def test_module_subtype():
+    class x(type(sys)):
+        def __init__(self): self.baz = 100
+        def __getattr__(self, name):
+            if name == 'qux': raise AttributeError
+            return 42
+        def __getattribute__(self, name):
+            if name == 'foo' or name == 'qux': raise AttributeError
+            if name == 'baz': return type(sys).__getattribute__(self, name)
+            return 23
+
+
+    a = x()
+    AreEqual(a.foo, 42)
+    AreEqual(a.bar, 23)
+    AreEqual(a.baz, 100)
+    AssertError(AttributeError, lambda : a.qux)
+
+@runonly("stdlib")
+def test_cp13736():
+    _f_imp_cp13736 = path_combine(testpath.public_testdir, "impcp13736.py")
+    shortName = _f_imp_cp13736.rsplit("\\", 1)[1].split(".")[0]
+
+    write_to_file(_f_imp_cp13736, """
+class Test(object):
+    def a(self):
+        return 34
+""")
+
+    import sys
+    if sys.platform=="win32" and "." not in sys.path:
+        sys.path.append(".")
+    import new
+    import imp
+
+    moduleInfo = imp.find_module(shortName)
+    module = imp.load_module(shortName, moduleInfo[0], moduleInfo[1], moduleInfo[2])
+    t = new.classobj('Test1', (getattr(module, 'Test'),), {})
+    i = t()
+    AreEqual(i.a(), 34)
+    
 
 #------------------------------------------------------------------------------
 run_test(__name__)

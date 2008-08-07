@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Collections.Generic;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     [Serializable]

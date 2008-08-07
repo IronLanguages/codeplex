@@ -15,9 +15,9 @@
 
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {
     /// <summary>

@@ -111,7 +111,7 @@ namespace Microsoft.Contracts {
     internal sealed class StateIndependentAttribute : Attribute {
     }
 
-#if DLR
+#if MICROSOFT_SCRIPTING_CORE
     [Conditional("SPECSHARP"), AttributeUsage(AttributeTargets.Delegate | AttributeTargets.Event | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false, Inherited = true)]
     internal sealed class PureAttribute : Attribute {
     }

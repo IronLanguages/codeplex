@@ -18,15 +18,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting;
-
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Operations {
     internal static class PythonTypeOps {
@@ -36,7 +34,7 @@ namespace IronPython.Runtime.Operations {
         internal static readonly Dictionary<BuiltinFunctionKey, BuiltinFunction> _functions = new Dictionary<BuiltinFunctionKey, BuiltinFunction>();
         private static readonly Dictionary<ReflectionCache.MethodBaseCache, ConstructorFunction> _ctors = new Dictionary<ReflectionCache.MethodBaseCache, ConstructorFunction>();
         private static readonly Dictionary<EventTracker, ReflectedEvent> _eventCache = new Dictionary<EventTracker, ReflectedEvent>();
-        private static readonly Dictionary<PropertyTracker, ReflectedGetterSetter> _propertyCache = new Dictionary<PropertyTracker, ReflectedGetterSetter>();
+        internal static readonly Dictionary<PropertyTracker, ReflectedGetterSetter> _propertyCache = new Dictionary<PropertyTracker, ReflectedGetterSetter>();
         private static readonly Dictionary<Type, TypePrepender.PrependerState> _prependerState = new Dictionary<Type, TypePrepender.PrependerState>();
 
         internal static PythonTuple MroToPython(IList<PythonType> types) {
@@ -179,7 +177,7 @@ namespace IronPython.Runtime.Operations {
         internal static bool IsRuntimeAssembly(Assembly assembly) {
             if (assembly == typeof(PythonOps).Assembly || // IronPython.dll
                 assembly == typeof(Microsoft.Scripting.Math.BigInteger).Assembly || // Microsoft.Scripting.dll
-                assembly == typeof(SymbolId).Assembly) {  // Microsoft.Scripting.Core.dll
+                assembly == typeof(System.Linq.Expressions.Expression).Assembly) {  // Microsoft.Scripting.Core.dll
                 return true;
             }
 
@@ -263,7 +261,7 @@ namespace IronPython.Runtime.Operations {
                     return GetReflectedField(((FieldTracker)group[0]).Field);
                 
                 case TrackerTypes.Property:
-                    return GetReflectedProperty((PropertyTracker)group[0], privateBinding);       
+                    return GetReflectedProperty((PropertyTracker)group[0], group, privateBinding);       
                 
                 case TrackerTypes.Event:
                     return GetReflectedEvent(((EventTracker)group[0]));
@@ -460,36 +458,12 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         internal static BuiltinFunction/*!*/ GetBuiltinFunction(Type/*!*/ type, string/*!*/ cacheName, string/*!*/ pythonName, FunctionType? funcType, params MemberInfo/*!*/[]/*!*/ mems) {
             BuiltinFunction res = null;
-            
-            MethodBase[] bases = GetNonBaseHelperMethodInfos(mems);
-
-            // get the base most declaring type, first sort the list so that
-            // the most derived class is at the beginning.
-            Array.Sort<MethodBase>(bases, delegate(MethodBase x, MethodBase y) {
-                if (x.DeclaringType.IsSubclassOf(y.DeclaringType)) {
-                    return -1;
-                } else if (y.DeclaringType.IsSubclassOf(x.DeclaringType)) {
-                    return 1;
-                }
-                return 0;
-            });
-
-            // then if the provided type is a subclass of the most derived type
-            // then our declaring type is the methods declaring type.
-            foreach (MethodBase mb in bases) {
-                // skip extension methods
-                if (mb.DeclaringType.IsAssignableFrom(type)) {
-                    
-                    if (type == mb.DeclaringType || type.IsSubclassOf(mb.DeclaringType)) {
-                        type = mb.DeclaringType;
-                        break;
-                    }
-                }
-            }
 
             if (mems.Length != 0) {
-                FunctionType ft = funcType ?? GetMethodFunctionType(type, bases);
-                BuiltinFunctionKey cache = new BuiltinFunctionKey(type, new ReflectionCache.MethodBaseCache(cacheName, bases), ft);
+                type = GetBaseDeclaringType(type, mems);
+
+                FunctionType ft = funcType ?? GetMethodFunctionType(type, mems);
+                BuiltinFunctionKey cache = new BuiltinFunctionKey(type, new ReflectionCache.MethodBaseCache(cacheName, GetNonBaseHelperMethodInfos(mems)), ft);
 
                 lock (_functions) {
                     if (!_functions.TryGetValue(cache, out res)) {
@@ -499,6 +473,67 @@ namespace IronPython.Runtime.Operations {
             }
 
             return res;
+        }
+
+        private static Type GetCommonBaseType(Type xType, Type yType) {
+            if (xType.IsSubclassOf(yType)) {
+                return yType;
+            } else if (yType.IsSubclassOf(xType)) {
+                return xType;
+            } else if (xType == yType) {
+                return xType;
+            }
+
+            Type xBase = xType.BaseType;
+            Type yBase = yType.BaseType;
+            if (xBase != null) {
+                Type res = GetCommonBaseType(xBase, yType);
+                if (res != null) {
+                    return res;
+                }
+            }
+
+            if (yBase != null) {
+                Type res = GetCommonBaseType(xType, yBase);
+                if (res != null) {
+                    return res;
+                }
+            }
+
+            return null;
+        }
+
+        private static Type GetBaseDeclaringType(Type type, MemberInfo/*!*/[] mems) {
+            // get the base most declaring type, first sort the list so that
+            // the most derived class is at the beginning.
+            Array.Sort<MemberInfo>(mems, delegate(MemberInfo x, MemberInfo y) {
+                if (x.DeclaringType.IsSubclassOf(y.DeclaringType)) {
+                    return -1;
+                } else if (y.DeclaringType.IsSubclassOf(x.DeclaringType)) {
+                    return 1;
+                } else if (x.DeclaringType == y.DeclaringType) {
+                    return 0;
+                }
+
+                // no relationship between these types, they should be base helper
+                // methods for two different types - for example object.MemberwiseClone for
+                // ExtensibleInt & object.  We need to reset our type to the common base type.
+                type = GetCommonBaseType(x.DeclaringType, y.DeclaringType) ?? typeof(object);
+                return x.DeclaringType.FullName.CompareTo(y.DeclaringType.FullName);
+            });
+
+            // then if the provided type is a subclass of the most derived type
+            // then our declaring type is the methods declaring type.
+            foreach (MemberInfo mb in mems) {
+                // skip extension methods
+                if (mb.DeclaringType.IsAssignableFrom(type)) {
+                    if (type == mb.DeclaringType || type.IsSubclassOf(mb.DeclaringType)) {
+                        type = mb.DeclaringType;
+                        break;
+                    }
+                }
+            }
+            return type;
         }
 
         internal static ConstructorFunction GetConstructor(Type type, BuiltinFunction realTarget, params MethodBase[] mems) {
@@ -516,13 +551,13 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        internal static FunctionType GetMethodFunctionType(Type type, MethodBase[] methods) {
+        internal static FunctionType GetMethodFunctionType(Type/*!*/ type, MemberInfo/*!*/[]/*!*/ methods) {
             FunctionType ft = FunctionType.None;
             foreach (MethodInfo mi in methods) {
                 if (mi.IsStatic && mi.IsSpecialName) {
-
                     ParameterInfo[] pis = mi.GetParameters();
-                    if ((pis.Length == 2 && (pis[0].ParameterType != typeof(CodeContext))) || 
+
+                    if ((pis.Length == 2 && pis[0].ParameterType != typeof(CodeContext)) || 
                         (pis.Length == 3 && pis[0].ParameterType == typeof(CodeContext))) {
                         ft |= FunctionType.BinaryOperator;
 
@@ -539,25 +574,37 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
+            if (IsMethodAlwaysVisible(type, methods)) {
+                ft |= FunctionType.AlwaysVisible;
+            }
+
+            return ft;
+        }
+
+        /// <summary>
+        /// Checks to see if the provided members are always visible for the given type.
+        /// 
+        /// This filters out methods such as GetHashCode and Equals on standard .NET 
+        /// types that we expose directly as Python types (e.g. object, string, etc...).
+        /// 
+        /// It also filters out the base helper overrides that are added for supporting
+        /// super calls on user defined types.
+        /// </summary>
+        private static bool IsMethodAlwaysVisible(Type/*!*/ type, MemberInfo/*!*/[]/*!*/ methods) {
+            bool alwaysVisible = true;
             if (PythonBinder.IsPythonType(type)) {
-                bool alwaysVisible = true;
                 // only show methods defined outside of the system types (object, string)
                 foreach (MethodInfo mi in methods) {
                     if (PythonBinder.IsExtendedType(mi.DeclaringType) ||
-                        PythonBinder.IsExtendedType(mi.GetBaseDefinition().DeclaringType) || 
+                        PythonBinder.IsExtendedType(mi.GetBaseDefinition().DeclaringType) ||
                         mi.IsDefined(typeof(PythonHiddenAttribute), false)) {
                         alwaysVisible = false;
                         break;
                     }
                 }
-
-                if (alwaysVisible) {
-                    ft |= FunctionType.AlwaysVisible;
-                }
             } else if (typeof(IPythonObject).IsAssignableFrom(type)) {
                 // check if this is a virtual override helper, if so we
                 // may need to filter it out.
-                bool alwaysVisible = true;
                 foreach (MethodInfo mi in methods) {
                     MethodInfo baseDef = mi.GetBaseDefinition();
                     if (PythonBinder.IsExtendedType(mi.DeclaringType)) {
@@ -566,14 +613,8 @@ namespace IronPython.Runtime.Operations {
                     }
                 }
 
-                if (alwaysVisible) {
-                    ft |= FunctionType.AlwaysVisible;
-                }
-            } else {
-                ft |= FunctionType.AlwaysVisible;
             }
-
-            return ft;
+            return alwaysVisible;
         }
 
         /// <summary>
@@ -635,7 +676,7 @@ namespace IronPython.Runtime.Operations {
                             Replace("__new__(cls, ", DynamicHelpers.GetPythonTypeFromType(type).Name + "(");
         }
 
-        internal static ReflectedGetterSetter GetReflectedProperty(PropertyTracker pt, bool privateBinding) {
+        internal static ReflectedGetterSetter GetReflectedProperty(PropertyTracker pt, MemberGroup allProperties, bool privateBinding) {
             ReflectedGetterSetter rp;
             lock (_propertyCache) {
                 if (_propertyCache.TryGetValue(pt, out rp)) {
@@ -664,17 +705,20 @@ namespace IronPython.Runtime.Operations {
                         nt = NameType.Property;
                     }
 
-                    NewTypeMaker.PropertyOverrideInfo overrideInfo;
                     if (pt.GetIndexParameters().Length > 0) {
-                        rp = new ReflectedIndexer(((ReflectedPropertyTracker)pt).Property, NameType.Property);
-                    } else if(NewTypeMaker._overriddenProperties.TryGetValue(rpt.Property, out overrideInfo)) {
-                        List<MethodInfo> getters = CopyOrNewList(overrideInfo.Getters);
-                        List<MethodInfo> setters = CopyOrNewList(overrideInfo.Setters);
-                        if (getter != null) {
-                            getters.Add(getter);
-                        }
-                        if (setter != null) {
-                            setters.Add(setter);
+                        rp = new ReflectedIndexer(((ReflectedPropertyTracker)pt).Property, NameType.Property, privateBinding);
+                    } else if (allProperties != null && allProperties.Count > 1) {
+                        List<MethodInfo> getters = new List<MethodInfo>();
+                        List<MethodInfo> setters = new List<MethodInfo>();
+                        for (int i = 0; i < allProperties.Count; i++) {
+                            MethodInfo method = ((PropertyTracker)allProperties[i]).GetGetMethod(privateBinding);
+                            if (method != null) {
+                                getters.Add(method);
+                            }
+                            method = ((PropertyTracker)allProperties[i]).GetSetMethod(privateBinding);
+                            if (method != null) {
+                                setters.Add(method);
+                            }
                         }
                         rp = new ReflectedProperty(rpt.Property, getters.ToArray(), setters.ToArray(), nt);
                     } else {

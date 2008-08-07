@@ -1079,5 +1079,25 @@ def test_cli_interop():
     AreEqual(pyNow.month, now.Month)
     AreEqual(pyNow.day, now.Day)
     AreEqual(pyNow.year, now.Year)
+
+#@skip("win32")  #Because datetime.datetime.__init__ takes a System.DateTime.Now
+@disabled("CodePlex 13704")
+def test_cp13704():
+    '''
+    TODO: 
+    - extend this for datetime.date, datetime.time, etc
+    - splatted args, keyword args, etc
+    '''
+    min_args = 1
+
+    AssertErrorWithMessage(TypeError, "function takes at least %d argument (0 given)" % min_args, 
+                           datetime.datetime)
+    AssertErrorWithMessage(TypeError, "function takes at least %d argument (2 given)" % min_args, 
+                           datetime.datetime, None, None)
+    AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (9 given)", 
+                           datetime.datetime, None, None, None, None, None, None, None, None, None)
+    AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (10 given)", 
+                           datetime.datetime, None, None, None, None, None, None, None, None, None, None)
+                           
     
 run_test(__name__)

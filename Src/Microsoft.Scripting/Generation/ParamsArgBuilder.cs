@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
@@ -39,10 +39,13 @@ namespace Microsoft.Scripting.Generation {
             get { return 4; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
-            Expression[] elems = new Expression[_count];
-            for (int i = 0; i < _count; i++) {
-                elems[i] = context.ConvertExpression(parameters[_start + i], _elementType);
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+            List<Expression> elems = new List<Expression>(_count);
+            for (int i = _start; i < _start + _count; i++) {
+                if (!hasBeenUsed[i]) {
+                    elems.Add(context.ConvertExpression(parameters[i], _elementType));
+                    hasBeenUsed[i] = true;
+                }
             }
 
             return Ast.NewArrayInit(_elementType, elems);

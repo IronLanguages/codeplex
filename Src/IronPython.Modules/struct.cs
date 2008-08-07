@@ -27,6 +27,7 @@ namespace IronPython.Modules {
     public static class PythonStruct {
 
         #region Public API Surface
+
         public static string pack(string fmt, params object[] values) {
             int count = 1;
             int curObj = 0;
@@ -35,6 +36,17 @@ namespace IronPython.Modules {
             bool fStandardized = false;
 
             for (int i = 0; i < fmt.Length; i++) {
+                if (!fStandardized) {
+                    // In native mode, align to {size}-byte boundaries
+                    int nativeSize = GetNativeSize(fmt[i]);
+                    if (nativeSize > 0) {
+                        int alignLength = Align(res.Length, nativeSize);
+                        int padLength = alignLength - res.Length;
+                        for (int j = 0; j < padLength; j++) {
+                            res.Append('\0');
+                        }
+                    }
+                }
                 switch (fmt[i]) {
                     case 'x': // pad byte
                         for (int j = 0; j < count; j++) {
@@ -138,7 +150,6 @@ namespace IronPython.Modules {
 
             if (curObj != values.Length) throw Error("not all arguments used");
 
-            if (fStandardized) return res.ToString();
             return res.ToString();
         }
 
@@ -150,8 +161,14 @@ namespace IronPython.Modules {
             bool fLittleEndian = BitConverter.IsLittleEndian;
             bool fStandardized = false;
 
-
             for (int i = 0; i < fmt.Length; i++) {
+                if (!fStandardized) {
+                    // In native mode, align to {size}-byte boundaries
+                    int nativeSize = GetNativeSize(fmt[i]);
+                    if (nativeSize > 0) {
+                        curIndex = Align(curIndex, nativeSize);
+                    }
+                }
                 switch (fmt[i]) {
                     case 'x': // pad byte
                         curIndex += count;
@@ -258,8 +275,7 @@ namespace IronPython.Modules {
             }
 
             if (curIndex != data.Length) throw Error("not all data used");
-            if (fStandardized)
-                return new PythonTuple(res);
+
             return new PythonTuple(res);
         }
 
@@ -300,10 +316,13 @@ namespace IronPython.Modules {
         public static int calcsize(string fmt) {
             int len = 0;
             int count = 1;
+            bool fStandardized = false;
             for (int i = 0; i < fmt.Length; i++) {
                 int nativeSize = GetNativeSize(fmt[i]);
                 if (nativeSize > 0) {
-                    len = Align(len, nativeSize);
+                    if (!fStandardized) {
+                        len = Align(len, nativeSize); // In native mode, align to {size}-byte boundaries
+                    }
                     len += (nativeSize * count);
                     count = 1;
                 } else {
@@ -311,12 +330,15 @@ namespace IronPython.Modules {
                         case ' ':
                         case '\t':
                             break;
-                        case '=': // native
                         case '@': // native
+                            if (i != 0) PythonExceptions.CreateThrowable(error, "unexpected byte order");
+                            break;
+                        case '=': // native
                         case '<': // little endian
                         case '>': // big endian
                         case '!': // big endian
                             if (i != 0) PythonExceptions.CreateThrowable(error, "unexpected byte order");
+                            fStandardized = true;
                             break;
                         default:
                             if (Char.IsDigit(fmt[i])) {

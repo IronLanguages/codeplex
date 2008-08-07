@@ -22,11 +22,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     /// <summary>
     /// LambdaCompiler is responsible for compiling individual lambda (LambdaExpression). The complete tree may
@@ -47,6 +46,10 @@ namespace System.Linq.Expressions {
             }
         }
 
+        // Indicates that the method should logically be treated as a
+        // DynamicMethod. We need this because in debuggable code we have to
+        // emit into a MethodBuilder, but we still want to pretend it's a
+        // DynamicMethod
         private readonly bool _dynamicMethod;
 
         /// <summary>
@@ -56,9 +59,11 @@ namespace System.Linq.Expressions {
         private readonly GeneratorInfo _generatorInfo;
 
         private readonly ILGen _ilg;
-        private readonly TypeGen _typeGen;
 
-        private readonly MethodBase _method;
+        // The TypeBuilder backing this method, if any
+        private readonly TypeBuilder _typeBuilder;
+
+        private readonly MethodInfo _method;
 
         private readonly ListStack<Targets> _targets = new ListStack<Targets>();
 
@@ -80,9 +85,9 @@ namespace System.Linq.Expressions {
         /// </summary>
         private readonly ReadOnlyCollection<Type> _paramTypes;
 
-        // State for emitting debug symbols
-        // TODO: can we make it readonly?
-        private bool _emitDebugSymbols;
+        // True if we want to emitting debug symbols
+        private readonly bool _emitDebugSymbols;
+        // TODO: can this be readonly?
         private ISymbolDocumentWriter _debugSymbolWriter;
 
         // Runtime constants bound to the delegate
@@ -102,18 +107,18 @@ namespace System.Linq.Expressions {
 
         private LambdaCompiler(
             CompilerScope scope,
-            TypeGen typeGen,
-            MethodBase mi,
+            TypeBuilder typeBuilder,
+            MethodInfo method,
             ILGenerator ilg,
             IList<Type> paramTypes,
             bool dynamicMethod,
             bool emitDebugSymbols) {
 
-            ContractUtils.Requires(dynamicMethod || mi.IsStatic, "dynamicMethod");
+            ContractUtils.Requires(dynamicMethod || method.IsStatic, "dynamicMethod");
             Debug.Assert(scope != null);
             _lambda = (LambdaExpression)scope.Expression;
-            _typeGen = typeGen;
-            _method = mi;
+            _typeBuilder = typeBuilder;
+            _method = method;
             _paramTypes = new ReadOnlyCollection<Type>(paramTypes);
             _dynamicMethod = dynamicMethod;
             _scope = scope;
@@ -124,10 +129,10 @@ namespace System.Linq.Expressions {
             }
 
             // Create the ILGen instance, debug or not
-            if (GlobalDlrOptions.DumpIL || GlobalDlrOptions.ShowIL) {
-                _ilg = CreateDebugILGen(ilg, typeGen, mi, paramTypes);
+            if (DebugOptions.DumpIL || DebugOptions.ShowIL) {
+                _ilg = CreateDebugILGen(ilg, method, paramTypes);
             } else {
-                _ilg = new ILGen(ilg, typeGen);
+                _ilg = new ILGen(ilg);
             }
 
             // Initialize constant pool
@@ -136,10 +141,8 @@ namespace System.Linq.Expressions {
                 _constantCache = new Dictionary<object, int>(ReferenceEqualityComparer<object>.Instance);
             }
 
-            Debug.Assert(!emitDebugSymbols || _typeGen != null);
-            _emitDebugSymbols = emitDebugSymbols && _typeGen.AssemblyGen.IsDebuggable;
-
-            NoteCompilerCreation(mi);
+            Debug.Assert(!emitDebugSymbols || _typeBuilder != null, "emitting debug symbols requires a TypeBuilder");
+            _emitDebugSymbols = emitDebugSymbols;
         }
 
         public override string ToString() {
@@ -150,22 +153,6 @@ namespace System.Linq.Expressions {
 
         internal ILGen IL {
             get { return _ilg; }
-        }
-
-        /// <summary>
-        /// Gets the TypeGen object which this Compiler is emitting into.  TypeGen can be
-        /// null if the method is a dynamic method.
-        /// </summary>
-        internal TypeGen TypeGen {
-            get {
-                return _typeGen;
-            }
-        }
-
-        internal MethodBase Method {
-            get {
-                return _method;
-            }
         }
 
         private bool IsDynamicMethod {
@@ -265,48 +252,49 @@ namespace System.Linq.Expressions {
             return (T)(object)CompileLambda(lambda, typeof(T), false, forceDynamic, out method);
         }
 
-        internal static T CompileLambda<T>(LambdaExpression lambda) {
-            MethodInfo method;
-            return (T)(object)CompileLambda(lambda, typeof(T), false, false, out method);
-        }
-
-        internal static Delegate CompileLambda(LambdaExpression lambda) {
-            MethodInfo method;
-            return CompileLambda(lambda, lambda.Type, false, false, out method);
-        }
-
-        /// <summary>
-        /// Used by ScriptCode for generating the top level target
-        /// </summary>
         internal static T CompileLambda<T>(LambdaExpression lambda, bool emitDebugSymbols) {
             MethodInfo method;
             return (T)(object)CompileLambda(lambda, typeof(T), emitDebugSymbols, false, out method);
         }
 
-        /// <summary>
-        /// This compiles a lambda to a method. It's designed only for optimized scopes
-        /// TODO: remove TypeGen parameter
-        /// </summary>
-        internal static void CompileLambda(LambdaExpression lambda, TypeGen tg, MethodBuilder mb, bool emitDebugSymbols) {
+        internal static Delegate CompileLambda(LambdaExpression lambda, bool emitDebugSymbols) {
+            MethodInfo method;
+            return CompileLambda(lambda, lambda.Type, emitDebugSymbols, false, out method);
+        }
 
+        /// <summary>
+        /// Creates and returns a MethodBuilder
+        /// </summary>
+        internal static MethodBuilder CompileLambda(LambdaExpression lambda, TypeBuilder type, MethodAttributes attributes, bool emitDebugSymbols) {
+            // 1. Create signature
             List<Type> types;
             List<string> names;
             string lambdaName;
             Type returnType;
             ComputeSignature(lambda, out types, out names, out lambdaName, out returnType);
 
-            LambdaCompiler lc = new LambdaCompiler(
+            // don't use generated name
+            lambdaName = lambda.Name ?? "lambda_method";
+
+            // 2. Create lambda compiler
+            LambdaCompiler lc = CreateStaticLambdaCompiler(
                 AnalyzeLambda(lambda),
-                tg,
-                mb,
-                mb.GetILGenerator(),
+                type,
+                lambdaName,
+                attributes,
+                returnType,
                 types,
+                names,
                 false, // dynamicMethod
+                false, // closure
                 emitDebugSymbols
             );
 
+            // 3. Emit
             lc.EmitBody();
             lc.Finish();
+
+            return (MethodBuilder)lc._method;
         }
 
         #endregion
@@ -382,7 +370,7 @@ namespace System.Linq.Expressions {
 
             if (_returnBlock.HasValue) {
                 _ilg.MarkLabel(_returnBlock.Value.ReturnStart);
-                if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
+                if (_method.GetReturnType() != typeof(void)) {
                     _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value.ReturnValue);
                 }
                 _ilg.Emit(OpCodes.Ret);
@@ -428,7 +416,7 @@ namespace System.Linq.Expressions {
                 return (MethodInfo)_method;
             } else if (_method is MethodBuilder) {
                 MethodBuilder mb = _method as MethodBuilder;
-                Type methodType = _typeGen.FinishType();
+                Type methodType = _typeBuilder.CreateType();
                 return methodType.GetMethod(mb.Name);
             } else {
                 throw new InvalidOperationException();
@@ -446,9 +434,9 @@ namespace System.Linq.Expressions {
             method = CreateDelegateMethodInfo();
 
             if (_boundConstants != null) {
-                return ReflectionUtils.CreateDelegate(method, delegateType, new Closure(_boundConstants.ToArray(), null));
+                return method.CreateDelegate(delegateType, new Closure(_boundConstants.ToArray(), null));
             } else {
-                return ReflectionUtils.CreateDelegate(method, delegateType);
+                return method.CreateDelegate(delegateType);
             }
         }
 
@@ -470,7 +458,7 @@ namespace System.Linq.Expressions {
             if (_dynamicMethod) {
                 lc = CreateDynamicLambdaCompiler(scope, name, retType, paramTypes, paramNames, closure, _emitDebugSymbols, false);
             } else {
-                lc = CreateStaticLambdaCompiler(scope, _typeGen, name, retType, paramTypes, paramNames, _dynamicMethod, closure, _emitDebugSymbols);
+                lc = CreateStaticLambdaCompiler(scope, _typeBuilder, name, TypeUtils.PublicStatic, retType, paramTypes, paramNames, _dynamicMethod, closure, _emitDebugSymbols);
             }
 
             // TODO: better way to flow this in?
@@ -481,21 +469,21 @@ namespace System.Linq.Expressions {
 
         #region IL Debugging Support
 
-        private static DebugILGen CreateDebugILGen(ILGenerator il, TypeGen tg, MethodBase method, IList<Type> paramTypes) {
+        private static DebugILGen CreateDebugILGen(ILGenerator il, MethodBase method, IList<Type> paramTypes) {
             TextWriter txt = Console.Out;
 #if !SILVERLIGHT
-            if (GlobalDlrOptions.DumpIL) {
+            if (DebugOptions.DumpIL) {
                 txt = new StreamWriter(Snippets.Shared.GetMethodILDumpFile(method));
             }
 #endif
-            DebugILGen dig = new DebugILGen(il, tg, txt);
+            DebugILGen dig = new DebugILGen(il, txt);
 
             StringBuilder sb = new StringBuilder("\n\n");
-            ReflectionUtils.FormatTypeName(sb, CompilerHelpers.GetReturnType(method));
+            sb.Append(method.GetReturnType().FormatTypeName());
             sb.AppendFormat(" {0} {1} (\n", method.Name, method.Attributes);
             foreach (Type type in paramTypes) {
                 sb.Append("\t");
-                ReflectionUtils.FormatTypeName(sb, type);
+                sb.Append(type.FormatTypeName());
                 sb.Append("\n");
             }
             sb.Append(")\n");
@@ -534,11 +522,12 @@ namespace System.Linq.Expressions {
             // 2) the method is debuggable, i.e. DebugMode is on and a source unit is associated with the method
             //
             if ((Snippets.Shared.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
-                TypeGen typeGen = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
+                var typeBuilder = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
                 lc = CreateStaticLambdaCompiler(
                     scope,
-                    typeGen,
+                    typeBuilder,
                     methodName,
+                    TypeUtils.PublicStatic,
                     returnType,
                     paramTypes,
                     paramNames,
@@ -556,7 +545,7 @@ namespace System.Linq.Expressions {
                     target.GetILGenerator(),
                     parameterTypes,
                     true, // dynamicMethod
-                    emitDebugSymbols
+                    false // emitDebugSymbols
                 );
             }
 
@@ -564,12 +553,13 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
-        /// Creates a LambdaCompiler backed by a method on a static type (represented by tg).
+        /// Creates a LambdaCompiler backed by a method on a static type
         /// </summary>
         private static LambdaCompiler CreateStaticLambdaCompiler(
             CompilerScope scope,
-            TypeGen tg,
+            TypeBuilder typeBuilder,
             string name,
+            MethodAttributes attributes,
             Type retType,
             IList<Type> paramTypes,
             IList<string> paramNames,
@@ -581,10 +571,10 @@ namespace System.Linq.Expressions {
 
             Type[] parameterTypes = MakeParameterTypeArray(paramTypes, dynamicMethod, closure);
 
-            MethodBuilder mb = tg.TypeBuilder.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
+            MethodBuilder mb = typeBuilder.DefineMethod(name, attributes, retType, parameterTypes);
             LambdaCompiler lc = new LambdaCompiler(
                 scope,
-                tg,
+                typeBuilder,
                 mb,
                 mb.GetILGenerator(),
                 parameterTypes,
@@ -600,24 +590,6 @@ namespace System.Linq.Expressions {
                 }
             }
             return lc;
-        }
-
-        #endregion
-
-        #region Utilities
-
-        [Conditional("DEBUG")]
-        private static void NoteCompilerCreation(MethodBase mi) {
-            string name = mi.Name;
-
-            for (int i = 0; i < name.Length; i++) {
-                if (!Char.IsLetter(name[i]) && name[i] != '.') {
-                    name = name.Substring(0, i);
-                    break;
-                }
-            }
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Compiler " + name);
         }
 
         #endregion

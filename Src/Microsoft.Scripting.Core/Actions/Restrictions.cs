@@ -15,7 +15,6 @@
 
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
@@ -138,14 +137,14 @@ namespace System.Scripting.Actions {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2211:NonConstantFieldsShouldNotBeVisible")]
-        public static Restrictions Empty = new Restrictions();
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
+        public static readonly Restrictions Empty = new Restrictions();
 
         public static Restrictions TypeRestriction(Expression expression, Type type) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
 
-            if (expression.Type == type && CompilerHelpers.IsSealed(type)) {
+            if (expression.Type == type && type.IsSealedOrValueType()) {
                 return Restrictions.Empty;
             }
 

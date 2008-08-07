@@ -140,6 +140,24 @@ def test_cp12907():
         print test_case, kind
         AssertError(SyntaxError, compile, test_case, "", kind, 0x200, 1)
 
+def test_cp12009():
+    import nt
+    import shutil
+    
+    dir1 = "temp_test_stdmodules_dir"
+    dir2 = dir1 + "2"
+    
+    nt.mkdir(dir1)
+    f = open(dir1 + r"\stuff.txt", "w")
+    f.close()
+    
+    try:
+        shutil.copytree(dir1, dir2)
+        Assert("stuff.txt" in nt.listdir(dir2))
+    finally:
+        for t_dir in [dir1, dir2]:
+            nt.unlink(t_dir + r"\stuff.txt")
+            nt.rmdir(t_dir)
 
 ##MAIN#########################################################################
 run_test(__name__)

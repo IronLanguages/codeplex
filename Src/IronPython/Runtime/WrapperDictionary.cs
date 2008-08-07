@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
     internal class WrapperDictionaryStorage : DictionaryStorage {

@@ -13,10 +13,9 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -32,16 +31,6 @@ namespace Microsoft.Scripting.Hosting {
 
         public override PlatformAdaptationLayer PlatformAdaptationLayer {
             get { return _host.PlatformAdaptationLayer; }
-        }
-
-        public override SourceUnit TryGetSourceFileUnit(LanguageContext language, string path, Encoding encoding, SourceCodeKind kind) {
-            ScriptSource result = _host.TryGetSourceFile(_host.Runtime.GetEngine(language), path, encoding, kind);
-            return (result != null) ? result.SourceUnit : null;
-        }
-
-        public override SourceUnit ResolveSourceFileUnit(string name) {
-            ScriptSource result = _host.ResolveSourceFile(name);
-            return (result != null) ? result.SourceUnit : null;
         }
     }
 }

@@ -16,6 +16,7 @@
 
 from lib.assert_util import *
 skiptest("silverlight")
+skiptest("stdlib") #Too slow
 from lib.console_util import IronPythonInstance
 
 remove_ironpython_dlls(testpath.public_testdir)
@@ -204,7 +205,7 @@ def test_dump_exception():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -X:ExceptionDetail")
     AreEqual(ipi.Start(), True)
     response = ipi.ExecuteLine("raise 'goodbye'", True)
-    AreEqual(response.count("System.Scripting") >= 1, True)
+    AreEqual(response.count("Microsoft.Scripting") >= 1, True)
     ipi.End()
 
 #############################################################################
@@ -618,7 +619,8 @@ def test_ipy_dash_m():
         output = output.replace('\r\n', '\n')
         lines = output.split('\n')
         AreEqual(lines[0], 'hello')
-        AreEqual(eval(lines[1]), [filename])
+        Assert(samefile(eval(lines[1])[0], 
+                        filename))
         
         # we receive any arguments in sys.argv
         ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule foo bar")
@@ -644,14 +646,23 @@ def test_ipy_dash_m():
         output = output.replace('\r\n', '\n')
         lines = output.split('\n')
         AreEqual(lines[0], 'hello')
+    finally:
+        nt.unlink(filename)
         
-        # Python packages work
+def test_ipy_dash_m_pkgs(): 
+    # Python packages work
+    import nt
+    Assert("lib" in [x.lower() for x in nt.listdir(nt.getcwd())], nt.getcwd())
+    
+    old_ipy_path = get_environ_variable("IRONPYTHONPATH")
+    try:
+        nt.environ["IRONPYTHONPATH"] = nt.getcwd()
         ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib")
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 0)   # should have returned 0
         AreEqual(output, "")
-        
+    
         # Bad module names should not work
         ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m libxyz")
         res, output, err, exit = ipi.StartAndRunToCompletion()
@@ -659,9 +670,9 @@ def test_ipy_dash_m():
         AreEqual(exit, 1)   # should have returned 0
         Assert("ImportError: No module named libxyz" in err,
                "stderr is:" + str(err))
-              
     finally:
-        nt.unlink(filename)
+        nt.environ["IRONPYTHONPATH"] = old_ipy_path  
+    
         
 @disabled("CodePlex Work Item 10925")
 def test_ipy_dash_m_negative():

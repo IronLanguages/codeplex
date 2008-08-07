@@ -17,13 +17,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection.Emit;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-using CompilerServices = System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Scripting;
+using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     /// <summary>
     /// CompilerScope is the data structure which the Compiler keeps information
@@ -225,21 +223,21 @@ namespace System.Linq.Expressions {
                     // real index of variable to get the index to emit.
                     ulong index = (parents << 32) | (uint)locals.Indexes[variable];
 
-                    names.Add(CompilerHelpers.GetVariableName(variable));
+                    names.Add(CompilerScope.GetName(variable));
                     indexes.Add((long)index);
                 }
 
                 if (names.Count > 0) {
                     EmitGet(nearestLocals.SelfVariable);
-                    lc.EmitConstantArray(names);
-                    lc.EmitConstantArray(indexes);
-                    lc.IL.EmitCall(typeof(RuntimeHelpers).GetMethod("CreateVariableAccess"));
+                    lc.EmitConstantArray(names.ToArray());
+                    lc.EmitConstantArray(indexes.ToArray());
+                    lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateVariableAccess"));
                     return;
                 }
             }
 
             // No visible variables
-            lc.IL.EmitCall(typeof(RuntimeHelpers).GetMethod("CreateEmptyVariableAccess"));
+            lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateEmptyVariableAccess"));
             return;
         }
 
@@ -295,7 +293,7 @@ namespace System.Linq.Expressions {
             // not found
             string msg = string.Format(
                 "variable '{0}' of type '{1}' referenced from scope '{2}', but it is not defined",
-                CompilerHelpers.GetVariableName(variable),
+                CompilerScope.GetName(variable),
                 variable.Type,
                 GetName(Expression)
             );
@@ -340,7 +338,7 @@ namespace System.Linq.Expressions {
                 // array[i] = new StrongBox<T>(...);
                 lc.IL.Emit(OpCodes.Dup);
                 lc.IL.EmitInt(i++);
-                Type boxType = typeof(CompilerServices.StrongBox<>).MakeGenericType(v.Type);
+                Type boxType = typeof(StrongBox<>).MakeGenericType(v.Type);
 
                 if (v.NodeType == ExpressionType.Parameter) {
                     // array[i] = new StrongBox<T>(argument);
@@ -409,7 +407,7 @@ namespace System.Linq.Expressions {
 
         private void EmitClosureToVariable(LambdaCompiler lc, HoistedLocals locals) {
             lc.EmitClosureArgument();
-            lc.IL.Emit(OpCodes.Ldfld, typeof(CompilerServices.Closure).GetField("Locals"));
+            lc.IL.Emit(OpCodes.Ldfld, typeof(Closure).GetField("Locals"));
             EmitSet(locals.SelfVariable);
         }
 
@@ -445,16 +443,18 @@ namespace System.Linq.Expressions {
 
         #region helper methods
 
-        // Gets the name of the LambdaExpression or ScopeExpression
-        internal static string GetName(Expression scope) {
-            Assert.NotNull(scope);
-
-            switch (scope.NodeType) {
-                case ExpressionType.Scope:
-                    return ((ScopeExpression)scope).Name;
+        // Gets the name of the lambda, scope, or variable
+        internal static string GetName(Expression e) {
+            switch (e.NodeType) {
+                case ExpressionType.Parameter:
+                    return ((ParameterExpression)e).Name;
+                case ExpressionType.Variable:
+                    return ((VariableExpression)e).Name;
                 case ExpressionType.Lambda:
                 case ExpressionType.Generator:
-                    return ((LambdaExpression)scope).Name;
+                    return ((LambdaExpression)e).Name;
+                case ExpressionType.Scope:
+                    return ((ScopeExpression)e).Name;
                 default: throw Assert.Unreachable;
             }
         }
@@ -462,7 +462,7 @@ namespace System.Linq.Expressions {
 
         [Conditional("DEBUG")]
         private void DumpScope() {
-            if (!GlobalDlrOptions.ShowScopes) {
+            if (!DebugOptions.ShowScopes) {
                 return;
             }
 
@@ -480,13 +480,13 @@ namespace System.Linq.Expressions {
                 if (_localVars.Count > 0) {
                     output.WriteLine("  locals {0}:", _localVars.Count);
                     foreach (Expression v in _localVars) {
-                        output.WriteLine("    {0}", CompilerHelpers.GetVariableName(v));
+                        output.WriteLine("    {0}", CompilerScope.GetName(v));
                     }
                 }
                 if (_hoistedLocals != null) {
                     output.WriteLine("  hoisted {0}:", _hoistedLocals.Variables.Count);
                     foreach (Expression v in _hoistedLocals.Variables) {
-                        output.WriteLine("    {0}", CompilerHelpers.GetVariableName(v));
+                        output.WriteLine("    {0}", CompilerScope.GetName(v));
                     }
                 }
 #if !SILVERLIGHT

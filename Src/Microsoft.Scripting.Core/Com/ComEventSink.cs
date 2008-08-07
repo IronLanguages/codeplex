@@ -76,7 +76,7 @@ namespace System.Scripting.Com {
             }
 
             public object Call(object[] args) {
-                return _site.Invoke(ArrayUtils.Insert(_func, args));
+                return _site.Invoke(args.AddFirst(_func));
             }
         }
 

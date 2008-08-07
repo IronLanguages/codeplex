@@ -14,18 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
-using System.Linq.Expressions;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class CallExpression : Expression {
         private readonly Expression _target;
@@ -80,7 +76,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression[] values = new MSAst.Expression[_args.Length + 2];
             ArgumentInfo[] kinds = new ArgumentInfo[_args.Length];
 
-            values[0] = Ast.CodeContext();
+            values[0] = AstUtils.CodeContext();
             values[1] = ag.Transform(_target);
 
             for (int i = 0; i < _args.Length; i++) {

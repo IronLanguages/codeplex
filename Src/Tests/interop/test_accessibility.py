@@ -68,7 +68,7 @@ def all_read(x):
     x.protected_static_method
     #x.protected_static_property  # bug 370438
     #x.protected_static_event     # bug 370432
-    x.protected_static_nestedclass
+    Assert(not hasattr('x', 'protected_static_nestedclass')) # not supported
     x.public_static_field
     x.public_static_method
     x.public_static_property
@@ -89,7 +89,7 @@ def all_read(x):
     x.protected_instance_method
     x.protected_instance_property
     #x.protected_instance_event     # bug 370432
-    x.protected_instance_nestedclass
+    Assert(not hasattr('x', 'protected_instance_nestedclass')) # not supported
     x.public_instance_field
     x.public_instance_method
     x.public_instance_property
@@ -99,6 +99,7 @@ def all_read(x):
 def test_access_outside(): 
     class C1(CliClass): 
         __slots__ = []
+    
     class C2(DerivedCliClass): 
         __slots__ = []
 
@@ -112,7 +113,7 @@ def test_access_outside():
         AssertError(AttributeError, lambda: x.add_internal_static_event)
         AssertError(AttributeError, lambda: x.set_protected_static_property)
         AssertError(AttributeError, lambda: x.get_public_static_property)
-        x.add_protected_static_event
+        Assert(hasattr(x, 'add_protected_static_event'))
         x.remove_public_static_event
 
         AssertError(AttributeError, lambda: x.set_private_instance_property)
@@ -121,7 +122,7 @@ def test_access_outside():
         AssertError(AttributeError, lambda: x.remove_internal_instance_event)
         AssertError(AttributeError, lambda: x.get_protected_instance_property)
         AssertError(AttributeError, lambda: x.set_public_instance_property)
-        x.remove_protected_instance_event
+        Assert(hasattr(x, 'remove_protected_instance_event'))
         x.add_public_instance_event
         
     def f(*arg): pass
@@ -137,7 +138,7 @@ def test_access_outside():
     
     for x in [C1(), C2()]: 
         x.protected_instance_field = 11
-        x.protected_instance_property = 12
+        Assert(hasattr(x, 'protected_instance_property'))
         #x.protected_instance_event += f
         x.public_instance_field = 13
         x.public_instance_property = 14
@@ -178,10 +179,19 @@ class PythonDerivedType2(PythonType2): pass
 #       x.protected_instance_method should throw.
 def test_reflected_type():
     for C in [CliClass, DerivedCliClass]:
-        #print C.internal_static_field
-        C.protected_static_field
-        
+        # hasattr reports false because accessing the attribute
+        # raises, this is consistent w/ CPython when accessing a
+        # user defined property w/ a getter that raises.
+        Assert(not hasattr(C, 'internal_static_field'))
+        Assert(not hasattr(C, 'protected_static_field'))
+        Assert('internal_static_field' not in dir(C))
+        Assert('protected_static_field' in dir(C))
+
         x = C()
-        x.protected_instance_field
+        Assert(not hasattr(x, 'protected_instance_field'))
+        Assert('protected_instance_field' in dir(C))
+        Assert('protected_instance_field' in dir(x))
+        AssertError(TypeError, lambda : x.protected_instance_field)
 
 run_test(__name__)
+

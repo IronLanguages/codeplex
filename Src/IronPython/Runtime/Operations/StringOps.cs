@@ -20,13 +20,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute; 
 
 namespace IronPython.Runtime.Operations {
@@ -880,10 +880,14 @@ namespace IronPython.Runtime.Operations {
             List temp = null, ret = null;
             temp = split(reversed, sep, maxsplit);
             temp.reverse();
-            if (temp.__len__() != 0)
-                ret = new List();
-            foreach (string s in temp)
-                ret.AddNoLock(Reverse(s));
+            int resultlen = temp.__len__();
+            if (resultlen != 0) {
+                ret = new List(resultlen);
+                foreach (string s in temp)
+                    ret.AddNoLock(Reverse(s));
+            } else {
+                ret = temp;
+            }
             return ret;
         }
 

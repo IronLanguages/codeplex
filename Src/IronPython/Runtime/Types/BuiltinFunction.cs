@@ -16,25 +16,25 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
+
+using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
-    using Ast = System.Linq.Expressions.Expression;
 
     /// <summary>
     /// BuiltinFunction represents any standard CLR function exposed to Python.
@@ -46,14 +46,10 @@ namespace IronPython.Runtime.Types {
     /// TODO: Back BuiltinFunction's by MethodGroup's.
     /// </summary>    
     [PythonSystemType("builtin_function_or_method")]
-    public class BuiltinFunction :
-        PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDynamicObject, IDelegateConvertible {
-        private string/*!*/ _name;
-        private MethodBase/*!*/[]/*!*/ _targets;
-        private readonly Type/*!*/ _declType;
-        private FunctionType _funcType;
-        
-        private Dictionary<TypeList, BuiltinFunction> _boundGenerics;
+    public class BuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDynamicObject, IDelegateConvertible {
+        private readonly BuiltinFunctionData/*!*/ _data;            // information describing the BuiltinFunction
+        private readonly object _instance;                          // the bound instance or null if unbound
+        private static readonly object _noInstance = new object();  
 
         #region Static factories
 
@@ -69,11 +65,15 @@ namespace IronPython.Runtime.Types {
             PythonBinder.AssertNotExtensionType(declaringType);
 
             if (existing != null) {
-                existing.AddMethod(mi);
+                existing._data.AddMethod(mi);
                 return existing;
             } else {
                 return MakeMethod(name, mi, declaringType, funcType);
             }
+        }
+
+        internal BuiltinFunction/*!*/ BindToInstance(object instance) {
+            return new BuiltinFunction(instance, _data);
         }
 
         #endregion
@@ -85,35 +85,45 @@ namespace IronPython.Runtime.Types {
             Assert.NotNull(declaringType);
             Assert.NotNullItems(originalTargets);
 
-            _funcType = functionType;
-            _targets = originalTargets;
-            _name = name;
-            _declType = declaringType;
+            _data = new BuiltinFunctionData(name, originalTargets, declaringType, functionType);
+            _instance = _noInstance;
+        }
+
+        /// <summary>
+        /// Creates a bound built-in function.  The instance may be null for built-in functions
+        /// accessed for None.
+        /// </summary>
+        private BuiltinFunction(object instance, BuiltinFunctionData/*!*/ data) {
+            Assert.NotNull(data);
+
+            _instance = instance;
+            _data = data;
         }
 
         #endregion
 
         #region Internal API Surface
 
-        internal string Name {
+        internal void AddMethod(MethodInfo mi) {
+            _data.AddMethod(mi);
+        }
+
+        internal bool TestData(object data) {
+            return _data == data;
+        }
+
+        internal bool IsUnbound {
             get {
-                return _name;
-            }
-            set {
-                _name = value;
+                return _instance == _noInstance;
             }
         }
 
-        internal void AddMethod(MethodBase info) {
-            Assert.NotNull(info);
-
-            if (_targets != null) {
-                MethodBase[] ni = new MethodBase[_targets.Length + 1];
-                _targets.CopyTo(ni, 0);
-                ni[_targets.Length] = info;
-                _targets = ni;
-            } else {
-                _targets = new MethodBase[] { info };
+        internal string Name {
+            get {
+                return _data.Name;
+            }
+            set {
+                _data.Name = value;
             }
         }
 
@@ -164,9 +174,9 @@ namespace IronPython.Runtime.Types {
 
             // check for cached method first...
             BuiltinFunction bf;
-            if (_boundGenerics != null) {
-                lock (_boundGenerics) {
-                    if (_boundGenerics.TryGetValue(tl, out bf)) {
+            if (_data.BoundGenerics != null) {
+                lock (_data.BoundGenerics) {
+                    if (_data.BoundGenerics.TryGetValue(tl, out bf)) {
                         return bf;
                     }
                 }
@@ -193,8 +203,8 @@ namespace IronPython.Runtime.Types {
 
             EnsureBoundGenericDict();
 
-            lock (_boundGenerics) {
-                _boundGenerics[tl] = bf;
+            lock (_data.BoundGenerics) {
+                _data.BoundGenerics[tl] = bf;
             }
 
             return bf;
@@ -216,22 +226,16 @@ namespace IronPython.Runtime.Types {
         /// Returns a descriptor for the built-in function if one is
         /// neededed
         /// </summary>
-        internal PythonTypeSlot GetDescriptor() {
+        internal PythonTypeSlot/*!*/ GetDescriptor() {
             if ((FunctionType & FunctionType.Method) != 0) {
                 return new BuiltinMethodDescriptor(this);
             }
             return this;
         }
 
-        internal ContextId Context {
-            get {
-                return ContextId.Empty;
-            }
-        }
-
         internal Type DeclaringType {
             get {
-                return _declType;
+                return _data.DeclaringType;
             }
         }
 
@@ -241,22 +245,16 @@ namespace IronPython.Runtime.Types {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
         internal IList<MethodBase> Targets {
             get {
-                return _targets;
+                return _data.Targets;
             }
         }
 
         /// <summary>
         /// True if the method should be visible to non-CLS opt-in callers
         /// </summary>
-        internal bool IsPythonVisible {
-            get {
-                return (_funcType & FunctionType.AlwaysVisible) != 0;
-            }
-        }
-
         internal override bool IsAlwaysVisible {
             get {
-                return IsPythonVisible;
+                return (_data.Type & FunctionType.AlwaysVisible) != 0;
             }
         }
 
@@ -274,10 +272,10 @@ namespace IronPython.Runtime.Types {
 
         internal FunctionType FunctionType {
             get {
-                return _funcType;
+                return _data.Type;
             }
             set {
-                _funcType = value;
+                _data.Type = value;
             }
         }
 
@@ -296,17 +294,28 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        internal override Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
+            return Ast.Constant(this);
+        }
+
         #endregion                
 
         #region ICodeFormattable members
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return string.Format("<built-in function {0}>", Name);
+            if (IsUnbound) {
+                return string.Format("<built-in function {0}>", Name);
+            }
+
+            return string.Format("<built-in method {0} of {1} object at {2}>",
+                __name__,
+                PythonOps.GetPythonTypeName(__self__),
+                PythonOps.HexId(__self__));
         }
 
         #endregion
 
-         #region IDynamicObject Members
+        #region IDynamicObject Members
 
         MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
             return new Binding.MetaBuiltinFunction(parameter, Restrictions.Empty, this);
@@ -314,7 +323,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IOldDynamicObject Members
 
         RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind) {
@@ -340,16 +349,119 @@ namespace IronPython.Runtime.Types {
                 return IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All;
             }
         }
-         private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            
+
+        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            BuiltinFunction func = args[0] as BuiltinFunction;
+            if (func.IsUnbound) {
+                return MakeUnboundRule<T>(action, context, args);
+            } else {
+                return MakeBoundRule<T>(action, context, args);
+            }
+        }
+        
+        private RuleBuilder<T> MakeUnboundRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
             CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(context, action, args, Targets, Level, IsReversedOperator);
-           RuleBuilder<T> rule = helper.MakeRule();
+
+            RuleBuilder<T> rule = helper.MakeRule();
             if (IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 function + 2 args
                 // BinaryOperators return NotImplemented on failure.
                 rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Field(null, typeof(PythonOps), "NotImplemented"));
             }
             rule.AddTest(MakeFunctionTest(rule.Parameters[0]));
             return rule;
+        }
+
+        private RuleBuilder<T> MakeBoundRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
+            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(
+                context,
+                action,
+                args,
+                Targets,
+                Level,
+                IsReversedOperator);
+            RuleBuilder<T> rule = helper.Rule;
+            Expression instance = Ast.Property(
+                Ast.Convert(
+                    rule.Parameters[0],
+                    typeof(BuiltinFunction)
+                ),
+                typeof(BuiltinFunction).GetProperty("__self__")
+            );
+
+            Expression instanceVal = instance;
+            Type testType = CompilerHelpers.GetType(__self__);
+
+            // cast the instance to the correct type
+            if (CompilerHelpers.IsStrongBox(__self__)) {
+                instance = ReadStrongBoxValue(instance);
+            } else if (!testType.IsEnum) {
+                // We need to deal w/ wierd types like MarshalByRefObject.  
+                // We could have an MBRO whos DeclaringType is completely different.  
+                // Therefore we special case it here and cast to the declaring type
+                Type selfType = CompilerHelpers.GetType(__self__);
+                if (!selfType.IsVisible && PythonContext.GetContext(context).DomainManager.Configuration.PrivateBinding) {
+                    helper.InstanceType = selfType;
+                } else {
+                    selfType = CompilerHelpers.GetVisibleType(selfType);
+
+                    if (selfType == typeof(object) && DeclaringType.IsInterface) {
+                        selfType = DeclaringType;
+                    }
+
+                    if (DeclaringType.IsInterface && selfType.IsValueType) {
+                        // explitit interface implementation dispatch on a value type, don't
+                        // unbox the value type before the dispatch.
+                        instance = Ast.Convert(instance, DeclaringType);
+                    } else if (selfType.IsValueType) {
+                        // We might be calling a a mutating method (like
+                        // Rectangle.Intersect). If so, we want it to mutate
+                        // the boxed value directly
+                        instance = Ast.Unbox(instance, selfType);
+                    } else {
+#if SILVERLIGHT
+                    instance = Ast.Convert(instance, selfType);
+#else
+                        Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(DeclaringType) : selfType;
+
+                        instance = Ast.Convert(instance, convType);
+#endif
+                    }
+                }
+            } else {
+                // we don't want to cast the enum to it's real type, it will unbox it 
+                // and turn it into it's underlying type.  We presumably want to call 
+                // a method on the Enum class though - so we cast to Enum instead.
+                instance = Ast.Convert(instance, typeof(Enum));
+            }
+
+            helper.Instance = instance;
+
+            RuleBuilder<T> newRule = helper.MakeRule();
+            if (newRule == rule) {
+                // work around ActionOnCall, we should flow the rule in eventually.
+                // For the time being it contains sufficient tests so we don't need
+                // to add more.
+                rule.AddTest(
+                    MakeBoundFunctionTest(
+                        Ast.Convert(rule.Parameters[0], typeof(BuiltinFunction))
+                    )
+                );
+                rule.AddTest(rule.MakeTypeTest(testType, instanceVal));
+            }
+
+            if (newRule.IsError && IsBinaryOperator && args.Length == 2) { // 1 bound function + 1 args
+                // BinaryOperators return NotImplemented on failure.
+                newRule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Property(null, typeof(PythonOps), "NotImplemented"));
+            }
+
+            return newRule;
+        }
+
+        private MemberExpression/*!*/ ReadStrongBoxValue(Expression instance) {
+            return Ast.Field(
+                Ast.Convert(instance, __self__.GetType()),
+                __self__.GetType().GetField("Value")
+            );
         }
 
         internal Expression MakeFunctionTest(Expression functionTarget) {
@@ -359,13 +471,39 @@ namespace IronPython.Runtime.Types {
             );
         }
 
+        internal Expression/*!*/ MakeBoundFunctionTest(Expression/*!*/ functionTarget) {
+            Debug.Assert(functionTarget.Type == typeof(BuiltinFunction));
+
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("TestBoundBuiltinFunction"),
+                functionTarget,
+                Ast.Constant(_data, typeof(object))
+            );            
+        }
+        
         #endregion
 
         #region Public Python APIs
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls")]
+        public static object/*!*/ __new__(object cls, object newFunction, object inst) {
+            return new Method(newFunction, inst, null);
+        }
+
         public int __cmp__(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/  other) {
             if (other == this) {
                 return 0;
+            }
+
+            if (!IsUnbound && !other.IsUnbound) {
+                int result = PythonOps.Compare(__self__, other.__self__);
+                if (result != 0) {
+                    return result;
+                }
+
+                if (_data == other._data) {
+                    return 0;
+                }
             }
 
             int res = String.CompareOrdinal(__name__, other.__name__);
@@ -392,6 +530,11 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
+        [SpecialName, PropertyMethod]
+        public void Set__module__(string value) {
+            // Do nothing but don't return an error
+        }
+
         /// <summary>
         /// Provides (for reflected methods) a mapping from a signature to the exact target
         /// which takes this signature.
@@ -405,7 +548,7 @@ namespace IronPython.Runtime.Types {
                 // since it's hard to generate all the keys of the signature mapping when
                 // two type systems are involved.  Creating the mapping object is quite
                 // cheap so we don't cache a copy.
-                return new BuiltinFunctionOverloadMapper(this, null);
+                return new BuiltinFunctionOverloadMapper(this, IsUnbound ? null : _instance);
             }
         }
 
@@ -429,7 +572,11 @@ namespace IronPython.Runtime.Types {
 
         public object __self__ {
             get {
-                return null;
+                if (IsUnbound) {
+                    return null;
+                }
+
+                return _instance;
             }
         }
 
@@ -459,10 +606,26 @@ namespace IronPython.Runtime.Types {
 
                 BuiltinFunction res = MakeGenericMethod(types);
                 if (res == null) {
-                    throw PythonOps.TypeError(string.Format("bad type args to this generic method {0}", this.Name));
+                    bool hasGenerics = false;
+                    foreach (MethodBase mb in Targets) {
+                        MethodInfo mi = mb as MethodInfo;
+                        if (mi != null && mi.ContainsGenericParameters) {
+                            hasGenerics = true;
+                        }
+                    }
+
+                    if (hasGenerics) {
+                        throw PythonOps.TypeError(string.Format("bad type args to this generic method {0}", Name));
+                    } else {
+                        throw PythonOps.TypeError(string.Format("{0} is not a generic method and is unsubscriptable", Name));
+                    }
                 }
 
-                return res;
+                if (IsUnbound) {
+                    return res;
+                }
+
+                return new BuiltinFunction(_instance, res._data);
             }
         }
         
@@ -485,9 +648,9 @@ namespace IronPython.Runtime.Types {
         }
 
         private void EnsureBoundGenericDict() {
-            if (_boundGenerics == null) {
+            if (_data.BoundGenerics == null) {
                 Interlocked.CompareExchange<Dictionary<TypeList, BuiltinFunction>>(
-                    ref _boundGenerics,
+                    ref _data.BoundGenerics,
                     new Dictionary<TypeList, BuiltinFunction>(1),
                     null);
             }
@@ -543,13 +706,45 @@ namespace IronPython.Runtime.Types {
                         }
 
                         if (match) {
-                            return Delegate.CreateDelegate(type, mi);
+                            if (IsUnbound) {
+                                return Delegate.CreateDelegate(type, mi);
+                            } else {
+                                return Delegate.CreateDelegate(type, _instance, mi);
+                            }
                         }
                     }
                 }
             }
 
             return null;
+        }
+
+        #endregion
+
+        #region BuiltinFunctionData
+
+        private sealed class BuiltinFunctionData {
+            public string/*!*/ Name;
+            public MethodBase/*!*/[]/*!*/ Targets;
+            public readonly Type/*!*/ DeclaringType;
+            public FunctionType Type;
+            public Dictionary<TypeList, BuiltinFunction> BoundGenerics;
+
+            public BuiltinFunctionData(string name, MethodBase[] targets, Type declType, FunctionType functionType) {
+                Name = name;
+                Targets = targets;
+                DeclaringType = declType;
+                Type = functionType;
+            }
+
+            internal void AddMethod(MethodBase/*!*/ info) {
+                Assert.NotNull(info);
+
+                MethodBase[] ni = new MethodBase[Targets.Length + 1];
+                Targets.CopyTo(ni, 0);
+                ni[Targets.Length] = info;
+                Targets = ni;
+            }
         }
 
         #endregion

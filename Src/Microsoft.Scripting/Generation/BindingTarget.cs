@@ -15,12 +15,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -114,13 +114,26 @@ namespace Microsoft.Scripting.Generation {
         /// OBSOLETE
         /// </summary>
         public Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters) {
+            ContractUtils.RequiresNotNull(rule, "rule");
+            return MakeExpression(rule.Context, parameters);
+        }
+
+        /// <summary>
+        /// Gets an Expression which calls the binding target if the method binding succeeded.
+        /// 
+        /// Throws InvalidOperationException if the binding failed.
+        /// 
+        /// OBSOLETE
+        /// </summary>
+        public Expression MakeExpression(Expression contextExpression, IList<Expression> parameters) {
+            ContractUtils.RequiresNotNull(contextExpression, "contextExpression");
             ContractUtils.RequiresNotNull(parameters, "parameters");
 
             if (_target == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
             }
 
-            return _target.MakeExpression(rule, parameters, ArgumentTests);
+            return _target.MakeExpression(contextExpression, parameters, ArgumentTests);
         }
 
         /// <summary>

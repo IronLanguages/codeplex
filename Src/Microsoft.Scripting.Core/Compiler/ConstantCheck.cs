@@ -16,8 +16,8 @@
 using System.Diagnostics;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
-    public static class ConstantCheck {
+namespace System.Linq.Expressions.Compiler {
+    internal static class ConstantCheck {
 
         /// <summary>
         /// Tests to see if the expression is a constant with the given value.

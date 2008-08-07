@@ -15,7 +15,9 @@
 
 using System;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Scripting;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Utils {
     static class TypeUtils {
@@ -220,6 +222,106 @@ namespace Microsoft.Scripting.Utils {
 
         private static bool NullVsNullable(Type left, Type right) {
             return IsNullableType(left) && right == typeof(None);
+        }
+
+        // keep in sync with System.Core version
+        internal static bool AreReferenceAssignable(Type dest, Type src) {
+            // WARNING: This actually implements "Is this identity assignable and/or reference assignable?"
+            if (dest == src) {
+                return true;
+            }
+            if (!dest.IsValueType && !src.IsValueType && AreAssignable(dest, src)) {
+                return true;
+            }
+            return false;
+        }
+
+        // keep in sync with System.Core version
+        internal static bool AreAssignable(Type dest, Type src) {
+            if (dest == src) {
+                return true;
+            }
+            if (dest.IsAssignableFrom(src)) {
+                return true;
+            }
+            if (dest.IsArray && src.IsArray && dest.GetArrayRank() == src.GetArrayRank() && AreReferenceAssignable(dest.GetElementType(), src.GetElementType())) {
+                return true;
+            }
+            if (src.IsArray && dest.IsGenericType &&
+                (dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IEnumerable<>)
+                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IList<>)
+                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.ICollection<>))
+                && dest.GetGenericArguments()[0] == src.GetElementType()) {
+                return true;
+            }
+            return false;
+        }
+
+        // keep in sync with System.Core version
+        internal static Type GetConstantType(Type type) {
+            // If it's a visible type, we're done
+            if (type.IsVisible) {
+                return type;
+            }
+
+            // Get the visible base type
+            Type bt = type;
+            do {
+                bt = bt.BaseType;
+            } while (!bt.IsVisible);
+
+            // If it's one of the known reflection types,
+            // return the known type.
+            if (bt == typeof(Type) ||
+                bt == typeof(ConstructorInfo) ||
+                bt == typeof(EventInfo) ||
+                bt == typeof(FieldInfo) ||
+                bt == typeof(MethodInfo) ||
+                bt == typeof(PropertyInfo)) {
+                return bt;
+            }
+
+            // else return the original type
+            return type;
+        }
+
+        internal static bool IsConvertible(Type type) {
+            type = GetNonNullableType(type);
+            if (type.IsEnum) {
+                return true;
+            }
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Boolean:
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Char:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        internal static Type GetNonNoneType(Type type) {
+            return (type == typeof(None)) ? typeof(object) : type;
+        }
+
+        internal static bool IsFloatingPoint(Type type) {
+            type = GetNonNullableType(type);
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Single:
+                case TypeCode.Double:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

@@ -16,7 +16,7 @@
 from lib.assert_util import *
 skiptest("silverlight")
 
-add_clr_assemblies("dyanmicobjmodel")
+add_clr_assemblies("dynamicobjmodel")
 
 from Merlin.Testing.DynamicObjectModel import *
 

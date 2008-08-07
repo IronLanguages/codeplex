@@ -21,22 +21,18 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {
-    using Ast = System.Linq.Expressions.Expression;
 
     /// <summary>
     /// Created for a user-defined function.  

@@ -18,12 +18,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -147,6 +146,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 runtimeSetup.LanguageSetups.Add(provider, languageSetup = new LanguageSetup(String.Empty));
             }
 
+            // sets search paths for all languages:
+            runtimeSetup.Options["SearchPaths"] = Options.SourceUnitSearchPaths;
+            
             _languageOptionsParser = CreateOptionsParser();
 
             try {
@@ -164,9 +166,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 Console.Error.WriteLine(e.Message);
                 return _exitCode = 1;
             }
-            
-            // TODO: move to setup
-            _engine.SetScriptSourceSearchPaths(Options.SourceUnitSearchPaths);
 
             Execute();
             return _exitCode;
@@ -353,11 +352,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected virtual void UnhandledException(ScriptEngine engine, Exception e) {
             Console.Error.Write("Unhandled exception");
             Console.Error.WriteLine(':');
-            Console.Error.WriteLine(engine.FormatException(e));
+
+            ExceptionService es = engine.GetService<ExceptionService>();
+            Console.Error.WriteLine(es.FormatException(e));
         }
 
         protected static void PrintException(TextWriter output, Exception e) {
             Debug.Assert(output != null);
+            ContractUtils.RequiresNotNull(e, "e");
 
             while (e != null) {
                 output.WriteLine(e);

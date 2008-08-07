@@ -17,7 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Scripting;
+using Microsoft.Scripting;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
@@ -26,7 +26,7 @@ using IronPython.Runtime.Types;
 
 #if !SILVERLIGHT // Sockets
 using System.Net.Sockets;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("select", typeof(IronPython.Modules.PythonSelect))]
 namespace IronPython.Modules {

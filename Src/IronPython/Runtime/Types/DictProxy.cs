@@ -18,15 +18,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("dictproxy")]
-    public class DictProxy : IDictionary, IEnumerable {
+    public class DictProxy : IDictionary, IEnumerable, IDictionary<object, object> {
         private readonly PythonType/*!*/ _dt;
         
         public DictProxy(PythonType/*!*/ dt) {
@@ -47,6 +47,10 @@ namespace IronPython.Runtime.Types {
 
         public bool __contains__(object value) {
             return has_key(value);
+        }
+
+        public string/*!*/ __str__(CodeContext/*!*/ context) {
+            return DictionaryOps.__repr__(this);
         }
 
         public bool has_key(object key) {
@@ -148,11 +152,13 @@ namespace IronPython.Runtime.Types {
 
         #region IDictionary Members
 
-        void IDictionary.Add(object key, object value) {
+        [PythonHidden]
+        public void Add(object key, object value) {
             this[key] = value;
         }
 
-        void IDictionary.Clear() {
+        [PythonHidden]
+        public void Clear() {
             throw new InvalidOperationException("dictproxy is read-only");
         }
 
@@ -199,7 +205,7 @@ namespace IronPython.Runtime.Types {
         #region ICollection Members
 
         void ICollection.CopyTo(Array array, int index) {
-            foreach (DictionaryEntry de in this) {
+            foreach (DictionaryEntry de in (IDictionary)this) {
                 array.SetValue(de, index++);
             }
         }
@@ -214,6 +220,72 @@ namespace IronPython.Runtime.Types {
 
         object ICollection.SyncRoot {
             get { return this; }
+        }
+
+        #endregion
+
+        #region IDictionary<object,object> Members
+
+        bool IDictionary<object, object>.ContainsKey(object key) {
+            return has_key(key);
+        }
+
+        ICollection<object> IDictionary<object, object>.Keys {
+            get {
+                return _dt.GetMemberDictionary(DefaultContext.Default, false).Keys;
+            }
+        }
+
+        bool IDictionary<object, object>.Remove(object key) {
+            throw new InvalidOperationException("dictproxy is read-only");
+        }
+
+        bool IDictionary<object, object>.TryGetValue(object key, out object value) {
+            return TryGetValue(key, out value);
+        }
+
+        ICollection<object> IDictionary<object, object>.Values {
+            get {
+                return _dt.GetMemberDictionary(DefaultContext.Default, false).AsObjectKeyedDictionary().Values;
+            }
+        }
+
+        #endregion
+
+        #region ICollection<KeyValuePair<object,object>> Members
+
+        void ICollection<KeyValuePair<object, object>>.Add(KeyValuePair<object, object> item) {
+            this[item.Key] = item.Value;
+        }
+
+        bool ICollection<KeyValuePair<object, object>>.Contains(KeyValuePair<object, object> item) {
+            return has_key(item.Key);
+        }
+
+        void ICollection<KeyValuePair<object, object>>.CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
+            foreach (KeyValuePair<object, object> de in (IEnumerable<KeyValuePair<object, object>>)this) {
+                array.SetValue(de, arrayIndex++);
+            }
+        }
+
+        int ICollection<KeyValuePair<object, object>>.Count {
+            get { return __len__(DefaultContext.Default); }
+        }
+
+        bool ICollection<KeyValuePair<object, object>>.IsReadOnly {
+            get { return true; }
+        }
+
+        bool ICollection<KeyValuePair<object, object>>.Remove(KeyValuePair<object, object> item) {
+            return ((IDictionary<object, object>)this).Remove(item.Key);
+        }
+
+        #endregion
+
+        #region IEnumerable<KeyValuePair<object,object>> Members
+
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
+            return _dt.GetMemberDictionary(DefaultContext.Default, false).GetEnumerator();
         }
 
         #endregion

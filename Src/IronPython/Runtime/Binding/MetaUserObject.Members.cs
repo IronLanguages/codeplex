@@ -15,21 +15,19 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Linq.Expressions;
-using System.Scripting.Runtime;
-
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Ast = System.Linq.Expressions.Expression;
 using Utils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
 
     partial class MetaUserObject : MetaPythonObject {
         
@@ -48,9 +46,9 @@ namespace IronPython.Runtime.Binding {
                 BindingHelpers.GetValidationInfo(self.Expression, sdo.PythonType)
             );
 
-            PythonTypeSlot dts;
-            if (TryGetGetAttribute(context, sdo.PythonType, out dts)) {
-                return MakeGetAttributeRule(bindingInfo, sdo, dts);
+            PythonTypeSlot foundSlot;
+            if (TryGetGetAttribute(context, sdo.PythonType, out foundSlot)) {
+                return MakeGetAttributeRule(bindingInfo, sdo, foundSlot);
             }
 
             // otherwise look the object according to Python rules:
@@ -66,32 +64,20 @@ namespace IronPython.Runtime.Binding {
             // we'll first check the dictionary and then invoke the get descriptor.  If we have no descriptor
             // at all we'll just check the dictionary.  If both lookups fail we'll raise an exception.
 
-            bool isOldStyle = false;                // if we're mixed new-style/old-style we have to do a slower check
-            bool systemTypeResolution = false;      // if we pick up the property from a System type we fallback
-            foreach (PythonType pt in sdo.PythonType.ResolutionOrder) {
-                if (pt.IsOldClass) {
-                    isOldStyle = true;
-                }
+            bool isOldStyle;
+            bool systemTypeResolution;
+            foundSlot = FindSlot(context, action.Name, sdo, out isOldStyle, out systemTypeResolution);
 
-                if (pt.TryLookupSlot(context, SymbolTable.StringToId(action.Name), out dts)) {
-                    // use our built-in binding for ClassMethodDescriptors rather than falling back
-                    if (!(dts is ClassMethodDescriptor)) {
-                        systemTypeResolution = pt.IsSystemType;
-                    }
-                    break;
-                }
-            }
-
-            if (!isOldStyle || dts is ReflectedSlotProperty) {
-                if (sdo.HasDictionary && (dts == null || !dts.IsSetDescriptor(context, sdo.PythonType))) {
+            if (!isOldStyle || foundSlot is ReflectedSlotProperty) {
+                if (sdo.HasDictionary && (foundSlot == null || !foundSlot.IsSetDescriptor(context, sdo.PythonType))) {
                     MakeDictionaryAccess(bindingInfo);
                 }
 
-                if (dts != null) {
+                if (foundSlot != null) {
                     if (systemTypeResolution) {
                         bindingInfo.Body.FinishCondition(Fallback(action, args).Expression);
                     } else {
-                        MakeSlotAccess(bindingInfo, dts);
+                        MakeSlotAccess(bindingInfo, foundSlot);
                     }
                 }
             } else {
@@ -153,15 +139,10 @@ namespace IronPython.Runtime.Binding {
 
             if (res == null) {
                 // then see if we have a set descriptor
-                bool systemTypeResolution = false;      // if we pick up the property from a System type we fallback
-                foreach (PythonType pt in sdo.PythonType.ResolutionOrder) {
-                    if (pt.TryLookupSlot(context, SymbolTable.StringToId(action.Name), out dts)) {
-                        systemTypeResolution = pt.IsSystemType;
-                        break;
-                    }
-                }
-
-                sdo.PythonType.TryResolveSlot(context, SymbolTable.StringToId(action.Name), out dts);
+                bool isOldStyle;
+                bool systemTypeResolution;
+                dts = FindSlot(context, action.Name, sdo, out isOldStyle, out systemTypeResolution);
+                
                 ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
                 if (rsp != null) {
                     MakeSlotsSetTarget(bindingInfo, rsp, args[1].Expression);
@@ -256,7 +237,7 @@ namespace IronPython.Runtime.Binding {
                             TypeInfo._IPythonObject.Dict
                         ),
                         TypeInfo._IAttributesCollection.TryGetvalue,
-                        Ast.Constant(SymbolTable.StringToId(info.Action.Name)),
+                        Utils.Constant(SymbolTable.StringToId(info.Action.Name)),
                         info.Result
                     )
                 ),
@@ -335,7 +316,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(UserTypeOps).GetMethod("TryGetMixedNewStyleOldStyleSlot"),
                     Ast.Constant(BinderState.GetBinderState(info.Action).Context),
                     Ast.ConvertHelper(info.Self, typeof(object)),
-                    Ast.Constant(SymbolTable.StringToId(info.Action.Name)),
+                    Utils.Constant(SymbolTable.StringToId(info.Action.Name)),
                     info.Result
                 ),
                 info.Result
@@ -393,7 +374,7 @@ namespace IronPython.Runtime.Binding {
 
                 expr = Ast.Scope(
                     Ast.Comma(
-                        Ast.Try(
+                        Utils.Try(
                             Ast.Assign(tmp, Ast.ConvertHelper(expr, t))
                         ).Catch(
                             typeof(MissingMemberException),
@@ -470,7 +451,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                     Ast.Constant(type.Name),
-                    Ast.Constant(SymbolTable.StringToId(name))
+                    Utils.Constant(SymbolTable.StringToId(name))
                 )
             );
         }
@@ -577,7 +558,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
                     Ast.Convert(info.Args[0].Expression, typeof(IPythonObject)),
-                    Ast.Constant(SymbolTable.StringToId(info.Action.Name)),
+                    Utils.Constant(SymbolTable.StringToId(info.Action.Name)),
                     Ast.ConvertHelper(info.Args[1].Expression, typeof(object))
                 )
             );
@@ -702,9 +683,41 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(UserTypeOps).GetMethod("RemoveDictionaryValue"),
                     Ast.Convert(info.Args[0].Expression, typeof(IPythonObject)),
-                    Ast.Constant(SymbolTable.StringToId(info.Action.Name))
+                    Utils.Constant(SymbolTable.StringToId(info.Action.Name))
                 )
             );
+        }
+
+        #endregion
+
+        #region Common Helpers
+
+        /// <summary>
+        /// Looks up the associated PythonTypeSlot from the object.  Indicates if the result
+        /// came from a standard .NET type in which case we will fallback to the sites binder.
+        /// </summary>
+        private PythonTypeSlot FindSlot(CodeContext/*!*/ context, string/*!*/ name, IPythonObject/*!*/ sdo, out bool isOldStyle, out bool systemTypeResolution) {
+            PythonTypeSlot foundSlot = null;
+            isOldStyle = false;                // if we're mixed new-style/old-style we have to do a slower check
+            systemTypeResolution = false;      // if we pick up the property from a System type we fallback
+
+            SymbolId lookingFor = SymbolTable.StringToId(name);
+
+            foreach (PythonType pt in sdo.PythonType.ResolutionOrder) {
+                if (pt.IsOldClass) {
+                    isOldStyle = true;
+                }
+
+                if (pt.TryLookupSlot(context, lookingFor, out foundSlot)) {
+                    // use our built-in binding for ClassMethodDescriptors rather than falling back
+                    if (!(foundSlot is ClassMethodDescriptor)) {
+                        systemTypeResolution = pt.IsSystemType;
+                    }
+                    break;
+                }
+            }
+
+            return foundSlot;
         }
 
         #endregion

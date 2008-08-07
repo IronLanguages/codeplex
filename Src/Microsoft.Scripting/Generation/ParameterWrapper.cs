@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {

@@ -288,6 +288,10 @@ def test_MTA():
 
 # Test -Q
 def test_Q():
+    if is_stdlib():
+        TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), """sys:1: DeprecationWarning: classic float division\n1.5\n""")
+        return
+
     TestCommandLine(("-Q", "warn", "-c", "print 3/2.0"), "1.5\n")
     TestCommandLine(("-Q", "warn", "-c", "print 3j/2.0"), "1.5j\n")
     TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), "warning: DeprecationWarning: classic float division\n1.5\n")

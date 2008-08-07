@@ -38,7 +38,9 @@ class oldstyle_reflect:
     def __repr__(self):                 return "oldstyle_reflect(%s)" % self.value
     def __radd__(self, other):          return other + self.value
     def __rsub__(self, other):          return other - self.value
-    def __rmul__(self, other):          return other * self.value
+    def __rmul__(self, other):          
+        print "\toldstyle_reflect.__rmul__"
+        return other * self.value
     def __rdiv__(self, other):          return other / self.value
     def __rfloordiv__(self, other):     return other // self.value
     def __rmod__(self, other):          return other % self.value
@@ -93,7 +95,9 @@ class newstyle_reflect(object):
     def __repr__(self):                 return "newstyle_reflect(%s, %r)" % (self.value, type(self.value))
     def __radd__(self, other):          return other + self.value
     def __rsub__(self, other):          return other - self.value
-    def __rmul__(self, other):          return other * self.value
+    def __rmul__(self, other):          
+        print "\tnewstyle_reflect.__rmul__"
+        return other * self.value
     def __rdiv__(self, other):          return other / self.value
     def __rfloordiv__(self, other):     return other // self.value
     def __rmod__(self, other):          return other % self.value

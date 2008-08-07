@@ -24,13 +24,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
@@ -225,7 +226,7 @@ namespace IronPython.Modules {
                     if (!StringUtils.TryParseDateTimeExact(@string,
                         String.Join("", formats),
                         PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat,
-                        DateTimeStyles.AllowWhiteSpaces,
+                        DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.NoCurrentDateDefault,
                         out res)) {
                         // If TryParseExact fails, fall back to DateTime.Parse which does a better job in some cases...
                         res = DateTime.Parse(@string, PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat);
@@ -354,8 +355,10 @@ namespace IronPython.Modules {
                             break;
                         case 'H': newFormat.Add(new FormatInfo("HH")); break;
                         case 'I': newFormat.Add(new FormatInfo("hh")); break;
-                        case 'm': newFormat.Add(new FormatInfo("MM")); break;
-                        case 'M': newFormat.Add(new FormatInfo("mm")); break;
+                        case 'm':
+                            newFormat.Add(new FormatInfo(forParse ? "M" : "MM"));
+                            break;
+                        case 'M': newFormat.Add(new FormatInfo(forParse ? "m" : "mm")); break;
                         case 'p':
                             newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "t"));
                             newFormat.Add(new FormatInfo(FormatInfoType.UserText, "M"));
@@ -526,6 +529,10 @@ namespace IronPython.Modules {
                 : base(new object[] { year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst }) {
             }
 
+            internal struct_time(PythonTuple sequence)
+                : base(sequence) {
+            }
+
             public static struct_time __new__(CodeContext context, PythonType cls, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
                 if (cls == _StructTimeType) {
                     return new struct_time(year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst);
@@ -533,6 +540,21 @@ namespace IronPython.Modules {
                     struct_time st = cls.CreateInstance(context, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst) as struct_time;
                     if (st == null)
                         throw PythonOps.TypeError("{0} is not a subclass of time.struct_time", cls);
+                    return st;
+                }
+            }
+
+            public static struct_time __new__(CodeContext context, PythonType cls, [NotNull]PythonTuple sequence) {
+                if (sequence.__len__() != 9) {
+                    throw PythonOps.TypeError("time.struct_time() takes a 9-sequence ({0}-sequence given)", sequence.__len__());
+                }
+                if (cls == _StructTimeType) {
+                    return new struct_time(sequence);
+                } else {
+                    struct_time st = cls.CreateInstance(context, sequence) as struct_time;
+                    if (st == null) {
+                        throw PythonOps.TypeError("{0} is not a subclass of time.struct_time", cls);
+                    }
                     return st;
                 }
             }

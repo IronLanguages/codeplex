@@ -18,8 +18,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
@@ -217,7 +217,30 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeGenericBody(GetMemberInfo getMemInfo, Type type, MemberGroup members, Expression instance) {
-            MakeGenericBodyWorker(getMemInfo, type, members[0], instance);
+            MemberTracker bestMember = members[0];
+            if (members.Count > 1) {
+                // if we were given multiple members pick the member closest to the type...                
+                Type bestMemberDeclaringType = members[0].DeclaringType;
+
+                for (int i = 1; i < members.Count; i++) {
+                    MemberTracker mt = members[i];
+                    if (!IsTrackerApplicableForType(type, mt)) {
+                        continue;
+                    }
+
+                    if (members[i].DeclaringType.IsSubclassOf(bestMemberDeclaringType) ||
+                        !IsTrackerApplicableForType(type, bestMember)) {
+                        bestMember = members[i];
+                        bestMemberDeclaringType = members[i].DeclaringType;
+                    }
+                }
+            }
+
+            MakeGenericBodyWorker(getMemInfo, type, bestMember, instance);
+        }
+
+        private static bool IsTrackerApplicableForType(Type type, MemberTracker mt) {
+            return mt.DeclaringType == type || type.IsSubclassOf(mt.DeclaringType);
         }
 
         private void MakeTypeBody(GetMemberInfo getMemInfo, Type type, MemberGroup members) {

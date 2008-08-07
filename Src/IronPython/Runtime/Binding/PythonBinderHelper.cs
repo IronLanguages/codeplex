@@ -16,17 +16,12 @@
 using System;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Generation;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     using Ast = System.Linq.Expressions.Expression;
@@ -274,7 +269,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Expression AddRecursionCheck(Expression expr) {
             if (PythonFunction.EnforceRecursion) {
-                expr = Ast.Try(
+                expr = AstUtils.Try(
                     Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                     expr
                 ).Finally(

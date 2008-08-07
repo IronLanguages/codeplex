@@ -18,14 +18,14 @@ using System.Scripting.Utils;
 namespace System.Scripting.Actions {
     public abstract class DeleteMemberAction : StandardAction {
         private readonly string _name;
-        private readonly bool _caseInsensitive;
+        private readonly bool _ignoreCase;
 
-        protected DeleteMemberAction(string name, bool caseInsensitive)
+        protected DeleteMemberAction(string name, bool ignoreCase)
             : base(StandardActionKind.DeleteMember) {
             ContractUtils.RequiresNotNull(name, "name");
 
             _name = name;
-            _caseInsensitive = caseInsensitive;
+            _ignoreCase = ignoreCase;
         }
 
         public string Name {
@@ -34,9 +34,9 @@ namespace System.Scripting.Actions {
             }
         }
 
-        public bool CaseInsensitive {
+        public bool IgnoreCase {
             get {
-                return _caseInsensitive;
+                return _ignoreCase;
             }
         }        
 
@@ -47,12 +47,12 @@ namespace System.Scripting.Actions {
         }
 
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0); ;
+            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0); ;
         }
 
         public override bool Equals(object obj) {
             DeleteMemberAction dma = obj as DeleteMemberAction;
-            return dma != null && dma._name == _name && dma._caseInsensitive == _caseInsensitive;
+            return dma != null && dma._name == _name && dma._ignoreCase == _ignoreCase;
         }
     }
 }

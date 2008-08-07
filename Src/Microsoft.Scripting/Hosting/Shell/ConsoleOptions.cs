@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 

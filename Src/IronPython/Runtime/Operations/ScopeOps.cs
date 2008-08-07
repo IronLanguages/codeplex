@@ -15,11 +15,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Scripting;
-using System.Scripting.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
@@ -30,15 +28,18 @@ namespace IronPython.Runtime.Types {
     public static class ScopeOps {
         [StaticExtensionMethod]
         public static Scope/*!*/ __new__(CodeContext/*!*/ context, PythonType/*!*/ cls, params object[]/*!*/ args\u00F8) {
-            if (cls.IsSubclassOf(TypeCache.Module)) {
-                PythonModule module = PythonContext.GetContext(context).CreateModule();
-                
-                // TODO: should be null
-                module.Scope.Clear();
-
-                return module.Scope;
+            Scope res;
+            if (cls == TypeCache.Module) {
+                res = new Scope(PythonDictionary.MakeSymbolDictionary());
+            } else if (cls.IsSubclassOf(TypeCache.Module)) {
+                res = (Scope)cls.CreateInstance(context);
+            } else {
+                throw PythonOps.TypeError("{0} is not a subtype of module", cls.Name);
             }
-            throw PythonOps.TypeError("{0} is not a subtype of module", cls.Name);
+
+            PythonContext.GetContext(context).CreateModule(null, res, null, ModuleOptions.None);
+            res.Clear();
+            return res;
         }
 
         [StaticExtensionMethod]

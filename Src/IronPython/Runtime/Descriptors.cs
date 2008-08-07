@@ -15,7 +15,7 @@
 
 using System.Runtime.InteropServices;
 using System.Scripting;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 using Microsoft.Scripting;
 
@@ -182,12 +182,14 @@ namespace IronPython.Runtime {
         }
 
         public bool __set__(CodeContext/*!*/ context, object instance, object value) {
+            if (instance == null) {
+                return false;
+            }
+
             if (fset != null) {
                 PythonCalls.Call(context, fset, instance, value);
                 return true;
             } else {
-                if (instance == null) return false;
-
                 throw PythonOps.AttributeError("readonly attribute");
             }
         }

@@ -13,17 +13,50 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
 using System.Linq.Expressions;
+using System.Scripting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public static partial class Utils {
+    public sealed class DoStatementBuilder {
+        private readonly Expression _body;
+        private readonly Annotations _annotations;
+        private readonly LabelTarget _label;
+
+        internal DoStatementBuilder(Annotations annotations, LabelTarget label, Expression body) {
+            ContractUtils.RequiresNotNull(body, "body");
+
+            _body = body;
+            _annotations = annotations;
+            _label = label;
+        }
+
+        public DoStatement While(Expression condition) {
+            return Expression.DoWhile(_body, condition, _label, _annotations);
+        }
+    }
+
+    public partial class Utils {
+        public static DoStatementBuilder Do(params Expression[] body) {
+            ContractUtils.RequiresNotNullItems(body, "body");
+            return new DoStatementBuilder(Annotations.Empty, null, Expression.Block(body));
+        }
+
+        public static DoStatementBuilder Do(LabelTarget label, params Expression[] body) {
+            ContractUtils.RequiresNotNullItems(body, "body");
+            return new DoStatementBuilder(Annotations.Empty, label, Expression.Block(body));
+        }
+
+        public static DoStatementBuilder Do(LabelTarget label, Annotations annotations, params Expression[] body) {
+            return new DoStatementBuilder(annotations, label, Expression.Block(body));
+        }
+
         public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, params Expression[] body) {
-            return Expression.Do(null, Expression.Annotate(statementSpan, location), body);
+            return Do(null, Expression.Annotate(statementSpan, location), body);
         }
 
         public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, LabelTarget label, params Expression[] body) {
-            return Expression.Do(label, Expression.Annotate(statementSpan, location), body);
+            return Do(label, Expression.Annotate(statementSpan, location), body);
         }
     }
 }

@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -88,7 +87,7 @@ namespace System.Scripting.Com {
 
         private static ComObject CreateComObject(object rcw) {
             IDispatch dispatchObject = rcw as IDispatch;
-            if (!GlobalDlrOptions.PreferComInteropAssembly && (dispatchObject != null)) {
+            if (!DebugOptions.PreferComInteropAssembly && (dispatchObject != null)) {
                 // We can do method invocations on IDispatch objects
                 return new IDispatchComObject(dispatchObject);
             }

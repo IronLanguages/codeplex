@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using System.Security.Cryptography;
 using IronPython.Runtime;
 
@@ -32,6 +32,8 @@ namespace IronPython.Modules {
         private static readonly int digestSize = hasher256.HashSize / 8;
         private const int blockSize = 1;
 
+        public const string __doc__ = "SHA256 hash algorithm";
+
         public static Sha256Object sha256(object data) {
             return new Sha256Object(hasher256, data);
         }
@@ -48,6 +50,7 @@ namespace IronPython.Modules {
             throw new NotImplementedException();
         }
 
+        [PythonHidden]
         public sealed class Sha256Object : HashBase, ICloneable {
             internal Sha256Object(HashAlgorithm hasher) : this(hasher, new byte[0]) { }
 
@@ -71,6 +74,11 @@ namespace IronPython.Modules {
             object ICloneable.Clone() {
                 return copy();
             }
+
+            public const int block_size = 64;
+            public const int digest_size = 32;
+            public const int digestsize = 32;
+            public const string name = "SHA256";
         }
     }
 }

@@ -15,10 +15,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Scripting;
-using System.Scripting.Utils;
 using System.Text;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Silverlight {
 
@@ -31,35 +30,10 @@ namespace Microsoft.Scripting.Silverlight {
         public BrowserScriptHost() {
         }
 
-        protected override IList<string>/*!*/ SourceFileSearchPath {
-            get {
-                return new string[] { String.Empty };
-            }
-        }
-
-        public override ScriptSource TryGetSourceFile(ScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
-            ContractUtils.RequiresNotNull(path, "path");
-
-            if (!DynamicApplication.InUIThread) {
-                return null; // Application.GetResourceStream will throw if called from a non-UI thread
-            }
-            string code = DynamicApplication.DownloadContents(path);
-            if (code != null) {
-                ScriptSource src = engine.CreateScriptSourceFromString(code, path, kind);
-                SourceCache.Add(src);
-                return src;
-            }
-            return null;
-        }
-
         public override PlatformAdaptationLayer/*!*/ PlatformAdaptationLayer {
             get {
                 return BrowserPAL.PAL;
             }
-        }
-
-        protected override void EngineCreated(ScriptEngine/*!*/ engine) {
-            engine.SetScriptSourceSearchPaths(new string[] { String.Empty });
         }
     }
 }

@@ -40,14 +40,14 @@ def test_assemblybuilder_instance():
     name.Name = 'Test'
     assemblyBuilder = System.AppDomain.CurrentDomain.DefineDynamicAssembly(name, System.Reflection.Emit.AssemblyBuilderAccess.Run)    
     
-    AreEqual(len(dir(assemblyBuilder)), 74)
+    AreEqual(len(dir(assemblyBuilder)), 75)
     
 def test_type():
     mscorlib = Assembly.Load("mscorlib")
     Assert("Assembly" in repr(mscorlib))  
 
-    AreEqual(len(dir(Assembly)), 61)
-    AreEqual(len(dir(AssemblyBuilder)), 74)   
+    AreEqual(len(dir(Assembly)), 62)
+    AreEqual(len(dir(AssemblyBuilder)), 75)   
     
 #####################################################################################
 run_test(__name__)

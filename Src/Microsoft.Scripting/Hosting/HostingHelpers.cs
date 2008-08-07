@@ -13,10 +13,11 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.ComponentModel;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 // TODO: Move this to a separate namespace to hide it from ordinary hosts?
 namespace Microsoft.Scripting.Hosting {
@@ -58,6 +59,17 @@ namespace Microsoft.Scripting.Hosting {
         public static Scope GetScope(ScriptScope scriptScope) {
             ContractUtils.RequiresNotNull(scriptScope, "scriptScope");
             return scriptScope.Scope;
+        }
+
+        public static ScriptScope CreateScriptScope(ScriptEngine engine, Scope scope) {
+            return new ScriptScope(engine, scope);
+        }
+
+        /// <summary>
+        /// Performs a callback in the ScriptEngine's app domain and returns the result.
+        /// </summary>
+        public static object CallEngine<T, TRet>(ScriptEngine engine, Func<LanguageContext, T, TRet> f, T arg) {
+            return engine.Call(f, arg);
         }
     }
 }

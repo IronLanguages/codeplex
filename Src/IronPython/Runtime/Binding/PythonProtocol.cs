@@ -14,19 +14,17 @@
  * ***************************************************************************/
 
 
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Ast;
-
-using IronPython.Runtime.Binding;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using System.Scripting.Runtime;
 
     /// <summary>
     /// Provides binding logic which is implemented to follow various Python protocols.  This includes
@@ -170,38 +168,33 @@ namespace IronPython.Runtime.Binding {
             ValidationInfo valInfo = BindingHelpers.GetValidationInfo(null, args[0]);
             PythonType pt = DynamicHelpers.GetPythonType(args[0].Value);
             Expression body = GetCallError(self);
+            BinderState state = BinderState.GetBinderState(call);
 
             // look for __call__, if it's present dispatch to it.  Otherwise fall back to the
             // default binder
             PythonTypeSlot callSlot;
-            if (pt.TryResolveSlot(BinderState.GetBinderState(call).Context, Symbols.Call, out callSlot)) {
+            if (pt.TryResolveSlot(state.Context, Symbols.Call, out callSlot)) {
                 VariableExpression tmp = Ast.Variable(typeof(object), "callSlot");
+                
                 Expression[] callArgs = ArrayUtils.Insert(
-                    BinderState.GetCodeContext(call), 
-                    (Expression)tmp, 
-                    MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args)));
-
-                body = Ast.Scope(
-                    Ast.Condition(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("SlotTryGetValue"),
-                            Ast.Constant(BinderState.GetBinderState(call).Context),
-                            Ast.Convert(Utils.WeakConstant(callSlot), typeof(PythonTypeSlot)),
-                            Ast.ConvertHelper(self.Expression, typeof(object)),
-                            GetPythonType(self),
-                            tmp
-                        ),
-                        Ast.ActionExpression(
-                            new InvokeBinder(
-                                BinderState.GetBinderState(call),
-                                BindingHelpers.GetCallSignature(call)
-                            ),
-                            typeof(object),
-                            callArgs
-                        ),
+                    BinderState.GetCodeContext(call),
+                    callSlot.MakeGetExpression(
+                        state.Binder,
+                        BinderState.GetCodeContext(call),
+                        self.Expression,
+                        GetPythonType(self),
                         Ast.ConvertHelper(body, typeof(object))
+                    ), 
+                    MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
+                );
+
+                body = Ast.ActionExpression(
+                    new InvokeBinder(
+                        BinderState.GetBinderState(call),
+                        BindingHelpers.GetCallSignature(call)
                     ),
-                    tmp
+                    typeof(object),
+                    callArgs
                 );
 
                 return BindingHelpers.AddDynamicTestAndDefer(

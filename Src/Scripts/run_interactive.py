@@ -22,9 +22,9 @@ clr.AddReference("Microsoft.Scripting.Core.dll")
 clr.AddReference("IronPython.dll")
 clr.AddReference("IronPython.Modules.dll")
 
-from System.Scripting import SourceCodeKind, ErrorSink
+from Microsoft.Scripting import SourceCodeKind, ErrorSink
 from Microsoft.Scripting.Hosting import ScriptRuntime, HostingHelpers
-from Microsoft.Scripting.Compilers import CompilerContext
+from Microsoft.Scripting.Runtime import CompilerContext
 from IronPython import PythonEngineOptions
 from IronPython.Runtime import PythonContext, ModuleOptions, Symbols
 from IronPython.Compiler import Parser, PythonCompilerOptions
@@ -75,7 +75,7 @@ class FileConsole(object):
         if Directory.Exists(dllsDir):
             searchPath.append(dllsDir)
 
-        self.engine.SetScriptSourceSearchPaths(Array[str](searchPath))
+        self.engine.SetSearchPaths(Array[str](searchPath))
         
     def CreateASTFromFile(self, fileName):
         completeCode = self.engine.CreateScriptSourceFromFile(fileName)

@@ -16,7 +16,7 @@
 using System.Diagnostics;
 using System.Reflection.Emit;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     internal sealed class TargetLabel {
         private Label _label;
         private bool _initialized;

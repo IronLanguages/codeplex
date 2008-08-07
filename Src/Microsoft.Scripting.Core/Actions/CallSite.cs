@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
+using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
 
@@ -113,16 +113,7 @@ namespace System.Scripting.Actions {
 
         private void AddRule(Rule<T> rule) {
             lock (this) {
-#if DEBUG
-                bool wasMegamorphic = _rules == EmptyRuleSet<T>.FixedInstance;
-#endif
-
                 _rules = _rules.AddRule(rule);
-#if DEBUG
-                if (!wasMegamorphic && _rules == EmptyRuleSet<T>.FixedInstance) {
-                    PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "MegaMorphic " + _binder.ToString());
-                }
-#endif
             }
         }
 
@@ -152,7 +143,7 @@ namespace System.Scripting.Actions {
 
             Matchmaker mm = new Matchmaker();
             CallSite site = CreateMatchmakerCallSite(mm);
-            MatchCallerTarget caller = MatchCaller.GetCaller(typeofT);
+            MatchCallerTarget<T> caller = MatchCaller.MakeCaller<T>();
 
             //
             // Capture the site's rule set. Since it can change on the site asynchronously,
@@ -164,11 +155,6 @@ namespace System.Scripting.Actions {
             // Level 1 cache lookup
             //
             IList<Rule<T>> history = siteRules.GetRules();
-#if DEBUG
-            if (history == null) {
-                PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "FirstLookup " + _binder.GetType().ToString());
-            }
-#endif
 
             if (history != null) {
                 count = history.Count;
@@ -182,7 +168,6 @@ namespace System.Scripting.Actions {
                     }
 
                     if (!rule.IsValid) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "Invalid L1 " + _binder.ToString());
                         continue;
                     }
 
@@ -206,7 +191,6 @@ namespace System.Scripting.Actions {
                             // (unless the delegate was already asynchronously updated by another thread)
                             //
                             if (Target == ruleTarget) {
-                                PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "Polymorphic " + _binder.GetType().ToString());
                                 Interlocked.CompareExchange<T>(ref Target, siteRules.GetTarget(), ruleTarget);
                             }
                         }
@@ -217,7 +201,7 @@ namespace System.Scripting.Actions {
             //
             // Level 2 cache lookup
             //
-            Type[] argTypes = CompilerHelpers.GetTypes(args);
+            Type[] argTypes = TypeUtils.GetTypesForBinding(args);
             applicable = _cache.FindApplicableRules(_binder, argTypes, startingTarget);
 
             //
@@ -311,8 +295,6 @@ namespace System.Scripting.Actions {
         }
 
         private Rule<T> CreateNewRule(Rule<T> originalMonomorphicRule, object[] args) {
-            NoteRuleCreation(_binder, args);
-
             Rule<T> rule = _binder.Bind<T>(args);
 
             //
@@ -331,19 +313,6 @@ namespace System.Scripting.Actions {
             }
 
             return rule;
-        }
-
-        [Conditional("DEBUG")]
-        private static void NoteRuleCreation(CallSiteBinder binder, object[] args) {
-            StringBuilder sb = new StringBuilder("MakeRule ");
-            sb.Append(binder.ToString());
-            sb.Append(" ");
-            foreach (object arg in args) {
-                sb.Append(CompilerHelpers.GetType(arg).Name);
-                sb.Append(" ");
-            }
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Rules, sb.ToString());
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]

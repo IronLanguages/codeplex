@@ -16,21 +16,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
+using System.Reflection;
+using System.Scripting.Actions;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-      
+
     /// <summary>
     /// Provides an abstraction for calling something which might be a builtin function or
     /// might be some arbitrary user defined slot.  If the object is a builtin function the
@@ -135,7 +132,7 @@ namespace IronPython.Runtime.Binding {
             PythonTypeSlot slot;
             SlotOrFunction res;
             if (TryGetBinder(state, types, op, SymbolId.Empty, out res)) {
-                if (res != SlotOrFunction.Empty) {                    
+                if (res != SlotOrFunction.Empty) {
                     return res;
                 }
             } else if (MetaUserObject.GetPythonType(types[0]).TryResolveSlot(state.Context, op, out slot)) {
@@ -173,13 +170,18 @@ namespace IronPython.Runtime.Binding {
                                 )
                             ),
                             tmp
-                        ),                        
+                        ),
                         Restrictions.Combine(types).Merge(Restrictions.TypeRestriction(types[0].Expression, types[0].LimitType))
                     )
                 );
             }
 
             return SlotOrFunction.Empty;
+        }
+
+        internal static bool TryGetBinder(BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res) {
+            PythonType declType;
+            return TryGetBinder(state, types, op, rop, out res, out declType);
         }
 
         /// <summary>
@@ -191,9 +193,10 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// TODO: Remove rop
         /// </summary>
-        internal static bool TryGetBinder(BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res) {
-            MetaObject xType = types[0];
+        internal static bool TryGetBinder(BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res, out PythonType declaringType) {
+            declaringType = null;
 
+            MetaObject xType = types[0];
             BuiltinFunction xBf;
             if (!BindingHelpers.TryGetStaticFunction(state, op, xType, out xBf)) {
                 res = SlotOrFunction.Empty;
@@ -224,6 +227,7 @@ namespace IronPython.Runtime.Binding {
                     binder = null;
                     bt = null;
                 } else {
+                    declaringType = DynamicHelpers.GetPythonTypeFromType(yBf.DeclaringType);
                     binder = state.Binder.CallMethod(
                         Ast.Constant(state.Context),
                         yBf.Targets,
@@ -237,6 +241,7 @@ namespace IronPython.Runtime.Binding {
                 }
             } else {
                 if (yBf == null) {
+                    declaringType = DynamicHelpers.GetPythonTypeFromType(xBf.DeclaringType);
                     binder = state.Binder.CallMethod(
                         Ast.Constant(state.Context),
                         xBf.Targets,
@@ -264,6 +269,17 @@ namespace IronPython.Runtime.Binding {
                         PythonNarrowing.BinaryOperator,
                         out bt
                     );
+
+                    foreach (MethodBase mb in yBf.Targets) {
+                        if (bt.Method == mb) {
+                            declaringType = DynamicHelpers.GetPythonTypeFromType(yBf.DeclaringType);
+                            break;
+                        }
+                    }
+
+                    if (declaringType == null) {
+                        declaringType = DynamicHelpers.GetPythonTypeFromType(xBf.DeclaringType);
+                    }
                 }
             }
 

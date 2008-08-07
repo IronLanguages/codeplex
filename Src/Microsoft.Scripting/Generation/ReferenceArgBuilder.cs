@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using CompilerServices = System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Generation {
@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 5; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             if (_tmp == null) {
                 _tmp = context.GetTemporary(_elementType, "outParam");
             }
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Generation {
             // a bug in partial trust we can't access the generic field.
 
             // arg is boxType ? &_tmp : throw new ArgumentTypeException()
-            //   IncorrectBoxType throws the exception to avoid stack imbalance issues.
+            hasBeenUsed[Index] = true;
             Type boxType = typeof(CompilerServices.StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
                 Expression.TypeIs(parameters[Index], BoxType),

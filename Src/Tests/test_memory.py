@@ -17,7 +17,7 @@ from lib.assert_util import *
 skiptest("win32")
 skiptest("silverlight")  #no time.clock or GetTotalMemory
 
-from System.Scripting.Generation import Snippets
+from Microsoft.Scripting.Generation import Snippets
 import clr
 skipMemoryCheck = Snippets.Shared.SaveSnippets or clr.GetCurrentRuntime().Configuration.DebugMode
 

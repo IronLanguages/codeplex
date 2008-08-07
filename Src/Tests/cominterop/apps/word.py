@@ -69,10 +69,7 @@ def remove_wordapp_event(wdapp):
         wdapp.Event_WindowSelectionChange -= wd_selection_change_eventhandler
     
 def get_range(doc, start, end):
-    if isPiaInstalled and not preferComDispatch: 
-        return doc.Range(start, end)[0]
-    else: 
-        return doc.Range(start, end)
+    return doc.Range(start, end)
     
 def quit_word(wd):
     if isPiaInstalled : 

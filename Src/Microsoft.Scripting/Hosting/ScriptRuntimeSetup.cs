@@ -14,10 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     [Serializable]
@@ -33,42 +33,15 @@ namespace Microsoft.Scripting.Hosting {
         private bool _debugMode;
         private bool _privateBinding;
 
-        public Dictionary<AssemblyQualifiedTypeName, LanguageSetup> LanguageSetups {
-            get { return _languageSetups; }
-        }
-
-        public bool DebugMode {
-            get { return _debugMode; }
-            set { _debugMode = value; }
-        }
-
-        public bool PrivateBinding {
-            get { return _privateBinding; }
-            set { _privateBinding = value; }
-        }
-
-        public Type HostType {
-            get { return _hostType; }
-            set { _hostType = value; }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public object[] HostArguments {
-            get {
-                return _hostArguments;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _hostArguments = value;
-            }
-        }
+        // common language options:
+        private IDictionary<string, object> _options;
 
         public ScriptRuntimeSetup() 
             : this(false) {
         }
 
 #if SIGNED
-        private const string IronPythonAssembly = "IronPython, Version=2.0.0.4000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+        private const string IronPythonAssembly = "IronPython, Version=2.0.0.3000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
         private const string JScriptAssembly = "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
         private const string IronRubyAssembly = "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
         private const string VisualBasicAssembly = "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
@@ -120,6 +93,54 @@ namespace Microsoft.Scripting.Hosting {
             _hostArguments = ArrayUtils.EmptyObjects;
         }
 
+        public Dictionary<AssemblyQualifiedTypeName, LanguageSetup> LanguageSetups {
+            get { return _languageSetups; }
+        }
+
+        public bool DebugMode {
+            get { return _debugMode; }
+            set { _debugMode = value; }
+        }
+
+        public bool PrivateBinding {
+            get { return _privateBinding; }
+            set { _privateBinding = value; }
+        }
+
+        public Type HostType {
+            get { return _hostType; }
+            set { _hostType = value; }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public IDictionary<string, object> Options {
+            get {
+                if (_options == null) {
+                    _options = new Dictionary<string, object>();
+                }
+                return _options;
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _options = value;
+            }
+        }
+
+        public bool HasOptions {
+            get { return _options != null; }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
+        public object[] HostArguments {
+            get {
+                return _hostArguments;
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _hostArguments = value;
+            }
+        }
+        
         private void AddLanguage(string typeName, string assemblyName, string displayName, string[] ids, string[] extensions) {
             _languageSetups.Add(new AssemblyQualifiedTypeName(typeName, assemblyName), new LanguageSetup(displayName, ids, extensions));
         }
@@ -191,11 +212,31 @@ namespace Microsoft.Scripting.Hosting {
             );
 
             foreach (var entry in _languageSetups) {
+
+                Dictionary<string, object> options;
+                if (HasOptions || entry.Value.HasOptions) {
+                    // add global language options first, they can be rewritten by language specific ones:
+                    if (HasOptions) {
+                        options = new Dictionary<string, object>(_options);
+                    } else {
+                        options = new Dictionary<string, object>();
+                    }
+
+                    // add only those global options that are not yet set in language options:
+                    if (entry.Value.HasOptions) {
+                        foreach (var option in entry.Value.Options) {
+                            options[option.Key] = option.Value;
+                        }
+                    }
+                } else {
+                    options = null;
+                }
+
                 config.AddLanguage(
                     entry.Key, 
                     entry.Value.Ids, 
                     entry.Value.FileExtensions, 
-                    entry.Value.HasOptions ? entry.Value.Options : null
+                    options
                 );
             }
 

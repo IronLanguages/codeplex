@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 0; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             return Ast.Null();
         }
     }

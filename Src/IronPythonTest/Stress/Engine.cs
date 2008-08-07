@@ -15,9 +15,8 @@
 
 using System;
 using System.Diagnostics;
-using IronPython.Runtime;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
-using IronPythonTest;
 
 namespace IronPythonTest.Stress {
 
@@ -63,7 +62,7 @@ namespace IronPythonTest.Stress {
             long memoryUsed = finalMemory - initialMemory;
             const long memoryThreshold = 100000;
 
-            bool emitsUncollectibleCode = System.Scripting.Generation.Snippets.Shared.SaveSnippets || _env.DebugMode;
+            bool emitsUncollectibleCode = Snippets.Shared.SaveSnippets || _env.DebugMode;
             if (!emitsUncollectibleCode) {
                 if (memoryUsed > memoryThreshold)
                     throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));

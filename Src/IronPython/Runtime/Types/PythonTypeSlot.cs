@@ -13,9 +13,17 @@
  *
  * ***************************************************************************/
 
+using System;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
-using System.Scripting.Runtime;
+
+using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
+
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -60,6 +68,40 @@ namespace IronPython.Runtime.Types {
             get {
                 return true;
             }
+        }
+
+        /// <summary>
+        /// Gets an expression which is used for accessing this slot.  If the slot lookup fails the error expression
+        /// is used again.
+        /// 
+        /// The default implementation just calls the TryGetValue method.  Subtypes of PythonTypeSlot can override
+        /// this and provide a more optimal implementation.
+        /// </summary>
+        internal virtual Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
+            VariableExpression tmp = Ast.Variable(typeof(object), "slotTmp");
+            Expression call = Ast.Call(
+                 typeof(PythonOps).GetMethod("SlotTryGetValue"),
+                 codeContext,
+                 Ast.ConvertHelper(AstUtils.WeakConstant(this), typeof(PythonTypeSlot)),
+                 instance ?? Ast.Constant(null),
+                 owner,
+                 tmp
+            );
+
+            if (!GetAlwaysSucceeds) {
+                call = Ast.Condition(
+                    call,
+                    tmp,
+                    Ast.ConvertHelper(error, typeof(object))
+                );
+            } else {
+                call = Ast.Comma(call, tmp);
+            }
+
+            return Ast.Scope(
+                call,
+                tmp
+            );
         }
 
         /// <summary>

@@ -339,6 +339,36 @@ AreEqual(C._C__x, 10)
 AreEqual(C.___.__y, 20)
 AreEqual(C.D._D__z, 30)
 
+class B(object):
+    def method(self, __a):
+        return __a
+
+AreEqual(B().method("__a passed in"), "__a passed in")
+
+class B(object):
+    def method(self, (__a, )):
+        return __a
+
+AreEqual(B().method(("__a passed in", )), "__a passed in")
+
+class B(object):
+    def __f(self):
+        pass
+
+
+Assert('_B__f' in dir(B))
+
+class B(object):
+    class __C(object): pass
+
+Assert('_B__C' in dir(B))
+
+class B(object):
+	x = lambda self, __a : __a
+
+AreEqual(B.x(B(), _B__a='value'), 'value')
+
+
 #Hit negative case of 'sublist' in http://www.python.org/doc/2.5.1/ref/grammar.txt.
 AssertError(SyntaxError, compile, "def f((1)): pass", "", "exec")
 
@@ -500,7 +530,7 @@ def test_break_in_else_clause():
        else:
            break''')
             
-    AssertError(f, SyntaxError)
+    AssertError(SyntaxError, f)
 
 #Just make sure these don't throw
 print "^L"
@@ -513,8 +543,46 @@ print "No ^L's..."
 
 def endoffile():
     return "Hi" # and some comment here
+
+def test_syntaxerror_text():       
+    method_missing_colon = ("    def MethodTwo(self)\n", """
+class HasASyntaxException:
+    def MethodOne(self):
+        print 'hello'
+        print 'world'
+        print 'again'
+    def MethodTwo(self)
+        print 'world'""")
+        
+    function_missing_colon1 = ("def f()", "def f()")
+    function_missing_colon2 = ("def f()\n", "def f()\n")
+    function_missing_colon3 = ("def f()\r\n", "def f()\r\n")
+    function_missing_colon4 = ("def f()\r", "def f()\r")
+        
+    function_missing_colon2a = ("def f()\n", "print 1\ndef f()\nprint 3")
+    function_missing_colon3a = ("def f()\r\n", "print 1\ndef f()\r\nprint 3")
+    function_missing_colon4a = ("def f()\rprint 3", "print 1\ndef f()\rprint 3")
     
+    tests = (
+        method_missing_colon,
+        #function_missing_body,
+        function_missing_colon1,
+        function_missing_colon2,
+        function_missing_colon3,
+        function_missing_colon4,
+
+        function_missing_colon2a,
+        function_missing_colon3a,
+        function_missing_colon4a,
+    )
     
+    for expectedText, testCase in tests:            
+        try:
+            exec testCase
+        except SyntaxError, e:
+            AreEqual(e.text, expectedText)
+
+
 try:
     exec("""
     def f():
@@ -523,3 +591,5 @@ try:
     AssertUnreachable()
 except IndentationError, e:
     AreEqual(e.lineno, 2)
+
+run_test(__name__)

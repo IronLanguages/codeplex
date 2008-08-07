@@ -62,7 +62,7 @@ function setup
 #-- Test a few sets of modes just to ensure they emit no output
 function test-nooutput
 {
-    $ipy_modes = @("", "-h", "-c 'print None'", "-c 'print BadNone'", "does_not_exist.py", "-X:NoSuchMode", "-X:NoSuchMode does_not_exist.py")
+    $ipy_modes = @("-h", "-c 'print None'", "-c 'print BadNone'", "does_not_exist.py", "-X:NoSuchMode", "-X:NoSuchMode does_not_exist.py")
     foreach ($mode in $ipy_modes) 
     {
 	    $stuff = ipyw $mode.Split(" ") 2>&1
@@ -90,6 +90,37 @@ function test-nooutput
     	exit 1
     }    
 }
+
+#------------------------------------------------------------------------------
+#-- Test a few sets of modes just to ensure they emit no output
+function test-noargs
+{
+    $stuff = ipyw 2>&1
+	if ("$stuff" -ne "") 
+	{
+		write-error "Failed: the output of ipyw.exe isn't empty - $stuff"
+		$global:ERRORS++
+	}
+    sleep 5
+    $title = (get-process | where-object { $_.ProcessName -match "^ipyw" }).MainWindowTitle
+	if ("$title" -ne "IronPython Window Console Help") {
+		write-error "Failed: ipyw help window title wrong - $title"
+    	exit 1
+	}
+
+    #cleanup
+    #Kill off ipyw processess
+    echo "CodePlex Work Item 12900 - must forcefully kill ipyw.exe processes"
+	taskkill /F /IM ipyw.exe /T 2> $null
+	sleep 5
+    $proc_list = @(get-process | where-object { $_.ProcessName -match "^ipyw" })
+    if ($proc_list.Length -ne 0) 
+    {
+    	write-error "Failed: could not stop ipyw processes started by this script - $proc_list"
+    	exit 1
+    }    
+}
+
 #------------------------------------------------------------------------------
 #-- Run a real test case
 
@@ -166,7 +197,7 @@ function test-verify_ipyw
 #------------------------------------------------------------------------------
 setup
 
-$tests = @("test-nooutput", "test-verify_ipyw")
+$tests = @("test-nooutput", "test-noargs", "test-verify_ipyw")
 foreach ($exe_test in $tests)
 {
 	echo "Running $exe_test..."

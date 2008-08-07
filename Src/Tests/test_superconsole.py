@@ -32,7 +32,7 @@ import clr
 if is_peverify_run:
     clr.AddReference("Microsoft.Scripting.Core")
     clr.AddReference("Microsoft.Scripting")
-    from System.Scripting.Runtime import ScriptDomainManager
+    from Microsoft.Scripting.Runtime import ScriptDomainManager
     from System.IO import Path
 
     tempMauiDir = Path.GetTempPath()
@@ -46,7 +46,8 @@ if is_peverify_run:
 for t_name in ['ip_session.log', 'ip_session_stderr.log']:
     if File.Exists(t_name):
         File.Delete(t_name)
-
+    Assert(not File.Exists(t_name))
+    
 #------------------------------------------------------------------------------
 #--Helper functions
 def getTestOutput():
@@ -248,6 +249,7 @@ def test_member_completion():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
 
+@retry_on_failure
 def test_autoindent():
     '''
     Auto-indent
@@ -503,7 +505,12 @@ def test_cp16497():
 #--__main__
 
 try:
-    run_test(__name__)
+    if len(sys.argv)==2:
+        print "Will run %s only..." % sys.argv[1]
+        temp_func = eval(sys.argv[1])
+        temp_func()
+    else:
+        run_test(__name__)
 finally:
     # and finally test that F6 shuts it down
     superConsole.SendKeys('{F6}')

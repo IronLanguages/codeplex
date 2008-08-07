@@ -17,20 +17,12 @@
 ## Test autoimport of assemblies found in DLLs directory
 ##
 
-from sys import exit, argv, path
-from nt import getcwd
+from sys import exit, argv
 from lib.assert_util import *
 
-path.insert(0, nt.getcwd() + "\\..\\Lib")
-
-import site
-
-
-
 if argv.count("OKtoRun")==0 or is_cli==False:
-    #bail
+    print "Bailing"
     exit(0)
-
 
 def test_sanity():
     '''

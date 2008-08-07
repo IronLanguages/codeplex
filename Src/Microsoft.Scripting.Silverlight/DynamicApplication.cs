@@ -16,13 +16,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Scripting;
-using System.Scripting.Utils;
 using System.Threading;
 using System.Windows;
 using System.Windows.Resources;
 using System.Xml;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Silverlight {
 
@@ -222,6 +221,8 @@ namespace Microsoft.Scripting.Silverlight {
             setup.HostType = typeof(BrowserScriptHost);
             setup.DebugMode = _debug;
 
+            setup.Options["SearchPaths"] = new string[] { String.Empty };
+            
             _env = ScriptRuntime.Create(setup);
 
             _env.LoadAssembly(GetType().Assembly); // to expose our helper APIs
@@ -239,7 +240,6 @@ namespace Microsoft.Scripting.Silverlight {
             ScriptEngine engine = _env.GetEngineByFileExtension(Path.GetExtension(_entryPoint));
 
             ScriptSource sourceCode = engine.CreateScriptSourceFromString(code, _entryPoint, SourceCodeKind.File);
-            SourceCache.Add(sourceCode);
 
             // Create a new script module & execute the code.
             // It's important to use optimized scopes,

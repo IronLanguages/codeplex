@@ -18,7 +18,7 @@ using System.Diagnostics;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
 
     /// <summary>
     /// Expression rewriting to spill the CLR stack into temporary variables
@@ -116,30 +116,6 @@ namespace System.Linq.Expressions {
 
         #region Expressions
 
-        /// <summary>
-        /// Rewrite the expression
-        /// </summary>
-        /// <param name="self">Expression rewriter instance</param>
-        /// <param name="node">Expression to rewrite</param>
-        /// <param name="stack">State of the stack before the expression is emitted.</param>
-        /// <returns>Rewritten expression.</returns>
-        private static Result RewriteExpression(StackSpiller self, Expression node, Stack stack) {
-            if (node == null) {
-                return new Result(RewriteAction.None, null);
-            }
-
-            // dynamic nodes have already been removed
-            Debug.Assert(!node.IsDynamic);
-
-            ExpressionType ant = node.NodeType;
-            Debug.Assert((int)ant < _Rewriters.Length);
-
-            Result result = _Rewriters[(int)ant](self, node, stack);
-            VerifyRewrite(result, node);
-
-            return result;
-        }
-
         [Conditional("DEBUG")]
         private static void VerifyRewrite(Result result, Expression node) {
             // (result.Action == RewriteAction.None) if and only if (node == result.Node)
@@ -158,6 +134,9 @@ namespace System.Linq.Expressions {
         }
 
         // ActionExpression
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static Result RewriteActionExpression(StackSpiller self, Expression expr, Stack stack) {
             throw Error.DynamicNotReduced();
         }
@@ -195,7 +174,7 @@ namespace System.Linq.Expressions {
                         pExpression.SetMethod,
                         cr[1, -2],                          // arguments
                         node.Type,
-                        node.BindingInfo as OldInvokeMemberAction
+                        node.BindingInfo
                     ),
                     cr[pExpression.Arguments.Count + 1],    // value
                     node.Type,
@@ -283,18 +262,24 @@ namespace System.Linq.Expressions {
         }
 
         // VariableExpression
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
         private static Result RewriteVariableExpression(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary, regardless of the stack state
             return new Result(RewriteAction.None, expr);
         }
 
         // ParameterExpression
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
         private static Result RewriteParameterExpression(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary, regardless of the stack state
             return new Result(RewriteAction.None, expr);
         }
 
         // LambdaExpression
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
         private static Result RewriteLambdaExpression(StackSpiller self, Expression expr, Stack stack) {
             LambdaExpression node = (LambdaExpression)expr;
 
@@ -327,12 +312,16 @@ namespace System.Linq.Expressions {
         }
 
         // ConstantExpression
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
         private static Result RewriteConstantExpression(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary, regardless of stack
             return new Result(RewriteAction.None, expr);
         }
 
         // LocalScopeExpression
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
         private static Result RewriteLocalScopeExpression(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary, regardless of stack
             return new Result(RewriteAction.None, expr);
@@ -358,7 +347,7 @@ namespace System.Linq.Expressions {
                         new MemberExpression(cr[0], lvalue.Member, lvalue.Annotations, lvalue.Type, lvalue.CanRead, lvalue.CanWrite, lvalue.BindingInfo),
                         cr[1],
                         node.Type,
-                        node.BindingInfo as OldSetMemberAction
+                        node.BindingInfo
                     )
                 );
             }
@@ -396,7 +385,7 @@ namespace System.Linq.Expressions {
                     node.SetMethod,
                     cr[1, -1],
                     node.Type,
-                    node.BindingInfo as OldInvokeMemberAction
+                    node.BindingInfo
                 );
             }
 
@@ -417,7 +406,7 @@ namespace System.Linq.Expressions {
 
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo as OldInvokeMemberAction, node.Method, cr[0], cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo, node.Method, cr[0], cr[1, -1]) : expr);
         }
 
         // NewArrayExpression
@@ -451,7 +440,7 @@ namespace System.Linq.Expressions {
             // rest of arguments have non-empty stack (delegate instance on the stack)
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new InvocationExpression(node.Annotations, cr[0], node.Type, node.BindingInfo as OldCallAction, cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? new InvocationExpression(node.Annotations, cr[0], node.Type, node.BindingInfo, cr[1, -1]) : expr);
         }
 
         // NewExpression
@@ -463,7 +452,7 @@ namespace System.Linq.Expressions {
             ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count);
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.BindingInfo as OldCreateInstanceAction) : expr);
+            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.BindingInfo) : expr);
         }
 
         // TypeBinaryExpression
@@ -636,12 +625,16 @@ namespace System.Linq.Expressions {
         }
 
         // BreakStatement
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
         private static Result RewriteBreakStatement(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary
             return new Result(RewriteAction.None, expr);
         }
 
         // ContinueStatement
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
         private static Result RewriteContinueStatement(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary
             return new Result(RewriteAction.None, expr);
@@ -657,7 +650,7 @@ namespace System.Linq.Expressions {
             // Operand is emitted on top of the stack as is
             Result expression = RewriteExpression(self, lvalue.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = Expression.DeleteMember(expression.Node, (OldDeleteMemberAction)node.BindingInfo, node.Annotations);
+                expr = Expression.DeleteMember(expression.Node, (DeleteMemberAction)node.BindingInfo, node.Annotations);
             }
             return new Result(expression.Action, expr);
         }
@@ -687,6 +680,8 @@ namespace System.Linq.Expressions {
         }
 
         // EmptyStatement
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
         private static Result RewriteEmptyStatement(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary, regardless of stack
             return new Result(RewriteAction.None, expr);
@@ -914,6 +909,9 @@ namespace System.Linq.Expressions {
             return new Result(action, expr);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static Result RewriteExtensionExpression(StackSpiller self, Expression expr, Stack stack) {
             // can't get here because DynamicNodeRewriter runs first and will take care of this
             throw Error.ExtensionNotReduced();

@@ -91,13 +91,14 @@ def test_formatexception():
         se = Microsoft.Scripting.Hosting.ScriptRuntime.Create()
         pe = se.GetEngine('py')
         
-        AssertError(TypeError, pe.FormatException, None)
+        service = pe.GetService[Microsoft.Scripting.Hosting.ExceptionService]()
+        AssertError(TypeError, service.FormatException, None)
     
-        exc_string = pe.FormatException(System.Exception("first",
+        exc_string = service.FormatException(System.Exception("first",
                                                         System.Exception("second",
                                                                          System.Exception())))
         AreEqual(exc_string, 'Traceback (most recent call last):\r\nException: first')
-        exc_string = pe.FormatException(c())
+        exc_string = service.FormatException(c())
         AreEqual(exc_string.count(" File "), 4)
         AreEqual(exc_string.count(" line "), 4)
     finally:
@@ -113,11 +114,11 @@ def test_formatexception_showclrexceptions():
 
         pe.Options.ShowClrExceptions = True
     
-        exc_string = pe.FormatException(System.Exception("first",
+        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionService]().FormatException(System.Exception("first",
                                                         System.Exception("second",
                                                                          System.Exception())))
         AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
-        exc_string = pe.FormatException(c())
+        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionService]().FormatException(c())
 
         # Uncomment when bug #371095 is fixed: Helper stubs shown in Python stack traces
         #AreEqual(exc_string.count(" File "), 4)
@@ -141,9 +142,9 @@ def test_formatexception_exceptiondetail():
         IronPythonTest.TestHelpers.GetContext().Options.ExceptionDetail = True
     
         #CodePlex Work Item 6710
-        exc_string = pe.FormatException(System.Exception("first", System.Exception("second", System.Exception())))
+        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionService]().FormatException(System.Exception("first", System.Exception("second", System.Exception())))
         AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
-        exc_string = pe.FormatException(c())
+        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionService]().FormatException(c())
         AreEqual(exc_string.count(" File "), 6)
         AreEqual(exc_string.count(" line "), 4)
         Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))

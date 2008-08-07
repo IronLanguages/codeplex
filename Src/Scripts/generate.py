@@ -38,12 +38,14 @@ START = "#region Generated %s"
 END =   "#endregion"
 PREFIX = r"^([ \t]*)"
 
-try:
-    import os
-    listdir = os.listdir
-    pathjoin = os.path.join
-    isdir = os.path.isdir
-except Exception, e:
+#TODO: does it make sense to run this under CPython?
+#try:
+#    import os
+#    listdir = os.listdir
+#    pathjoin = os.path.join
+#    isdir = os.path.isdir
+#except Exception, e:
+if sys.platform=="cli":
     import nt
     import System.IO        
         

@@ -134,7 +134,22 @@ def test_class_name():
     '''
     AreEqual(SWF.TextBox.__name__, "TextBox")
     AreEqual(SWF.TextBox().__class__.__name__, "TextBox")
-
+    
+def test_cp17072():
+    tb_class_dir = dir(SWF.TextBox)
+    tb_instance_dir = dir(SWF.TextBox())
+    for x in [  #Protected??? "AccessibilityNotifyClients", #overloaded
+                "BeginInvoke", #overloaded
+                "AppendText", #inherited
+                "BringToFront", #inherited
+                "CreateObjRef", #inherited
+                "AcceptsReturn", #property
+                "AutoSizeChanged", #inherited
+                "OnDragEnter", #explicit interface implementation
+                "__reduce_ex__", #arbitrary Python method
+                ]:
+        Assert(x in tb_class_dir, "%s not in dir(SWF.TextBox)" % x)
+        Assert(x in tb_instance_dir, "%s not in dir(SWF.TextBox())" % x)
 
 def test_cp9908():
     from System.Windows.Forms import Panel

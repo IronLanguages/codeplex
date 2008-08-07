@@ -68,7 +68,8 @@ if sys.platform=="win32":
     
 windir = get_environ_variable("windir")
 if is_cli:
-    preferComDispatch = nt.environ.get("COREDLR_PreferComInteropAssembly") != "TRUE"
+    envVar = nt.environ.get("DLR_PreferComInteropAssembly")
+    preferComDispatch = (not envVar) or (envVar.lower() != 'true')
 else:
     preferComDispatch = False
 
@@ -114,13 +115,15 @@ MERLIN_323996_VALUES = [None]
 #--Subclasses of Python/.NET types
 class Py_Str(str): pass  
 
-class Py_System_String(System.String): pass
+if is_cli:
+    class Py_System_String(System.String): pass
 
 class Py_Float(float): pass  
 
 class Py_Double(float): pass  
 
-class Py_System_Double(System.Double): pass
+if is_cli:
+    class Py_System_Double(System.Double): pass
 
 class Py_UShort(int): pass
 
@@ -132,7 +135,8 @@ class Py_Short(int): pass
 
 class Py_Long(int): pass
 
-class Py_System_Int32(System.Int32): pass
+if is_cli:
+    class Py_System_Int32(System.Int32): pass
 
 class Py_LongLong(long): pass
     
@@ -715,7 +719,11 @@ if sys.platform=="win32":
             pass
             
 #------------------------------------------------------------------------------
-def run_pkg_helper(filename, exclude_list = []):
+def run_pkg_helper(filename, ns_name=None, exclude_list = []):
+    #CodePlex 17621 - don't want to run the test package twice
+    if ns_name!=None and ns_name!="__main__" and sys.platform=="win32":
+        return -1
+
     from exceptions import SystemExit
 
     #Determine the package structure
@@ -729,10 +737,14 @@ def run_pkg_helper(filename, exclude_list = []):
     
     common_end+=1
     temp_package = filename[common_end:filename.rfind("\\")+1]
+    
     temp_package.replace("\\", ".")
+    
+   
     
     #get the module names in the package
     mod_names = [temp_package + x for x in get_mod_names(filename) if x not in exclude_list]
+    mod_names = [x.replace("\\", ".") for x in mod_names]
     
     for test_module in mod_names:
         print "--------------------------------------------------------------------"

@@ -18,12 +18,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
 using System.Text;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
 
@@ -587,7 +587,8 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<object> Members
 
-        IEnumerator<object> IEnumerable<object>.GetEnumerator() {
+        [PythonHidden]
+        public IEnumerator<object> GetEnumerator() {
             int count = this.items.__len__();
 
             foreach (object o in items.keys()) {
@@ -615,7 +616,8 @@ namespace IronPython.Runtime {
             throw new NotImplementedException();
         }
 
-        int ICollection.Count {
+        public int Count {
+            [PythonHidden]
             get { return this.items.__len__(); }
         }
 
@@ -1009,7 +1011,8 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<object> Members
 
-        IEnumerator<object> IEnumerable<object>.GetEnumerator() {
+        [PythonHidden]
+        public IEnumerator<object> GetEnumerator() {
             return ((ICollection<object>)items.keys()).GetEnumerator();
         }
 
@@ -1029,7 +1032,8 @@ namespace IronPython.Runtime {
             throw new NotImplementedException();
         }
 
-        int ICollection.Count {
+        public int Count {
+            [PythonHidden]
             get { return items.__len__(); }
         }
 

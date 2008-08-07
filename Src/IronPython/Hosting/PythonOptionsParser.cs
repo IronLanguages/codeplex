@@ -16,14 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Utils;
-using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Hosting {
 

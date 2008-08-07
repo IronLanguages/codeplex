@@ -14,10 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 using System.Threading;
 
@@ -38,32 +37,6 @@ namespace System.Scripting.Actions {
             return (CallSite)ctor(binder);
         }
 
-        //
-        // Initialization of dynamic sites stored in static fields 
-        //
-
-        public static void InitializeFields(Type type) {
-            InitializeFields(type, false);
-        }
-
-        public static void InitializeFields(Type type, bool reusable) {
-            if (type == null) return;
-
-            const string slotStorageName = "#Constant";
-            foreach (FieldInfo fi in type.GetFields()) {
-                if (fi.Name.StartsWith(slotStorageName)) {
-                    object value;
-                    if (reusable) {
-                        value = GlobalStaticFieldRewriter.GetConstantDataReusable(Int32.Parse(fi.Name.Substring(slotStorageName.Length)));
-                    } else {
-                        value = GlobalStaticFieldRewriter.GetConstantData(Int32.Parse(fi.Name.Substring(slotStorageName.Length)));
-                    }
-                    Debug.Assert(value != null);
-                    fi.SetValue(null, value);
-                }
-            }
-        }
-
         internal static bool SimpleSignature(MethodInfo invoke, out Type[] sig) {
             ParameterInfo[] pis = invoke.GetParameters();
             ContractUtils.Requires(pis.Length > 0 && pis[0].ParameterType == typeof(CallSite), "T");
@@ -73,7 +46,7 @@ namespace System.Scripting.Actions {
 
             for (int i = 1; i < pis.Length; i++) {
                 ParameterInfo pi = pis[i];
-                if (CompilerHelpers.IsByRefParameter(pi)) {
+                if (pi.IsByRefParameter()) {
                     supported = false;
                 }
                 args[i - 1] = pi.ParameterType;
@@ -134,7 +107,7 @@ namespace System.Scripting.Actions {
                 Interlocked.CompareExchange<Dictionary<Signature, Type>>(ref _DynamicSiteTargets, new Dictionary<Signature, Type>(), null);
             }
 
-            Signature sig = new Signature(ArrayUtils.Copy(types));
+            Signature sig = new Signature(types.Copy());
 
             bool found;
             Type type;
@@ -181,7 +154,7 @@ namespace System.Scripting.Actions {
 
         private static Type MakeNewBigSiteTargetType(Type[] types) {
             Type returnType = types[types.Length - 1];
-            Type[] parameters = ArrayUtils.RotateRight(types, 1);
+            Type[] parameters = types.RotateRight(1);
             parameters[0] = typeof(CallSite);
 
             TypeBuilder builder = Snippets.Shared.DefineDelegateType("CallSiteTarget" + types.Length);
@@ -199,7 +172,7 @@ namespace System.Scripting.Actions {
             if (visible) {
                 return Snippets.Shared.CreateDynamicMethod(name, returnType, parameters, false);
             } else {
-                DynamicMethod dm = ReflectionUtils.CreateDynamicMethod(name, returnType, parameters);
+                DynamicMethod dm = Helpers.CreateDynamicMethod(name, returnType, parameters);
                 return new DynamicILGenMethod(dm, dm.GetILGenerator());
             }
         }
