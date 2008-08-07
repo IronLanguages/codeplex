@@ -15,7 +15,7 @@
 
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
 

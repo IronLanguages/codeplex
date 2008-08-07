@@ -23,6 +23,15 @@ public class PublicRefTypeWithoutNS {
     public int IM() { return 40; }
 }
 
+public static class PublicStaticRefTypeWithoutNS {
+    public class Nested { public static int A = 10;    }
+
+    public static readonly int A = 20;
+    public const int B = 20;
+    public static int C = 20;
+    public static int SM() { return 30; }
+}
+
 public struct PublicValueTypeWithoutNS<T> {
     public static int A = 60;
 }

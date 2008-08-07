@@ -157,6 +157,21 @@ def test_meta_attrs():
     else:
         AreEqual(C.foo.im_func, C.__getattribute__(C, "foo"))
     AreEqual(C.__doc__, C.__getattribute__(C, "__doc__"))
+    
+    # fancy type.__doc__ access...
+    x = type.__dict__['__doc__'].__get__
+
+    class C(object): __doc__ = 'foo'
+
+    class D(object): pass
+
+    AreEqual(x(D, None), None)
+    AreEqual(x(C, None), 'foo')
+
+    class C(object): __doc__ = 42
+
+    AreEqual(x(C, None), 42)
+    
     # IronPython incorrectly allows this because of MethodWrappers
     if not (is_cli or is_silverlight):
         AssertErrorWithMessage(TypeError, "can't apply this __setattr__ to type object", C.__setattr__, C, "__str__", "foo")

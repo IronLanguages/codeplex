@@ -32,42 +32,68 @@ def test_interpreted():
     save = IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode
     IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode = True
     modules = sys.modules.copy()
+    perserve_syspath()
     try:
         # Just try some important tests.
         # The full test suite should pass using -X:Interpret; this is just a lightweight check for "run 0".
 
         import test_delegate
+        restore_syspath()
         import test_function
+        restore_syspath()
         import test_closure
+        restore_syspath()
         import test_namebinding
+        restore_syspath()
         import test_generator
+        restore_syspath()
         import test_tcf
+        restore_syspath()
         import test_methoddispatch
+        restore_syspath()
         import test_operator
+        restore_syspath()
         import test_exec
+        restore_syspath()
         import test_list
+        restore_syspath()
         import test_cliclass
+        restore_syspath()
         import test_exceptions
+        restore_syspath()
         # These two pass, but take forever to run
         #import test_numtypes
         #import test_number
         import test_str
+        restore_syspath()
         import test_math
+        restore_syspath()
         import test_statics
+        restore_syspath()
         import test_property
+        restore_syspath()
         import test_weakref
+        restore_syspath()
         import test_specialcontext
+        restore_syspath()
         import test_thread
+        restore_syspath()
         import test_dict
+        restore_syspath()
         import test_set
+        restore_syspath()
         import test_tuple
+        restore_syspath()
         import test_class
+        restore_syspath()
         if not is_silverlight:
             #This particular test corrupts the run - CodePlex Work Item 11830
             import test_syntax
+            restore_syspath()
     finally:
         IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode = save
         # "Un-import" these modules so that they get re-imported in emit mode
         sys.modules = modules
+        restore_syspath()
 
 run_test(__name__)

@@ -21,22 +21,20 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
+using IronPython.Compiler;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-    using IronPython.Compiler;
 
     static partial class PythonProtocol {
         private const string DisallowCoerce = "DisallowCoerce";
@@ -140,7 +138,7 @@ namespace IronPython.Runtime.Binding {
                                     Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
                                     Ast.Block(                                                // body
                         // getItemRes = param0.__getitem__(curIndex)
-                                        Ast.Try(
+                                        Utils.Try(
                                             Ast.Assign(
                                                 getItemRes,
                                                 sf.Target.Expression
@@ -151,7 +149,7 @@ namespace IronPython.Runtime.Binding {
                                             Ast.Break(target)
                                         ),
                         // if(getItemRes == param1) return true
-                                        Ast.If(
+                                        Utils.If(
                                             Ast.ActionExpression(
                                                 new OperationBinder(
                                                     state,
@@ -330,7 +328,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             PythonType pt = DynamicHelpers.GetPythonType(self.Value);
-            List<string> strNames = GetMemberNames(context, pt);
+            List<string> strNames = GetMemberNames(context, pt, self.Value);
 
             if (pt.IsSystemType) {
                 return new MetaObject(
@@ -459,17 +457,30 @@ namespace IronPython.Runtime.Binding {
 
             fSlot = null;
             rSlot = null;
+            PythonType fParent, rParent;
 
-            if (!SlotOrFunction.TryGetBinder(state, types, op, SymbolId.Empty, out fbinder)) {
-                MetaPythonObject.GetPythonType(types[0]).TryResolveSlot(state.Context, op, out fSlot);
+            if (!SlotOrFunction.TryGetBinder(state, types, op, SymbolId.Empty, out fbinder, out fParent)) {
+                foreach (PythonType pt in MetaPythonObject.GetPythonType(types[0]).ResolutionOrder) {
+                    if (pt.TryLookupSlot(state.Context, op, out fSlot)) {
+                        fParent = pt;
+                        break;
+                    }
+                }
             }
 
-            if (!SlotOrFunction.TryGetBinder(state, types, SymbolId.Empty, rop, out rbinder)) {
-                MetaPythonObject.GetPythonType(types[1]).TryResolveSlot(state.Context, rop, out rSlot);
-                if (BindingHelpers.IsSubclassOf(types[1], types[0])) {
-                    // Python says if x + subx and subx defines __r*__ we should call r*.
-                    fbinder = SlotOrFunction.Empty;
+            if (!SlotOrFunction.TryGetBinder(state, types, SymbolId.Empty, rop, out rbinder, out rParent)) {
+                foreach (PythonType pt in MetaPythonObject.GetPythonType(types[1]).ResolutionOrder) {
+                    if (pt.TryLookupSlot(state.Context, rop, out rSlot)) {
+                        rParent = pt;
+                        break;
+                    }
                 }
+            }
+
+            if (fParent != null && (rbinder.Success || rSlot != null) && rParent != fParent && rParent.IsSubclassOf(fParent)) {
+                // Python says if x + subx and subx defines __r*__ we should call r*.
+                fbinder = SlotOrFunction.Empty;
+                fSlot = null;
             }
 
             if (!fbinder.Success && !rbinder.Success && fSlot == null && rSlot == null) {
@@ -1371,7 +1382,16 @@ namespace IronPython.Runtime.Binding {
             }
 
             public override MetaObject/*!*/ CompleteRuleTarget(MetaObject/*!*/[]/*!*/ args, Func<MetaObject> customFailure) {
-                VariableExpression callable = Ast.Variable(typeof(object), "slot");
+                Expression callable = _slot.MakeGetExpression(
+                    Binder,
+                    Ast.Constant(BinderState.Context),
+                    args[0].Expression,
+                    Ast.Call(
+                        typeof(DynamicHelpers).GetMethod("GetPythonType"),
+                        Ast.ConvertHelper(args[0].Expression, typeof(object))
+                    ),
+                    Ast.Throw(Ast.New(typeof(InvalidOperationException)))
+                );
 
                 Expression[] exprArgs = new Expression[args.Length - 1];
                 for (int i = 1; i < args.Length; i++) {
@@ -1392,23 +1412,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return new MetaObject(
-                    Ast.Scope(
-                        Ast.Comma(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("SlotTryGetValue"),
-                                Ast.Constant(BinderState.Context),
-                                Ast.ConvertHelper(Utils.WeakConstant(_slot), typeof(PythonTypeSlot)),
-                                Ast.ConvertHelper(args[0].Expression, typeof(object)),
-                                Ast.Call(
-                                    typeof(DynamicHelpers).GetMethod("GetPythonType"),
-                                    Ast.ConvertHelper(args[0].Expression, typeof(object))
-                                ),
-                                callable
-                            ),
-                            retVal
-                        ),
-                        callable
-                    ),
+                    retVal,
                     Restrictions.Combine(args)
                 );
             }
@@ -1979,8 +1983,8 @@ namespace IronPython.Runtime.Binding {
             return action.Fallback(args);
         }
 
-        private static List<string/*!*/>/*!*/ GetMemberNames(CodeContext/*!*/ context, PythonType/*!*/ pt) {
-            List names = pt.GetMemberNames(context);
+        private static List<string/*!*/>/*!*/ GetMemberNames(CodeContext/*!*/ context, PythonType/*!*/ pt, object value) {
+            List names = pt.GetMemberNames(context, value);
             List<string> strNames = new List<string>();
             foreach (object o in names) {
                 string s = o as string;

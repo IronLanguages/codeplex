@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
         /// </summary>
-        internal abstract Expression ToExpression(MethodBinderContext context, IList<Expression> parameters);
+        internal abstract Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed);
 
         /// <summary>
         /// Returns the type required for the argument or null if the ArgBuilder

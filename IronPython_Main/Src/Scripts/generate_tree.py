@@ -125,8 +125,8 @@ def gen_scripting_walker(cw):
         space = 1
 
 default_visit = """// %(type)s
-private static Expression DefaultVisit%(type)s(ExpressionTreeVisitor visitor, Expression node) {
-    return visitor.Visit((%(type)s)node);
+private Expression DefaultVisit%(type)s(Expression node) {
+    return Visit((%(type)s)node);
 }"""
 
 def gen_visitor_methods(cw):
@@ -139,19 +139,16 @@ def gen_visitor_methods(cw):
         cw.write(default_visit, type = node)
         space = 1
 
-def gen_visitor_delegates(cw):
+def gen_visitor_switch(cw):
     for node in expressions:
         method = "DefaultVisit"
 
         if node.enabled:
-            text = method + node.type + ","
-            comment = "//    " + node.kind
+            cw.write("// " + node.kind)
+            cw.write("case ExpressionType." + node.kind + ":")
+            cw.write("    return " + method + node.type + "(node);")
         else:
-            text = ""
-            comment = "// ** " + node.kind
-
-        cw.write(text + (60 - len(text)) * " " + comment)
-        
+            cw.write("// ** " + node.kind)        
 
 def gen_tree_nodes(cw):
     for node in expressions:
@@ -160,26 +157,25 @@ def gen_tree_nodes(cw):
             text = "//    " + text
         cw.write(text + ",")
 
-def gen_stackspiller_delegates(cw):
+def gen_stackspiller_switch(cw):
     for node in expressions:
         method = "Rewrite"
 
         #special case AndAlso and OrElse
         if node.kind == "AndAlso" or node.kind == "OrElse":
             method += "Logical"
-        
+
         if node.enabled:
-            text = method + node.type + ","
-            comment = "//    " + node.kind
+            cw.write("// " + node.kind)
+            cw.write("case ExpressionType." + node.kind + ":")
+            cw.write("    result = " + method + node.type + "(self, node, stack);")
+            cw.write("    break;")
         else:
-            text = ""
-            comment = "// ** " + node.kind
+            cw.write("// ** " + node.kind)
 
-        cw.write(text + (60 - len(text)) * " " + comment)
-
-def gen_compiler_interpreter(cw, name):
+def gen_compiler(cw):
     for node in expressions:
-        method = name
+        method = "Emit"
 
         # special case certain unary/binary expressions
         if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox"]:
@@ -188,16 +184,12 @@ def gen_compiler_interpreter(cw, name):
             method += "Convert"
 
         if node.enabled:
-            text = method + node.type + ","
-            comment = "//    " + node.kind
+            cw.write("// " + node.kind)
+            cw.write("case ExpressionType." + node.kind + ":")
+            cw.write("    " + method + node.type + "(this, node);")
+            cw.write("    break;")
         else:
-            text = ""
-            comment = "// ** " + node.kind
-
-        cw.write(text + (60 - len(text)) * " " + comment)
-
-def gen_compiler(cw):
-    gen_compiler_interpreter(cw, "Emit")
+            cw.write("// ** " + node.kind)
 
 def gen_interpreter(cw):
    for node in expressions:
@@ -235,9 +227,9 @@ def gen_ast_writer(cw):
 def main():
     return generate(
         ("Expression Tree Node Types", gen_tree_nodes),
-        ("ExpressionVisitor Delegates", gen_visitor_delegates),
+        ("ExpressionVisitor Switch", gen_visitor_switch),
         ('ExpressionVisitor Methods', gen_visitor_methods),
-        ("StackSpiller Delegates", gen_stackspiller_delegates),
+        ("StackSpiller Switch", gen_stackspiller_switch),
         ("Ast Interpreter", gen_interpreter),
         ("Expression Compiler", gen_compiler),
     )

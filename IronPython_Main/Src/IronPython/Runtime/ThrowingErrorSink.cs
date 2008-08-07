@@ -15,6 +15,7 @@
 
 using System.Scripting;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
     internal class ThrowingErrorSink : ErrorSink {

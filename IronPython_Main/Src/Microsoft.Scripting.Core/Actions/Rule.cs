@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Linq.Expressions;
@@ -47,13 +48,18 @@ namespace System.Scripting.Actions {
         /// </summary>
         private readonly TemplateData<T> _template;
 
-        public Rule(Expression binding, Func<bool> validator, ReadOnlyCollection<ParameterExpression> parameters) {
-            ValidateRuleParameters(typeof(T), parameters);
+        public Rule(Expression binding, Func<bool> validator, params ParameterExpression[] parameters)
+            : this(binding, validator, (IEnumerable<ParameterExpression>)parameters) {
+        }
+
+        public Rule(Expression binding, Func<bool> validator, IEnumerable<ParameterExpression> parameters) {
+            var @params = parameters.ToReadOnly();
+            ValidateRuleParameters(typeof(T), @params);
 
             _binding = binding;
             _validator = validator;
-            _parameters = parameters;
-            _mySet = new SmallRuleSet<T>(new Rule<T>[] { this });
+            _parameters = @params;
+            _mySet = new SmallRuleSet<T>(new[] { this });
         }
 
         internal Rule(Expression binding, Func<bool> validator, T target, TemplateData<T> template, ReadOnlyCollection<ParameterExpression> parameters) {

@@ -16,11 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
+using System.Reflection;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {
     using Ast = System.Linq.Expressions.Expression;
@@ -71,16 +71,6 @@ namespace IronPython.Runtime.Types {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotGetValue"),
                 builder.Context,
-                Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
-                Ast.Null(),
-                Ast.Constant(accessing)
-            );
-        }
-
-        public Expression GetBoundPythonValue(Expression context, ActionBinder binder, PythonType accessing) {
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("SlotGetValue"),
-                context,
                 Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
                 Ast.Null(),
                 Ast.Constant(accessing)

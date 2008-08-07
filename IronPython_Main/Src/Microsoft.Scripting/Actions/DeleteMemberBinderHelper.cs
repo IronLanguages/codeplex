@@ -14,14 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
+using System.Reflection;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class DeleteMemberBinderHelper<T> : MemberBinderHelper<T, OldDeleteMemberAction> where T : class {
         private bool _isStatic;
@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression ret;
 
                 if (delMem.ReturnType == typeof(bool)) {
-                    ret = Ast.If(call, Rule.MakeReturn(Binder, Ast.Null()));
+                    ret = AstUtils.If(call, Rule.MakeReturn(Binder, Ast.Null()));
                 } else {
                     ret = Rule.MakeReturn(Binder, call);
                 }

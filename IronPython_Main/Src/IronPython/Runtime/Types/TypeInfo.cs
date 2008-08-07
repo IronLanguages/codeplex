@@ -19,20 +19,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Threading;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
-using IronPython.Compiler;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -48,9 +44,6 @@ namespace IronPython.Runtime.Types {
     internal static partial class TypeInfo {
         /// <summary> list of resolvers which we run to resolve items </summary>
         private static readonly MemberResolver/*!*/[]/*!*/ _resolvers = MakeResolverTable();
-        /// <summary> table of backwards compatibility mappings </summary>
-        [MultiRuntimeAware]
-        private static Dictionary<string/*!*/, string/*!*/[]/*!*/> _memberMapping;
         [MultiRuntimeAware]
         private static DocumentationDescriptor _docDescr;
         [MultiRuntimeAware]
@@ -98,16 +91,6 @@ namespace IronPython.Runtime.Types {
             Assert.NotNull(binder, action, type);
 
             return GetResolvedMembers(new LookupBinder(binder), action, type);
-        }
-
-        /// <summary>
-        /// Hack for backwards compatibility.  Because we don't eagerly fetch these we can't cache the results after a full
-        /// resolution on a type.  This will go away when we remove the backwards compatability feature.
-        /// </summary>
-        public static bool IsBackwardsCompatabileName(string name) {
-            EnsureMemberMapping();
-
-            return _memberMapping.ContainsKey(name);
         }
 
         #endregion
@@ -284,6 +267,11 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         class OperatorResolver : MemberResolver {
             public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+                if (type.IsSealed && type.IsAbstract) {
+                    // static types don't have operators
+                    return MemberGroup.EmptyGroup;
+                }
+
                 // try mapping __*__ methods to .NET method names
                 OperatorMapping opMap;
                 EnsureOperatorTable();
@@ -318,9 +306,9 @@ namespace IronPython.Runtime.Types {
                                         // "Equals" is available as an alternate method name.  Because it's also on object and Python
                                         // doesn't define it on object we need to filter it out.  
                                         res = FilterObjectEquality(res);
+                                    } else {
+                                        res = GetBaseHelperOverloads(type, opInfo.AlternateName, res);
                                     }
-
-                                    res = GetBaseHelperOverloads(type, opInfo.AlternateName, res);
                                 }
 
                                 if (res.Count > 0) {
@@ -434,57 +422,52 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
-        /// Provides resolutions for various backwards compatibility methods.
+        /// Provides resolutions for protected members that haven't yet been
+        /// subclassed by NewTypeMaker.
         /// </summary>
-        class BackwardsCompatibilityResolver : MemberResolver {
+        class ProtectedMemberResolver : MemberResolver {
             public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
-                // Python exposes protected members as public
-                // TODO: This should go away and NewTypeMaker should make the members visible.   
                 foreach (Type t in binder.GetContributingTypes(type)) {
-                    MemberGroup res = new MemberGroup(ArrayUtils.FindAll(t.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly));
+                    MemberGroup res = new MemberGroup(ArrayUtils.FindAll(t.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy), ProtectedOnly));
 
+                    for (int i = 0; i < res.Count; i++) {
+                        MethodTracker meth = res[i] as MethodTracker;                        
+                        if (meth == null) {
+                            continue;
+                        }
+
+                        if (meth.Name == "Finalize" && meth.Method.GetBaseDefinition() == typeof(object).GetMethod("Finalize", BindingFlags.NonPublic | BindingFlags.Instance)) {
+                            MemberTracker[] retained = new MemberTracker[res.Count - 1];
+                            if (res.Count == 1) {
+                                res = MemberGroup.EmptyGroup;
+                            } else {
+                                for (int j = 0; j < i; j++) {
+                                    retained[j] = res[j];
+                                }
+                                for (int j = i + 1; j < res.Count; j++) {
+                                    retained[j - 1] = res[j];
+                                }
+                                res = new MemberGroup(retained);
+                            }
+                            break;
+                        }
+                    }
                     res = FilterSpecialNames(res, name, action);
 
-                    if (res.Count > 0) {
-                        PythonOps.Warn(
-                            DefaultContext.Default,
-                            PythonExceptions.DeprecationWarning,
-                            "Accessing protected method {0} from non-derived type {1}",
-                            name,
-                            type.Name
-                        );
-                        return GetBaseHelperOverloads(type, name, res);
-                    }
-                }
-
-                // try alternate mapping to support backwards compatibility of calling extension methods.
-                EnsureMemberMapping();
-                string[] newNames;
-                if (_memberMapping.TryGetValue(name, out newNames)) {
-                    List<MemberTracker> oldRes = new List<MemberTracker>();
-                    foreach (string newName in newNames) {
-                        oldRes.AddRange(binder.GetMember(type, newName));
-                    }
-
-                    if (oldRes.Count > 0) {
-                        PythonOps.Warn(
-                            DefaultContext.Default,
-                            PythonExceptions.DeprecationWarning,
-                            "The method {0} will be removed from the type {1} in the future and is only provided for migration purposes",
-                            name,
-                            NameConverter.GetTypeName(type)
-                        ); 
-                        
-                        return new MemberGroup(oldRes.ToArray());
-                    }
+                    return GetBaseHelperOverloads(PythonTypeOps.GetFinalSystemType(type), name, res);
                 }
 
                 return MemberGroup.EmptyGroup;
             }
 
             protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
-                // don't show these members in dir()
-                yield break;
+                // these members are visible but only accept derived types.
+                foreach (Type t in binder.GetContributingTypes(type)) {
+                    MemberInfo[] mems = ArrayUtils.FindAll(t.GetMembers(BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
+                    foreach (MemberInfo mi in mems) {
+                        yield return mi.Name;
+                    }
+                }
             }
         }
 
@@ -503,22 +486,22 @@ namespace IronPython.Runtime.Types {
                 new OneOffResolver("__iter__", IterResolver),         
                 // The standard resolver looks for types using .NET reflection by name
                 new StandardResolver(), 
+                
                 // Runs after StandardResolver so custom __eq__ methods can be added
                 // that support things like returning NotImplemented vs. IValueEquality
                 // which only supports true/false.  Runs before OperatorResolver so that
                 // IValueEquality takes precedence over Equals which can be provied for
                 // nice .NET interop.
-                new OneOffResolver("__eq__", EqualityResolver),     
-                new OneOffResolver("__ne__", InequalityResolver),
+                new OneOffResolver("__all__", AllResolver),     
+                new OneOffResolver("__contains__", ContainsResolver),
                 new OneOffResolver("__dir__", DirResolver),
                 new OneOffResolver("__doc__", DocResolver),
-                new OneOffResolver("next", NextResolver),           
-                new OneOffResolver("__len__", LengthResolver),        
-
                 new OneOffResolver("__enter__", EnterResolver),     
+                new OneOffResolver("__eq__", EqualityResolver),     
                 new OneOffResolver("__exit__", ExitResolver),  
-   
-                new OneOffResolver("__contains__", ContainsResolver),
+                new OneOffResolver("__len__", LengthResolver),        
+                new OneOffResolver("__ne__", InequalityResolver),
+                new OneOffResolver("next", NextResolver),
 
                 // non standard operators which are Python specific
                 new OneOffResolver("__truediv__", new OneOffOperatorBinder("TrueDivide", "__truediv__", new OperatorMapping(Operators.TrueDivide, false, true, false, true)).Resolver),
@@ -533,14 +516,18 @@ namespace IronPython.Runtime.Types {
                 new OneOffResolver("__abs__", new OneOffOperatorBinder("Abs", "__abs__", new OperatorMapping(Operators.AbsoluteValue, true, false, false, false)).Resolver),
                 new OneOffResolver("__divmod__", new OneOffOperatorBinder("DivMod", "__divmod__", new OperatorMapping(Operators.DivMod, false, true, true, true)).Resolver),
                 new OneOffResolver("__rdivmod__", new OneOffOperatorBinder("DivMod", "__rdivmod__", new OperatorMapping(Operators.DivMod, true, true, false, true)).Resolver),
+                
                 // The operator resolver maps standard .NET operator methods into Python operator
                 // methods
                 new OperatorResolver(),
+                
+                // Runs after operator resolver to map __ne__ -> !__eq__
                 new OneOffResolver("__ne__", FallbackInequalityResolver),
+                
+                // Protected members are visible but only usable from derived types
+                new ProtectedMemberResolver(),
                 // Support binding to private members if the user has enabled that feature
                 new PrivateBindingResolver(),
-                // Support various lookups for backwards compatibility between 1.x and 2.x
-                new BackwardsCompatibilityResolver(),
             };
         }
 
@@ -552,7 +539,7 @@ namespace IronPython.Runtime.Types {
         /// Provides a resolution for __str__.
         /// </summary>
         private static MemberGroup/*!*/ StringResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (!IsComObject(type) && type != typeof(double) && type != typeof(float)) {
+            if (type != typeof(double) && type != typeof(float)) {
                 MethodInfo tostr = type.GetMethod("ToString", Type.EmptyTypes);
                 if (tostr != null && tostr.DeclaringType != typeof(object)) {
                     return GetInstanceOpsMethod(type, "ToStringMethod");
@@ -568,7 +555,8 @@ namespace IronPython.Runtime.Types {
         private static MemberGroup/*!*/ ReprResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
             // __repr__ for normal .NET types is special, if we're a Python type then
             // we'll use one of the built-in reprs (from object or from the type)
-            if (!IsComObject(type) && !PythonBinder.IsPythonType(type)) {
+            if (!PythonBinder.IsPythonType(type) &&
+                (!type.IsSealed || !type.IsAbstract)) {     // static types don't get __repr__
                 // check and see if __repr__ has been overridden by the base type.
                 foreach (Type t in binder.GetContributingTypes(type)) {
                     if (t == typeof(ObjectOps) && type != typeof(object)) {
@@ -595,9 +583,7 @@ namespace IronPython.Runtime.Types {
             // __repr__ for normal .NET types is special, if we're a Python type then
             // we'll use one of the built-in reprs (from object or from the type)
             if (typeof(IValueEquality).IsAssignableFrom(type) && !type.IsInterface) {
-                if (!IsComObject(type)) {
-                    return new MemberGroup(typeof(IValueEquality).GetMethod("GetValueHashCode"));
-                }
+                return new MemberGroup(typeof(IValueEquality).GetMethod("GetValueHashCode"));
             }
 
             // otherwise we'll pick up __hash__ from ObjectOps which will call .NET's .GetHashCode therefore
@@ -612,6 +598,11 @@ namespace IronPython.Runtime.Types {
         /// TODO: Can we just always fallback to object.__new__?  If not why not?
         /// </summary>
         private static MemberGroup/*!*/ NewResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            if (type.IsSealed && type.IsAbstract) {
+                // static types don't have __new__
+                return MemberGroup.EmptyGroup;
+            }
+
             bool isPythonType = typeof(IPythonObject).IsAssignableFrom(type);
 
             // check and see if __new__ has been overridden by the base type.
@@ -765,14 +756,28 @@ namespace IronPython.Runtime.Types {
             return MemberGroup.EmptyGroup;
         }
 
+        private static MemberGroup/*!*/ AllResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            // static types are like modules and define __all__.
+            if (type.IsAbstract && type.IsSealed) {
+                return new MemberGroup(new ExtensionPropertyTracker("__all__", typeof(InstanceOps).GetMethod("Get__all__").MakeGenericMethod(type), null, null, type));
+            }
+
+            return MemberGroup.EmptyGroup;
+        }
+
         private static MemberGroup/*!*/ DirResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
             return binder.GetMember(type, "GetMemberNames");
         }
 
         class DocumentationDescriptor : PythonTypeSlot {
             internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-                value = PythonTypeOps.GetDocumentation(owner.UnderlyingSystemType);
-                return true;
+                if (owner.IsSystemType) {
+                    value = PythonTypeOps.GetDocumentation(owner.UnderlyingSystemType);
+                    return true;
+                }
+
+                value = null;
+                return false;
             }
 
             internal override bool GetAlwaysSucceeds {
@@ -957,6 +962,11 @@ namespace IronPython.Runtime.Types {
             }
 
             public MemberGroup/*!*/ Resolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+                if (type.IsSealed && type.IsAbstract) {
+                    // static types don't have operators
+                    return MemberGroup.EmptyGroup;
+                }
+
                 foreach (Type t in binder.GetContributingTypes(type)) {
                     MemberGroup res = binder.GetMember(t, _methodName);
                     if (res.Count > 0) {
@@ -979,6 +989,11 @@ namespace IronPython.Runtime.Types {
             }
 
             public MemberGroup/*!*/ Resolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+                if (type.IsSealed && type.IsAbstract) {
+                    // static types don't have operators
+                    return MemberGroup.EmptyGroup;
+                }
+
                 foreach (Type t in binder.GetContributingTypes(type)) {
                     if (t == typeof(BigInteger)) continue;
 
@@ -1220,51 +1235,6 @@ namespace IronPython.Runtime.Types {
             }
 
             return res;
-        }
-
-        /// <summary>
-        /// Creates the backwards compatiblity mapping table
-        /// </summary>
-        private static void EnsureMemberMapping() {
-            if (_memberMapping != null) return;
-
-            Dictionary<string/*!*/, string/*!*/[]/*!*/> res = new Dictionary<string/*!*/, string/*!*/[]/*!*/>();
-
-            /* common object ops */
-            AddMapping(res, "GetAttribute", "__getattribute__");
-            AddMapping(res, "DelAttrMethod", "__delattr__");
-            AddMapping(res, "SetAttrMethod", "__setattr__");
-            AddMapping(res, "PythonToString", "__str__");
-            AddMapping(res, "Hash", "__hash__");
-            AddMapping(res, "Reduce", "__reduce__", "__reduce_ex__");
-            AddMapping(res, "CodeRepresentation", "__repr__");
-
-            AddMapping(res, "Add", "append");
-            AddMapping(res, "Contains", "__contains__");
-            AddMapping(res, "CompareTo", "__cmp__");
-            AddMapping(res, "DelIndex", "__delitem__");
-            AddMapping(res, "GetEnumerator", "__iter__");
-            AddMapping(res, "Length", "__len__");
-            AddMapping(res, "Clear", "clear");
-            AddMapping(res, "Clone", "copy");
-            AddMapping(res, "GetIndex", "get");
-            AddMapping(res, "HasKey", "has_key");
-            AddMapping(res, "Insert", "insert");
-            AddMapping(res, "Items", "items");
-            AddMapping(res, "IterItems", "iteritems");
-            AddMapping(res, "IterKeys", "iterkeys");
-            AddMapping(res, "IterValues", "itervalues");
-            AddMapping(res, "Keys", "keys");
-            AddMapping(res, "Pop", "pop");
-            AddMapping(res, "PopItem", "popitem");
-            AddMapping(res, "Remove", "remove");
-            AddMapping(res, "RemoveAt", "pop");
-            AddMapping(res, "SetDefault", "setdefault");
-            AddMapping(res, "ToFloat", "__float__");
-            AddMapping(res, "Values", "values");
-            AddMapping(res, "Update", "update");
-
-            Interlocked.Exchange(ref _memberMapping, res);
         }
 
         private static void AddMapping(Dictionary<string/*!*/, string/*!*/[]/*!*/> res, string/*!*/ name, params string/*!*/[]/*!*/ names) {
@@ -1636,44 +1606,42 @@ namespace IronPython.Runtime.Types {
         /// These base helper methods just do a return base.Whatever(*args) so that we can issue super calls from
         /// users subclasses.
         /// </summary>
-        private static MemberGroup GetBaseHelperOverloads(Type/*!*/ type, string/*!*/ name, MemberGroup/*!*/ res) {
+        private static MemberGroup/*!*/ GetBaseHelperOverloads(Type/*!*/ type, string/*!*/ name, MemberGroup/*!*/ res) {
             // we only get base methods when we're looking for a type from a normal .NET type.  If it's a NewTypeMaker
             // type then we don't want them as we'll bind to the NewTypeMaker methods which override the base helper
             // methods.
             if (res.Count > 0 && PythonTypeOps.GetFinalSystemType(type) == type) {
                 List<MemberTracker> newMembers = null;
 
-                Type curType = type;
-                do {
-                    IList<MethodInfo> overriddenMethods = NewTypeMaker.GetOverriddenMethods(curType, name);
-                    
-                    if (overriddenMethods.Count > 0) {
-                        if (newMembers == null) {
-                            newMembers = new List<MemberTracker>();
-                        }
-
-                        foreach (MethodInfo mi in overriddenMethods) {
-                            newMembers.Add(MemberTracker.FromMemberInfo(mi));
-                        }
+                IList<MethodInfo> overriddenMethods = NewTypeMaker.GetOverriddenMethods(type, name);
+                
+                if (overriddenMethods.Count > 0) {
+                    if (newMembers == null) {
+                        newMembers = new List<MemberTracker>();
                     }
 
-                    curType = curType.BaseType;
-                } while (curType != null);
+                    foreach (MethodInfo mi in overriddenMethods) {
+                        newMembers.Add(MemberTracker.FromMemberInfo(mi));
+                    }
+                }
+
+                IList<ExtensionPropertyTracker> overriddenProperties = NewTypeMaker.GetOverriddenProperties(type, name);
+                if (overriddenProperties.Count > 0) {
+                    if (newMembers == null) {
+                        newMembers = new List<MemberTracker>();
+                    }
+
+                    foreach (ExtensionPropertyTracker tracker in overriddenProperties) {
+                        newMembers.Add(tracker);
+                    }
+                }
 
                 if (newMembers != null) {
                     newMembers.InsertRange(0, res);
                     res = new MemberGroup(newMembers.ToArray());
                 }
-            }
+            }            
             return res;
-        }
-
-        private static bool IsComObject(Type type) {
-#if !SILVERLIGHT
-            return false;
-#else
-            return false;
-#endif
         }
 
         private static MethodInfo[] GetMethodSet(string name, int expected) {

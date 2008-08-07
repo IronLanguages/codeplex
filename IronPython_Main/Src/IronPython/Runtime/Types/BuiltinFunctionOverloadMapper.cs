@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Types {
             BuiltinFunction bf = new BuiltinFunction(_function.Name, newTargets, Function.DeclaringType, _function.FunctionType);
 
             if (_instance != null) {
-                return new BoundBuiltinFunction(bf, _instance);
+                return bf.BindToInstance(_instance);
             } else {
                 return GetTargetFunction(bf);
             }
@@ -136,7 +136,7 @@ namespace IronPython.Runtime.Types {
             // the user then calls this w/ the dynamic type, and the bound
             // function drops the class & calls the overload.
             if (bf.Targets[0].DeclaringType != typeof(InstanceOps)) {
-                return new BoundBuiltinFunction(new ConstructorFunction(InstanceOps.OverloadedNew, bf.Targets), bf);
+                return new ConstructorFunction(InstanceOps.OverloadedNew, bf.Targets).BindToInstance(bf);
             }
 
             return base.GetTargetFunction(bf);

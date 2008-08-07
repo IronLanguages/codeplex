@@ -14,21 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
+using System.Scripting.Actions;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
+using Ast = System.Linq.Expressions.Expression;
+
 namespace IronPython.Runtime.Types {
-    using Ast = System.Linq.Expressions.Expression;
 
     [PythonSystemType("method_descriptor")]
     public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable {
@@ -41,7 +40,7 @@ namespace IronPython.Runtime.Types {
         #region Internal APIs
 
         internal object UncheckedGetAttribute(object instance) {
-            return new BoundBuiltinFunction(_template, instance);
+            return _template.BindToInstance(instance);
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -52,6 +51,18 @@ namespace IronPython.Runtime.Types {
             }
             value = this;
             return true;
+        }
+
+        internal override Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
+            if (instance != null) {
+                return Ast.Call(
+                    typeof(PythonOps).GetMethod("MakeBoundBuiltinFunction"),
+                    Ast.Constant(_template),
+                    instance
+                );
+            }
+
+            return Ast.Constant(this);
         }
 
         internal override bool GetAlwaysSucceeds {

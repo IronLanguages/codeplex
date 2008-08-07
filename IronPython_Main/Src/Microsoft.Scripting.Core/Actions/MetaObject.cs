@@ -15,7 +15,6 @@
 
 using System.Linq.Expressions;
 using System.Scripting.Utils;
-using System.Scripting.Generation;
 
 namespace System.Scripting.Actions {
     public class MetaObject {
@@ -87,7 +86,7 @@ namespace System.Scripting.Actions {
                     return false;
                 }
 
-                if (CompilerHelpers.IsSealed(Expression.Type)) {
+                if (Expression.Type.IsSealedOrValueType()) {
                     return typeof(IDynamicObject).IsAssignableFrom(Expression.Type);
                 }
 
@@ -116,7 +115,7 @@ namespace System.Scripting.Actions {
         }
 
         public virtual MetaObject Restrict(Type type) {
-            if (type == Expression.Type && CompilerHelpers.IsSealed(type)) {
+            if (type == Expression.Type && type.IsSealedOrValueType()) {
                 return this;
             }
 
@@ -125,7 +124,7 @@ namespace System.Scripting.Actions {
                     return new RestrictedMetaObject(
                         Expression.ConvertHelper(
                             Expression,
-                            CompilerHelpers.GetVisibleType(type)
+                            TypeUtils.GetVisibleType(type)
                         ),
                         Restrictions.Merge(Restrictions.TypeRestriction(Expression, type)),
                         Value
@@ -135,7 +134,7 @@ namespace System.Scripting.Actions {
                 return new RestrictedMetaObject(
                     Expression.ConvertHelper(
                         Expression,
-                        CompilerHelpers.GetVisibleType(type)
+                        TypeUtils.GetVisibleType(type)
                     ),
                     Restrictions.Merge(Restrictions.TypeRestriction(Expression, type))
                 );
@@ -146,7 +145,7 @@ namespace System.Scripting.Actions {
                 return new MetaObject(
                     Expression.ConvertHelper(
                         Expression,
-                        CompilerHelpers.GetVisibleType(type)
+                        TypeUtils.GetVisibleType(type)
                     ),
                     Restrictions.Merge(Restrictions.TypeRestriction(Expression, type)),
                     Value
@@ -156,7 +155,7 @@ namespace System.Scripting.Actions {
             return new MetaObject(
                 Expression.ConvertHelper(
                     Expression,
-                    CompilerHelpers.GetVisibleType(type)
+                    TypeUtils.GetVisibleType(type)
                 ),
                 Restrictions.Merge(Restrictions.TypeRestriction(Expression, type))
             );

@@ -18,12 +18,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Scripting;
-using System.Scripting.Utils;
 using IronPython.Compiler.Ast;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Compilers;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
 
@@ -1365,7 +1366,7 @@ namespace IronPython.Compiler {
                     break;
 
                 case TokenKind.Name:  // identifier
-                    SymbolId name = (SymbolId)t.Value;
+                    SymbolId name = FixName((SymbolId)t.Value);
                     parameter = new Parameter(name);
                     CompleteParameterName(parameter, name, names);
                     break;
@@ -1396,7 +1397,7 @@ namespace IronPython.Compiler {
                     Eat(TokenKind.RightParenthesis);
                     break;
                 case TokenKind.Name:  // identifier
-                    SymbolId name = (SymbolId)t.Value;
+                    SymbolId name = FixName((SymbolId)t.Value);
                     NameExpression ne = new NameExpression(name);
                     CompleteParameterName(ne, name, names);
                     return ne;

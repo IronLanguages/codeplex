@@ -17,14 +17,13 @@
 using System;
 using System.Diagnostics;
 using System.Scripting;
-using System.Scripting.Utils;
 using System.Text;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Compilers;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
 

@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
             _type = type;
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             return Expression.Constant(Activator.CreateInstance(_type));
         }
 

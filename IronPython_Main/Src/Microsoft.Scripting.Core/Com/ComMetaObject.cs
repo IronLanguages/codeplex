@@ -62,7 +62,7 @@ namespace System.Scripting.Com {
         #endregion
 
         private MetaObject[] Wrap(MetaObject[] args) {
-            MetaObject[] wrap = ArrayUtils.Copy(args);
+            MetaObject[] wrap = args.Copy();
             wrap[0] = new MetaObject(
                 Expression.Call(
                     typeof(ComObject).GetMethod("ObjectToComObject"),
@@ -88,8 +88,11 @@ namespace System.Scripting.Com {
             return new ComMetaObject(expression, Restrictions.Empty, arg);
         }
 
+        private static readonly Type ComObjectType = typeof(object).Assembly.GetType("System.__ComObject");
+
         internal static bool IsComObject(object obj) {
-            return obj != null && System.Runtime.InteropServices.Marshal.IsComObject(obj);
+            // we can't use System.Runtime.InteropServices.Marshal.IsComObject(obj) since it doesn't work in partial trust
+            return obj != null && ComObjectType.IsAssignableFrom(obj.GetType());
         }
     }
 }

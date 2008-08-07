@@ -17,13 +17,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Math; 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils; 
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
@@ -197,15 +197,13 @@ namespace IronPython.Runtime {
             get { return false; }
         }
 
-        int ICollection.Count {
+        public int Count {
+            [PythonHidden]
             get { return __len__(); }
         }
 
-        int IParameterSequence.Count {
-            get { return __len__(); }
-        }
-
-        void ICollection.CopyTo(Array array, int index) {
+        [PythonHidden]
+        public void CopyTo(Array array, int index) {
             Array.Copy(_data, 0, array, index, _data.Length);
         }
 
@@ -219,7 +217,8 @@ namespace IronPython.Runtime {
 
         #region IEnumerable Members
         
-        IEnumerator IEnumerable.GetEnumerator() {
+        [PythonHidden]
+        public IEnumerator GetEnumerator() {
             return new TupleEnumerator(this);
         }
 
@@ -259,7 +258,8 @@ namespace IronPython.Runtime {
 
         #region IList<object> Members
 
-        int IList<object>.IndexOf(object item) {
+        [PythonHidden]
+        public int IndexOf(object item) {
             for (int i = 0; i < __len__(); i++) {
                 if (PythonOps.EqualRetBool(this[i], item)) return i;
             }
@@ -295,7 +295,8 @@ namespace IronPython.Runtime {
             throw new InvalidOperationException("Tuple is readonly");
         }
 
-        bool ICollection<object>.Contains(object item) {
+        [PythonHidden]
+        public bool Contains(object item) {
             for (int i = 0; i < _data.Length; i++) {
                 if (PythonOps.EqualRetBool(_data[i], item)) {
                     return true;
@@ -305,14 +306,11 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
+        [PythonHidden]
+        public void CopyTo(object[] array, int arrayIndex) {
             for (int i = 0; i < __len__(); i++) {
                 array[arrayIndex + i] = this[i];
             }
-        }
-
-        int ICollection<object>.Count {
-            get { return __len__(); }
         }
 
         bool ICollection<object>.IsReadOnly {

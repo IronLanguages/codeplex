@@ -17,7 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -70,6 +70,7 @@ namespace IronPython.Runtime {
             GC.SuppressFinalize(this);
         }
 
+        [PythonHidden]
         protected virtual void Dispose(bool notFinalizing) {
         }
 
@@ -125,6 +126,7 @@ namespace IronPython.Runtime {
             GC.SuppressFinalize(this);
         }
 
+        [PythonHidden]
         protected virtual void Dispose(bool disposing) {
         }
 

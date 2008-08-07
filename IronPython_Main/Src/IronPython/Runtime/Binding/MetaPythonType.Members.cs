@@ -15,19 +15,23 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
+using System.Reflection;
+using System.Scripting.Actions;
 
-using IronPython.Runtime.Binding;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
 
     partial class MetaPythonType : MetaPythonObject {
 
@@ -85,6 +89,17 @@ namespace IronPython.Runtime.Binding {
 
             if (Value.IsSystemType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(Value.UnderlyingSystemType);
+                MemberGroup mg = state.Binder.GetMember(OldSetMemberAction.Make(state.Binder, member.Name), Value.UnderlyingSystemType, member.Name);
+                
+                // filter protected member access against .NET types, these can only be accessed from derived types...
+                foreach (MemberTracker mt in mg) {
+                    if (IsProtectedSetter(mt)) {
+                        return new MetaObject(
+                            BindingHelpers.TypeErrorForProtectedMember(Value.UnderlyingSystemType, member.Name),
+                            Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions).Merge(args[1].Restrictions)
+                        );
+                    }
+                }
 
                 // have the default binder perform it's operation against a TypeTracker and then
                 // replace the test w/ our own.
@@ -176,7 +191,7 @@ namespace IronPython.Runtime.Binding {
                     // built-in type, see if we can bind to any .NET members and then quit the search 
                     // because this includes all subtypes.
                     result = new MetaObject(
-                        MakeSystemTypeGetExpression(member, result.Expression),
+                        MakeSystemTypeGetExpression(pt, member, result.Expression),
                         self.Restrictions // don't merge w/ result - we've already restricted to instance.
                     );    
                 } else if (pt.IsOldClass) {
@@ -188,7 +203,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldClassTryLookupOneSlot"),
                                     Ast.Constant(pt.OldClass),
-                                    Ast.Constant(SymbolTable.StringToId(member.Name)),
+                                    AstUtils.Constant(SymbolTable.StringToId(member.Name)),
                                     tmp
                                 ),
                                 tmp,
@@ -261,7 +276,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[]{ typeof(string), typeof(SymbolId) }),
                             Ast.Constant(Value.Name),
-                            Ast.Constant(SymbolTable.StringToId(member.Name))
+                            AstUtils.Constant(SymbolTable.StringToId(member.Name))
                         )
                     )
                 );
@@ -270,65 +285,62 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private Expression MakeSystemTypeGetExpression(GetMemberAction/*!*/ member, Expression error) {
+        private Expression MakeSystemTypeGetExpression(PythonType/*!*/ pt, GetMemberAction/*!*/ member, Expression/*!*/ error) {
             BinderState state = BinderState.GetBinderState(member);
             OldGetMemberAction gma = OldGetMemberAction.Make(state.Binder, member.Name);
-            MemberGroup mg = state.Binder.GetMember(gma, Value.UnderlyingSystemType, member.Name);
+            
+            PythonTypeSlot pts;
 
-            if (mg.Count > 0) {
-                return GetTrackerOrError(member, error, mg);
+            CodeContext clsContext = PythonContext.GetContext(state.Context).DefaultClsBinderState.Context;
+            if (state.Binder.TryResolveSlot(clsContext, pt, Value, SymbolTable.StringToId(member.Name), out pts)) {
+                Expression success = pts.MakeGetExpression(
+                    state.Binder,
+                    BinderState.GetCodeContext(member),
+                    null,
+                    Ast.ConvertHelper(AstUtils.WeakConstant(Value), typeof(PythonType)),
+                    error
+                );
+
+                return AddClsCheck(member, pts, success, error);
             }
 
             // need to lookup on type
             return MakeMetaTypeRule(member, error);
         }
 
-        private Expression/*!*/ GetTrackerOrError(GetMemberAction/*!*/ member, Expression/*!*/ error, MemberGroup/*!*/ mg) {
-            MemberTracker mt = GetTracker(member, mg);
-
-            if (mt != null && mt.MemberType == TrackerTypes.Property) {
-                ExtensionPropertyTracker ept = mt as ExtensionPropertyTracker;
-                if (ept != null) {
-                    MethodInfo mi = ept.GetGetMethod(true);
-                    if (mi != null && mi.IsDefined(typeof(WrapperDescriptorAttribute), false)) {
-                        mt = mt.BindToInstance(Ast.ConvertHelper(Expression, typeof(PythonType)));
-                    }
-                }
-            }
-
+        private Expression/*!*/ AddClsCheck(GetMemberAction/*!*/ member, PythonTypeSlot/*!*/ slot, Expression/*!*/ success, Expression/*!*/ error) {
             BinderState state = BinderState.GetBinderState(member);
-            Expression target = null;
-            if (mt != null) {
-                // unfortunately we need to bind using the PythonType for class methods, not the .NET type, so
-                // we have a special case here for that.
-                PythonCustomTracker cmt = mt as PythonCustomTracker;
-                Expression context = Ast.Constant(state.Context);
 
-                if (cmt != null) {
-                    target = cmt.GetBoundPythonValue(context, state.Binder, Value);
-                } else {
-                    target = mt.GetValue(context, state.Binder, Value.UnderlyingSystemType);
+            if (Value.IsPythonType && !slot.IsAlwaysVisible) {
+                Type resType = BindingHelpers.GetCompatibleType(success.Type, error.Type);
+
+                success = Ast.Condition(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("IsClsVisible"),
+                        Ast.Constant(BinderState.GetBinderState(member).Context)
+                    ),
+                    Ast.ConvertHelper(success, resType),
+                    Ast.ConvertHelper(error, resType)
+                );
+            }
+            return success;
+        }
+
+        private bool IsProtectedGetter(MemberTracker mt) {
+            PropertyTracker pt = mt as PropertyTracker;
+            if (pt != null) {
+                MethodInfo mi = pt.GetGetMethod(true);
+                if (mi != null && (mi.IsFamily || mi.IsFamilyOrAssembly)) {
+                    return true;
                 }
             }
 
-            if (target != null) {
-                if (Value.IsPythonType && !PythonTypeOps.GetSlot(mg, member.Name, state.Binder.PrivateBinding).IsAlwaysVisible) {
-                    Type resType = BindingHelpers.GetCompatibleType(target.Type, error.Type);
-
-                    target = Ast.Condition(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("IsClsVisible"),
-                            Ast.Constant(BinderState.GetBinderState(member).Context)
-                        ),
-                        Ast.ConvertHelper(target, resType),
-                        Ast.ConvertHelper(error, resType)
-                    );
-                }
-            } else {
-                target = error/* ?? MakeErrorExpression(mg)*/;
+            FieldTracker ft = mt as FieldTracker;
+            if (ft != null) {
+                return ft.Field.IsFamily || ft.Field.IsFamilyOrAssembly;   
             }
 
-            return target;
+            return false;
         }
 
         private Expression MakeMetaTypeRule(GetMemberAction/*!*/ member, Expression error) {
@@ -467,12 +479,10 @@ namespace IronPython.Runtime.Binding {
 #endif
 
         private MemberTracker GetTracker(GetMemberAction/*!*/ member, MemberGroup/*!*/ mg) {
-            TrackerTypes mt = PythonTypeOps.GetMemberType(mg);
+            TrackerTypes mt = GetMemberTypes(mg);
             MemberTracker tracker;
 
             switch (mt) {
-                case TrackerTypes.All:
-                    return null;
                 case TrackerTypes.Method:
                     tracker = ReflectionCache.GetMethodGroup(member.Name, mg);
                     break;
@@ -480,12 +490,50 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.Type:
                     tracker = GetTypeGroup(mg);
                     break;
-                default:
+                case TrackerTypes.Field:
+                case TrackerTypes.Property:
+                    tracker = null;
+                    foreach (MemberTracker curTracker in mg) {
+                        if (curTracker.DeclaringType == Value.UnderlyingSystemType) {
+                            tracker = curTracker;
+                        }
+                    }
+                    if (tracker == null) {
+                        tracker = mg[0];
+                    }
+                    break;
+                case TrackerTypes.Field | TrackerTypes.Property:
+                    // occurs when we have a protected field w/ public property accessors
+                    List<MemberTracker> newGroup = new List<MemberTracker>();
+                    foreach (MemberTracker curTracker in mg) {
+                        if (curTracker.MemberType != TrackerTypes.Field) {
+                            newGroup.Add(curTracker);
+                        }
+                    }
+
+                    return GetTracker(member, new MemberGroup(newGroup.ToArray()));
+                case TrackerTypes.Event:
+                case TrackerTypes.Namespace:
+                case TrackerTypes.Custom:
+                case TrackerTypes.Constructor:                
                     tracker = mg[0];
+                    break;
+                default:
+                    tracker = null;
                     break;
             }
 
             return tracker;
+        }
+
+        internal static TrackerTypes GetMemberTypes(MemberGroup members) {
+            TrackerTypes memberType = TrackerTypes.None;
+            for (int i = 0; i < members.Count; i++) {
+                MemberTracker mi = members[i];
+                memberType |= mi.MemberType;
+            }
+
+            return memberType;
         }
 
         private static TypeTracker/*!*/ GetTypeGroup(MemberGroup/*!*/ members) {
@@ -510,7 +558,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("PythonTypeSetCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
-                        Ast.Constant(SymbolTable.StringToId(member.Name)),
+                        AstUtils.Constant(SymbolTable.StringToId(member.Name)),
                         Ast.ConvertHelper(
                             args[1].Expression,
                             typeof(object)
@@ -521,6 +569,23 @@ namespace IronPython.Runtime.Binding {
                 args,
                 TestUserType()
             );                
+        }
+
+        private bool IsProtectedSetter(MemberTracker mt) {
+            PropertyTracker pt = mt as PropertyTracker;
+            if (pt != null) {
+                MethodInfo mi = pt.GetSetMethod(true);
+                if (mi != null && (mi.IsFamily || mi.IsFamilyOrAssembly)) {
+                    return true;
+                }
+            }
+
+            FieldTracker ft = mt as FieldTracker;
+            if (ft != null) {
+                return ft.Field.IsFamily || ft.Field.IsFamilyOrAssembly;
+            }
+
+            return false;
         }
 
         #endregion
@@ -536,7 +601,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("PythonTypeDeleteCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
-                        Ast.Constant(SymbolTable.StringToId(member.Name))
+                        AstUtils.Constant(SymbolTable.StringToId(member.Name))
                     ),
                     self.Restrictions
                 ),

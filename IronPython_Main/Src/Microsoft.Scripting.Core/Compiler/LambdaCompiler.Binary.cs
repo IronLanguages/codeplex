@@ -18,10 +18,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Generation;
 using System.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         //CONFORMING
         private static void EmitBinaryExpression(LambdaCompiler lc, Expression expr) {

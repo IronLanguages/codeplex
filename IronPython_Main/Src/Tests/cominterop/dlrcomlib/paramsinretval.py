@@ -313,7 +313,7 @@ def test_interface_types():
     AreEqual(com_obj.mIUnknown(com_obj), com_obj)
     
     #Merlin 323996
-    AssertError(TypeError, com_obj.mIUnknown, None, runonly=preferComDispatch, bugid="323996") # DISP_E_TYPEMISMATCH when using VT_EMPTY
+    AssertError(ValueError, com_obj.mIUnknown, None, runonly=preferComDispatch, bugid="323996") # DISP_E_TYPEMISMATCH when using VT_EMPTY
     if not preferComDispatch:
         AreEqual(None, com_obj.mIUnknown(None)) # DISP_E_TYPEMISMATCH when using VT_EMPTY
 

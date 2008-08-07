@@ -55,16 +55,26 @@ def test_derived():
     a.foo = 7
     AreEqual(a.foo, 7)
 
+def test_super_protected():
+    class x(object): pass
+    
+    clone = super(x, x()).MemberwiseClone()
+    AreEqual(type(clone), x)
 
 def test_override():
     # overriding methods
 
-    # can't access protected methods directly in Silverlight
-    # (need to create a derived class)
-    if not is_silverlight:
-        a = Inherited()
-        AreEqual(a.ProtectedMethod(), 'Inherited.ProtectedMethod')
-        AreEqual(a.ProtectedProperty, 'Inherited.Protected')
+    # can't access protected methods directly
+    a = Inherited()
+    
+    # they are present...
+    Assert('ProtectedMethod' in dir(a))
+    Assert('ProtectedProperty' in dir(a))
+    Assert(hasattr(a, 'ProtectedMethod'))
+    
+    # hasattr returns false if the getter raises...
+    Assert(not hasattr(a, 'ProtectedProperty'))
+    AssertErrorWithMessage(TypeError, "cannot access protected member ProtectedProperty without a python subclass of Inherited", lambda : a.ProtectedProperty)
     
     class WrapInherited(Inherited): pass
     a = WrapInherited()

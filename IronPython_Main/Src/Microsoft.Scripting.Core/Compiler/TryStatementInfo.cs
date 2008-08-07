@@ -17,8 +17,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-namespace System.Linq.Expressions {
-    class TryStatementInfo {
+namespace System.Linq.Expressions.Compiler {
+
+    internal sealed class TryStatementInfo {
         private readonly TryStatement _ts;
 
         /// <summary>

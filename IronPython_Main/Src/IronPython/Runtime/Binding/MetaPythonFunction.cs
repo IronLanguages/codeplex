@@ -17,17 +17,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Actions;
-
-using IronPython.Runtime.Binding;
+using System.Reflection;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -292,7 +289,12 @@ namespace IronPython.Runtime.Binding {
                 int noDefaults = _func.Value.NormalArgumentCount - _func.Value.Defaults.Length; // number of args w/o defaults
 
                 for (int i = 0; i < _func.Value.NormalArgumentCount; i++) {
-                    if (exprArgs[i] != null) continue;
+                    if (exprArgs[i] != null) {
+                        if (_userProvidedParams != null && i >= Signature.GetProvidedPositionalArgumentCount()) {
+                            exprArgs[i] = ValidateNotDuplicate(exprArgs[i], _func.Value.ArgNames[i], i);
+                        }
+                        continue;
+                    }
 
                     if (i < noDefaults) {
                         exprArgs[i] = ExtractNonDefaultValue(_func.Value.ArgNames[i]);
@@ -470,6 +472,25 @@ namespace IronPython.Runtime.Binding {
                         _paramlessCheck = Ast.Comma(tests.ToArray());
                     }
                 }
+            }
+
+            /// <summary>
+            /// Helper function to validate that a named arg isn't duplicated with by
+            /// a params list or the dictionary (or both).
+            /// </summary>
+            private Expression ValidateNotDuplicate(Expression value, string name, int position) {
+                EnsureParams();
+
+                return Ast.Comma(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("VerifyUnduplicatedByPosition"),
+                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),    // function
+                        Ast.Constant(name, typeof(string)),                               // name
+                        Ast.Constant(position),                                           // position
+                        _paramsLen                                                        // params list length
+                        ),
+                    value
+                    );
             }
 
             /// <summary>

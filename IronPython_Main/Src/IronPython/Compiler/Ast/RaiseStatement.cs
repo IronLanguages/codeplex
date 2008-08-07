@@ -45,12 +45,12 @@ namespace IronPython.Compiler.Ast {
             if (_type == null && _value == null && _traceback == null) {
                 raiseExpression = Ast.Call(
                     AstGenerator.GetHelperMethod("MakeRethrownException"),
-                    Ast.CodeContext()
+                    AstUtils.CodeContext()
                 );
             } else {
                 raiseExpression = Ast.Call(
                     AstGenerator.GetHelperMethod("MakeException"),
-                    Ast.CodeContext(),
+                    AstUtils.CodeContext(),
                     ag.TransformOrConstantNull(_type, typeof(object)),
                     ag.TransformOrConstantNull(_value, typeof(object)),
                     ag.TransformOrConstantNull(_traceback, typeof(object))

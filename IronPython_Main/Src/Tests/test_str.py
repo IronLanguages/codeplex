@@ -120,6 +120,24 @@ def test_split():
     Assert("1--2--3--4--5--6--7--8--9--0".split("--", -1) == ['1','2','3','4','5','6','7','8','9','0'])
     Assert("1--2--3--4--5--6--7--8--9--0".split("--", 2) == ['1', '2', '3--4--5--6--7--8--9--0'])
 
+    AreEqual("".split(None), [])
+    AreEqual("ab".split(None), ["ab"])
+    AreEqual("a b".split(None), ["a", "b"])
+
+
+def test_rsplit():
+    x="Hello Worllds"
+    s = x.split("ll")
+    Assert(s[0] == "He")
+    Assert(s[1] == "o Wor")
+    Assert(s[2] == "ds")
+
+    Assert("1--2--3--4--5--6--7--8--9--0".rsplit("--", 2) == ['1--2--3--4--5--6--7--8', '9', '0'])
+
+    AreEqual("".rsplit(None), [])
+    AreEqual("ab".rsplit(None), ["ab"])
+    AreEqual("a b".rsplit(None), ["a", "b"])
+
 
 def test_codecs():
     if is_silverlight:

@@ -20,15 +20,13 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT
 using ComTypeLibInfo = System.Scripting.Com.ComTypeLibInfo;
@@ -197,14 +195,11 @@ the assembly object.")]
                 throw new ArgumentTypeException("Use: arg 1 must be a string");
             }
 
-            try {
-                return context.LanguageContext.DomainManager.UseModule(name);
-            } catch (AmbiguousFileNameException e) {
-                throw new ArgumentException(String.Format("found multiple modules of the same name '{0}' to use: '{1}' and '{2}'",
-                    name, e.FirstPath, e.SecondPath));
-            } catch (FileNotFoundException) {
+            var scope = Importer.TryImportSourceFile(PythonContext.GetContext(context), name);
+            if (scope == null) {
                 throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
             }
+            return scope;
         }
 
         public static object/*!*/ Use(CodeContext/*!*/ context, string/*!*/ path, string/*!*/ language) {
@@ -213,16 +208,18 @@ the assembly object.")]
             if (path == null) {
                 throw new ArgumentTypeException("Use: arg 1 must be a string");
             }
+
             if (language == null) {
                 throw new ArgumentTypeException("Use: arg 2 must be a string");
             }
 
-            object res = context.LanguageContext.DomainManager.UseModule(path, language);
-            if (res == null) {
+            var manager = context.LanguageContext.DomainManager;
+            if (!manager.Platform.FileExists(path)) {
                 throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
             }
 
-            return res;
+            var sourceUnit = manager.GetLanguage(language).CreateFileUnit(path);
+            return Importer.ExecuteSourceUnit(sourceUnit);
         }
 
         public static CommandDispatcher SetCommandDispatcher(CodeContext/*!*/ context, CommandDispatcher dispatcher) {
@@ -328,7 +325,8 @@ the assembly object.")]
         }
 
         private static void CheckPreferComDispatch() {
-            if (Environment.GetEnvironmentVariable("COREDLR_PreferComInteropAssembly") == "TRUE") {
+            string envVar = Environment.GetEnvironmentVariable("DLR_PreferComInteropAssembly");
+            if (envVar != null && envVar.ToLowerInvariant() == "true") {
                 throw new InvalidOperationException("this method is only available in ComDispatch mode");
             }
         }
@@ -671,11 +669,11 @@ import Namespace.")]
 
             List<ScriptCode> code = new List<ScriptCode>();
             foreach (string filename in filenames) {
-                SourceUnit su = pc.DomainManager.Host.TryGetSourceFileUnit(pc, filename, pc.DefaultEncoding, SourceCodeKind.File);
-                if (su == null) {
+                if (!pc.DomainManager.Platform.FileExists(filename)) {
                     throw PythonOps.IOError("Couldn't find file for compilation: {0}", filename);
                 }
 
+                SourceUnit su = pc.CreateFileUnit(filename, pc.DefaultEncoding, SourceCodeKind.File);
                 ScriptCode sc;
 
                 if (Path.GetFileName(filename) == "__init__.py") {
@@ -692,11 +690,11 @@ import Namespace.")]
             if (kwArgs != null && kwArgs.TryGetValue(SymbolTable.StringToId("mainModule"), out mainModule)) {
                 string strModule = mainModule as string;
                 if (strModule != null) {
-                    SourceUnit su = pc.DomainManager.Host.TryGetSourceFileUnit(pc, strModule, pc.DefaultEncoding, SourceCodeKind.File);
-                    if (su == null) {
+                    if (!pc.DomainManager.Platform.FileExists(strModule)) {
                         throw PythonOps.IOError("Couldn't find main file for compilation: {0}", strModule);
                     }
-
+                    
+                    SourceUnit su = pc.CreateFileUnit(strModule, pc.DefaultEncoding, SourceCodeKind.File);
                     code.Add(PythonContext.GetContext(context).GetScriptCode(su, "__main__", ModuleOptions.Initialize));
                 }
             }

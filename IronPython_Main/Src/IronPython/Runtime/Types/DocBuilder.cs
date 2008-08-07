@@ -18,13 +18,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-using System.Text;
 using System.Threading;
-using System.Xml.XPath;
-using IronPython.Runtime.Types;
+using System.Text;
 using System.Xml;
+using System.Xml.XPath;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     static class DocBuilder {

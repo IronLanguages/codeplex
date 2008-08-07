@@ -16,13 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Compilers;
+using Microsoft.Scripting.Utils;
 
 /*
  * The name binding:

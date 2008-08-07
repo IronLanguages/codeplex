@@ -17,26 +17,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Compiler;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
@@ -411,36 +405,41 @@ namespace IronPython.Runtime {
             return scriptCode.Run(scope);
         }
 
-        public static void execfile(CodeContext/*!*/ context, object filename) {
+        public static void execfile(CodeContext/*!*/ context, object/*!*/ filename) {
             execfile(context, filename, null, null);
         }
 
-        public static void execfile(CodeContext/*!*/ context, object filename, object globals) {
+        public static void execfile(CodeContext/*!*/ context, object/*!*/ filename, object globals) {
             execfile(context, filename, globals, null);
         }
 
-        public static void execfile(CodeContext/*!*/ context, object filename, object globals, object locals) {
+        public static void execfile(CodeContext/*!*/ context, object/*!*/ filename, object globals, object locals) {
+            if (filename == null) {
+                throw PythonOps.TypeError("execfile() argument 1 must be string, not None");
+            }
+            
             IAttributesCollection g = globals as IAttributesCollection;
             if (g == null && globals != null) {
-                throw PythonOps.TypeError("execfile: arg 2 must be dictionary");
+                throw PythonOps.TypeError("execfile() arg 2 must be dictionary");
             }
 
             IAttributesCollection l = locals as IAttributesCollection;
             if (l == null && locals != null) {
-                throw PythonOps.TypeError("execfile: arg 3 must be dictionary");
+                throw PythonOps.TypeError("execfile() arg 3 must be dictionary");
             }
 
-            if (l == null) l = g;
+            if (l == null) {
+                l = g;
+            }
 
             Scope execScope = GetExecEvalScopeOptional(context, g, l, true);
             string path = Converter.ConvertToString(filename);
             PythonContext pc = PythonContext.GetContext(context);
-            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, path, pc.DefaultEncoding, SourceCodeKind.Statements);
-
-            if (sourceUnit == null) {
+            if (!pc.DomainManager.Platform.FileExists(path)) {
                 throw PythonOps.IOError("execfile: specified file doesn't exist");
             }
 
+            SourceUnit sourceUnit = pc.CreateFileUnit(path, pc.DefaultEncoding, SourceCodeKind.Statements);
             ScriptCode code;
 
             try {
@@ -579,7 +578,6 @@ namespace IronPython.Runtime {
         private static void help(CodeContext/*!*/ context, List<object>/*!*/ doced, StringBuilder/*!*/ doc, int indent, object obj) {
             PythonType type;
             BuiltinFunction builtinFunction;
-            BoundBuiltinFunction boundBuiltinFunction;
             PythonFunction function;
             BuiltinMethodDescriptor methodDesc;
             Method method;
@@ -668,14 +666,6 @@ namespace IronPython.Runtime {
                 doc.Append("(...)\n");
 
                 AppendMultiLine(doc, methodDesc.__doc__, indent + 1);
-            } else if ((boundBuiltinFunction = obj as BoundBuiltinFunction) != null) {
-                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", boundBuiltinFunction.Target.__name__);
-
-                AppendIndent(doc, indent);
-                doc.Append(boundBuiltinFunction.Target.__name__);
-                doc.Append("(...)\n");
-
-                AppendMultiLine(doc, boundBuiltinFunction.Target.__doc__, indent + 1);
             } else if ((builtinFunction = obj as BuiltinFunction) != null) {
                 if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", builtinFunction.Name);
                 AppendIndent(doc, indent);

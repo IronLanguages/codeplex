@@ -15,7 +15,7 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Scripting.Runtime;
+using System.Runtime.CompilerServices;
 using System.Scripting.Utils;
 
 namespace System.Linq.Expressions {
@@ -74,7 +74,7 @@ namespace System.Linq.Expressions {
             for (int i = 0; i < vars.Count; i++) {
                 Expression v = vars[i];
                 if (v == null) {
-                    throw ExceptionUtils.MakeArgumentItemNullException(i, "variables");
+                    throw new ArgumentNullException(string.Format("variables[{0}]", i));
                 }
                 ExpressionType kind = vars[i].NodeType;
                 if (kind != ExpressionType.Variable && kind != ExpressionType.Parameter) {

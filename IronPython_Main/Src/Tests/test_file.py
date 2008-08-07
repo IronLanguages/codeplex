@@ -655,6 +655,7 @@ def test_truncate():
 def test_modes():
     """test various strange mode combinations and error reporting"""
     x = file('test_file', 'w')
+    AreEqual(x.mode, 'w')
     x.close()
     # don't allow empty modes
     AssertErrorWithMessage(ValueError, 'empty mode string', file, 'abc', '')

@@ -17,7 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
 namespace Microsoft.Scripting.Hosting.Shell {

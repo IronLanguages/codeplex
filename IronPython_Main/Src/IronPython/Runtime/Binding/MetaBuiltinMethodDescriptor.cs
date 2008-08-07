@@ -13,20 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
-
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
 
     class MetaBuiltinMethodDescriptor : MetaPythonObject, IPythonInvokable {
         public MetaBuiltinMethodDescriptor(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinMethodDescriptor/*!*/ value)
@@ -96,7 +92,16 @@ namespace IronPython.Runtime.Binding {
                 out target
             );
 
-            if (Value.Template.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.ThrowStatement) {
+
+            if (target.Method != null && (target.Method.IsFamily || target.Method.IsFamilyOrAssembly)) {
+                res = new MetaObject(
+                    BindingHelpers.TypeErrorForProtectedMember(
+                        target.Method.DeclaringType,
+                        target.Method.Name
+                    ),
+                    res.Restrictions
+                );
+            } else if (Value.Template.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.ThrowStatement) {
                 // Binary Operators return NotImplemented on failure.
                 res = new MetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),

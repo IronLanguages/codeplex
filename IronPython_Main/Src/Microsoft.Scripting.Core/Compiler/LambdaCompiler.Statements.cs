@@ -17,9 +17,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection.Emit;
-using System.Scripting.Generation;
 
-namespace System.Linq.Expressions {
+namespace System.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         private static void EmitBlock(LambdaCompiler lc, Expression expr) {
             lc.Emit((Block)expr, EmitAs.Default);
@@ -79,6 +78,8 @@ namespace System.Linq.Expressions {
             lc._ilg.MarkLabel(breakTarget);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitEmptyStatement(LambdaCompiler lc, Expression expr) {
         }
 

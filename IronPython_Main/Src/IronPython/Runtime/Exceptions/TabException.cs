@@ -15,6 +15,7 @@
 
 using System;
 using System.Scripting;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Exceptions {
     /// <summary>

@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System.Scripting;
+using Microsoft.Scripting;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {

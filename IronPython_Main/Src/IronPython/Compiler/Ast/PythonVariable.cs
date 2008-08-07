@@ -15,8 +15,9 @@
 
 using System;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -110,7 +111,7 @@ namespace IronPython.Compiler.Ast {
             string name = SymbolTable.IdToString(_name);
             switch (_kind) {
                 case VariableKind.Global:
-                    return _variable = MSAst.Expression.GlobalVariable(_type, name);
+                    return _variable = Utils.GlobalVariable(_type, name);
 
                 case VariableKind.Local:
                 case VariableKind.HiddenLocal:

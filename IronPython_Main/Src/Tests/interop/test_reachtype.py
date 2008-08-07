@@ -112,9 +112,17 @@ def test_generic_types():
     AssertErrorWithMessage(SystemError, "MakeGenericType on non-generic type", lambda: G4[int])
     
 def test_type_without_namespace():
-    from PublicRefTypeWithoutNS import *    # warning expected
+    try:
+        from PublicRefTypeWithoutNS import *    # non static type, should fail
+        AssertUnreachable()
+    except ImportError:
+        pass
+        
+    from PublicStaticRefTypeWithoutNS import *
     AreEqual(Nested.A, 10)
     AreEqual(A, 20)
+    AreEqual(B, 20)
+    Assert(not 'C' in dir())
     AreEqual(SM(), 30)
 
     import PublicRefTypeWithoutNS
@@ -122,11 +130,9 @@ def test_type_without_namespace():
     AreEqual(PublicRefTypeWithoutNS.A, 20)
     AreEqual(PublicRefTypeWithoutNS.SM(), 30)
     
-    AreEqual(PublicRefTypeWithoutNS.B, B)
-    AreEqual(PublicRefTypeWithoutNS.IM, IM)
+    Assert(hasattr(PublicRefTypeWithoutNS, 'B')) # instance field
+    Assert(hasattr(PublicRefTypeWithoutNS, 'IM')) # instance method
     
-    AssertError(TypeError, IM)
-
     # internal type
     try:
         import InternalRefTypeWithoutNS

@@ -18,15 +18,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-using IronPython.Hosting;
 using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
+using IronPython;
+using IronPython.Hosting;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -158,6 +157,108 @@ namespace IronPythonTest {
             Assert(false, "Expecting exception '" + typeof(T) + "'.");
             return null;
         }
+
+#if !SILVERLIGHT
+        public void ScenarioHostingHelpers() {
+            AppDomain remote = AppDomain.CreateDomain("foo");
+            Dictionary<string, object> options = new Dictionary<string,object>();
+            // DLR ScriptRuntime options
+            options["Debug"] = true;
+            options["PrivateBinding"] = true;
+            
+            // python options
+            options["StripDocStrings"] = true;
+            options["Optimize"] = true;
+            options["DivisionOptions"] = PythonDivisionOptions.New;
+            options["RecursionLimit"] = 42;
+            options["IndentationInconsistencySeverity"] = Severity.Warning;
+            options["WarningFilters"] = new string[] { "warnonme" };
+
+            ScriptEngine engine1 = Python.CreateEngine();
+            ScriptEngine engine2 = Python.CreateEngine(AppDomain.CurrentDomain);
+            ScriptEngine engine3 = Python.CreateEngine(remote);
+
+            TestEngines(null, new ScriptEngine[] { engine1, engine2, engine3 });
+
+            ScriptEngine engine4 = Python.CreateEngine(options);
+            ScriptEngine engine5 = Python.CreateEngine(AppDomain.CurrentDomain, options);
+            ScriptEngine engine6 = Python.CreateEngine(remote, options);
+
+            TestEngines(options, new ScriptEngine[] { engine4, engine5, engine6 });
+
+            ScriptRuntime runtime1 = Python.CreateRuntime();
+            ScriptRuntime runtime2 = Python.CreateRuntime(AppDomain.CurrentDomain);
+            ScriptRuntime runtime3 = Python.CreateRuntime(remote);
+
+            TestRuntimes(null, new ScriptRuntime[] { runtime1, runtime2, runtime3 });
+
+            ScriptRuntime runtime4 = Python.CreateRuntime(options);
+            ScriptRuntime runtime5 = Python.CreateRuntime(AppDomain.CurrentDomain, options);
+            ScriptRuntime runtime6 = Python.CreateRuntime(remote, options);
+
+            TestRuntimes(options, new ScriptRuntime[] { runtime4, runtime5, runtime6 });
+        }
+
+        private void TestEngines(Dictionary<string, object> options, ScriptEngine[] engines) {
+            foreach (ScriptEngine engine in engines) {
+                TestEngine(engine, options);
+                TestRuntime(engine.Runtime, options);
+            }
+        }
+
+        private void TestRuntimes(Dictionary<string, object> options, ScriptRuntime[] runtimes) {
+            foreach (ScriptRuntime runtime in runtimes) {
+                TestRuntime(runtime, options);
+
+                TestEngine(Python.GetEngine(runtime), options);
+            }
+        }
+
+        private void TestEngine(ScriptEngine scriptEngine, Dictionary<string, object> options) {
+            // basic smoke tests that the engine is alive and working
+            AreEqual((int)scriptEngine.CreateScriptSourceFromString("42").Execute(scriptEngine.CreateScope()), 42);
+
+            if(options != null) {
+                PythonEngineOptions po = (PythonEngineOptions)scriptEngine.Options;
+
+                AreEqual(po.StripDocStrings, true);
+                AreEqual(po.Optimize, true);
+                AreEqual(po.DivisionOptions, PythonDivisionOptions.New);
+                AreEqual(po.RecursionLimit, 42);
+                AreEqual(po.IndentationInconsistencySeverity, Severity.Warning);
+                AreEqual(po.WarningFilters[0], "warnonme");
+            }
+
+            AreEqual(Python.GetSysModule(scriptEngine).GetVariable<string>("platform"), "cli");
+            AreEqual(Python.GetBuiltinModule(scriptEngine).GetVariable<bool>("True"), true);
+            AreEqual(Python.ImportModule(scriptEngine, "nt").GetVariable<int>("F_OK"), 0);
+            try {
+                Python.ImportModule(scriptEngine, "non_existant_module");
+                Assert(false);
+            } catch (ImportException) {
+            }
+        }
+
+        private void TestRuntime(ScriptRuntime runtime, Dictionary<string, object> options) {
+            // basic smoke tests that the runtime is alive and working
+            runtime.Globals.SetVariable("hello", 42);
+            Assert(runtime.GetEngine("py") != null);
+
+            if (options != null) {
+                AreEqual(runtime.DebugMode, true);
+                AreEqual(runtime.PrivateBinding, true);
+            }
+
+            AreEqual(Python.GetSysModule(runtime).GetVariable<string>("platform"), "cli");
+            AreEqual(Python.GetBuiltinModule(runtime).GetVariable<bool>("True"), true);
+            AreEqual(Python.ImportModule(runtime, "nt").GetVariable<int>("F_OK"), 0);
+            try {
+                Python.ImportModule(runtime, "non_existant_module");
+                Assert(false);
+            } catch (ImportException) {
+            }
+        }
+#endif
 
         // Execute
         public void ScenarioExecute() {
@@ -566,7 +667,7 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
                 } catch (IronPython.Runtime.Exceptions.ImportException) { }
 
                 File.WriteAllText(tempFile1, "from lib.assert_util import *");
-                _pe.SetScriptSourceSearchPaths(new string[] { Common.ScriptTestDirectory });
+                _pe.SetSearchPaths(new string[] { Common.ScriptTestDirectory });
 
                 _pe.CreateScriptSourceFromFile(tempFile1).Execute(scope);
                 _pe.CreateScriptSourceFromString("AreEqual(5, eval('2 + 3'))", SourceCodeKind.Statements).Execute(scope);

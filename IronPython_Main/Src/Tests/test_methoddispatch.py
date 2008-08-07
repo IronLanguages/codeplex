@@ -812,7 +812,7 @@ def test_default_value():
     AreEqual(tst.Test_ByRef_Object(r), "Hi; System.Reflection.Missing; System.Reflection.Missing")
     AreEqual(tst.Test_ByRef_Object(r, s), "Hi; Hello; System.Reflection.Missing")
     AreEqual(tst.Test_ByRef_Object(r, s, t), "Hi; Hello; Ciao")
-    AreEqual(tst.Test_ByRef_Object("Hi", "Hello", "Ciao"), ("Hi; Hello; Ciao", "Hi", "Hello", "Ciao"))
+    AreEqual(tst.Test_ByRef_Object("Hi", "Hello", "Ciao"), ("Hi; Hello; Ciao"))
     AssertError(TypeError, tst.Test_ByRef_Object, "Hi")
     
     AreEqual(tst.Test_Default_Cast(), "1")

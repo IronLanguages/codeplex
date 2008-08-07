@@ -183,4 +183,15 @@ def test_property_doc():
     AreEqual(property(None).__doc__, None)
     AreEqual(property(None, getter, getter).__doc__, None)
 
+def test_class_assign():
+    """assigning to a property through the class should replace the
+       property in the class dictionary"""
+    class x(object):
+        def set(self, value):
+            AssertUnreachable()
+        prop = property(lambda x:42, set)
+    
+    x.prop = 42
+    AreEqual(x.__dict__['prop'], 42)
+
 run_test(__name__)

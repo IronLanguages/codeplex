@@ -1823,10 +1823,22 @@ def test_dictproxy_access():
         
     AssertError(TypeError, f)
     
+    class KOld: pass
+    class KNew(object): pass
+    
+    #CodePlex 16001
     AreEqual(int.__dict__.get(0, 'abc'), 'abc')
     AreEqual(int.__dict__.get('__new__'), int.__new__)
-    
-    AreEqual(int.__dict__.copy(), dict(int.__dict__))
+    AreEqual(KOld.__dict__.get(0, 'abc'), 'abc')
+    AreEqual(KNew.__dict__.get(0, 'abc'), 'abc')
+    AreEqual(KNew.__dict__.get('__new__'), None)
+    #CodePlex 15702
+    #AreEqual(int.__dict__.copy(), dict(int.__dict__))
+    #AreEqual(int.__class__.__dict__.copy(), dict(int.__class__.__dict__))
+    AreEqual(KOld.__dict__.copy(), dict(KOld.__dict__))
+    AreEqual(KNew.__dict__.copy(), dict(KNew.__dict__))
+    #Dev10 4844754
+    #AreEqual(KNew.__class__.__dict__.copy(), dict(KNew.__class__.__dict__))
 
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals
@@ -3077,5 +3089,43 @@ def test_metaclass_base_search():
         pass
         
     AreEqual(Child.attr_Child, 'attribute set on Child by MetaClass')
+
+def test_binary_operator_subclass():
+    """subclassing but not overriding shouldn't call __radd__"""
+    class A(object):
+        def __add__(self, other):
+            return ('a', self.__class__.__name__)
+        __radd__ = __add__
+    
+    class B(A):
+        def __add__(self, other):
+            return ('b', self.__class__.__name__)
+        __radd__ = __add__
+    
+    class C(A): pass
+        
+    a = A()
+    b = B()
+    c = C()
+    AreEqual(a + b, ('b', 'B'))
+    AreEqual(a + c, ('a', 'A'))
+
+@runonly("win32")
+def test_cp2021():
+    class KOld:
+        def __rmul__(self, other):
+            return 7
+    
+    class KNew(object):
+        def __rmul__(self, other):
+            return 7
+    
+    for testdata in [[], [1], [1,2]]:
+        AreEqual(testdata * KOld(), 7)
+        AreEqual(testdata * KNew(), 7)
+        AssertErrorWithMessage(TypeError, "object cannot be interpreted as an index",
+                               testdata.__mul__, KOld())
+        AssertErrorWithMessage(TypeError, "'KNew' object cannot be interpreted as an index",
+                               testdata.__mul__, KNew())
 
 run_test(__name__)

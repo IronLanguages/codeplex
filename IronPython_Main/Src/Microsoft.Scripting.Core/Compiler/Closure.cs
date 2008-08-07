@@ -23,7 +23,7 @@ namespace System.Runtime.CompilerServices {
     /// TODO: Prevent this from being exposed as public surface area. See what
     /// Linq v1 does with System.Runtime.CompilerServices.ExecutionScope
     /// </summary>
-    public class Closure {
+    public sealed class Closure {
         /// <summary>
         /// The constant pool
         /// </summary>

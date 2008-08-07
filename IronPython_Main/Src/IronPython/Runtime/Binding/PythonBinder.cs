@@ -21,10 +21,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -234,11 +234,21 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public override ErrorInfo MakeStaticAssignFromDerivedTypeError(Type accessingType, MemberTracker info, Expression assignedValue, Expression context) {
+        public override ErrorInfo/*!*/ MakeNonPublicMemberGetError(Expression codeContext, MemberTracker member, Type type, Expression instance) {
+            if (PrivateBinding) {
+                return base.MakeNonPublicMemberGetError(codeContext, member, type, instance);
+            }
+
+            return ErrorInfo.FromValue(
+                BindingHelpers.TypeErrorForProtectedMember(type, member.Name)
+            );
+        }
+
+        public override ErrorInfo/*!*/ MakeStaticAssignFromDerivedTypeError(Type accessingType, MemberTracker info, Expression assignedValue, Expression context) {
             return MakeMissingMemberError(accessingType, info.Name);
         }
 
-        public override ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression/*!*/>/*!*/ parameters) {
+        public override ErrorInfo/*!*/ MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression/*!*/>/*!*/ parameters) {
             ContractUtils.RequiresNotNull(tracker, "tracker");
             ContractUtils.RequiresNotNull(parameters, "parameters");
             ContractUtils.RequiresNotNullItems(parameters, "parameters");
@@ -468,7 +478,7 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.Type:
                     return ReturnTypeTracker((TypeTracker)memberTracker);
                 case TrackerTypes.Bound:
-                    return ReturnBoundTracker((BoundMemberTracker)memberTracker);
+                    return ReturnBoundTracker((BoundMemberTracker)memberTracker, privateBinding);
                 case TrackerTypes.Property:
                     return ReturnPropertyTracker((PropertyTracker)memberTracker, privateBinding);
                 case TrackerTypes.Event:
@@ -517,6 +527,18 @@ namespace IronPython.Runtime.Binding {
         public bool TryLookupSlot(CodeContext/*!*/ context, PythonType/*!*/ type, SymbolId name, out PythonTypeSlot slot) {
             Debug.Assert(type.IsSystemType);
 
+            return TryLookupProtectedSlot(context, type, name, out slot);
+        }
+
+        /// <summary>
+        /// Performs .NET member resolution.  This looks within the given type and also
+        /// includes any extension members.  Base classes and their extension members are 
+        /// not searched.
+        /// 
+        /// This version allows PythonType's for protected member resolution.  It shouldn't
+        /// be called externally for other purposes.
+        /// </summary>
+        internal bool TryLookupProtectedSlot(CodeContext/*!*/ context, PythonType/*!*/ type, SymbolId name, out PythonTypeSlot slot) {
             string strName = SymbolTable.IdToString(name);
             Type curType = type.UnderlyingSystemType;
 
@@ -649,7 +671,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.Constant(PythonTypeOps.GetFinalSlotForFunction(GetBuiltinFunction(methodGroup)));
         }
 
-        private static Expression ReturnBoundTracker(BoundMemberTracker boundMemberTracker) {
+        private static Expression ReturnBoundTracker(BoundMemberTracker boundMemberTracker, bool privateBinding) {
             MemberTracker boundTo = boundMemberTracker.BoundTo;
             switch (boundTo.MemberType) {
                 case TrackerTypes.Property:
@@ -657,7 +679,7 @@ namespace IronPython.Runtime.Binding {
                     Debug.Assert(pt.GetIndexParameters().Length > 0);
                     return Ast.New(
                         typeof(ReflectedIndexer).GetConstructor(new Type[] { typeof(ReflectedIndexer), typeof(object) }),
-                        Ast.Constant(new ReflectedIndexer(((ReflectedPropertyTracker)pt).Property, NameType.Property)),
+                        Ast.Constant(new ReflectedIndexer(((ReflectedPropertyTracker)pt).Property, NameType.Property, privateBinding)),
                         boundMemberTracker.Instance
                     );
                 case TrackerTypes.Event:
@@ -696,7 +718,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static Expression ReturnPropertyTracker(PropertyTracker propertyTracker, bool privateBinding) {
-            return Ast.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker, privateBinding));
+            return Ast.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker, null, privateBinding));
         }
 
         private static MethodInfo IncludePropertyMethod(MethodInfo method, bool privateMembers) {
@@ -824,11 +846,15 @@ namespace IronPython.Runtime.Binding {
             return t.Name;
         }
 
-        public static bool IsExtendedType(Type t) {
+        public static bool IsExtendedType(Type/*!*/ t) {
+            Debug.Assert(t != null);
+
             return _sysTypes.ContainsKey(t);
         }
 
-        public static bool IsPythonType(Type t) {
+        public static bool IsPythonType(Type/*!*/ t) {
+            Debug.Assert(t != null);
+
             return _sysTypes.ContainsKey(t) || t.IsDefined(typeof(PythonSystemTypeAttribute), false);
         }
 
@@ -924,7 +950,7 @@ namespace IronPython.Runtime.Binding {
                     lock (_cachedInfos) {
                         SlotCacheInfo slots;
                         if (_cachedInfos.TryGetValue(type, out slots) &&
-                            (slots.TryGetMember(name, out group) || (getMemberAction && slots.ResolvedAll && !TypeInfo.IsBackwardsCompatabileName(name)))) {
+                            (slots.TryGetMember(name, out group) || (getMemberAction && slots.ResolvedAll))) {
                             return true;
                         }
                     }

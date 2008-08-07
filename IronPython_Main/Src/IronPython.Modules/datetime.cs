@@ -18,12 +18,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Scripting;
-using System.Scripting.Runtime;
 using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -303,7 +302,7 @@ namespace IronPython.Modules {
         }
 
         internal enum InputKind { Year, Month, Day, Hour, Minute, Second, Microsecond }
-        
+
         internal static void ValidateInput(InputKind kind, int value) {
             switch (kind) {
                 case InputKind.Year:
@@ -583,7 +582,7 @@ namespace IronPython.Modules {
                             return false;
                         }
                     }
-                    
+
                     throw PythonOps.TypeError("can't compare datetime.date to {0}", PythonTypeOps.GetName(other));
                 }
 
@@ -594,28 +593,28 @@ namespace IronPython.Modules {
             public static object operator >(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator >=(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <=(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return System.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
             }
 
             public bool __eq__(object other) {

@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {

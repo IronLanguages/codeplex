@@ -15,12 +15,17 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
-using System.Scripting.Runtime;
+
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-using Utils = System.Scripting.Utils;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("getset_descriptor")]
@@ -50,6 +55,8 @@ namespace IronPython.Runtime.Types {
                 foreach (MethodInfo mi in Setter) {
                     if(mi.IsStatic && DeclaringType != owner.UnderlyingSystemType) {
                         return false;
+                    } else if (mi.IsFamily || mi.IsFamilyAndAssembly) {
+                        throw PythonOps.TypeErrorForProtectedMember(owner.UnderlyingSystemType, _info.Name);
                     }
                 }
             } else if (instance != null) {
@@ -60,7 +67,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            return CallSetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects, value);
+            return CallSetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, ArrayUtils.EmptyObjects, value);
         }
 
         internal override Type DeclaringType {
@@ -80,7 +87,7 @@ namespace IronPython.Runtime.Types {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
 
-            value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, Utils.ArrayUtils.EmptyObjects);
+            value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, ArrayUtils.EmptyObjects);
             return true;
         }
 
@@ -93,6 +100,37 @@ namespace IronPython.Runtime.Types {
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             __delete__(instance);
             return true;
+        }
+
+        internal override Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
+            if (Getter.Length != 0 && !Getter[0].IsPublic) {
+                // fallback to runtime call
+                return base.MakeGetExpression(binder, codeContext, instance, owner, error);
+            } else if (NeedToReturnProperty(instance, Getter)) {
+                return Expression.Constant(this);
+            } else if (Getter[0].ContainsGenericParameters) {
+                return DefaultBinder.MakeError(
+                    binder.MakeContainsGenericParametersError(
+                        MemberTracker.FromMemberInfo(_info)
+                    )
+                );
+            }
+
+            Expression res;
+            if (instance != null) {
+                res = binder.MakeCallExpression(
+                    codeContext,
+                    Getter[0],
+                    instance
+                );
+            } else {
+                res = binder.MakeCallExpression(
+                    codeContext,
+                    Getter[0]
+                );
+            }
+            Debug.Assert(res != null);
+            return res;
         }
 
         internal override bool IsAlwaysVisible {

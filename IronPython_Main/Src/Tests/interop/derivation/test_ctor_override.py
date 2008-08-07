@@ -147,10 +147,12 @@ def test_5_args():
     class C(CCtor40):
         def __new__(cls, arg1, arg2, *arg3, **arg4): 
             return super(cls, C).__new__(cls, arg1, arg2, *arg3, **arg4)
-         
-    C(3, arg2=1, *(2, 5), **{'arg5' : 4})
-    Flag.Check(31254)
     
+    AssertErrorWithMessage(TypeError, "__new__() got multiple values for keyword argument 'arg2'", eval, "C(3, arg2=1, *(2, 5), **{'arg5' : 4})", globals(), locals())
+    
+    C(3, 1, *(2, 5), **{'arg5' : 4})
+    Flag.Check(31254)
+
 def test_overload1():
     class C(CCtor50):
         def __new__(cls, arg):

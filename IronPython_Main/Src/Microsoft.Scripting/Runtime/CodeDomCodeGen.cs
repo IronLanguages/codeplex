@@ -15,8 +15,7 @@
 
 using System.CodeDom;
 using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT // CodeDom objects are not available in Silverlight
 

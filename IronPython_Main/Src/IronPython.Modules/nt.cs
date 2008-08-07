@@ -22,15 +22,15 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Security.Cryptography;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -767,7 +767,7 @@ namespace IronPython.Modules {
                 DateTime.Now.Subtract(p.StartTime).TotalSeconds);
         }
 
-        public static PythonFile tmpfile(CodeContext/*!*/ context) {
+        public static PythonFile/*!*/ tmpfile(CodeContext/*!*/ context) {
             try {
                 FileStream sw = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
@@ -778,8 +778,9 @@ namespace IronPython.Modules {
             }
         }
 
-        public static string tmpnam() {
-            return Path.GetTempFileName();
+        public static string/*!*/ tmpnam(CodeContext/*!*/ context) {
+            PythonOps.Warn(context, PythonExceptions.RuntimeWarning, "tmpnam is a potential security risk to your program");
+            return Path.GetFullPath(Path.GetTempPath() + Path.GetRandomFileName());
         }
 
         public static void unlink(string path) {

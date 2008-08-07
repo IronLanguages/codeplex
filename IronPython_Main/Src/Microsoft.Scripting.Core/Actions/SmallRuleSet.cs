@@ -16,6 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -68,7 +69,6 @@ namespace System.Scripting.Actions {
             }
 
             if (newRules.Count > MaxRules) {
-                PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "RuleOverflow " + newRule.GetType().Name);
                 return EmptyRuleSet<T>.FixedInstance;
             } else {
                 return new SmallRuleSet<T>(newRules.ToArray());

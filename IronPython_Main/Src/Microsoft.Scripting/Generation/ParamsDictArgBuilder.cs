@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Scripting;
 using System.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
@@ -41,11 +42,11 @@ namespace Microsoft.Scripting.Generation {
             get { return 3; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             Expression res = Ast.Call(
                 typeof(BinderOps).GetMethod("MakeSymbolDictionary"),
                 Ast.NewArrayInit(typeof(SymbolId), ConstantNames()),
-                Ast.NewArrayHelper(typeof(object), GetParameters(parameters))
+                Ast.NewArrayHelper(typeof(object), GetParameters(parameters, hasBeenUsed))
             );
 
             return res;
@@ -57,10 +58,14 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        private Expression[] GetParameters(IList<Expression> parameters) {
-            Expression[] res = new Expression[_nameIndexes.Length];
+        private List<Expression> GetParameters(IList<Expression> parameters, bool[] hasBeenUsed) {
+            List<Expression> res = new List<Expression>(_nameIndexes.Length);
             for (int i = 0; i < _nameIndexes.Length; i++) {
-                res[i] = parameters[_nameIndexes[i] + _argIndex];
+                int parameterIndex = _nameIndexes[i] + _argIndex;
+                if (!hasBeenUsed[parameterIndex]) {
+                    res.Add(parameters[parameterIndex]);
+                    hasBeenUsed[parameterIndex] = true;
+                }
             }
             return res;
         }
@@ -68,7 +73,7 @@ namespace Microsoft.Scripting.Generation {
         private Expression[] ConstantNames() {
             Expression[] res = new Expression[_names.Length];
             for (int i = 0; i < _names.Length; i++) {
-                res[i] = Ast.Constant(_names[i]);
+                res[i] = AstUtils.Constant(_names[i]);
             }
             return res;
         }

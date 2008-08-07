@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -59,7 +59,7 @@ namespace IronPython.Compiler.Ast {
                             AstGenerator.GetHelperMethod(                           // helper
                                 _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
                             ),
-                            Ast.CodeContext(),                                      // 1st arg - code context
+                            AstUtils.CodeContext(),                                      // 1st arg - code context
                             Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
                             Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
                         ), 

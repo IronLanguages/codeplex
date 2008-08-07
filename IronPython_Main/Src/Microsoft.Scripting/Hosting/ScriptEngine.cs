@@ -15,16 +15,14 @@
 
 using System;
 using System.CodeDom;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Remoting;
-using System.Scripting;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Security.Permissions;
 using System.Text;
 using System.Threading;
-using Microsoft.Scripting.Compilers;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -568,7 +566,11 @@ namespace Microsoft.Scripting.Hosting {
                 TokenizerService service = _language.GetService<TokenizerService>(ArrayUtils.Insert((object)_language, args));
                 return (service != null) ? (TService)(object)new TokenCategorizer(service) : null;
             }
-            return null;
+            if (typeof(TService) == typeof(ExceptionService)) {
+                ExceptionService service = _language.GetService<ExceptionService>();
+                return (service != null) ? (TService)(object)service :(TService)(object)new ExceptionService(_language);
+            }
+            return _language.GetService<TService>(args);
         }
 
         #endregion
@@ -640,27 +642,24 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// This method sets the search paths used by the engine for loading files when a script wants 
+        /// Sets the search paths used by the engine for loading files when a script wants 
         /// to import or require another file of code.  
-        /// 
-        /// This setting affects this engine's processing of code that loads other files.  When hosts 
-        /// call ScriptRuntime.ExecuteFile, the host's resolution or the default host's DLRPath 
-        /// controls partial file name resolution.
         /// </summary>
-        public void SetScriptSourceSearchPaths(string[] paths) {
+        /// <exception cref="NotSupportedException">The language doesn't allow to set search paths.</exception>
+        public void SetSearchPaths(ICollection<string> paths) {
             ContractUtils.RequiresNotNull(paths, "paths");
             ContractUtils.RequiresNotNullItems(paths, "paths");
 
-            _language.SetScriptSourceSearchPaths(paths);
+            _language.SetSearchPaths(paths);
         }
 
         /// <summary>
-        /// This method returns a string in the style of this engine's language to describe the exception argument.
+        /// Gets the search paths used by the engine for loading files when a script wants 
+        /// to import or require another file of code.  
         /// </summary>
-        public string FormatException(Exception exception) {
-            ContractUtils.RequiresNotNull(exception, "exception");
-
-            return _language.FormatException(exception);
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public ICollection<string> GetSearchPaths() {
+            return _language.GetSearchPaths();
         }
 
         #region Private implementation details
@@ -702,6 +701,10 @@ namespace Microsoft.Scripting.Hosting {
             return _language.GetCompilerErrorSink();
         }
 
+        internal object Call<T, TRet>(Func<LanguageContext, T, TRet> f, T arg) {
+            return f(_language, arg);
+        }
+
         #endregion
 
         #region Remote API
@@ -714,9 +717,6 @@ namespace Microsoft.Scripting.Hosting {
         }
 
 #endif
-        public void GetExceptionMessage(Exception exception, out string message, out string errorTypeName) {
-            _language.GetExceptionMessage(exception, out message, out errorTypeName);
-        }
 
         #endregion
     }

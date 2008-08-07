@@ -317,7 +317,7 @@ namespace System.Scripting.Com {
         }
 
         private MetaObject[] Unwrap(MetaObject[] args) {
-            MetaObject[] unwrap = ArrayUtils.Copy(args);
+            MetaObject[] unwrap = args.Copy();
             unwrap[0] = new MetaObject(
                 Expression.Property(
                     Expression.ConvertHelper(Expression, typeof(ComObject)),

@@ -16,8 +16,9 @@
 using System;
 using System.Runtime.Remoting;
 using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
+using System.Threading;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -31,6 +32,8 @@ namespace Microsoft.Scripting.Hosting {
     {
         private readonly ScriptEngine _engine;
         private readonly ScriptCode _code;
+
+        private ScriptScope _defaultScope;
 
         internal ScriptCode ScriptCode { get { return _code; } }
 
@@ -50,10 +53,22 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// TODO: Executes code in an optimized scope.
+        /// Default scope for this code.
+        /// </summary>
+        public ScriptScope DefaultScope {
+            get {
+                if (_defaultScope == null) {
+                    Interlocked.CompareExchange(ref _defaultScope, new ScriptScope(_engine, _code.CreateScope()), null);
+                }
+                return _defaultScope; 
+            }
+        }
+
+        /// <summary>
+        /// Executes code in a default scope.
         /// </summary>
         public object Execute() {
-            return _code.Run();
+            return _code.Run(DefaultScope.Scope);
         }
 
         /// <summary>
@@ -63,6 +78,21 @@ namespace Microsoft.Scripting.Hosting {
             ContractUtils.RequiresNotNull(scope, "scope");
             return _code.Run(scope.Scope);
         }
+
+        /// <summary>
+        /// Executes code in in a default scope and converts to a given type.
+        /// </summary>
+        public T Execute<T>() {
+            return _engine.Operations.ConvertTo<T>(Execute());
+        }
+
+        /// <summary>
+        /// Execute code within a given scope and converts result to a given type.
+        /// </summary>
+        public T Execute<T>(ScriptScope scope) {
+            return _engine.Operations.ConvertTo<T>(Execute(scope));
+        }
+
 
 #if !SILVERLIGHT
         public ObjectHandle ExecuteAndWrap(ScriptScope scope) {

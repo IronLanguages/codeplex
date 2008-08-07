@@ -34,13 +34,12 @@ clsPart = ClsPart()
 def Negate(i): return -i
 
 def test_Common():
-    # !!! AreEqual("InternalClsPart" in dir(IronPythonTest), privateBinding)
-    # !!! AreEqual("InternalClsPart" in dir(), privateBinding)
+    AreEqual("InternalClsPart" in dir(IronPythonTest), privateBinding)
+    AreEqual("InternalClsPart" in globals(), privateBinding)
     AreEqual("_ClsPart__privateField" in dir(ClsPart), privateBinding)
     AreEqual("_ClsPart__privateProperty" in dir(ClsPart), privateBinding)
     AreEqual("_ClsPart__privateEvent" in dir(ClsPart), privateBinding)
     AreEqual("_ClsPart__privateMethod" in dir(ClsPart), privateBinding)
-    pass
 
 if not privateBinding:
     def test_NormalBinding():
@@ -62,8 +61,8 @@ else:
         #x = Generation.Namespace(None)
         
         # mixed namespace
-        import System.Scripting
-        x = System.Scripting.Actions.TopNamespaceTracker
+        import Microsoft.Scripting
+        x = Microsoft.Scripting.Actions.TopNamespaceTracker
         
         clsPart._ClsPart__privateField = 1
         AreEqual(clsPart._ClsPart__privateField, 1)
@@ -105,16 +104,19 @@ else:
         from System.Windows.Forms import Label, Control
         
         for val in [20, 0xffff]:
+            global called
+            called = False
             class TransLabel(Label):
                 def get_CreateParams(self):
-                    global style
-                    cp = Label().CreateParams
+                    global called
+                    cp = super(TransLabel, self).CreateParams
                     cp.ExStyle = cp.ExStyle | val
-                    style = cp.ExStyle
+                    called = True
                     return cp
                 CreateParams = property(fget=get_CreateParams)
         
-            AreEqual(Control.CreateParams.GetValue(TransLabel() ).ExStyle, style)
+            a = TransLabel()
+            AreEqual(called, True)
 
 # use this when running standalone
 #run_test(__name__)

@@ -22,18 +22,18 @@ using Microsoft.Contracts;
 namespace System.Scripting.Actions {
     public abstract class CallAction : StandardAction {
         private readonly string _name;
-        private readonly bool _caseInsensitive;
+        private readonly bool _ignoreCase;
         private readonly ReadOnlyCollection<Argument> _arguments;
 
-        protected CallAction(string name, bool caseInsensitive, IEnumerable<Argument> arguments)
+        protected CallAction(string name, bool ignoreCase, IEnumerable<Argument> arguments)
             : base(StandardActionKind.Call) {
             _name = name;
-            _caseInsensitive = caseInsensitive;
+            _ignoreCase = ignoreCase;
             _arguments = arguments.ToReadOnly();
         }
 
-        protected CallAction(string name, bool caseInsensitive, params Argument[] arguments)
-            : this(name, caseInsensitive, (IEnumerable<Argument>)arguments) {
+        protected CallAction(string name, bool ignoreCase, params Argument[] arguments)
+            : this(name, ignoreCase, (IEnumerable<Argument>)arguments) {
         }
 
         public string Name {
@@ -42,9 +42,9 @@ namespace System.Scripting.Actions {
             }
         }
 
-        public bool CaseInsensitive {
+        public bool IgnoreCase {
             get {
-                return _caseInsensitive;
+                return _ignoreCase;
             }
         }
 
@@ -60,17 +60,17 @@ namespace System.Scripting.Actions {
             return args[0].Call(this, args);
         }
 
-        public abstract MetaObject FallbackInvoke(MetaObject[] args);
+        public abstract MetaObject FallbackInvoke(MetaObject[] args, MetaObject onBindingError);
 
         [Confined]
         public override bool Equals(object obj) {
             CallAction ca = obj as CallAction;
-            return ca != null && ca._name == _name && ca._caseInsensitive == _caseInsensitive && ca._arguments.ListEquals(_arguments);
+            return ca != null && ca._name == _name && ca._ignoreCase == _ignoreCase && ca._arguments.ListEquals(_arguments);
         }
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28 ^ _name.GetHashCode() ^ (_caseInsensitive ? 0x8000000 : 0) ^ _arguments.ListHashCode());
+            return ((int)Kind << 28 ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0) ^ _arguments.ListHashCode());
         }
     }
 }

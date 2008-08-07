@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 using MSAst = System.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using System.Scripting.Runtime;
+    using Microsoft.Scripting.Runtime;
 
     public enum ParameterKind {
         Normal,

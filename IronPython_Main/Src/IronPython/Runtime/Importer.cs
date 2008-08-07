@@ -21,8 +21,8 @@ using System.IO;
 using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
 using Microsoft.Scripting;
@@ -98,6 +98,8 @@ namespace IronPython.Runtime {
             Exception exLast = PythonOps.SaveCurrentException();
             try {
                 Scope scope = from as Scope;
+                PythonType pt;
+                NamespaceTracker nt;
                 if (scope != null) {
                     object ret;
                     if (scope.TryGetName(SymbolTable.StringToId(name), out ret)) {
@@ -108,6 +110,18 @@ namespace IronPython.Runtime {
                     List listPath;
                     if (scope.TryGetName(Symbols.Path, out path) && (listPath = path as List) != null) {
                         return ImportNestedModule(context, scope, name, listPath);
+                    }
+                } else if ((pt = from as PythonType) != null) {
+                    PythonTypeSlot pts;
+                    object res;
+                    if (pt.TryResolveSlot(context, SymbolTable.StringToId(name), out pts) &&
+                        pts.TryGetValue(context, null, pt, out res)) {
+                        return res;
+                    }
+                } else if ((nt = from as NamespaceTracker) != null) {
+                    object res = ReflectedPackageOps.GetCustomMember(context, nt, name);
+                    if (res != OperationFailed.Value) {
+                        return res;
                     }
                 } else {
                     // This is too lax, for example it allows from module.class import member
@@ -136,7 +150,7 @@ namespace IronPython.Runtime {
             if (ns != null) {
                 object val;
                 if (ns.TryGetValue(SymbolTable.StringToId(name), out val)) {
-                    return val;
+                    return MemberTrackerToPython(context, val);
                 }
             }
 
@@ -335,12 +349,11 @@ namespace IronPython.Runtime {
                 }
             }
 
-            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, fileName, pc.DefaultEncoding, SourceCodeKind.File);
-
-            if (sourceUnit == null) {
+            if (!pc.DomainManager.Platform.FileExists(fileName)) {
                 throw PythonOps.SystemError("module source file not found");
             }
-            
+
+            SourceUnit sourceUnit = pc.CreateFileUnit(fileName, pc.DefaultEncoding, SourceCodeKind.File);
             pc.GetScriptCode(sourceUnit, name, ModuleOptions.None).Run(scope);
         }
 
@@ -492,7 +505,9 @@ namespace IronPython.Runtime {
 
                 // This allows from System.Math import *
                 PythonType dt = nested as PythonType;
-                if (dt != null && dt.IsSystemType) return true;
+                if (dt != null && dt.IsSystemType) {
+                    return true;
+                }
             }
             return false;
         }
@@ -563,25 +578,14 @@ namespace IronPython.Runtime {
             object ret;
             PythonContext pc = PythonContext.GetContext(context);
             if (!pc.DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out ret)) {
-                try {
-                    SourceUnit su = pc.DomainManager.Host.ResolveSourceFileUnit(name);
-
-                    if (GetFullPathAndValidateCase(context, Path.Combine(Path.GetDirectoryName(su.Path), name + Path.GetExtension(su.Path))) != null) {
-                        ScriptCode compiledCode = su.Compile();
-                        Scope scope = compiledCode.CreateScope();
-                        compiledCode.Run(scope);
-
-                        context.LanguageContext.DomainManager.Globals.SetName(SymbolTable.StringToId(name), scope);
-                        ret = scope;
-                    }
-                } catch (FileNotFoundException) {
-                    return null;
-                } catch (AmbiguousFileNameException e) {
-                    throw PythonOps.ImportError(String.Format("Found multiple modules of the same name '{0}': '{1}' and '{2}'", 
-                        name, e.FirstPath, e.SecondPath));
-                }
+                ret = TryImportSourceFile(pc, name);
             }
 
+            ret = MemberTrackerToPython(context, ret);
+            return ret;
+        }
+
+        private static object MemberTrackerToPython(CodeContext/*!*/ context, object ret) {
             MemberTracker res = ret as MemberTracker;
             if (res != null) {
                 PythonContext.EnsureModule(context).ShowCls = true;
@@ -596,10 +600,70 @@ namespace IronPython.Runtime {
                         realRes = PythonTypeOps.GetBuiltinFunction(mt.DeclaringType, mt.Name, new MemberInfo[] { mt.Method });
                         break;
                 }
-             
-                return realRes;
+
+                ret = realRes;
             }
             return ret;
+        }
+
+        internal static Scope TryImportSourceFile(PythonContext/*!*/ context, string/*!*/ name) {
+            var sourceUnit = TryFindSourceFile(context, name);
+            if (sourceUnit == null || 
+                GetFullPathAndValidateCase(context, Path.Combine(Path.GetDirectoryName(sourceUnit.Path), name + Path.GetExtension(sourceUnit.Path))) == null) {
+                return null;
+            }
+
+            var scope = ExecuteSourceUnit(sourceUnit);
+            sourceUnit.LanguageContext.DomainManager.Globals.SetName(SymbolTable.StringToId(name), scope);
+            return scope;
+        }
+
+        internal static Scope ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
+            ScriptCode compiledCode = sourceUnit.Compile();
+            Scope scope = compiledCode.CreateScope();
+            compiledCode.Run(scope);
+            return scope;
+        }
+
+        internal static SourceUnit TryFindSourceFile(PythonContext/*!*/ context, string/*!*/ name) {
+            List paths;
+            if (!context.TryGetSystemPath(out paths)) {
+                return null;
+            }
+
+            foreach (object dirObj in paths) {
+                string directory = dirObj as string;
+                if (directory == null) continue;  // skip invalid entries
+
+                string candidatePath = null;
+                LanguageContext candidateLanguage = null;
+                foreach (string extension in context.DomainManager.Configuration.GetFileExtensions()) {
+                    string fullPath;
+
+                    try {
+                        fullPath = Path.Combine(directory, name + extension);
+                    } catch (ArgumentException) {
+                        // skip invalid paths
+                        continue;
+                    }
+
+                    if (context.DomainManager.Platform.FileExists(fullPath)) {
+                        if (candidatePath != null) {
+                            throw PythonOps.ImportError(String.Format("Found multiple modules of the same name '{0}': '{1}' and '{2}'",
+                                name, candidatePath, fullPath));
+                        }
+
+                        candidatePath = fullPath;
+                        candidateLanguage = context.DomainManager.GetLanguageByExtension(extension);
+                    }
+                }
+
+                if (candidatePath != null) {
+                    return candidateLanguage.CreateFileUnit(candidatePath);
+                }
+            }
+
+            return null;
         }
 
         private static bool IsReflected(object module) {
@@ -691,25 +755,23 @@ namespace IronPython.Runtime {
         private static PythonModule LoadModuleFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
             Assert.NotNull(context, name, path);
 
-            string fullPath = GetFullPathAndValidateCase(context, path);
-            if (fullPath == null) {
-                return null;
-            }
-            
             PythonContext pc = PythonContext.GetContext(context);
-            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, fullPath, pc.DefaultEncoding, SourceCodeKind.File);
-            if (sourceUnit == null) {
+
+            string fullPath = GetFullPathAndValidateCase(pc, path);
+            if (fullPath == null || !pc.DomainManager.Platform.FileExists(fullPath)) {
                 return null;
             }
+
+            SourceUnit sourceUnit = pc.CreateFileUnit(fullPath, pc.DefaultEncoding, SourceCodeKind.File);
             return LoadFromSourceUnit(context, sourceUnit, name, sourceUnit.Path);
         }
 
-        private static string GetFullPathAndValidateCase(CodeContext/*!*/ context, string path) {
+        private static string GetFullPathAndValidateCase(LanguageContext/*!*/ context, string path) {
 #if !SILVERLIGHT
             // check for a match in the case of the filename, unfortunately we can't do this
             // in Silverlight becauase there's no way to get the original filename.
 
-            PlatformAdaptationLayer pal = context.LanguageContext.DomainManager.Platform;
+            PlatformAdaptationLayer pal = context.DomainManager.Platform;
             string dir = Path.GetDirectoryName(path);
             if (!pal.DirectoryExists(dir)) {
                 return null;

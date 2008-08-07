@@ -14,20 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using System.Scripting.Actions;
 
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
+using Ast = System.Linq.Expressions.Expression;
+
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
 
     class MetaBuiltinFunction : MetaPythonObject, IPythonInvokable {
         public MetaBuiltinFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinFunction/*!*/ value)
@@ -70,7 +70,18 @@ namespace IronPython.Runtime.Binding {
 
             args = ArrayUtils.RemoveFirst(args);
 
-            Restrictions selfRestrict = Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions);
+            if (Value.IsUnbound) {
+                return MakeSelflessCall(call, codeContext, args);
+            } else {
+                return MakeSelfCall(call, codeContext, args);
+            }            
+        }
+
+        private MetaObject/*!*/ MakeSelflessCall(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+            // just check if it's the same built-in function.  Because built-in fucntions are
+            // immutable the identity check will suffice.  Because built-in functions are uncollectible
+            // anyway we don't use the typical InstanceRestriction.
+            Restrictions selfRestrict = Restrictions.ExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
 
             if (Value.IsReversedOperator) {
                 ArrayUtils.SwapLastTwo(args);
@@ -100,6 +111,143 @@ namespace IronPython.Runtime.Binding {
             }
 
             return res;
+        }
+
+        private MetaObject/*!*/ MakeSelfCall(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {            
+            CallSignature signature = BindingHelpers.GetCallSignature(call);
+
+            Expression instance = Ast.Property(
+                Ast.Convert(
+                    Expression,
+                    typeof(BuiltinFunction)
+                ),
+                typeof(BuiltinFunction).GetProperty("__self__")
+            );
+
+            MetaObject self = GetInstance(
+                instance,
+                CompilerHelpers.GetType(Value.__self__),
+                Restrictions.Merge(
+                    Restrictions.TypeRestriction(
+                        Expression,
+                        typeof(BuiltinFunction)
+                    )
+                ).Merge(
+                    Restrictions.ExpressionRestriction(
+                        Value.MakeBoundFunctionTest(
+                            Ast.ConvertHelper(Expression, typeof(BuiltinFunction))                            
+                        )
+                    )
+                )
+            );
+
+            MetaObject res;
+            BinderState state = BinderState.GetBinderState(call);
+            BindingTarget dummy;
+            if (Value.IsReversedOperator) {
+                res = state.Binder.CallMethod(
+                    codeContext,
+                    Value.Targets,
+                    ArrayUtils.Append(args, self),
+                    GetReversedSignature(signature),
+                    self.Restrictions,
+                    NarrowingLevel.None,
+                    Value.IsBinaryOperator ?
+                        PythonNarrowing.BinaryOperator :
+                        NarrowingLevel.All,
+                    Value.Name,
+                    out dummy
+                );
+            } else {
+                res = state.Binder.CallInstanceMethod(
+                    codeContext,
+                    Value.Targets,
+                    self,
+                    args,
+                    signature,
+                    self.Restrictions,
+                    NarrowingLevel.None,
+                    Value.IsBinaryOperator ?
+                        PythonNarrowing.BinaryOperator :
+                        NarrowingLevel.All,
+                    Value.Name,
+                    out dummy
+                );
+            }
+
+            if (Value.IsBinaryOperator && args.Length == 1 && res.Expression.NodeType == ExpressionType.ThrowStatement) { // 1 bound function + 1 arg
+                // binary operators return NotImplemented on a failure to call them
+                res = new MetaObject(
+                    Ast.Property(null, typeof(PythonOps), "NotImplemented"),
+                    res.Restrictions
+                );
+            }
+
+            return res;
+        }
+
+        private MetaObject/*!*/ GetInstance(Expression/*!*/ instance, Type/*!*/ testType, Restrictions/*!*/ restrictions) {
+            Assert.NotNull(instance, testType);
+            object instanceValue = Value.__self__;
+
+            restrictions = restrictions.Merge(Restrictions.TypeRestriction(instance, testType));
+
+            // cast the instance to the correct type
+            if (CompilerHelpers.IsStrongBox(instanceValue)) {
+                instance = ReadStrongBoxValue(instance);
+                instanceValue = ((IStrongBox)instanceValue).Value;
+            } else if (!testType.IsEnum) {
+                // We need to deal w/ wierd types like MarshalByRefObject.  
+                // We could have an MBRO whos DeclaringType is completely different.  
+                // Therefore we special case it here and cast to the declaring type
+
+                Type selfType = CompilerHelpers.GetType(Value.__self__);
+                selfType = CompilerHelpers.GetVisibleType(selfType);
+
+                if (selfType == typeof(object) && Value.DeclaringType.IsInterface) {
+                    selfType = Value.DeclaringType;
+                }
+
+                if (Value.DeclaringType.IsInterface && selfType.IsValueType) {
+                    // explicit interface implementation dispatch on a value type, don't
+                    // unbox the value type before the dispatch.
+                    instance = Ast.Convert(instance, Value.DeclaringType);
+                } else if (selfType.IsValueType) {
+                    // We might be calling a a mutating method (like
+                    // Rectangle.Intersect). If so, we want it to mutate
+                    // the boxed value directly
+                    instance = Ast.Unbox(instance, selfType);
+                } else {
+#if SILVERLIGHT
+                    instance = Ast.Convert(instance, selfType);
+#else
+                    Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(Value.DeclaringType) : selfType;
+
+                    instance = Ast.Convert(instance, convType);
+#endif
+                }
+            } else {
+                // we don't want to cast the enum to its real type, it will unbox it 
+                // and turn it into its underlying type.  We presumably want to call 
+                // a method on the Enum class though - so we cast to Enum instead.
+                instance = Ast.Convert(instance, typeof(Enum));
+            }
+            return new MetaObject(
+                instance,
+                restrictions,
+                instanceValue
+            );
+        }
+
+        private MemberExpression/*!*/ ReadStrongBoxValue(Expression instance) {
+            return Ast.Field(
+                Ast.Convert(instance, Value.__self__.GetType()),
+                Value.__self__.GetType().GetField("Value")
+            );
+        }
+
+        private static CallSignature GetReversedSignature(CallSignature signature) {
+            return new CallSignature(ArrayUtils.Append(signature.GetArgumentInfos(), new ArgumentInfo(ArgumentKind.Simple)));
         }
 
         #endregion

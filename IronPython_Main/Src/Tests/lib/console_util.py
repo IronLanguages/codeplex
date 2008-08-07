@@ -135,7 +135,7 @@ console for testing purposes, and direct input to and from the instance.
     def ExecuteAndExit(self, line):
         self.writer.Write(line+"\n")
         i = 0
-        while i < 10 and not self.proc.HasExited:
+        while i < 40 and not self.proc.HasExited:
             Thread.Sleep(100)
             i += 1
         return self.proc.ExitCode

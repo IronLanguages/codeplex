@@ -14,20 +14,19 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
 using System.Linq.Expressions;
-
-using IronPython.Runtime.Binding;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
+using Ast = System.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
     
     /// <summary>
     /// Common helpers used by the various binding logic.
@@ -36,7 +35,7 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// Trys to get the BuiltinFunction for the given name on the type of the provided MetaObject.  
         /// 
-        /// Succeeds if the MetaObject is a BuiltinFunction, BuiltinMethodDescriptor, or BoundBuiltinFunction.
+        /// Succeeds if the MetaObject is a BuiltinFunction or BuiltinMethodDescriptor.
         /// </summary>
         internal static bool TryGetStaticFunction(BinderState/*!*/ state, SymbolId op, MetaObject/*!*/ mo, out BuiltinFunction function) {
             PythonType type = MetaPythonObject.GetPythonType(mo);
@@ -111,12 +110,28 @@ namespace IronPython.Runtime.Binding {
                 return ArgumentArrayToSignature(iac.Arguments);
             }
 
+            CallAction cla = action as CallAction;
+            if (cla != null) {
+                return ArgumentArrayToSignature(cla.Arguments);
+            }
+            
             // DLR Create action which we hand off to our call code, also
             // has an argument array.
             CreateAction ca = action as CreateAction;
             Debug.Assert(ca != null);
 
             return ArgumentArrayToSignature(ca.Arguments);
+        }
+
+        public static Expression/*!*/ Invoke(Expression codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
+            return Ast.ActionExpression(
+                new InvokeBinder(
+                    binder,
+                    signature
+                ),
+                resultType,
+                ArrayUtils.Insert(codeContext, args)
+            );
         }
 
         /// <summary>
@@ -130,12 +145,14 @@ namespace IronPython.Runtime.Binding {
             }
 
             return new MetaObject(
-                Binders.Invoke(
+                Invoke(
+                    BinderState.GetCodeContext(action),
                     BinderState.GetBinderState(action),
                     typeof(object),
                     GetCallSignature(action),
                     ArrayUtils.Insert(
                         Binders.Get(
+                            BinderState.GetCodeContext(action),
                             BinderState.GetBinderState(action),
                             typeof(object),
                             action.Name,
@@ -198,11 +215,6 @@ namespace IronPython.Runtime.Binding {
 
             if (md != null) {
                 return md.Template;
-            }
-
-            BoundBuiltinFunction bbf = o as BoundBuiltinFunction;
-            if (bbf != null) {
-                return bbf.Target;
             }
 
             return o as BuiltinFunction;
@@ -373,7 +385,7 @@ namespace IronPython.Runtime.Binding {
 
                 expr = Ast.Scope(
                     Ast.Comma(
-                        Ast.Try(
+                        AstUtils.Try(
                             Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                             Ast.Assign(tmp, expr)
                         ).Finally(
@@ -388,7 +400,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         internal static Expression CreateBinderStateExpression() {
-            return Ast.CodeContext();
+            return AstUtils.CodeContext();
         }
 
         /// <summary>
@@ -408,6 +420,18 @@ namespace IronPython.Runtime.Binding {
 
             // unreachable, we always have one of these binders
             throw new InvalidOperationException();
+        }
+
+        internal static Expression/*!*/ TypeErrorForProtectedMember(Type/*!*/ type, string/*!*/ name) {
+            Debug.Assert(!typeof(IPythonObject).IsAssignableFrom(type));
+
+            return Ast.Throw(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("TypeErrorForProtectedMember"),
+                    Ast.Constant(type),
+                    Ast.Constant(name)
+                )
+            );
         }
     }
 

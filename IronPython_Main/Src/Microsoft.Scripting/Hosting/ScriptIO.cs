@@ -15,10 +15,10 @@
 
 using System;
 using System.IO;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Security.Permissions;
 using System.Text;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>

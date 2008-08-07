@@ -17,12 +17,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Scripting;
 using System.Scripting.Actions;
-
 using IronPython.Runtime.Operations;
-using System.Scripting.Utils;
-using System.Scripting.Runtime;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
 
@@ -190,7 +191,7 @@ namespace IronPython.Runtime.Binding {
                                 Expression.Call(
                                     Expression.ConvertHelper(args[i + 1].Expression, typeof(IAttributesCollection)),
                                     typeof(IAttributesCollection).GetMethod("get_Item"),
-                                    Expression.Constant(SymbolTable.StringToId(key))
+                                    AstUtils.Constant(SymbolTable.StringToId(key))
                                 )
                             );
                         }
@@ -269,7 +270,7 @@ namespace IronPython.Runtime.Binding {
                 _fallback = realFallback;
             }
 
-            public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
+            public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
                 return _fallback.InvokeFallback(args, BindingHelpers.GetCallSignature(this));
             }
 
@@ -291,7 +292,7 @@ namespace IronPython.Runtime.Binding {
                 _state = state;
             }
 
-            public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args) {
+            public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
                 if (args[0].IsDynamicObject) {
                     // try creating an instance...
                     return args[0].Create(

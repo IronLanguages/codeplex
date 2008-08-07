@@ -20,7 +20,7 @@ from lib.cominterop_util import *
 from System.Runtime.InteropServices import COMException
 from System import InvalidOperationException
 from System.Reflection import TargetParameterCountException
-from System.Scripting import ArgumentTypeException
+from Microsoft.Scripting import ArgumentTypeException
 
 com_type_name = "DlrComLibrary.DlrComServer"
 
@@ -68,7 +68,7 @@ def test_errorInfo():
 
 def test_documentation():
     import IronPython
-    ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations
+    ops = IronPython.Hosting.Python.CreateRuntime().GetEngine('py').Operations
     if preferComDispatch:
         #AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
         # ObjectOperations needs to be updated to use IDO

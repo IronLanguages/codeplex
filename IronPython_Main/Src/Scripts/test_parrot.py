@@ -25,8 +25,8 @@ if sys.platform=="cli":
     import clr
     clr.AddReference("IronPython")
     import IronPython
-    is_interpret = IronPython.Hosting.PythonEngine.CurrentEngine.Options.InterpretedMode
     import System
+    is_interpret = "-X:Interpret" in System.Environment.GetCommandLineArgs()
     is_cli64 = System.IntPtr.Size == 8
     
     if is_interpret and is_cli64:

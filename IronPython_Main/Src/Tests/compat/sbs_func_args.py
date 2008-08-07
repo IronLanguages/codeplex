@@ -28,6 +28,17 @@ if is_cli:
     g1 = o.M1
     g2 = o.M2
     g3 = o.M3
+    
+    #for peverify runs
+    from System.IO import Path, File, Directory
+    if File.Exists(Path.GetTempPath() + r"\sbs_library.dll"):
+        try:
+            File.Delete(Path.GetTempPath() + r"\sbs_library.dll")
+        except:
+            pass
+    if not File.Exists(Path.GetTempPath() + r"\sbs_library.dll"):
+        File.Copy(Directory.GetCurrentDirectory() + r"\sbs_library.dll", Path.GetTempPath() + r"\sbs_library.dll")
+    
 else:
     g1 = f1
     g2 = f2

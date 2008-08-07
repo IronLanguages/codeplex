@@ -21,8 +21,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -338,6 +338,67 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static void ExitMethod(IDisposable/*!*/ self, object exc_type, object exc_value, object exc_back) {
             self.Dispose();
+        }
+
+        [PropertyMethod, StaticExtensionMethod]
+        public static List/*!*/ Get__all__<T>(CodeContext/*!*/ context) {
+            Debug.Assert(typeof(T).IsSealed && typeof(T).IsAbstract, "__all__ should only be produced for static members"); 
+
+            PythonType pt = DynamicHelpers.GetPythonTypeFromType(typeof(T));
+
+            List names = new List();
+            foreach (string name in pt.GetMemberNames(context)) {
+                object res;
+                if (IsStaticTypeMemberInAll(context, pt, SymbolTable.StringToId(name), out res)) {
+                    names.AddNoLock(name);
+                }
+            }
+
+            return names;
+        }
+
+        /// <summary>
+        /// Determines if a type member can be imported.  This is used to treat static types like modules.
+        /// </summary>
+        private static bool IsStaticTypeMemberInAll(CodeContext/*!*/ context, PythonType/*!*/ pt, SymbolId name, out object res) {
+            PythonTypeSlot pts;
+            res = null;
+            if (pt.TryResolveSlot(context, name, out pts)) {
+                if (name == Symbols.Doc || name == Symbols.Class) {
+                    // these exist but we don't want to clobber __doc__ on import * or bring in __class__
+                    return false;
+                } else if (pts is ReflectedGetterSetter) {
+                    // property or indexer, these fetch the value at runtime, the user needs to explicitly
+                    // import them using from type import property
+                    return false;
+                }
+
+                ReflectedField rf = pts as ReflectedField;
+                if (rf != null && !rf.info.IsInitOnly && !rf.info.IsLiteral) {
+                    // only bring in read-only fields, if the value can change the user needs to explicitly
+                    // import by name
+                    return false;
+                }
+
+                BuiltinMethodDescriptor method = pts as BuiltinMethodDescriptor;
+                if (method != null && (!method.DeclaringType.IsSealed || !method.DeclaringType.IsAbstract)) {
+                    // inherited object member on a static class (GetHashCode, Equals, etc...)
+                    return false;
+                }
+
+                BuiltinFunction bf = pts as BuiltinFunction;
+                if (bf != null && (!bf.DeclaringType.IsSealed || !bf.DeclaringType.IsAbstract)) {
+                    // __new__/ReferenceEquals inherited from object
+                    return false;
+                }
+
+                if (pts.TryGetValue(context, null, pt, out res)) {
+                    return true;
+                }
+            }
+
+            res = null;
+            return false;
         }
 
         /// <summary>

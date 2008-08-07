@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
@@ -38,7 +37,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 2; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             object val = _defaultValue;
             if(val is Missing) {
                 val = CompilerHelpers.GetMissingValue(_argumentType);

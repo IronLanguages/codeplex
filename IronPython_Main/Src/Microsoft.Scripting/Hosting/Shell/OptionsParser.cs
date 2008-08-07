@@ -17,10 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.Serialization;
-using System.Scripting;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -195,11 +194,11 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 //#endif
 
                 case "-X:AssembliesDir":
-                    Snippets.Shared.SnippetsDirectory = PopNextArg();
+                    SetDlrOption("AssembliesDir", PopNextArg());
                     break;
 
-                case "-X:SaveAssemblies": 
-                    Snippets.Shared.SaveSnippets = true; 
+                case "-X:SaveAssemblies":
+                    SetDlrOption("SaveAssemblies");
                     break;
 
                 case "-X:Frames":
@@ -217,7 +216,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 case "-X:PreferComInteropAssembly":
                 case "-X:CachePointersInApartment":
                 case "-X:TrackPerformance": 
-                    SetCoreDlrOption(arg.Substring(3));
+                    SetDlrOption(arg.Substring(3));
                     break;
 
                 case "-X:Interpret":
@@ -237,19 +236,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
             }
         }
 
-        // Note: this works because it runs before the compiler picks up the
-        // environment variable
-        internal static void SetCoreDlrOption(string option) {
-#if !SILVERLIGHT
-            Environment.SetEnvironmentVariable("COREDLR_" + option, "TRUE");
-#endif
+        internal static void SetDlrOption(string option) {
+            SetDlrOption(option, "true");
         }
 
         // Note: this works because it runs before the compiler picks up the
         // environment variable
-        internal static void SetDlrOption(string option) {
+        internal static void SetDlrOption(string option, string value) {
 #if !SILVERLIGHT
-            Environment.SetEnvironmentVariable("DLR_" + option, "TRUE");
+            Environment.SetEnvironmentVariable("DLR_" + option, value);
 #endif
         }
 

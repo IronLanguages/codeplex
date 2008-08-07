@@ -151,7 +151,7 @@ namespace System.Linq.Expressions {
                 }
                 return New(ci);
             }
-            return new NewExpression(Annotations.Empty, type, null, DefaultReadOnlyCollection<Expression>.Empty, null);
+            return new NewExpression(Annotations.Empty, type, null, EmptyReadOnlyCollection<Expression>.Instance, null);
         }
 
 

@@ -16,16 +16,13 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Utils;
+using System.Reflection;
 using System.Text;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
@@ -103,16 +100,6 @@ namespace Microsoft.Scripting.Generation {
             return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
         }
 
-        internal Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters) {
-            Assert.NotNullItems(parameters);
-            Debug.Assert(rule != null);
-
-            return MakeExpression(
-                new MethodBinderContext(_binder._binder, rule.Context),
-                parameters
-            );
-        }
-
         internal Expression MakeExpression(Expression contextExpression, IList<Expression> parameters) {
             Assert.NotNullItems(parameters);
             Debug.Assert(contextExpression != null);
@@ -124,9 +111,21 @@ namespace Microsoft.Scripting.Generation {
         }
 
         internal Expression MakeExpression(MethodBinderContext context, IList<Expression> parameters) {
+            int minPriority = Int32.MaxValue;
+            int maxPriority = Int32.MinValue;
+            foreach (ArgBuilder ab in _argBuilders) {
+                minPriority = System.Math.Min(minPriority, ab.Priority);
+                maxPriority = System.Math.Max(maxPriority, ab.Priority);
+            }
+
             Expression[] args = new Expression[_argBuilders.Count];
-            for (int i = 0; i < _argBuilders.Count; i++) {
-                args[i] = _argBuilders[i].ToExpression(context, parameters);
+            bool[] usageMarkers = new bool[parameters.Count];
+            for (int priority = minPriority; priority <= maxPriority; priority++) {
+                for (int i = 0; i < _argBuilders.Count; i++) {
+                    if (_argBuilders[i].Priority == priority) {
+                        args[i] = _argBuilders[i].ToExpression(context, parameters, usageMarkers);
+                    }
+                }
             }
 
             MethodBase mb = Method;
@@ -144,7 +143,7 @@ namespace Microsoft.Scripting.Generation {
             if (mb.IsPublic && mb.DeclaringType.IsVisible) {
                 // public method
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters);
+                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters, usageMarkers);
                     call = Ast.SimpleCallHelper(instance, mi, args);
                 } else {
                     call = Ast.SimpleNewHelper(ci, args);
@@ -152,7 +151,7 @@ namespace Microsoft.Scripting.Generation {
             } else {
                 // Private binding, invoke via reflection
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? Ast.Null() : _instanceBuilder.ToExpression(context, parameters);
+                    Expression instance = mi.IsStatic ? Ast.Null() : _instanceBuilder.ToExpression(context, parameters, usageMarkers);
                     call = Ast.Call(
                         typeof(BinderOps).GetMethod("InvokeMethod"),
                         Ast.Constant(mi),
@@ -209,11 +208,11 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// TODO: Remove RuleBuilder and knownTypes once we're fully meta
         /// </summary>
-        /// <param name="rule">The rule being generated for the call</param>
+        /// <param name="contextExpression">CodeContext expression</param>
         /// <param name="parameters">The explicit arguments</param>
         /// <param name="knownTypes">If non-null, the type for each element in parameters</param>
         /// <returns></returns>
-        internal Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters, IList<Type> knownTypes) {
+        internal Expression MakeExpression(Expression contextExpression, IList<Expression> parameters, IList<Type> knownTypes) {
             Debug.Assert(knownTypes == null || parameters.Count == knownTypes.Count);
 
             IList<Expression> args = parameters;
@@ -227,7 +226,7 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            return MakeExpression(rule, args);
+            return MakeExpression(contextExpression, args);
         }
 
         private static int FindMaxPriority(IList<ArgBuilder> abs, int ceiling) {

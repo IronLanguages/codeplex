@@ -735,4 +735,16 @@ def test_cp15298():
 
     Assert(tmin_compiled<=tmin_string, "re.compile(...).match(...) is slower than re.match(..., ...)")
 
+def test_cp11136():
+    regex = re.compile(r"^(?P<msg>NMAKE[A-Za-z0-9]*)'\"?(?P<file>[\\A-Za-z0-9/:_\.\+]+)" )
+    Assert(regex.search(r"NMAKE0119'adirectory\afile.txt")!=None)
+
+def test_cp17111():
+    test_cases = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#%&_+-=]{};':,.//<>" + '"'
+    for x in test_cases:
+        regex = re.compile(r".*\\%s" % x)
+        Assert(regex.search(r"\\%s" % x)!=None)
+        Assert(regex.search(r"")==None)
+        
+        
 run_test(__name__)

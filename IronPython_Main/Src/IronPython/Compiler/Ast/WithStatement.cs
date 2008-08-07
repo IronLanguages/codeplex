@@ -15,11 +15,9 @@
 
 using System;
 using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Runtime;
-
 using IronPython.Runtime.Binding;
-
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = System.Linq.Expressions;
 
@@ -156,6 +154,7 @@ namespace IronPython.Compiler.Ast {
             statements[4] =
                 // try:
                 AstUtils.Try(// try statement body
+                    Ast.Annotate(Span, _header),
                     _var != null ?
                         AstUtils.Block(
                             _body.Span,
@@ -165,8 +164,7 @@ namespace IronPython.Compiler.Ast {
                             ag.Transform(_body)
                         ) :
                 // BLOCK
-                        ag.Transform(_body), // except:, // try statement location
-                        Span, _header
+                        ag.Transform(_body) // except:, // try statement location
                 ).Catch(typeof(Exception), exception,
                     Ast.Block(
                 // Python specific exception handling code
@@ -180,7 +178,7 @@ namespace IronPython.Compiler.Ast {
                         ),
                 //  if not exit(*sys.exc_info()):
                 //      raise
-                        Ast.IfThen(
+                        AstUtils.IfThen(
                             Binders.Convert(
                                 ag.BinderState,
                                 typeof(bool),
@@ -199,7 +197,7 @@ namespace IronPython.Compiler.Ast {
                 ).Finally(
                 //  if exc:
                 //      exit(None, None, None)
-                    Ast.IfThen(
+                    AstUtils.IfThen(
                         exc,
                         Ast.ActionExpression(
                             new InvokeBinder(
@@ -209,7 +207,7 @@ namespace IronPython.Compiler.Ast {
                             typeof(object),
                             MSAst.Expression.Annotate(_contextManager.Span),
                             new MSAst.Expression[] {
-                                Ast.CodeContext(),
+                                AstUtils.CodeContext(),
                                 exit,
                                 Ast.Null(),
                                 Ast.Null(),
@@ -235,11 +233,11 @@ namespace IronPython.Compiler.Ast {
                 Binders.Invoke(
                     ag.BinderState,
                     typeof(object),
-                    new CallSignature(MSAst.ArgumentKind.List),
+                    new CallSignature(ArgumentKind.List),
                     exit,
                     Ast.Call(
                         AstGenerator.GetHelperMethod("GetExceptionInfoLocal"),
-                        Ast.CodeContext(),
+                        AstUtils.CodeContext(),
                         exception
                     )
                 )

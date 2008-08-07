@@ -16,8 +16,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -145,9 +147,7 @@ namespace IronPython.Runtime {
             PythonType.DeleteMember(context, this, SymbolTable.StringToId(name));
         }
 
-        private bool TryLookupInBase(CodeContext context, object type, SymbolId name, object self, out object value) {
-            PythonType pt = type as PythonType;
-
+        private bool TryLookupInBase(CodeContext context, PythonType pt, SymbolId name, object self, out object value) {
             PythonTypeSlot dts;
 
             if (pt.OldClass == null) {

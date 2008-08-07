@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -31,12 +31,11 @@ namespace IronPython.Runtime {
 
     [PythonSystemType("dict")]
     public class PythonDictionary : IDictionary<object, object>, IValueEquality,
-        IDictionary, ICodeFormattable, IAttributesCollection
-    {
+        IDictionary, ICodeFormattable, IAttributesCollection {
         [MultiRuntimeAware]
         private static object DefaultGetItem;   // our cached __getitem__ method
         internal DictionaryStorage _storage;
-        
+
         internal static object MakeDict(CodeContext/*!*/ context, PythonType cls) {
             if (cls == TypeCache.Dict) {
                 return new PythonDictionary();
@@ -98,19 +97,23 @@ namespace IronPython.Runtime {
 
         #region IDictionary<object,object> Members
 
-        void IDictionary<object,object>.Add(object key, object value) {
+        [PythonHidden]
+        public void Add(object key, object value) {
             _storage.Add(key, value);
         }
 
-        bool IDictionary<object,object>.ContainsKey(object key) {
+        [PythonHidden]
+        public bool ContainsKey(object key) {
             return _storage.Contains(key);
         }
 
-        ICollection<object> IDictionary<object,object>.Keys {
+        public ICollection<object> Keys {
+            [PythonHidden]
             get { return keys(); }
         }
 
-        bool IDictionary<object,object>.Remove(object key) {
+        [PythonHidden]
+        public bool Remove(object key) {
             try {
                 __delitem__(key);
                 return true;
@@ -119,11 +122,13 @@ namespace IronPython.Runtime {
             }
         }
 
-        bool IDictionary<object,object>.TryGetValue(object key, out object value) {
+        [PythonHidden]
+        public bool TryGetValue(object key, out object value) {
             return _storage.TryGetValue(key, out value);
         }
 
-        ICollection<object> IDictionary<object,object>.Values {
+        public ICollection<object> Values {
+            [PythonHidden]
             get { return values(); }
         }
 
@@ -131,31 +136,37 @@ namespace IronPython.Runtime {
 
         #region ICollection<KeyValuePair<object,object>> Members
 
-        void ICollection<KeyValuePair<object,object>>.Add(KeyValuePair<object, object> item) {
+        [PythonHidden]
+        public void Add(KeyValuePair<object, object> item) {
             _storage.Add(item.Key, item.Value);
         }
 
-        void ICollection<KeyValuePair<object, object>>.Clear() {
+        [PythonHidden]
+        public void Clear() {
             _storage.Clear();
         }
 
-        bool ICollection<KeyValuePair<object,object>>.Contains(KeyValuePair<object, object> item) {
+        [PythonHidden]
+        public bool Contains(KeyValuePair<object, object> item) {
             return _storage.Contains(item.Key);
         }
 
-        void ICollection<KeyValuePair<object,object>>.CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
+        [PythonHidden]
+        public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
             _storage.GetItems().CopyTo(array, arrayIndex);
         }
 
-        int ICollection<KeyValuePair<object,object>>.Count {
+        public int Count {
+            [PythonHidden]
             get { return __len__(); }
         }
 
-        bool ICollection<KeyValuePair<object,object>>.IsReadOnly {
+        bool ICollection<KeyValuePair<object, object>>.IsReadOnly {
             get { return false; }
         }
 
-        bool ICollection<KeyValuePair<object,object>>.Remove(KeyValuePair<object, object> item) {
+        [PythonHidden]
+        public bool Remove(KeyValuePair<object, object> item) {
             return _storage.Remove(item.Key);
         }
 
@@ -163,7 +174,8 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
+        [PythonHidden]
+        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
             foreach (KeyValuePair<object, object> kvp in _storage.GetItems()) {
                 yield return kvp;
             }
@@ -404,7 +416,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonClassMethod]
-        public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {            
+        public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {
             XRange xr = seq as XRange;
             if (xr != null) {
                 int n = xr.__len__();
@@ -481,7 +493,7 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-        
+
         #region IValueEquality Members
 
         int IValueEquality.GetValueHashCode() {
@@ -517,15 +529,8 @@ namespace IronPython.Runtime {
 
         #region IDictionary Members
 
-        void IDictionary.Add(object key, object value) {
-            this[key] = value;
-        }
-
-        void IDictionary.Clear() {
-            DictionaryOps.clear(this);
-        }
-
-        bool IDictionary.Contains(object key) {
+        [PythonHidden]
+        public bool Contains(object key) {
             return __contains__(key);
         }
 
@@ -544,7 +549,7 @@ namespace IronPython.Runtime {
                     // List<T> enumerator doesn't throw, so we need to.
                     if (!_moved) throw new InvalidOperationException();
 
-                    return new DictionaryEntry(_enumerator.Current.Key, _enumerator.Current.Value);  
+                    return new DictionaryEntry(_enumerator.Current.Key, _enumerator.Current.Value);
                 }
             }
 
@@ -598,25 +603,12 @@ namespace IronPython.Runtime {
             get { return this.keys(); }
         }
 
-        void IDictionary.Remove(object key) {
-            ((IDictionary<object, object>)this).Remove(key);
-        }
-
         ICollection IDictionary.Values {
             get { return values(); }
         }
 
-        object IDictionary.this[object key] {
-            get {
-                object res;
-                if (!_storage.TryGetValue(key, out res)) {
-                    throw PythonOps.KeyError(key);
-                }
-                return res;
-            }
-            set {
-                _storage.Add(key, value);
-            }
+        void IDictionary.Remove(object key) {
+            ((IDictionary<object, object>)this).Remove(key);
         }
 
         #endregion
@@ -625,10 +617,6 @@ namespace IronPython.Runtime {
 
         void ICollection.CopyTo(Array array, int index) {
             throw new NotImplementedException("The method or operation is not implemented.");
-        }
-
-        int ICollection.Count {
-            get { return __len__(); }
         }
 
         bool ICollection.IsSynchronized {
@@ -718,7 +706,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        void IAttributesCollection.AddObjectKey(object name, object value) { this[name] =  value; }
+        void IAttributesCollection.AddObjectKey(object name, object value) { this[name] = value; }
         bool IAttributesCollection.TryGetObjectValue(object name, out object value) { return ((IDictionary<object, object>)this).TryGetValue(name, out value); }
         bool IAttributesCollection.RemoveObjectKey(object name) { return ((IDictionary<object, object>)this).Remove(name); }
         bool IAttributesCollection.ContainsObjectKey(object name) { return __contains__(name); }
@@ -726,13 +714,13 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #endregion       
+        #endregion
     }
 
 #if !SILVERLIGHT // environment variables not available
     internal class EnvironmentDictionaryStorage : CommonDictionaryStorage {
         public EnvironmentDictionaryStorage() {
-            foreach(DictionaryEntry de in Environment.GetEnvironmentVariables()) {
+            foreach (DictionaryEntry de in Environment.GetEnvironmentVariables()) {
                 Add(de.Key, de.Value);
             }
         }
@@ -756,10 +744,10 @@ namespace IronPython.Runtime {
             }
 
             return res;
-        }       
+        }
     }
 #endif
-   
+
     /// <summary>
     /// Note: 
     ///   IEnumerator innerEnum = Dictionary&lt;K,V&gt;.KeysCollections.GetEnumerator();

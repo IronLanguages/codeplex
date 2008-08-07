@@ -18,8 +18,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Types {
     /// etc...
     /// </summary>
     public abstract class ReflectedGetterSetter : PythonTypeSlot {
-        private readonly MethodInfo/*!*/[]/*!*/ _getter, _setter;
+        private MethodInfo/*!*/[]/*!*/ _getter, _setter;
         private readonly NameType _nameType;
 
         protected ReflectedGetterSetter(MethodInfo[]/*!*/ getter, MethodInfo[]/*!*/ setter, NameType nt) {
@@ -52,11 +52,19 @@ namespace IronPython.Runtime.Types {
             _nameType = from._nameType;
         }
 
-        public abstract string __name__ {
-            get;
+        internal void AddGetter(MethodInfo mi) {
+            _getter = ArrayUtils.Append(_getter, mi);
+        }
+
+        internal void AddSetter(MethodInfo mi) {
+            _setter = ArrayUtils.Append(_setter, mi);
         }
 
         internal abstract Type DeclaringType {
+            get;
+        }
+
+        public abstract string __name__ {
             get;
         }
 
@@ -102,7 +110,7 @@ namespace IronPython.Runtime.Types {
             return target.Call(context, storage, instance, args);
         }
 
-        private static bool NeedToReturnProperty(object instance, MethodInfo[] mis) {
+        protected static bool NeedToReturnProperty(object instance, MethodInfo[] mis) {
             if (instance == null) {
                 if (mis.Length == 0) {
                     return true;

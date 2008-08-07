@@ -290,16 +290,13 @@ namespace System.Linq.Expressions {
                     return false;
                 } else if (currentLeft.Type != currentRight.Type) {
                     // they can't possibly be a match
-                    PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByType");
                     return false;
                 } else if (currentLeft.BindingInfo != null) {
                     if (currentRight.BindingInfo == null ||
                         !currentRight.BindingInfo.HashCookie.Equals(currentLeft.BindingInfo.HashCookie)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByBindingInfo");
                         return false;
                     }
                 } else if (currentRight.BindingInfo != null) {
-                    PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByBindingInfo");
                     return false;
                 }
 
@@ -334,18 +331,15 @@ namespace System.Linq.Expressions {
                     CallSite rightSite = ceRight.Value as CallSite;
                     if (leftSite != null) {
                         if (rightSite == null) {
-                            PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferBySiteAndConstant (R)");
                             return false;
                         }
 
                         if (!leftSite.Binder.HashCookie.Equals(rightSite.Binder.HashCookie)) {
-                            PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferBySiteBinder");
                             return false;
                         }
 
                         return true;
                     } else if (rightSite != null) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferBySiteAndConstant (L)");
                         return false;
                     }
 
@@ -369,7 +363,6 @@ namespace System.Linq.Expressions {
                 case ExpressionType.Equal:
                 case ExpressionType.NotEqual:
                     if (!CompareEquality((BinaryExpression)currentLeft, (BinaryExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByBinary");
                         return false;
                     }
                     break;
@@ -391,54 +384,46 @@ namespace System.Linq.Expressions {
                 case ExpressionType.RightShift:
                 case ExpressionType.Subtract:
                     if (!Compare((BinaryExpression)currentLeft, (BinaryExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByBinary");
                         return false;
                     }
                     break;
                 case ExpressionType.Call:
                     if (!Compare((MethodCallExpression)currentLeft, (MethodCallExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByCall");
                         return false;
                     }
                     break;
                 case ExpressionType.New:
                     // chcek ConstructorInfo and BindingInfo
                     if (!Compare((NewExpression)currentLeft, (NewExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByNew");
                         return false;
                     }
                     break;
                 case ExpressionType.TypeIs:
                     // check type
                     if (!Compare((TypeBinaryExpression)currentLeft, (TypeBinaryExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByTypeIs");
                         return false;
                     }
                     break;
                 case ExpressionType.Scope:
                     // compare factory method
                     if (!Compare(varInfo, (ScopeExpression)currentLeft, (ScopeExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByScope");
                         return false;
                     }
                     break;
                 case ExpressionType.MemberAccess:
                     // compare member
                     if (!Compare((MemberExpression)currentLeft, (MemberExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByMember");
                         return false;
                     }
                     break;
                 case ExpressionType.TryStatement:
                     // compare catch finally blocks and their handler types
                     if (!Compare(varInfo, (TryStatement)currentLeft, (TryStatement)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByTry");
                         return false;
                     }
                     break;
                 case ExpressionType.Variable:
                     if (!Compare(varInfo, (VariableExpression)currentLeft, (VariableExpression)currentRight)) {
-                        PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByVariable");
                         return false;
                     }
                     break;
@@ -475,7 +460,6 @@ namespace System.Linq.Expressions {
                 // TODO: compare case values
                 case ExpressionType.Extension:
 
-                    PerfTrack.NoteEvent(PerfTrack.Categories.RuleEvaluation, "TreesDifferByUnknown");
                     // we should have been reduced, but error on the side of being different.
                     return false;
                 default:

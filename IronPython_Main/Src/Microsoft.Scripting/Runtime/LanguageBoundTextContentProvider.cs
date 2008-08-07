@@ -15,7 +15,6 @@
 
 using System.IO;
 using System.Scripting;
-using System.Scripting.Runtime;
 using System.Text;
 
 namespace Microsoft.Scripting.Runtime {

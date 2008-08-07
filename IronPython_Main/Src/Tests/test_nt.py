@@ -134,47 +134,54 @@ def test_chdir():
 
 # fdopen tests
 def test_fdopen():
-    # fd = 0
+    
     # IronPython does not implement the nt.dup function
     if not is_cli:
-        result = None
-        result = nt.fdopen(nt.dup(0),"r",1024)
-        Assert(result!=None,"1,The file object was not returned correctly")
-        
-        result = None
-        result = nt.fdopen(nt.dup(0),"w",2048)
-        Assert(result!=None,"2,The file object was not returned correctly")
-        
-        result = None
-        result = nt.fdopen(nt.dup(0),"a",512)
-        Assert(result!=None,"3,The file object was not returned correctly")
-        
-        # fd = 1
-        result = None
-        result = nt.fdopen(nt.dup(1),"a",1024)
-        Assert(result!=None,"4,The file object was not returned correctly")
-        
-        result = None
-        result = nt.fdopen(nt.dup(1),"r",2048)
-        Assert(result!=None,"5,The file object was not returned correctly")
-        
-        result = None
-        result = nt.fdopen(nt.dup(1),"w",512)
-        Assert(result!=None,"6,The file object was not returned correctly")
-        
-        # fd = 2
-        result = None
-        result = nt.fdopen(nt.dup(2),"r",1024)
-        Assert(result!=None,"7,The file object was not returned correctly")
-        
-        result = None
-        result = nt.fdopen(nt.dup(2),"a",2048)
-        Assert(result!=None,"8,The file object was not returned correctly")
-        
-        result = None
-        result = nt.fdopen(nt.dup(2),"w",512)
-        Assert(result!=None,"9,The file object was not returned correctly")
+        fd_lambda = lambda x: nt.dup(x)
+    else:
+        AssertError(AttributeError, lambda: nt.dup)
+        fd_lambda = lambda x: x
     
+    # fd = 0    
+    result = None
+    result = nt.fdopen(fd_lambda(0),"r",1024)
+    Assert(result!=None,"1,The file object was not returned correctly")
+    
+    result = None
+    result = nt.fdopen(fd_lambda(0),"w",2048)
+    Assert(result!=None,"2,The file object was not returned correctly")
+    
+    result = None
+    result = nt.fdopen(fd_lambda(0),"a",512)
+    Assert(result!=None,"3,The file object was not returned correctly")
+    
+    # fd = 1
+    result = None
+    result = nt.fdopen(fd_lambda(1),"a",1024)
+    Assert(result!=None,"4,The file object was not returned correctly")
+    
+    result = None
+    result = nt.fdopen(fd_lambda(1),"r",2048)
+    Assert(result!=None,"5,The file object was not returned correctly")
+    
+    result = None
+    result = nt.fdopen(fd_lambda(1),"w",512)
+    Assert(result!=None,"6,The file object was not returned correctly")
+    
+    # fd = 2
+    result = None
+    result = nt.fdopen(fd_lambda(2),"r",1024)
+    Assert(result!=None,"7,The file object was not returned correctly")
+    
+    result = None
+    result = nt.fdopen(fd_lambda(2),"a",2048)
+    Assert(result!=None,"8,The file object was not returned correctly")
+    
+    result = None
+    result = nt.fdopen(fd_lambda(2),"w",512)
+    Assert(result!=None,"9,The file object was not returned correctly")
+    
+    if not is_cli:
         result.close()
          
     # The file descriptor is not valid

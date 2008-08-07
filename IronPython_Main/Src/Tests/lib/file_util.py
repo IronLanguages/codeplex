@@ -69,6 +69,9 @@ def file_exists_in_path(file):
 def fullpath(path):
     if colon not in path:
         return nt.getcwd() + separator + path
+    elif sys.platform!="win32":
+        from System.IO.Path import GetFullPath
+        return GetFullPath(path)
     else: 
         return path
 
@@ -86,7 +89,7 @@ def get_full_dir_name(path):
     """removes ~# from short file names"""
     if sys.platform == "win32": return path
     import System
-    return System.IO.DirectoryInfo(path).FullPath
+    return System.IO.DirectoryInfo(path).FullName
             
 def ensure_directory_present(path): 
     path = fullpath(path)

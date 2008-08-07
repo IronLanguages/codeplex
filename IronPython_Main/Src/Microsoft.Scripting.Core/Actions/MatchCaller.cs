@@ -14,20 +14,21 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
-    internal delegate object MatchCallerTarget(object target, CallSite site, object[] args);
+    internal delegate object MatchCallerTarget<T>(T target, CallSite site, object[] args);
 
     /// <summary>
     /// MatchCaller allows to call match maker delegate with the signature (object, CallSite, object[])
     /// It is used by the call site cache lookup logic when searching for applicable rule.
     /// </summary>
-    internal static partial class MatchCaller {
+    public static partial class MatchCaller {
         private struct RefFixer {
             internal readonly LocalBuilder Temp;
             internal readonly int Index;
@@ -47,11 +48,35 @@ namespace System.Scripting.Actions {
         // onto the delegates and ages them out.
         //
         private static readonly Dictionary<Type, WeakReference> _Callers = new Dictionary<Type, WeakReference>();
-        private static readonly Type[] _CallerSignature = new Type[] { typeof(object), typeof(CallSite), typeof(object[]) };
 
-        internal static MatchCallerTarget GetCaller(Type type) {
+        internal static MatchCallerTarget<T> MakeCaller<T>() {
+            Type target = typeof(T);
+            Type[] args;
+            MethodInfo invoke = target.GetMethod("Invoke");
+
+            // TODO: faster way to test if target is a Func<...> or Action<...>
+            if (target.IsGenericType && DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
+                MethodInfo method;
+                if (invoke.ReturnType == typeof(void)) {
+                    method = typeof(MatchCaller).GetMethod("CallVoid" + args.Length);
+                } else {
+                    method = typeof(MatchCaller).GetMethod("Call" + (args.Length - 1));
+                }
+                if (method != null) {
+                    method = method.MakeGenericMethod(args);
+                    if (method.GetParameters()[0].ParameterType == target) {
+                        return method.CreateDelegate<MatchCallerTarget<T>>();
+                    }
+                }
+            }
+
+            return GetOrCreateCustomCaller<T>();
+        }
+
+        private static MatchCallerTarget<T> GetOrCreateCustomCaller<T>() {
             bool found;
             WeakReference wr;
+            Type type = typeof(T);
 
             // LOCK to extract the weak reference with the updater DynamicMethod 
             lock (_Callers) {
@@ -66,7 +91,7 @@ namespace System.Scripting.Actions {
 
             // No target? Build new one
             if (target == null) {
-                target = CreateCaller(type);
+                target = CreateCustomCaller<T>();
 
                 // Insert into dictionary
                 lock (_Callers) {
@@ -74,30 +99,34 @@ namespace System.Scripting.Actions {
                 }
             }
 
-            return (MatchCallerTarget)target;
+            return (MatchCallerTarget<T>)target;
         }
 
         /// <summary>
         /// Uses LCG to create method such as this:
         /// 
-        /// object MatchCaller(object target, CallSite site, object[] args) {
-        ///      return ((ActualDelegateType)target)(site, args[0], args[1], args[2], ...);
+        /// object MatchCaller(ActualDelegateType target, CallSite site, object[] args) {
+        ///      return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], ...);
         /// }
         /// 
         /// inserting appropriate casts and boxings as needed.
         /// </summary>
-        /// <param name="type">Type of the delegate to call</param>
         /// <returns>A MatchCallerTarget delegate.</returns>
-        private static object CreateCaller(Type type) {
+        private static object CreateCustomCaller<T>() {
+            Type type = typeof(T);
             MethodInfo invoke = type.GetMethod("Invoke");
             ParameterInfo[] parameters = invoke.GetParameters();
-            DynamicILGen il = DynamicSiteHelpers.CreateDynamicMethod(type.IsVisible, "_stub_MatchCaller", typeof(object), _CallerSignature);
+            DynamicILGen il = DynamicSiteHelpers.CreateDynamicMethod(
+                type.IsVisible,
+                "_stub_MatchCaller",
+                typeof(object),
+                new[] { type, typeof(CallSite), typeof(object[]) }
+            );
 
             List<RefFixer> fixers = null;
 
-            // Emit delegate and cast it to the right type
+            // Emit delegate
             il.EmitLoadArg(0);
-            il.Emit(OpCodes.Castclass, type);
     
             // CallSite
             il.EmitLoadArg(1);
@@ -144,7 +173,7 @@ namespace System.Scripting.Actions {
                 il.EmitLoadArg(1);
                 il.Emit(OpCodes.Castclass, siteType);
                 il.Emit(OpCodes.Ldfld, siteType.GetField("Update"));
-                il.EmitCall(typeof(RuntimeHelpers).GetMethod("RuleMatched"));
+                il.EmitCall(typeof(RuntimeOps).GetMethod("RuleMatched"));
                 il.Emit(OpCodes.Brfalse, nomatch);
 
                 foreach (RefFixer rf in fixers) {
@@ -169,13 +198,13 @@ namespace System.Scripting.Actions {
 
             il.Emit(OpCodes.Ret);
 
-            return il.CreateDelegate<MatchCallerTarget>();
+            return il.CreateDelegate<MatchCallerTarget<T>>();
         }
     }
 }
 
-namespace System.Scripting.Runtime {
-    public static partial class RuntimeHelpers {
+namespace System.Runtime.CompilerServices {
+    public static partial class RuntimeOps {
         /// <summary>
         /// Called by generated code.
         /// </summary>

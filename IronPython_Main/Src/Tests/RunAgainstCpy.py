@@ -34,6 +34,7 @@ Assumptions:
 from sys import exit
 from sys import executable
 from sys import argv
+from sys import path
 
 from os  import system
 from os  import listdir
@@ -62,6 +63,10 @@ DEBUG = False
 
 EXCLUDE_LIST = [x.lower() for x in EXCLUDE_LIST]
 EXTRA_INCLUDE_LIST = [x.lower() for x in EXTRA_INCLUDE_LIST]
+
+
+#Test Packages
+PKG_LIST = [ "modules"]
 
 #------------------------------------------------------------------------------
 
@@ -106,6 +111,19 @@ for test_name in test_list:
     print "-- " + test_name
     #run the test
     ec = system(executable + " " + test_name)
+    
+    #if it fails, add it to the list
+    if ec!=0:
+        failed_tests.append(test_name + "; Exit Code=" + str(ec))
+    print
+
+#------------------------------------------------------------------------------
+path.append(getcwd())
+for test_name in PKG_LIST:
+    print "-------------------------------------------------------------------"
+    print "-- " + test_name
+    #run the test
+    ec = system(executable + " -m " + test_name)
     
     #if it fails, add it to the list
     if ec!=0:

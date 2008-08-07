@@ -16,7 +16,7 @@
 using System;
 using System.IO;
 using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 

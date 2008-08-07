@@ -105,6 +105,7 @@ else:
         # get some directories and files
         ip_root             = path_combine(rowan_root, basePyDir)
         external_dir        = path_combine(rowan_root, r'..\External\Languages\IronPython20')
+        clean_external_dir  = path_combine(rowan_root, r'..\External\Languages\CPython\25')
         public_testdir      = path_combine(ip_root, r'Tests')
         compat_testdir      = path_combine(ip_root, r'Tests\compat')
         test_inputs_dir     = path_combine(ip_root, r'Tests\Inputs')
@@ -174,6 +175,15 @@ def is_interactive():
             return True
     else:
 	    return False
+
+def is_stdlib():
+    if is_cli:
+        clean_lib = System.IO.Path.GetFullPath(testpath.clean_external_dir + r"\lib").lower()
+        for x in sys.path:
+            if clean_lib==System.IO.Path.GetFullPath(x).lower():
+                return True
+    return False
+    
 
 # test support 
 def Fail(m):  raise AssertionError(m)
@@ -262,7 +272,7 @@ if is_silverlight:
         clr.AddReference("Microsoft.Scripting")
         clr.AddReference("IronPython")
 
-        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=ccac92ed873b185c"
+        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=31bf3856ad364e35"
         if args: 
             return clr.LoadAssembly(ipt_fullname)
         else: 
@@ -307,17 +317,22 @@ def _do_nothing(*args):
     pass
 
 def get_num_iterations():
-	default = 1
-	try:
-		num_of_iterations = int (get_environ_variable('NUM_TEST_ITERATIONS'))
-	except:
-		num_of_iterations = default
-		
-	if num_of_iterations < default :
-		num_of_iterations = default		
-	
-	return num_of_iterations
-	
+    default = 1
+    if not is_silverlight:
+        value = get_environ_variable('NUM_TEST_ITERATIONS')
+    else:
+        value = None
+
+    if value:
+        num_of_iterations = int(value)
+    else:
+        num_of_iterations = default
+
+    if num_of_iterations < default :
+        num_of_iterations = default
+
+    return num_of_iterations
+
 class disabled:
     def __init__(self, reason):
         self.reason = reason
@@ -343,6 +358,8 @@ class skip:
 	    return is_interactive()
     def multiple_execute_test(self):
 		return get_num_iterations() > 1
+    def stdlib_test(self):
+        return is_stdlib()
     
     def __call__(self, f):
         #skip questionable tests
@@ -355,7 +372,7 @@ class skip:
             return _do_nothing(msg)
 		
         
-        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted', 'interactive', 'multiple_execute'        
+        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted', 'interactive', 'multiple_execute', 'stdlib'
         for to_skip in platforms:
             platform_test = getattr(self, to_skip + '_test')
             if to_skip in self.platforms and platform_test():
@@ -374,6 +391,8 @@ class runonly:
         if "orcas" in self.platforms and is_orcas:
             return f
         elif "silverlight" in self.platforms and is_silverlight:
+            return f
+        elif "stdlib" in self.platforms and is_stdlib():
             return f
         elif sys.platform in self.platforms:
             return f
@@ -399,6 +418,9 @@ def skiptest(*args):
         
     elif is_interactive() and 'interactive' in args:
         print '... %s, skipping whole test module under "interactive" mode...' % sys.platform
+        exit_module()
+    elif is_stdlib() and 'stdlib' in args:
+        print '... %s, skipping whole test module under "stdlib" mode...' % sys.platform
         exit_module()     
     
     elif is_cli64 and 'cli64' in args:
@@ -451,7 +473,7 @@ def run_test(mod_name, noOutputPlease=False):
             if name.startswith("test_"): 
                 if not includedTests or name in includedTests:
                     for i in xrange( get_num_iterations()):
-                        if not noOutputPlease and (mod_name == '__main__'): 
+                        if not noOutputPlease: 
                             if hasattr(time, 'clock'):
                                 print ">>> %6.2fs testing %-40s" % (round(time.clock(), 2), name, ), 
                             else:
@@ -524,3 +546,24 @@ def add_clr_assemblies(*dlls):
         else:
             clr.AddReference(prefix + x)
     
+
+#------------------------------------------------------------------------------
+MAX_FAILURE_RETRY = 3
+
+def retry_on_failure(f, *args, **kwargs):
+    '''
+    Utility function which:
+    1. Wraps execution of the input function, f
+    2. If f() fails, it retries invoking it MAX_FAILURE_RETRY times
+    '''
+    def t(*args, **kwargs):
+        for i in xrange(MAX_FAILURE_RETRY):
+            try:
+                ret_val = f(*args, **kwargs)
+                return ret_val
+            except:
+                print "retry_on_failure(%s): failed on attempt '%d'" % (f.__name__, i+1)
+                continue
+        raise e
+                
+    return t

@@ -15,11 +15,19 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Scripting;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Runtime;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Binding;
+
+using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("field#")]
@@ -111,7 +119,7 @@ namespace IronPython.Runtime.Types {
 
         internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
             // field is settable if it is not readonly
-            return (info.Attributes & FieldAttributes.InitOnly) == 0 || info.IsLiteral;
+            return (info.Attributes & FieldAttributes.InitOnly) == 0 && !info.IsLiteral;
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
@@ -124,6 +132,31 @@ namespace IronPython.Runtime.Types {
         internal override bool IsAlwaysVisible {
             get {
                 return _nameType == NameType.PythonField;
+            }
+        }
+
+        internal override Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
+            if (!info.IsPublic || info.DeclaringType.ContainsGenericParameters) {
+                // fallback to reflection
+                return base.MakeGetExpression(binder, codeContext, instance, owner, error);
+            }
+            
+            if (instance == null) {
+                if (info.IsStatic) {
+                    return Ast.Field(null, info);
+                } else {
+                    return Ast.Constant(this);
+                }
+            } else {
+                return Ast.Field(
+                    binder.ConvertExpression(
+                        instance,
+                        info.DeclaringType,
+                        ConversionResultKind.ExplicitCast,
+                        codeContext
+                    ),
+                    info
+                );
             }
         }
 

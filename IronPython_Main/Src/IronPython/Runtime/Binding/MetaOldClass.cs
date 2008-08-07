@@ -14,15 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
-
-using IronPython.Runtime.Binding;
+using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -216,7 +216,7 @@ namespace IronPython.Runtime.Binding {
                     call = Ast.Call(
                         self.Expression,
                         typeof(OldClass).GetMethod("SetNameHelper"),
-                        Ast.Constant(SymbolTable.StringToId(name)),
+                        AstUtils.Constant(SymbolTable.StringToId(name)),
                         valueExpr
                     );
                     break;
@@ -236,7 +236,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(PythonOps).GetMethod("OldClassDeleteMember"),
                     Ast.Constant(BinderState.GetBinderState(member).Context),
                     self.Expression,
-                    Ast.Constant(SymbolTable.StringToId(member.Name))
+                    AstUtils.Constant(SymbolTable.StringToId(member.Name))
                 ),
                 self.Restrictions
             );
@@ -280,7 +280,7 @@ namespace IronPython.Runtime.Binding {
                                     self.Expression,
                                     typeof(OldClass).GetMethod("TryLookupValue"),
                                     Ast.Constant(BinderState.GetBinderState(member).Context),
-                                    Ast.Constant(SymbolTable.StringToId(member.Name)),
+                                    AstUtils.Constant(SymbolTable.StringToId(member.Name)),
                                     tmp
                                 ),
                                 tmp,

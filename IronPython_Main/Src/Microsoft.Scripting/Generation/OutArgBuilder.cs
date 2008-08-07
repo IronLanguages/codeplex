@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 5; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             if (_isRef) {
                 if (_tmp == null) {
                     _tmp = context.GetTemporary(_parameterType, "outParam");

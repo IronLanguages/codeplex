@@ -395,6 +395,7 @@ def test_bound_user_method():
     if is_silverlight==False:
         Assert(out.find('method of __main__.x instance') != -1)
 
+@skip("stdlib") #CodePlex 17577
 def test_bound_builtin_func():
     x = []
     

@@ -18,14 +18,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -506,7 +503,10 @@ namespace Microsoft.Scripting.Generation {
                     returnArgs.Add(argBuilders.Count);
                     ab = new OutArgBuilder(pi);
                 } else if (pi.ParameterType.IsByRef) {
-                    returnArgs.Add(argBuilders.Count);
+                    // if the parameter is marked as [In] it is not returned.
+                    if ((pi.Attributes & (ParameterAttributes.In | ParameterAttributes.Out)) != ParameterAttributes.In) {
+                        returnArgs.Add(argBuilders.Count);
+                    }
                     ParameterWrapper param = new ParameterWrapper(_binder, pi.ParameterType.GetElementType(), SymbolTable.StringToId(pi.Name));
                     parameters.Add(param);
                     ab = new ReturnReferenceArgBuilder(indexForArgBuilder, pi.ParameterType.GetElementType());

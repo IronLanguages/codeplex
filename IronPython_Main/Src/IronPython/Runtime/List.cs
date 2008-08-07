@@ -18,21 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {
@@ -669,7 +664,8 @@ namespace IronPython.Runtime {
             }
         }
 
-        void IList.Insert(int index, object value) {
+        [PythonHidden]
+        public void Insert(int index, object value) {
             insert(index, value);
         }
 
@@ -992,19 +988,23 @@ namespace IronPython.Runtime {
             return _data;
         }
 
-        void IList.RemoveAt(int index) {
+        [PythonHidden]
+        public void RemoveAt(int index) {
             lock (this) RawDelete(index);
         }
 
-        bool IList.Contains(object value) {
+        [PythonHidden]
+        public bool Contains(object value) {
             return __contains__(value);
         }
 
-        void IList.Clear() {
+        [PythonHidden]
+        public void Clear() {
             lock (this) _size = 0;
         }
 
-        int IList.IndexOf(object value) {
+        [PythonHidden]
+        public int IndexOf(object value) {
             // we get a stable view of the list, and if user code
             // clears it then we'll stop iterating.
             object[] locData;
@@ -1020,7 +1020,8 @@ namespace IronPython.Runtime {
             return -1;
         }
 
-        int IList.Add(object value) {
+        [PythonHidden]
+        public int Add(object value) {
             lock (this) {
                 AddNoLock(value);
                 return _size - 1;
@@ -1039,11 +1040,13 @@ namespace IronPython.Runtime {
             get { return false; }
         }
 
-        int ICollection.Count {
+        public int Count {
+            [PythonHidden]
             get { return __len__(); }
         }
 
-        void ICollection.CopyTo(Array array, int index) {
+        [PythonHidden]
+        public void CopyTo(Array array, int index) {
             Array.Copy(_data, 0, array, index, _size);
         }
 
@@ -1061,7 +1064,8 @@ namespace IronPython.Runtime {
 
         #region IEnumerable Members
 
-        IEnumerator IEnumerable.GetEnumerator() {
+        [PythonHidden]
+        public IEnumerator GetEnumerator() {
             return __iter__();
         }
 
@@ -1109,60 +1113,24 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region IList<object> Members
-
-        int IList<object>.IndexOf(object item) {
-            return ((IList)this).IndexOf(item);
-        }
-
-        void IList<object>.Insert(int index, object item) {
-            this.insert(index, item);
-        }
-
-        void IList<object>.RemoveAt(int index) {
-            ((IList)this).RemoveAt(index);
-        }
-
-        object IList<object>.this[int index] {
-            get {
-                return this[index];
-            }
-            set {
-                this[index] = value;
-            }
-        }
-
-        #endregion
-
         #region ICollection<object> Members
 
         void ICollection<object>.Add(object item) {
             append(item);
         }
 
-        void ICollection<object>.Clear() {
-            ((IList)this).Clear();
-        }
-
-        bool ICollection<object>.Contains(object item) {
-            return this.__contains__(item);
-        }
-
-        void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
+        public void CopyTo(object[] array, int arrayIndex) {
             for (int i = 0; i < __len__(); i++) {
                 array[arrayIndex + i] = this[i];
             }
-        }
-
-        int ICollection<object>.Count {
-            get { return __len__(); }
         }
 
         bool ICollection<object>.IsReadOnly {
             get { return ((IList)this).IsReadOnly; }
         }
 
-        bool ICollection<object>.Remove(object item) {
+        [PythonHidden]
+        public bool Remove(object item) {
             if (this.__contains__(item)) {
                 this.remove(item);
                 return true;

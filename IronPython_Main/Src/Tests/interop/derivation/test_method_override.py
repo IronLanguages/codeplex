@@ -96,17 +96,34 @@ def test_interface_methods():
         pass
     class C2(IInterface110c):
         pass
+
+    # interfaces defined explicitly are included in the MRO so we can find their methods...
+    AreEqual(C1.__mro__, (C1, IInterface110a, IInterface110b, object))
+    AreEqual(C2.__mro__, (C2, IInterface110c, IInterface110a, IInterface110b, object))
+    
     for C in [C1, C2]:        
         x = C()
         AssertError(AttributeError, IInterface110a.m110, x)
         AssertError(TypeError, IInterface110b.m110, x)
         AssertError(AttributeError, IInterface110c.m110, x)
         f = C.m110  # no AttributeError
-        # can't find either implementation at runtime
+        
+        # we find the implementation through the interface which does a 
+        # lookup for the member dynamically...        
+        AreEqual(repr(f), "<method 'm110' of 'IInterface110a' objects>")
+        
+        # this fails w/ attribute error because we can find the method
+        # on the interface and dispatch through it and then the lookup
+        # on the type fails...
         AssertError(AttributeError, f, x)       
-        AssertError(AttributeError, f, x, 1)   
+        
+        # this fails because we find IInterface110a's method not B's and
+        # we don't have the right number of arguments
+        AssertError(TypeError, f, x, 1)   
+        
+        ## !! it's strange that this behaves differently...
         f = x.m110  # no AttributeError
-        AssertError(AttributeError, f)        
+        AssertError(AttributeError, f)
         AssertError(AttributeError, f, 1)  
     #
     # m110 is defined

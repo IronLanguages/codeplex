@@ -134,21 +134,19 @@ namespace System.Linq.Expressions {
         /// <param name="bindingInfo">invoke binding information (method name, named arguments, etc)</param>
         /// <param name="arguments">the arguments to the call</param>
         /// <returns></returns>
-        public static InvocationExpression Invoke(Annotations annotations, Type returnType, Expression expression, OldCallAction bindingInfo, params Expression[] arguments) {
+        public static InvocationExpression Invoke(Annotations annotations, Type returnType, Expression expression, InvokeAction bindingInfo, params Expression[] arguments) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
+
             RequiresCanRead(arguments, "arguments");
+            var args = arguments.ToReadOnly();
 
             // Validate ArgumentInfos. For now, excludes the target expression.
             // This needs to be reconciled with MethodCallExpression
-            if (bindingInfo.Signature.ArgumentCount != arguments.Length) {
-                throw new ArgumentException(
-                    string.Format(
-                        "Argument count '{0}' must match arguments in the binding information '{1}'",
-                        arguments.Length,
-                        bindingInfo.Signature.ArgumentCount
-                    ),
-                    "bindingInfo"
+            if (bindingInfo.Arguments.Count > 0 && bindingInfo.Arguments.Count != args.Count) {
+                throw Error.ArgumentCountMustMatchBinding(
+                    args.Count + 1,
+                    bindingInfo.Arguments.Count
                 );
             }
 

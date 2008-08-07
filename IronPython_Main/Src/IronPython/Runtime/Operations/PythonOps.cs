@@ -22,9 +22,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting;
 using System.Scripting.Actions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
 using IronPython.Compiler;
@@ -34,11 +31,12 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Interpretation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Operations {
 
@@ -1945,43 +1943,59 @@ namespace IronPython.Runtime.Operations {
             object newmod = Importer.Import(context, fullName, PythonTuple.MakeTuple("*"), level);
 
             Scope scope = newmod as Scope;
-            if (scope != null) {
-                object all;
-                if (scope.TryGetName(Symbols.All, out all)) {
-                    IEnumerator exports = PythonOps.GetEnumerator(all);
-
-                    while (exports.MoveNext()) {
-                        string name = exports.Current as string;
-                        if (name == null) continue;
-
-                        SymbolId fieldId = SymbolTable.StringToId(name);
-                        context.Scope.SetName(fieldId, PythonOps.GetBoundAttr(context, newmod, fieldId));
-                    }
-                    return;
-                }
-            }
-
-            Scope newmodScope = newmod as Scope;
             NamespaceTracker nt = newmod as NamespaceTracker;
-            foreach (object o in PythonOps.GetAttrNames(context, newmod)) {
-                if (o != null) {
-                    if (!(o is string)) throw PythonOps.TypeErrorForNonStringAttribute();
-                    string name = o as string;
-                    if (name.Length == 0) continue;
-                    if (name[0] == '_') continue;
+            PythonType pt = newmod as PythonType;
+            
+            if (pt != null && (!pt.UnderlyingSystemType.IsAbstract || !pt.UnderlyingSystemType.IsSealed)) {
+                // from type import * only allowed on static classes
+                throw PythonOps.ImportError("no module named {0}", pt.Name);
+            }
 
-                    SymbolId fieldId = SymbolTable.StringToId(name);
+            IEnumerator exports;
+            object all;
+            bool filterPrivates = false;
 
-                    if (newmodScope != null) {
-                        context.Scope.SetName(fieldId, newmodScope.Dict[fieldId]);
-                    } else if (nt != null) {
-                        context.Scope.SetName(fieldId, ReflectedPackageOps.GetCustomMember(context, nt, name));
-                    } else {
-                        context.Scope.SetName(fieldId, PythonOps.GetBoundAttr(context, newmod, fieldId));
+            // look for __all__, if it's defined then use that to get the attribute names,
+            // otherwise get all the names and filter out members starting w/ _'s.
+            if (PythonOps.TryGetBoundAttr(context, newmod, Symbols.All, out all)) {
+                exports = PythonOps.GetEnumerator(all);
+            } else {
+                exports = PythonOps.GetAttrNames(context, newmod).GetEnumerator();
+                filterPrivates = true;
+            }
+
+            // iterate through the names and populate the scope with the values.
+            while (exports.MoveNext()) {
+                string name = exports.Current as string;
+                if (name == null) {
+                    throw PythonOps.TypeErrorForNonStringAttribute();
+                } else if (filterPrivates && name.Length > 0 && name[0] == '_') {
+                    continue;
+                }
+
+                SymbolId fieldId = SymbolTable.StringToId(name);
+
+                // we special case several types to avoid one-off code gen of dynamic sites                
+                if (scope != null) {
+                    context.Scope.SetName(fieldId, scope.Dict[fieldId]);
+                } else if (nt != null) {
+                    object value = ReflectedPackageOps.GetCustomMember(context, nt, name);
+                    if (value != OperationFailed.Value) {
+                        context.Scope.SetName(fieldId, value);
                     }
+                } else if (pt != null) {
+                    PythonTypeSlot pts;
+                    object value;
+                    if (pt.TryResolveSlot(context, fieldId, out pts) &&
+                        pts.TryGetValue(context, null, pt, out value)) {
+                        context.Scope.SetName(fieldId, value);
+                    }
+                } else {
+                    // not a known type, we'll do use a site to do the get...
+                    context.Scope.SetName(fieldId, PythonOps.GetBoundAttr(context, newmod, fieldId));
                 }
             }
-        }
+        }        
 
         #endregion
 
@@ -2409,6 +2423,12 @@ namespace IronPython.Runtime.Operations {
 
         private static Exception MultipleKeywordArgumentError(PythonFunction function, string name) {
             return TypeError("{0}() got multiple values for keyword argument '{1}'", function.__name__, name);
+        }
+
+        public static void VerifyUnduplicatedByPosition(PythonFunction function, string name, int position, int listlen) {
+            if (listlen > 0 && listlen > position) {
+                throw MultipleKeywordArgumentError(function, name);
+            }
         }
 
         public static List CopyAndVerifyParamsList(PythonFunction function, object list) {
@@ -2947,12 +2967,22 @@ namespace IronPython.Runtime.Operations {
             return slot.TryDeleteValue(context, instance, owner);
         }
 
-        public static BoundBuiltinFunction/*!*/ MakeBoundBuiltinFunction(BuiltinFunction/*!*/ function, object/*!*/ target) {
-            return new BoundBuiltinFunction(function, target);
+        public static BuiltinFunction/*!*/ MakeBoundBuiltinFunction(BuiltinFunction/*!*/ function, object/*!*/ target) {
+            return function.BindToInstance(target);
         }
 
-        public static BuiltinFunction/*!*/ GetBoundBuiltinFunctionTarget(BoundBuiltinFunction/*!*/ self) {
-            return self.Target;
+        /// <summary>
+        /// Called from generated code.  Gets a builtin function and the BuiltinFunctionData associated
+        /// with the object.  Tests to see if the function is bound and has the same data for the generated
+        /// rule.
+        /// </summary>
+        public static bool TestBoundBuiltinFunction(BuiltinFunction/*!*/ function, object data) {
+            if (function.IsUnbound) {
+                // not bound
+                return false;
+            }
+
+            return function.TestData(data);
         }
 
         public static BuiltinFunction/*!*/ GetBuiltinMethodDescriptorTemplate(BuiltinMethodDescriptor/*!*/ descriptor) {
@@ -3061,7 +3091,7 @@ namespace IronPython.Runtime.Operations {
 
         public static OldCallAction MakeListCallAction(int count) {
             ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count);
-            infos[count - 1] = new ArgumentInfo(System.Linq.Expressions.ArgumentKind.List);
+            infos[count - 1] = new ArgumentInfo(ArgumentKind.List);
             return OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(infos));
         }
 
@@ -3186,12 +3216,19 @@ namespace IronPython.Runtime.Operations {
             return type.IsPythonType;
         }
 
-        public static void PublishModule(CodeContext/*!*/ context, string name) {
+        public static object PublishModule(CodeContext/*!*/ context, string name) {
+            object original = null; 
+            PythonContext.GetContext(context).SystemStateModules.TryGetValue(name, out original);
             PythonContext.GetContext(context).SystemStateModules[name] = context.Scope;
+            return original;
         }
 
-        public static void RemoveModule(CodeContext/*!*/ context, string name) {
-            PythonContext.GetContext(context).SystemStateModules.Remove(name);
+        public static void RemoveModule(CodeContext/*!*/ context, string name, object oldValue) {
+            if (oldValue != null) {
+                PythonContext.GetContext(context).SystemStateModules[name] = oldValue;
+            } else {
+                PythonContext.GetContext(context).SystemStateModules.Remove(name);
+            }
         }
 
         public static Ellipsis Ellipsis {
@@ -3393,6 +3430,10 @@ namespace IronPython.Runtime.Operations {
 
         public static CodeContext GetPythonTypeContext(PythonType pt) {
             return pt.PythonContext.DefaultBinderState.Context;
+        }
+
+        public static Exception TypeErrorForProtectedMember(Type/*!*/ type, string/*!*/ name) {
+            return PythonOps.TypeError("cannot access protected member {0} without a python subclass of {1}", name, NameConverter.GetTypeName(type));
         }
     }
 }

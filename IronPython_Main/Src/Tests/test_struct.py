@@ -75,7 +75,29 @@ def test_cp3092():
         AreEqual(struct.calcsize(fmt), 32)
         AreEqual(struct.unpack(fmt, mem), (1,))
     
-
+def test_cp9347():
+    temp_list = [("2xB",    '\x00\x00\xff',             255),
+                 ("4s4x",   'AAAA\x00\x00\x00\x00',     "AAAA"),
+                 ("x",      '\x00'),
+                 ("ix",     '\x01\x00\x00\x00\x00',     1),
+                 ("ix",     '\x01\x00\x00\x80\x00',     -(2**(32-1)-1)),
+                 ("xI",     '\x00\x00\x00\x00\xff\xff\xff\xff',     2**32-1),
+                 ("xlx",    '\x00\x00\x00\x00x\xec\xff\xff\x00',        -5000),
+                 ("LxL",    '~\x00\x00\x00\x00\x00\x00\x00~\x00\x00\x00', 126, 126),
+                 ("LxxL",   '~\x00\x00\x00\x00\x00\x00\x00~\x00\x00\x00', 126, 126),
+                 ("32xLL",  '\x00' *32 + '~\x00\x00\x00~\x00\x00\x00', 126, 126),
+                 ("LxL8xLL", '~\x00\x00\x00\x00\x00\x00\x00~\x00\x00\x00' + '\x00'*8 + '~\x00\x00\x00'*2, 126, 126, 126, 126),
+    ]
+    
+    for stuff in temp_list:
+        format = stuff[0]
+        expected_val = stuff[1]
+        params = stuff[2:]
+        
+        actual = struct.pack(format, *params)
+        AreEqual(expected_val, actual)
+        AreEqual(struct.unpack(format, actual),
+                 params)
 
 def test_negative():
     AssertError(struct.error, struct.pack, 'x', 1)

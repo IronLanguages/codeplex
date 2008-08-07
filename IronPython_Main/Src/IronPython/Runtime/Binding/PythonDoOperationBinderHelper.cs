@@ -18,22 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
 using System.Linq.Expressions;
-using System.Scripting.Generation;
-using System.Scripting.Runtime;
-using System.Scripting.Utils;
 using System.Text;
-
-using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
@@ -177,7 +171,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
                         Ast.Block(                                                // body
                             // getItemRes = param0.__getitem__(curIndex)
-                            Ast.Try(
+                            AstUtils.Try(
                                 Ast.Assign(
                                     getItemRes,
                                     sf.MakeCall(
@@ -195,7 +189,7 @@ namespace IronPython.Runtime.Binding {
                                 res.MakeReturn(binder, Ast.Constant(false))
                             ),
                             // if(getItemRes == param1) return true
-                            Ast.If(
+                            AstUtils.If(
                                 AstUtils.Operator(
                                     binder,
                                     Operators.Equals,
@@ -291,7 +285,7 @@ namespace IronPython.Runtime.Binding {
             }
             RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
-            rule.Target = rule.MakeReturn(binder, Ast.RuntimeConstant(arrres.ToArray()));
+            rule.Target = rule.MakeReturn(binder, Ast.Constant(arrres.ToArray()));
             return rule;
         }
 
@@ -322,7 +316,7 @@ namespace IronPython.Runtime.Binding {
 
             rule.Target = rule.MakeReturn(
                 Binder,
-                Ast.RuntimeConstant(strNames)
+                Ast.Constant(strNames)
             );
             return rule;
         }
@@ -661,7 +655,7 @@ namespace IronPython.Runtime.Binding {
 
             if (target.MaybeNotImplemented) {
                 stmts.Add(
-                    Ast.IfThen(
+                    AstUtils.IfThen(
                         Ast.NotEqual(
                             assign,
                             Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))
@@ -785,7 +779,7 @@ namespace IronPython.Runtime.Binding {
             if (test.Type != typeof(bool)) {
                 test = AstUtils.ConvertTo(PythonBinder, typeof(bool), ConversionResultKind.ExplicitCast, rule.Context, test);
             }
-            return Ast.IfThen(
+            return AstUtils.IfThen(
                 test,
                 rule.MakeReturn(Binder, Ast.Constant(val))
             );
@@ -924,7 +918,7 @@ namespace IronPython.Runtime.Binding {
             SlotOrFunction slot = GetSlotOrFunction(types, Symbols.Coerce);
             
             if (slot.Success) {
-                return Ast.If(
+                return AstUtils.If(
                     Ast.AndAlso(
                         Ast.Not(
                             Ast.TypeIs(
@@ -1298,7 +1292,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("SlotTryGetValue"),
                             rule.Context,
-                            Ast.ConvertHelper(Ast.WeakConstant(_slot), typeof(PythonTypeSlot)),
+                            Ast.ConvertHelper(AstUtils.WeakConstant(_slot), typeof(PythonTypeSlot)),
                             Ast.ConvertHelper(args[0], typeof(object)),
                             Ast.Call(
                                 typeof(DynamicHelpers).GetMethod("GetPythonType"),
@@ -1541,7 +1535,7 @@ namespace IronPython.Runtime.Binding {
                     foundIndexable = true;
                     VariableExpression tmp = ret.GetTemporary(typeof(object), "slotVal");
                     indexArgs[i] = Ast.Comma(
-                        PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.RuntimeConstant(types[i])),
+                        PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.Constant(types[i])),
                         AstUtils.Call(PythonBinder, typeof(int), ret.Context, tmp)
                     );
                     types[i] = TypeCache.Int32;
@@ -1690,11 +1684,11 @@ namespace IronPython.Runtime.Binding {
 
         private Expression MakeSlotCallWorker(PythonTypeSlot slotTarget, RuleBuilder<T> block, Expression self, params Expression[] args) {
             VariableExpression callable = block.GetTemporary(typeof(object), "slot");
-            return Ast.IfThen(
+            return AstUtils.IfThen(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("SlotTryGetValue"),
                     block.Context,
-                    Ast.ConvertHelper(Ast.WeakConstant(slotTarget), typeof(PythonTypeSlot)),
+                    Ast.ConvertHelper(AstUtils.WeakConstant(slotTarget), typeof(PythonTypeSlot)),
                     Ast.ConvertHelper(self, typeof(object)),
                     Ast.Call(
                         typeof(DynamicHelpers).GetMethod("GetPythonType"),
@@ -1720,7 +1714,7 @@ namespace IronPython.Runtime.Binding {
         private Expression CheckNotImplemented(RuleBuilder<T> block, Expression call) {
             VariableExpression tmp = block.GetTemporary(call.Type, "tmp");
 
-            Expression notImplCheck = Ast.IfThen(
+            Expression notImplCheck = AstUtils.IfThen(
                 Ast.NotEqual(
                     Ast.Assign(tmp, call),
                     Ast.Property(null, typeof(PythonOps).GetProperty("NotImplemented"))),
@@ -2036,11 +2030,6 @@ namespace IronPython.Runtime.Binding {
 
             if (md != null) {
                 return md.Template;
-            }
-
-            BoundBuiltinFunction bbf = o as BoundBuiltinFunction;
-            if (bbf != null) {
-                return bbf.Target;
             }
 
             return o as BuiltinFunction;

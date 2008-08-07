@@ -15,7 +15,7 @@
 
 using System.Collections;
 using System.Scripting;
-using System.Scripting.Runtime;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 
@@ -104,7 +104,7 @@ namespace IronPython.Compiler.Ast {
                 enumerator, 
                 Ast.Call(
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
-                    Ast.CodeContext(),
+                    AstUtils.CodeContext(),
                     ag.TransformAsObject(list)
                 ), 
                 list.Span

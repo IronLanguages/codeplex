@@ -25,14 +25,14 @@ def test_accessibility():
     o = Misc()
     o.Set()
     AreEqual(o.PublicField, 100)
-    AreEqual(o.ProtectedField, 200)
+    Assert(not hasattr(o, 'ProtectedField'))
     AssertErrorWithMatch(AttributeError, "'Misc' object has no attribute 'PrivateField'", lambda: o.PrivateField)
     AreEqual(o.InterfaceField.Flag, 500)
     
     o = DerivedMisc()
     o.Set()
     AreEqual(o.PublicField, 400)
-    AreEqual(o.ProtectedField, 200)
+    Assert(not hasattr(o, 'ProtectedField'))
 
 run_test(__name__)
 

@@ -59,9 +59,11 @@ namespace Microsoft.Scripting.Generation {
             return (((SimpleArgBuilder)builder).Index == 0);
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             Debug.Assert(BuilderExpectsSingleParameter(_builder));
-            return _builder.ToExpression(context, new Expression[] { parameters[GetKeywordIndex(parameters.Count)] });
+            int index = GetKeywordIndex(parameters.Count);
+            hasBeenUsed[index] = true;
+            return _builder.ToExpression(context, new Expression[] { parameters[index] }, new bool[1]);
         }
 
         public override Type Type {
