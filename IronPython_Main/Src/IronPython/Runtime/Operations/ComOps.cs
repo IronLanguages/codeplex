@@ -26,12 +26,19 @@ using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {
     public static class ComOps {
+        private static readonly Type ComObjectType = typeof(object).Assembly.GetType("System.__ComObject");
+
+        internal static bool IsComObject(object obj) {
+            // we can't use System.Runtime.InteropServices.Marshal.IsComObject(obj) since it doesn't work in partial trust
+            return obj != null && ComObjectType.IsAssignableFrom(obj.GetType());
+        }
+
         public static string __str__(object/*!*/ self) {
             if (self is ComObject) {
                 return __str__inner((ComObject)self);
             }
 
-            if (Marshal.IsComObject(self)) {
+            if (IsComObject(self)) {
                 return __str__inner(ComObject.ObjectToComObject(self));
             }
 
@@ -43,7 +50,7 @@ namespace IronPython.Runtime.Operations {
                 return __repr__inner((ComObject)self);
             }
 
-            if (Marshal.IsComObject(self)) {
+            if (IsComObject(self)) {
                 return __repr__inner(ComObject.ObjectToComObject(self));
             }
 
@@ -71,7 +78,7 @@ namespace IronPython.Runtime.Operations {
 
             // then pcik up any names from the COM object...
             ComObject co = self as ComObject;
-            if (self == null && Marshal.IsComObject(self)) {
+            if (self == null && IsComObject(self)) {
                 co = ComObject.ObjectToComObject(self);
             }
 

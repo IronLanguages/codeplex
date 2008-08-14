@@ -1477,7 +1477,7 @@ namespace IronPython.Runtime.Types {
                         }
                     }
 
-                    if (meth.Method.IsDefined(typeof(PythonClassMethodAttribute), true)) {
+                    if (meth.Method.IsDefined(typeof(ClassMethodAttribute), true)) {
                         return new MemberGroup(new ClassMethodTracker(group));
                     }
                 } else if (mt.MemberType == TrackerTypes.Property) {

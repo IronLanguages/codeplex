@@ -19,7 +19,7 @@ using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
 
-    [PythonSystemType("ellipsis"), Documentation(null)]
+    [PythonType("ellipsis"), Documentation(null)]
     public class Ellipsis : ICodeFormattable {
         private static Ellipsis _instance;
         
@@ -47,7 +47,7 @@ namespace IronPython.Runtime.Types {
         #endregion
     }
 
-    [PythonSystemType("NotImplementedType"), Documentation(null)]
+    [PythonType("NotImplementedType"), Documentation(null)]
     public class NotImplementedType : ICodeFormattable {
         private static NotImplementedType _instance;
         

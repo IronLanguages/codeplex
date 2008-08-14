@@ -33,7 +33,7 @@ namespace IronPython.Runtime.Types {
     /// the descriptor returns a bound indexer.  The bound indexer supports indexing.
     /// We support multiple indexer parameters via expandable tuples.
     /// </summary>
-    [PythonSystemType("indexer#")]
+    [PythonType("indexer#")]
     public sealed class ReflectedIndexer : ReflectedGetterSetter {
         private readonly object _instance;
         private readonly PropertyInfo/*!*/ _info;

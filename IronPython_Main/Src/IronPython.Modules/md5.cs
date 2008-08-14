@@ -50,7 +50,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("new([data]) -> object (object used to calculate MD5 hash)")]
-        [PythonSystemType]
+        [PythonType]
         public class md5 : ICloneable {
             byte[] _bytes;
             byte[] _hash;

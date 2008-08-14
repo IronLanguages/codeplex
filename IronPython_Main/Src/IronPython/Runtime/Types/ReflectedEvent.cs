@@ -30,7 +30,7 @@ namespace IronPython.Runtime.Types {
     /// <summary>
     /// The unbound representation of an event property
     /// </summary>
-    [PythonSystemType("event#")]
+    [PythonType("event#")]
     public sealed class ReflectedEvent : PythonTypeSlot, ICodeFormattable {
         private readonly bool _clsOnly;
         private readonly EventInfo/*!*/ _eventInfo;
@@ -122,7 +122,7 @@ namespace IronPython.Runtime.Types {
 
         private HandlerList/*!*/ GetStubList(object instance) {
 #if !SILVERLIGHT
-            if (instance != null && Marshal.IsComObject(instance)) {
+            if (instance != null && ComOps.IsComObject(instance)) {
                 return GetComStubList(instance);
             }
 #endif

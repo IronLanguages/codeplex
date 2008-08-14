@@ -34,7 +34,7 @@ namespace IronPython.Modules {
         public static readonly int MAXYEAR = DateTime.MaxValue.Year;
         public static readonly int MINYEAR = DateTime.MinValue.Year;
 
-        [PythonSystemType]
+        [PythonType]
         public class timedelta : ICodeFormattable {
             internal int _days;
             internal int _seconds;
@@ -350,7 +350,7 @@ namespace IronPython.Modules {
             return false;
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class date : ICodeFormattable {
             private DateTime _dateTime;
             // class attributes
@@ -636,7 +636,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class datetime : date, ICodeFormattable {
             internal int _lostMicroseconds;
             internal tzinfo _tz;
@@ -1059,7 +1059,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class time : ICodeFormattable {
             internal TimeSpan _timeSpan;
             internal int _lostMicroseconds;
@@ -1347,7 +1347,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class tzinfo {
             public virtual object fromutc(datetime dt) {
                 timedelta dtOffset = utcoffset(dt);

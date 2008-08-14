@@ -15,7 +15,16 @@
 
 from lib.assert_util import *
 
-import struct
+import _struct
+
+def pack(f, *v):
+    return _struct.Struct(f).pack(*v)
+
+def unpack(f, *v):
+    return _struct.Struct(f).unpack(*v)
+
+def calcsize(f):
+    return _struct.Struct(f).size
 
 def test_sanity():
     mapping = {
@@ -37,18 +46,18 @@ def test_sanity():
         }
     
     for (k, v) in mapping.iteritems():
-        s = struct.pack(k, v)
-        v2 = struct.unpack(k, s)
+        s = pack(k, v)
+        v2 = unpack(k, s)
         
         if isinstance(v, float):
             AlmostEqual(v, v2[0])
         else:
             AreEqual(v, v2[0])
 
-    AreEqual(struct.pack(' c\t', 'a'), 'a')
+    AreEqual(pack(' c\t', 'a'), 'a')
     
 def test_padding_len():
-    AreEqual(struct.unpack('4xi','\x00\x01\x02\x03\x01\x00\x00\x00'), (1,))
+    AreEqual(unpack('4xi','\x00\x01\x02\x03\x01\x00\x00\x00'), (1,))
 
 def test_cp3092():
     for format in [ "i", "I", "l", "L"]:
@@ -56,24 +65,24 @@ def test_cp3092():
         AreEqual(len(mem), 32)
     
         fmt = "<8" + format
-        AreEqual(struct.calcsize(fmt), 32)
-        AreEqual(struct.unpack(fmt, mem), (1,)*8)
+        AreEqual(calcsize(fmt), 32)
+        AreEqual(unpack(fmt, mem), (1,)*8)
     
         fmt = "<2" + format + "4x5" + format
-        AreEqual(struct.calcsize(fmt), 32)
-        AreEqual(struct.unpack(fmt, mem), (1,)*7)
+        AreEqual(calcsize(fmt), 32)
+        AreEqual(unpack(fmt, mem), (1,)*7)
         
         fmt = "<" + format + format + "4x5" + format
-        AreEqual(struct.calcsize(fmt), 32)
-        AreEqual(struct.unpack(fmt, mem), (1,)*7)
+        AreEqual(calcsize(fmt), 32)
+        AreEqual(unpack(fmt, mem), (1,)*7)
 
         fmt = "<32x"
-        AreEqual(struct.calcsize(fmt), 32)
-        AreEqual(struct.unpack(fmt, mem), ())
+        AreEqual(calcsize(fmt), 32)
+        AreEqual(unpack(fmt, mem), ())
     
         fmt = "<28x" + format
-        AreEqual(struct.calcsize(fmt), 32)
-        AreEqual(struct.unpack(fmt, mem), (1,))
+        AreEqual(calcsize(fmt), 32)
+        AreEqual(unpack(fmt, mem), (1,))
     
 def test_cp9347():
     temp_list = [("2xB",    '\x00\x00\xff',             255),
@@ -94,24 +103,24 @@ def test_cp9347():
         expected_val = stuff[1]
         params = stuff[2:]
         
-        actual = struct.pack(format, *params)
+        actual = pack(format, *params)
         AreEqual(expected_val, actual)
-        AreEqual(struct.unpack(format, actual),
+        AreEqual(unpack(format, actual),
                  params)
 
 def test_negative():
-    AssertError(struct.error, struct.pack, 'x', 1)
-    AssertError(struct.error, struct.unpack, 'hh', struct.pack('h', 1))
+    AssertError(_struct.error, pack, 'x', 1)
+    AssertError(_struct.error, unpack, 'hh', pack('h', 1))
     
-    AssertError(struct.error, struct.pack, 'a', 1)
+    AssertError(_struct.error, pack, 'a', 1)
     
     # BUG: 1033
     # such chars should be in the leading position only
     
     for x in '=@<>!':
-        AssertError(struct.error, struct.pack, 'h'+x+'h', 1, 2)
+        AssertError(_struct.error, pack, 'h'+x+'h', 1, 2)
 
-    AssertError(struct.error, struct.pack, 'c', 300)
+    AssertError(_struct.error, pack, 'c', 300)
 
 def test_calcsize_alignment():
     '''
@@ -167,8 +176,42 @@ def test_calcsize_alignment():
     for x in struct_format:
         for y in struct_format:
             temp_str = str(x) + str(y)
-            Assert(expected[temp_str] == struct.calcsize(temp_str),
-                     "struct.calcsize(" + temp_str + ") is broken")
+            Assert(expected[temp_str] == calcsize(temp_str),
+                     "_struct.Struct(" + temp_str + ").size is broken")
 
-   
+
+def test_new_init():
+    """tests for calling __new__/__init__ directly on the Struct object"""
+    for x in (_struct.Struct.__new__(_struct.Struct), _struct.Struct.__new__(_struct.Struct, a = 2)):        
+        # state of uninitialized object...
+        AreEqual(x.size, -1)
+        AreEqual(x.format, None)
+        AssertErrorWithMessage(_struct.error, "pack requires exactly -1 arguments", x.pack)
+        AssertErrorWithMessage(_struct.error, "unpack requires a string argument of length -1", x.unpack, '')    
+    
+    # invalid format passed to __init__ - format string is updated but old format info is stored...
+    a = _struct.Struct('c')
+    try:
+        a.__init__('bad')
+        AssertUnreachable()
+    except _struct.error, e: 
+        pass
+    
+    AreEqual(a.format, 'bad')
+    AreEqual(a.pack('1'), '1')
+    AreEqual(a.unpack('1'), ('1', ))
+    
+    # and then back to a valid format
+    a.__init__('i')
+    AreEqual(a.format, 'i')
+    AreEqual(a.pack(0), '\x00\x00\x00\x00')
+    AreEqual(a.unpack('\x00\x00\x00\x00'), (0, ))
+
+@skip("silverlight") # no weak refs on Silverlight
+def test_weakref():
+    """weakrefs to struct objects are supported"""
+    x = _struct.Struct('i')
+    import _weakref
+    AreEqual(_weakref.proxy(x).size, x.size)
+    
 run_test(__name__)

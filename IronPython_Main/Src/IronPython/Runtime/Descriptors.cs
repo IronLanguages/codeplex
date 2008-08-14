@@ -23,7 +23,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
-    [PythonSystemType]
+    [PythonType]
     public class staticmethod : PythonTypeSlot {
         private object _func;
 
@@ -53,7 +53,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType]
+    [PythonType]
     public class classmethod : PythonTypeSlot {
         internal object func;
 
@@ -89,7 +89,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType]
+    [PythonType]
     public class PythonProperty : PythonTypeSlot {
         private object _fget, _fset, _fdel, _doc;
 

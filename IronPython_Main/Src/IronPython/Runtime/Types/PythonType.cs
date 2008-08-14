@@ -43,7 +43,7 @@ namespace IronPython.Runtime.Types {
 #if !SILVERLIGHT
     [DebuggerDisplay("PythonType: {Name}")]
 #endif
-    [PythonSystemType("type")]
+    [PythonType("type")]
     public class PythonType : IMembersList, IDynamicObject, IOldDynamicObject, IWeakReferenceable, ICodeFormattable {
         private readonly Type/*!*/ _underlyingSystemType;   // the underlying CLI system type for this type
         private string _name;                               // the name of the type
@@ -119,7 +119,7 @@ namespace IronPython.Runtime.Types {
             EnsureDict();
 
             _underlyingSystemType = typeof(OldInstance);
-            Name = oc.Name;
+            Name = oc.__name__;
             OldClass = oc;
 
             List<PythonType> ocs = new List<PythonType>(oc.BaseClasses.Count);
@@ -207,10 +207,37 @@ namespace IronPython.Runtime.Types {
         }
 
         [SpecialName, PropertyMethod, WrapperDescriptor]
+        public static PythonType Get__base__(CodeContext/*!*/ context, PythonType/*!*/ type) {
+            foreach (object typeObj in Get__bases__(context, type)) {
+                PythonType pt = typeObj as PythonType;
+                if (pt != null) {
+                    return pt;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Used in copy_reg which is the only consumer of __flags__ in the standard library.
+        /// 
+        /// Set if the type is user defined
+        /// </summary>
+        private const int TypeFlagHeapType = 1 << 9;
+
+        [SpecialName, PropertyMethod, WrapperDescriptor]
+        public static int Get__flags__(CodeContext/*!*/ context, PythonType/*!*/ type) {
+            if (type.IsSystemType) {
+                return 0;
+            }
+
+            return TypeFlagHeapType;
+        }
+
+        [SpecialName, PropertyMethod, WrapperDescriptor]
         public static void Set__bases__(CodeContext/*!*/ context, PythonType/*!*/ type, object value) {
             // validate we got a tuple...           
             PythonTuple t = value as PythonTuple;
-            if (t == null) throw PythonOps.TypeError("expected tuple of types or old-classes, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(value)));
+            if (t == null) throw PythonOps.TypeError("expected tuple of types or old-classes, got '{0}'", PythonTypeOps.GetName(value));
 
             List<PythonType> ldt = new List<PythonType>();
 
@@ -220,7 +247,7 @@ namespace IronPython.Runtime.Types {
                 if (adt == null) {
                     OldClass oc = o as OldClass;
                     if (oc == null) {
-                        throw PythonOps.TypeError("expected tuple of types, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(o)));
+                        throw PythonOps.TypeError("expected tuple of types, got '{0}'", PythonTypeOps.GetName(o));
                     }
 
                     adt = oc.TypeObject;
@@ -1403,7 +1430,7 @@ namespace IronPython.Runtime.Types {
                     if (i != j && newBases[i] == newBases[j]) {
                         OldClass oc = newBases[i] as OldClass;
                         if (oc != null) {
-                            throw PythonOps.TypeError("duplicate base class {0}", oc.Name);
+                            throw PythonOps.TypeError("duplicate base class {0}", oc.__name__);
                         } else {
                             throw PythonOps.TypeError("duplicate base class {0}", ((PythonType)newBases[i]).Name);
                         }

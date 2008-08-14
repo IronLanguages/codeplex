@@ -998,6 +998,9 @@ class Test(object):
     i = t()
     AreEqual(i.a(), 34)
     
+def test_import_path_seperator():
+    """verify using the path seperator in a direct call will result in an ImportError"""
+    AssertError(ImportError, __import__, 'lib\\warning_util')
 
 #------------------------------------------------------------------------------
 run_test(__name__)

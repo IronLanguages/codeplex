@@ -433,6 +433,19 @@ namespace IronPython.Runtime.Binding {
                 )
             );
         }
+
+        internal static MetaObject/*!*/ TypeErrorGenericMethod(Type/*!*/ type, string/*!*/ name, Restrictions/*!*/ restrictions) {
+            return new MetaObject(
+                Ast.Throw(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("TypeErrorForGenericMethod"),
+                        Ast.Constant(type),
+                        Ast.Constant(name)
+                    )
+                ),
+                restrictions
+            );
+        }
     }
 
     internal class ValidationInfo {

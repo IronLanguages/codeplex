@@ -22,11 +22,12 @@ namespace Microsoft.Scripting.Utils {
     public static class IOUtils {
         /// <summary>
         /// Seeks the first character of a specified line in the text stream.
-        /// Assumes the reader is currently positioned just before the first character of the first line.
-        /// Line numbers are counted starting from 1.
-        /// Returns <c>true</c> if the line is found (the current position of the reader will be  
-        /// character read from the reader will be the first one of the line - if there is any), <b>false</b> otherwise.
         /// </summary>
+        /// <param name="reader">The reader.</param>
+        /// <param name="line">Line number. The current position is assumed to be line #1.</param>
+        /// <returns>
+        /// Returns <c>true</c> if the line is found, <b>false</b> otherwise.
+        /// </returns>
         public static bool SeekLine(TextReader reader, int line) {
             ContractUtils.RequiresNotNull(reader, "reader");
             if (line < 1) throw new ArgumentOutOfRangeException("line");

@@ -26,7 +26,7 @@ namespace IronPython.Runtime {
     /// object or a Function.   The user can explicitly call FunctionCode by
     /// passing it into exec or eval.
     /// </summary>
-    [PythonSystemType("code")]
+    [PythonType("code")]
     public class FunctionCode {
         #region Private member variables
         private Delegate _target;

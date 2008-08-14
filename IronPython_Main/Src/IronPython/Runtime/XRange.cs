@@ -21,7 +21,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    [PythonSystemType("xrange")]
+    [PythonType("xrange")]
     public sealed class XRange : ISequence, ICollection, IEnumerable, IEnumerable<int>, ICodeFormattable {
         private int _start, _stop, _step, _length;
 
@@ -46,6 +46,27 @@ namespace IronPython.Runtime {
             _step = step;
             _length = GetLengthHelper();
             _stop = start + step * _length; // make stop precise
+        }
+
+        public int Start {
+            [PythonHidden]
+            get {
+                return _start;
+            }
+        }
+
+        public int Stop {
+            [PythonHidden]
+            get {
+                return _stop;
+            }
+        }
+
+        public int Step {
+            [PythonHidden]
+            get {
+                return _step;
+            }
         }
 
         #region ISequence Members

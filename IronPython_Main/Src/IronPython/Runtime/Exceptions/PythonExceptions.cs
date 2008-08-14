@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Exceptions {
         /// which inherits from BaseException.  User defined exceptions likewise inherit
         /// from this and have their own .NET class.
         /// </summary>
-        [PythonSystemType("BaseException"), DynamicBaseTypeAttribute, Serializable]
+        [PythonType("BaseException"), DynamicBaseTypeAttribute, Serializable]
         public class BaseException : ICodeFormattable, IPythonObject, IOldDynamicObject, IDynamicObject {
             private PythonType/*!*/ _type;          // the actual Python type of the Exception object
             private object _message = String.Empty; // the message object, cached at __init__ time, not updated on args assignment

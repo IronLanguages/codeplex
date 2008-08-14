@@ -17,6 +17,7 @@ using System;
 using System.Reflection;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -60,6 +61,12 @@ namespace IronPython.Runtime.Types {
 
         internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
             return true;
+        }
+
+        public void __set__(CodeContext context, object instance, object value) {
+            if (!TrySetValue(context, instance, DynamicHelpers.GetPythonType(instance), value)) {
+                throw PythonOps.TypeError("readonly attribute");
+            }
         }
 
         internal override Type DeclaringType {

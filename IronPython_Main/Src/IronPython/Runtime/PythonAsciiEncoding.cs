@@ -127,6 +127,14 @@ namespace IronPython.Runtime {
                 return "us-ascii";
             }
         }
+
+#if !SILVERLIGHT
+        public override string EncodingName {
+            get {
+                return "ascii";
+            }
+        }
+#endif
     }
 
 #if !SILVERLIGHT

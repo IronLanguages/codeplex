@@ -20,8 +20,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
 using System.Scripting.Actions;
+using System.Security;
 using System.Text;
 using System.Threading;
 
@@ -64,10 +64,8 @@ namespace IronPython.Runtime {
 #if !SILVERLIGHT
         private static int _hookedAssemblyResolve;
         private Hosting.PythonService _pythonService;
-        private string _initialExecutable, _initialPrefix = typeof(PythonContext).Assembly.CodeBase;
-#else
-        private string _initialExecutable, _initialPrefix = "";
 #endif
+        private string _initialExecutable, _initialPrefix = GetInitialPrefix();
 
         // other fields which might only be conditionally used
         private string _initialVersionString;
@@ -116,6 +114,7 @@ namespace IronPython.Runtime {
         internal bool _importWarningThrows;
         private CommandDispatcher _commandDispatcher; // can be null
         private ClrModule.ReferencesList _referencesList;
+        private string _floatFormat, _doubleFormat;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -378,6 +377,24 @@ namespace IronPython.Runtime {
             return new AssemblyName(typeof(PythonContext).Assembly.FullName).Version;
         }
 
+        internal string FloatFormat {
+            get {
+                return _floatFormat;
+            }
+            set {
+                _floatFormat = value;
+            }
+        }
+
+        internal string DoubleFormat {
+            get {
+                return _doubleFormat;
+            }
+            set {
+                _doubleFormat = value;
+            }
+        }
+
         /// <summary>
         /// Initializes the sys module on startup.  Called both to load and reload sys
         /// </summary>
@@ -507,17 +524,16 @@ namespace IronPython.Runtime {
             return base.LoadCompiledCode(method);
         }
 
-        public override StreamReader GetSourceReader(Stream/*!*/ stream, Encoding/*!*/ encoding) {
+        public override SourceCodeReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding/*!*/ defaultEncoding) {
             ContractUtils.RequiresNotNull(stream, "stream");
-            ContractUtils.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(defaultEncoding, "defaultEncoding");
             ContractUtils.Requires(stream.CanSeek && stream.CanRead, "stream", "The stream must support seeking and reading");
 
             // we choose ASCII by default, if the file has a Unicode pheader though
             // we'll automatically get it as unicode.
-            Encoding default_encoding = encoding;
-            encoding = PythonAsciiEncoding.Instance;
+            Encoding encoding = PythonAsciiEncoding.Instance;
 
-            long start_position = stream.Position;
+            long startPosition = stream.Position;
 
             StreamReader sr = new StreamReader(stream, PythonAsciiEncoding.Instance);
 
@@ -529,11 +545,11 @@ namespace IronPython.Runtime {
             bool gotEncoding = false;
 
             // magic encoding must be on line 1 or 2
-            if (line != null && !(gotEncoding = Tokenizer.TryGetEncoding(default_encoding, line, ref encoding))) {
+            if (line != null && !(gotEncoding = Tokenizer.TryGetEncoding(defaultEncoding, line, ref encoding))) {
                 line = ReadOneLine(sr, ref bytesRead);
 
                 if (line != null) {
-                    gotEncoding = Tokenizer.TryGetEncoding(default_encoding, line, ref encoding);
+                    gotEncoding = Tokenizer.TryGetEncoding(defaultEncoding, line, ref encoding);
                 }
             }
 
@@ -542,12 +558,13 @@ namespace IronPython.Runtime {
                 throw new IOException("file has both Unicode marker and PEP-263 file encoding");
             }
 
-            if (encoding == null)
+            if (encoding == null) {
                 throw new IOException("unknown encoding type");
+            }
 
             if (!gotEncoding) {
                 // if we didn't get an encoding seek back to the beginning...
-                stream.Seek(start_position, SeekOrigin.Begin);
+                stream.Seek(startPosition, SeekOrigin.Begin);
             } else {
                 // if we got an encoding seek to the # of bytes we read (so the StreamReader's
                 // buffering doesn't throw us off)
@@ -555,7 +572,7 @@ namespace IronPython.Runtime {
             }
 
             // re-read w/ the correct encoding type...
-            return new StreamReader(stream, encoding);
+            return new SourceCodeReader(new StreamReader(stream, encoding), encoding);
         }
 
         /// <summary>
@@ -987,7 +1004,7 @@ namespace IronPython.Runtime {
 
         internal static string GetSourceLine(SyntaxErrorException e) {
             try {
-                using (SourceUnitReader reader = e.SourceUnit.GetReader()) {
+                using (SourceCodeReader reader = e.SourceUnit.GetReader()) {
                     char[] buffer = new char[80];
                     int curLine = 1;
                     StringBuilder line = new StringBuilder();
@@ -1361,9 +1378,17 @@ namespace IronPython.Runtime {
 
         public static string GetIronPythonAssembly(string baseName) {
 #if SIGNED
-            return baseName + ", Version=" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + ", Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+
+#if DEBUG
+            try {
+                Debug.Assert(Assembly.GetExecutingAssembly().GetName().Version.ToString() == "2.0.0.5000");
+            } catch (SecurityException) {
+            }
+#endif
+
+            return baseName + ", Version=2.0.0.5000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
 #else
-        return baseName;
+            return baseName;
 #endif
         }
 
@@ -1437,6 +1462,19 @@ namespace IronPython.Runtime {
             dict[SymbolTable.StringToId("hexversion")] = ((int)major << 24) + ((int)minor << 16) + ((int)build << 8);
             dict[SymbolTable.StringToId("version_info")] = PythonTuple.MakeTuple((int)major, (int)minor, (int)build, level, 0);
             dict[SymbolTable.StringToId("version")] = String.Format("{0}.{1}.{2} ({3})", major, minor, build, versionString);
+        }
+
+        private static string GetInitialPrefix() {
+#if !SILVERLIGHT
+            try {
+                return typeof(PythonContext).Assembly.CodeBase;
+            } catch (SecurityException) {
+                // we don't have permissions to get paths...
+                return String.Empty;
+            }
+#else
+            return String.Empty;
+#endif
         }
 
         internal object GetSystemStateValue(string name) {
@@ -1711,7 +1749,7 @@ namespace IronPython.Runtime {
             if (ret == OperationFailed.Value) {
                 if (o is OldClass) {
                     throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                        ((OldClass)o).Name, SymbolTable.IdToString(name));
+                        ((OldClass)o).__name__, SymbolTable.IdToString(name));
                 } else {
                     throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetPythonType(o).Name, SymbolTable.IdToString(name));
                 }

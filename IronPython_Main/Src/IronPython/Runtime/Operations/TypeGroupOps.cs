@@ -32,7 +32,9 @@ namespace IronPython.Runtime.Operations {
                     sb.Append(", ");
                 }
                 PythonType dt = DynamicHelpers.GetPythonTypeFromType(type);
-                sb.Append(PythonOps.StringRepr(dt.Name));
+                sb.Append('\'');
+                sb.Append(dt.Name);
+                sb.Append('\'');
                 pastFirstType = true;
             }
             sb.Append(">");

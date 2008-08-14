@@ -94,7 +94,7 @@ namespace IronPython.Runtime.Operations {
             int i = args.Length;
             foreach (KeyValuePair<SymbolId, object> kvp in kwArgs.SymbolAttributes) {
                 allArgs[i] = kvp.Value;
-                argNames[i++] = SymbolTable.IdToString(kvp.Key);
+                argNames[i++ - args.Length] = SymbolTable.IdToString(kvp.Key);
             }
 
             return CallWorker(context, dt, new KwCallInfo(allArgs, argNames));        }
@@ -389,7 +389,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            if (func.Targets[0].IsDefined(typeof(PythonClassMethodAttribute), true)) {
+            if (func.Targets[0].IsDefined(typeof(ClassMethodAttribute), true)) {
                 lock (_classMethodCache) {
                     ClassMethodDescriptor desc;
                     if (!_classMethodCache.TryGetValue(func, out desc)) {

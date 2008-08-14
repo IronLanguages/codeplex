@@ -28,7 +28,7 @@ namespace IronPython.Runtime {
      * 
      */
 
-    [PythonSystemType("enumerate")]
+    [PythonType("enumerate")]
     [Documentation("enumerate(iterable) -> iterator for index, value of iterable")]
     public class Enumerate : IEnumerator, IEnumerator<object> {
         private readonly IEnumerator _iter;
@@ -37,7 +37,11 @@ namespace IronPython.Runtime {
         public Enumerate(object iter) {
             this._iter = PythonOps.GetEnumerator(iter);
         }
-       
+
+        public object __iter__() {
+            return this;
+        }
+
         #region IEnumerator Members
 
         void IEnumerator.Reset() {
@@ -77,63 +81,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType("ReversedEnumerator")]
-    public class ReversedEnumerator : IEnumerator, IEnumerator<object> {
-        private readonly object _getItemMethod;
-        private object _current;
-        private int _index;
-        private int _savedIndex;
-
-        public ReversedEnumerator(int length, object getitem) {
-            this._index = this._savedIndex = length;
-            this._getItemMethod = getitem;
-        }
-
-        public int __len__() { return _index; }
-
-        #region IEnumerator implementation
-
-        object IEnumerator.Current {
-            get {
-                return _current;
-            }
-        }
-
-        object IEnumerator<object>.Current {
-            get {
-                return ((IEnumerator)this).Current;
-            }
-        }
-
-        bool IEnumerator.MoveNext() {
-            if (_index > 0) {
-                _index--;
-                _current = PythonCalls.Call(_getItemMethod, _index);
-                return true;
-            } else return false;
-        }
-
-        void IEnumerator.Reset() {
-            _index = _savedIndex;
-        }
-
-        #endregion
-
-        #region IDisposable Members
-
-        void IDisposable.Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        [PythonHidden]
-        protected virtual void Dispose(bool disposing) {
-        }
-
-        #endregion
-    }
-
-    [PythonSystemType("SentinelIterator")]
+    [PythonType("SentinelIterator")]
     public sealed class SentinelIterator : IEnumerator, IEnumerator<object> {
         private readonly object _target;
         private readonly object _sentinel;
@@ -204,7 +152,7 @@ namespace IronPython.Runtime {
      * Enumeraters exposed to .NET code
      * 
      */
-    [PythonSystemType("enumerator")]
+    [PythonType("enumerator")]
     public class PythonEnumerator : IEnumerator {
         private readonly object _baseObject;
         private object _nextMethod;
@@ -288,7 +236,7 @@ namespace IronPython.Runtime {
         }
     }
 
-    [PythonSystemType("enumerable")]
+    [PythonType("enumerable")]
     public class PythonEnumerable : IEnumerable {
         private object _iterator;
 
@@ -331,7 +279,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType("item-enumerator")]
+    [PythonType("item-enumerator")]
     public class ItemEnumerator : IEnumerator {
         private readonly object _getItemMethod;
         private object _current;
@@ -397,7 +345,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType("item-enumerable")]
+    [PythonType("item-enumerable")]
     public class ItemEnumerable : IEnumerable {
         private object _getitem;
 

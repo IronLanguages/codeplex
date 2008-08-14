@@ -22,7 +22,7 @@ using Microsoft.Scripting.Math;
 [assembly: PythonModule("_random", typeof(IronPython.Modules.PythonRandom))]
 namespace IronPython.Modules {
     public static class PythonRandom {
-        [PythonSystemType]
+        [PythonType]
         public class Random {
             private System.Random _rnd;
 

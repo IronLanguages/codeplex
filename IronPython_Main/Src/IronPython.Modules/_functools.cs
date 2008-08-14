@@ -31,7 +31,7 @@ namespace IronPython.Modules {
         /// bound to it.  Calling the new function then appends to the additional
         /// user provided arguments.
         /// </summary>
-        [PythonSystemType]
+        [PythonType]
         public class partial : IWeakReferenceable {
             private object/*!*/ _function;                                                  // the callable function to dispatch to
             private object[]/*!*/ _args;                                                    // the initially provided arguments

@@ -1516,7 +1516,12 @@ def test_slots():
     
     def f(): a.abc = 'abc'
     AssertError(AttributeError, f)
+
+    class Foo(object): __slots__ = 'abc'
     
+    AreEqual(repr(Foo.abc), "<member 'abc' of 'Foo' objects>")
+    AreEqual(str(Foo.abc), "<member 'abc' of 'Foo' objects>")
+    AssertErrorWithPartialMessage(AttributeError, 'abc', lambda: Foo().abc)
 
 def test_slots11457():
     class COld:
@@ -1571,11 +1576,13 @@ def test_hexoct():
 def test_no_clr_attributes():
     """verify types have no CLR attributes"""
     # list, 
+    class x: pass
+    
     for stuff in [object, int, float, bool, str, long, complex, dict, set, 
                   None, NotImplemented, Ellipsis, type(test_no_clr_attributes),
                   classmethod, staticmethod, frozenset, property, sys, 
                   BaseException, type(zip), slice, buffer, enumerate, file,
-                  range, xrange]:
+                  range, xrange, type(x), type(x())]:
         for dir_stuff in dir(stuff):
             if dir_stuff[:1].isalpha():
                 Assert(dir_stuff[:1].islower(),
@@ -3128,4 +3135,34 @@ def test_cp2021():
         AssertErrorWithMessage(TypeError, "'KNew' object cannot be interpreted as an index",
                                testdata.__mul__, KNew())
 
+def test_redundant_multiple_bases():
+    """specifying an extra base which is implied by a previous one should work ok"""
+    class Foo(list, object):
+        pass
+
+    class Bar(Foo):
+        pass
+        
+    AreEqual(Bar(), [])
+
+def test_metaclass_keyword_args():
+    class MetaType(type):
+       def __init__(cls, name, bases, dict):
+          super(MetaType, cls).__init__(name, bases, dict)
+    
+    class Base(object):
+        __metaclass__ = MetaType
+    
+    class A(Base):
+        def __init__(self, a, b='b', c=12, d=None, e=None):
+            self.d = d
+            self.b = b
+    
+    a = A('empty', *(), **{'d': 'boom'})
+    AreEqual(a.d, 'boom')
+
+    a = A('empty', *('foo', ), **{'d': 'boom'})
+    AreEqual(a.b, 'foo')
+    AreEqual(a.d, 'boom')
+    
 run_test(__name__)

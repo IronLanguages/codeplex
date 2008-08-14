@@ -20,6 +20,7 @@ using IronPython.Runtime;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
 using System.Scripting.Utils;
+using System.Diagnostics;
 
 internal sealed class PythonConsoleHost : ConsoleHost {
 
@@ -59,6 +60,7 @@ internal sealed class PythonConsoleHost : ConsoleHost {
         if (Environment.GetEnvironmentVariable("TERM") == null) {
             Environment.SetEnvironmentVariable("TERM", "dumb");
         }
+
         return new PythonConsoleHost().Run(args);
     }
 }

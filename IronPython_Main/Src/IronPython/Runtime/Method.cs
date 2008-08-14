@@ -31,7 +31,7 @@ using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime {
 
-    [PythonSystemType("instancemethod")]
+    [PythonType("instancemethod")]
     public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {
         private readonly object _func;
         private readonly object _inst;
@@ -90,7 +90,7 @@ namespace IronPython.Runtime {
 
             return PythonOps.TypeError("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
                 __name__,
-                (dt != null) ? dt.Name : im_class,
+                (dt != null) ? dt.__name__ : im_class,
                 firstArg);
         }
 
@@ -121,7 +121,7 @@ namespace IronPython.Runtime {
             PythonType dt = im_class as PythonType;
             if (dt != null) return dt.Name;
             OldClass oc = im_class as OldClass;
-            if (oc != null) return oc.Name;
+            if (oc != null) return oc.__name__;
             return im_class.ToString();
         }
 
@@ -378,7 +378,7 @@ namespace IronPython.Runtime {
                 return string.Format("<bound method {0}.{1} of {2}>",
                     DeclaringClassAsString(),
                     name,
-                    PythonOps.StringRepr(_inst));
+                    PythonOps.Repr(context, _inst));
             } else {
                 return string.Format("<unbound method {0}.{1}>", DeclaringClassAsString(), name);
             }

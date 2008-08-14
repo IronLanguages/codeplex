@@ -15,53 +15,52 @@
 
 using System.IO;
 using Microsoft.Scripting.Utils;
+using System.Text;
 
 namespace Microsoft.Scripting {
 
     /// <summary>
-    /// Couples a source unit with an open text reader. Remotable (TextReader is a MBRO).
+    /// Source code reader.
     /// </summary>    
-    public sealed class SourceUnitReader : TextReader {
+    public class SourceCodeReader : TextReader {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
+        new public static readonly SourceCodeReader Null = new SourceCodeReader(TextReader.Null, null);
 
         private readonly TextReader _textReader;
-        private readonly SourceUnit _sourceUnit;
+        private readonly Encoding _encoding;
 
-        internal SourceUnitReader(SourceUnit sourceUnit, TextReader textReader) {
-            Assert.NotNull(sourceUnit, textReader);
+        public SourceCodeReader(TextReader textReader, Encoding encoding) {
+            ContractUtils.RequiresNotNull(textReader, "textReader");
 
+            _encoding = encoding;
             _textReader = textReader;
-            _sourceUnit = sourceUnit;
         }
 
-        public SourceUnit SourceUnit {
-            get { return _sourceUnit; }
+        /// <summary>
+        /// Encoding that is used by the reader to convert binary data read from an underlying binary stream.
+        /// <c>Null</c> if the reader is reading from a textual source (not performing any byte to character transcoding).
+        /// </summary>
+        public Encoding Encoding {
+            get { return _encoding; }
         }
 
-        // TODO: internal once this moves to Microsoft.Scripting
-        public TextReader TextReader {
+        public TextReader BaseReader {
             get { return _textReader; }
         }
 
         public override string ReadLine() {
-            if (_sourceUnit.DisableLineFeedLineSeparator) {
-                return IOUtils.ReadTo(_textReader, '\n');
-            } else {
-                return _textReader.ReadLine();
-            }
+            return _textReader.ReadLine();
         }
 
-        public bool SeekLine(int line) {
-            if (_sourceUnit.DisableLineFeedLineSeparator) {
-                int current_line = 1;
-
-                for (; ; ) {
-                    if (current_line == line) return true;
-                    if (!IOUtils.SeekTo(_textReader, '\n')) return false;
-                    current_line++;
-                }
-            } else {
-                return IOUtils.SeekLine(_textReader, line);
-            }
+        /// <summary>
+        /// Seeks the first character of a specified line in the text stream.
+        /// </summary>
+        /// <param name="line">Line number. The current position is assumed to be line #1.</param>
+        /// <returns>
+        /// Returns <c>true</c> if the line is found, <b>false</b> otherwise.
+        /// </returns>
+        public virtual bool SeekLine(int line) {
+            return IOUtils.SeekLine(_textReader, line);
         }
 
         public override string ReadToEnd() {

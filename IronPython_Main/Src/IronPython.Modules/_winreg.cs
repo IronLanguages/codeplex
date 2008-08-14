@@ -351,7 +351,7 @@ namespace IronPython.Modules {
 
     }
 
-    [PythonSystemType]
+    [PythonType]
     public class PyHKEY : IDisposable {
         internal RegistryKey key;
         internal PyHKEY(RegistryKey key) {

@@ -204,25 +204,33 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Gets enumeration of variable names stored in the scope.
+        /// Gets a list of variable names stored in the scope.
         /// </summary>
-        public IEnumerable<string> VariableNames {
-            get {
-                foreach (KeyValuePair<SymbolId, object> kvp in _scope.Items) {
-                    yield return SymbolTable.IdToString(kvp.Key);
-                }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public IEnumerable<string> GetVariableNames() {
+            // Remoting: we eagerly enumerate all variables to avoid cross domain calls for each item.
+
+            var result = new List<string>();
+            foreach (var entry in _scope.Items) {
+                result.Add(SymbolTable.IdToString(entry.Key));
             }
+            result.TrimExcess();
+            return result;
         }
 
         /// <summary>
-        /// Gets enumeration of variable names and their values stored in the scope.
+        /// Gets an array of variable names and their values stored in the scope.
         /// </summary>
-        public IEnumerable<KeyValuePair<string, object>> Items {
-            get {
-                foreach (KeyValuePair<SymbolId, object> kvp in _scope.Items) {
-                    yield return new KeyValuePair<string, object>(SymbolTable.IdToString(kvp.Key), kvp.Value);
-                }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public IEnumerable<KeyValuePair<string, object>> GetItems() {
+            // Remoting: we eagerly enumerate all variables to avoid cross domain calls for each item.
+
+            var result = new List<KeyValuePair<string, object>>();
+            foreach (var entry in _scope.Items) {
+                result.Add(new KeyValuePair<string, object>(SymbolTable.IdToString(entry.Key), entry.Value));
             }
+            result.TrimExcess();
+            return result;
         }
 
         #region DebugView
@@ -242,7 +250,7 @@ namespace Microsoft.Scripting.Hosting {
             public System.Collections.Hashtable Variables {
                 get {
                     System.Collections.Hashtable result = new System.Collections.Hashtable();
-                    foreach (KeyValuePair<string, object> variable in _scope.Items) {
+                    foreach (KeyValuePair<string, object> variable in _scope.GetItems()) {
                         result[variable.Key] = variable.Value;
                     }
                     return result;

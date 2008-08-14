@@ -21,7 +21,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {
-    [PythonSystemType("builtin_function_or_method")]
+    [PythonType("builtin_function_or_method")]
     public class ConstructorFunction : BuiltinFunction {
         private MethodBase[] _ctors;
 

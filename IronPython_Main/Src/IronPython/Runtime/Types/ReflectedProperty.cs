@@ -28,7 +28,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {
-    [PythonSystemType("getset_descriptor")]
+    [PythonType("getset_descriptor")]
     public class ReflectedProperty : ReflectedGetterSetter, ICodeFormattable {
         private readonly PropertyInfo/*!*/ _info;
 

@@ -70,6 +70,10 @@ namespace IronPython.Runtime.Binding {
                 )
             );
 
+            if (Value.Template.IsOnlyGeneric) {
+                return BindingHelpers.TypeErrorGenericMethod(Value.DeclaringType, Value.Template.Name, selfRestrict);
+            }
+
             if (Value.Template.IsReversedOperator) {
                 ArrayUtils.SwapLastTwo(args);
             }

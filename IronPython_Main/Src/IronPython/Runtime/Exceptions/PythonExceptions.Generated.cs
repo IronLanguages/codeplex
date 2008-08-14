@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("SystemExit"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("SystemExit"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _SystemExit : BaseException {
             private object _code;
 
@@ -214,7 +214,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("EnvironmentError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("EnvironmentError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _EnvironmentError : BaseException {
             private object _errno;
             private object _strerror;
@@ -285,7 +285,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("WindowsError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("WindowsError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _WindowsError : _EnvironmentError {
             private object _winerror;
 
@@ -474,7 +474,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("SyntaxError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("SyntaxError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _SyntaxError : BaseException {
             private object _text;
             private object _print_file_and_line;
@@ -615,7 +615,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("UnicodeDecodeError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("UnicodeDecodeError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _UnicodeDecodeError : BaseException {
             private object _start;
             private object _reason;
@@ -690,7 +690,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("UnicodeEncodeError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("UnicodeEncodeError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _UnicodeEncodeError : BaseException {
             private object _start;
             private object _reason;
@@ -763,7 +763,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("UnicodeTranslateError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
+        [PythonType("UnicodeTranslateError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _UnicodeTranslateError : BaseException {
             private object _start;
             private object _reason;

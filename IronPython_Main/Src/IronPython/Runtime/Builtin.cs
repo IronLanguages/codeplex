@@ -238,7 +238,10 @@ namespace IronPython.Runtime {
 
             converted = TryCoerce(context, y, x);
             if (converted != null && converted != NotImplementedType.Value) {
-                return PythonTuple.Make(reversed(context, converted));
+                PythonTuple pt = converted as PythonTuple;
+                if (pt != null && pt.Count == 2) {
+                    return PythonTuple.MakeTuple(pt[1], pt[0]);
+                }
             }
 
             throw PythonOps.TypeError("coercion failed");
@@ -560,7 +563,7 @@ namespace IronPython.Runtime {
                     return;
                 }
                 doc.Append("no documentation found for ");
-                doc.Append(PythonOps.StringRepr(o));
+                doc.Append(PythonOps.Repr(context, o));
             }
 
             string[] strings = doc.ToString().Split('\n');
@@ -709,7 +712,7 @@ namespace IronPython.Runtime {
                 }
             } else if ((oldClass = obj as OldClass) != null) {
                 if (indent == 0) {
-                    doc.AppendFormat("Help on {0} in module {1}\n\n", oldClass.Name, PythonOps.GetBoundAttr(context, oldClass, Symbols.Module));
+                    doc.AppendFormat("Help on {0} in module {1}\n\n", oldClass.__name__, PythonOps.GetBoundAttr(context, oldClass, Symbols.Module));
                 }
 
                 object docText;
@@ -1466,8 +1469,8 @@ namespace IronPython.Runtime {
             return scope;
         }
 
-        public static object repr(object o) {
-            object res = PythonOps.StringRepr(o);
+        public static object repr(CodeContext/*!*/ context, object o) {
+            object res = PythonOps.Repr(context, o);
 
             if (!(res is String) && !(res is ExtensibleString)) {
                 throw PythonOps.TypeError("__repr__ returned non-string (type {0})", PythonOps.GetPythonTypeName(o));
@@ -1476,28 +1479,12 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        public static object reversed(CodeContext/*!*/ context, object o) {
-            object reversed;
-            if (PythonOps.TryGetBoundAttr(o, Symbols.Reversed, out reversed)) {
-                return PythonCalls.Call(context, reversed);
+        public static PythonType reversed {
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(typeof(ReversedEnumerator));
             }
-
-            object getitem;
-            object len;
-
-            if (!PythonOps.TryGetBoundAttr(o, Symbols.GetItem, out getitem) ||
-                !PythonOps.TryGetBoundAttr(o, Symbols.Length, out len) ||
-                o is PythonDictionary) {
-                throw PythonOps.TypeError("argument to reversed() must be a sequence");
-            }
-
-            object length = PythonCalls.Call(context, len);
-            if (!(length is int)) {
-                throw PythonOps.ValueError("__len__ must return int");
-            }
-            return new ReversedEnumerator((int)length, getitem);
         }
-
+        
         public static double round(double number) {
             return MathUtils.RoundAwayFromZero(number);
         }

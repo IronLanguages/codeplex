@@ -62,7 +62,7 @@ namespace IronPython.Modules {
         public static readonly PythonType ProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakproxy));
         public static readonly PythonType ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(@ref));
 
-        [PythonSystemType]
+        [PythonType]
         public class @ref : IValueEquality {
             private WeakHandle _target;
             private int _hashVal;
@@ -230,7 +230,7 @@ namespace IronPython.Modules {
             #endregion            
         }
 
-        [PythonSystemType, DynamicBaseTypeAttribute]
+        [PythonType, DynamicBaseTypeAttribute]
         public sealed partial class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, IMembersList {
             private readonly WeakHandle _target;
             private readonly CodeContext/*!*/ _context;
@@ -433,7 +433,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType, DynamicBaseTypeAttribute]
+        [PythonType, DynamicBaseTypeAttribute]
         public sealed partial class weakcallableproxy :
             IPythonObject,
             ICodeFormattable,            
@@ -665,7 +665,7 @@ namespace IronPython.Modules {
         }
     }
 
-    [PythonSystemType]
+    [PythonType]
     class SlotWrapper : PythonTypeSlot, ICodeFormattable {
         SymbolId name;
         PythonType type;
@@ -679,8 +679,8 @@ namespace IronPython.Modules {
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<slot wrapper {0} of {1} objects>",
-                PythonOps.StringRepr(SymbolTable.IdToString(name)),
-                PythonOps.StringRepr(type.Name));
+                PythonOps.Repr(context, SymbolTable.IdToString(name)),
+                PythonOps.Repr(context, type.Name));
         }
 
         #endregion
@@ -697,8 +697,8 @@ namespace IronPython.Modules {
 
             if (proxy == null)
                 throw PythonOps.TypeError("descriptor for {0} object doesn't apply to {1} object",
-                    PythonOps.StringRepr(type.Name),
-                    PythonOps.StringRepr(PythonTypeOps.GetName(instance)));
+                    PythonOps.Repr(context, type.Name),
+                    PythonOps.Repr(context, PythonTypeOps.GetName(instance)));
 
             if (!DynamicHelpers.GetPythonType(proxy.Target).TryGetBoundMember(context, proxy.Target, name, out value))
                 return false;
@@ -710,7 +710,7 @@ namespace IronPython.Modules {
         #endregion
     }
 
-    [PythonSystemType("method-wrapper")]
+    [PythonType("method-wrapper")]
     public class GenericMethodWrapper {
         SymbolId name;
         IProxyObject target;

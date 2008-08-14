@@ -80,7 +80,7 @@ namespace IronPython.Runtime.Operations {
         [StaticExtensionMethod]
         public static object __new__(CodeContext/*!*/ context, PythonType cls, params object[] args\u00F8) {
             if (cls == null) {
-                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(cls)));
             }
 
             InstanceOps.CheckInitArgs(context, null, args\u00F8, cls);
@@ -94,7 +94,7 @@ namespace IronPython.Runtime.Operations {
         [StaticExtensionMethod]
         public static object __new__(CodeContext/*!*/ context, PythonType cls, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
             if (cls == null) {
-                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(cls)));
             }
 
             InstanceOps.CheckInitArgs(context, kwargs\u00F8, args\u00F8, cls);
@@ -158,8 +158,8 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Returns a friendly string representation of the object. 
         /// </summary>
-        public static string __str__(object o) {
-            return PythonOps.StringRepr(o);
+        public static string __str__(CodeContext/*!*/ context, object o) {
+            return PythonOps.Repr(context, o);
         }
 
         #region Pickle helpers

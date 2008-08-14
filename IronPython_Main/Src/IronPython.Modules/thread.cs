@@ -14,15 +14,19 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using System.Threading;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
@@ -111,7 +115,7 @@ namespace IronPython.Modules {
 
         #endregion
 
-        [PythonSystemType]
+        [PythonType]
         public class @lock {
             private AutoResetEvent blockEvent;
             private Thread curHolder;
@@ -223,6 +227,80 @@ namespace IronPython.Modules {
 
         private static void SetStackSize(CodeContext/*!*/ context, int stackSize) {
             PythonContext.GetContext(context).SetModuleState(_stackSizeKey, stackSize);
+        }
+
+        [PythonType]
+        public class _local {
+            private readonly PythonDictionary/*!*/ _dict = new PythonDictionary(new ThreadLocalDictionaryStorage());
+
+            #region Custom Attribute Access
+
+            [SpecialName]
+            public object GetCustomMember(string name) {
+                return _dict.get(name, OperationFailed.Value);
+            }
+
+            [SpecialName]
+            public void SetMemberAfter(string name, object value) {
+                _dict[name] = value;
+            }
+
+            [SpecialName]
+            public void DeleteMember(string name) {
+                _dict.__delitem__(name);
+            }
+
+            #endregion
+
+            public PythonDictionary/*!*/ __dict__ {
+                get {
+                    return _dict;
+                }
+            }
+
+            #region Dictionary Storage
+
+            /// <summary>
+            /// Provides a dictionary storage implementation whose storage is local to
+            /// the thread.
+            /// </summary>
+            private class ThreadLocalDictionaryStorage : DictionaryStorage {
+                private readonly ThreadLocal<CommonDictionaryStorage> _storage = new ThreadLocal<CommonDictionaryStorage>();
+
+                public override void Add(object key, object value) {
+                    GetStorage().Add(key, value);
+                }
+
+                public override bool Contains(object key) {
+                    return GetStorage().Contains(key);
+                }
+
+                public override bool Remove(object key) {
+                    return GetStorage().Remove(key);
+                }
+
+                public override bool TryGetValue(object key, out object value) {
+                    return GetStorage().TryGetValue(key, out value);
+                }
+
+                public override int Count {
+                    get { return GetStorage().Count; }
+                }
+
+                public override void Clear() {
+                    GetStorage().Clear();
+                }
+
+                public override List<KeyValuePair<object, object>>/*!*/ GetItems() {
+                    return GetStorage().GetItems();
+                }
+
+                private CommonDictionaryStorage/*!*/ GetStorage() {
+                    return _storage.GetOrCreate(() => new CommonDictionaryStorage());
+                }
+            }
+
+            #endregion
         }
     }
 }

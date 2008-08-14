@@ -92,7 +92,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Constant("{0} instance has no attribute '{1}'"),
                                 Ast.NewArrayInit(
                                     typeof(object),
-                                    Ast.Constant(((OldInstance)args[0].Value).__class__.__name__),
+                                    Ast.Constant(((OldInstance)args[0].Value)._class._name),
                                     Ast.Constant(Name)
                                 )
                             )

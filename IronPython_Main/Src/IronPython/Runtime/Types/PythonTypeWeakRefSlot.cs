@@ -18,7 +18,7 @@ using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    [PythonSystemType("getset_descriptor")]
+    [PythonType("getset_descriptor")]
     public sealed class PythonTypeWeakRefSlot : PythonTypeSlot, ICodeFormattable {
         PythonType _type;
 
@@ -67,7 +67,7 @@ namespace IronPython.Runtime.Types {
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<attribute '__weakref__' of {0} objects",
-                PythonOps.StringRepr(_type));
+                PythonOps.Repr(context, _type));
         }
 
         #endregion

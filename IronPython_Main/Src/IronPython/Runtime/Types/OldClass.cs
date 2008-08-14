@@ -48,7 +48,7 @@ namespace IronPython.Runtime.Types {
         HasDelAttr = 0x04,
     }
 
-    [PythonSystemType("classobj")]
+    [PythonType("classobj")]
     [Serializable]
     public sealed class OldClass :
 #if !SILVERLIGHT // ICustomTypeDescriptor
@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Types {
 
         public PythonDictionary __dict__;
         private int _attrs;  // actually OldClassAttributes - losing type safety for thread safety
-        internal object __name__;
+        internal object _name;
 
         [MultiRuntimeAware]
         private static int _namesVersion;
@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private void Init(string name, IAttributesCollection dict, string instanceNames) {
-            __name__ = name;
+            _name = name;
 
             InitializeInstanceNames(instanceNames);
 
@@ -130,7 +130,7 @@ namespace IronPython.Runtime.Types {
 #if !SILVERLIGHT // SerializationInfo
         private OldClass(SerializationInfo info, StreamingContext context) {
             _bases = (List<OldClass>)info.GetValue("__class__", typeof(List<OldClass>));
-            __name__ = info.GetValue("__name__", typeof(object));
+            _name = info.GetValue("__name__", typeof(object));
             __dict__ = new PythonDictionary();
 
             InitializeInstanceNames(""); //TODO should we serialize the optimization data
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Types {
             ContractUtils.RequiresNotNull(info, "info");
 
             info.AddValue("__bases__", _bases);
-            info.AddValue("__name__", __name__);
+            info.AddValue("__name__", _name);
 
             List<object> keys = new List<object>();
             List<object> values = new List<object>();
@@ -186,8 +186,8 @@ namespace IronPython.Runtime.Types {
             get { return _optimizedInstanceNamesVersion; }
         }
 
-        public string Name {
-            get { return __name__.ToString(); }
+        public string __name__ {
+            get { return _name.ToString(); }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
@@ -211,11 +211,11 @@ namespace IronPython.Runtime.Types {
         }
 
         internal string FullName {
-            get { return __dict__["__module__"].ToString() + '.' + __name__; }
+            get { return __dict__["__module__"].ToString() + '.' + _name; }
         }
 
 
-        public List<OldClass> BaseClasses {
+        internal List<OldClass> BaseClasses {
             get {
                 return _bases;
             }
@@ -231,11 +231,11 @@ namespace IronPython.Runtime.Types {
             return PythonOps.GetUserDescriptor(self, instance, type);
         }
 
-        public bool HasFinalizer {
+        internal bool HasFinalizer {
             get {
                 return (_attrs & (int)OldClassAttributes.HasFinalizer) != 0;
             }
-            internal set {
+            set {
                 int oldAttrs, newAttrs;
                 do {
                     oldAttrs = _attrs;
@@ -340,7 +340,7 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (!TryGetBoundCustomMember(context, name, out value)) {
-                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'", Name, SymbolTable.IdToString(name));
+                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'", __name__, SymbolTable.IdToString(name));
             }
 
             return value;
@@ -348,7 +348,7 @@ namespace IronPython.Runtime.Types {
 
         internal bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
             if (name == Symbols.Bases) { value = PythonTuple.Make(_bases); return true; }
-            if (name == Symbols.Name) { value = __name__; return true; }
+            if (name == Symbols.Name) { value = _name; return true; }
             if (name == Symbols.Dict) {
                 //!!! user code can modify __del__ property of __dict__ behind our back
                 HasDelAttr = HasSetAttr = true;  // pessimisticlly assume the user is setting __setattr__ in the dict
@@ -483,7 +483,7 @@ namespace IronPython.Runtime.Types {
 
         #region IOldDynamicObject Members
 
-        public RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
+        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                     return MakeGetMemberRule<T>((OldGetMemberAction)action, context, args);
@@ -537,8 +537,8 @@ namespace IronPython.Runtime.Types {
                         ),
                         Ast.Condition(
                             Ast.Call(
+                                typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
                                 Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                                typeof(OldClass).GetMethod("TryLookupInit"),
                                 instTmp,
                                 tmp
                             ),
@@ -552,8 +552,8 @@ namespace IronPython.Runtime.Types {
                             // bind against C(). 
                             rule.Parameters.Count != 1 ?
                                 (Expression)Ast.Call(
-                                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                                    typeof(OldClass).GetMethod("MakeCallError")
+                                    typeof(PythonOps).GetMethod("OldClassMakeCallError"),
+                                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass))
                                     ) :
                                 Ast.Null()
                         ),
@@ -564,7 +564,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        public bool TryLookupInit(object inst, out object ret) {
+        internal bool TryLookupInit(object inst, out object ret) {
             if (TryLookupSlot(Symbols.Init, out ret)) {
                 ret = GetOldStyleDescriptor(DefaultContext.Default, ret, inst, this);
                 return true;
@@ -573,7 +573,7 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        public object MakeCallError() {
+        internal object MakeCallError() {
             // Normally, if we have an __init__ method, the method binder detects signature mismatches.
             // This can happen when a class does not define __init__ and therefore does not take any arguments.
             // Beware that calls like F(*(), **{}) have 2 arguments but they're empty and so it should still
@@ -588,26 +588,26 @@ namespace IronPython.Runtime.Types {
 
             if (action.Name == Symbols.Bases) {
                 call = Ast.Call(
+                    typeof(PythonOps).GetMethod("OldClassSetBases"),
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetMethod("SetBases"),
                     Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 );
             } else if (action.Name == Symbols.Name) {
                 call = Ast.Call(
+                    typeof(OldClass).GetMethod("OldClassSetName"),
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetMethod("SetName"),
                     Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 );
             } else if (action.Name == Symbols.Dict) {
                 call = Ast.Call(
+                    typeof(OldClass).GetMethod("OldClassSetDictionary"),
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetMethod("SetDictionary"),
                     Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 );
             } else {
                 call = Ast.Call(
+                    typeof(OldClass).GetMethod("OldClassSetNameHelper"),
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetMethod("SetNameHelper"),
                     AstUtils.Constant(action.Name),
                     Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 );
@@ -617,23 +617,23 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        public void SetBases(object value) {
+        internal void SetBases(object value) {
             _bases = ValidateBases(value);
         }
 
-        public void SetName(object value) {
+        internal void SetName(object value) {
             string n = value as string;
             if (n == null) throw PythonOps.TypeError("TypeError: __name__ must be a string object");
-            __name__ = n;
+            _name = n;
         }
 
-        public void SetDictionary(object value) {
+        internal void SetDictionary(object value) {
             PythonDictionary d = value as PythonDictionary;
             if (d == null) throw PythonOps.TypeError("__dict__ must be set to dictionary");
             __dict__ = d;
         }
 
-        public void SetNameHelper(SymbolId name, object value) {
+        internal void SetNameHelper(SymbolId name, object value) {
             __dict__._storage.Add(name, value);
 
             if (name == Symbols.Unassign) {
@@ -668,8 +668,8 @@ namespace IronPython.Runtime.Types {
             if (action.Name == Symbols.Dict) {
                 target = Ast.Comma(
                     Ast.Call(
-                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                        typeof(OldClass).GetMethod("DictionaryIsPublic")
+                        typeof(PythonOps).GetMethod("OldClassDictionaryIsPublic"),
+                        Ast.Convert(rule.Parameters[0], typeof(OldClass))
                     ),
                     Ast.Field(
                         Ast.Convert(rule.Parameters[0], typeof(OldClass)),
@@ -684,7 +684,7 @@ namespace IronPython.Runtime.Types {
             } else if (action.Name == Symbols.Name) {
                 target = Ast.Property(
                     Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetProperty("Name")
+                    typeof(OldClass).GetProperty("__name__")
                 );
             } else {
                 if (action.IsNoThrow) {
@@ -692,9 +692,9 @@ namespace IronPython.Runtime.Types {
                     target =
                         Ast.Condition(
                             Ast.Call(
-                                Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                                typeof(OldClass).GetMethod("TryLookupValue"),
+                                typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
                                 rule.Context,
+                                Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                                 AstUtils.Constant(action.Name),
                                 tmp
                             ),
@@ -719,7 +719,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        public object LookupValue(CodeContext context, SymbolId name) {
+        internal object LookupValue(CodeContext context, SymbolId name) {
             object value;
             if (TryLookupValue(context, name, out value)) {
                 return value;
@@ -728,7 +728,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(this, name);
         }
 
-        public bool TryLookupValue(CodeContext context, SymbolId name, out object value) {
+        internal bool TryLookupValue(CodeContext context, SymbolId name, out object value) {
             if (TryLookupSlot(name, out value)) {
                 value = GetOldStyleDescriptor(context, value, null, this);
                 return true;
@@ -737,10 +737,11 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        public void DictionaryIsPublic() {
+        internal void DictionaryIsPublic() {
             HasDelAttr = true;
             HasSetAttr = true;
         }
+
         #endregion
 
         #region IDynamicObject Members

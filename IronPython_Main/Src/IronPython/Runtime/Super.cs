@@ -24,7 +24,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
-    [PythonSystemType("super")]
+    [PythonType("super")]
     public class Super : PythonTypeSlot, ICodeFormattable {
         private PythonType _thisClass;
         private object _self;
@@ -215,8 +215,8 @@ namespace IronPython.Runtime {
             if (_self == this)
                 selfRepr = "<super object>";
             else
-                selfRepr = PythonOps.StringRepr(_self);
-            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.StringRepr(_thisClass), selfRepr);
+                selfRepr = PythonOps.Repr(context, _self);
+            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.Repr(context, _thisClass), selfRepr);
         }
 
         #endregion

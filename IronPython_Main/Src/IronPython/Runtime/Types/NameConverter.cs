@@ -90,9 +90,9 @@ namespace IronPython.Runtime.Types {
             }
 
             NameType res = NameType.Type;
-            object[] attribute = t.GetCustomAttributes(typeof(PythonSystemTypeAttribute), false);
+            object[] attribute = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
             if (attribute.Length > 0) {
-                PythonSystemTypeAttribute attr = attribute[0] as PythonSystemTypeAttribute;
+                PythonTypeAttribute attr = attribute[0] as PythonTypeAttribute;
                 if (attr.Name != null) {
                     name = attr.Name;
                 }
@@ -156,13 +156,13 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            if (mi.IsDefined(typeof(PythonClassMethodAttribute), false)) {
+            if (mi.IsDefined(typeof(ClassMethodAttribute), false)) {
                 res |= NameType.ClassMember;
             }
 
             if (namePrefix != null) name = namePrefix + name;
 
-            if (mi.DeclaringType.IsDefined(typeof(PythonSystemTypeAttribute), false) ||
+            if (mi.DeclaringType.IsDefined(typeof(PythonTypeAttribute), false) ||
                 !mi.DeclaringType.IsAssignableFrom(dt.UnderlyingSystemType)) {
                 // extension types are all python names
                 res |= NameType.Python;

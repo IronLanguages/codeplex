@@ -18,14 +18,18 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security;
+using System.Security.Policy;
 using System.Text;
-using IronPython.Runtime;
-using IronPython.Runtime.Exceptions;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
+
 using IronPython;
 using IronPython.Hosting;
+using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -122,7 +126,7 @@ namespace IronPythonTest {
         public EngineTest() {
             // Load a script with all the utility functions that are required
             // pe.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
-            _env = ScriptRuntime.Create();
+            _env = new ScriptRuntime();
             _env.LoadAssembly(typeof(string).Assembly);
             _env.LoadAssembly(typeof(Debug).Assembly);
             _pe = _env.GetEngine("py");
@@ -684,12 +688,80 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
         }
 
 #if !SILVERLIGHT
+        public void ScenarioPartialTrust() {
+            // basic check of running a host in partial trust
+            AppDomainSetup info = new AppDomainSetup();
+            info.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
+            info.ApplicationName = "Test";
+            Evidence evidence = new Evidence();
+            evidence.AddHost(new Zone(SecurityZone.Internet));
+            AppDomain newDomain = AppDomain.CreateDomain("test", evidence, info);
+            
+            // create runtime in partial trust...
+            ScriptRuntime runtime = Python.CreateRuntime(newDomain);
+
+            // get the Python engine...
+            ScriptEngine engine = runtime.GetEngine("py");
+
+            // execute some simple code
+            ScriptScope scope = engine.CreateScope();
+            ScriptSource source = engine.CreateScriptSourceFromString("2 + 2");
+            AreEqual(source.Execute<int>(scope), 4);
+
+            // import all of the built-in modules & make sure we can reflect on them...
+            source = engine.CreateScriptSourceFromString(@"
+import sys
+for mod in sys.builtin_module_names:
+    x = __import__(mod)
+    dir(x)
+", SourceCodeKind.Statements);
+
+            source.Execute(scope);
+
+            // define some classes & use the methods...
+            source = engine.CreateScriptSourceFromString(@"
+class x(object):
+    def f(self): return 1 + 2
+
+a = x()
+a.f()
+
+
+class y: 
+    def f(self): return 1 + 2
+
+b = y()
+b.f()
+", SourceCodeKind.Statements);
+
+
+            source.Execute(scope);
+
+            // call a protected method on a derived class...
+            source = engine.CreateScriptSourceFromString(@"
+import clr
+class x(object):
+    def f(self): return 1 + 2
+
+a = x()
+b = a.MemberwiseClone()
+
+if id(a) == id(b):
+    raise Exception
+", SourceCodeKind.Statements);
+
+
+            source.Execute(scope);
+
+            AppDomain.Unload(newDomain);
+        }
+
         public void ScenarioStackFrameLineInfo() {
             const string lineNumber = "raise.py:line";
 
             // TODO: clone setup?
-            var scope = ScriptRuntime.Create(new ScriptRuntimeSetup(true)).CreateScope("py");
-            var debugScope = ScriptRuntime.Create(new ScriptRuntimeSetup(true) { DebugMode = true }).CreateScope("py");
+            var scope = new ScriptRuntime(new ScriptRuntimeSetup(true)).CreateScope("py");
+            var debugScope = new ScriptRuntime(new ScriptRuntimeSetup(true) { DebugMode = true }).CreateScope("py");
 
             TestLineInfo(scope, lineNumber);
             TestLineInfo(debugScope, lineNumber);

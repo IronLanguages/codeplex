@@ -55,7 +55,7 @@ namespace IronPython.Compiler {
         private bool _fromFutureAllowed;
         private string _privatePrefix;
         private bool _parsingStarted, _allowIncomplete;
-        private SourceUnitReader _sourceReader;
+        private SourceCodeReader _sourceReader;
         private int _errorCode;
 
         #region Construction
@@ -87,7 +87,7 @@ namespace IronPython.Compiler {
                 throw new ArgumentException(Resources.PythonContextRequired);
             }
 
-            SourceUnitReader reader;
+            SourceCodeReader reader;
 
             try {
                 reader = context.SourceUnit.GetReader();
@@ -101,7 +101,7 @@ namespace IronPython.Compiler {
             }
 
             Tokenizer tokenizer = new Tokenizer(context.Errors, verbatim, compilerOptions.DontImplyDedent);
-            tokenizer.Initialize(null, reader, SourceLocation.MinValue);
+            tokenizer.Initialize(null, reader, context.SourceUnit, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
             Parser result = new Parser(tokenizer, context.Errors, context.ParserSink, compilerOptions.LanguageFeatures);

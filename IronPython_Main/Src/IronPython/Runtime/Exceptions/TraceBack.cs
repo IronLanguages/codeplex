@@ -19,7 +19,7 @@ using System;
 [module: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", Scope = "member", Target = "IronPython.Runtime.Exceptions.TraceBackFrame.Globals", MessageId = "Globals")]
 
 namespace IronPython.Runtime.Exceptions {
-    [PythonSystemType("traceback")]
+    [PythonType("traceback")]
     [Serializable]
     public class TraceBack {
         private readonly TraceBack _next;
@@ -60,7 +60,7 @@ namespace IronPython.Runtime.Exceptions {
         }
     }
 
-    [PythonSystemType("frame")]
+    [PythonType("frame")]
     [Serializable]
     public class TraceBackFrame {
         private object _globals;

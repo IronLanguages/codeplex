@@ -76,13 +76,24 @@ namespace IronPython.Compiler.Ast {
 
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
+            // allocated all variables here so they won't be shared w/ other 
+            // locals allocated during the body or except blocks.
             MSAst.VariableExpression noNestedException = null;
             if (_finally != null) {
-                // allocated here so it won't be shared w/ other locals allocated during
-                // the body or except blocks.
                 noNestedException = ag.GetTemporary("$noException", typeof(bool));
             }
 
+            MSAst.VariableExpression lineUpdated = null;
+            MSAst.VariableExpression runElse = null;
+
+            if (_else != null || (_handlers != null && _handlers.Length > 0)) {
+                lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
+                if (_else != null) {
+                    runElse = ag.GetTemporary("run_else", typeof(bool));
+                }
+            }
+
+            // don't allocate locals below here...
             MSAst.Expression body = ag.Transform(_body);
             MSAst.Expression @else = ag.Transform(_else);
 
@@ -97,10 +108,6 @@ namespace IronPython.Compiler.Ast {
             // We have else clause, must generate guard around it
             if (@else != null) {
                 Debug.Assert(@catch != null);
-
-                MSAst.VariableExpression runElse = ag.GetTemporary("run_else", typeof(bool));
-                MSAst.VariableExpression lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
-
 
                 //  run_else = true;
                 //  try {
@@ -137,8 +144,6 @@ namespace IronPython.Compiler.Ast {
                 //      ... catch handling ...
                 //  }
                 //
-
-                MSAst.VariableExpression lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
                 result = AstUtils.Try(
                         Ast.Annotate(Span, _header),
                         Ast.Block(
@@ -149,14 +154,22 @@ namespace IronPython.Compiler.Ast {
                     ).Catch(exception.Type, exception,
                         @catch,
                         Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
-                    );
-
-                ag.FreeTemp(lineUpdated);
+                    );                
             } else {
                 result = body;
             }
 
-            return AddFinally(ag, result, noNestedException);
+            try {
+                return AddFinally(ag, result, noNestedException);
+            } finally {
+                // free all locals here after the children nodes have been generated
+                if (lineUpdated != null) {
+                    ag.FreeTemp(lineUpdated);
+                }
+                if (runElse != null) {
+                    ag.FreeTemp(@runElse);
+                }
+            }
         }
 
         private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.VariableExpression noNestedException) {

@@ -52,7 +52,7 @@ namespace IronPython.Runtime {
     /// Contains common set functionality between set and forzenSet
     /// </summary>
     static class SetHelpers {
-        public static string SetToString(object set, IEnumerable items) {
+        public static string SetToString(CodeContext/*!*/ context, object set, IEnumerable items) {
             string setTypeStr;
             Type setType = set.GetType();
             if (setType == typeof(SetCollection)) {
@@ -68,7 +68,7 @@ namespace IronPython.Runtime {
             string comma = "";
             foreach (object o in items) {
                 sb.Append(comma);
-                sb.Append(PythonOps.Repr(o));
+                sb.Append(PythonOps.Repr(context, o));
                 comma = ", ";
             }
             sb.Append("])");
@@ -198,7 +198,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Mutable set class
     /// </summary>
-    [PythonSystemType("set")]
+    [PythonType("set")]
     public class SetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
         PythonDictionary items;
 
@@ -413,18 +413,18 @@ namespace IronPython.Runtime {
         #region Operators
 
         [SpecialName]
-        public SetCollection InPlaceAnd(object s) {
+        public SetCollection InPlaceBitwiseAnd(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
 
             intersection_update(set);
             return this;
         }
 
         [SpecialName]
-        public SetCollection InPlaceOr(object s) {
+        public SetCollection InPlaceBitwiseOr(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
 
             update(set);
             return this;
@@ -433,7 +433,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public SetCollection InPlaceSubtract(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
 
             difference_update(set);
             return this;
@@ -442,7 +442,7 @@ namespace IronPython.Runtime {
         [SpecialName]
         public SetCollection InPlaceExclusiveOr(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
 
             symmetric_difference_update(set);
             return this;
@@ -455,6 +455,22 @@ namespace IronPython.Runtime {
 
         public int __cmp__(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
+        }
+
+        public static object operator &(ISet y, SetCollection x) {
+            return x & y;
+        }
+
+        public static object operator |(ISet y, SetCollection x) {
+            return x | y;
+        }
+
+        public static object operator ^(ISet y, SetCollection x) {
+            return x ^ y;
+        }
+
+        public static object operator -(ISet y, SetCollection x) {
+            return SetHelpers.MakeSet(x, y.PrivDifference(x));
         }
 
         public static object operator &(SetCollection x, ISet y) {
@@ -605,7 +621,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return SetHelpers.SetToString(this, this.items.keys());
+            return SetHelpers.SetToString(context, this, this.items.keys());
         }
 
         #endregion
@@ -636,7 +652,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Non-mutable set class
     /// </summary>
-    [PythonSystemType("frozenset")]
+    [PythonType("frozenset")]
     public class FrozenSetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
         internal static readonly FrozenSetCollection EMPTY = new FrozenSetCollection();
 
@@ -847,6 +863,22 @@ namespace IronPython.Runtime {
 
         #region Operators
 
+        public static object operator &(ISet y, FrozenSetCollection x) {
+            return x & y;
+        }
+
+        public static object operator |(ISet y, FrozenSetCollection x) {
+            return x | y;
+        }
+
+        public static object operator ^(ISet y, FrozenSetCollection x) {
+            return x ^ y;
+        }
+
+        public static object operator -(ISet y, FrozenSetCollection x) {
+            return SetHelpers.MakeSet(x, y.PrivDifference(x));
+        }
+
         public static object operator &(FrozenSetCollection x, ISet y) {
             if (y.__len__() < x.__len__()) {
                 return x.intersection(y);
@@ -1021,7 +1053,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return SetHelpers.SetToString(this, this.items.keys());
+            return SetHelpers.SetToString(context, this, this.items.keys());
         }
 
         #endregion

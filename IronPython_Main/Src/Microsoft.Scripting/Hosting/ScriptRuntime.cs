@@ -41,6 +41,40 @@ namespace Microsoft.Scripting.Hosting {
         private ScriptScope _globals;
         private ScriptEngine _invariantEngine;
 
+        /// <summary>
+        /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
+        /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
+        /// </summary>
+        public ScriptRuntime()
+            : this(GetSetupInformation()) {
+        }
+
+        /// <summary>
+        /// Creates ScriptRuntime in the current app-domain and initialized according to the the specified settings.
+        /// Creates an instance of host class specified in the setup and associates it with the created runtime.
+        /// Both Runtime and ScriptHost are collocated in the current app-domain.
+        /// </summary>
+        public ScriptRuntime(ScriptRuntimeSetup setup) {
+            ContractUtils.RequiresNotNull(setup, "setup");
+
+            _host = ReflectionUtils.CreateInstance<ScriptHost>(setup.HostType, setup.HostArguments);
+
+            ScriptHostProxy hostProxy = new ScriptHostProxy(_host);
+
+            _manager = new ScriptDomainManager(hostProxy, setup.ToConfiguration());
+            _invariantContext = new InvariantContext(_manager);
+
+            _io = new ScriptIO(_manager.SharedIO);
+            _engines = new Dictionary<LanguageContext, ScriptEngine>();
+
+            bool freshEngineCreated;
+            _globals = new ScriptScope(GetEngineNoLockNoNotification(_invariantContext, out freshEngineCreated), _manager.Globals);
+
+            // runtime needs to be all set at this point, host code is called
+
+            _host.SetRuntime(this);
+        }
+
         internal ScriptDomainManager Manager {
             get { return _manager; }
         }
@@ -61,24 +95,13 @@ namespace Microsoft.Scripting.Hosting {
             get { return _io; }
         }
 
-        private ScriptRuntime(ScriptDomainManager manager, ScriptHost host, InvariantContext invariantContext) {
-            Assert.NotNull(manager);
-            _manager = manager;
-            _host = host;
-            _invariantContext = invariantContext;
-            _io = new ScriptIO(_manager.SharedIO);
-            _engines = new Dictionary<LanguageContext, ScriptEngine>();
-
-            bool freshEngineCreated;
-            _globals = new ScriptScope(GetEngineNoLockNoNotification(_invariantContext, out freshEngineCreated), manager.Globals);
-        }
-
         /// <summary>
         /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
         /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
         /// </summary>
+        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method")]
         public static ScriptRuntime Create() {
-            return CreateInternal(null, null);
+            return new ScriptRuntime();
         }
 
         /// <summary>
@@ -86,38 +109,9 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates an instance of host class specified in the setup and associates it with the created runtime.
         /// Both Runtime and ScriptHost are collocated in the current app-domain.
         /// </summary>
+        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method")]
         public static ScriptRuntime Create(ScriptRuntimeSetup setup) {
-            ContractUtils.RequiresNotNull(setup, "setup");
-            return CreateInternal(null, setup);
-        }
-
-        // Creates Runtime in specified app-domain and initialized according to specified setup.
-        private static ScriptRuntime CreateInternal(AppDomain domain, ScriptRuntimeSetup setup) {
-            if (domain != null && domain != AppDomain.CurrentDomain) {
-#if SILVERLIGHT
-                throw Assert.Unreachable;
-#else
-                return RemoteRuntimeFactory.CreateRuntime(domain, setup);
-#endif
-            }
-
-            if (setup == null) {
-                setup = GetSetupInformation();
-            }
-
-            ScriptHost host = ReflectionUtils.CreateInstance<ScriptHost>(setup.HostType, setup.HostArguments);
-
-            ScriptHostProxy hostProxy = new ScriptHostProxy(host);
-
-            ScriptDomainManager manager = new ScriptDomainManager(hostProxy, setup.ToConfiguration());
-            InvariantContext invariantContext = new InvariantContext(manager);
-
-            ScriptRuntime runtime = new ScriptRuntime(manager, host, invariantContext);
-
-            // runtime needs to be all set at this point, host code is called
-
-            host.SetRuntime(runtime);
-            return runtime;
+            return new ScriptRuntime(setup);
         }
 
         #region Remoting
@@ -127,9 +121,10 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates ScriptRuntime in the specified app-domain and initialized with default settings.
         /// Also creates a default ScriptHost instance associated with the runtime, also in the given app-domain.
         /// </summary>
-        public static ScriptRuntime Create(AppDomain domain) {
+        public static ScriptRuntime CreateRemote(AppDomain domain) {
             ContractUtils.RequiresNotNull(domain, "domain");
-            return CreateInternal(domain, null);
+
+            return (ScriptRuntime)domain.CreateInstanceAndUnwrap(typeof(ScriptRuntime).Assembly.FullName, typeof(ScriptRuntime).FullName);
         }
 
         /// <summary>
@@ -137,27 +132,19 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates an instance of host class specified in the setup and associates it with the created runtime.
         /// Both Runtime and ScriptHost are collocated in the specified app-domain.
         /// </summary>
-        public static ScriptRuntime Create(AppDomain domain, ScriptRuntimeSetup setup) {
-            ContractUtils.RequiresNotNull(domain, "domain");
-            return CreateInternal(domain, setup);
-        }
-
-        // Factory object used for creating remote Runtime.
-        private sealed class RemoteRuntimeFactory : MarshalByRefObject {
-            public readonly ScriptRuntime Runtime;
-
-            // Runs in the app-domain remote to the user of the factory.
-            public RemoteRuntimeFactory(ScriptRuntimeSetup setup) {
-                Runtime = ScriptRuntime.CreateInternal(null, setup);
-            }
-
-            // Runs in the same app-domain as the user of the factory and returns a remote reference to the created Runtime.
-            public static ScriptRuntime CreateRuntime(AppDomain domain, ScriptRuntimeSetup setup) {
-                RemoteRuntimeFactory rd = (RemoteRuntimeFactory)domain.CreateInstanceAndUnwrap(typeof(RemoteRuntimeFactory).Assembly.FullName,
-                    typeof(RemoteRuntimeFactory).FullName, false, BindingFlags.Default, null, new object[] { setup }, null, null, null);
-
-                return rd.Runtime;
-            }
+        public static ScriptRuntime CreateRemote(AppDomain domain, ScriptRuntimeSetup setup) {
+            ContractUtils.RequiresNotNull(domain, "domain");            
+            return (ScriptRuntime)domain.CreateInstanceAndUnwrap(
+                typeof(ScriptRuntime).Assembly.FullName, 
+                typeof(ScriptRuntime).FullName, 
+                false, 
+                BindingFlags.Default, 
+                null, 
+                new object[] { setup }, 
+                null, 
+                null, 
+                null
+            );
         }
 
         // TODO: Figure out what is the right lifetime

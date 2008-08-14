@@ -838,7 +838,7 @@ namespace IronPython.Runtime {
         }
 
         private void AppendRepr() {
-            AppendString(PythonOps.StringRepr(_opts.Value));
+            AppendString(PythonOps.Repr(_context, _opts.Value));
         }
 
         private void AppendString(string s) {

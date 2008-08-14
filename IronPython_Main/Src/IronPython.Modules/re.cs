@@ -218,7 +218,7 @@ namespace IronPython.Modules {
         /// <summary>
         /// Compiled reg-ex pattern
         /// </summary>
-        [PythonSystemType]
+        [PythonType]
         public class RE_Pattern : IWeakReferenceable {
             internal Regex _re;
             private PythonDictionary _groups;
@@ -497,7 +497,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class RE_Match {
             RE_Pattern _pattern;
             private Match _m;

@@ -493,7 +493,7 @@ namespace IronPython.Modules {
         }
 #endif
 
-        [PythonSystemType]
+        [PythonType]
         public class struct_time : PythonTuple {
             private static PythonType _StructTimeType = DynamicHelpers.GetPythonTypeFromType(typeof(struct_time));
 

@@ -16,6 +16,7 @@
 using System.IO;
 using System.Scripting;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -24,17 +25,18 @@ namespace Microsoft.Scripting.Runtime {
     /// </summary>
     internal sealed class LanguageBoundTextContentProvider : TextContentProvider {
         private readonly LanguageContext _context;
-        private readonly StreamContentProvider _stream;
-        private readonly Encoding _encoding;
+        private readonly StreamContentProvider _streamProvider;
+        private readonly Encoding _defaultEncoding;
 
-        public LanguageBoundTextContentProvider(LanguageContext context, StreamContentProvider stream, Encoding encoding) {
+        public LanguageBoundTextContentProvider(LanguageContext context, StreamContentProvider streamProvider, Encoding defaultEncoding) {
+            Assert.NotNull(context, streamProvider, defaultEncoding);
             _context = context;
-            _stream = stream;
-            _encoding = encoding;
+            _streamProvider = streamProvider;
+            _defaultEncoding = defaultEncoding;
         }
 
-        public override TextReader GetReader() {
-            return _context.GetSourceReader(_stream.GetStream(), _encoding);
+        public override SourceCodeReader GetReader() {
+            return _context.GetSourceReader(_streamProvider.GetStream(), _defaultEncoding);
         }
     }
 }

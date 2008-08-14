@@ -17,11 +17,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     public static class DictionaryOfTOps<K, V> {
-        public static string __repr__(Dictionary<K, V> self) {
+        public static string __repr__(CodeContext/*!*/ context, Dictionary<K, V> self) {
             List<object> infinite = PythonOps.GetAndCheckInfinite(self);
             if (infinite == null) {
                 return "{...}";
@@ -41,9 +43,9 @@ namespace IronPython.Runtime.Operations {
                     string comma = "";
                     foreach (KeyValuePair<K, V> obj in self) {
                         res.Append(comma);
-                        res.Append(PythonOps.StringRepr(obj.Key));
+                        res.Append(PythonOps.Repr(context, obj.Key));
                         res.Append(" : ");
-                        res.Append(PythonOps.StringRepr(obj.Value));
+                        res.Append(PythonOps.Repr(context, obj.Value));
                         comma = ", ";
                     }
                     res.Append("}");

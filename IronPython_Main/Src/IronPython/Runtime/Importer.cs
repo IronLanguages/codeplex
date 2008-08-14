@@ -166,6 +166,10 @@ namespace IronPython.Runtime {
         ///     Positive numbers indicate the # of parent directories to search relative to the calling module
         /// </summary>        
         public static object ImportModule(CodeContext/*!*/ context, object globals, string/*!*/ modName, bool bottom, int level) {
+            if (modName.IndexOf(Path.DirectorySeparatorChar) != -1) {
+                return null;
+            }
+
             object newmod = null;
             string[] parts = modName.Split('.');
 

@@ -1040,5 +1040,22 @@ def test_interface_isinstance():
     l = System.Collections.ArrayList()
     AreEqual(isinstance(l, System.Collections.IList), True)
 
+def test_generic_method_error():
+    import clr
+    clr.AddReference('System.Core')
+    from System.Linq import Queryable
+    AssertErrorWithMessage(TypeError, "Queryable.First is a generic method and must be indexed with types before calling", Queryable.First, [])
+
+def test_collection_length():
+    a = GenericCollection()
+    AreEqual(len(a), 0)
+    a.Add(1)
+    AreEqual(len(a), 1)
+    
+    Assert(hasattr(a, '__len__'))
+    
+def test_dict_copy():
+    Assert(int.__dict__.copy().has_key('MaxValue'))
+    
 run_test(__name__)
 

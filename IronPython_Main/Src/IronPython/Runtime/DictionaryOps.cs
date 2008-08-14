@@ -143,7 +143,7 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        public static string/*!*/ __repr__(IDictionary<object, object> self) {
+        public static string/*!*/ __repr__(CodeContext/*!*/ context, IDictionary<object, object> self) {
             List<object> infinite = PythonOps.GetAndCheckInfinite(self);
             if (infinite == null) {
                 return "{...}";
@@ -162,7 +162,7 @@ namespace IronPython.Runtime {
                     if (BaseSymbolDictionary.IsNullObject(kv.Key))
                         buf.Append("None");
                     else
-                        buf.Append(PythonOps.StringRepr(kv.Key));
+                        buf.Append(PythonOps.Repr(context, kv.Key));
                     buf.Append(": ");
 
                     // StringRepr enforces recursion for ICodeFormattable types, but
@@ -171,7 +171,7 @@ namespace IronPython.Runtime {
                     if (Object.ReferenceEquals(kv.Value, self)) {
                         buf.Append("{...}");
                     } else {
-                        buf.Append(PythonOps.StringRepr(kv.Value));
+                        buf.Append(PythonOps.Repr(context, kv.Value));
                     }
                 }
                 buf.Append("}");

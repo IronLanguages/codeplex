@@ -336,6 +336,54 @@ namespace IronPython.Runtime.Operations {
         public static double __float__(double self) {
             return self;
         }
+
+        public static string __getformat__(CodeContext/*!*/ context, string typestr) {
+            switch (typestr) {
+                case "float":
+                    return PythonContext.GetContext(context).FloatFormat ?? DefaultFloatFormat();
+                case "double":
+                    return PythonContext.GetContext(context).DoubleFormat ?? DefaultFloatFormat();
+                default: throw PythonOps.ValueError("__getformat__() argument 1 must be 'double' or 'float'");
+            }
+        }
+
+        private static string DefaultFloatFormat() {
+            if (BitConverter.IsLittleEndian) {
+                return "IEEE, little-endian";
+            }
+
+            return "IEEE, big-endian";
+        }
+
+        public static void __setformat__(CodeContext/*!*/ context, string typestr, string fmt) {            
+            switch (fmt) {
+                case "unknown":
+                    break;
+                case "IEEE, little-endian":
+                    if (!BitConverter.IsLittleEndian) {
+                        throw PythonOps.ValueError("can only set double format to 'unknown' or the detected platform value");
+                    }
+                    break;
+                case "IEEE, big-endian":
+                    if (BitConverter.IsLittleEndian) {
+                        throw PythonOps.ValueError("can only set double format to 'unknown' or the detected platform value");
+                    }
+                    break;
+                default:
+                    throw PythonOps.ValueError(" __setformat__() argument 2 must be 'unknown', 'IEEE, little-endian' or 'IEEE, big-endian'");
+            }
+
+            switch (typestr) {
+                case "float":
+                    PythonContext.GetContext(context).FloatFormat = fmt;
+                    break;
+                case "double":
+                    PythonContext.GetContext(context).DoubleFormat = fmt;
+                    break;
+                default: 
+                    throw PythonOps.ValueError("__setformat__() argument 1 must be 'double' or 'float'");
+            }            
+        }
     }
 
     public partial class SingleOps {

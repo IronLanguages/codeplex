@@ -52,9 +52,9 @@ namespace IronPython.Runtime {
         /// Handles output of the expression statement.
         /// Prints the value and sets the __builtin__._
         /// </summary>
-        public static void displayhook  (CodeContext/*!*/ context, object value) {
+        public static void displayhook(CodeContext/*!*/ context, object value) {
             if (value != null) {
-                PythonOps.Print(context, PythonOps.StringRepr(value));
+                PythonOps.Print(context, PythonOps.Repr(context, value));
                 ScopeOps.SetMember(context, PythonContext.GetContext(context).BuiltinModuleInstance, "_", value);
             }
         }

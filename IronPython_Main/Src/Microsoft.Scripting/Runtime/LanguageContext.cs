@@ -119,12 +119,22 @@ namespace Microsoft.Scripting.Runtime {
 
         #region Source Code Parsing & Compilation
 
-        public virtual StreamReader GetSourceReader(Stream stream, Encoding defaultEncoding) {
-            return new StreamReader(stream, defaultEncoding);
+        /// <summary>
+        /// Provides a text reader for source code that is to be read from a given stream.
+        /// </summary>
+        /// <param name="stream">The stream open for reading. The stream must also allow seeking.</param>
+        /// <param name="defaultEncoding">An encoding that should be used if the stream doesn't have Unicode or language specific preamble.</param>
+        /// <returns>The reader.</returns>
+        /// <exception cref="IOException">An I/O error occurs.</exception>
+        public virtual SourceCodeReader GetSourceReader(Stream stream, Encoding defaultEncoding) {
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(defaultEncoding, "defaultEncoding");
+            ContractUtils.Requires(stream.CanRead && stream.CanSeek, "stream", "The stream must support reading and seeking");
+            
+            var result = new StreamReader(stream, defaultEncoding, true);
+            result.Peek();
+            return new SourceCodeReader(result, result.CurrentEncoding);
         }
-
-        #endregion
-
 
         /// <summary>
         /// Creates the language specific CompilerContext object for code compilation.  The 
@@ -142,6 +152,21 @@ namespace Microsoft.Scripting.Runtime {
         public virtual CompilerOptions GetCompilerOptions(Scope scope) {
             return GetCompilerOptions();
         }
+
+        /// <summary>
+        /// Parses the source code within a specified compiler context. 
+        /// The source unit to parse is held on by the context.
+        /// </summary>
+        /// <returns><b>null</b> on failure.</returns>
+        /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
+        internal protected abstract ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
+
+        internal protected virtual ScriptCode LoadCompiledCode(MethodInfo method) {
+            return ScriptCode.Load(method, this);
+        }
+
+        #endregion
+
 
         /// <summary>
         /// Looks up the name in the provided Scope using the current language's semantics.
@@ -306,18 +331,6 @@ namespace Microsoft.Scripting.Runtime {
 
         #region ScriptEngine API
 
-        /// <summary>
-        /// Parses the source code within a specified compiler context. 
-        /// The source unit to parse is held on by the context.
-        /// </summary>
-        /// <returns><b>null</b> on failure.</returns>
-        /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
-        internal protected abstract ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
-
-        internal protected virtual ScriptCode LoadCompiledCode(MethodInfo method) {
-            return ScriptCode.Load(method, this);
-        }
-
         public virtual string DisplayName {
             get {
                 return "unknown";
@@ -418,6 +431,16 @@ namespace Microsoft.Scripting.Runtime {
 
             TextContentProvider provider = new SourceStringContentProvider(content);
             return CreateSourceUnit(provider, path, SourceCodeKind.File);
+        }
+
+        public SourceUnit CreateSourceUnit(StreamContentProvider contentProvider, string path, Encoding encoding, SourceCodeKind kind) {
+            ContractUtils.RequiresNotNull(contentProvider, "contentProvider");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
+            ContractUtils.Requires(path == null || path.Length > 0, "path", Strings.EmptyStringIsInvalidPath);
+            ContractUtils.Requires(EnumBounds.IsValid(kind), "kind");
+            ContractUtils.Requires(CanCreateSourceCode);
+
+            return new SourceUnit(this, new LanguageBoundTextContentProvider(this, contentProvider, encoding), path, kind);
         }
 
         public SourceUnit CreateSourceUnit(TextContentProvider contentProvider, string path, SourceCodeKind kind) {

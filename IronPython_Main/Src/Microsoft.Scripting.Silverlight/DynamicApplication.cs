@@ -223,7 +223,7 @@ namespace Microsoft.Scripting.Silverlight {
 
             setup.Options["SearchPaths"] = new string[] { String.Empty };
             
-            _env = ScriptRuntime.Create(setup);
+            _env = new ScriptRuntime(setup);
 
             _env.LoadAssembly(GetType().Assembly); // to expose our helper APIs
 

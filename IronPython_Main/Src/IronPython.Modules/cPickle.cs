@@ -38,6 +38,11 @@ namespace IronPython.Modules {
         + " - does not implement the undocumented fast mode\n"
         )]
     public static class PythonPickle {
+        private static readonly PythonStruct.Struct _float64 = PythonStruct.Struct.Create(">d");
+        private static readonly PythonStruct.Struct _uint8 = PythonStruct.Struct.Create("B");
+        private static readonly PythonStruct.Struct _uint16 = PythonStruct.Struct.Create("<H");
+        private static readonly PythonStruct.Struct _uint32 = PythonStruct.Struct.Create("<i");
+        
         private const int highestProtocol = 2;
         public static int HIGHEST_PROTOCOL {
             get { return highestProtocol; }
@@ -266,7 +271,7 @@ namespace IronPython.Modules {
             + "    If protocol is not specified, then protocol 0 is used if bin is false, and\n"
             + "    protocol 1 is used if bin is true."
             )]
-        [PythonSystemType]
+        [PythonType]
         public class Pickler {
 
             private const char LowestPrintableChar = (char)32;
@@ -849,7 +854,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteFloat64(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.Double));
-                Write(context, PythonStruct.pack(">d", value));
+                Write(context, _float64.pack(value));
             }
 
             /// <summary>
@@ -857,7 +862,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteUInt8(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsUInt8(context, value));
-                Write(context, PythonStruct.pack("B", value));
+                Write(context, _uint8.pack(value));
             }
 
             /// <summary>
@@ -865,7 +870,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteUInt16(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsUInt16(context, value));
-                Write(context, PythonStruct.pack("<H", value));
+                Write(context, _uint16.pack(value));
             }
 
             /// <summary>
@@ -873,7 +878,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteInt32(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsInt32(context, value));
-                Write(context, PythonStruct.pack("<i", value));
+                Write(context, _uint32.pack(value));
             }
 
             /// <summary>
@@ -881,7 +886,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteIntAsString(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsInt32(context, value));
-                Write(context, PythonOps.StringRepr(value));
+                Write(context, PythonOps.Repr(context, value));
                 Write(context, Newline);
             }
 
@@ -890,7 +895,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteLongAsString(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.BigInteger));
-                Write(context, PythonOps.StringRepr(value));
+                Write(context, PythonOps.Repr(context, value));
                 Write(context, Newline);
             }
 
@@ -1250,7 +1255,7 @@ namespace IronPython.Modules {
             + "file: an object (such as an open file or a StringIO) with read(num_chars) and\n"
             + "    readline() methods that return strings"
             )]
-        [PythonSystemType]
+        [PythonType]
         public class Unpickler {
 
             private readonly object _mark = new object();
@@ -1337,7 +1342,7 @@ namespace IronPython.Modules {
 
                 while (opcode != Opcode.Stop) {
                     if (!_dispatch.ContainsKey(opcode)) {
-                        throw CannotUnpickle("invalid opcode: {0}", PythonOps.StringRepr(opcode));
+                        throw CannotUnpickle("invalid opcode: {0}", PythonOps.Repr(context, opcode));
                     }
                     _dispatch[opcode](context);
                     opcode = Read(context, 1);

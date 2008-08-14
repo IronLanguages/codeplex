@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public void Initialize(object state, ScriptSource scriptSource, SourceLocation initialLocation) {
-            _tokenizer.Initialize(state, scriptSource.SourceUnit.GetReader(), initialLocation);
+            _tokenizer.Initialize(state, scriptSource.SourceUnit.GetReader(), scriptSource.SourceUnit, initialLocation);
         }
 
         /// <summary>
