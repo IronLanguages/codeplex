@@ -138,22 +138,13 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        //!!! Temporarily left in so this checkin won't collide with Converter changes
-        internal static string GetClassName(object obj) {
-            return GetPythonTypeName(obj);
-        }
-
         internal static string GetPythonTypeName(object obj) {
             OldInstance oi = obj as OldInstance;
-            if (oi != null) return oi.__class__.__name__.ToString();
+            if (oi != null) return oi._class._name.ToString();
             else return DynamicHelpers.GetPythonType(obj).Name;
         }
 
-        public static string StringRepr(object o) {
-            return StringRepr(DefaultContext.Default, o);
-        }
-
-        public static string StringRepr(CodeContext/*!*/ context, object o) {
+        public static string Repr(CodeContext/*!*/ context, object o) {
             if (o == null) return "None";
 
             string s;
@@ -209,10 +200,6 @@ namespace IronPython.Runtime.Operations {
                 ret = es.Value;
             }
             return ret;
-        }
-
-        public static object Repr(object o) {
-            return StringRepr(o);
         }
 
         public static object Plus(object o) {
@@ -338,7 +325,7 @@ namespace IronPython.Runtime.Operations {
                 // OldClass's.  To check their types we need the actual
                 // instance.
                 OldInstance oi = o as OldInstance;
-                if (oi != null) return oi.__class__.IsSubclassOf(typeinfo);
+                if (oi != null) return oi._class.IsSubclassOf(typeinfo);
             }
 
             PythonType odt = DynamicHelpers.GetPythonType(o);
@@ -427,16 +414,16 @@ namespace IronPython.Runtime.Operations {
         /// This function assumes that it is only called for case where count is not implicitly
         /// coercible to int so that check is skipped.
         /// </summary>
-        internal static object MultiplySequence<T>(MultiplySequenceWorker<T> multiplier, T sequence, object count, bool isForward) {
+        internal static object MultiplySequence<T>(MultiplySequenceWorker<T> multiplier, T sequence, Index count, bool isForward) {
             if (isForward && count != null) {
                 object ret;
-                if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, count, sequence, Symbols.OperatorReverseMultiply, out ret)) {
+                if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, count.Value, sequence, Symbols.OperatorReverseMultiply, out ret)) {
                     if (ret != NotImplementedType.Value) return ret;
                 }
             }
 
-            int icount = GetSequenceMultiplier(sequence, count);
-
+            int icount = GetSequenceMultiplier(sequence, count.Value);
+            
             if (icount < 0) icount = 0;
             return multiplier(sequence, icount);
         }
@@ -455,7 +442,7 @@ namespace IronPython.Runtime.Operations {
             }
             return icount;
         }
-
+        
         public static object Equal(CodeContext/*!*/ context, object x, object y) {
             PythonContext pc = PythonContext.GetContext(context);
             return pc.EqualSite.Target(pc.EqualSite, x, y);
@@ -549,9 +536,9 @@ namespace IronPython.Runtime.Operations {
 
             if (DynamicHelpers.GetPythonType(x) != DynamicHelpers.GetPythonType(y)) {
                 if (x.GetType() == typeof(OldInstance)) {
-                    name1 = ((OldInstance)x).__class__.Name;
+                    name1 = ((OldInstance)x)._class.__name__;
                     if (y.GetType() == typeof(OldInstance)) {
-                        name2 = ((OldInstance)y).__class__.Name;
+                        name2 = ((OldInstance)y)._class.__name__;
                     } else {
                         // old instances are always less than new-style classes
                         return -1;
@@ -663,7 +650,7 @@ namespace IronPython.Runtime.Operations {
         public static IEnumerator GetEnumerator(object o) {
             IEnumerator ie = Converter.ConvertToIEnumerator(o);
             if (ie == null) {
-                throw PythonOps.TypeError("{0} is not enumerable", StringRepr(o));
+                throw PythonOps.TypeError("{0} is not enumerable", PythonTypeOps.GetName(o));
             }
             return ie;
         }
@@ -673,8 +660,7 @@ namespace IronPython.Runtime.Operations {
 
             IEnumerator ie;
             if (!pc.TryConvertToIEnumerator(enumerable, out ie)) {
-                throw PythonOps.TypeError("{0} object is not iterable",
-                    StringRepr(PythonTypeOps.GetName(enumerable)));
+                throw PythonOps.TypeError("'{0}' object is not iterable", PythonTypeOps.GetName(enumerable));
             }
             return ie;
         }
@@ -715,7 +701,7 @@ namespace IronPython.Runtime.Operations {
                 Symbols.ConvertToHex,
                 out hex)) {            
                 if (!(hex is string) && !(hex is ExtensibleString))
-                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(hex)));
+                    throw PythonOps.TypeError("hex expected string type as return, got '{0}'", PythonTypeOps.GetName(hex));
 
                 return hex;
             }
@@ -736,7 +722,7 @@ namespace IronPython.Runtime.Operations {
                 Symbols.ConvertToOctal,
                 out octal)) {            
                 if (!(octal is string) && !(octal is ExtensibleString))
-                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(octal)));
+                    throw PythonOps.TypeError("hex expected string type as return, got '{0}'", PythonTypeOps.GetName(octal));
 
                 return octal;
             }
@@ -759,10 +745,6 @@ namespace IronPython.Runtime.Operations {
 
         public static object CallWithContext(CodeContext/*!*/ context, object func, params object[] args) {
             return PythonCalls.Call(context, func, args);
-        }
-
-        public static Exception UncallableError(object func) {
-            return PythonOps.TypeError("{0} is not callable", PythonTypeOps.GetName(func));
         }
 
         /// <summary>
@@ -924,8 +906,8 @@ namespace IronPython.Runtime.Operations {
 
             object ret;
             if (!PythonTypeOps.TryInvokeTernaryOperator(DefaultContext.Default, o, index, value, Symbols.SetItem, out ret)) {
-                throw PythonOps.AttributeError("{0} object has no attribute '__setitem__'",
-                    PythonOps.StringRepr(PythonTypeOps.GetName(o)));
+                throw PythonOps.AttributeError("'{0}' object has no attribute '__setitem__'",
+                    PythonTypeOps.GetName(o));
             }
         }
 
@@ -963,8 +945,7 @@ namespace IronPython.Runtime.Operations {
 
             object ret;
             if (!PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, o, index, Symbols.DelItem, out ret)) {
-                throw PythonOps.AttributeError("{0} object has no attribute '__delitem__'",
-                    PythonOps.StringRepr(PythonTypeOps.GetName(o)));
+                throw PythonOps.AttributeError("'{0}' object has no attribute '__delitem__'", PythonTypeOps.GetName(o));
             }
         }
 
@@ -1051,24 +1032,6 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetPythonType(o).Name, name);
         }
 
-        public static Exception AttributeErrorForMissingOrReadonly(CodeContext/*!*/ context, PythonType dt, SymbolId name) {
-            PythonTypeSlot dts;
-            if (dt.TryResolveSlot(context, name, out dts)) {
-                throw PythonOps.AttributeErrorForReadonlyAttribute(dt.Name, name);
-            }
-
-            throw PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
-        }
-
-        public static Exception AttributeErrorForMissingAttribute(object o, SymbolId name) {
-            PythonType dt = o as PythonType;
-            if (dt != null)
-                return PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
-
-            return AttributeErrorForReadonlyAttribute(PythonTypeOps.GetName(o), name);
-        }
-
-
         public static IList<object> GetAttrNames(CodeContext/*!*/ context, object o) {
 
             IMembersList memList = o as IMembersList;
@@ -1088,7 +1051,7 @@ namespace IronPython.Runtime.Operations {
                 res = DynamicHelpers.GetPythonType(o).GetMemberNames(context, o);
 
 #if !SILVERLIGHT
-                if (o != null && System.Runtime.InteropServices.Marshal.IsComObject(o)) {
+                if (o != null && ComOps.IsComObject(o)) {
                     foreach (string name in System.Scripting.Com.ComObject.ObjectToComObject(o).GetMemberNames()) {
                         res.AddNoLock(name);
                     }
@@ -1284,245 +1247,6 @@ namespace IronPython.Runtime.Operations {
             return v;
         }
 
-        #region CLS Compatible exception factories
-
-        public static Exception ValueError(string format, params object[] args) {
-            return new ArgumentException(string.Format(format, args));
-        }
-
-        public static Exception KeyError(object key) {
-            return PythonExceptions.CreateThrowable(PythonExceptions.KeyError, key);
-        }
-
-        public static Exception KeyError(string format, params object[] args) {
-            return new KeyNotFoundException(string.Format(format, args));
-        }
-
-        public static Exception UnicodeEncodeError(string format, params object[] args) {
-#if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
-            throw new NotImplementedException();
-#else
-            return new System.Text.DecoderFallbackException(string.Format(format, args));
-#endif
-        }
-
-        public static Exception UnicodeDecodeError(string format, params object[] args) {
-#if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
-            throw new NotImplementedException();
-#else
-            return new System.Text.EncoderFallbackException(string.Format(format, args));
-#endif
-        }
-
-        public static Exception IOError(Exception inner) {
-            return new System.IO.IOException(inner.Message, inner);
-        }
-
-        public static Exception IOError(string format, params object[] args) {
-            return new System.IO.IOException(string.Format(format, args));
-        }
-
-        public static Exception EofError(string format, params object[] args) {
-            return new System.IO.EndOfStreamException(string.Format(format, args));
-        }
-
-        public static Exception StandardError(string format, params object[] args) {
-            return new SystemException(string.Format(format, args));
-        }
-
-        public static Exception ZeroDivisionError(string format, params object[] args) {
-            return new DivideByZeroException(string.Format(format, args));
-        }
-
-        public static Exception SystemError(string format, params object[] args) {
-            return new SystemException(string.Format(format, args));
-        }
-
-        public static Exception TypeError(string format, params object[] args) {
-            return new ArgumentTypeException(string.Format(format, args));
-        }
-
-        public static Exception IndexError(string format, params object[] args) {
-            return new System.IndexOutOfRangeException(string.Format(format, args));
-        }
-
-        public static Exception MemoryError(string format, params object[] args) {
-            return new OutOfMemoryException(string.Format(format, args));
-        }
-
-        public static Exception ArithmeticError(string format, params object[] args) {
-            return new ArithmeticException(string.Format(format, args));
-        }
-
-        public static Exception NotImplementedError(string format, params object[] args) {
-            return new NotImplementedException(string.Format(format, args));
-        }
-
-        public static Exception AttributeError(string format, params object[] args) {
-            return new MissingMemberException(string.Format(format, args));
-        }
-
-        public static Exception OverflowError(string format, params object[] args) {
-            return new System.OverflowException(string.Format(format, args));
-        }
-        public static Exception WindowsError(string format, params object[] args) {
-#if !SILVERLIGHT // System.ComponentModel.Win32Exception
-            return new System.ComponentModel.Win32Exception(string.Format(format, args));
-#else
-            return new System.SystemException(string.Format(format, args));
-#endif
-        }
-
-        public static Exception SystemExit() {
-            return new SystemExitException();
-        }
-
-        public static Exception SyntaxWarning(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
-            int line = span.Start.Line;
-            string fileName = sourceUnit.Path ?? "?";
-
-            if (sourceUnit != null) {
-                message = String.Format("{0} ({1}, line {2})", message, fileName, line);
-            }
-
-            return SyntaxWarning(message, fileName, span.Start.Line, span.Start.Column, sourceUnit.GetCodeLine(line), Severity.FatalError);
-        }
-
-        public static SyntaxErrorException SyntaxError(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
-            switch (errorCode & ErrorCodes.ErrorMask) {
-                case ErrorCodes.IndentationError:
-                    return new IndentationException(message, sourceUnit, span, errorCode, Severity.FatalError);
-
-                case ErrorCodes.TabError:
-                    return new TabException(message, sourceUnit, span, errorCode, Severity.FatalError);
-
-                default:
-                    return new SyntaxErrorException(message, sourceUnit, span, errorCode, Severity.FatalError);
-            }
-        }
-
-        #endregion
-
-
-        public static Exception StopIteration() {
-            return StopIteration("");
-        }
-
-        public static Exception InvalidType(object o, RuntimeTypeHandle handle) {
-            return PythonOps.TypeErrorForTypeMismatch(DynamicHelpers.GetPythonTypeFromType(Type.GetTypeFromHandle(handle)).Name, o);
-        }
-
-        public static Exception ZeroDivisionError() {
-            return ZeroDivisionError("Attempted to divide by zero.");
-        }
-
-        // If you do "(a, b) = (1, 2, 3, 4)"
-        public static Exception ValueErrorForUnpackMismatch(int left, int right) {
-            System.Diagnostics.Debug.Assert(left != right);
-
-            if (left > right)
-                return ValueError("need more than {0} values to unpack", right);
-            else
-                return ValueError("too many values to unpack");
-        }
-
-        public static Exception NameError(SymbolId name) {
-            return new UnboundNameException(string.Format("name '{0}' is not defined", SymbolTable.IdToString(name)));
-        }
-
-
-        // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
-        public static Exception TypeErrorForUnboundMethodCall(string methodName, Type methodType, object instance) {
-            return TypeErrorForUnboundMethodCall(methodName, DynamicHelpers.GetPythonTypeFromType(methodType), instance);
-        }
-
-        public static Exception TypeErrorForUnboundMethodCall(string methodName, PythonType methodType, object instance) {
-            string message = string.Format("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
-                                           methodName, methodType.Name, DynamicHelpers.GetPythonType(instance).Name);
-            return TypeError(message);
-        }
-
-        // When a generator first starts, before it gets to the first yield point, you can't call generator.Send(x) where x != null.
-        // See Pep342 for details.
-        public static Exception TypeErrorForIllegalSend() {
-            string message = "can't send non-None value to a just-started generator";
-            return TypeError(message);
-        }
-
-        // If a method is called with an incorrect number of arguments
-        // You should use TypeErrorForUnboundMethodCall() for unbound methods called with 0 arguments
-        public static Exception TypeErrorForArgumentCountMismatch(string methodName, int expectedArgCount, int actualArgCount) {
-            return TypeError("{0}() takes exactly {1} argument{2} ({3} given)",
-                             methodName, expectedArgCount, expectedArgCount == 1 ? "" : "s", actualArgCount);
-        }
-
-        public static Exception TypeErrorForTypeMismatch(string expectedTypeName, object instance) {
-            return TypeError("expected {0}, got {1}", expectedTypeName, PythonOps.GetPythonTypeName(instance));
-        }
-
-        // If hash is called on an instance of an unhashable type
-        public static Exception TypeErrorForUnhashableType(string typeName) {
-            return TypeError(typeName + " objects are unhashable");
-        }
-
-        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
-            return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.Name, newType);
-        }
-
-        public static Exception TypeErrorForNonStringAttribute() {
-            return TypeError("attribute name must be string");
-        }
-
-        internal static Exception TypeErrorForBadInstance(string template, object instance) {
-            return TypeError(template, PythonOps.GetPythonTypeName(instance));
-        }
-
-        public static Exception TypeErrorForBinaryOp(string opSymbol, object x, object y) {
-            throw PythonOps.TypeError("unsupported operand type(s) for {0}: '{1}' and '{2}'",
-                                opSymbol, GetPythonTypeName(x), GetPythonTypeName(y));
-        }
-
-        public static Exception TypeErrorForUnaryOp(string opSymbol, object x) {
-            throw PythonOps.TypeError("unsupported operand type for {0}: '{1}'",
-                                opSymbol, GetPythonTypeName(x));
-        }
-
-        public static Exception TypeErrorForNonIterableObject(object o) {
-            return PythonOps.TypeError(
-                "argument of type '{0}' is not iterable",
-                DynamicHelpers.GetPythonType(o).Name
-            );
-        }
-
-        public static Exception TypeErrorForDefaultArgument(string message) {
-            return PythonOps.TypeError(message);
-        }
-
-        public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
-            // CPython uses AttributeError for all attributes except "__class__"
-            if (attributeName == Symbols.Class)
-                return PythonOps.TypeError("can't delete __class__ attribute");
-
-            return PythonOps.AttributeError("attribute '{0}' of '{1}' object is read-only", SymbolTable.IdToString(attributeName), typeName);
-        }
-
-        public static Exception AttributeErrorForBuiltinAttributeDeletion(string typeName, SymbolId attributeName) {
-            return PythonOps.AttributeError("cannot delete attribute '{0}' of builtin type '{1}'", SymbolTable.IdToString(attributeName), typeName);
-        }
-
-        public static Exception MissingInvokeMethodException(object o, string name) {
-            if (o is OldClass) {
-                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                    ((OldClass)o).Name, name);
-            } else {
-                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", GetPythonTypeName(o), name);
-            }
-        }
-
-        public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {
-            return PythonOps.AttributeError("'{0}' object has no attribute '{1}'", typeName, SymbolTable.IdToString(attributeName));
-        }
-
         public static void InitializeForFinalization(CodeContext/*!*/ context, object newObject) {
             IWeakReferenceable iwr = newObject as IWeakReferenceable;
             Debug.Assert(iwr != null);
@@ -1567,7 +1291,7 @@ namespace IronPython.Runtime.Operations {
                         if (tc != null) {
                             Type nonGenericType;
                             if (!tc.TryGetNonGenericType(out nonGenericType)) {
-                                throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.repr(tc).ToString());
+                                throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.repr(context, tc).ToString());
                             }
                             newBases[i] = DynamicHelpers.GetPythonTypeFromType(nonGenericType);
                         } else {
@@ -2044,9 +1768,9 @@ namespace IronPython.Runtime.Operations {
 
             var pythonContext = PythonContext.GetContext(context);
 
-            bool lineFeed = true;
+            bool noLineFeed = true;
 
-            // TODO: use SourceUnitReader when available
+            // TODO: use ContentProvider?
             if ((pf = code as PythonFile) != null) {
                 List lines = pf.readlines();
 
@@ -2062,15 +1786,19 @@ namespace IronPython.Runtime.Operations {
                     code = reader.ReadToEnd();
                 }
 
-                lineFeed = false;
+                noLineFeed = false;
             }
 
             string strCode = code as string;
 
             if (strCode != null) {
-                SourceUnit source = pythonContext.CreateSnippet(strCode, SourceCodeKind.Statements);
-                // in accordance to CPython semantics:
-                source.DisableLineFeedLineSeparator = lineFeed;
+                SourceUnit source;
+
+                if (noLineFeed) {
+                    source = pythonContext.CreateSourceUnit(new NoLineFeedSourceContentProvider(strCode), null, SourceCodeKind.Statements);
+                } else {
+                    source = pythonContext.CreateSnippet(strCode, SourceCodeKind.Statements);
+                }
 
                 PythonCompilerOptions compilerOptions = Builtin.GetDefaultCompilerOptions(context, true, 0);
 
@@ -2102,7 +1830,7 @@ namespace IronPython.Runtime.Operations {
             IEnumerator ie;
             if (!pc.TryConvertToIEnumerator(enumerable, out ie)) {
                 throw PythonOps.TypeError("iteration over non-sequence of type {0}",
-                    PythonOps.StringRepr(DynamicHelpers.GetPythonType(enumerable)));
+                    PythonOps.Repr(context, DynamicHelpers.GetPythonType(enumerable)));
             }
             return ie;
         }
@@ -2304,16 +2032,6 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
-        /// Create at TypeError exception for when Raise() can't create the exception requested.  
-        /// </summary>
-        /// <param name="type">original type of exception requested</param>
-        /// <returns>a TypeEror exception</returns>
-        internal static Exception MakeExceptionTypeError(object type) {
-            Exception throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
-            return throwable;
-        }
-
-        /// <summary>
         /// helper function for re-raised exceptions.
         /// </summary>
         public static Exception MakeRethrownException(CodeContext/*!*/ context) {
@@ -2419,10 +2137,6 @@ namespace IronPython.Runtime.Operations {
             }
 
             dict.AddObjectKey(name, value);
-        }
-
-        private static Exception MultipleKeywordArgumentError(PythonFunction function, string name) {
-            return TypeError("{0}() got multiple values for keyword argument '{1}'", function.__name__, name);
         }
 
         public static void VerifyUnduplicatedByPosition(PythonFunction function, string name, int position, int listlen) {
@@ -2560,10 +2274,6 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        public static Exception UnexpectedKeywordArgumentError(PythonFunction function, string name) {
-            return TypeError("{0}() got an unexpected keyword argument '{1}'", function.__name__, name);
-        }
-
         public static object InitializeUserTypeSlots(Type type) {
             return Tuple.MakeTuple(type, 
                 CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, Tuple.GetSize(type)));
@@ -2621,11 +2331,18 @@ namespace IronPython.Runtime.Operations {
         /// deprecated form of slicing.
         /// </summary>
         internal static bool IsNumericType(Type t) {
-            return t == typeof(int) ||
-                t == typeof(bool) ||
-                t == typeof(BigInteger) ||
+            return IsNonExtensibleNumericType(t) ||
                 t.IsSubclassOf(typeof(Extensible<int>)) ||
                 t.IsSubclassOf(typeof(Extensible<BigInteger>));
+        }
+
+        /// <summary>
+        /// Helper to determine if the type is a simple numeric type (int or big int or bool) but not a subclass
+        /// </summary>
+        internal static bool IsNonExtensibleNumericType(Type t) {
+            return t == typeof(int) ||
+                t == typeof(bool) ||
+                t == typeof(BigInteger);
         }
 
         /// <summary>
@@ -3009,10 +2726,6 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static Exception StaticAssignmentFromInstanceError(PropertyTracker tracker, bool isAssignment) {
-            return new MissingMemberException(string.Format(isAssignment ? Resources.StaticAssignmentFromInstanceError : Resources.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name));
-        }
-
         #region Function helpers
 
         [NoSideEffects]
@@ -3049,14 +2762,6 @@ namespace IronPython.Runtime.Operations {
 
         public static Delegate FunctionGetTarget(PythonFunction func) {
             return func.Target;
-        }
-
-        public static Exception FunctionBadArgumentError(PythonFunction func, int count) {
-            return func.BadArgumentError(count);
-        }
-
-        public static Exception BadKeywordArgumentError(PythonFunction func, int count) {
-            return func.BadKeywordArgumentError(count);
         }
 
         public static void FunctionPushFrame() {
@@ -3162,6 +2867,8 @@ namespace IronPython.Runtime.Operations {
             return value;
         }
 
+        #region OldClass/OldInstance public helpers
+
         public static bool OldInstanceIsCallable(CodeContext/*!*/ context, OldInstance/*!*/ self) {
             object dummy;
             return self.TryGetBoundCustomMember(context, Symbols.Call, out dummy);
@@ -3176,10 +2883,63 @@ namespace IronPython.Runtime.Operations {
             return null;
         }
 
+        public static void OldClassSetBases(OldClass oc, object value) {
+            oc.SetBases(value);
+        }
+        
+        public static void OldClassSetName(OldClass oc, object value) {
+            oc.SetName(value);
+        }
+
+        public static void OldClassSetDictionary(OldClass oc, object value) {
+            oc.SetDictionary(value);
+        }
+
+        public static void OldClassSetNameHelper(OldClass oc, SymbolId name, object value) {
+            oc.SetNameHelper(name, value);
+        }
+
+        public static bool OldClassTryLookupInit(OldClass oc, object inst, out object ret) {
+            return oc.TryLookupInit(inst, out ret);
+        }
+
+        public static object OldClassMakeCallError(OldClass oc) {
+            return oc.MakeCallError();
+        }
+
+        public static PythonTuple OldClassGetBaseClasses(OldClass oc) {
+            return PythonTuple.MakeTuple(oc.BaseClasses.ToArray());
+        }
+
+        public static void OldClassDictionaryIsPublic(OldClass oc) {
+            oc.DictionaryIsPublic();
+        }
+
+        public static bool OldClassTryLookupValue(CodeContext context, OldClass oc, SymbolId name, out object value) {
+            return oc.TryLookupValue(context, name, out value);
+        }
+
+        public static object OldClassLookupValue(CodeContext context, OldClass oc, SymbolId name) {
+            return oc.LookupValue(context, name);
+        }
+
+        public static object OldInstanceGetOptimizedDictionary(OldInstance instance, int keyVersion) {
+            CustomOldClassDictionaryStorage storage = instance.Dictionary._storage as CustomOldClassDictionaryStorage;
+            if (storage == null || instance._class.HasSetAttr || storage.KeyVersion != keyVersion) {
+                return null;
+            }
+
+            return storage;
+        }
+
         public static object OldInstanceDictionaryGetValueHelper(object dict, int index, object oldInstance) {
             return ((CustomOldClassDictionaryStorage)dict).GetValueHelper(index, oldInstance);
         }
 
+        public static object OldInstanceGetBoundMember(CodeContext context, OldInstance instance, SymbolId name) {
+            return instance.GetBoundMember(context, name);
+        }
+        
         public static void OldInstanceDictionarySetExtraValue(object dict, int index, object value) {
             ((CustomOldClassDictionaryStorage)dict).SetExtraValue(index, value);
         }
@@ -3203,6 +2963,8 @@ namespace IronPython.Runtime.Operations {
         public static bool OldInstanceDeleteCustomMember(CodeContext context, OldInstance self, SymbolId name) {
             return self.DeleteCustomMember(context, name);
         }
+
+        #endregion
 
         public static void PythonTypeSetCustomMember(CodeContext context, PythonType self, SymbolId name, object value) {
             self.SetCustomMember(context, name, value);
@@ -3257,11 +3019,7 @@ namespace IronPython.Runtime.Operations {
         public static void InitializePythonGenerator(PythonGenerator/*!*/ generator, IEnumerator/*!*/ enumerator) {
             generator.Next = enumerator;
         }
-
-        public static PythonTuple OldClassGetBaseClasses(OldClass oc) {
-            return PythonTuple.MakeTuple(oc.BaseClasses.ToArray());
-        }
-
+        
         public static object GetUserDescriptorValue(object instance, PythonTypeSlot slot) {
             return GetUserDescriptor(((PythonTypeUserDescriptorSlot)slot).Value, instance, ((IPythonObject)instance).PythonType);
         }
@@ -3403,7 +3161,7 @@ namespace IronPython.Runtime.Operations {
             ContractUtils.RequiresNotNull(precompiled, "precompiled");
             ContractUtils.RequiresNotNull(main, "main");
 
-            ScriptRuntime sr = ScriptRuntime.Create();
+            ScriptRuntime sr = new ScriptRuntime();
             ScriptEngine se = sr.GetEngine(new AssemblyQualifiedTypeName(typeof(PythonContext)));
             PythonContext pc = (PythonContext)HostingHelpers.GetLanguageContext(se);
 
@@ -3432,8 +3190,309 @@ namespace IronPython.Runtime.Operations {
             return pt.PythonContext.DefaultBinderState.Context;
         }
 
+        #region Exception Factories
+
+        private static Exception MultipleKeywordArgumentError(PythonFunction function, string name) {
+            return TypeError("{0}() got multiple values for keyword argument '{1}'", function.__name__, name);
+        }
+
+        public static Exception UnexpectedKeywordArgumentError(PythonFunction function, string name) {
+            return TypeError("{0}() got an unexpected keyword argument '{1}'", function.__name__, name);
+        }
+
+        public static Exception StaticAssignmentFromInstanceError(PropertyTracker tracker, bool isAssignment) {
+            return new MissingMemberException(string.Format(isAssignment ? Resources.StaticAssignmentFromInstanceError : Resources.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name));
+        }
+
+        public static Exception FunctionBadArgumentError(PythonFunction func, int count) {
+            return func.BadArgumentError(count);
+        }
+
+        public static Exception BadKeywordArgumentError(PythonFunction func, int count) {
+            return func.BadKeywordArgumentError(count);
+        }
+
+        public static Exception AttributeErrorForMissingOrReadonly(CodeContext/*!*/ context, PythonType dt, SymbolId name) {
+            PythonTypeSlot dts;
+            if (dt.TryResolveSlot(context, name, out dts)) {
+                throw PythonOps.AttributeErrorForReadonlyAttribute(dt.Name, name);
+            }
+
+            throw PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
+        }
+
+        public static Exception AttributeErrorForMissingAttribute(object o, SymbolId name) {
+            PythonType dt = o as PythonType;
+            if (dt != null)
+                return PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
+
+            return AttributeErrorForReadonlyAttribute(PythonTypeOps.GetName(o), name);
+        }
+
+
+        public static Exception ValueError(string format, params object[] args) {
+            return new ArgumentException(string.Format(format, args));
+        }
+
+        public static Exception KeyError(object key) {
+            return PythonExceptions.CreateThrowable(PythonExceptions.KeyError, key);
+        }
+
+        public static Exception KeyError(string format, params object[] args) {
+            return new KeyNotFoundException(string.Format(format, args));
+        }
+
+        public static Exception UnicodeEncodeError(string format, params object[] args) {
+#if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
+            throw new NotImplementedException();
+#else
+            return new System.Text.DecoderFallbackException(string.Format(format, args));
+#endif
+        }
+
+        public static Exception UnicodeDecodeError(string format, params object[] args) {
+#if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
+            throw new NotImplementedException();
+#else
+            return new System.Text.EncoderFallbackException(string.Format(format, args));
+#endif
+        }
+
+        public static Exception IOError(Exception inner) {
+            return new System.IO.IOException(inner.Message, inner);
+        }
+
+        public static Exception IOError(string format, params object[] args) {
+            return new System.IO.IOException(string.Format(format, args));
+        }
+
+        public static Exception EofError(string format, params object[] args) {
+            return new System.IO.EndOfStreamException(string.Format(format, args));
+        }
+
+        public static Exception StandardError(string format, params object[] args) {
+            return new SystemException(string.Format(format, args));
+        }
+
+        public static Exception ZeroDivisionError(string format, params object[] args) {
+            return new DivideByZeroException(string.Format(format, args));
+        }
+
+        public static Exception SystemError(string format, params object[] args) {
+            return new SystemException(string.Format(format, args));
+        }
+
+        public static Exception TypeError(string format, params object[] args) {
+            return new ArgumentTypeException(string.Format(format, args));
+        }
+
+        public static Exception IndexError(string format, params object[] args) {
+            return new System.IndexOutOfRangeException(string.Format(format, args));
+        }
+
+        public static Exception MemoryError(string format, params object[] args) {
+            return new OutOfMemoryException(string.Format(format, args));
+        }
+
+        public static Exception ArithmeticError(string format, params object[] args) {
+            return new ArithmeticException(string.Format(format, args));
+        }
+
+        public static Exception NotImplementedError(string format, params object[] args) {
+            return new NotImplementedException(string.Format(format, args));
+        }
+
+        public static Exception AttributeError(string format, params object[] args) {
+            return new MissingMemberException(string.Format(format, args));
+        }
+
+        public static Exception OverflowError(string format, params object[] args) {
+            return new System.OverflowException(string.Format(format, args));
+        }
+        public static Exception WindowsError(string format, params object[] args) {
+#if !SILVERLIGHT // System.ComponentModel.Win32Exception
+            return new System.ComponentModel.Win32Exception(string.Format(format, args));
+#else
+            return new System.SystemException(string.Format(format, args));
+#endif
+        }
+
+        public static Exception SystemExit() {
+            return new SystemExitException();
+        }
+
+        public static Exception SyntaxWarning(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
+            int line = span.Start.Line;
+            string fileName = sourceUnit.Path ?? "?";
+
+            if (sourceUnit != null) {
+                message = String.Format("{0} ({1}, line {2})", message, fileName, line);
+            }
+
+            return SyntaxWarning(message, fileName, span.Start.Line, span.Start.Column, sourceUnit.GetCodeLine(line), Severity.FatalError);
+        }
+
+        public static SyntaxErrorException SyntaxError(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
+            switch (errorCode & ErrorCodes.ErrorMask) {
+                case ErrorCodes.IndentationError:
+                    return new IndentationException(message, sourceUnit, span, errorCode, Severity.FatalError);
+
+                case ErrorCodes.TabError:
+                    return new TabException(message, sourceUnit, span, errorCode, Severity.FatalError);
+
+                default:
+                    return new SyntaxErrorException(message, sourceUnit, span, errorCode, Severity.FatalError);
+            }
+        }
+
+        public static Exception StopIteration() {
+            return StopIteration("");
+        }
+
+        public static Exception InvalidType(object o, RuntimeTypeHandle handle) {
+            return PythonOps.TypeErrorForTypeMismatch(DynamicHelpers.GetPythonTypeFromType(Type.GetTypeFromHandle(handle)).Name, o);
+        }
+
+        public static Exception ZeroDivisionError() {
+            return ZeroDivisionError("Attempted to divide by zero.");
+        }
+
+        // If you do "(a, b) = (1, 2, 3, 4)"
+        public static Exception ValueErrorForUnpackMismatch(int left, int right) {
+            System.Diagnostics.Debug.Assert(left != right);
+
+            if (left > right)
+                return ValueError("need more than {0} values to unpack", right);
+            else
+                return ValueError("too many values to unpack");
+        }
+
+        public static Exception NameError(SymbolId name) {
+            return new UnboundNameException(string.Format("name '{0}' is not defined", SymbolTable.IdToString(name)));
+        }
+
+
+        // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
+        public static Exception TypeErrorForUnboundMethodCall(string methodName, Type methodType, object instance) {
+            return TypeErrorForUnboundMethodCall(methodName, DynamicHelpers.GetPythonTypeFromType(methodType), instance);
+        }
+
+        public static Exception TypeErrorForUnboundMethodCall(string methodName, PythonType methodType, object instance) {
+            string message = string.Format("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
+                                           methodName, methodType.Name, DynamicHelpers.GetPythonType(instance).Name);
+            return TypeError(message);
+        }
+
+        // When a generator first starts, before it gets to the first yield point, you can't call generator.Send(x) where x != null.
+        // See Pep342 for details.
+        public static Exception TypeErrorForIllegalSend() {
+            string message = "can't send non-None value to a just-started generator";
+            return TypeError(message);
+        }
+
+        // If a method is called with an incorrect number of arguments
+        // You should use TypeErrorForUnboundMethodCall() for unbound methods called with 0 arguments
+        public static Exception TypeErrorForArgumentCountMismatch(string methodName, int expectedArgCount, int actualArgCount) {
+            return TypeError("{0}() takes exactly {1} argument{2} ({3} given)",
+                             methodName, expectedArgCount, expectedArgCount == 1 ? "" : "s", actualArgCount);
+        }
+
+        public static Exception TypeErrorForTypeMismatch(string expectedTypeName, object instance) {
+            return TypeError("expected {0}, got {1}", expectedTypeName, PythonOps.GetPythonTypeName(instance));
+        }
+
+        // If hash is called on an instance of an unhashable type
+        public static Exception TypeErrorForUnhashableType(string typeName) {
+            return TypeError(typeName + " objects are unhashable");
+        }
+
+        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
+            return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.Name, newType);
+        }
+
+        public static Exception TypeErrorForNonStringAttribute() {
+            return TypeError("attribute name must be string");
+        }
+
+        internal static Exception TypeErrorForBadInstance(string template, object instance) {
+            return TypeError(template, PythonOps.GetPythonTypeName(instance));
+        }
+
+        public static Exception TypeErrorForBinaryOp(string opSymbol, object x, object y) {
+            throw PythonOps.TypeError("unsupported operand type(s) for {0}: '{1}' and '{2}'",
+                                opSymbol, GetPythonTypeName(x), GetPythonTypeName(y));
+        }
+
+        public static Exception TypeErrorForUnaryOp(string opSymbol, object x) {
+            throw PythonOps.TypeError("unsupported operand type for {0}: '{1}'",
+                                opSymbol, GetPythonTypeName(x));
+        }
+
+        public static Exception TypeErrorForNonIterableObject(object o) {
+            return PythonOps.TypeError(
+                "argument of type '{0}' is not iterable",
+                DynamicHelpers.GetPythonType(o).Name
+            );
+        }
+
+        public static Exception TypeErrorForDefaultArgument(string message) {
+            return PythonOps.TypeError(message);
+        }
+
+        public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
+            // CPython uses AttributeError for all attributes except "__class__"
+            if (attributeName == Symbols.Class)
+                return PythonOps.TypeError("can't delete __class__ attribute");
+
+            return PythonOps.AttributeError("attribute '{0}' of '{1}' object is read-only", SymbolTable.IdToString(attributeName), typeName);
+        }
+
+        public static Exception AttributeErrorForBuiltinAttributeDeletion(string typeName, SymbolId attributeName) {
+            return PythonOps.AttributeError("cannot delete attribute '{0}' of builtin type '{1}'", SymbolTable.IdToString(attributeName), typeName);
+        }
+
+        public static Exception MissingInvokeMethodException(object o, string name) {
+            if (o is OldClass) {
+                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
+                    ((OldClass)o).__name__, name);
+            } else {
+                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", GetPythonTypeName(o), name);
+            }
+        }
+
+        /// <summary>
+        /// Create at TypeError exception for when Raise() can't create the exception requested.  
+        /// </summary>
+        /// <param name="type">original type of exception requested</param>
+        /// <returns>a TypeEror exception</returns>
+        internal static Exception MakeExceptionTypeError(object type) {
+            return PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
+        }
+
+        public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {
+            return PythonOps.AttributeError("'{0}' object has no attribute '{1}'", typeName, SymbolTable.IdToString(attributeName));
+        }
+
+        public static Exception UncallableError(object func) {
+            return PythonOps.TypeError("{0} is not callable", PythonTypeOps.GetName(func));
+        }
+
         public static Exception TypeErrorForProtectedMember(Type/*!*/ type, string/*!*/ name) {
             return PythonOps.TypeError("cannot access protected member {0} without a python subclass of {1}", name, NameConverter.GetTypeName(type));
         }
+
+        public static Exception TypeErrorForGenericMethod(Type/*!*/ type, string/*!*/ name) {
+            return PythonOps.TypeError("{0}.{1} is a generic method and must be indexed with types before calling", NameConverter.GetTypeName(type), name);
+        }
+
+        public static Exception TypeErrorForUnIndexableObject(object o) {
+            if (o == null) {
+                return PythonOps.TypeError("'NoneType' object cannot be interpreted as an index");
+            }
+
+            return TypeError("object cannot be interpreted as an index");
+        }
+
+        #endregion        
     }
 }

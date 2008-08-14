@@ -15,6 +15,7 @@
 
 using System;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
 
@@ -83,6 +84,10 @@ namespace IronPython.Runtime.Binding {
             // anyway we don't use the typical InstanceRestriction.
             Restrictions selfRestrict = Restrictions.ExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
 
+            if (Value.IsOnlyGeneric) {
+                return BindingHelpers.TypeErrorGenericMethod(Value.DeclaringType, Value.Name, selfRestrict);
+            }
+
             if (Value.IsReversedOperator) {
                 ArrayUtils.SwapLastTwo(args);
             }
@@ -100,7 +105,7 @@ namespace IronPython.Runtime.Binding {
                         NarrowingLevel.All,
                 Value.Name,
                 out target
-            );
+            );            
 
             if (Value.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.ThrowStatement) {
                 // Binary Operators return NotImplemented on failure.

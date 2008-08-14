@@ -158,7 +158,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 return _exitCode = -1;
             }
 
-            _runtime = ScriptRuntime.Create(runtimeSetup);
+            _runtime = new ScriptRuntime(runtimeSetup);
 
             try {
                 _engine = _runtime.GetEngine(provider);

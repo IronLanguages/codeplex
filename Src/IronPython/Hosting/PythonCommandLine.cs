@@ -93,14 +93,48 @@ namespace IronPython.Hosting {
 
         protected override int Run() {
             if (Options.ModuleToRun != null) {
+                // PEP 338 support - http://www.python.org/dev/peps/pep-0338
+                // This requires the presence of the Python standard library or
+                // an equivalent runpy.py which defines a run_module method.
+
                 CodeContext ctx = new CodeContext(new Scope(), Language);
-                object ret = Importer.ImportModule(ctx, null, Options.ModuleToRun, false, -1);
-                if (ret == null) {
-                    Console.WriteLine(String.Format("ImportError: No module named {0}", Options.ModuleToRun), Style.Error);
-                    return 1;
-                } else {
-                    return 0;
+
+                // import the runpy module
+                object runpy, runMod;
+                try {
+                    runpy = Importer.Import(
+                        new CodeContext(new Scope(), PythonContext),
+                        "runpy",
+                        PythonTuple.EMPTY,
+                        0
+                    );
+                } catch (Exception) {
+                    Console.WriteLine("Could not import runpy module", Style.Error);
+                    return -1;
                 }
+
+                // get the run_module method
+                try {
+                    runMod = PythonOps.GetBoundAttr(ctx, runpy, SymbolTable.StringToId("run_module"));
+                } catch (Exception) {
+                    Console.WriteLine("Could not access runpy.run_module", Style.Error);
+                    return -1;
+                }
+
+                // call it with the name of the module to run
+                try {
+                    PythonOps.CallWithKeywordArgs(
+                        ctx,
+                        runMod,
+                        new object[] { Options.ModuleToRun, "__main__", RuntimeHelpers.True },
+                        new string[] { "run_name", "alter_sys" }
+                    );
+                } catch (SystemExitException e) {
+                    object dummy;
+                    return e.GetExitCode(out dummy);
+                }
+
+                return 0;
             }
 
             return base.Run();
@@ -140,32 +174,9 @@ namespace IronPython.Hosting {
             Language.DomainManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
 
             InitializePath();
-            InitializeArguments();
             InitializeModules();
             InitializeExtensionDLLs();
             ImportSite();
-        }
-
-        private void InitializeArguments() {
-            if (Options.ModuleToRun != null) {
-                // if the user used the -m option we need to update sys.argv to arv[0] is the full path
-                // to the module we'll run.  If we don't find the module we'll have an import error
-                // and this doesn't matter.
-                List path;
-                if (PythonContext.TryGetSystemPath(out path)) {
-                    foreach (object o in path) {
-                        string str = o as string;
-                        if (str == null) continue;
-
-                        string libpath = Path.Combine(str, Options.ModuleToRun + ".py");
-                        if (File.Exists(libpath)) {
-                            // cast to List is a little scary but safe during startup
-                            ((List)PythonContext.SystemState.Dict[SymbolTable.StringToId("argv")])[0] = libpath;
-                            break;
-                        }
-                    }
-                }
-            }
         }
 
         protected override Scope/*!*/ CreateScope() {
@@ -191,27 +202,35 @@ namespace IronPython.Hosting {
                 }
             }
 
-            string entry = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-            string site = Path.Combine(entry, "Lib");
-            PythonContext.AddToPath(site);
+            Assembly entryAssembly = Assembly.GetEntryAssembly();
+            //Can be null if called from unmanaged code (VS integration scenario)
+            if (entryAssembly != null) {
+                string entry = Path.GetDirectoryName(entryAssembly.Location);
+                string site = Path.Combine(entry, "Lib");
+                PythonContext.AddToPath(site);
 
-            // add DLLs directory if it exists            
-            string dlls = Path.Combine(entry, "DLLs");
-            if (Directory.Exists(dlls)) {
-                PythonContext.AddToPath(dlls);
+
+                // add DLLs directory if it exists            
+                string dlls = Path.Combine(entry, "DLLs");
+                if (Directory.Exists(dlls)) {
+                    PythonContext.AddToPath(dlls);
+                }
             }
 #endif
         }
 
         private string InitializeModules() {
             string version = VersionString;
-            
-#if SILVERLIGHT // paths
+
             string executable = "";
             string prefix = "";
-#else
-            string executable = Assembly.GetEntryAssembly().Location;
-            string prefix = Path.GetDirectoryName(executable);
+#if !SILVERLIGHT // paths     
+            Assembly entryAssembly = Assembly.GetEntryAssembly();
+            //Can be null if called from unmanaged code (VS integration scenario)
+            if (entryAssembly != null) {
+                executable = entryAssembly.Location;
+                prefix = Path.GetDirectoryName(executable);
+            }
 #endif
             PythonContext.SetHostVariables(prefix, executable, version);
             return version;

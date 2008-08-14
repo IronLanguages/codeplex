@@ -29,7 +29,7 @@ using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
 
-    [PythonSystemType("method_descriptor")]
+    [PythonType("method_descriptor")]
     public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable {
         internal readonly BuiltinFunction/*!*/ _template;
 
@@ -197,9 +197,9 @@ namespace IronPython.Runtime.Types {
         #region ICodeFormattable Members
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return String.Format("<method {0} of {1} objects>",
-                PythonOps.StringRepr(Template.Name),
-                PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name));
+            return String.Format("<method '{0}' of '{1}' objects>",
+                Template.Name,
+                DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name);
         }
 
         #endregion

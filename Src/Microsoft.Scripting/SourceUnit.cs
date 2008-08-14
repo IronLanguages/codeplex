@@ -20,6 +20,7 @@ using System.Linq.Expressions;
 using System.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.Text;
 
 namespace Microsoft.Scripting {
     [DebuggerDisplay("{_path ?? \"<anonymous>\"}")]
@@ -28,8 +29,6 @@ namespace Microsoft.Scripting {
         private readonly string _path;
         private readonly LanguageContext _language;
         private readonly TextContentProvider _contentProvider;
-
-        private bool _disableLineFeedLineSeparator;
 
         // SourceUnit is serializable => updated parse result is transmitted
         // back to the host unless the unit is passed by-ref
@@ -82,12 +81,6 @@ namespace Microsoft.Scripting {
             set { _parseResult = value; }
         }
 
-        // TODO: remove, used by Python only
-        public bool DisableLineFeedLineSeparator {
-            get { return _disableLineFeedLineSeparator; }
-            set { _disableLineFeedLineSeparator = value; }
-        }
-
         internal SourceUnit(LanguageContext context, TextContentProvider contentProvider, string path, SourceCodeKind kind) {
             Assert.NotNull(context, contentProvider);
             Debug.Assert(path == null || path.Length > 0);
@@ -100,8 +93,8 @@ namespace Microsoft.Scripting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public SourceUnitReader GetReader() {
-            return new SourceUnitReader(this, _contentProvider.GetReader());
+        public SourceCodeReader GetReader() {
+            return _contentProvider.GetReader();
         }
 
         /// <summary>
@@ -114,7 +107,7 @@ namespace Microsoft.Scripting {
 
             List<string> result = new List<string>(count);
 
-            using (SourceUnitReader reader = GetReader()) {
+            using (SourceCodeReader reader = GetReader()) {
                 reader.SeekLine(start);
                 while (count > 0) {
                     string line = reader.ReadLine();
@@ -135,7 +128,7 @@ namespace Microsoft.Scripting {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCode() {
-            using (SourceUnitReader reader = GetReader()) {
+            using (SourceCodeReader reader = GetReader()) {
                 return reader.ReadToEnd();
             }
         }

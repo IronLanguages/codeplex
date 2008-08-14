@@ -318,7 +318,7 @@ def gen_one_new_exception(cw, exception, parent):
         cw.exit_block()
         cw.writeline()
 
-        cw.writeline('[PythonSystemType("%s"), PythonHidden, DynamicBaseTypeAttribute, Serializable]' % exception.name)
+        cw.writeline('[PythonType("%s"), PythonHidden, DynamicBaseTypeAttribute, Serializable]' % exception.name)
         if exception.ConcreteParent.fields:
             cw.enter_block('public partial class _%s : _%s' % (exception.name, exception.ConcreteParent.name))
         else:

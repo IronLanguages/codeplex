@@ -36,7 +36,7 @@ namespace IronPython.Modules {
         public static readonly PythonType/*!*/ ArrayType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonArray));
         public static readonly PythonType/*!*/ array = ArrayType;
 
-        [PythonSystemType("array")]
+        [PythonType("array")]
         public class PythonArray : IPythonArray, IValueEquality, IEnumerable, IWeakReferenceable, ICollection, ICodeFormattable {
             private ArrayData _data;
             private char _typeCode;
@@ -203,8 +203,8 @@ namespace IronPython.Modules {
                 while (ie.MoveNext()) {
                     if (!_data.CanStore(ie.Current)) {
                         throw PythonOps.TypeError("expected {0}, got {1}",
-                            PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(_data.StorageType)),
-                            PythonOps.StringRepr(DynamicHelpers.GetPythonType(ie.Current)));
+                            DynamicHelpers.GetPythonTypeFromType(_data.StorageType).Name,
+                            DynamicHelpers.GetPythonType(ie.Current).Name);
                     }
                     items.Add(ie.Current);
                 }
@@ -258,7 +258,33 @@ namespace IronPython.Modules {
 
             public int itemsize {
                 get {
-                    return PythonStruct.GetNativeSize(_typeCode);
+                    switch (_typeCode) {
+                        case 'c': // char
+                        case 'b': // signed byte
+                        case 'B': // unsigned byte
+                        case 'x': // pad byte
+                        case 's': // null-terminated string
+                        case 'p': // Pascal string
+                        case 'u': // unicode char
+                            return 1;
+                        case 'h': // signed short
+                        case 'H': // unsigned short
+                            return 2;
+                        case 'i': // signed int
+                        case 'I': // unsigned int
+                        case 'l': // signed long
+                        case 'L': // unsigned long
+                        case 'f': // float
+                            return 4;
+                        case 'P': // pointer
+                            return IntPtr.Size;
+                        case 'q': // signed long long
+                        case 'Q': // unsigned long long
+                        case 'd': // double
+                            return 8;
+                        default:
+                            return 0;
+                    }
                 }
             }
 
@@ -569,11 +595,15 @@ namespace IronPython.Modules {
                 return ms;                
             }
 
-            private byte[] ToByteArray() {
+            internal byte[] ToByteArray() {
                 return ToStream().ToArray();
             }
 
-            private void FromStream(Stream ms) {
+            internal void Clear() {
+                _data = CreateData(_typeCode);
+            }
+
+            internal void FromStream(Stream ms) {
                 BinaryReader br = new BinaryReader(ms);
 
                 for (int i = 0; i < ms.Length / itemsize; i++) {
@@ -618,11 +648,11 @@ namespace IronPython.Modules {
                         if (!Converter.TryConvert(value, typeof(T), out newVal)) {
                             if (value != null && typeof(T).IsPrimitive && typeof(T) != typeof(char))
                                 throw PythonOps.OverflowError("couldn't convert {1} to {0}",
-                                    PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(typeof(T))),
-                                    PythonOps.StringRepr(DynamicHelpers.GetPythonType(value)));
+                                    DynamicHelpers.GetPythonTypeFromType(typeof(T)).Name,
+                                    DynamicHelpers.GetPythonType(value).Name);
                             throw PythonOps.TypeError("expected {0}, got {1}",
-                                PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(typeof(T))),
-                                PythonOps.StringRepr(DynamicHelpers.GetPythonType(value)));
+                                DynamicHelpers.GetPythonTypeFromType(typeof(T)).Name,
+                                DynamicHelpers.GetPythonType(value).Name);
                         }
                         value = newVal;
                     }
@@ -754,7 +784,7 @@ namespace IronPython.Modules {
                         if (i > 0) {
                             sb.Append(", ");
                         }
-                        sb.Append(PythonOps.Repr(this[i]).ToString());
+                        sb.Append(PythonOps.Repr(context, this[i]).ToString());
                     }
                     sb.Append("])");
                 }

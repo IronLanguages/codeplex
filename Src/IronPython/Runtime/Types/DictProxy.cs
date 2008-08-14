@@ -25,7 +25,7 @@ using IronPython.Runtime.Operations;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Types {
-    [PythonSystemType("dictproxy")]
+    [PythonType("dictproxy")]
     public class DictProxy : IDictionary, IEnumerable, IDictionary<object, object> {
         private readonly PythonType/*!*/ _dt;
         
@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public string/*!*/ __str__(CodeContext/*!*/ context) {
-            return DictionaryOps.__repr__(this);
+            return DictionaryOps.__repr__(context, this);
         }
 
         public bool has_key(object key) {
@@ -104,8 +104,8 @@ namespace IronPython.Runtime.Types {
             return res;
         }
 
-        public PythonDictionary copy() {
-            return new PythonDictionary(this);
+        public PythonDictionary copy(CodeContext/*!*/ context) {
+            return new PythonDictionary(context, this);
         }
 
         #endregion

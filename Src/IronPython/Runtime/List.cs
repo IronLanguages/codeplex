@@ -32,7 +32,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 namespace IronPython.Runtime {
 
-    [PythonSystemType("list"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
+    [PythonType("list"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public class List : IMutableSequence, IList, ICodeFormattable, IValueEquality, IList<object> {
         internal int _size;
         internal volatile object[] _data;
@@ -199,12 +199,30 @@ namespace IronPython.Runtime {
             return MultiplyWorker(l, count);
         }
 
-        public static object operator *([NotNull]List self, object count) {
+        public static object operator *([NotNull]List self, [NotNull]Index count) {
             return PythonOps.MultiplySequence<List>(MultiplyWorker, self, count, true);
         }
 
-        public static object operator *(object count, [NotNull]List self) {
+        public static object operator *([NotNull]Index count, [NotNull]List self) {
             return PythonOps.MultiplySequence<List>(MultiplyWorker, self, count, false);
+        }
+
+        public static object operator *([NotNull]List self, object count) {
+            int index;
+            if (Converter.TryConvertToIndex(count, out index)) {
+                return self * index;
+            }
+
+            throw PythonOps.TypeErrorForUnIndexableObject(count);
+        }
+
+        public static object operator *(object count, [NotNull]List self) {
+            int index;
+            if (Converter.TryConvertToIndex(count, out index)) {
+                return index * self;
+            }
+
+            throw PythonOps.TypeErrorForUnIndexableObject(count);
         }
 
         private static List MultiplyWorker(List self, int count) {
@@ -231,8 +249,6 @@ namespace IronPython.Runtime {
             }
             return new List(ret);
         }
-
-
 
         #endregion
 
@@ -310,8 +326,18 @@ namespace IronPython.Runtime {
         }
 
         [SpecialName]
-        public object InPlaceMultiply(object count) {
+        public object InPlaceMultiply(Index count) {
             return PythonOps.MultiplySequence<List>(InPlaceMultiplyWorker, this, count, true);
+        }
+
+        [SpecialName]
+        public object InPlaceMultiply(object count) {
+            int index;
+            if (Converter.TryConvertToIndex(count, out index)) {
+                return InPlaceMultiply(index);
+            }
+
+            throw PythonOps.TypeErrorForUnIndexableObject(count);
         }
 
         private static List InPlaceMultiplyWorker(List self, int count) {
@@ -1086,7 +1112,7 @@ namespace IronPython.Runtime {
                 buf.Append("[");
                 for (int i = 0; i < _size; i++) {
                     if (i > 0) buf.Append(", ");
-                    buf.Append(PythonOps.StringRepr(_data[i]));
+                    buf.Append(PythonOps.Repr(context, _data[i]));
                 }
                 buf.Append("]");
                 return buf.ToString();

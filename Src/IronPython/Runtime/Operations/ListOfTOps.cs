@@ -15,11 +15,14 @@
 
 using System.Collections.Generic;
 using System.Text;
+
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     public static class ListOfTOps<T> {
-        public static string __repr__(List<T> self) {
+        public static string __repr__(CodeContext/*!*/ context, List<T> self) {
             List<object> infinite = PythonOps.GetAndCheckInfinite(self);
             if (infinite == null) {
                 return "[...]";
@@ -37,7 +40,7 @@ namespace IronPython.Runtime.Operations {
                     string comma = "";
                     foreach (T obj in self) {
                         res.Append(comma);
-                        res.Append(PythonOps.StringRepr(obj));
+                        res.Append(PythonOps.Repr(context, obj));
                         comma = ", ";
                     }
                     res.Append("]");

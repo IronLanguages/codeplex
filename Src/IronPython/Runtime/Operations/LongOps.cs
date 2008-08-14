@@ -515,6 +515,15 @@ namespace IronPython.Runtime.Operations {
             return self.ToString() + "L";
         }
 
+        public static object __coerce__(CodeContext context, BigInteger self, object o) {
+            // called via builtin.coerce()
+            BigInteger val;
+            if (Converter.TryConvertToBigInteger(o, out val)) {
+                return PythonTuple.MakeTuple(self, val);
+            }
+            return NotImplementedType.Value;
+        }
+
         // provided for backwards compatibility...
         [PythonHidden]
         public static float ToFloat(BigInteger/*!*/ self) {

@@ -740,7 +740,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         protected override bool AllowKeywordArgumentSetting(MethodBase method) {
-            return CompilerHelpers.IsConstructor(method) && !method.DeclaringType.IsDefined(typeof(PythonSystemTypeAttribute), true);
+            return CompilerHelpers.IsConstructor(method) && !method.DeclaringType.IsDefined(typeof(PythonTypeAttribute), true);
         }
 
         internal ScriptDomainManager/*!*/ DomainManager {
@@ -838,7 +838,7 @@ namespace IronPython.Runtime.Binding {
                 return extInfo.PythonName;
             }
 
-            PythonSystemTypeAttribute[] attrs = (PythonSystemTypeAttribute[])t.GetCustomAttributes(typeof(PythonSystemTypeAttribute), false);
+            PythonTypeAttribute[] attrs = (PythonTypeAttribute[])t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
             if (attrs.Length > 0 && attrs[0].Name != null) {
                 return attrs[0].Name;
             }
@@ -855,7 +855,7 @@ namespace IronPython.Runtime.Binding {
         public static bool IsPythonType(Type/*!*/ t) {
             Debug.Assert(t != null);
 
-            return _sysTypes.ContainsKey(t) || t.IsDefined(typeof(PythonSystemTypeAttribute), false);
+            return _sysTypes.ContainsKey(t) || t.IsDefined(typeof(PythonTypeAttribute), false);
         }
 
         /// <summary>

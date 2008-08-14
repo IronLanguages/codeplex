@@ -87,6 +87,26 @@ namespace IronPython.Modules {
 #endif
         }
 
+        public static double log(BigInteger value) {
+            return Check(value.Log());
+        }
+
+        public static double log(BigInteger value, double newBase) {
+            if (newBase == 0 || newBase == Double.PositiveInfinity) {
+                throw PythonOps.OverflowError("math range error");
+            } else if (newBase < 0) {
+                throw PythonOps.ValueError("math range error");
+            } else if (newBase == 1.0) {
+                throw PythonOps.ZeroDivisionError("float division");
+            } 
+
+            return Check(value.Log(newBase));
+        }
+
+        public static double log10(BigInteger value) {
+            return Check(value.Log10());
+        }
+
         private static void SetExponentLe(byte[] v, int exp) {
             exp += Bias;
             ushort oldExp = LdExponentLe(v);

@@ -45,7 +45,7 @@ namespace IronPython.Runtime.Types {
     /// 
     /// TODO: Back BuiltinFunction's by MethodGroup's.
     /// </summary>    
-    [PythonSystemType("builtin_function_or_method")]
+    [PythonType("builtin_function_or_method")]
     public class BuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDynamicObject, IDelegateConvertible {
         private readonly BuiltinFunctionData/*!*/ _data;            // information describing the BuiltinFunction
         private readonly object _instance;                          // the bound instance or null if unbound
@@ -628,7 +628,19 @@ namespace IronPython.Runtime.Types {
                 return new BuiltinFunction(_instance, res._data);
             }
         }
-        
+
+        internal bool IsOnlyGeneric {
+            get {
+                foreach (MethodBase mb in Targets) {
+                    if (!mb.IsGenericMethod || !mb.ContainsGenericParameters) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
         #endregion
 
         #region Private members

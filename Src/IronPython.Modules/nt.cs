@@ -484,7 +484,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class stat_result : ISequence {
             // !!! We should convert this to be a subclass of Tuple (so that it implements
             // the whole tuple protocol) or at least use a Tuple for internal storage rather
@@ -989,7 +989,7 @@ namespace IronPython.Modules {
             return FileAccess.Read;
         }
 
-        [PythonSystemType]
+        [PythonType]
         private class POpenFile : PythonFile {
             private Process _process;
 

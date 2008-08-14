@@ -17,19 +17,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
+using System.Security;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
-    [PythonSystemType("dict")]
+    [PythonType("dict")]
     public class PythonDictionary : IDictionary<object, object>, IValueEquality,
         IDictionary, ICodeFormattable, IAttributesCollection {
         [MultiRuntimeAware]
@@ -410,12 +408,12 @@ namespace IronPython.Runtime {
             return dict;
         }
 
-        [PythonClassMethod]
+        [ClassMethod]
         public static object fromkeys(CodeContext context, PythonType cls, object seq) {
             return fromkeys(context, cls, seq, null);
         }
 
-        [PythonClassMethod]
+        [ClassMethod]
         public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {
             XRange xr = seq as XRange;
             if (xr != null) {
@@ -632,7 +630,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return DictionaryOps.__repr__(this);
+            return DictionaryOps.__repr__(context, this);
         }
 
         #endregion
@@ -720,8 +718,12 @@ namespace IronPython.Runtime {
 #if !SILVERLIGHT // environment variables not available
     internal class EnvironmentDictionaryStorage : CommonDictionaryStorage {
         public EnvironmentDictionaryStorage() {
-            foreach (DictionaryEntry de in Environment.GetEnvironmentVariables()) {
-                Add(de.Key, de.Value);
+            try {
+                foreach (DictionaryEntry de in Environment.GetEnvironmentVariables()) {
+                    Add(de.Key, de.Value);
+                }
+            } catch (SecurityException) {
+                // environment isn't available under partial trust
             }
         }
 
@@ -754,7 +756,7 @@ namespace IronPython.Runtime {
     ///   innerEnum.MoveNext() will throw InvalidOperation even if the values get changed,
     ///   which is supported in python
     /// </summary>
-    [PythonSystemType("dictionary-keyiterator")]
+    [PythonType("dictionary-keyiterator")]
     public sealed class DictionaryKeyEnumerator : IEnumerator, IEnumerator<object> {
         private readonly int _size;
         DictionaryStorage _dict;
@@ -813,7 +815,7 @@ namespace IronPython.Runtime {
     ///   innerEnum.MoveNext() will throw InvalidOperation even if the values get changed,
     ///   which is supported in python
     /// </summary>
-    [PythonSystemType("dictionary-valueiterator")]
+    [PythonType("dictionary-valueiterator")]
     public sealed class DictionaryValueEnumerator : IEnumerator, IEnumerator<object> {
         private readonly int _size;
         DictionaryStorage _dict;
@@ -872,7 +874,7 @@ namespace IronPython.Runtime {
     ///   innerEnum.MoveNext() will throw InvalidOperation even if the values get changed,
     ///   which is supported in python
     /// </summary>
-    [PythonSystemType("dictionary-itemiterator")]
+    [PythonType("dictionary-itemiterator")]
     public sealed class DictionaryItemEnumerator : IEnumerator, IEnumerator<object> {
         private readonly int _size;
         DictionaryStorage _dict;

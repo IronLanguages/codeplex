@@ -31,7 +31,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 namespace IronPython.Modules {
     [Documentation("High performance data structures\n")]
     public class PythonCollections {
-        [PythonSystemType]
+        [PythonType]
         public class deque : IEnumerable, IComparable, ICodeFormattable, IValueEquality, ICollection {
             private object[] _data;
             private object _lockObj = new object();
@@ -340,14 +340,6 @@ namespace IronPython.Modules {
                 return _itemCnt;
             }
 
-            #region Object Overrides
-
-            public override string ToString() {
-                return PythonOps.StringRepr(this);
-            }
-
-            #endregion
-
             #region IComparable Members
 
             int IComparable.CompareTo(object obj) {
@@ -410,7 +402,7 @@ namespace IronPython.Modules {
                 return new deque_iterator(this);
             }
 
-            [PythonSystemType]
+            [PythonType]
             private class deque_iterator : IEnumerator {
                 private readonly deque _deque;
                 private int _curIndex, _moveCnt, _version;
@@ -463,7 +455,7 @@ namespace IronPython.Modules {
                 return new deque_reverse_iterator(this);
             }
 
-            [PythonSystemType]
+            [PythonType]
             private class deque_reverse_iterator : IEnumerator {
                 private readonly deque _deque;
                 private int _curIndex, _moveCnt, _version;
@@ -608,7 +600,7 @@ namespace IronPython.Modules {
                     lock (_lockObj) {
                         WalkDeque(delegate(int index) {
                             sb.Append(comma);
-                            sb.Append(PythonOps.StringRepr(_data[index]));
+                            sb.Append(PythonOps.Repr(context, _data[index]));
                             comma = ", ";
                             return true;
                         });
@@ -701,7 +693,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class defaultdict : PythonDictionary {
             private object _factory;
             private CallSite<DynamicSiteTarget<CodeContext, object, object>> _missingSite;
@@ -766,7 +758,7 @@ namespace IronPython.Modules {
 
 
             public override string __repr__(CodeContext context) {
-                return String.Format("defaultdict({0}, {1})", PythonOps.Repr(default_factory), base.__repr__(context));
+                return String.Format("defaultdict({0}, {1})", PythonOps.Repr(context, default_factory), base.__repr__(context));
             }
 
             public PythonTuple __reduce__() {

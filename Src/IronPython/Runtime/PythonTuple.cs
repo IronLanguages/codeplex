@@ -27,7 +27,7 @@ using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    [PythonSystemType("tuple")]
+    [PythonType("tuple")]
     public class PythonTuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
         internal static readonly PythonTuple EMPTY = new PythonTuple();
 
@@ -181,12 +181,29 @@ namespace IronPython.Runtime {
             return MultiplyWorker(x, n);
         }
 
-        public static object operator *([NotNull]PythonTuple self, object count) {
+        public static object operator *([NotNull]PythonTuple self, [NotNull]Index count) {
             return PythonOps.MultiplySequence<PythonTuple>(MultiplyWorker, self, count, true);
         }
 
-        public static object operator *(object count, [NotNull]PythonTuple self) {
+        public static object operator *([NotNull]Index count, [NotNull]PythonTuple self) {
             return PythonOps.MultiplySequence<PythonTuple>(MultiplyWorker, self, count, false);
+        }
+
+        public static object operator *([NotNull]PythonTuple self, object count) {
+            int index;
+            if (Converter.TryConvertToIndex(count, out index)) {
+                return self * index;
+            }
+            throw PythonOps.TypeErrorForUnIndexableObject(count);
+        }
+
+        public static object operator *(object count, [NotNull]PythonTuple self) {
+            int index;
+            if (Converter.TryConvertToIndex(count, out index)) {
+                return index * self;
+            }
+
+            throw PythonOps.TypeErrorForUnIndexableObject(count);
         }
 
         #endregion
@@ -426,7 +443,7 @@ namespace IronPython.Runtime {
             buf.Append("(");
             for (int i = 0; i < _data.Length; i++) {
                 if (i > 0) buf.Append(", ");
-                buf.Append(PythonOps.StringRepr(_data[i]));
+                buf.Append(PythonOps.Repr(context, _data[i]));
             }
             if (_data.Length == 1) buf.Append(",");
             buf.Append(")");

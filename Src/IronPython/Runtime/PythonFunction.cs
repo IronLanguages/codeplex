@@ -37,7 +37,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Created for a user-defined function.  
     /// </summary>
-    [PythonSystemType("function")]
+    [PythonType("function")]
     public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {
         private readonly CodeContext/*!*/ _context;     // the creating code context of the function
         [PythonHidden]
@@ -246,7 +246,7 @@ namespace IronPython.Runtime {
                     int noDefaults = NormalArgumentCount - Defaults.Length; // number of args w/o defaults
                     if (i - noDefaults >= 0) {
                         sb.Append('=');
-                        sb.Append(PythonOps.Repr(Defaults[i - noDefaults]));
+                        sb.Append(PythonOps.Repr(Context, Defaults[i - noDefaults]));
                     }
                 }
             }
@@ -1364,7 +1364,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType("cell")]
+    [PythonType("cell")]
     public sealed class ClosureCell : ICodeFormattable, IValueEquality {
         private object _value;
 

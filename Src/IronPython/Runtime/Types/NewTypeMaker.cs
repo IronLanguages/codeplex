@@ -67,6 +67,7 @@ namespace IronPython.Runtime.Types {
         protected FieldInfo _dictField;
         protected FieldInfo _weakrefField;
         protected FieldInfo _slotsField;
+        private FieldInfo _explicitMO;
         protected Type _tupleType;
         protected IEnumerable<Type> _interfaceTypes;
         protected PythonTuple _baseClasses;
@@ -140,7 +141,7 @@ namespace IronPython.Runtime.Types {
                         continue;
                     }
 
-                    dict[id] = new ReflectedSlotProperty(name, ret, i);
+                    dict[id] = new ReflectedSlotProperty(name, typeName, ret, i);
                 }
             }
 
@@ -237,19 +238,17 @@ namespace IronPython.Runtime.Types {
                 if (curBasePythonType.ExtensionType.IsInterface) {
                     baseInterfaces = new Type[] { curTypeToExtend };
                     curTypeToExtend = typeof(object);
-                } else {
-                    if (IsInstanceType(curTypeToExtend)) {
-                        PythonTypeSlot dummy;
-                        baseInterfaces = new List<Type>();
-                        if (!curBasePythonType.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dummy) &&
-                            (slots == null || slots.Count == 0)) {
-                            // user did:
-                            // class foo(object): __slots__ = 'abc'  (creates object_x)
-                            // class bar(foo): pass                  
-                            // rather than creating a new object_x_y type we re-use the object_x type.
-                            curTypeToExtend = GetBaseTypeFromUserType(curBasePythonType, baseInterfaces, curTypeToExtend.BaseType);
-                        }
-                    }
+                } else if (IsInstanceType(curTypeToExtend)) {
+                    PythonTypeSlot dummy;
+                    baseInterfaces = new List<Type>();
+                    if (!curBasePythonType.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dummy) &&
+                        (slots == null || slots.Count == 0)) {
+                        // user did:
+                        // class foo(object): __slots__ = 'abc'  (creates object_x)
+                        // class bar(foo): pass                  
+                        // rather than creating a new object_x_y type we re-use the object_x type.
+                        curTypeToExtend = GetBaseTypeFromUserType(curBasePythonType, baseInterfaces, curTypeToExtend.BaseType);
+                   }                    
                 }
 
                 if (curTypeToExtend == null || typeof(BuiltinFunction).IsAssignableFrom(curTypeToExtend) || typeof(PythonFunction).IsAssignableFrom(curTypeToExtend))
@@ -326,7 +325,7 @@ namespace IronPython.Runtime.Types {
             do {
                 PythonType walking = processing.Dequeue();
                 foreach (PythonType dt in walking.BaseTypes) {
-                    if (dt.ExtensionType == curTypeToExtend) continue;
+                    if (dt.ExtensionType == curTypeToExtend || curTypeToExtend.IsSubclassOf(dt.ExtensionType)) continue;
 
                     if (dt.ExtensionType.IsInterface) {
                         baseInterfaces.Add(dt.ExtensionType);
@@ -720,6 +719,12 @@ namespace IronPython.Runtime.Types {
         }
 
         private void DoInterfaceType(Type interfaceType, Dictionary<Type, bool> doneTypes, Dictionary<string, List<string>> specialNames) {
+            if (interfaceType == typeof(IDynamicObject)) {
+                // very tricky, we'll handle it when we're creating
+                // our own IDynamicObject interface
+                return;
+            }
+
             if (doneTypes.ContainsKey(interfaceType)) return;
             doneTypes.Add(interfaceType, true);
             OverrideMethods(interfaceType, specialNames);
@@ -786,6 +791,12 @@ namespace IronPython.Runtime.Types {
                 }
 
                 il.EmitFieldSet(_typeField);
+            }
+
+            if (_explicitMO != null) {
+                il.Emit(OpCodes.Ldarg_0);
+                il.EmitNew(_explicitMO.FieldType.GetConstructor(Type.EmptyTypes));
+                il.Emit(OpCodes.Stfld, _explicitMO);
             }
 
             // initialize all slots to Uninitialized.instance
@@ -928,9 +939,81 @@ namespace IronPython.Runtime.Types {
             ILGen il = DefineMethodOverride(MethodAttributes.Private, typeof(IDynamicObject), "GetMetaObject", out decl, out impl);
             MethodInfo mi = typeof(UserTypeOps).GetMethod("GetMetaObjectHelper");
 
+            bool explicitDynamicObject = false;
+            foreach (Type t in _interfaceTypes) {
+                if (t == typeof(IDynamicObject)) {
+                    explicitDynamicObject = true;
+                    break;
+                }
+            }
+
+            LocalBuilder retVal = il.DeclareLocal(typeof(MetaObject));
+            Label retLabel = il.DefineLabel();
+            if (explicitDynamicObject) {
+                _explicitMO = _tg.DefineField("__gettingMO", typeof(ThreadLocal<bool>), FieldAttributes.InitOnly | FieldAttributes.Private);
+
+                Label ipyImpl = il.DefineLabel();
+                Label noOverride = il.DefineLabel();
+                Label retNull = il.DefineLabel();
+
+                // check if the we're recursing (this enables the user to refer to self
+                // during GetMetaObject calls)
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, _explicitMO);
+                il.EmitPropertyGet(typeof(ThreadLocal<bool>), "Value");
+                il.Emit(OpCodes.Brtrue, ipyImpl);
+
+                // we're not recursing, set the flag...
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, _explicitMO);
+                il.Emit(OpCodes.Ldc_I4_1);
+                il.EmitPropertySet(typeof(ThreadLocal<bool>), "Value");
+
+                il.BeginExceptionBlock();
+
+                LocalBuilder callTarget = EmitNonInheritedMethodLookup("GetMetaObject", il);
+
+                il.Emit(OpCodes.Brfalse, noOverride);
+
+                // call the user GetMetaObject function
+                EmitClrCallStub(il, typeof(IDynamicObject).GetMethod("GetMetaObject"), callTarget);
+
+                // check for null return
+                il.Emit(OpCodes.Dup);
+                il.Emit(OpCodes.Ldnull);
+                il.Emit(OpCodes.Beq, retNull);
+                
+                // store the local value
+                il.Emit(OpCodes.Stloc_S, retVal.LocalIndex);
+
+                // returned a value, that's our result
+                il.Emit(OpCodes.Leave, retLabel);
+
+                // user returned null, fallback to base impl
+                il.MarkLabel(retNull);
+                il.Emit(OpCodes.Pop);
+                
+                // no override exists
+                il.MarkLabel(noOverride);
+
+                // will emit leave to end of exception block
+                il.BeginFinallyBlock();
+
+                // restore the flag now that we're done
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, _explicitMO);
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.EmitPropertySet(typeof(ThreadLocal<bool>), "Value");
+
+                il.EndExceptionBlock();
+
+                // no user defined function or no result
+                il.MarkLabel(ipyImpl);
+            }
+
             il.EmitLoadArg(0);  // this
             il.EmitLoadArg(1);  // parameter
-
+                
             // baseMetaObject
             if (typeof(IDynamicObject).IsAssignableFrom(_baseType)) {
                 InterfaceMapping imap = _baseType.GetInterfaceMap(typeof(IDynamicObject));
@@ -943,6 +1026,11 @@ namespace IronPython.Runtime.Types {
             }
 
             il.EmitCall(mi);
+            il.Emit(OpCodes.Stloc, retVal.LocalIndex);
+
+            il.MarkLabel(retLabel);
+
+            il.Emit(OpCodes.Ldloc, retVal.LocalIndex);
             il.Emit(OpCodes.Ret);
 
             _tg.DefineMethodOverride(impl, decl);
@@ -1633,7 +1721,30 @@ namespace IronPython.Runtime.Types {
             }
             //CompilerHelpers.GetArgumentNames(parameters));  TODO: Set names
 
+            LocalBuilder callTarget = EmitNonInheritedMethodLookup(name, il);            
             Label instanceCall = il.DefineLabel();
+            il.Emit(OpCodes.Brtrue, instanceCall);
+
+            // lookup failed, call the base class method (this returns or throws)
+            EmitBaseMethodDispatch(mi, il);
+
+            // lookup succeeded, call the user defined method & return
+            il.MarkLabel(instanceCall);
+            EmitClrCallStub(il, mi, callTarget);
+            il.Emit(OpCodes.Ret);
+
+            if (mi.IsVirtual && !mi.IsFinal) {
+                _tg.DefineMethodOverride(impl, mi);
+            }
+            return impl;
+        }
+
+        /// <summary>
+        /// Emits the call to lookup a member defined in the user's type.  Returns
+        /// the local which stores the resulting value and leaves a value on the
+        /// stack indicating the success of the lookup.
+        /// </summary>
+        private LocalBuilder EmitNonInheritedMethodLookup(string name, ILGen il) {
             LocalBuilder callTarget = il.DeclareLocal(typeof(object));
 
             // emit call to helper to do lookup
@@ -1650,19 +1761,7 @@ namespace IronPython.Runtime.Types {
             EmitSymbolId(il, name);
             il.Emit(OpCodes.Ldloca, callTarget);
             il.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedMethodHelper");
-
-            il.Emit(OpCodes.Brtrue, instanceCall);
-
-            EmitBaseMethodDispatch(mi, il);
-
-            il.MarkLabel(instanceCall);
-
-            EmitClrCallStub(il, mi, callTarget);
-
-            if (mi.IsVirtual && !mi.IsFinal) {
-                _tg.DefineMethodOverride(impl, mi);
-            }
-            return impl;
+            return callTarget;
         }
 
         /// <summary>
@@ -1842,7 +1941,6 @@ namespace IronPython.Runtime.Types {
             }
 
             EmitConvertFromObject(il, mi.ReturnType);
-            il.Emit(OpCodes.Ret);
         }
 
         private static void EmitCodeContext(ILGen il, bool context) {

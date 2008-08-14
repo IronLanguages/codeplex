@@ -41,7 +41,7 @@ namespace IronPython.Runtime.Binding {
             _signature = signature;
         }
 
-        #region StandardAction overrides
+        #region MetaAction overrides
 
         /// <summary>
         /// Python's Invoke is a non-standard action.  Here we first try to bind through a Python

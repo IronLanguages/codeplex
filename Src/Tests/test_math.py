@@ -16,6 +16,7 @@
 from lib.assert_util import *
 if is_cli or is_silverlight:
     from System import Int64, Byte, Int16
+import math
 
 def test_nonnumeric_multiply():
     Assert("pypypypypy" == 5 * "py")
@@ -46,6 +47,7 @@ def test_complex():
     if is_cli or is_silverlight: AreEqual((1j) + Int64(), 1j)
 
     AssertError(TypeError, (lambda:(1+1j)+[]))
+    AssertError(TypeError, lambda : type(2j).__dict__['real'].__set__, 2j, 0)
 
 def test_floor_divide():
     AreEqual( (12j//5j), (2+0j))
@@ -405,5 +407,30 @@ def test_nan():
     Assert(not x>y)
     #CodePlex 17517
     #AreEqual(cmp(x, y), 1)
-               
+
+def test_long_log():
+    """logon big ints should work"""
+    AreEqual(round(math.log10(10 ** 1000), 5), 1000.0)
+    AreEqual(round(math.log(10 ** 1000), 5), 2302.58509)
+    
+    AreEqual(round(math.log10(18446744073709551615), 5),  19.26592)
+    AreEqual(round(math.log(18446744073709551615), 5), 44.36142)
+
+    AreEqual(round(math.log10(18446744073709551616), 5),  19.26592)
+    AreEqual(round(math.log(18446744073709551616), 5), 44.36142)
+
+    AreEqual(round(math.log10(18446744073709551614), 5),  19.26592)
+    AreEqual(round(math.log(18446744073709551614), 5), 44.36142)
+    
+    # log in a new base
+    AreEqual(round(math.log(2 ** 1000, 2), 5), 1000.0)
+    
+    AssertError(ValueError, math.log, 0L)
+    AssertError(ValueError, math.log, -1L)
+    AssertError(OverflowError, math.log, 2L, 1e666)
+    AssertError(ValueError, math.log, 2L, -1e666)
+    AssertError(OverflowError, math.log, 1L, 0.0)
+    AssertError(OverflowError, math.log, 2L, 0.0)
+    AssertError(ZeroDivisionError, math.log, 2L, 1.0)
+
 run_test(__name__)

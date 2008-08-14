@@ -14,11 +14,13 @@
  * ***************************************************************************/
 
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Runtime.Remoting;
 using System.Scripting;
-using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
+using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -177,23 +179,68 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public ScriptSourceReader GetReader() {
-            return new ScriptSourceReader(this);
+        public SourceCodeReader GetReader() {
+            return _unit.GetReader();
+        }
+
+        /// <summary>
+        /// Detects the encoding of the content.
+        /// </summary>
+        /// <returns>
+        /// An encoding that is used by the reader of the script source to transcode its content to Unicode text.
+        /// <c>Null</c> if the content is already textual and no transcoding is performed.
+        /// </returns>
+        /// <remarks>
+        /// Note that the default encoding specified when the script source is created could be overridden by 
+        /// an encoding that is found in the content preamble (Unicode BOM or a language specific encoding preamble).
+        /// In that case the preamble encoding is returned. Otherwise, the default encoding is returned.
+        /// </remarks>
+        /// <exception cref="IOException">An I/O error occurs.</exception>
+        public Encoding DetectEncoding() {
+            using (var reader = _unit.GetReader()) {
+                return reader.Encoding;
+            }
         }
 
         /// <summary>
         /// Reads specified range of lines (or less) from the source unit. 
-        /// Line numbers starts with 1.
         /// </summary>
+        /// <param name="start">1-based number of the first line to fetch.</param>
+        /// <param name="count">The number of lines to fetch.</param>
+        /// <remarks>
+        /// Which character sequences are considered line separators is language specific.
+        /// If language doesn't specify otherwise "\r", "\n", "\r\n" are recognized line separators.
+        /// </remarks>
+        /// <exception cref="IOException">An I/O error occurs.</exception>
         public string[] GetCodeLines(int start, int count) {
             return _unit.GetCodeLines(start, count);
         }
 
+        /// <summary>
+        /// Reads a specified line.
+        /// </summary>
+        /// <param name="line">1-based line number.</param>
+        /// <returns>Line content. Line separator is not included.</returns>
+        /// <exception cref="IOException">An I/O error occurs.</exception>
+        /// <remarks>
+        /// Which character sequences are considered line separators is language specific.
+        /// If language doesn't specify otherwise "\r", "\n", "\r\n" are recognized line separators.
+        /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCodeLine(int line) {
             return _unit.GetCodeLine(line);
         }
 
+        /// <summary>
+        /// Gets script source content.
+        /// </summary>
+        /// <returns>Entire content.</returns>
+        /// <exception cref="IOException">An I/O error occurs.</exception>
+        /// <remarks>
+        /// The result includes language specific preambles (e.g. "#coding:UTF-8" encoding preamble recognized by Ruby), 
+        /// but not the preamble defined by the content encoding (e.g. BOM).
+        /// The entire content of the source unit is encoded by single encoding (if it is read from binary stream).
+        /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCode() {
             return _unit.GetCode();

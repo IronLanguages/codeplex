@@ -22,7 +22,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonSystemType("generator")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("generator")]
     public sealed class PythonGenerator : IEnumerator, IEnumerator<object>, IEnumerable, IEnumerable<object>, ICodeFormattable {
         /// <summary>
         /// The instance of the DLR generator.
@@ -91,7 +91,7 @@ namespace IronPython.Runtime {
                 // Sample error message from CPython 2.5 looks like:
                 //     Exception __main__.MyError: MyError() in <generator object at 0x00D7F6E8> ignored
                 try {
-                    string message = string.Format("Exception in generator {1} ignored", PythonOps.StringRepr(this));
+                    string message = string.Format("Exception in generator {1} ignored", PythonOps.Repr(Context, this));
 
                     PythonOps.PrintWithDest(Context, PythonContext.GetContext(Context).SystemStandardError, message);
                     PythonOps.PrintWithDest(Context, PythonContext.GetContext(Context).SystemStandardError, Context.LanguageContext.FormatException(e));

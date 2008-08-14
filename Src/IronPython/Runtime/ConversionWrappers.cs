@@ -252,7 +252,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonSystemType("enumerable_wrapper")]
+    [PythonType("enumerable_wrapper")]
     public class IEnumerableOfTWrapper<T> : IEnumerable<T>, IEnumerable {
         IEnumerable enumerable;
 

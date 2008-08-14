@@ -16,6 +16,7 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Scripting;
 using System.Text;
 using IronPython.Hosting;
@@ -76,6 +77,7 @@ namespace IronPython.Compiler {
 
         // tokenizer properties:
         private readonly bool _verbatim, _dontImplyDedent;
+        private bool _disableLineFeedLineSeparator;
         private SourceUnit _sourceUnit;
         private TokenizerBuffer _buffer;
         private ErrorSink _errors;
@@ -167,20 +169,21 @@ namespace IronPython.Compiler {
             _sourceUnit = null;
             _buffer = null;
             _dontImplyDedent = dontImplyDedent;
+            _disableLineFeedLineSeparator = false;
         }
 
         public void Initialize(SourceUnit sourceUnit) {
             ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
 
-            Initialize(null, sourceUnit.GetReader(), SourceLocation.MinValue, DefaultBufferCapacity);
+            Initialize(null, sourceUnit.GetReader(), sourceUnit, SourceLocation.MinValue, DefaultBufferCapacity);
         }
 
-        public override void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation) {
-            Initialize(state, sourceReader, initialLocation, DefaultBufferCapacity);
+        public override void Initialize(object state, TextReader reader, SourceUnit sourceUnit, SourceLocation initialLocation) {
+            Initialize(state, reader, sourceUnit, initialLocation, DefaultBufferCapacity);
         }
 
-        public void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation, int bufferCapacity) {
-            ContractUtils.RequiresNotNull(sourceReader, "sourceReader");
+        public void Initialize(object state, TextReader reader, SourceUnit sourceUnit, SourceLocation initialLocation, int bufferCapacity) {
+            ContractUtils.RequiresNotNull(reader, "reader");
 
             if (state != null) {
                 if (!(state is State)) throw new ArgumentException();
@@ -189,10 +192,11 @@ namespace IronPython.Compiler {
                 _state = new State(null);
             }
 
-            _sourceUnit = sourceReader.SourceUnit;
+            _sourceUnit = sourceUnit;
+            _disableLineFeedLineSeparator = reader is NoLineFeedSourceContentProvider.Reader;
 
             // TODO: we can reuse the buffer if there is enough free space:
-            _buffer = new TokenizerBuffer(sourceReader, initialLocation, bufferCapacity, !_sourceUnit.DisableLineFeedLineSeparator);
+            _buffer = new TokenizerBuffer(reader, initialLocation, bufferCapacity, !_disableLineFeedLineSeparator);
 
             DumpBeginningOfUnit();
         }
@@ -605,7 +609,7 @@ namespace IronPython.Compiler {
 
             // EOLN should be normalized to '\n' in triple-quoted strings:
             // TODO: do this better
-            if (multi_line && isTriple && !_sourceUnit.DisableLineFeedLineSeparator) {
+            if (multi_line && isTriple && !_disableLineFeedLineSeparator) {
                 contents = contents.Replace("\r\n", "\n").Replace("\r", "\n");
             }
 

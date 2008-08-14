@@ -379,4 +379,29 @@ def test_repr():
 
     AreEqual(repr(mylist()), 'abc')
 
+def test_index_multiply():
+    for data in ([1,2], (1,2), 'ab'):
+    
+        class M:
+            def __rmul__(self, other):
+                return 1
+    
+        class Index(object):
+            def __index__(self): return 2
+            
+        class OldIndex:
+            def __index__(self): return 2
+        
+        AreEqual(data * M(), 1)
+        AssertError(TypeError, lambda : data.__mul__(M()))
+        
+        AreEqual(data * Index(), data * 2)
+        AreEqual(data * OldIndex(), data * 2)
+        AreEqual(data.__mul__(Index()), data * 2)
+        AreEqual(data.__mul__(OldIndex()), data * 2)
+        
+        AssertErrorWithMessage(TypeError, "'NoneType' object cannot be interpreted as an index", lambda : data.__mul__(None))
+        AssertError(TypeError, lambda : data * None)
+        AssertError(TypeError, lambda : None * data)
+
 run_test(__name__)

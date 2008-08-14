@@ -846,13 +846,13 @@ namespace IronPython.Runtime {
 
     #endregion
 
-    [PythonSystemType("file")]
+    [PythonType("file")]
     public class PythonFile : IDisposable, ICodeFormattable, IEnumerable<string>, IEnumerable, IWeakReferenceable {
         private ConsoleStreamType _consoleStreamType;
         private SharedIO _io;   // null for non-console
         private Stream _stream; // null for console
         private string _mode;
-        private string _name;
+        private string _name, _encoding;
         private PythonFileMode _fileMode;
 
         private PythonStreamReader _reader;
@@ -896,7 +896,12 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT // finalizers not supported
         ~PythonFile() {
-            Dispose(false);
+            try {
+                Dispose(false);
+            } catch (ObjectDisposedException) {
+            } catch (EncoderFallbackException) {
+                // flushing could fail due to encoding, ignore it
+            }
         }
 #endif
 
@@ -937,6 +942,9 @@ namespace IronPython.Runtime {
                 } else {
                     stream = PythonContext.GetContext(context).DomainManager.Platform.OpenInputFileStream(name, fmode, faccess, fshare, bufsize);
                 }
+
+                // we want to own the lifetime of the stream so we can flush & dispose in our finalizer...
+                GC.SuppressFinalize(stream);
 
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
@@ -1086,6 +1094,9 @@ namespace IronPython.Runtime {
             _isOpen = true;
             _io = null;
             _fileMode = MapFileMode(mode);
+#if !SILVERLIGHT
+            _encoding = StringOps.NormalizeEncodingName(encoding.EncodingName);
+#endif
 
             if (stream.CanRead) {
                 if (_fileMode == PythonFileMode.Binary) {
@@ -1127,6 +1138,10 @@ namespace IronPython.Runtime {
             _isOpen = true;
             _fileMode = MapFileMode(_mode);
             _name = name;
+#if !SILVERLIGHT
+
+            _encoding = StringOps.NormalizeEncodingName(io.OutputEncoding.EncodingName);
+#endif
 
             if (type == ConsoleStreamType.Input) {
                 _reader = CreateConsoleReader();
@@ -1196,9 +1211,7 @@ namespace IronPython.Runtime {
                     return;
                 }
 
-                if (disposing) {
-                    FlushWorker();
-                }
+                FlushWorker();
 
                 if (!IsConsole) {
                     _stream.Close();
@@ -1263,6 +1276,12 @@ namespace IronPython.Runtime {
         public string name {
             get {
                 return _name;
+            }
+        }
+
+        public string encoding {
+            get {
+                return _encoding;
             }
         }
 

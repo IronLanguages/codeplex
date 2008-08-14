@@ -129,7 +129,8 @@ namespace IronPython.Runtime {
         private static bool ScopeContains(object key, Scope scope) {
             string strKey = key as string;
             if (strKey != null) {
-                if (scope.ContainsName(SymbolTable.StringToId(strKey))) {
+                object dummy;
+                if (scope.TryGetName(SymbolTable.StringToId(strKey), out dummy)) {
                     return true;
                 }
             } else {

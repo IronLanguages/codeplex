@@ -1470,6 +1470,57 @@ namespace Microsoft.Scripting.Math {
             return (data != null && data.Length > 0 && ((data[0] & 1) != 0));
         }
 
+
+        public double Log(Double newBase) {
+            if (IsNegative() || newBase == 1.0D || this == Zero || (newBase == 0.0D && this != One)) {
+                return Double.NaN;
+            } else if (newBase == Double.PositiveInfinity) {
+                return this == One ? 0.0D : Double.NaN;
+            }
+
+            int length = GetLength(data) - 1;
+            int bitCount = -1;
+            for (int curBit = 31; curBit >= 0; curBit--) {
+                if ((data[length] & (1 << curBit)) != 0) {
+                    bitCount = curBit + length * 32;
+                    break;
+                }
+            }
+
+            long bitlen = bitCount;
+            Double c = 0, d = 1;
+
+            BigInteger testBit = BigInteger.One;
+            long tempBitlen = bitlen;
+            while (tempBitlen > Int32.MaxValue) {
+                testBit = testBit << Int32.MaxValue;
+                tempBitlen -= Int32.MaxValue;
+            }
+            testBit = testBit << (int)tempBitlen;
+
+            for (long curbit = bitlen; curbit >= 0; --curbit) {
+                if ((this & testBit) != BigInteger.Zero)
+                    c += d;
+                d *= 0.5;
+                testBit = testBit >> 1;
+            }
+            return (System.Math.Log(c) + System.Math.Log(2) * bitlen) / System.Math.Log(newBase);
+        }
+
+        /// <summary>
+        /// Calculates the natural logarithm of the BigInteger.
+        /// </summary>
+        public double Log() {
+            return Log(System.Math.E);
+        }
+
+        /// <summary>
+        /// Calculates log base 10 of a BigInteger.
+        /// </summary>
+        public double Log10() {
+            return Log(10);
+        }
+
         #region IComparable Members
 
         public int CompareTo(object obj) {

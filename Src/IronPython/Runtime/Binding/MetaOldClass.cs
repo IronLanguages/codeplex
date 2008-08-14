@@ -115,8 +115,8 @@ namespace IronPython.Runtime.Binding {
                         ),
                         Ast.Condition(
                             Ast.Call(
+                                typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
                                 self.Expression,
-                                typeof(OldClass).GetMethod("TryLookupInit"),
                                 instTmp,
                                 init
                             ),
@@ -148,8 +148,8 @@ namespace IronPython.Runtime.Binding {
             if (signature.IsSimple || unusedCount > 0) {
                 if (args.Length > 0) {
                     return Ast.Call(
-                        self.Expression,
-                        typeof(OldClass).GetMethod("MakeCallError")
+                        typeof(PythonOps).GetMethod("OldClassMakeCallError"),
+                        self.Expression
                     );
                 }
 
@@ -193,29 +193,29 @@ namespace IronPython.Runtime.Binding {
             switch (name) {
                 case "__bases__":
                     call = Ast.Call(
+                        typeof(PythonOps).GetMethod("OldClassSetBases"),
                         self.Expression,
-                        typeof(OldClass).GetMethod("SetBases"),
                         valueExpr
                     );
                     break;
                 case "__name__":
                     call = Ast.Call(
+                        typeof(PythonOps).GetMethod("OldClassSetName"),
                         self.Expression,
-                        typeof(OldClass).GetMethod("SetName"),
                         valueExpr
                     );
                     break;
                 case "__dict__":
                     call = Ast.Call(
+                        typeof(PythonOps).GetMethod("OldClassSetDictionary"),
                         self.Expression,
-                        typeof(OldClass).GetMethod("SetDictionary"),
                         valueExpr
                     );
                     break;
                 default:
                     call = Ast.Call(
+                        typeof(PythonOps).GetMethod("OldClassSetNameHelper"),
                         self.Expression,
-                        typeof(OldClass).GetMethod("SetNameHelper"),
                         AstUtils.Constant(SymbolTable.StringToId(name)),
                         valueExpr
                     );
@@ -250,8 +250,8 @@ namespace IronPython.Runtime.Binding {
                 case "__dict__":
                     target = Ast.Comma(
                         Ast.Call(
-                            self.Expression,
-                            typeof(OldClass).GetMethod("DictionaryIsPublic")
+                            typeof(PythonOps).GetMethod("OldClassDictionaryIsPublic"),
+                            self.Expression
                         ),
                         Ast.Field(
                             self.Expression,
@@ -268,7 +268,7 @@ namespace IronPython.Runtime.Binding {
                 case "__name__":
                     target = Ast.Property(
                         self.Expression,
-                        typeof(OldClass).GetProperty("Name")
+                        typeof(OldClass).GetProperty("__name__")
                     );
                     break;
                 default:
@@ -277,9 +277,9 @@ namespace IronPython.Runtime.Binding {
                         Ast.Scope(
                             Ast.Condition(
                                 Ast.Call(
-                                    self.Expression,
-                                    typeof(OldClass).GetMethod("TryLookupValue"),
+                                    typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
                                     Ast.Constant(BinderState.GetBinderState(member).Context),
+                                    self.Expression,
                                     AstUtils.Constant(SymbolTable.StringToId(member.Name)),
                                     tmp
                                 ),

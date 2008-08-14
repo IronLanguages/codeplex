@@ -47,7 +47,7 @@ def test_sanity():
     import operator
     import re
     import socket
-    import struct
+    import _struct
     import thread
     import time
     

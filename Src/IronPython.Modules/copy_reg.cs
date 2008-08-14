@@ -131,9 +131,9 @@ namespace IronPython.Modules {
                 // nop
             } else {
                 if (keyExists) {
-                    throw PythonOps.ValueError("key {0} is already registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(GetExtensionRegistry(context)[key]));
+                    throw PythonOps.ValueError("key {0} is already registered with code {1}", PythonOps.Repr(context, key), PythonOps.Repr(context, GetExtensionRegistry(context)[key]));
                 } else { // codeExists
-                    throw PythonOps.ValueError("code {0} is already in use for key {1}", PythonOps.Repr(code), PythonOps.Repr(GetInvertedRegistry(context)[code]));
+                    throw PythonOps.ValueError("code {0} is already in use for key {1}", PythonOps.Repr(context, code), PythonOps.Repr(context, GetInvertedRegistry(context)[code]));
                 }
             }
         }
@@ -154,7 +154,7 @@ namespace IronPython.Modules {
                 GetExtensionRegistry(context).__delitem__(key);
                 GetInvertedRegistry(context).__delitem__(code);
             } else {
-                throw PythonOps.ValueError("key {0} is not registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(code));
+                throw PythonOps.ValueError("key {0} is not registered with code {1}", PythonOps.Repr(context, key), PythonOps.Repr(context, code));
             }
         }
 

@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.IO;
+using System.Text;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -27,8 +28,8 @@ namespace Microsoft.Scripting.Runtime {
         private NullTextContentProvider() {
         }
 
-        public override TextReader GetReader() {
-            return TextReader.Null;
+        public override SourceCodeReader GetReader() {
+            return SourceCodeReader.Null;
         }
     }
 }

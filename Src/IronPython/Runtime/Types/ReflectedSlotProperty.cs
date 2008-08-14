@@ -21,6 +21,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     
@@ -28,16 +29,19 @@ namespace IronPython.Runtime.Types {
     /// Represents a member of a user-defined type which defines __slots__.  The names listed in
     /// __slots__ have storage allocated for them with the type and provide fast get/set access.
     /// </summary>
-    [PythonSystemType("member_descriptor")]
+    [PythonType("member_descriptor")]
     class ReflectedSlotProperty : PythonTypeSlot, ICodeFormattable {
-        private string _name;
-        private SlotInfo _slotInfo;
+        private readonly string/*!*/ _name, _typeName;
+        private readonly SlotInfo/*!*/ _slotInfo;        
 
         private static readonly Dictionary<SlotInfo, SlotValue> _methods = new Dictionary<SlotInfo, SlotValue>();
                 
-        public ReflectedSlotProperty(string name, Type type, int index) {
+        public ReflectedSlotProperty(string name, string typeName, Type type, int index) {
+            Assert.NotNull(name, typeName, type);
+
             _slotInfo = new SlotInfo(index, type);
             _name = name;
+            _typeName = typeName;
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -77,7 +81,7 @@ namespace IronPython.Runtime.Types {
         #region ICodeFormattable Members
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return String.Format("<member '{0}'>", _name); // <member '{0}' of '{1}' objects> - but we don't know our type name
+            return String.Format("<member '{0}' of '{1}' objects>", _name, _typeName);
         }
 
         #endregion

@@ -346,66 +346,12 @@ def test_arg_Collections():
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-#------------------------------------------------------------------------------
-#--Boolean
-def test_arg_boolean_boolean_overload():
-    o = COverloads_Boolean()
-    
-    param_method_map = {
-        None : [        o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, 
-                        o.M107, o.M108, o.M109, o.M110, o.M111],
-        True : [        o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, o.M107, o.M108, o.M109, o.M110, o.M111, o.M112],
-        False : [       o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, o.M107, o.M108, o.M109, o.M110, o.M111, o.M112],
-        100 : [         o.M100],
-        myint(100): [   o.M100],
-        -100 : [        o.M100],
-        UInt32Max: [    o.M100, o.M106],
-        200L : [        o.M100, o.M106, o.M109],
-        -200L : [       o.M100, o.M106, o.M109],
-        Byte10 : [      o.M100],
-        SBytem10 : [    o.M100],
-        Int1610 : [     o.M100],
-        Int16m20 : [    o.M100],
-        12.34 : [       o.M100, o.M101, o.M102, o.M103, o.M104, o.M105, o.M106, o.M107, o.M108, o.M109, o.M110],
-        
-    }
-    
-    for param in param_method_map.keys():
-        for meth in param_method_map[param]:
-            expected_flag = int(meth.__name__[1:])
-            meth(param)
-            AreEqual(expected_flag, Flag.Value)
-    
-    #True, False
-    #'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '
-    
-    """
-    for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        
-(        True, _merge(_first(), _second('')), '', '', ),
-(       False, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
-(         100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(        -100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(   UInt32Max, _merge(_first('M100 M106 '), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 ', '', ),
-(        200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(       -200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(      Byte10, _merge(_first('M100 '), _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 ')), 'M102 ', '', ),
-(    SBytem10, _merge(_first('M100 '), _second('M102 M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M103 M105 M107 ', '', ),
-(     Int1610, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
-(    Int16m20, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
-(       12.34, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 '), _second('M111 M112 ')), '', '', ),
-    ]:
-        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
-    """
-
-
 def test_arg_Boolean():
     target = COverloads_Boolean()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (        None, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M112 ')), '', '', ),
-(        True, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
-(       False, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
+(        True, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(       False, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
 (         100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (        -100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),

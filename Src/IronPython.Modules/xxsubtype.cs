@@ -26,7 +26,7 @@ namespace IronPython.Modules {
     /// Samples on how to subtype built-in types from C#
     /// </summary>
     public static class xxsubtype {
-        [PythonSystemType]
+        [PythonType]
         public class spamlist : List {
             public spamlist()
                 : base() {
@@ -53,13 +53,13 @@ namespace IronPython.Modules {
                 return PythonTuple.MakeTuple(null, PythonTuple.MakeTuple(args), dict);
             }
 
-            [PythonClassMethod]
+            [ClassMethod]
             public static object classmeth(PythonType cls, [ParamDictionary]IAttributesCollection dict, params object[] args) {
                 return PythonTuple.MakeTuple(cls, PythonTuple.MakeTuple(args), dict);
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class spamdict : PythonDictionary {
             /// <summary>
             /// an int variable for demonstration purposes

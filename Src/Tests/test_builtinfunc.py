@@ -462,5 +462,12 @@ def test_cp16000():
         Assert(type(id(x)) in [int, long], 
                str(type(id(x))))
 
+def test_locals_contains():
+    global x
+    x = 2
+    def func():
+        Assert(not 'x' in locals())
+    func()
+
 run_test(__name__)
 

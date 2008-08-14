@@ -30,7 +30,7 @@ using IronPython.Runtime.Binding;
 using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
-    [PythonSystemType("field#")]
+    [PythonType("field#")]
     public sealed class ReflectedField : PythonTypeSlot, ICodeFormattable {
         private readonly NameType _nameType;
         internal readonly FieldInfo/*!*/ info;

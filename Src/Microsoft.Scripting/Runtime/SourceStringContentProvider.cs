@@ -17,6 +17,7 @@ using System;
 using System.IO;
 using System.Scripting;
 using Microsoft.Scripting.Utils;
+using System.Text;
 
 namespace Microsoft.Scripting {
 
@@ -30,8 +31,8 @@ namespace Microsoft.Scripting {
             _code = code;
         }
 
-        public override TextReader GetReader() {
-            return new StringReader(_code);
+        public override SourceCodeReader GetReader() {
+            return new SourceCodeReader(new StringReader(_code), null);
         }
     }
 }

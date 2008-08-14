@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using System.Scripting;
+using System.IO;
 
 namespace Microsoft.Scripting.Runtime {
     public abstract class TokenizerService {
@@ -23,7 +24,7 @@ namespace Microsoft.Scripting.Runtime {
         protected TokenizerService() {
         }
 
-        public abstract void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation);
+        public abstract void Initialize(object state, TextReader sourceReader, SourceUnit sourceUnit, SourceLocation initialLocation);
 
         /// <summary>
         /// The current internal state of the scanner.

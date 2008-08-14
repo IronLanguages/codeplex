@@ -36,7 +36,7 @@ namespace IronPython.Hosting {
         /// </summary>
         /// <returns></returns>
         public static ScriptRuntime/*!*/ CreateRuntime() {
-            return ScriptRuntime.Create(CreateRuntimeSetup(null));
+            return new ScriptRuntime(CreateRuntimeSetup(null));
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace IronPython.Hosting {
         /// additional options.
         /// </summary>
         public static ScriptRuntime/*!*/ CreateRuntime(IDictionary<string, object> options) {
-            return ScriptRuntime.Create(CreateRuntimeSetup(options));
+            return new ScriptRuntime(CreateRuntimeSetup(options));
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace IronPython.Hosting {
         public static ScriptRuntime/*!*/ CreateRuntime(AppDomain/*!*/ domain) {
             ContractUtils.RequiresNotNull(domain, "domain");
 
-            return ScriptRuntime.Create(domain, CreateRuntimeSetup(null));
+            return ScriptRuntime.CreateRemote(domain, CreateRuntimeSetup(null));
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace IronPython.Hosting {
         public static ScriptRuntime/*!*/ CreateRuntime(AppDomain/*!*/ domain, IDictionary<string, object> options) {
             ContractUtils.RequiresNotNull(domain, "domain");
 
-            return ScriptRuntime.Create(domain, CreateRuntimeSetup(options));
+            return ScriptRuntime.CreateRemote(domain, CreateRuntimeSetup(options));
         }
 
         /// <summary>

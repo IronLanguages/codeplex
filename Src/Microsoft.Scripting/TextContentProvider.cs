@@ -15,6 +15,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace Microsoft.Scripting {
 
@@ -29,16 +30,14 @@ namespace Microsoft.Scripting {
     /// </summary>
     [Serializable]
     public abstract class TextContentProvider {
+
         /// <summary>
         /// Creates a new TextReader which is backed by the content the TextContentProvider was created for.
         /// 
         /// This method may be called multiple times.  For example once to compile the code and again to get
         /// the source code to display error messages.
         /// </summary>
-        /// <returns></returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public abstract TextReader GetReader();
+        public abstract SourceCodeReader GetReader();
     }
-
-
 }

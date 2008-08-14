@@ -78,7 +78,7 @@ namespace IronPython.Modules {
 
         public static PythonType SocketType = DynamicHelpers.GetPythonTypeFromType(typeof(socket));
 
-        [PythonSystemType]
+        [PythonType]
         [Documentation("socket([family[, type[, proto]]]) -> socket object\n\n"
                 + "Create a socket (a network connection endpoint) of the given family, type,\n"
                 + "and protocol. socket() accepts keyword arguments.\n"
@@ -1649,7 +1649,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class _fileobject : PythonFile {
             public new const string name = "<socket>";
             private readonly socket _socket = null;

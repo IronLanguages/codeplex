@@ -23,7 +23,7 @@ namespace IronPython.Runtime.Types {
     /// <summary>
     /// Provides a slot object for the dictionary to allow setting of the dictionary.
     /// </summary>
-    [PythonSystemType("getset_descriptor")]
+    [PythonType("getset_descriptor")]
     public sealed class PythonTypeDictSlot : PythonTypeSlot, ICodeFormattable {
         private PythonType/*!*/ _type;
 

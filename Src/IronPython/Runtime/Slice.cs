@@ -20,7 +20,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
-    [PythonSystemType("slice")]
+    [PythonType("slice")]
     public sealed class Slice : ICodeFormattable, IComparable, IValueEquality, ISlice {
         private readonly object _start, _stop, _step;
 
@@ -139,7 +139,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return string.Format("slice({0}, {1}, {2})", PythonOps.StringRepr(_start), PythonOps.StringRepr(_stop), PythonOps.StringRepr(_step));
+            return string.Format("slice({0}, {1}, {2})", PythonOps.Repr(context, _start), PythonOps.Repr(context, _stop), PythonOps.Repr(context, _step));
         }
 
         #endregion

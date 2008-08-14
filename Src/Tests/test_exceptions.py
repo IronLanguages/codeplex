@@ -906,4 +906,33 @@ def test_deprecated_string_exception():
     AreEqual(m[0].category, DeprecationWarning)
     AreEqual(m[0].message, 'raising a string exception is deprecated')
 
+def test_nested_try():
+    global l
+    l = []
+    def foo():
+        try:
+            try:
+                l.append(1)
+            except:
+                pass
+        except:
+            l.append(2)
+        else:
+            l.append(3)
+    
+    foo()
+    AreEqual(l, [1, 3])
+    l = []
+    
+    def bar():
+        try:
+            l.append(1)
+        except:
+            l.append(2)
+        else:
+            l.append(3)
+            
+    bar()
+    AreEqual(l, [1, 3])
+
 run_test(__name__)

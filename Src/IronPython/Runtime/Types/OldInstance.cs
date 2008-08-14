@@ -34,7 +34,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 namespace IronPython.Runtime.Types {
 
-    [PythonSystemType("instance")]
+    [PythonType("instance")]
     [Serializable]
     public sealed partial class OldInstance :
         ICodeFormattable,
@@ -49,8 +49,8 @@ namespace IronPython.Runtime.Types {
         IOldDynamicObject
     {
 
-        private PythonDictionary __dict__;
-        internal OldClass __class__;
+        private PythonDictionary _dict;
+        internal OldClass _class;
         private WeakRefTracker _weakRef;       // initialized if user defines finalizer on class or instance
 
         private PythonDictionary MakeDictionary(OldClass oldClass) {
@@ -61,10 +61,10 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        public OldInstance(CodeContext/*!*/ context, OldClass _class) {
-            __class__ = _class;
-            __dict__ = MakeDictionary(_class);
-            if (__class__.HasFinalizer) {
+        public OldInstance(CodeContext/*!*/ context, OldClass @class) {
+            _class = @class;
+            _dict = MakeDictionary(@class);
+            if (_class.HasFinalizer) {
                 // class defines finalizer, we get it automatically.
                 AddFinalizer(context);
             }
@@ -72,28 +72,28 @@ namespace IronPython.Runtime.Types {
 
 #if !SILVERLIGHT // SerializationInfo
         private OldInstance(SerializationInfo info, StreamingContext context) {
-            __class__ = (OldClass)info.GetValue("__class__", typeof(OldClass));
-            __dict__ = MakeDictionary(__class__);
+            _class = (OldClass)info.GetValue("__class__", typeof(OldClass));
+            _dict = MakeDictionary(_class);
 
             List<object> keys = (List<object>)info.GetValue("keys", typeof(List<object>));
             List<object> values = (List<object>)info.GetValue("values", typeof(List<object>));
             for (int i = 0; i < keys.Count; i++) {
-                __dict__[keys[i]] = values[i];
+                _dict[keys[i]] = values[i];
             }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
-        public void GetObjectData(SerializationInfo info, StreamingContext context) {
+        private void GetObjectData(SerializationInfo info, StreamingContext context) {
             ContractUtils.RequiresNotNull(info, "info");
 
-            info.AddValue("__class__", __class__);
+            info.AddValue("__class__", _class);
             List<object> keys = new List<object>();
             List<object> values = new List<object>();
-            foreach (object o in __dict__.keys()) {
+            foreach (object o in _dict.keys()) {
                 keys.Add(o);
                 object value;
                 
-                bool res = ((IAttributesCollection)__dict__).TryGetObjectValue(o, out value);
+                bool res = ((IAttributesCollection)_dict).TryGetObjectValue(o, out value);
 
                 Debug.Assert(res);
 
@@ -108,19 +108,9 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Returns the dictionary used to store state for this object
         /// </summary>
-        public PythonDictionary Dictionary {
-            get { return __dict__; }
+        internal PythonDictionary Dictionary {
+            get { return _dict; }
         }
-
-        public object GetOptimizedDictionary(int keyVersion) {
-            CustomOldClassDictionaryStorage storage = __dict__._storage as CustomOldClassDictionaryStorage;
-            if (storage == null || __class__.HasSetAttr || storage.KeyVersion != keyVersion) {
-                return null;
-            }
-
-            return storage;
-        }
-
 
         public static bool operator true(OldInstance self) {
             return (bool)self.__nonzero__(DefaultContext.Default);
@@ -129,12 +119,6 @@ namespace IronPython.Runtime.Types {
         public static bool operator false(OldInstance self) {
             return !(bool)self.__nonzero__(DefaultContext.Default);
         }
-
-
-        public IEnumerator GetEnumerator() {            
-            return PythonOps.GetEnumeratorForIteration(DefaultContext.Default, this);
-        }
-
 
         #region IOldDynamicObject Members
 
@@ -423,7 +407,7 @@ namespace IronPython.Runtime.Types {
 
         private RuleBuilder<T> MakeMemberRule<T>(OldMemberAction action, CodeContext context, object[] args) where T : class {
             CustomOldClassDictionaryStorage dict = this.Dictionary._storage as CustomOldClassDictionaryStorage;
-            if (dict == null || __class__.HasSetAttr) {
+            if (dict == null || _class.HasSetAttr) {
                 return MakeDynamicOldInstanceRule<T>(action, context);
             }
 
@@ -436,8 +420,8 @@ namespace IronPython.Runtime.Types {
 
             VariableExpression tmp = rule.GetTemporary(typeof(object), "dict");
             Expression tryGetValue = Ast.Call(
+                typeof(PythonOps).GetMethod("OldInstanceGetOptimizedDictionary"),
                 Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
-                typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
                 Ast.Constant(dict.KeyVersion)
             );
             tryGetValue = Ast.Assign(tmp, tryGetValue);
@@ -522,9 +506,9 @@ namespace IronPython.Runtime.Types {
                                 );
                     } else {
                         target = Ast.Call(
-                            instance,
-                            typeof(OldInstance).GetMethod("GetBoundMember"),
+                            typeof(PythonOps).GetMethod("OldInstanceGetBoundMember"),
                             rule.Context,
+                            instance,
                             AstUtils.Constant(action.Name)
                         );
                     }
@@ -604,7 +588,7 @@ namespace IronPython.Runtime.Types {
                 throw PythonOps.TypeError("__repr__ returned non-string type ({0})", PythonTypeOps.GetName(ret));
             }
 
-            return string.Format("<{0} instance at {1}>", __class__.FullName, PythonOps.HexId(this));
+            return string.Format("<{0} instance at {1}>", _class.FullName, PythonOps.HexId(this));
         }
 
         #endregion
@@ -649,7 +633,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.Length);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.Length);
         }
 
         public object __pos__(CodeContext context) {
@@ -659,7 +643,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.Positive);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.Positive);
         }
 
         [SpecialName]
@@ -680,7 +664,7 @@ namespace IronPython.Runtime.Types {
                 return PythonCalls.Call(context, value, item);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.DelItem);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.DelItem);
         }
 
         public object __getslice__(CodeContext context, int i, int j) {
@@ -691,7 +675,7 @@ namespace IronPython.Runtime.Types {
                 return PythonCalls.Call(context, callable, new Slice(i, j));
             }
 
-            throw PythonOps.TypeError("instance {0} does not have __getslice__ or __getitem__", __class__.Name);
+            throw PythonOps.TypeError("instance {0} does not have __getslice__ or __getitem__", _class.__name__);
         }
         
         public void __setslice__(CodeContext context, int i, int j, object value) {
@@ -704,7 +688,7 @@ namespace IronPython.Runtime.Types {
                 return;
             }
 
-            throw PythonOps.TypeError("instance {0} does not have __setslice__ or __setitem__", __class__.Name);
+            throw PythonOps.TypeError("instance {0} does not have __setslice__ or __setitem__", _class.__name__);
         }
 
         public object __delslice__(CodeContext context, int i, int j) {
@@ -715,7 +699,7 @@ namespace IronPython.Runtime.Types {
                 return PythonCalls.Call(context, callable, new Slice(i, j));
             }
 
-            throw PythonOps.TypeError("instance {0} does not have __delslice__ or __delitem__", __class__.Name);
+            throw PythonOps.TypeError("instance {0} does not have __delslice__ or __delitem__", _class.__name__);
         }
 
         public object __index__(CodeContext context) {
@@ -735,7 +719,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.OperatorNegate);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.OperatorNegate);
         }
 
         public object __abs__(CodeContext context) {
@@ -745,7 +729,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.AbsoluteValue);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.AbsoluteValue);
         }
 
         public object __invert__(CodeContext context) {
@@ -755,7 +739,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.OperatorOnesComplement);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.OperatorOnesComplement);
         }
 
         public object __contains__(CodeContext context, object index) {
@@ -798,7 +782,7 @@ namespace IronPython.Runtime.Types {
                 PythonOps.FunctionPopFrame();
             }
 
-            throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
+            throw PythonOps.AttributeError("{0} instance has no __call__ method", _class.__name__);
         }
 
         [SpecialName]
@@ -814,7 +798,7 @@ namespace IronPython.Runtime.Types {
                 PythonOps.FunctionPopFrame();
             }
 
-            throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
+            throw PythonOps.AttributeError("{0} instance has no __call__ method", _class.__name__);
         }
 
         [SpecialName]
@@ -830,7 +814,7 @@ namespace IronPython.Runtime.Types {
                 PythonOps.FunctionPopFrame();
             }
 
-            throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
+            throw PythonOps.AttributeError("{0} instance has no __call__ method", _class.__name__);
         }
 
         public object __nonzero__(CodeContext context) {
@@ -858,7 +842,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.ConvertToHex);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.ConvertToHex);
         }
 
         public object __oct__(CodeContext context) {
@@ -867,7 +851,7 @@ namespace IronPython.Runtime.Types {
                 return PythonOps.CallWithContext(context, value);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.ConvertToOctal);
+            throw PythonOps.AttributeErrorForMissingAttribute(_class.__name__, Symbols.ConvertToOctal);
         }
 
         public object __int__(CodeContext context) {
@@ -916,10 +900,10 @@ namespace IronPython.Runtime.Types {
                 return res;
             }
 
-            throw PythonOps.AttributeError("{0} instance has no attribute '{1}'", __class__.__name__, name);
+            throw PythonOps.AttributeError("{0} instance has no attribute '{1}'", _class._name, name);
         }
 
-        public object GetBoundMember(CodeContext context, SymbolId name) {
+        internal object GetBoundMember(CodeContext context, SymbolId name) {
             object ret;
             if (TryGetBoundCustomMember(context, name, out ret)) {
                 return ret;
@@ -934,10 +918,10 @@ namespace IronPython.Runtime.Types {
             int nameId = name.Id;
             if (nameId == Symbols.Dict.Id) {
                 //!!! user code can modify __del__ property of __dict__ behind our back
-                value = __dict__;
+                value = _dict;
                 return true;
             } else if (nameId == Symbols.Class.Id) {
-                value = __class__;
+                value = _class;
                 return true;
             }
 
@@ -965,12 +949,12 @@ namespace IronPython.Runtime.Types {
                 SetClass(value);
             } else if (nameId == Symbols.Dict.Id) {
                 SetDict(context, value);
-            } else if (__class__.HasSetAttr && __class__.TryLookupSlot(Symbols.SetAttr, out setFunc)) {
-                PythonCalls.Call(context, __class__.GetOldStyleDescriptor(context, setFunc, this, __class__), name.ToString(), value);
+            } else if (_class.HasSetAttr && _class.TryLookupSlot(Symbols.SetAttr, out setFunc)) {
+                PythonCalls.Call(context, _class.GetOldStyleDescriptor(context, setFunc, this, _class), name.ToString(), value);
             } else if (nameId == Symbols.Unassign.Id) {
                 SetFinalizer(context, name, value);
             } else {
-                ((IAttributesCollection)__dict__)[name] = value;
+                ((IAttributesCollection)_dict)[name] = value;
             }
         }
 
@@ -980,7 +964,7 @@ namespace IronPython.Runtime.Types {
                 AddFinalizer(context);
             }
 
-            ((IAttributesCollection)__dict__)[name] = value;
+            ((IAttributesCollection)_dict)[name] = value;
         }
 
         private void SetDict(CodeContext/*!*/ context, object value) {
@@ -988,7 +972,7 @@ namespace IronPython.Runtime.Types {
             if (dict == null) {
                 throw PythonOps.TypeError("__dict__ must be set to a dictionary");
             }
-            if (HasFinalizer() && !__class__.HasFinalizer) {
+            if (HasFinalizer() && !_class.HasFinalizer) {
                 if (!((IAttributesCollection)dict).ContainsKey(Symbols.Unassign)) {
                     ClearFinalizer();
                 }
@@ -996,7 +980,7 @@ namespace IronPython.Runtime.Types {
                 AddFinalizer(context);
             }
 
-            __dict__ = dict;
+            _dict = dict;
         }
 
         private void SetClass(object value) {
@@ -1004,7 +988,7 @@ namespace IronPython.Runtime.Types {
             if (oc == null) {
                 throw PythonOps.TypeError("__class__ must be set to class");
             }
-            __class__ = oc;
+            _class = oc;
         }
 
         internal bool DeleteCustomMember(CodeContext context, SymbolId name) {
@@ -1012,20 +996,20 @@ namespace IronPython.Runtime.Types {
             if (name == Symbols.Dict) throw PythonOps.TypeError("__dict__ must be set to a dictionary");
 
             object delFunc;
-            if (__class__.HasDelAttr && __class__.TryLookupSlot(Symbols.DelAttr, out delFunc)) {
-                PythonCalls.Call(context, __class__.GetOldStyleDescriptor(context, delFunc, this, __class__), name.ToString());
+            if (_class.HasDelAttr && _class.TryLookupSlot(Symbols.DelAttr, out delFunc)) {
+                PythonCalls.Call(context, _class.GetOldStyleDescriptor(context, delFunc, this, _class), name.ToString());
                 return true;
             }
 
 
             if (name == Symbols.Unassign) {
                 // removing finalizer
-                if (HasFinalizer() && !__class__.HasFinalizer) {
+                if (HasFinalizer() && !_class.HasFinalizer) {
                     ClearFinalizer();
                 }
             }
 
-            if (!((IAttributesCollection)__dict__).Remove(name)) {
+            if (!((IAttributesCollection)_dict).Remove(name)) {
                 throw PythonOps.AttributeError("{0} is not a valid attribute", SymbolTable.IdToString(name));
             }
             return true;
@@ -1036,8 +1020,8 @@ namespace IronPython.Runtime.Types {
         #region IMembersList Members
 
         IList<object> IMembersList.GetMemberNames(CodeContext context) {
-            PythonDictionary attrs = new PythonDictionary(__dict__);
-            OldClass.RecurseAttrHierarchy(this.__class__, attrs);
+            PythonDictionary attrs = new PythonDictionary(_dict);
+            OldClass.RecurseAttrHierarchy(this._class, attrs);
             return PythonOps.MakeListFromSequence(attrs);
         }
 
@@ -1179,7 +1163,7 @@ namespace IronPython.Runtime.Types {
                 if (!Object.ReferenceEquals(bi, null)) {
                     return BigIntegerOps.__hash__(bi);
                 } else if (!(ret is int))
-                    throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(ret)));
+                    throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonTypeOps.GetName(ret));
 
                 return (int)ret;
             }
@@ -1282,8 +1266,8 @@ namespace IronPython.Runtime.Types {
 #if !SILVERLIGHT // SerializationInfo
 
         void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context) {
-            info.AddValue("__class__", __class__);
-            info.AddValue("__dict__", __dict__);
+            info.AddValue("__class__", _class);
+            info.AddValue("__dict__", _dict);
         }
 
 #endif
@@ -1351,12 +1335,12 @@ namespace IronPython.Runtime.Types {
         }
 
         private bool TryRawGetAttr(CodeContext context, SymbolId name, out object ret) {
-            if (__dict__._storage.TryGetValue(name, out ret)) {
+            if (_dict._storage.TryGetValue(name, out ret)) {
                 return true;
             }
 
-            if (__class__.TryLookupSlot(name, out ret)) {
-                ret = __class__.GetOldStyleDescriptor(context, ret, this, __class__);
+            if (_class.TryLookupSlot(name, out ret)) {
+                ret = _class.GetOldStyleDescriptor(context, ret, this, _class);
                 return true;
             }
 

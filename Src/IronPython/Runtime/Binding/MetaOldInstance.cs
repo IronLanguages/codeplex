@@ -358,8 +358,8 @@ namespace IronPython.Runtime.Binding {
                     Ast.Assign(
                         tmp, 
                         Ast.Call(
+                            typeof(PythonOps).GetMethod("OldInstanceGetOptimizedDictionary"),
                             self.Expression,
-                            typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
                             Ast.Constant(dict.KeyVersion)
                         )
                     ), 
@@ -413,7 +413,7 @@ namespace IronPython.Runtime.Binding {
 
         private int GetCustomStorageSlot(string name, out CustomOldClassDictionaryStorage dict) {
             dict = Value.Dictionary._storage as CustomOldClassDictionaryStorage;
-            if (dict == null || Value.__class__.HasSetAttr) {
+            if (dict == null || Value._class.HasSetAttr) {
                 return -1;
             }
 

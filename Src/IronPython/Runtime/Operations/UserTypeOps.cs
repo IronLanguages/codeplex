@@ -1142,7 +1142,7 @@ namespace IronPython.Runtime.Operations {
         /// which case we'll display the result of __repr__.
         /// </summary>
         public static string ToStringHelper(IPythonObject o) {
-            return ObjectOps.__str__(o);
+            return ObjectOps.__str__(DefaultContext.Default, o);
         }
 
         public static bool TryGetNonInheritedMethodHelper(PythonType dt, object instance, SymbolId name, out object callTarget) {

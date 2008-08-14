@@ -110,5 +110,24 @@ def test_new_thread_is_background():
     while done == None:
         Thread.Sleep(1000)
     Assert(done)
+
+def test_thread_local():
+    import thread
+    x = thread._local()
+    x.foo = 42
+    AreEqual(x.foo, 42)
     
+    global found
+    found = None
+    def f():
+        global found
+        found = hasattr(x, 'foo')
+        
+    thread.start_new_thread(f, ())
+
+    while found == None:
+        Thread.Sleep(1000)
+
+    Assert(not found)
+
 run_test(__name__)

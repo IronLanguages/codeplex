@@ -100,7 +100,7 @@ namespace IronPython.Runtime.Operations {
                     object attrVal;
 
                     if (self is OldInstance) {
-                        if (((OldInstance)self).__class__.TryLookupSlot(SymbolTable.StringToId(s), out attrVal)) {
+                        if (((OldInstance)self)._class.TryLookupSlot(SymbolTable.StringToId(s), out attrVal)) {
                             attrSlot = attrVal as PythonTypeSlot;
                         } else {
                             attrVal = ObjectOps.__getattribute__(DefaultContext.DefaultCLS, self, s);

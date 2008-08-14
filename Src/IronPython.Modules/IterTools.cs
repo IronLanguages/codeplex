@@ -112,7 +112,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class count : IEnumerator, ICodeFormattable {
             private int _cur, _start;
 
@@ -154,7 +154,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class cycle : IterBase {
             public cycle(object iterable) {
                 InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));
@@ -176,7 +176,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class dropwhile : IterBase {
             private readonly CodeContext/*!*/ _context;
 
@@ -201,7 +201,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class groupby : IterBase {
             private static readonly object _starterKey = new object();
             private bool _fFinished = false;
@@ -256,7 +256,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class ifilter : IterBase {
             private readonly CodeContext/*!*/ _context;
 
@@ -281,7 +281,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class ifilterfalse : IterBase {
             private readonly CodeContext/*!*/ _context;
 
@@ -307,7 +307,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class imap : IEnumerator {
             private object _function;
             private IEnumerator[] _iterables;
@@ -363,7 +363,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class islice : IterBase {
             public islice(object iterable, object stop)
                 : this(iterable, 0, stop, 1) {
@@ -412,7 +412,7 @@ namespace IronPython.Modules {
 
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class izip : IEnumerator {
             private readonly IEnumerator[]/*!*/ _iters;
             private PythonTuple _current;
@@ -459,7 +459,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class repeat : IterBase, ICodeFormattable, ICollection {
             private int _remaining;
             private bool _fInfinite;
@@ -493,9 +493,9 @@ namespace IronPython.Modules {
 
             public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
                 if (_fInfinite) {
-                    return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(_obj));
+                    return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(context, _obj));
                 }
-                return String.Format("{0}({1}, {2})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(_obj), _remaining);
+                return String.Format("{0}({1}, {2})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(context, _obj), _remaining);
             }
 
             #endregion
@@ -539,7 +539,7 @@ namespace IronPython.Modules {
             #endregion
         }
         
-        [PythonSystemType]
+        [PythonType]
         public class starmap : IterBase {            
             public starmap(CodeContext context, object function, object iterable) {
                 InnerEnumerator = Yielder(context, function, PythonOps.GetEnumerator(iterable));
@@ -561,7 +561,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
+        [PythonType]
         public class takewhile : IterBase {
             private readonly CodeContext/*!*/ _context;
 

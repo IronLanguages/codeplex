@@ -439,7 +439,7 @@ namespace IronPython.Runtime.Binding {
             return MakeBinaryOperatorResult(types, operation, fbinder, rbinder, fSlot, rSlot);
         }
 
-        private static void GetOpreatorMethods(MetaObject/*!*/[] types, string oper, BinderState state, out SlotOrFunction fbinder, out SlotOrFunction rbinder, out PythonTypeSlot fSlot, out PythonTypeSlot rSlot) {
+        private static void GetOpreatorMethods(MetaObject/*!*/[]/*!*/ types, string oper, BinderState state, out SlotOrFunction fbinder, out SlotOrFunction rbinder, out PythonTypeSlot fSlot, out PythonTypeSlot rSlot) {
             oper = NormalizeOperator(oper);
             if (IsInPlace(oper)) {
                 oper = DirectOperation(oper);
@@ -458,6 +458,35 @@ namespace IronPython.Runtime.Binding {
             fSlot = null;
             rSlot = null;
             PythonType fParent, rParent;
+
+            if (oper == StandardOperators.Multiply && 
+                IsSequence(types[0]) && 
+                !PythonOps.IsNonExtensibleNumericType(types[1].LimitType) && 
+                IsIndexType(state, types[1])) {
+                // class M:
+                //      def __rmul__(self, other):
+                //          print "CALLED"
+                //          return 1
+                //
+                // print [1,2] * M()
+                //
+                // in CPython this results in a successful call to __rmul__ on the type ignoring the forward
+                // multiplication.  But calling the __mul__ method directly does NOT return NotImplemented like
+                // one might expect.  Therefore we explicitly convert the MetaObject argument into an Index
+                // for binding purposes.  That allows this to work at multiplication time but not with
+                // a direct call to __mul__.
+
+                MetaObject[] newTypes = new MetaObject[2];
+                newTypes[0] = types[0];
+                newTypes[1] = new MetaObject(
+                    Ast.New(
+                        typeof(Index).GetConstructor(new Type[] { typeof(object) }),
+                        types[1].Expression
+                    ),
+                    Restrictions.Empty
+                );
+                types = newTypes;
+            }
 
             if (!SlotOrFunction.TryGetBinder(state, types, op, SymbolId.Empty, out fbinder, out fParent)) {
                 foreach (PythonType pt in MetaPythonObject.GetPythonType(types[0]).ResolutionOrder) {
@@ -491,6 +520,15 @@ namespace IronPython.Runtime.Binding {
                     GetOpreatorMethods(types, newOp, state, out fbinder, out rbinder, out fSlot, out rSlot);
                 }
             }
+        }
+
+        private static bool IsSequence(MetaObject/*!*/ metaObject) {
+            if (typeof(List).IsAssignableFrom(metaObject.LimitType) ||
+                typeof(PythonTuple).IsAssignableFrom(metaObject.LimitType) ||
+                typeof(String).IsAssignableFrom(metaObject.LimitType)) {
+                return true;
+            }
+            return false;
         }
 
         private static MetaObject/*!*/ MakeBinaryOperatorResult(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation, SlotOrFunction/*!*/ fCand, SlotOrFunction/*!*/ rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
@@ -1627,21 +1665,31 @@ namespace IronPython.Runtime.Binding {
 
         private static bool HasOnlyNumericTypes(MetaAction/*!*/ action, MetaObject/*!*/[]/*!*/ types, bool skipLast) {
             bool onlyNumeric = true;
+            BinderState state = BinderState.GetBinderState(action);
 
             for (int i = 1; i < (skipLast ? types.Length - 1 : types.Length); i++) {
-                if (types[i].LimitType != typeof(MissingParameter) &&
-                    !PythonOps.IsNumericType(types[i].LimitType)) {
-                    
-                    PythonType curType = MetaPythonObject.GetPythonType(types[i]);
-                    PythonTypeSlot dummy;
-
-                    if (!curType.TryResolveSlot(BinderState.GetBinderState(action).Context, Symbols.Index, out dummy)) {
-                        onlyNumeric = false;
-                        break;
-                    }
+                MetaObject obj = types[i];
+                if (!IsIndexType(state, obj)) {
+                    onlyNumeric = false;
+                    break;
                 }
             }
             return onlyNumeric;
+        }
+
+        private static bool IsIndexType(BinderState/*!*/ state, MetaObject/*!*/ obj) {
+            bool numeric = true;
+            if (obj.LimitType != typeof(MissingParameter) &&
+                !PythonOps.IsNumericType(obj.LimitType)) {
+
+                PythonType curType = MetaPythonObject.GetPythonType(obj);
+                PythonTypeSlot dummy;
+
+                if (!curType.TryResolveSlot(state.Context, Symbols.Index, out dummy)) {
+                    numeric = false;
+                }
+            }
+            return numeric;
         }
 
         private static bool IsSlice(string op) {

@@ -30,7 +30,7 @@ namespace IronPython.Runtime.Types {
     /// A TypeSlot is an item that gets stored in a type's dictionary.  Slots provide an 
     /// opportunity to customize access at runtime when a value is get or set from a dictionary.
     /// </summary>
-    [PythonSystemType]
+    [PythonType]
     public class PythonTypeSlot {
         /// <summary>
         /// Gets the value stored in the slot for the given instance. 

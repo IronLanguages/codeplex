@@ -189,7 +189,7 @@ namespace IronPython.Runtime.Operations {
                 value);
         }
 
-        public static string __repr__([NotNull]Array/*!*/ self) {
+        public static string __repr__(CodeContext/*!*/ context, [NotNull]Array/*!*/ self) {
             List<object> infinite = PythonOps.GetAndCheckInfinite(self);
             if (infinite == null) {
                 return "...";
@@ -208,7 +208,7 @@ namespace IronPython.Runtime.Operations {
                     ret.Append("((");
                     for (int i = 0; i < self.Length; i++) {
                         if (i > 0) ret.Append(", ");
-                        ret.Append(PythonOps.StringRepr(self.GetValue(i + self.GetLowerBound(0))));
+                        ret.Append(PythonOps.Repr(context, self.GetValue(i + self.GetLowerBound(0))));
                     }
                     ret.Append("))");
                 } else {

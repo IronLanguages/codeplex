@@ -103,7 +103,7 @@
     <Compile Include="sha256.cs" />
     <Compile Include="sha512.cs" />
     <Compile Include="socket.cs" />
-    <Compile Include="struct.cs" />
+    <Compile Include="_struct.cs" />
     <Compile Include="thread.cs" />
     <Compile Include="time.cs" />
     <Compile Include="xxsubtype.cs" />

@@ -20,7 +20,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {
-    [PythonSystemType("buffer")]
+    [PythonType("buffer")]
     public sealed class PythonBuffer : ICodeFormattable {
         private object _object;
         private int _offset;

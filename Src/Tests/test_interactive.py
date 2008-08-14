@@ -610,9 +610,12 @@ def test_ipy_dash_m():
         f.write('import sys\n')
         f.write('print sys.argv')
         f.close()
-        
+
+        # need to run these tests where we have access to runpy.py
+        path = System.IO.FileInfo(__file__).DirectoryName
+
         # simple case works
-        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule")
+        ipi = IronPythonInstance(executable, path, extraArgs + " -m somemodule")
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 0)   # should have returned 0
@@ -623,7 +626,7 @@ def test_ipy_dash_m():
                         filename))
         
         # we receive any arguments in sys.argv
-        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule foo bar")
+        ipi = IronPythonInstance(executable, path, extraArgs + " -m somemodule foo bar")
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 0)   # should have returned 0
@@ -639,7 +642,7 @@ def test_ipy_dash_m():
         f.close()
         
         # sys.exit works
-        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule")
+        ipi = IronPythonInstance(executable, path, extraArgs + " -m somemodule")
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 1)   # should have returned 0
