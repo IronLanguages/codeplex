@@ -70,6 +70,15 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        public OldInstance(CodeContext/*!*/ context, OldClass @class, PythonDictionary dict) {
+            _class = @class;
+            _dict = dict;
+            if (_class.HasFinalizer) {
+                // class defines finalizer, we get it automatically.
+                AddFinalizer(context);
+            }
+        }
+
 #if !SILVERLIGHT // SerializationInfo
         private OldInstance(SerializationInfo info, StreamingContext context) {
             _class = (OldClass)info.GetValue("__class__", typeof(OldClass));
@@ -82,6 +91,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+#pragma warning disable 169 // unused method - called via reflection from serialization
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
         private void GetObjectData(SerializationInfo info, StreamingContext context) {
             ContractUtils.RequiresNotNull(info, "info");
@@ -103,6 +113,7 @@ namespace IronPython.Runtime.Types {
             info.AddValue("keys", keys);
             info.AddValue("values", values);
         }
+#pragma warning restore 169
 #endif
 
         /// <summary>
@@ -122,7 +133,7 @@ namespace IronPython.Runtime.Types {
 
         #region IOldDynamicObject Members
 
-        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args)  {
+        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                 case DynamicActionKind.SetMember:

@@ -115,6 +115,11 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
+            WarningInfo info;
+            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
+                res = info.AddWarning(codeContext, res);
+            } 
+            
             return res;
         }
 
@@ -148,7 +153,7 @@ namespace IronPython.Runtime.Binding {
 
             MetaObject res;
             BinderState state = BinderState.GetBinderState(call);
-            BindingTarget dummy;
+            BindingTarget target;
             if (Value.IsReversedOperator) {
                 res = state.Binder.CallMethod(
                     codeContext,
@@ -161,7 +166,7 @@ namespace IronPython.Runtime.Binding {
                         PythonNarrowing.BinaryOperator :
                         NarrowingLevel.All,
                     Value.Name,
-                    out dummy
+                    out target
                 );
             } else {
                 res = state.Binder.CallInstanceMethod(
@@ -176,7 +181,7 @@ namespace IronPython.Runtime.Binding {
                         PythonNarrowing.BinaryOperator :
                         NarrowingLevel.All,
                     Value.Name,
-                    out dummy
+                    out target
                 );
             }
 
@@ -188,6 +193,11 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
+            WarningInfo info;
+            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
+                res = info.AddWarning(codeContext, res);
+            }
+            
             return res;
         }
 

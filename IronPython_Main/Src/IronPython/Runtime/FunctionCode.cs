@@ -29,7 +29,6 @@ namespace IronPython.Runtime {
     [PythonType("code")]
     public class FunctionCode {
         #region Private member variables
-        private Delegate _target;
         //private Statement _body;
 
         private object _varnames;
@@ -39,10 +38,6 @@ namespace IronPython.Runtime {
         private int _lineNo;
         private FunctionAttributes _flags;      // future division, generator
         #endregion
-
-        internal FunctionCode(Delegate target) {
-            _target = target;            
-        }
 
         internal FunctionCode(ScriptCode code, CompileFlags compilerFlags)
             : this(code) {

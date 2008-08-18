@@ -32,6 +32,7 @@ namespace IronPython.Modules {
         [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             EnsureLocaleInitialized(context);
+            context.EnsureModuleException("_localeerror", dict, "Error", "_locale");
         }
 
         internal static void EnsureLocaleInitialized(PythonContext context) {
@@ -39,8 +40,6 @@ namespace IronPython.Modules {
                 context.SetModuleState(_localeKey, new LocaleInfo());
             }
         }
-
-        public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "_locale", "");
 
         public const int CHAR_MAX = 127;
         public const int LC_ALL = (int)LocaleCategories.All;
@@ -84,10 +83,10 @@ If locale is None then the current setting is returned.
         public static object setlocale(CodeContext/*!*/ context, object category, [DefaultParameterValue(null)]string locale) {
             LocaleInfo li = GetLocaleInfo(context);
             if (locale == null) {
-                return li.GetLocale(category);
+                return li.GetLocale(context, category);
             }
 
-            return li.SetLocale(category, locale);
+            return li.SetLocale(context, category, locale);
         }
 
         [Documentation("compares two strings using the current locale")]
@@ -139,35 +138,35 @@ Currently returns the string unmodified")]
                 return conv;
             }
 
-            public string SetLocale(object category, string locale) {
+            public string SetLocale(CodeContext/*!*/ context, object category, string locale) {
                 switch ((LocaleCategories)(int)category) {
                     case LocaleCategories.All:
-                        SetLocale(LC_COLLATE, locale);
-                        SetLocale(LC_CTYPE, locale);
-                        SetLocale(LC_MONETARY, locale);
-                        SetLocale(LC_NUMERIC, locale);
-                        return SetLocale(LC_TIME, locale);
+                        SetLocale(context, LC_COLLATE, locale);
+                        SetLocale(context, LC_CTYPE, locale);
+                        SetLocale(context, LC_MONETARY, locale);
+                        SetLocale(context, LC_NUMERIC, locale);
+                        return SetLocale(context, LC_TIME, locale);
                     case LocaleCategories.Collate:
-                        return CultureToName(Collate = LocaleToCulture(locale));
+                        return CultureToName(Collate = LocaleToCulture(context, locale));
                     case LocaleCategories.CType:
-                        return CultureToName(CType = LocaleToCulture(locale));                        
+                        return CultureToName(CType = LocaleToCulture(context, locale));                        
                     case LocaleCategories.Time:
-                        return CultureToName(Time = LocaleToCulture(locale));                        
+                        return CultureToName(Time = LocaleToCulture(context, locale));                        
                     case LocaleCategories.Monetary:
-                        Monetary = LocaleToCulture(locale);
+                        Monetary = LocaleToCulture(context, locale);
                         conv = null;
                         return CultureToName(Monetary);
                     case LocaleCategories.Numeric:
-                        Numeric = LocaleToCulture(locale);
+                        Numeric = LocaleToCulture(context, locale);
                         conv = null;
                         return CultureToName(Numeric);
                     default:
-                        throw PythonExceptions.CreateThrowable(Error, "unknown locale category");
+                        throw PythonExceptions.CreateThrowable(_localeerror(context), "unknown locale category");
                 }
 
             }
 
-            public string GetLocale(object category) {
+            public string GetLocale(CodeContext/*!*/ context, object category) {
                 switch ((LocaleCategories)(int)category) {
                     case LocaleCategories.All:
                         if (Collate == CType &&
@@ -180,18 +179,18 @@ Currently returns the string unmodified")]
 
                         // return them all...
                         return String.Format("LC_COLLATE={0};LC_CTYPE={1};LC_MONETARY={2};LC_NUMERIC={3};LC_TIME={4}",
-                            GetLocale(LC_COLLATE),
-                            GetLocale(LC_CTYPE),
-                            GetLocale(LC_MONETARY),
-                            GetLocale(LC_NUMERIC),
-                            GetLocale(LC_TIME));
+                            GetLocale(context, LC_COLLATE),
+                            GetLocale(context, LC_CTYPE),
+                            GetLocale(context, LC_MONETARY),
+                            GetLocale(context, LC_NUMERIC),
+                            GetLocale(context, LC_TIME));
                     case LocaleCategories.Collate: return CultureToName(Collate);
                     case LocaleCategories.CType: return CultureToName(CType);
                     case LocaleCategories.Time: return CultureToName(Time);
                     case LocaleCategories.Monetary: return CultureToName(Monetary);
                     case LocaleCategories.Numeric: return CultureToName(Numeric);
                     default:
-                        throw PythonExceptions.CreateThrowable(Error, "unknown locale category");
+                        throw PythonExceptions.CreateThrowable(_localeerror(context), "unknown locale category");
                 }
             }
 
@@ -203,7 +202,7 @@ Currently returns the string unmodified")]
                 return culture.Name.Replace('-', '_');
             }
 
-            private CultureInfo LocaleToCulture(string locale) {
+            private CultureInfo LocaleToCulture(CodeContext/*!*/ context, string locale) {
                 if (locale == "C") {
                     return CultureInfo.InvariantCulture;
                 }
@@ -213,7 +212,7 @@ Currently returns the string unmodified")]
                 try {
                     return StringUtils.GetCultureInfo(locale);
                 } catch (ArgumentException) {
-                    throw PythonExceptions.CreateThrowable(Error, String.Format("unknown locale: {0}", locale));
+                    throw PythonExceptions.CreateThrowable(_localeerror(context), String.Format("unknown locale: {0}", locale));
                 }
             }
 
@@ -266,5 +265,9 @@ Currently returns the string unmodified")]
 
             return (LocaleInfo)PythonContext.GetContext(context).GetModuleState(_localeKey);
         }        
+
+        private static PythonType _localeerror(CodeContext/*!*/ context) {
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("_localeerror");
+        }
     }
 }

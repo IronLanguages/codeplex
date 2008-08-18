@@ -167,10 +167,6 @@ namespace System.Scripting.Actions {
                         originalMonomorphicRule = rule;
                     }
 
-                    if (!rule.IsValid) {
-                        continue;
-                    }
-
                     mm.Reset();
 
                     //
@@ -202,7 +198,7 @@ namespace System.Scripting.Actions {
             // Level 2 cache lookup
             //
             Type[] argTypes = TypeUtils.GetTypesForBinding(args);
-            applicable = _cache.FindApplicableRules(_binder, argTypes, startingTarget);
+            applicable = _cache.FindApplicableRules(_binder, argTypes);
 
             //
             // Any applicable rules in level 2 cache?
@@ -320,9 +316,7 @@ namespace System.Scripting.Actions {
             return new CallSite<T>(binder);
         }
 
-        // TODO: Make internal and create friendly UnitTests
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
-        public static void ClearRuleCache() {
+        private static void ClearRuleCache() {
             _cache.Clear();
         }
     }

@@ -94,7 +94,6 @@ namespace IronPython.Runtime.Types {
 
                 mroList.Add(TupleToList(bases));
 
-                int lastRemove = -1;
                 for (; ; ) {
                     bool removed = false, sawNonZero = false;
                     // now that we have our list, look for good heads
@@ -113,7 +112,6 @@ namespace IronPython.Runtime.Types {
                         }
 
                         if (!inTail) {
-                            lastRemove = i;
                             if (mro.Contains(head)) {
                                 throw PythonOps.TypeError("a __bases__ item causes an inheritance cycle");
                             }
@@ -141,12 +139,6 @@ namespace IronPython.Runtime.Types {
             }
 
             return mro;
-        }
-
-        private static IList<PythonType> TupleToList(PythonTuple t) {
-            List<PythonType> innerList = new List<PythonType>();
-            foreach (PythonType ipt in t) innerList.Add(ipt);
-            return innerList;
         }
 
         private static IList<PythonType> TupleToList(IList<PythonType> t) {

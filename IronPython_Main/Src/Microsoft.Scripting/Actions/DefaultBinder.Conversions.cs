@@ -188,10 +188,10 @@ namespace Microsoft.Scripting.Actions {
 
             if (TypeUtils.IsNumeric(toType) && TypeUtils.IsNumeric(checkType)) {
                 // check for an explicit conversion
-                int tx, ty, fx, fy;
-                if (TypeUtils.GetNumericConversionOrder(Type.GetTypeCode(toType), out tx, out ty) &&
-                    TypeUtils.GetNumericConversionOrder(Type.GetTypeCode(checkType), out fx, out fy)) {
-                    if (TypeUtils.IsImplicitlyConvertible(fx, fy, tx, ty)) {
+                int toX, toY, fromX, fromY;
+                if (TypeUtils.GetNumericConversionOrder(Type.GetTypeCode(toType), out toX, out toY) &&
+                    TypeUtils.GetNumericConversionOrder(Type.GetTypeCode(checkType), out fromX, out fromY)) {
+                    if (TypeUtils.IsImplicitlyConvertible(fromX, fromY, toX, toY)) {
                         // MakeSimpleConversionTarget handles the ConversionResultKind check
                         if (type == checkType) {
                             return MakeSimpleConversionTarget(toType, restrictions, arg);

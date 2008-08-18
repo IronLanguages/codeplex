@@ -332,10 +332,6 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private void MakeICollectionRule(RuleBuilder<T> rule, Type collectionType) {
-            MakeNonZeroPropertyRule(rule, collectionType, "Count");
-        }
-
         private void MakeNonZeroPropertyRule(RuleBuilder<T> rule, Type collectionType, string propertyName) {
             rule.Target = rule.MakeReturn(
                 Binder,

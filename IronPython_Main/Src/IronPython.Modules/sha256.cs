@@ -29,7 +29,6 @@ namespace IronPython.Modules {
     [Documentation("SHA256 hash algorithm")]
     public static class PythonSha256 {
         private static readonly SHA256 hasher256 = SHA256Managed.Create();
-        private static readonly int digestSize = hasher256.HashSize / 8;
         private const int blockSize = 1;
 
         public const string __doc__ = "SHA256 hash algorithm";

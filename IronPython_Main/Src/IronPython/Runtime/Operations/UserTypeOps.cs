@@ -519,14 +519,6 @@ namespace IronPython.Runtime.Operations {
             return rule;
         }
 
-        private static Expression MakeMissingAttributeError<T>(CodeContext context, OldGetMemberAction action, string typeName, RuleBuilder<T> rule) where T : class {
-            if (action.IsNoThrow) {
-                return ReturnOperationFailed<T>(context, rule);
-            } else {
-                return MakeThrowingAttributeError<T>(context, action, typeName, rule);
-            }
-        }
-
         private static Expression MakeThrowingAttributeError<T>(CodeContext context, OldMemberAction action, string typeName, RuleBuilder<T> rule) where T : class {
             return rule.MakeError(
                 Ast.Call(

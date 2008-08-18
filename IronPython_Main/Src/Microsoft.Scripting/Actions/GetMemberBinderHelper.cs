@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Actions {
     /// 
     /// The RuleMaker sets up it's initial state grabbing the incoming type and the type we should look members up
     /// from.  It then does the lookup for the members using the current context's ActionBinder and then binds to
-    /// the returned members if the match is non-ambigious.  
+    /// the returned members if the match is non-ambiguous.  
     /// 
     /// The target of the rule is built up using a series of block statements as the body.  
     /// </summary>

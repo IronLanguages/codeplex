@@ -19,19 +19,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
 using System.Text;
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 #if !SILVERLIGHT
 using ComTypeLibInfo = System.Scripting.Com.ComTypeLibInfo;
 using ComTypeLibDesc = System.Scripting.Com.ComTypeLibDesc;
 using ComObjectWithTypeInfo = System.Scripting.Com.ComObjectWithTypeInfo;
+using System.Runtime.Serialization.Formatters.Binary;
 #endif
 
 [assembly: PythonModule("clr", typeof(IronPython.Runtime.ClrModule))]
@@ -171,9 +174,11 @@ from the assembly object.")]
                 throw new ArgumentTypeException("LoadAssemblyByPartialName: arg 1 must be a string");
             }
 
-#pragma warning disable 618
+#pragma warning disable 618 // csc
+#pragma warning disable 612 // gmcs
             return Assembly.LoadWithPartialName(name);
 #pragma warning restore 618
+#pragma warning restore 612
         }
 #endif
 
@@ -727,5 +732,88 @@ import Namespace.")]
                 pc.GetCompiledLoader().AddScriptCode(sc);
             }
         }
+
+#if !SILVERLIGHT
+        /// <summary>
+        /// Serializes data using the .NET serialization formatter for complex
+        /// types.  Returns a tuple identifying the serialization format and the serialized 
+        /// data which can be fed back into clr.Deserialize.
+        /// 
+        /// Current serialization formats include custom formats for primitive .NET
+        /// types which aren't already recognized as tuples.  None is used to indicate
+        /// that the Binary .NET formatter is used.
+        /// </summary>
+        public static PythonTuple/*!*/ Serialize(object self) {
+            if (self == null) {
+                return PythonTuple.MakeTuple(null, String.Empty);
+            }
+
+            string data, format;
+            switch (Type.GetTypeCode(CompilerHelpers.GetType(self))) {
+                // for the primitive non-python types just do a simple
+                // serialization
+                case TypeCode.Byte:
+                case TypeCode.Char:
+                case TypeCode.DBNull:
+                case TypeCode.Decimal:
+                case TypeCode.Int16:
+                case TypeCode.Int64:
+                case TypeCode.SByte:
+                case TypeCode.Single:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    data = self.ToString();
+                    format = CompilerHelpers.GetType(self).FullName;
+                    break;
+                default:
+                    // something more complex, let the binary formatter handle it                    
+                    BinaryFormatter bf = new BinaryFormatter();
+                    MemoryStream stream = new MemoryStream();
+                    bf.Serialize(stream, self);
+                    data = StringOps.FromByteArray(stream.ToArray());
+                    format = null;
+                    break;
+            }
+
+            return PythonTuple.MakeTuple(format, data);
+        }
+
+        /// <summary>
+        /// Deserializes the result of a Serialize call.  This can be used to perform serialization
+        /// for .NET types which are serializable.  This method is the callable object provided
+        /// from __reduce_ex__ for .serializable .NET types.
+        /// 
+        /// The first parameter indicates the serialization format and is the first tuple element
+        /// returned from the Serialize call.  
+        /// 
+        /// The second parameter is the serialized data.
+        /// </summary>
+        public static object Deserialize(string serializationFormat, [NotNull]string/*!*/ data) {
+            if (serializationFormat != null) {
+                switch (serializationFormat) {
+                    case "System.Byte": return Byte.Parse(data);
+                    case "System.Char": return Char.Parse(data);
+                    case "System.DBNull": return DBNull.Value;
+                    case "System.Decimal": return Decimal.Parse(data);
+                    case "System.Int16": return Int16.Parse(data);
+                    case "System.Int64": return Int64.Parse(data);
+                    case "System.SByte": return SByte.Parse(data);
+                    case "System.Single": return Single.Parse(data);
+                    case "System.UInt16": return UInt16.Parse(data);
+                    case "System.UInt32": return UInt32.Parse(data);
+                    case "System.UInt64": return UInt64.Parse(data);
+                    default:
+                        throw PythonOps.ValueError("unknown serialization format: {0}", serializationFormat);
+                }
+            } else if (data == String.Empty) {
+                return null;
+            }
+            
+            MemoryStream stream = new MemoryStream(StringOps.ToByteArray(data));
+            BinaryFormatter bf = new BinaryFormatter();
+            return bf.Deserialize(stream);
+        }
+#endif
     }
 }

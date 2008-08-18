@@ -113,6 +113,11 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
+            WarningInfo info;
+            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
+                res = info.AddWarning(codeContext, res);
+            }
+
             return res;
         }
 

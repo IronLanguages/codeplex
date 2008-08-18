@@ -1001,6 +1001,35 @@ class Test(object):
 def test_import_path_seperator():
     """verify using the path seperator in a direct call will result in an ImportError"""
     AssertError(ImportError, __import__, 'lib\\warning_util')
+def test_load_package():
+    import lib
+    pkg = imp.load_package('libcopy', lib.__path__[0])
+    AreEqual(sys.modules['libcopy'], pkg)
+
+    pkg = imp.load_package('some_new_pkg', 'some_path_that_does_not_and_never_will_exist')
+    AreEqual(sys.modules['some_new_pkg'], pkg)
+
+# NullImporter isn't used on Silverlight because we cannot detect the presence dirs
+@skip("silverlight") 
+def test_NullImporter():
+    def f():
+        class x(imp.NullImporter): pass
+        
+    AssertError(TypeError, f)
+    
+    AreEqual(imp.NullImporter.__module__, 'imp')
+    
+    sys.path.append('directory_that_does_not_exist')
+    try:
+        import SomeFileThatDoesNotExist
+    except ImportError:
+        pass
+        
+    Assert(isinstance(sys.path_importer_cache['directory_that_does_not_exist'], imp.NullImporter))
+
+def test_get_frozen_object():
+    # frozen objects not supported, this always fails
+    AssertError(ImportError, imp.get_frozen_object, 'foo')
 
 #------------------------------------------------------------------------------
 run_test(__name__)

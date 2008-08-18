@@ -56,7 +56,7 @@ print "Output: ", output1
 print "Error:  ", output2
 print
 
-if ret == 1 and "Error Verifying" in output1:
+if ret == 1 and ("Error Verifying" in output1 or "Error(s) Verifying" in output1):
     print "caught verification failure: pass"
     sys.exit(0)
 else:

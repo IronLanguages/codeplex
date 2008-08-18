@@ -26,16 +26,10 @@ namespace IronPython.Compiler.Ast {
     public class CallExpression : Expression {
         private readonly Expression _target;
         private readonly Arg[] _args;
-        private bool _hasArgsTuple, _hasKeywordDict;
-        private int _keywordCount, _extraArgs;
 
-        public CallExpression(Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs) {
+        public CallExpression(Expression target, Arg[] args) {
             _target = target;
             _args = args;
-            _hasArgsTuple = hasArgsTuple;
-            _hasKeywordDict = hasKeywordDictionary;
-            _keywordCount = keywordCount;
-            _extraArgs = extraArgs;
         }
 
         public Expression Target {

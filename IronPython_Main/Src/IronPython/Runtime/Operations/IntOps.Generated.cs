@@ -90,6 +90,10 @@ namespace IronPython.Runtime.Operations {
             return (x != 0);
         }
 
+        public static int __hash__(SByte x) {
+            return unchecked((int)x);
+        }
+
         // Binary Operations - Arithmetic
         [SpecialName]
         public static object Add(SByte x, SByte y) {
@@ -287,6 +291,10 @@ namespace IronPython.Runtime.Operations {
         }
         public static bool __nonzero__(Byte x) {
             return (x != 0);
+        }
+
+        public static int __hash__(Byte x) {
+            return unchecked((int)x);
         }
 
         // Binary Operations - Arithmetic
@@ -577,6 +585,10 @@ namespace IronPython.Runtime.Operations {
             return (x != 0);
         }
 
+        public static int __hash__(Int16 x) {
+            return unchecked((int)x);
+        }
+
         // Binary Operations - Arithmetic
         [SpecialName]
         public static object Add(Int16 x, Int16 y) {
@@ -777,6 +789,10 @@ namespace IronPython.Runtime.Operations {
         }
         public static bool __nonzero__(UInt16 x) {
             return (x != 0);
+        }
+
+        public static int __hash__(UInt16 x) {
+            return unchecked((int)x);
         }
 
         // Binary Operations - Arithmetic
@@ -1037,6 +1053,10 @@ namespace IronPython.Runtime.Operations {
             return (x != 0);
         }
 
+        public static int __hash__(Int32 x) {
+            return unchecked((int)x);
+        }
+
         // Binary Operations - Arithmetic
         [SpecialName]
         public static object Add(Int32 x, Int32 y) {
@@ -1216,6 +1236,10 @@ namespace IronPython.Runtime.Operations {
         }
         public static bool __nonzero__(UInt32 x) {
             return (x != 0);
+        }
+
+        public static int __hash__(UInt32 x) {
+            return unchecked((int)x);
         }
 
         // Binary Operations - Arithmetic
@@ -1510,6 +1534,19 @@ namespace IronPython.Runtime.Operations {
             return (x != 0);
         }
 
+        public static int __hash__(Int64 x) {
+            Int64 tmp = x;
+            if (tmp < 0) {
+                tmp *= -1;
+            }
+            int total = unchecked((int) (((uint)tmp) + (uint)(tmp >> 32)));
+            if (x < 0) {
+                return unchecked(-total);
+            }
+            return total;
+        }
+
+
         // Binary Operations - Arithmetic
         [SpecialName]
         public static object Add(Int64 x, Int64 y) {
@@ -1706,6 +1743,15 @@ namespace IronPython.Runtime.Operations {
         public static bool __nonzero__(UInt64 x) {
             return (x != 0);
         }
+
+        public static int __hash__(UInt64 x) {
+            int total = unchecked((int) (((uint)x) + (uint)(x >> 32)));
+            if (x < 0) {
+                return unchecked(-total);
+            }
+            return total;
+        }
+
 
         // Binary Operations - Arithmetic
         [SpecialName]
@@ -1992,6 +2038,7 @@ namespace IronPython.Runtime.Operations {
             return (x != 0);
         }
 
+
         // Binary Operations - Arithmetic
         [SpecialName]
         public static Single Add(Single x, Single y) {
@@ -2102,6 +2149,7 @@ namespace IronPython.Runtime.Operations {
         public static bool __nonzero__(Double x) {
             return (x != 0);
         }
+
 
         // Binary Operations - Arithmetic
         [SpecialName]

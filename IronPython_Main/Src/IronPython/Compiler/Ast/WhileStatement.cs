@@ -57,11 +57,12 @@ namespace IronPython.Compiler.Ast {
             // Only the body is "in the loop" for the purposes of break/continue
             // The "else" clause is outside
             MSAst.Expression body;
-            MSAst.LabelTarget label = ag.EnterLoop();
+            bool inFinally;
+            MSAst.LabelTarget label = ag.EnterLoop(out inFinally);
             try {
                 body = ag.Transform(_body);
             } finally {
-                ag.ExitLoop();
+                ag.ExitLoop(inFinally);
             }
             return AstUtils.While(
                 ag.TransformAndDynamicConvert(_test, typeof(bool)), 

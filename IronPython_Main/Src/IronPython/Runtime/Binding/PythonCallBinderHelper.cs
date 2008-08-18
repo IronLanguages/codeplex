@@ -31,8 +31,6 @@ namespace IronPython.Runtime {
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     class PythonCallBinderHelper<T> : CallBinderHelper<T, OldCallAction> where T : class {
-        private List<Type[]> _testTypes = new List<Type[]>();
-
         public PythonCallBinderHelper(CodeContext context, OldCallAction action, object[] args)
             : base(context, action, args) {
         }
@@ -168,7 +166,7 @@ namespace IronPython.Runtime {
             } else if (newInst == InstanceOps.New) {
                 return new DefaultNewAdapter(ai, Action, creating);
             } else if (newInst is ConstructorFunction) {
-                return new ConstructorNewAdapter(ai, Action, ((ConstructorFunction)newInst));
+                return new ConstructorNewAdapter(ai, Action);
             } else if (newInst is BuiltinFunction) {
                 return new BuiltinNewAdapter(ai, Action, ((BuiltinFunction)newInst));
             }
@@ -286,13 +284,11 @@ namespace IronPython.Runtime {
 
         private class ConstructorNewAdapter : NewAdapter {
             private PythonType _creating;
-            private ConstructorFunction _ctor;
             private BindingTarget _target;
 
-            public ConstructorNewAdapter(ArgumentValues ai, OldCallAction action, ConstructorFunction ctor)
+            public ConstructorNewAdapter(ArgumentValues ai, OldCallAction action)
                 : base(ai, action) {
                 _creating = (PythonType)ai.Arguments[0];
-                _ctor = ctor;
             }
 
             public override Expression GetExpression(ActionBinder binder, ActionBinder python, RuleBuilder<T> rule) {

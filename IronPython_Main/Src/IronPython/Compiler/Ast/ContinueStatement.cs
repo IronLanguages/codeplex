@@ -23,7 +23,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            if (ag.InLoop) {
+            if (ag.InFinally) {
+                ag.AddError("'continue' not supported inside 'finally' clause", Span);
+                return null;
+            } else if (ag.InLoop) {
                 return AstUtils.Continue(ag.LoopLabel, Span);
             } else {
                 ag.AddError("'continue' not properly in loop", Span);

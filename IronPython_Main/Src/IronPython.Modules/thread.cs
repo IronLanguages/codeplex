@@ -36,13 +36,13 @@ namespace IronPython.Modules {
 
         [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
-            context.SetModuleState(_stackSizeKey, 0);            
+            context.SetModuleState(_stackSizeKey, 0);
+            context.EnsureModuleException("threaderror", dict, "error", "thread");
         }
-
+      
         #region Public API Surface
 
         public static readonly PythonType LockType = DynamicHelpers.GetPythonTypeFromType(typeof(@lock));
-        public static readonly PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "thread", "");
 
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
         public static object start_new_thread(CodeContext/*!*/ context, object function, object args, object kwDict) {
@@ -125,8 +125,8 @@ namespace IronPython.Modules {
                 return this;
             }
 
-            public void __exit__(params object[] args) {
-                release();
+            public void __exit__(CodeContext/*!*/ context, params object[] args) {
+                release(context);
             }
             
             public object acquire() {
@@ -152,13 +152,13 @@ namespace IronPython.Modules {
                 }
             }
 
-            public void release(params object[] param) {
-                release();
+            public void release(CodeContext/*!*/ context, params object[] param) {
+                release(context);
             }
 
-            public void release() {
+            public void release(CodeContext/*!*/ context) {
                 if (Interlocked.Exchange<Thread>(ref curHolder, null) == null) {
-                    throw PythonExceptions.CreateThrowable(error, "lock isn't held", null);
+                    throw PythonExceptions.CreateThrowable((PythonType)PythonContext.GetContext(context).GetModuleState("threaderror"), "lock isn't held", null);
                 }
                 if (blockEvent != null) {
                     // if this isn't set yet we race, it's handled in Acquire()

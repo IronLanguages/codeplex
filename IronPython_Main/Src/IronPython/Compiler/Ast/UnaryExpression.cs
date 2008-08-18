@@ -60,23 +60,6 @@ namespace IronPython.Compiler.Ast {
             walker.PostWalk(this);
         }
 
-        private static Operators PythonOperatorToAction(PythonOperator op) {
-            switch (op) {
-                // Unary
-                case PythonOperator.Not:
-                    return Operators.Not;
-                case PythonOperator.Pos:
-                    return Operators.Positive;
-                case PythonOperator.Invert:
-                    return Operators.OnesComplement;
-                case PythonOperator.Negate:
-                    return Operators.Negate;
-                default:
-                    Debug.Assert(false, "Unexpected PythonOperator: " + op.ToString());
-                    return Operators.None;
-            }
-        }
-
         private static string PythonOperatorToOperatorString(PythonOperator op) {
             switch (op) {
                 // Unary

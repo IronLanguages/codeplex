@@ -32,9 +32,9 @@ namespace Microsoft.Scripting.Utils {
                 return EmptyReadOnlyCollection<T>.Instance;
             }
 
-            var roc = enumerable as ReadOnlyCollection<T>;
-            if (roc != null) {
-                return roc;
+            var roCollection = enumerable as ReadOnlyCollection<T>;
+            if (roCollection != null) {
+                return roCollection;
             }
 
             var collection = enumerable as ICollection<T>;

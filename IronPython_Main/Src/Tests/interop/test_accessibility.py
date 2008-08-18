@@ -19,6 +19,7 @@ skiptest("silverlight")
 add_clr_assemblies("baseclasscs")
 
 from Merlin.Testing.Accessibility import *
+import System
 
 def throw_for_read_private_internal(x):
     AssertError(AttributeError, lambda: x.private_static_field)
@@ -191,7 +192,7 @@ def test_reflected_type():
         Assert(not hasattr(x, 'protected_instance_field'))
         Assert('protected_instance_field' in dir(C))
         Assert('protected_instance_field' in dir(x))
-        AssertError(TypeError, lambda : x.protected_instance_field)
+        AssertError(System.Reflection.AmbiguousMatchException, lambda : x.protected_instance_field)
 
 run_test(__name__)
 

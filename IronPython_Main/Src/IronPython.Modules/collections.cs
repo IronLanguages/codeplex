@@ -149,7 +149,7 @@ namespace IronPython.Modules {
                 lock (_lockObj) {
                     int found = -1;
                     WalkDeque(delegate(int index) {
-                        if (PythonOps.Equals(_data[index], value)) {
+                        if (PythonOps.EqualRetBool(_data[index], value)) {
                             found = index;
                             return false;
                         }

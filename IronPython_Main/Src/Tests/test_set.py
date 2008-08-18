@@ -188,6 +188,13 @@ def test_deque():
     x.remove(2)
     AreEqual(x, collections.deque([6,7,1, 3]))
 
+    class BadCmp:
+        def __eq__(self, other):
+            raise RuntimeError
+    
+    d = collections.deque([1,2, BadCmp()])
+    AssertError(RuntimeError, d.remove, 3)
+
 if isPython25:
     def test_singleton():
         """Verify that an empty frozenset is a singleton"""

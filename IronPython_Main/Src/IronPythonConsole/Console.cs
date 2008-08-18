@@ -54,7 +54,7 @@ internal sealed class PythonConsoleHost : ConsoleHost {
     }
 
     [STAThread]
-    static int Main(string[] args) {
+    public static int Main(string[] args) {
         // Work around issue w/ pydoc - piping to more doesn't work so
         // instead indicate that we're a dumb terminal
         if (Environment.GetEnvironmentVariable("TERM") == null) {

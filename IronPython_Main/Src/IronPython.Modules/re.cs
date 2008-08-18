@@ -17,15 +17,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {
@@ -34,6 +38,11 @@ namespace IronPython.Modules {
     /// Python regular expression module.
     /// </summary>
     public static class PythonRegex {
+        [SpecialName]
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            context.EnsureModuleException("reerror", dict, "error", "re");
+        }
+        
         private static readonly Random r = new Random(DateTime.Now.Millisecond);
 
         #region CONSTANTS
@@ -58,25 +67,23 @@ namespace IronPython.Modules {
 
         #region Public API Surface
 
-        public static RE_Pattern compile(object pattern) {
+        public static RE_Pattern compile(CodeContext/*!*/ context, object pattern) {
             try {
-                return new RE_Pattern(ValidatePattern(pattern), 0, true);
+                return new RE_Pattern(context, ValidatePattern(pattern), 0, true);
             } catch (ArgumentException e) {
-                throw PythonExceptions.CreateThrowable(error, e.Message);
+                throw PythonExceptions.CreateThrowable(error(context), e.Message);
             }
         }
 
         public static RE_Pattern compile(CodeContext/*!*/ context, object pattern, object flags) {
             try {
-                return new RE_Pattern(ValidatePattern(pattern), PythonContext.GetContext(context).ConvertToInt32(flags), true);
+                return new RE_Pattern(context, ValidatePattern(pattern), PythonContext.GetContext(context).ConvertToInt32(flags), true);
             } catch (ArgumentException e) {
-                throw PythonExceptions.CreateThrowable(error, e.Message);
+                throw PythonExceptions.CreateThrowable(error(context), e.Message);
             }
         }
 
         public const string engine = "cli reg ex";
-
-        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "re", "");
 
         public static string escape(string text) {
             if (text == null) throw PythonOps.TypeError("text must not be None");
@@ -113,7 +120,7 @@ namespace IronPython.Modules {
         }
 
         public static object findall(CodeContext/*!*/ context, object pattern, string @string, int flags) {
-            RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
+            RE_Pattern pat = new RE_Pattern(context, ValidatePattern(pattern), flags);
             ValidateString(@string, "string");
 
             MatchCollection mc = pat.FindAllWorker(context, @string, 0, @string.Length);
@@ -164,34 +171,34 @@ namespace IronPython.Modules {
         }
 
         public static object finditer(CodeContext/*!*/ context, object pattern, object @string, int flags) {
-            RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
+            RE_Pattern pat = new RE_Pattern(context, ValidatePattern(pattern), flags);
 
             string str = ValidateString(@string, "string");
             return MatchIterator(pat.FindAllWorker(context, str, 0, str.Length), pat, str);
         }
 
-        public static object match(object pattern, object @string) {
-            return match(pattern, @string, 0);
+        public static object match(CodeContext/*!*/ context, object pattern, object @string) {
+            return match(context, pattern, @string, 0);
         }
 
-        public static object match(object pattern, object @string, int flags) {
-            return new RE_Pattern(ValidatePattern(pattern), flags).match(ValidateString(@string, "string"));
+        public static object match(CodeContext/*!*/ context, object pattern, object @string, int flags) {
+            return new RE_Pattern(context, ValidatePattern(pattern), flags).match(ValidateString(@string, "string"));
         }
 
-        public static object search(object pattern, object @string) {
-            return search(pattern, @string, 0);
+        public static object search(CodeContext/*!*/ context, object pattern, object @string) {
+            return search(context, pattern, @string, 0);
         }
 
-        public static object search(object pattern, object @string, int flags) {
-            return new RE_Pattern(ValidatePattern(pattern), flags).search(ValidateString(@string, "string"));
+        public static object search(CodeContext/*!*/ context, object pattern, object @string, int flags) {
+            return new RE_Pattern(context, ValidatePattern(pattern), flags).search(ValidateString(@string, "string"));
         }
 
-        public static object split(object pattern, object @string) {
-            return split(ValidatePattern(pattern), ValidateString(@string, "string"), 0);
+        public static object split(CodeContext/*!*/ context, object pattern, object @string) {
+            return split(context, ValidatePattern(pattern), ValidateString(@string, "string"), 0);
         }
 
-        public static object split(object pattern, object @string, int maxsplit) {
-            return new RE_Pattern(ValidatePattern(pattern)).split(ValidateString(@string, "string"),
+        public static object split(CodeContext/*!*/ context, object pattern, object @string, int maxsplit) {
+            return new RE_Pattern(context, ValidatePattern(pattern)).split(ValidateString(@string, "string"),
                 maxsplit);
         }
 
@@ -200,7 +207,7 @@ namespace IronPython.Modules {
         }
 
         public static object sub(CodeContext/*!*/ context, object pattern, object repl, object @string, int count) {
-            return new RE_Pattern(ValidatePattern(pattern)).sub(context, repl, ValidateString(@string, "string"), count);
+            return new RE_Pattern(context, ValidatePattern(pattern)).sub(context, repl, ValidateString(@string, "string"), count);
         }
 
         public static object subn(CodeContext/*!*/ context, object pattern, object repl, object @string) {
@@ -208,7 +215,7 @@ namespace IronPython.Modules {
         }
 
         public static object subn(CodeContext/*!*/ context, object pattern, object repl, object @string, int count) {
-            return new RE_Pattern(ValidatePattern(pattern)).subn(context, repl, ValidateString(@string, "string"), count);
+            return new RE_Pattern(context, ValidatePattern(pattern)).subn(context, repl, ValidateString(@string, "string"), count);
 
         }
 
@@ -226,16 +233,16 @@ namespace IronPython.Modules {
             private WeakRefTracker _weakRefTracker;
             internal ParsedRegex _pre;
 
-            internal RE_Pattern(object pattern)
-                : this(pattern, 0) {
+            internal RE_Pattern(CodeContext/*!*/ context, object pattern)
+                : this(context, pattern, 0) {
             }
 
-            internal RE_Pattern(object pattern, int flags) :
-                this(pattern, flags, false) {
+            internal RE_Pattern(CodeContext/*!*/ context, object pattern, int flags) :
+                this(context, pattern, flags, false) {
             }
 
-            internal RE_Pattern(object pattern, int flags, bool compiled) {
-                _pre = PreParseRegex(ValidatePattern(pattern));
+            internal RE_Pattern(CodeContext/*!*/ context, object pattern, int flags, bool compiled) {
+                _pre = PreParseRegex(context, ValidatePattern(pattern));
                 try {
                     flags |= OptionToFlags(_pre.Options);
                     RegexOptions opts = FlagsToOption(flags);
@@ -245,7 +252,7 @@ namespace IronPython.Modules {
                     this._re = new Regex(_pre.Pattern, opts | (compiled ? RegexOptions.Compiled : RegexOptions.None));
 #endif
                 } catch (ArgumentException e) {
-                    throw PythonExceptions.CreateThrowable(error, e.Message);
+                    throw PythonExceptions.CreateThrowable(error(context), e.Message);
                 }
                 this._compileFlags = flags;
             }
@@ -841,7 +848,7 @@ namespace IronPython.Modules {
         /// Preparses a regular expression text returning a ParsedRegex class
         /// that can be used for further regular expressions.
         /// </summary>
-        private static ParsedRegex PreParseRegex(string pattern) {
+        private static ParsedRegex PreParseRegex(CodeContext/*!*/ context, string pattern) {
             ParsedRegex res = new ParsedRegex(pattern);
 
             //string newPattern;
@@ -872,7 +879,7 @@ namespace IronPython.Modules {
                 switch (pattern[++nameIndex]) {
                     case '?':
                         // extension syntax
-                        if (nameIndex == pattern.Length - 1) throw PythonExceptions.CreateThrowable(error, "unexpected end of regex");
+                        if (nameIndex == pattern.Length - 1) throw PythonExceptions.CreateThrowable(error(context), "unexpected end of regex");
                         switch (pattern[++nameIndex]) {
                             case 'P':
                                 //  named regex, .NET doesn't expect the P so we'll remove it;
@@ -892,7 +899,7 @@ namespace IronPython.Modules {
                                     while (tmpIndex < pattern.Length && pattern[tmpIndex] != ')')
                                         tmpIndex++;
 
-                                    if (tmpIndex == pattern.Length) throw PythonExceptions.CreateThrowable(error, "unexpected end of regex");
+                                    if (tmpIndex == pattern.Length) throw PythonExceptions.CreateThrowable(error(context), "unexpected end of regex");
 
                                     pattern = pattern.Substring(0, tmpIndex) + ">" + pattern.Substring(tmpIndex + 1);
                                 } else {
@@ -919,7 +926,7 @@ namespace IronPython.Modules {
                             case '!': break; // negative look ahead assertion
                             case '#': break; // inline comment
                             case '(':  // yes/no if group exists, we don't support this
-                            default: throw PythonExceptions.CreateThrowable(error, "Unrecognized extension " + pattern[nameIndex]);
+                            default: throw PythonExceptions.CreateThrowable(error(context), "Unrecognized extension " + pattern[nameIndex]);
                         }
                         break;
                     default:
@@ -1113,6 +1120,9 @@ namespace IronPython.Modules {
             throw PythonOps.TypeError("expected string for parameter '{0}' but got '{1}'", param, PythonOps.GetPythonTypeName(str));
         }
 
+        private static PythonType error(CodeContext/*!*/ context) {
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("reerror");
+        }
         #endregion
     }
 }

@@ -111,7 +111,6 @@ namespace IronPython.Runtime {
             Scope mod = ret as Scope;
             if (mod != null && from != null) {
                 string strAttrName;
-                object attrValue;
                 for (int i = 0; i < from.__len__(); i++) {
                     object attrName = from[i];
 
@@ -119,7 +118,7 @@ namespace IronPython.Runtime {
                         !String.IsNullOrEmpty(strAttrName) &&
                         strAttrName != "*") {
                         try {
-                            attrValue = Importer.ImportFrom(context, mod, strAttrName);
+                            Importer.ImportFrom(context, mod, strAttrName);
                         } catch (ImportException) {
                             continue;
                         }
@@ -598,7 +597,6 @@ namespace IronPython.Runtime {
                 // then call help on them.
                 foreach (object module in PythonContext.GetContext(context).SystemStateModules.Values) {
                     IList<object> attrs = PythonOps.GetAttrNames(context, module);
-                    PythonType modType = DynamicHelpers.GetPythonType(module);
                     List candidates = new List();
                     foreach (string s in attrs) {
                         if (s == strVal) {

@@ -320,20 +320,22 @@ namespace IronPython.Modules {
             return count;
         }
 
-        public static void delitem(object a, object b) {
-            PythonOps.DelIndex(a, b);
+        public static void delitem(CodeContext/*!*/ context, object a, object b) {
+            PythonContext.GetContext(context).DelIndex(a, b);
         }
 
-        public static void __delitem__(object a, object b) {
-            PythonOps.DelIndex(a, b);
+        public static void __delitem__(CodeContext/*!*/ context, object a, object b) {
+            delitem(context, a, b);
         }
 
-        public static void delslice(object a, object b, object c) {
-            PythonOps.DelIndex(a, MakeSlice(b, c));
+        public static void delslice(CodeContext/*!*/ context, object a, object b, object c) {
+            MakeSlice(b, c);
+
+            PythonContext.GetContext(context).DelSlice(a, b, c);            
         }
 
-        public static void __delslice__(object a, object b, object c) {
-            PythonOps.DelIndex(a, MakeSlice(b, c));
+        public static void __delslice__(CodeContext/*!*/ context, object a, object b, object c) {
+            delslice(context, a, b, c);
         }
 
         public static object getitem(CodeContext/*!*/ context, object a, object b) {
@@ -387,20 +389,20 @@ namespace IronPython.Modules {
             return contains(context, a, b);
         }
 
-        public static void setitem(object a, object b, object c) {
-            PythonOps.SetIndex(a, b, c);
+        public static void setitem(CodeContext/*!*/ context, object a, object b, object c) {
+            PythonContext.GetContext(context).SetIndex(a, b, c);
         }
 
-        public static void __setitem__(object a, object b, object c) {
-            PythonOps.SetIndex(a, b, c);
+        public static void __setitem__(CodeContext/*!*/ context, object a, object b, object c) {
+            setitem(context, a, b, c);
         }
 
-        public static void setslice(object a, object b, object c, object v) {
-            PythonOps.SetIndex(a, MakeSlice(b, c), v);
+        public static void setslice(CodeContext/*!*/ context, object a, object b, object c, object v) {
+            PythonContext.GetContext(context).SetSlice(a, b, c, v);
         }
 
-        public static void __setslice__(object a, object b, object c, object v) {
-            PythonOps.SetIndex(a, MakeSlice(b, c), v);
+        public static void __setslice__(CodeContext/*!*/ context, object a, object b, object c, object v) {
+            setslice(context, a, b, c, v);
         }
 
         public static bool isCallable(CodeContext/*!*/ context, object o) {

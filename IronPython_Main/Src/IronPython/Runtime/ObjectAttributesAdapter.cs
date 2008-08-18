@@ -112,7 +112,7 @@ namespace IronPython.Runtime {
 #endif
 
         public override void Add(object key, object value) {
-            PythonOps.SetIndex(_backing, key, value);
+            PythonContext.GetContext(_context).SetIndex(_backing, key, value);
         }
 
         public override bool Contains(object key) {
@@ -122,7 +122,7 @@ namespace IronPython.Runtime {
 
         public override bool Remove(object key) {
             try {
-                PythonOps.DelIndex(_backing, key);
+                PythonContext.GetContext(_context).DelIndex(_backing, key);
                 return true;
             } catch (KeyNotFoundException) {
                 return false;

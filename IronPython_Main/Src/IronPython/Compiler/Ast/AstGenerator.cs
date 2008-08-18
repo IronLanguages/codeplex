@@ -44,6 +44,7 @@ namespace IronPython.Compiler.Ast {
         private List<MSAst.VariableExpression/*!*/> _temps;             // temporary variables allocated against the lambda so we can re-use them
         private MSAst.ParameterExpression _generatorParameter;          // the extra parameter receiving the instance of PythonGenerator
         private readonly BinderState/*!*/ _binderState;                 // the state stored for the binder
+        private bool _inFinally;                                        // true if we are currently in a finally (coordinated with our loop state)
 
         private AstGenerator(MSAst.Annotations annotations, string name, bool generator, bool print) {
             _loopStack = new Stack<MSAst.LabelTarget>();
@@ -119,18 +120,31 @@ namespace IronPython.Compiler.Ast {
             get { return _generatorParameter; }
         }
 
-        public MSAst.LabelTarget/*!*/ EnterLoop() {
+        public MSAst.LabelTarget/*!*/ EnterLoop(out bool inFinally) {
             MSAst.LabelTarget label = Ast.Label();
             _loopStack.Push(label);
+            inFinally = _inFinally;
+            inFinally = false;
             return label;
         }
 
-        public void ExitLoop() {
+        public void ExitLoop(bool inFinally) {
+            _inFinally = inFinally;
             _loopStack.Pop();
         }
 
+
         public bool InLoop {
             get { return _loopStack.Count > 0; }
+        }
+
+        public bool InFinally {
+            get {
+                return _inFinally;
+            }
+            set {
+                _inFinally = value;
+            }
         }
 
         public MSAst.LabelTarget/*!*/ LoopLabel {

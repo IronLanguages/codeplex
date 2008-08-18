@@ -68,11 +68,16 @@ namespace IronPython.Compiler.Ast {
             // Only the body is "in the loop" for the purposes of break/continue
             // The "else" clause is outside
             MSAst.Expression body;
-            MSAst.LabelTarget label = ag.EnterLoop();
+            bool inFinally;
+            MSAst.LabelTarget label = ag.EnterLoop(out inFinally);
             try {
                 body = ag.Transform(_body);
             } finally {
-                ag.ExitLoop();
+                ag.ExitLoop(inFinally);
+            }
+            if (body == null) {
+                // error recovery
+                return null;
             }
             return TransformForStatement(ag, enumerator, _list, _left, body, _else, Span, _header, label);
         }

@@ -90,7 +90,7 @@ namespace IronPython.Runtime {
         private Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, object>>> _deleteAttrSites;
         private CallSite<DynamicSiteTarget<CodeContext, object, string, PythonTuple, IAttributesCollection, object>> _metaClassSite;
         private CallSite<DynamicSiteTarget<CodeContext, object, string, object>> _writeSite;
-        private CallSite<DynamicSiteTarget<object, object, object>> _getIndexSite, _equalSite;
+        private CallSite<DynamicSiteTarget<object, object, object>> _getIndexSite, _equalSite, _delIndexSite;
         private CallSite<DynamicSiteTarget<CodeContext, object, IList<string>>> _memberNamesSite;
         private CallSite<DynamicSiteTarget<CodeContext, object, object>> _finalizerSite;
         private CallSite<DynamicSiteTarget<CodeContext, PythonFunction, object>> _functionCallSite;
@@ -101,6 +101,8 @@ namespace IronPython.Runtime {
         private CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>> _oldImportSite;
         private CallSite<DynamicSiteTarget<object, bool>> _isCallableSite;
         private CallSite<DynamicSiteTarget<object, object, object>> _addSite, _divModSite, _rdivModSite;
+        private CallSite<DynamicSiteTarget<object, object, object, object>> _setIndexSite, _delSliceSite;
+        private CallSite<DynamicSiteTarget<object, object, object, object, object>> _setSliceSite;
 
         // conversion sites
         private CallSite<DynamicSiteTarget<object, int>> _intSite;
@@ -242,6 +244,36 @@ namespace IronPython.Runtime {
                 _moduleState[key] = value;
                 return result;
             }
+        }
+
+        /// <summary>
+        /// Sets per-runtime state used by a module and returns the previous value.  The module
+        /// should have a unique key for each piece of state it needs to store.
+        /// </summary>
+        private object GetOrCreateModuleState(object key, Func<object> value) {
+            EnsureModuleState();
+
+            lock (_moduleState) {
+                object result;
+                if (!_moduleState.TryGetValue(key, out result)) {
+                    _moduleState[key] = result = value();
+                }
+                return result;
+            }
+        }
+
+        internal PythonType EnsureModuleException(object key, IAttributesCollection dict, string name, string module) {
+            return (PythonType)(dict[SymbolTable.StringToId(name)] = GetOrCreateModuleState(
+                key,
+                () => PythonExceptions.CreateSubType(this, PythonExceptions.Exception, name, module, "")
+            ));
+        }
+
+        internal void EnsureModuleException(object key, PythonType baseType, IAttributesCollection dict, string name, string module) {
+            dict[SymbolTable.StringToId(name)] = GetOrCreateModuleState(
+                key,
+                () => PythonExceptions.CreateSubType(this, baseType, name, module, "")
+            );
         }
 
         internal PythonEngineOptions/*!*/ PythonOptions {
@@ -938,31 +970,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static string GetInformationalVersion() {
-            AssemblyInformationalVersionAttribute attribute = GetAssemblyAttribute<AssemblyInformationalVersionAttribute>();
-            return attribute != null ? attribute.InformationalVersion : "";
-        }
-
-        private static string GetFileVersion() {
-#if !SILVERLIGHT // file version
-            AssemblyFileVersionAttribute attribute = GetAssemblyAttribute<AssemblyFileVersionAttribute>();
-            return attribute != null ? attribute.Version : "";
-#else
-            return "1.0.0.0";
-#endif
-        }
-
-        private static T GetAssemblyAttribute<T>() where T : Attribute {
-            Assembly asm = typeof(PythonContext).Assembly;
-            object[] attributes = asm.GetCustomAttributes(typeof(T), false);
-            if (attributes != null && attributes.Length > 0) {
-                return (T)attributes[0];
-            } else {
-                Debug.Assert(false, String.Format("Cannot find attribute {0}", typeof(T).Name));
-                return null;
-            }
-        }
-
         // TODO: ExceptionFormatter service
         #region Stack Traces and Exceptions
 
@@ -1180,20 +1187,6 @@ namespace IronPython.Runtime {
                 methodName);
         }
 
-        private string FormatException(Exception exception, object pythonException) {
-            Debug.Assert(pythonException != null);
-            Debug.Assert(exception != null);
-
-            string result = string.Empty;
-            bool printedHeader = false;
-            result += FormatStackTraces(exception, ref printedHeader);
-            result += FormatPythonException(pythonException);
-            if (Options.ShowClrExceptions) {
-                result += FormatCLSException(exception);
-            }
-
-            return result;
-        }
 #endif
 
         #endregion
@@ -1874,6 +1867,76 @@ namespace IronPython.Runtime {
 
                 return _getIndexSite;
             }
+        }
+
+        internal void DelIndex(object target, object index) {
+            if (_delIndexSite == null) {
+                Interlocked.CompareExchange(
+                    ref _delIndexSite,
+                    CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                        new OperationBinder(
+                            _defaultBinderState,
+                            StandardOperators.DeleteItem
+                        )
+                    ),
+                    null
+                );
+            }
+
+
+            _delIndexSite.Target(_delIndexSite, target, index);
+        }
+
+        internal void DelSlice(object target, object start, object end) {
+            if (_delSliceSite == null) {
+                Interlocked.CompareExchange(
+                    ref _delSliceSite,
+                    CallSite<DynamicSiteTarget<object, object, object, object>>.Create(
+                        new OperationBinder(
+                            _defaultBinderState,
+                            StandardOperators.DeleteSlice
+                        )
+                    ),
+                    null
+                );
+            }
+
+
+            _delSliceSite.Target(_delSliceSite, target, start, end);
+        }
+
+        internal void SetIndex(object a, object b, object c) {
+            if (_setIndexSite == null) {
+                Interlocked.CompareExchange(
+                    ref _setIndexSite,
+                    CallSite<DynamicSiteTarget<object, object, object, object>>.Create(
+                        new OperationBinder(
+                            _defaultBinderState,
+                            StandardOperators.SetItem
+                        )
+                    ),
+                    null
+                );
+            }
+
+            _setIndexSite.Target(_setIndexSite, a, b, c);
+        }
+
+        internal void SetSlice(object a, object start, object end, object value) {
+            if (_setSliceSite == null) {
+                Interlocked.CompareExchange(
+                    ref _setSliceSite,
+                    CallSite<DynamicSiteTarget<object, object, object, object, object>>.Create(
+                        new OperationBinder(
+                            _defaultBinderState,
+                            StandardOperators.SetSlice
+                        )
+                    ),
+                    null
+                );
+            }
+
+            _setSliceSite.Target(_setSliceSite, a, start, end, value);
         }
 
         internal CallSite<DynamicSiteTarget<object, object, object>> EqualSite {

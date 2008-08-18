@@ -49,23 +49,11 @@ namespace System.Scripting.Actions {
             _target = target;
         }
 
-        public object ConstantPool {
-            get {
-                return ((Closure)(((Delegate)(Object)GetTarget()).Target)).Constants;
-            }
-        }
-
         internal override RuleSet<T> AddRule(Rule<T> newRule) {
-            // Can the rule become invalidated between its creation and
-            // its insertion into the set?
-            Debug.Assert(newRule.IsValid, "Adding an invalid rule");
-
             List<Rule<T>> newRules = new List<Rule<T>>();
             newRules.Add(newRule);
             foreach (Rule<T> rule in _rules) {
-                if (rule.IsValid) {
-                    newRules.Add(rule);
-                }
+                newRules.Add(rule);
             }
 
             if (newRules.Count > MaxRules) {

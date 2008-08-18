@@ -134,8 +134,6 @@ namespace IronPython.Runtime.Operations {
             Type t = data.GetType();
             Debug.Assert(t.HasElementType);
 
-            Type elm = t.GetElementType();
-
             int[] iindices = TupleToIndices(data, indices);
             if (data.Rank != indices.Length) throw PythonOps.ValueError("bad dimensions for array, got {0} expected {1}", indices.Length, data.Rank);
 
@@ -162,8 +160,6 @@ namespace IronPython.Runtime.Operations {
 
             Type t = a.GetType();
             Debug.Assert(t.HasElementType);
-
-            Type elm = t.GetElementType();
 
             object[] args = ArrayUtils.RemoveLast(indexAndValue);
 

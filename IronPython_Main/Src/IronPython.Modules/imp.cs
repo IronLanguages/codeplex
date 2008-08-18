@@ -22,6 +22,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {
@@ -35,6 +36,7 @@ namespace IronPython.Modules {
         internal const int PythonFrozen = 7;
         internal const int PythonCodeResource = 8;
         internal const int SearchError = 0;
+        internal const int ImporterHook = 9;
         private static readonly object _lockCountKey = new object();
 
         [SpecialName]
@@ -138,6 +140,7 @@ namespace IronPython.Modules {
         public const int PY_FROZEN = PythonFrozen;
         public const int PY_CODERESOURCE = PythonCodeResource;
         public const int SEARCH_ERROR = SearchError;
+        public const int IMP_HOOK = ImporterHook;
 
         public static object init_builtin(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("init_builtin() argument 1 must be string, not None");
@@ -146,6 +149,10 @@ namespace IronPython.Modules {
 
         public static object init_frozen(string name) {
             return null;
+        }
+
+        public static object get_frozen_object(string name) {
+            throw PythonOps.ImportError("No such frozen object named {0}", name);
         }
 
         public static int is_builtin(CodeContext/*!*/ context, string/*!*/ name) {
@@ -188,6 +195,26 @@ namespace IronPython.Modules {
         }
 
 #endif
+        public static object load_package(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
+            if (name == null) throw PythonOps.TypeError("load_package() argument 1 must be string, not None");
+            if (pathname == null) throw PythonOps.TypeError("load_package() argument 2 must be string, not None");
+
+            return (Importer.LoadPackageFromSource(context, name, pathname) ??
+                    CreateEmptyPackage(context, name, pathname)).Scope;
+        }
+
+        private static PythonModule/*!*/ CreateEmptyPackage(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
+            PythonContext pc = PythonContext.GetContext(context);
+
+            PythonModule mod = pc.CreateModule();
+            Scope scope = mod.Scope;
+            scope.SetName(Symbols.Name, name);
+            scope.SetName(Symbols.Path, pathname);
+
+            pc.SystemStateModules[name] = scope;
+
+            return mod;
+        }
 
         public static object load_source(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
             if (name == null) throw PythonOps.TypeError("load_source() argument 1 must be string, not None");
@@ -210,6 +237,12 @@ namespace IronPython.Modules {
             if (pathname == null) throw PythonOps.TypeError("load_source() argument 3 must be file, not None");
             
             return LoadPythonSource(PythonContext.GetContext(context), name, file, pathname);
+        }
+
+        public static PythonType NullImporter {
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(typeof(NullImporter));
+            }
         }
 
         #region Implementation

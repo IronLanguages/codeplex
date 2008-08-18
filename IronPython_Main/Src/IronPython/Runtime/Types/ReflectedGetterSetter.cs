@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        protected NameType NameType {
+        internal NameType NameType {
             get {
                 return _nameType;
             }
@@ -110,7 +110,7 @@ namespace IronPython.Runtime.Types {
             return target.Call(context, storage, instance, args);
         }
 
-        protected static bool NeedToReturnProperty(object instance, MethodInfo[] mis) {
+        internal static bool NeedToReturnProperty(object instance, MethodInfo[] mis) {
             if (instance == null) {
                 if (mis.Length == 0) {
                     return true;

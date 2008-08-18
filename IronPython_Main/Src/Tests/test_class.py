@@ -1971,7 +1971,7 @@ def test_setattr():
     class KOldSub(KOld): pass
 
     for K in [  KOld,
-                #KOldSub, #CodePlex 8018
+                KOldSub, #CodePlex 8018
                 KNew,
                 KNewSub]:
         setCalled = False
@@ -3164,5 +3164,16 @@ def test_metaclass_keyword_args():
     a = A('empty', *('foo', ), **{'d': 'boom'})
     AreEqual(a.b, 'foo')
     AreEqual(a.d, 'boom')
+
+def test_oldinstance_creation():
+    class C: pass
     
+    inst = type(C())
+    
+    d = {'a': 2}
+    i = inst(C, d)
+    
+    AreEqual(id(d), id(i.__dict__))
+    Assert(isinstance(i, C))
+
 run_test(__name__)

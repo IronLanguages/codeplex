@@ -35,7 +35,7 @@ namespace IronPythonTest {
         //public double doubleVal;
         //public DeTestEnum eshort;
         //public DeTestEnumLong elong;
-
+#pragma warning disable 169
         void Init() {
             intVal = 0;
             //stringVal = "Hello";
@@ -44,6 +44,7 @@ namespace IronPythonTest {
             //eshort = DeTestEnum.Value_3;
             //elong = DeTestEnumLong.Value_2;
         }
+#pragma warning restore 169
     }
 
     public class DeTest {
@@ -146,7 +147,6 @@ namespace IronPythonTest {
 
         public DeTestStruct ActualTestStruct(DeTestStruct dts) {
             object x = dts;
-            DeTestStruct dts2 = (DeTestStruct)x;
             return (DeTestStruct)x;
         }
 

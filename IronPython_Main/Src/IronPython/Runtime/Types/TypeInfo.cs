@@ -235,8 +235,6 @@ namespace IronPython.Runtime.Types {
             }
 
             protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
-                Dictionary<string, ResolvedMember> members = new Dictionary<string, ResolvedMember>();
-
                 foreach (Type curType in binder.GetContributingTypes(type)) {
                     foreach (MemberInfo mi in curType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)) {
                         if (mi.MemberType == MemberTypes.Method) {
@@ -484,6 +482,9 @@ namespace IronPython.Runtime.Types {
                 new OneOffResolver("__repr__", ReprResolver),
                 new OneOffResolver("__hash__", HashResolver),       
                 new OneOffResolver("__iter__", IterResolver),         
+#if !SILVERLIGHT
+                new OneOffResolver("__reduce_ex__", SerializationResolver),
+#endif
                 // The standard resolver looks for types using .NET reflection by name
                 new StandardResolver(), 
                 
@@ -575,6 +576,40 @@ namespace IronPython.Runtime.Types {
 
             return MemberGroup.EmptyGroup;
         }
+#if !SILVERLIGHT
+        private static MemberGroup/*!*/ SerializationResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            if (type.IsSerializable && !PythonBinder.IsPythonType(type)) {
+
+                string methodName = "__reduce_ex__";
+
+                if (!TypeOverridesMethod(binder, type, methodName)) {
+                    return GetInstanceOpsMethod(type, "SerializeReduce");
+                }
+            }
+
+            return MemberGroup.EmptyGroup;
+        }
+
+        /// <summary>
+        /// Helper to see if the type explicitly overrides the method.  This ignores members
+        /// defined on object.
+        /// </summary>
+        private static bool TypeOverridesMethod(MemberBinder/*!*/ binder, Type/*!*/  type, string/*!*/  methodName) {
+            // check and see if the method has been overridden by the base type.
+            foreach (Type t in binder.GetContributingTypes(type)) {
+                if (!PythonBinder.IsPythonType(type) && t == typeof(ObjectOps) && type != typeof(object)) {
+                    break;
+                }
+
+                MemberInfo[] reduce = t.GetMember(methodName);
+                if (reduce.Length > 0) {
+                    // type has a specific overload
+                    return true;
+                }
+            }
+            return false;
+        }
+#endif
 
         /// <summary>
         /// Provides a resolution for IValueEquality.GetValueHashCode to __hash__.
@@ -1235,10 +1270,6 @@ namespace IronPython.Runtime.Types {
             }
 
             return res;
-        }
-
-        private static void AddMapping(Dictionary<string/*!*/, string/*!*/[]/*!*/> res, string/*!*/ name, params string/*!*/[]/*!*/ names) {
-            res[name] = names;
         }
 
         /// <summary>

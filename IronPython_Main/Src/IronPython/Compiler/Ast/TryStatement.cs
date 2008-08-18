@@ -178,7 +178,10 @@ namespace IronPython.Compiler.Ast {
 
                 MSAst.VariableExpression nestedFrames = ag.GetTemporary("$nestedFrames", typeof(List<DynamicStackFrame>));
 
+                bool inFinally = ag.InFinally;
+                ag.InFinally = true;
                 MSAst.Expression @finally = ag.Transform(_finally);
+                ag.InFinally = inFinally;
                 if (@finally == null) {
                     // error reported during compilation
                     return null;

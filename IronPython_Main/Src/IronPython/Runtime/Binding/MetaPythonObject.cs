@@ -76,10 +76,6 @@ namespace IronPython.Runtime.Binding {
             return DynamicHelpers.GetPythonTypeFromType(value.LimitType);
         }
 
-        private Expression MakeTypeTests(MetaObject/*!*/[] args) {
-            return MakeTypeTests(this, args);
-        }
-
         public static Expression MakeTypeTests(MetaObject metaSelf, params MetaObject/*!*/[] args) {
             Expression typeTest = null;
             if (metaSelf != null) {

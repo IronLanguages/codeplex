@@ -777,7 +777,6 @@ def test_pers_load():
 def test_loads_negative():
     AssertError(EOFError, cPickle.loads, "")
     
-@disabled("CodePlex 3290")
 def test_load_negative():
     if cPickle.__name__ == "cPickle":   # pickle vs. cPickle report different exceptions, even on Cpy
         filename = nt.tempnam()
@@ -908,5 +907,10 @@ def test_cp945():
             x_unpickled = cPickle.loads(x_pickled)
             AreEqual(x_unpickled.object, e.object)
 
-    
+
+def test_carriage_return_round_trip():
+    # pickler shouldn't use ASCII and strip off \r
+    import cPickle
+    AreEqual(cPickle.loads(cPickle.dumps('\r\n')), '\r\n')
+
 run_test(__name__)

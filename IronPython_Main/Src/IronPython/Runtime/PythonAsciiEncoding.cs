@@ -124,7 +124,7 @@ namespace IronPython.Runtime {
 
         public override string WebName {
             get {
-                return "us-ascii";
+                return "ascii";
             }
         }
 

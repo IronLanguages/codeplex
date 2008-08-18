@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
         private readonly MetaObject[] _restrictedArgs;                                    // the arguments after they've been restricted to their known types
         private readonly NarrowingLevel _level;                                           // the NarrowingLevel at which the target succeeds on conversion
         private readonly CallFailure[] _callFailures;                                     // if failed on conversion the various conversion failures for all overloads
-        private readonly MethodTarget[] _ambigiousMatches;                                // list of methods which are ambigious to bind to.
+        private readonly MethodTarget[] _ambiguousMatches;                                // list of methods which are ambiguous to bind to.
         private readonly int[] _expectedArgs;                                             // gets the acceptable number of parameters which can be passed to the method.
         private readonly int _actualArgs;                                                 // gets the actual number of arguments provided
 
@@ -88,12 +88,12 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
-        /// Creates a new BindingTarget when the match was ambigious
+        /// Creates a new BindingTarget when the match was ambiguous
         /// </summary>
-        internal BindingTarget(string name, int actualArgumentCount, MethodTarget[] ambigiousMatches) {
+        internal BindingTarget(string name, int actualArgumentCount, MethodTarget[] ambiguousMatches) {
             _name = name;
-            _result = BindingResult.AmbigiousMatch;
-            _ambigiousMatches = ambigiousMatches;
+            _result = BindingResult.AmbiguousMatch;
+            _ambiguousMatches = ambiguousMatches;
             _actualArgs = actualArgumentCount;
         }
 
@@ -202,11 +202,11 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
-        /// Returns the methods which don't have any matches or null if Result == BindingResult.AmbigiousMatch
+        /// Returns the methods which don't have any matches or null if Result == BindingResult.AmbiguousMatch
         /// </summary>
-        public IEnumerable<MethodTarget> AmbigiousMatches {
+        public IEnumerable<MethodTarget> AmbiguousMatches {
             get {
-                return _ambigiousMatches;
+                return _ambiguousMatches;
             }
         }
 

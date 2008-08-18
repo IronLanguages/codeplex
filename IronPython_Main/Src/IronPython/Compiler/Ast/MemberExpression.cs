@@ -56,7 +56,6 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op == Operators.None) {
-                SourceSpan sspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
                 return AstUtils.Block(
                     span,
                     Binders.Set(

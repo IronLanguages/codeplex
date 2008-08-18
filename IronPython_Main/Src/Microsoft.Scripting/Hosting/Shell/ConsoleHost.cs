@@ -47,9 +47,11 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// Console Host entry-point .exe name.
         /// </summary>
         protected virtual string ExeName {
-            get {
+            get {                
 #if !SILVERLIGHT
-                return Assembly.GetEntryAssembly().GetName().Name;
+                Assembly entryAssembly = Assembly.GetEntryAssembly();
+                //Can be null if called from unmanaged code (VS integration scenario)
+                return entryAssembly != null ? entryAssembly.GetName().Name : "ConsoleHost";
 #else
                 return "ConsoleHost";
 #endif

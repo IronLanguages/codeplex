@@ -475,7 +475,7 @@ namespace IronPython.Runtime {
                 }
 
                 NamespaceTracker rp = ret as NamespaceTracker;
-                if (rp != null) {
+                if (rp != null || ret == PythonContext.GetContext(context).ClrModule) {
                     PythonContext.EnsureModule(context).ShowCls = true;
                 }
 
@@ -566,6 +566,7 @@ namespace IronPython.Runtime {
                 return pc.SystemState;
             } else if (name == "clr") {
                 PythonContext.EnsureModule(context).ShowCls = true;
+                pc.SystemStateModules["clr"] = pc.ClrModule;
                 return pc.ClrModule;
             }
 
@@ -613,7 +614,7 @@ namespace IronPython.Runtime {
         internal static Scope TryImportSourceFile(PythonContext/*!*/ context, string/*!*/ name) {
             var sourceUnit = TryFindSourceFile(context, name);
             if (sourceUnit == null || 
-                GetFullPathAndValidateCase(context, Path.Combine(Path.GetDirectoryName(sourceUnit.Path), name + Path.GetExtension(sourceUnit.Path))) == null) {
+                GetFullPathAndValidateCase(context, Path.Combine(Path.GetDirectoryName(sourceUnit.Path), name + Path.GetExtension(sourceUnit.Path)), false) == null) {
                 return null;
             }
 
@@ -738,12 +739,12 @@ namespace IronPython.Runtime {
         /// Finds a user defined importer for the given path or returns null if no importer
         /// handles this path.
         /// </summary>
-        private static object FindImporterForPath(CodeContext/*!*/ context, string str) {
+        private static object FindImporterForPath(CodeContext/*!*/ context, string dirname) {
             List pathHooks = PythonContext.GetContext(context).GetSystemStateValue("path_hooks") as List;
 
             foreach (object hook in (IEnumerable)pathHooks) {
                 try {
-                    object handler = PythonCalls.Call(context, hook, str);
+                    object handler = PythonCalls.Call(context, hook, dirname);
 
                     if (handler != null) {
                         return handler;
@@ -751,8 +752,14 @@ namespace IronPython.Runtime {
                 } catch (ImportException) {
                     // we can't handle the path
                 }
-
             }
+
+#if !SILVERLIGHT    // DirectoryExists isn't implemented on Silverlight
+            if (!context.LanguageContext.DomainManager.Platform.DirectoryExists(dirname)) {
+                return new NullImporter(dirname);
+            }
+#endif
+
             return null;
         }
 
@@ -761,7 +768,7 @@ namespace IronPython.Runtime {
 
             PythonContext pc = PythonContext.GetContext(context);
 
-            string fullPath = GetFullPathAndValidateCase(pc, path);
+            string fullPath = GetFullPathAndValidateCase(pc, path, false);
             if (fullPath == null || !pc.DomainManager.Platform.FileExists(fullPath)) {
                 return null;
             }
@@ -770,7 +777,7 @@ namespace IronPython.Runtime {
             return LoadFromSourceUnit(context, sourceUnit, name, sourceUnit.Path);
         }
 
-        private static string GetFullPathAndValidateCase(LanguageContext/*!*/ context, string path) {
+        private static string GetFullPathAndValidateCase(LanguageContext/*!*/ context, string path, bool isDir) {
 #if !SILVERLIGHT
             // check for a match in the case of the filename, unfortunately we can't do this
             // in Silverlight becauase there's no way to get the original filename.
@@ -783,7 +790,7 @@ namespace IronPython.Runtime {
 
             try {
                 string file = Path.GetFileName(path);
-                string[] files = pal.GetFiles(dir, file);
+                string[] files = isDir ? pal.GetDirectories(dir, file) : pal.GetFiles(dir, file);                
 
                 if (files.Length != 1 || Path.GetFileName(files[0]) != file) {
                     return null;
@@ -798,8 +805,14 @@ namespace IronPython.Runtime {
 #endif
         }
 
-        private static PythonModule LoadPackageFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
+        internal static PythonModule LoadPackageFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
             Assert.NotNull(context, name, path);
+
+            path = GetFullPathAndValidateCase(PythonContext.GetContext(context), path, true);
+            if (path == null) {
+                return null;
+            }
+
             return LoadModuleFromSource(context, name, Path.Combine(path, "__init__.py"));
         }
 

@@ -32,7 +32,6 @@ namespace IronPython.Modules {
     public static class PythonSha512 {
         private static readonly SHA512 hasher512 = SHA512Managed.Create();
         private static readonly SHA384 hasher384 = SHA384Managed.Create();
-        private static readonly int digestSize = hasher512.HashSize / 8;
         private const int blockSize = 1;
 
         public const string __doc__ = "SHA512 hash algorithm";

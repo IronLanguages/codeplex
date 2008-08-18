@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Binding {
             if (Value.IsSystemType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(Value.UnderlyingSystemType);
                 MemberGroup mg = state.Binder.GetMember(OldSetMemberAction.Make(state.Binder, member.Name), Value.UnderlyingSystemType, member.Name);
-                
+
                 // filter protected member access against .NET types, these can only be accessed from derived types...
                 foreach (MemberTracker mt in mg) {
                     if (IsProtectedSetter(mt)) {
@@ -140,7 +140,7 @@ namespace IronPython.Runtime.Binding {
                     ).Expression,
                     Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions)
                 );
-            } 
+            }
 
             return MakeDeleteMember(member, args);
         }
@@ -150,7 +150,7 @@ namespace IronPython.Runtime.Binding {
         #region Gets
 
         private ValidationInfo MakeMetaTypeTest(Expression self) {
-            
+
             PythonType metaType = DynamicHelpers.GetPythonType(Value);
             if (!metaType.IsSystemType) {
                 int version = metaType.Version;
@@ -193,7 +193,7 @@ namespace IronPython.Runtime.Binding {
                     result = new MetaObject(
                         MakeSystemTypeGetExpression(pt, member, result.Expression),
                         self.Restrictions // don't merge w/ result - we've already restricted to instance.
-                    );    
+                    );
                 } else if (pt.IsOldClass) {
                     // mixed new-style/old-style class, search the one slot in it's MRO for the member
                     VariableExpression tmp = Ast.Variable(typeof(object), "tmp");
@@ -217,7 +217,7 @@ namespace IronPython.Runtime.Binding {
                 } else if (pt.TryLookupSlot(state.Context, SymbolTable.StringToId(member.Name), out pts)) {
                     // user defined new style class, see if we have a slot.
                     VariableExpression tmp = Ast.Variable(typeof(object), "tmp");
-                    
+
                     result = new MetaObject(
                         Ast.Scope(
                             Ast.Condition(
@@ -258,7 +258,7 @@ namespace IronPython.Runtime.Binding {
                     ),
                     Ast.Constant(state.Context),
                     BindingHelpers.IsNoThrow(member)
-                    
+
                 ).Expression,
                 Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions)
             );
@@ -271,10 +271,10 @@ namespace IronPython.Runtime.Binding {
                 res = BindingHelpers.FilterShowCls(
                     codeContext,
                     member,
-                    res, 
+                    res,
                     Ast.Throw(
                         Ast.Call(
-                            typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[]{ typeof(string), typeof(SymbolId) }),
+                            typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                             Ast.Constant(Value.Name),
                             AstUtils.Constant(SymbolTable.StringToId(member.Name))
                         )
@@ -287,8 +287,7 @@ namespace IronPython.Runtime.Binding {
 
         private Expression MakeSystemTypeGetExpression(PythonType/*!*/ pt, GetMemberAction/*!*/ member, Expression/*!*/ error) {
             BinderState state = BinderState.GetBinderState(member);
-            OldGetMemberAction gma = OldGetMemberAction.Make(state.Binder, member.Name);
-            
+
             PythonTypeSlot pts;
 
             CodeContext clsContext = PythonContext.GetContext(state.Context).DefaultClsBinderState.Context;
@@ -317,30 +316,13 @@ namespace IronPython.Runtime.Binding {
                 success = Ast.Condition(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("IsClsVisible"),
-                        Ast.Constant(BinderState.GetBinderState(member).Context)
+                        Ast.Constant(state.Context)
                     ),
                     Ast.ConvertHelper(success, resType),
                     Ast.ConvertHelper(error, resType)
                 );
             }
             return success;
-        }
-
-        private bool IsProtectedGetter(MemberTracker mt) {
-            PropertyTracker pt = mt as PropertyTracker;
-            if (pt != null) {
-                MethodInfo mi = pt.GetGetMethod(true);
-                if (mi != null && (mi.IsFamily || mi.IsFamilyOrAssembly)) {
-                    return true;
-                }
-            }
-
-            FieldTracker ft = mt as FieldTracker;
-            if (ft != null) {
-                return ft.Field.IsFamily || ft.Field.IsFamilyOrAssembly;   
-            }
-
-            return false;
         }
 
         private Expression MakeMetaTypeRule(GetMemberAction/*!*/ member, Expression error) {
@@ -442,7 +424,7 @@ namespace IronPython.Runtime.Binding {
                 target = tracker.GetValue(Ast.Constant(state.Context), state.Binder, Value.UnderlyingSystemType);
             }
 
-            return target ?? error /*?? Ast.Throw(MakeAmbigiousMatchError(mg))*/;
+            return target ?? error /*?? Ast.Throw(MakeAmbiguousMatchError(mg))*/;
         }
 #if FALSE
         private static Expression/*!*/ MakeErrorExpression(MemberGroup/*!*/ mg) {
@@ -459,10 +441,10 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            return Ast.Throw(MakeAmbigiousMatchError(mg));
+            return Ast.Throw(MakeAmbiguousMatchError(mg));
         }
 
-        private static Expression/*!*/ MakeAmbigiousMatchError(MemberGroup/*!*/ members) {
+        private static Expression/*!*/ MakeAmbiguousMatchError(MemberGroup/*!*/ members) {
             StringBuilder sb = new StringBuilder();
             foreach (MethodTracker mi in members) {
                 if (sb.Length != 0) sb.Append(", ");
@@ -515,7 +497,7 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.Event:
                 case TrackerTypes.Namespace:
                 case TrackerTypes.Custom:
-                case TrackerTypes.Constructor:                
+                case TrackerTypes.Constructor:
                     tracker = mg[0];
                     break;
                 default:
@@ -543,7 +525,7 @@ namespace IronPython.Runtime.Binding {
             }
             return typeTracker;
         }
-        
+
         #endregion
 
         #region Sets
@@ -568,7 +550,7 @@ namespace IronPython.Runtime.Binding {
                 ),
                 args,
                 TestUserType()
-            );                
+            );
         }
 
         private bool IsProtectedSetter(MemberTracker mt) {

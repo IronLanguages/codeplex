@@ -174,8 +174,6 @@ namespace IronPython.Runtime.Binding {
             // default binder
             PythonTypeSlot callSlot;
             if (pt.TryResolveSlot(state.Context, Symbols.Call, out callSlot)) {
-                VariableExpression tmp = Ast.Variable(typeof(object), "callSlot");
-                
                 Expression[] callArgs = ArrayUtils.Insert(
                     BinderState.GetCodeContext(call),
                     callSlot.MakeGetExpression(

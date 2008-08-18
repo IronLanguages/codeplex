@@ -66,7 +66,6 @@ namespace System.Scripting.Actions {
                     GetMetaObjectRule(binding, GetReturnType(typeof(T)), siteExpr),
                     "<rule>"
                 ),
-                null,
                 new ReadOnlyCollection<ParameterExpression>(pes.AddFirst(siteExpr))
             );
         }

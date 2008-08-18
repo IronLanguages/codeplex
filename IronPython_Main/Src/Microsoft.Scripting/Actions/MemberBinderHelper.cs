@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Actions {
                 MemberTracker mi = members[i];
                 if (mi.MemberType != memberType) {
                     if (memberType != TrackerTypes.All) {
-                        error = MakeAmbigiousMatchError(members);
+                        error = MakeAmbiguousMatchError(members);
                         return TrackerTypes.All;
                     }
                     memberType = mi.MemberType;
@@ -124,7 +124,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private static Expression MakeAmbigiousMatchError(MemberGroup members) {
+        private static Expression MakeAmbiguousMatchError(MemberGroup members) {
             StringBuilder sb = new StringBuilder();
             foreach (MethodTracker mi in members) {
                 if (sb.Length != 0) sb.Append(", ");

@@ -110,20 +110,37 @@ namespace IronPython.Runtime.Types {
 
             __dict__ = dict as PythonDictionary ?? new PythonDictionary(new WrapperDictionaryStorage(dict));
 
+            
             if (!__dict__._storage.Contains(Symbols.Doc)) {
                 __dict__._storage.Add(Symbols.Doc, null);
             }
 
-            if (__dict__._storage.Contains(Symbols.Unassign)) {
+            CheckSpecialMethods(__dict__);
+        }
+
+        private void CheckSpecialMethods(PythonDictionary dict) {
+            if (dict._storage.Contains(Symbols.Unassign)) {
                 HasFinalizer = true;
             }
 
-            if (__dict__._storage.Contains(Symbols.SetAttr)) {
+            if (dict._storage.Contains(Symbols.SetAttr)) {
                 HasSetAttr = true;
             }
 
-            if (__dict__._storage.Contains(Symbols.DelAttr)) {
+            if (dict._storage.Contains(Symbols.DelAttr)) {
                 HasDelAttr = true;
+            }
+
+            foreach (OldClass oc in _bases) {
+                if (oc.HasDelAttr) {
+                    HasDelAttr = true;
+                }
+                if (oc.HasSetAttr) {
+                    HasSetAttr = true;
+                }
+                if (oc.HasFinalizer) {
+                    HasFinalizer = true;
+                }
             }
         }
 
@@ -144,6 +161,7 @@ namespace IronPython.Runtime.Types {
             if (__dict__.has_key("__del__")) HasFinalizer = true;
         }
 
+#pragma warning disable 169 // unused method - called via reflection from serialization
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
         private void GetObjectData(SerializationInfo info, StreamingContext context) {
             ContractUtils.RequiresNotNull(info, "info");
@@ -161,6 +179,7 @@ namespace IronPython.Runtime.Types {
             info.AddValue("keys", keys);
             info.AddValue("values", values);
         }
+#pragma warning restore 169
 #endif
 
         private void InitializeInstanceNames(string instanceNames) {
@@ -499,7 +518,7 @@ namespace IronPython.Runtime.Types {
                 default: return null;
             }
         }
-
+        
         private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:

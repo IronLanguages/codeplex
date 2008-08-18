@@ -97,7 +97,6 @@ namespace IronPython.Runtime {
                         Ast.Constant(version)
                     )
                 );
-                rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).Validate);
             }
 
             return test;
@@ -132,29 +131,6 @@ namespace IronPython.Runtime {
 
             return ret;
         }        
-
-        private class PythonTypeValidator {
-            /// <summary>
-            /// Weak reference to the dynamic type. Since they can be collected,
-            /// we need to be able to let that happen and then disable the rule.
-            /// </summary>
-            private WeakReference _pythonType;
-
-            /// <summary>
-            /// Expected version of the instance's dynamic type
-            /// </summary>
-            private int _version;
-
-            public PythonTypeValidator(WeakReference pythonType, int version) {
-                this._pythonType = pythonType;
-                this._version = version;
-            }
-
-            public bool Validate() {
-                PythonType dt = _pythonType.Target as PythonType;
-                return dt != null && dt.Version == _version;
-            }
-        }
 
         //
         // Various helpers related to calling Python __*__ conversion methods 

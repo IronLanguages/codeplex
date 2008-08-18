@@ -17,19 +17,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
+
 using Microsoft.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using System.Text;
+
 using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
@@ -38,6 +38,14 @@ namespace IronPython.Modules {
         + " - does not implement the undocumented fast mode\n"
         )]
     public static class PythonPickle {
+        [System.Runtime.CompilerServices.SpecialName]
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            context.EnsureModuleException("PickleError", dict, "PickleError", "cPickle");
+            context.EnsureModuleException("PicklingError", dict, "PicklingError", "cPickle");
+            context.EnsureModuleException("UnpicklingError", dict, "UnpicklingError", "cPickle");
+            context.EnsureModuleException("BadPickleGet", dict, "BadPickleGet", "cPickle");
+        }
+
         private static readonly PythonStruct.Struct _float64 = PythonStruct.Struct.Create(">d");
         private static readonly PythonStruct.Struct _uint8 = PythonStruct.Struct.Create("B");
         private static readonly PythonStruct.Struct _uint16 = PythonStruct.Struct.Create("<H");
@@ -49,15 +57,6 @@ namespace IronPython.Modules {
         }
 
         private const string Newline = "\n";
-
-        #region Exceptions
-
-        public static PythonType PickleError = PythonExceptions.CreateSubType(PythonExceptions.Exception, "PickleError", "cPickle", "");
-        public static PythonType PicklingError = PythonExceptions.CreateSubType(PickleError, "PicklingError", "cPickle", "");
-        public static PythonType UnpicklingError = PythonExceptions.CreateSubType(PickleError, "UnpicklingError", "cPickle", "");
-        public static PythonType BadPickleGet = PythonExceptions.CreateSubType(UnpicklingError, "BadPickleGet", "cPickle", ""); 
-        
-        #endregion
 
         #region Public module-level functions
 
@@ -108,14 +107,15 @@ namespace IronPython.Modules {
             + "reconstructed object. Characters in the string beyond the end of the first\n"
             + "pickle are ignored."
             )]
-        public static object loads(CodeContext/*!*/ context, object @string) {
-            object stringIO = PythonOps.Invoke(
+        public static object loads(CodeContext/*!*/ context, string @string) {
+            PythonFile pf = PythonFile.Create(
                 context,
-                DynamicHelpers.GetPythonTypeFromType(typeof(PythonStringIO)),
-                SymbolTable.StringToId("StringIO"),
-                @string
+                new MemoryStream(StringOps.ToByteArray(@string)),
+                "loads",
+                "b"
             );
-            return new Unpickler(context, stringIO).load(context);
+
+            return new Unpickler(context, pf).load(context);
         }
 
         #endregion
@@ -422,7 +422,7 @@ namespace IronPython.Modules {
                 if (_file is PythonReadableFileOutput) {
                     return ((PythonReadableFileOutput)_file).GetValue(context);
                 }
-                throw PythonExceptions.CreateThrowable(PicklingError, "Attempt to getvalue() a non-list-based pickler");
+                throw PythonExceptions.CreateThrowable(PicklingError(context), "Attempt to getvalue() a non-list-based pickler");
             }
 
             #endregion
@@ -523,7 +523,7 @@ namespace IronPython.Modules {
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Name, out name)) {
                     SaveGlobalByName(context, obj, name);
                 } else {
-                    throw CannotPickle(obj, "could not determine its __name__");
+                    throw CannotPickle(context, obj, "could not determine its __name__");
                 }
             }
 
@@ -535,7 +535,6 @@ namespace IronPython.Modules {
                 if (_protocol >= 2) {
                     object code;
                     if (((IDictionary<object, object>)PythonCopyReg.GetExtensionRegistry(context)).TryGetValue(PythonTuple.MakeTuple(moduleName, name), out code)) {
-                        int intCode = (int)code;
                         if (IsUInt8(context, code)) {
                             Write(context, Opcode.Ext1);
                             WriteUInt8(context, code);
@@ -570,13 +569,13 @@ namespace IronPython.Modules {
 
                 object objClass;
                 if (!PythonOps.TryGetBoundAttr(context, obj, Symbols.Class, out objClass)) {
-                    throw CannotPickle(obj, "could not determine its __class__");
+                    throw CannotPickle(context, obj, "could not determine its __class__");
                 }
 
                 if (_protocol < 1) {
                     object className, classModuleName;
                     if (!PythonOps.TryGetBoundAttr(context, objClass, Symbols.Name, out className)) {
-                        throw CannotPickle(obj, "its __class__ has no __name__");
+                        throw CannotPickle(context, obj, "its __class__ has no __name__");
                     }
                     classModuleName = FindModuleForGlobal(context, objClass, className);
 
@@ -723,10 +722,10 @@ namespace IronPython.Modules {
                             SaveReduce(context, obj, reduceCallable, rt[0], rt[1], rt[2], rt[3], rt[4]);
                             break;
                         default:
-                            throw CannotPickle(obj, "tuple returned by {0} must have to to five elements", reduceCallable);
+                            throw CannotPickle(context, obj, "tuple returned by {0} must have to to five elements", reduceCallable);
                     }
                 } else {
-                    throw CannotPickle(obj, "{0} must return string or tuple", reduceCallable);
+                    throw CannotPickle(context, obj, "{0} must return string or tuple", reduceCallable);
                 }
             }
 
@@ -737,32 +736,32 @@ namespace IronPython.Modules {
             /// </summary>
             private void SaveReduce(CodeContext/*!*/ context, object obj, object reduceCallable, object func, object args, object state, object listItems, object dictItems) {
                 if (!PythonOps.IsCallable(context, func)) {
-                    throw CannotPickle(obj, "func from reduce() should be callable");
+                    throw CannotPickle(context, obj, "func from reduce() should be callable");
                 } else if (!(args is PythonTuple) && args != null) {
-                    throw CannotPickle(obj, "args from reduce() should be a tuple");
+                    throw CannotPickle(context, obj, "args from reduce() should be a tuple");
                 } else if (listItems != null && !(listItems is IEnumerator)) {
-                    throw CannotPickle(obj, "listitems from reduce() should be a list iterator");
+                    throw CannotPickle(context, obj, "listitems from reduce() should be a list iterator");
                 } else if (dictItems != null && !(dictItems is IEnumerator)) {
-                    throw CannotPickle(obj, "dictitems from reduce() should be a dict iterator");
+                    throw CannotPickle(context, obj, "dictitems from reduce() should be a dict iterator");
                 }
 
                 object funcName;
                 string funcNameString;
                 if (!PythonOps.TryGetBoundAttr(context, func, Symbols.Name, out funcName)) {
-                    throw CannotPickle(obj, "func from reduce() ({0}) should have a __name__ attribute");
+                    throw CannotPickle(context, obj, "func from reduce() ({0}) should have a __name__ attribute");
                 } else if (!Converter.TryConvertToString(funcName, out funcNameString) || funcNameString == null) {
-                    throw CannotPickle(obj, "__name__ of func from reduce() must be string");
+                    throw CannotPickle(context, obj, "__name__ of func from reduce() must be string");
                 }
 
                 if (_protocol >= 2 && "__newobj__" == funcNameString) {
                     if (args == null) {
-                        throw CannotPickle(obj, "__newobj__ arglist is None");
+                        throw CannotPickle(context, obj, "__newobj__ arglist is None");
                     }
                     PythonTuple argsTuple = (PythonTuple)args;
                     if (argsTuple.__len__() == 0) {
-                        throw CannotPickle(obj, "__newobj__ arglist is empty");
+                        throw CannotPickle(context, obj, "__newobj__ arglist is empty");
                     } else if (!DynamicHelpers.GetPythonType(obj).Equals(argsTuple[0])) {
-                        throw CannotPickle(obj, "args[0] from __newobj__ args has the wrong class");
+                        throw CannotPickle(context, obj, "args[0] from __newobj__ args has the wrong class");
                     }
                     Save(context, argsTuple[0]);
                     Save(context, argsTuple[new Slice(1, null)]);
@@ -854,7 +853,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteFloat64(CodeContext/*!*/ context, object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.Double));
-                Write(context, _float64.pack(value));
+                Write(context, _float64.pack(context, value));
             }
 
             /// <summary>
@@ -862,7 +861,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteUInt8(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsUInt8(context, value));
-                Write(context, _uint8.pack(value));
+                Write(context, _uint8.pack(context, value));
             }
 
             /// <summary>
@@ -870,7 +869,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteUInt16(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsUInt16(context, value));
-                Write(context, _uint16.pack(value));
+                Write(context, _uint16.pack(context, value));
             }
 
             /// <summary>
@@ -878,7 +877,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteInt32(CodeContext/*!*/ context, object value) {
                 Debug.Assert(IsInt32(context, value));
-                Write(context, _uint32.pack(value));
+                Write(context, _uint32.pack(context, value));
             }
 
             /// <summary>
@@ -1010,7 +1009,7 @@ namespace IronPython.Modules {
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetInitArgs, out getInitArgsCallable)) {
                     object initArgs = PythonCalls.Call(context, getInitArgsCallable);
                     if (!(initArgs is PythonTuple)) {
-                        throw CannotPickle(obj, "__getinitargs__() must return tuple");
+                        throw CannotPickle(context, obj, "__getinitargs__() must return tuple");
                     }
                     foreach (object arg in (PythonTuple)initArgs) {
                         Save(context, arg);
@@ -1171,7 +1170,7 @@ namespace IronPython.Modules {
 
             #region Other private helper methods
 
-            private Exception CannotPickle(object obj, string format, params object[] args) {
+            private Exception CannotPickle(CodeContext/*!*/ context, object obj, string format, params object[] args) {
                 StringBuilder msgBuilder = new StringBuilder();
                 msgBuilder.Append("Can't pickle ");
                 msgBuilder.Append(obj);
@@ -1179,7 +1178,7 @@ namespace IronPython.Modules {
                     msgBuilder.Append(": ");
                     msgBuilder.Append(String.Format(format, args));
                 }
-                return PythonExceptions.CreateThrowable(PicklingError, msgBuilder.ToString());
+                return PythonExceptions.CreateThrowable(PicklingError(context), msgBuilder.ToString());
             }
 
             private void Memoize(object obj) {
@@ -1209,19 +1208,18 @@ namespace IronPython.Modules {
                 object moduleName;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Module, out moduleName)) {
                     // TODO: Global SystemState
-                    if (!Importer.TryGetExistingModule(context, Converter.ConvertToString(moduleName), out module)) {
-                        module = Builtin.__import__(context, Converter.ConvertToString(moduleName));
-                    }
+                    Builtin.__import__(context, Converter.ConvertToString(moduleName));
 
                     object foundObj;
-                    if (PythonOps.TryGetBoundAttr(context, module, SymbolTable.StringToId(Converter.ConvertToString(name)), out foundObj)) {
+                    if (Importer.TryGetExistingModule(context, Converter.ConvertToString(moduleName), out module) &&
+                        PythonOps.TryGetBoundAttr(context, module, SymbolTable.StringToId(Converter.ConvertToString(name)), out foundObj)) {
                         if (PythonOps.IsRetBool(foundObj, obj)) {
                             return moduleName;
                         } else {
-                            throw CannotPickle(obj, "it's not the same object as {0}.{1}", moduleName, name);
+                            throw CannotPickle(context, obj, "it's not the same object as {0}.{1}", moduleName, name);
                         }
                     } else {
-                        throw CannotPickle(obj, "it's not found as {0}.{1}", moduleName, name);
+                        throw CannotPickle(context, obj, "it's not found as {0}.{1}", moduleName, name);
                     }
                 } else {
                     // No obj.__module__, so crawl through all loaded modules looking for obj
@@ -1235,7 +1233,7 @@ namespace IronPython.Modules {
                             return moduleName;
                         }
                     }
-                    throw CannotPickle(obj, "could not determine its module");
+                    throw CannotPickle(context, obj, "could not determine its module");
                 }
 
             }
@@ -1342,7 +1340,7 @@ namespace IronPython.Modules {
 
                 while (opcode != Opcode.Stop) {
                     if (!_dispatch.ContainsKey(opcode)) {
-                        throw CannotUnpickle("invalid opcode: {0}", PythonOps.Repr(context, opcode));
+                        throw CannotUnpickle(context, "invalid opcode: {0}", PythonOps.Repr(context, opcode));
                     }
                     _dispatch[opcode](context);
                     opcode = Read(context, 1);
@@ -1365,8 +1363,8 @@ namespace IronPython.Modules {
                 throw PythonOps.NotImplementedError("noload() is not implemented");
             }
 
-            private Exception CannotUnpickle(string format, params object[] args) {
-                return PythonExceptions.CreateThrowable(UnpicklingError, String.Format(format, args));
+            private Exception CannotUnpickle(CodeContext/*!*/ context, string format, params object[] args) {
+                return PythonExceptions.CreateThrowable(UnpicklingError(context), String.Format(format, args));
             }
 
             public IDictionary<object, object> memo {
@@ -1383,31 +1381,26 @@ namespace IronPython.Modules {
                 }
             }
 
-            private object MemoGet(long key) {
+            private object MemoGet(CodeContext/*!*/ context, long key) {
                 object value;
                 if (_memo.TryGetValue(key, out value)) return value;
-                throw PythonExceptions.CreateThrowable(BadPickleGet, String.Format("memo key {0} not found", key));
+                throw PythonExceptions.CreateThrowable(BadPickleGet(context), String.Format("memo key {0} not found", key));
             }
 
             private void MemoPut(long key, object value) {
                 _memo[key] = value;
             }
 
-            public int MarkIndex {
-                get {
-                    int i = _stack.__len__() - 1;
-                    while (i > 0 && _stack[i] != _mark) i -= 1;
-                    if (i == -1) throw CannotUnpickle("mark not found");
-                    return i;
-                }
+            [PropertyMethod, System.Runtime.CompilerServices.SpecialName]
+            public int GetMarkIndex(CodeContext/*!*/ context) {
+                int i = _stack.__len__() - 1;
+                while (i > 0 && _stack[i] != _mark) i -= 1;
+                if (i == -1) throw CannotUnpickle(context, "mark not found");
+                return i;
             }
 
             private string Read(CodeContext/*!*/ context, int size) {
                 return _file.Read(context, size);
-            }
-
-            private string ReadLine(CodeContext/*!*/ context) {
-                return _file.ReadLine(context);
             }
 
             private string ReadLineNoNewline(CodeContext/*!*/ context) {
@@ -1421,7 +1414,7 @@ namespace IronPython.Modules {
 
             private double ReadFloat64(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateDoubleValue(ref index, false, Read(context, 8));
+                return PythonStruct.CreateDoubleValue(context, ref index, false, Read(context, 8));
             }
 
             private object ReadIntFromString(CodeContext/*!*/ context) {
@@ -1433,7 +1426,7 @@ namespace IronPython.Modules {
 
             private int ReadInt32(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateIntValue(ref index, true, Read(context, 4));
+                return PythonStruct.CreateIntValue(context, ref index, true, Read(context, 4));
             }
 
             private object ReadLongFromString(CodeContext/*!*/ context) {
@@ -1446,12 +1439,12 @@ namespace IronPython.Modules {
 
             private char ReadUInt8(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateCharValue(ref index, Read(context, 1));
+                return PythonStruct.CreateCharValue(context, ref index, Read(context, 1));
             }
 
             private ushort ReadUInt16(CodeContext/*!*/ context) {
                 int index = 0;
-                return PythonStruct.CreateUShortValue(ref index, true, Read(context, 2));
+                return PythonStruct.CreateUShortValue(context, ref index, true, Read(context, 2));
             }
 
             public object find_global(CodeContext/*!*/ context, object module, object attr) {
@@ -1506,7 +1499,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadAppends(CodeContext/*!*/ context) {
-                int markIndex = MarkIndex;
+                int markIndex = GetMarkIndex(context);
                 object seq = _stack[markIndex - 1];
                 object stackSlice = _stack.__getslice__(markIndex + 1, _stack.__len__());
                 if (seq is List) {
@@ -1522,7 +1515,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadBinGet(CodeContext/*!*/ context) {
-                _stack.append(MemoGet((long)ReadUInt8(context)));
+                _stack.append(MemoGet(context, (long)ReadUInt8(context)));
             }
 
             private void LoadBinInt(CodeContext/*!*/ context) {
@@ -1538,7 +1531,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadBinPersid(CodeContext/*!*/ context) {
-                if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
+                if (_pers_loader == null) throw CannotUnpickle(context, "cannot unpickle binary persistent ID w/o persistent_load");
 
                 _stack.append(PythonContext.GetContext(context).Call(_pers_loader, _stack.pop()));
             }
@@ -1598,7 +1591,7 @@ namespace IronPython.Modules {
                             if (PythonOps.TryGetBoundAttr(context, instDict, Symbols.Update, out updateCallable)) {
                                 PythonOps.CallWithContext(context, updateCallable, dict);
                             } else {
-                                throw CannotUnpickle("could not update __dict__ {0} when building {1}", dict, inst);
+                                throw CannotUnpickle(context, "could not update __dict__ {0} when building {1}", dict, inst);
                             }
                         }
                     }
@@ -1612,7 +1605,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadDict(CodeContext/*!*/ context) {
-                int markIndex = MarkIndex;
+                int markIndex = GetMarkIndex(context);
                 PythonDictionary dict = new PythonDictionary((_stack.__len__() - 1 - markIndex) / 2);
                 SetItems(dict, markIndex);
                 _stack.append(dict);
@@ -1655,9 +1648,9 @@ namespace IronPython.Modules {
 
             private void LoadGet(CodeContext/*!*/ context) {
                 try {
-                    _stack.append(MemoGet((long)(int)ReadIntFromString(context)));
+                    _stack.append(MemoGet(context, (long)(int)ReadIntFromString(context)));
                 } catch (ArgumentException) {
-                    throw PythonExceptions.CreateThrowable(BadPickleGet, "while executing GET: invalid integer value");
+                    throw PythonExceptions.CreateThrowable(BadPickleGet(context), "while executing GET: invalid integer value");
                 }
             }
 
@@ -1671,7 +1664,7 @@ namespace IronPython.Modules {
                 LoadGlobal(context);
                 object cls = _stack.pop();
                 if (cls is OldClass || cls is PythonType) {
-                    int markIndex = MarkIndex;
+                    int markIndex = GetMarkIndex(context);
                     object[] args = _stack.GetSliceAsArray(markIndex + 1, _stack.__len__());
                     PopMark(markIndex);
 
@@ -1686,7 +1679,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadList(CodeContext/*!*/ context) {
-                int markIndex = MarkIndex;
+                int markIndex = GetMarkIndex(context);
                 object list = _stack.__getslice__(markIndex + 1, _stack.__len__());
                 PopMark(markIndex);
                 _stack.append(list);
@@ -1705,7 +1698,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadLongBinGet(CodeContext/*!*/ context) {
-                _stack.append(MemoGet((long)(int)ReadInt32(context)));
+                _stack.append(MemoGet(context, (long)(int)ReadInt32(context)));
             }
 
             private void LoadLongBinPut(CodeContext/*!*/ context) {
@@ -1755,7 +1748,11 @@ namespace IronPython.Modules {
             }
 
             private void LoadObj(CodeContext/*!*/ context) {
-                int markIndex = MarkIndex;
+                int markIndex = GetMarkIndex(context);
+                if ((markIndex + 1) >= _stack.Count) {
+                    throw PythonExceptions.CreateThrowable(UnpicklingError(context), "could not find MARK");
+                }
+
                 object cls = _stack[markIndex + 1];
                 if (cls is OldClass || cls is PythonType) {
                     object[] args = _stack.GetSliceAsArray(markIndex + 2, _stack.__len__());
@@ -1768,7 +1765,7 @@ namespace IronPython.Modules {
 
             private void LoadPersId(CodeContext/*!*/ context) {
                 if (_pers_loader == null) {
-                    throw CannotUnpickle("A load persistent ID instruction is present but no persistent_load function is available");
+                    throw CannotUnpickle(context, "A load persistent ID instruction is present but no persistent_load function is available");
                 }
                 _stack.append(PythonContext.GetContext(context).Call(_pers_loader, ReadLineNoNewline(context)));
             }
@@ -1778,7 +1775,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadPopMark(CodeContext/*!*/ context) {
-                PopMark(MarkIndex);
+                PopMark(GetMarkIndex(context));
             }
 
             private void LoadProto(CodeContext/*!*/ context) {
@@ -1819,7 +1816,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadSetItems(CodeContext/*!*/ context) {
-                int markIndex = MarkIndex;
+                int markIndex = GetMarkIndex(context);
                 PythonDictionary dict = _stack[markIndex - 1] as PythonDictionary;
                 if (dict == null) {
                     throw PythonOps.TypeError(
@@ -1852,7 +1849,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadTuple(CodeContext/*!*/ context) {
-                int markIndex = MarkIndex;
+                int markIndex = GetMarkIndex(context);
                 PythonTuple tuple = PythonTuple.MakeTuple(_stack.GetSliceAsArray(markIndex + 1, _stack.__len__()));
                 PopMark(markIndex);
                 _stack.append(tuple);
@@ -1887,5 +1884,20 @@ namespace IronPython.Modules {
 
         #endregion
 
+        private static PythonType PicklingError(CodeContext/*!*/ context) {
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("PicklingError");
+        }
+
+        private static PythonType PickleError(CodeContext/*!*/ context) {
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("PickleError");
+        }
+
+        private static PythonType UnpicklingError(CodeContext/*!*/ context) {
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("UnpicklingError");
+        }
+
+        private static PythonType BadPickleGet(CodeContext/*!*/ context) {
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("BadPickleGet");
+        }
     }
 }

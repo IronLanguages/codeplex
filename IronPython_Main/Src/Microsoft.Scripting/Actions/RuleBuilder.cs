@@ -42,7 +42,6 @@ namespace Microsoft.Scripting.Actions {
         internal Expression[] _parameters;          // the parameters which the rule is processing
         internal Expression[] _parametersMinusSite; // the parameters which the rule is processing minus the CallSite parameter
         internal Expression[] _allParameters;       // The parameters, including CodeContext, if any.
-        internal List<Func<bool>> _validators;  // the list of validates which indicate when the rule is no longer valid
         private bool _error;                        // true if the rule represents an error
         internal List<VariableExpression> _temps;    // temporaries allocated by the rule
 
@@ -75,21 +74,6 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return _context;
             }
-        }
-
-        /// <summary>
-        /// Adds a validation delegate which determines if the rule is still valid.
-        /// 
-        /// A validator provides a dynamic test that can invalidate a rule at runtime.  
-        /// The definition of an invalid rule is one whose Test will always return false.  
-        /// In theory a set of validators is not needed as this could be encoded in the 
-        /// test itself; however, in practice it is much simpler to include these helpers.
-        /// 
-        /// The validator returns true if the rule should still be considered valid.
-        /// </summary>
-        public void AddValidator(Func<bool> validator) {
-            if (_validators == null) _validators = new List<Func<bool>>();
-            _validators.Add(validator);
         }
 
         /// <summary>
@@ -333,7 +317,6 @@ namespace Microsoft.Scripting.Actions {
                         "<rule>",
                         _temps != null ? _temps.ToArray() : new VariableExpression[0]
                     ),
-                    RuleValidator.Create(_validators),
                     new ReadOnlyCollection<ParameterExpression>(_paramVariables)
                 );
             }

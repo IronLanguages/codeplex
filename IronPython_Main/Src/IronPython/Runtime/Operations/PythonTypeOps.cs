@@ -407,6 +407,7 @@ namespace IronPython.Runtime.Operations {
             return GetBuiltinFunction(type, name, null, mems);
         }
 
+#pragma warning disable 414  // unused fields - they're used by GetHashCode()
         internal struct BuiltinFunctionKey {
             Type DeclaringType;
             ReflectionCache.MethodBaseCache Cache;
@@ -418,6 +419,7 @@ namespace IronPython.Runtime.Operations {
                 DeclaringType = declaringType;
             }
         }
+#pragma warning restore 169
 
         public static MethodBase[] GetNonBaseHelperMethodInfos(MemberInfo[] members) {
             List<MethodBase> res = new List<MethodBase>();
@@ -606,7 +608,6 @@ namespace IronPython.Runtime.Operations {
                 // check if this is a virtual override helper, if so we
                 // may need to filter it out.
                 foreach (MethodInfo mi in methods) {
-                    MethodInfo baseDef = mi.GetBaseDefinition();
                     if (PythonBinder.IsExtendedType(mi.DeclaringType)) {
                         alwaysVisible = false;
                         break;
@@ -730,15 +731,6 @@ namespace IronPython.Runtime.Operations {
 
                 return rp;
             }            
-        }
-
-        private static List<MethodInfo> CopyOrNewList(List<MethodInfo> getters) {
-            if (getters != null) {
-                getters = new List<MethodInfo>(getters);
-            } else {
-                getters = new List<MethodInfo>(1);
-            }
-            return getters;
         }
 
         private static MethodInfo FilterProtectedGetterOrSetter(MethodInfo info, bool privateBinding) {

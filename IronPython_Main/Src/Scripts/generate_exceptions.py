@@ -310,7 +310,7 @@ def gen_one_new_exception(cw, exception, parent):
         cw.enter_block('get')
         cw.enter_block('if (%sStorage == null)' % (exception.name, ))
         cw.enter_block('lock (typeof(PythonExceptions))')
-        cw.writeline('%sStorage = CreateSubType(%s, typeof(_%s), DefaultExceptionModule, "");' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.writeline('%sStorage = CreateSubType(%s, typeof(_%s));' % (exception.name, exception.parent.PythonType, exception.name))
         cw.exit_block() # lock
         cw.exit_block() # if
         cw.writeline('return %sStorage;' % (exception.name, ))
@@ -374,7 +374,7 @@ def gen_one_new_exception(cw, exception, parent):
         cw.enter_block('get')
         cw.enter_block('if (%sStorage == null)' % (exception.name, ))
         cw.enter_block('lock (typeof(PythonExceptions))')
-        cw.writeline('%sStorage = CreateSubType(%s, "%s", "");' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.writeline('%sStorage = CreateSubType(%s, "%s");' % (exception.name, exception.parent.PythonType, exception.name))
         cw.exit_block() # lock
         cw.exit_block() # if
         cw.writeline('return %sStorage;' % (exception.name, ))

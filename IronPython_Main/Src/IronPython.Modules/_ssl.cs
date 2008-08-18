@@ -26,6 +26,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using System.Runtime.CompilerServices;
 
 /* [assembly: PythonModule("_ssl", typeof(IronPython.Modules.PythonSsl))] */
 namespace IronPython.Modules {
@@ -78,7 +80,7 @@ namespace IronPython.Modules {
             [Documentation("read([n]) -> buffer_read\n\n"
                 + "If n is present, reads up to n bytes from the SSL connection. Otherwise, reads to EOF."
                 )]
-            public string read([DefaultParameterValue(Int32.MaxValue)] int n) {
+            public string read(CodeContext/*!*/ context, [DefaultParameterValue(Int32.MaxValue)] int n) {
                 try {
                     byte[] buffer = new byte[2048];
                     MemoryStream result = new MemoryStream(n);
@@ -94,7 +96,7 @@ namespace IronPython.Modules {
                         }
                     }
                 } catch (Exception e) {
-                    throw PythonSocket.MakeException(e);
+                    throw PythonSocket.MakeException(context, e);
                 }
             }
 
@@ -113,13 +115,13 @@ namespace IronPython.Modules {
             [Documentation("write(s) -> bytes_sent\n\n"
                 + "Writes the string s through the SSL connection."
                 )]
-            public int write(string data) {
+            public int write(CodeContext/*!*/ context, string data) {
                 byte[] buffer = StringOps.ToByteArray(data);
                 try {
                     _sslStream.Write(buffer);
                     return buffer.Length;
                 } catch (Exception e) {
-                    throw PythonSocket.MakeException(e);
+                    throw PythonSocket.MakeException(context, e);
                 }
             }
         }
@@ -137,8 +139,6 @@ namespace IronPython.Modules {
         public const int SSL_ERROR_INVALID_ERROR_CODE = 9;
 
         #endregion
-
-        public static PythonType sslerror = PythonExceptions.CreateSubType(PythonExceptions.Exception, "sslerror", "_ssl", "");
     }
 }
 #endif

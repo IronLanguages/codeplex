@@ -228,9 +228,9 @@ namespace IronPython.Runtime.Binding {
             } else if ((init == InstanceOps.Init && !HasFinalizer(call)) || (Value == TypeCache.PythonType && ai.Arguments.Length == 2)) {
                 return new DefaultInitAdapter(ai, state, codeContext);
             } else if (init is BuiltinMethodDescriptor) {
-                return new BuiltinInitAdapter(ai, Value, ((BuiltinMethodDescriptor)init).Template, state, codeContext);
+                return new BuiltinInitAdapter(ai, ((BuiltinMethodDescriptor)init).Template, state, codeContext);
             } else if (init is BuiltinFunction) {
-                return new BuiltinInitAdapter(ai, Value, (BuiltinFunction)init, state, codeContext);
+                return new BuiltinInitAdapter(ai, (BuiltinFunction)init, state, codeContext);
             } else {
                 return new InitAdapter(ai, state, codeContext);
             }
@@ -519,12 +519,10 @@ namespace IronPython.Runtime.Binding {
 
         private class BuiltinInitAdapter : InitAdapter {
             private readonly BuiltinFunction/*!*/ _method;
-            private readonly PythonType/*!*/ _creating;
 
-            public BuiltinInitAdapter(ArgumentValues/*!*/ ai, PythonType/*!*/creating, BuiltinFunction/*!*/ method, BinderState/*!*/ state, Expression/*!*/ codeContext)
+            public BuiltinInitAdapter(ArgumentValues/*!*/ ai, BuiltinFunction/*!*/ method, BinderState/*!*/ state, Expression/*!*/ codeContext)
                 : base(ai, state, codeContext) {
                 _method = method;
-                _creating = creating;
             }
 
             public override MetaObject/*!*/ MakeInitCall(DefaultBinder/*!*/ binder, MetaObject/*!*/ createExpr) {
@@ -709,12 +707,12 @@ namespace IronPython.Runtime.Binding {
         }
 
         private bool IsStandardDotNetType(MetaAction/*!*/ action) {
-            BinderState bs = BinderState.GetBinderState(action);
+            BinderState bState = BinderState.GetBinderState(action);
 
             return
                 Value.IsSystemType &&
                 !Value.IsPythonType &&
-                !bs.Binder.HasExtensionTypes(Value.UnderlyingSystemType) &&
+                !bState.Binder.HasExtensionTypes(Value.UnderlyingSystemType) &&
                 !typeof(Delegate).IsAssignableFrom(Value.UnderlyingSystemType) &&
                 !Value.UnderlyingSystemType.IsArray;                                
         }

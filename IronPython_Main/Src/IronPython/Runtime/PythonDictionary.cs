@@ -399,9 +399,10 @@ namespace IronPython.Runtime {
                 }
             } else {
                 // slow path, cls.__new__ returned a user defined dictionary instead of a PythonDictionary.
+                PythonContext pc = PythonContext.GetContext(context);
                 IEnumerator i = PythonOps.GetEnumerator(o);
                 while (i.MoveNext()) {
-                    PythonOps.SetIndex(dict, i.Current, value);
+                    pc.SetIndex(dict, i.Current, value);
                 }
             }
 
@@ -426,8 +427,9 @@ namespace IronPython.Runtime {
                     }
                 } else {
                     // slow path, user defined dict
+                    PythonContext pc = PythonContext.GetContext(context);
                     for (int i = 0; i < n; i++) {
-                        PythonOps.SetIndex(ret, xr[i], value);
+                        pc.SetIndex(ret, xr[i], value);
                     }
                 }
                 return ret;

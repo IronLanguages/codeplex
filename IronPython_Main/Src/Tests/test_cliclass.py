@@ -1040,6 +1040,52 @@ def test_interface_isinstance():
     l = System.Collections.ArrayList()
     AreEqual(isinstance(l, System.Collections.IList), True)
 
+@skip("silverlight") # no serialization support in Silverlight
+def test_serialization():
+    import cPickle
+    import clr
+    
+    # test the primitive data types...
+    data = [1, 1.0, 2j, 2L, System.Int64(1), System.UInt64(1), 
+            System.UInt32(1), System.Int16(1), System.UInt16(1), 
+            System.Byte(1), System.SByte(1), System.Decimal(1),
+            System.Char.MaxValue, System.DBNull.Value, System.Single(1.0),
+            System.DateTime.Now, None]
+    for value in data:
+        # use cPickle & clr.Serialize/Deserialize directly
+        for newVal in (cPickle.loads(cPickle.dumps(value)), clr.Deserialize(*clr.Serialize(value))):
+            AreEqual(type(newVal), type(value))
+            AreEqual(newVal, value)
+    
+    # passing an unknown format raises...
+    AssertError(ValueError, clr.Deserialize, "unknown", "foo")
+    
+    al = System.Collections.ArrayList()
+    al.Add(2)
+    
+    gl = System.Collections.Generic.List[int]()
+    gl.Add(2)
+    
+    # lists...
+    for value in (al, gl):
+        for newX in (cPickle.loads(cPickle.dumps(value)), clr.Deserialize(*clr.Serialize(value))):
+            AreEqual(value.Count, newX.Count)
+            for i in xrange(value.Count):
+                AreEqual(value[i], newX[i])
+    
+    ht = System.Collections.Hashtable()
+    ht['foo'] = 'bar'
+    
+    gd = System.Collections.Generic.Dictionary[str, str]()
+    gd['foo'] = 'bar'
+
+    # dictionaries
+    for value in (ht, gd):
+        for newX in (cPickle.loads(cPickle.dumps(value)), clr.Deserialize(*clr.Serialize(value))):
+            AreEqual(value.Count, newX.Count)
+            for key in value.Keys:
+                AreEqual(value[key], newX[key])
+
 def test_generic_method_error():
     import clr
     clr.AddReference('System.Core')
@@ -1056,6 +1102,10 @@ def test_collection_length():
     
 def test_dict_copy():
     Assert(int.__dict__.copy().has_key('MaxValue'))
-    
+
+def test_decimal_bool():
+    AreEqual(bool(System.Decimal(0)), False)
+    AreEqual(bool(System.Decimal(1)), True)
+
 run_test(__name__)
 
