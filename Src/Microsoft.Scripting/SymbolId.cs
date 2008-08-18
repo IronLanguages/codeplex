@@ -40,7 +40,7 @@ namespace Microsoft.Scripting {
             get { return new SymbolId(_id & 0x00FFFFFF); }
         }
 
-        public int CaseInsensisitveId {
+        public int CaseInsensitiveId {
             get { return _id & 0x00FFFFFF; }
         }
 

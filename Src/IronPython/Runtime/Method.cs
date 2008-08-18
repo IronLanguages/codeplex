@@ -101,20 +101,7 @@ namespace IronPython.Runtime {
             if (!PythonOps.IsInstance(self, im_class)) throw BadSelf(self);
             return self;
         }
-
-        private object[] AddInstToArgs(object[] args) {
-            if (_inst == null) {
-                if (args.Length < 1) throw BadSelf(null);
-                CheckSelf(args[0]);
-                return args;
-            }
-
-            object[] nargs = new object[args.Length + 1];
-            args.CopyTo(nargs, 1);
-            nargs[0] = _inst;
-            return nargs;
-        }
-
+        
         #region Object Overrides
         private string DeclaringClassAsString() {
             if (im_class == null) return "?";
@@ -201,7 +188,7 @@ namespace IronPython.Runtime {
                 IAttributesCollection dict = pf.func_dict;
                 
                 // Check the func
-                foreach (KeyValuePair<object, object> kvp in ((PythonFunction)_func).func_dict) {
+                foreach (KeyValuePair<object, object> kvp in dict) {
                     ret.AddNoLockNoDups(kvp.Key);
                 }                
             }
@@ -243,11 +230,11 @@ namespace IronPython.Runtime {
             if (action.Kind == DynamicActionKind.DoOperation) {
                 return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
             }
-            
+
             // get default rule:
             return null;
         }
-
+        
         private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:

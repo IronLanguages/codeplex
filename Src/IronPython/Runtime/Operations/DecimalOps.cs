@@ -24,6 +24,10 @@ namespace IronPython.Runtime.Operations {
             return x.CompareTo(other);
         }
 
+        public static bool __nonzero__(decimal x) {
+            return x != 0;
+        }
+
         [SpecialName]
         public static bool LessThan(decimal x, decimal y) {
             return x < y;
@@ -63,6 +67,10 @@ namespace IronPython.Runtime.Operations {
                 else return -1;
             }
             return bx > y ? +1 : -1;
+        }
+
+        public static int __hash__(decimal x) {
+            return ((BigInteger)x).GetHashCode();   
         }
     }
 }

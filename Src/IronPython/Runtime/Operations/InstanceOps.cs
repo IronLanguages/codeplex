@@ -468,6 +468,29 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, Symbols.GetDescriptor);
         }
 
+#if !SILVERLIGHT
+        /// <summary>
+        /// Implements __reduce_ex__ for .NET types which are serializable.  This uses the .NET
+        /// serializer to get a string of raw data which can be serialized.
+        /// </summary>
+        public static PythonTuple SerializeReduce(CodeContext/*!*/ context, object/*!*/ self, int protocol) {
+            PythonTuple data = ClrModule.Serialize(self);
+
+            object deserializeNew;
+            bool res = PythonContext.GetContext(context).ClrModule.TryGetName(
+                SymbolTable.StringToId("Deserialize"),
+                out deserializeNew
+            );
+            Debug.Assert(res);
+
+            return PythonTuple.MakeTuple(
+                deserializeNew,                 // function to call, clr.DeserializeNew 
+                data,                           // data to pass to it - our type & the raw data from the .NET serializer
+                null                            // state, unused
+            );
+        }
+#endif
+
         internal static void CheckInitArgs(CodeContext context, IAttributesCollection dict, object[] args, PythonType pt) {
             PythonTypeSlot dts;
             object initObj;

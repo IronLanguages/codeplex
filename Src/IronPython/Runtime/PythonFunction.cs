@@ -400,24 +400,7 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-
-        #region Private APIs
-
-        private int FindParamIndex(string name) {
-            for (int i = 0; i < _argNames.Length; i++) {
-                if (name == _argNames[i]) return i;
-            }
-            return -1;
-        }
-
-        private int FindParamIndexOrError(string name) {
-            int ret = FindParamIndex(name);
-            if (ret != -1) return ret;
-            throw PythonOps.TypeError("no parameter for " + name);
-        }
-
-        #endregion
-
+       
         #region Custom member lookup operators
 
         [SpecialName]
@@ -559,7 +542,7 @@ namespace IronPython.Runtime {
             }
             return null;
         }
-
+        
         private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
@@ -571,7 +554,6 @@ namespace IronPython.Runtime {
         }
 
         private RuleBuilder<T> MakeCallSignatureRule<T>(CodeContext context) where T : class {
-            string data = GetSignatureString();
             RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(PythonFunction));
             rule.Target = rule.MakeReturn(

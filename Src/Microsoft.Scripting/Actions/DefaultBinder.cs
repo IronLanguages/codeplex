@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Actions {
         public virtual ErrorInfo MakeInvalidParametersError(BindingTarget target) {
             switch (target.Result) {
                 case BindingResult.CallFailure: return MakeCallFailureError(target);
-                case BindingResult.AmbigiousMatch: return MakeAmbigiousCallError(target);
+                case BindingResult.AmbiguousMatch: return MakeAmbiguousCallError(target);
                 case BindingResult.IncorrectArgumentCount: return MakeIncorrectArgumentCountError(target);
                 default: throw new InvalidOperationException();
             }
@@ -123,10 +123,10 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private ErrorInfo MakeAmbigiousCallError(BindingTarget target) {
+        private ErrorInfo MakeAmbiguousCallError(BindingTarget target) {
             StringBuilder sb = new StringBuilder("Multiple targets could match: ");
             string outerComma = "";
-            foreach (MethodTarget mt in target.AmbigiousMatches) {
+            foreach (MethodTarget mt in target.AmbiguousMatches) {
                 Type[] types = mt.GetParameterTypes();
                 string innerComma = "";
 
@@ -283,7 +283,7 @@ namespace Microsoft.Scripting.Actions {
                 MemberTracker mi = members[i];
                 if (mi.MemberType != memberType) {
                     if (memberType != TrackerTypes.All) {
-                        error = MakeAmbigiousMatchError(members);
+                        error = MakeAmbiguousMatchError(members);
                         return TrackerTypes.All;
                     }
                     memberType = mi.MemberType;
@@ -292,18 +292,20 @@ namespace Microsoft.Scripting.Actions {
             return memberType;
         }
 
-        private static Expression MakeAmbigiousMatchError(MemberGroup members) {
+        private static Expression MakeAmbiguousMatchError(MemberGroup members) {
             StringBuilder sb = new StringBuilder();
-            foreach (MethodTracker mi in members) {
+            foreach (MemberTracker mi in members) {
                 if (sb.Length != 0) sb.Append(", ");
                 sb.Append(mi.MemberType);
                 sb.Append(" : ");
                 sb.Append(mi.ToString());
             }
 
-            return Ast.New(
-                typeof(AmbiguousMatchException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Constant(sb.ToString())
+            return Ast.Throw(
+                Ast.New(
+                    typeof(AmbiguousMatchException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Constant(sb.ToString())
+                )
             );
         }
 

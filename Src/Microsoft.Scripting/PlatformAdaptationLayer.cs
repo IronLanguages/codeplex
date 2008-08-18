@@ -201,7 +201,15 @@ namespace Microsoft.Scripting {
 
         public virtual string[] GetFiles(string path, string searchPattern) {
 #if !SILVERLIGHT
-            return Directory.GetFiles(path, searchPattern);
+            return Directory.GetFiles(path, searchPattern);            
+#else
+            throw new NotImplementedException();
+#endif
+        }
+
+        public virtual string[] GetDirectories(string path, string searchPattern) {
+#if !SILVERLIGHT
+            return Directory.GetDirectories(path, searchPattern);
 #else
             throw new NotImplementedException();
 #endif

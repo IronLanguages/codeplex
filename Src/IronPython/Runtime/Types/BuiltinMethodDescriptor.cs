@@ -115,7 +115,7 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         #region IOldDynamicObject Members
-
+        
         RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
             if (action.Kind == DynamicActionKind.Call) {
                 return MakeCallRule<T>((OldCallAction)action, context, args);

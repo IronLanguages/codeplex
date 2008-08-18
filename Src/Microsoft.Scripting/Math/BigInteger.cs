@@ -26,6 +26,7 @@ namespace Microsoft.Scripting.Math {
     /// <summary>
     /// arbitrary precision integers
     /// </summary>
+    [Serializable]
     public class BigInteger : IFormattable, IComparable, IConvertible, IEquatable<BigInteger> {
         private const int BitsPerDigit = 32;
         private const ulong Base = 0x100000000;

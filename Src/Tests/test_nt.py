@@ -656,10 +656,51 @@ def test_stat_result():
     statResult = [0,1,2,3,4,5,6,7,8,]
     AssertError(TypeError,nt.stat_result,statResult)
     
-    # BUG 17300, this should not produce an error
-    # statResult = ["a","b","c","y","r","a","a","b","d","r","f"]
-    # AssertError(TypeError,nt.stat_result,statResult)
+    # this should not produce an error
+    statResult = ["a","b","c","y","r","a","a","b","d","r","f"]
+    x = nt.stat_result(statResult)
+    AreEqual(x.st_mode, 'a')
+    AreEqual(x.st_ino, 'b')
+    AreEqual(x.st_dev, 'c')
+    AreEqual(x.st_nlink, 'y')
+    AreEqual(x.st_uid, 'r')
+    AreEqual(x.st_gid, 'a')
+    AreEqual(x.st_size, 'a')
+    AreEqual(x.st_atime, 'f')
+    AreEqual(x.st_mtime, 'd')
+    AreEqual(x.st_ctime, 'r')
+    
+    # can pass dict to get values...
+    x = nt.stat_result(xrange(10), {'st_atime': 23, 'st_mtime':42, 'st_ctime':2342})
+    AreEqual(x.st_atime, 23)
+    AreEqual(x.st_mtime, 42)
+    AreEqual(x.st_ctime, 2342)
+    
+    # positional values take precedence over dict values
+    x = nt.stat_result(xrange(13), {'st_atime': 23, 'st_mtime':42, 'st_ctime':2342})
+    AreEqual(x.st_atime, 10)
+    AreEqual(x.st_mtime, 11)
+    AreEqual(x.st_ctime, 12)
 
+    x = nt.stat_result(xrange(13))
+    AreEqual(x.st_atime, 10)
+    AreEqual(x.st_mtime, 11)
+    AreEqual(x.st_ctime, 12)
+    
+    # other values are ignored...
+    x = nt.stat_result(xrange(13), {'st_dev': 42, 'st_gid': 42, 'st_ino': 42, 'st_mode': 42, 'st_nlink': 42, 'st_size':42, 'st_uid':42})
+    AreEqual(x.st_mode, 0)
+    AreEqual(x.st_ino, 1)
+    AreEqual(x.st_dev, 2)
+    AreEqual(x.st_nlink, 3)
+    AreEqual(x.st_uid, 4)
+    AreEqual(x.st_gid, 5)
+    AreEqual(x.st_size, 6)
+    AreEqual(x.st_atime, 10)
+    AreEqual(x.st_mtime, 11)
+    AreEqual(x.st_ctime, 12)
+    
+    Assert(not isinstance(x, tuple))
 
 # urandom tests
 def test_urandom():
@@ -689,14 +730,14 @@ def test_write():
     
     # BUG 8783 the argument buffersize in nt.read(fd, buffersize) is less than zero
     # the string written to the file is empty string
-    #tempfilename = "temp.txt"
-    #file = open(tempfilename,"w")
-    #nt.write(file.fileno(),"bug test")
-    #file.close()
-    #file = open(tempfilename,"r")
-    #AssertError(OSError,nt.read,file.fileno(),-10)
-    #file.close()
-    #nt.unlink(tempfilename)
+    tempfilename = "temp.txt"
+    file = open(tempfilename,"w")
+    nt.write(file.fileno(),"bug test")
+    file.close()
+    file = open(tempfilename,"r")
+    AssertError(OSError,nt.read,file.fileno(),-10)
+    file.close()
+    nt.unlink(tempfilename)
 
 # open test
 def test_open():
@@ -771,7 +812,10 @@ def test_cp16413():
     nt.chmod(tmpfile, 0777)
     nt.unlink(tmpfile)
     
-    
+def test__getfullpathname():
+    AreEqual(nt._getfullpathname('.'), nt.getcwd())
+    AreEqual(nt._getfullpathname('<bad>'), path_combine(nt.getcwd(), '<bad>'))
+
 try:
     run_test(__name__)
 finally:

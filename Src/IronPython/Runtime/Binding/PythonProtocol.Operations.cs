@@ -394,8 +394,7 @@ namespace IronPython.Runtime.Binding {
             // a __call__ attribute. The default base binder also checks these, but since we're overriding
             // the base binder, we check them here.
             MetaObject self = args[0];
-            Expression test = MetaPythonObject.MakeTypeTests(self);
-
+            
             // only applies when called from a Python site
             if (typeof(Delegate).IsAssignableFrom(self.LimitType) ||
                 typeof(MethodGroup).IsAssignableFrom(self.LimitType)) {
@@ -639,16 +638,6 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private static bool MakeOneTarget(BinderState/*!*/ state, SlotOrFunction/*!*/ target, ConditionalBuilder/*!*/ bodyBuilder, bool reverse, MetaObject/*!*/[]/*!*/ types) {
-            return MakeOneTarget(
-                state,
-                target,
-                null,
-                bodyBuilder,
-                reverse,
-                types);
-        }
-
         private static bool MakeOneTarget(BinderState/*!*/ state, SlotOrFunction/*!*/ target, PythonTypeSlot slotTarget, ConditionalBuilder/*!*/ bodyBuilder, bool reverse, MetaObject/*!*/[]/*!*/ types) {
             if (target == SlotOrFunction.Empty && slotTarget == null) return true;
 
@@ -764,15 +753,6 @@ namespace IronPython.Runtime.Binding {
                 );
 
                 bodyBuilder.TestCoercionRecursionCheck = true;
-            }
-
-            Expression self, other;
-            if (reverse) {
-                self = Ast.ConvertHelper(types[1].Expression, types[1].LimitType);
-                other = Ast.ConvertHelper(types[0].Expression, types[0].LimitType);
-            } else {
-                self = Ast.ConvertHelper(types[0].Expression, types[0].LimitType);
-                other = Ast.ConvertHelper(types[1].Expression, types[1].LimitType);
             }
 
             // tmp = self.__coerce__(other)
@@ -1391,20 +1371,6 @@ namespace IronPython.Runtime.Binding {
 
                 return res;
             }
-
-            private string Name {
-                get {
-                    switch (Operator) {
-                        case StandardOperators.GetSlice: return "__getslice__";
-                        case StandardOperators.SetSlice: return "__setslice__";
-                        case StandardOperators.DeleteSlice: return "__delslice__";
-                        case StandardOperators.GetItem: return "__getitem__";
-                        case StandardOperators.SetItem: return "__setitem__";
-                        case StandardOperators.DeleteItem: return "__delitem__";
-                        default: throw new InvalidOperationException();
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -1926,19 +1892,7 @@ namespace IronPython.Runtime.Binding {
                 toCheck
             );
         }
-
-        private static IList<Expression/*!*/> CheckTypes(PythonType/*!*/[] types, IList<Expression/*!*/> vars) {
-            if (types != null) {
-                vars = ArrayUtils.MakeArray(vars);
-                for (int i = 0; i < types.Length; i++) {
-                    if (types[i] != null) {
-                        vars[i] = Ast.ConvertHelper(vars[i], CompilerHelpers.GetVisibleType(types[i].UnderlyingSystemType));
-                    }
-                }
-            }
-            return vars;
-        }
-
+        
         private static MetaObject/*!*/ MakeRuleForNoMatch(OperationAction/*!*/ operation, string/*!*/ op, params MetaObject/*!*/[]/*!*/ types) {
             // we get the error message w/ {0}, {1} so that TypeError formats it correctly
             return TypeError(

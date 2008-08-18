@@ -84,7 +84,6 @@ namespace IronPythonTest {
 #pragma warning disable 169
         // This field is accessed from the test
         private int privateField;
-#pragma warning restore 169
         private int privateProperty { get { return m_property; } set { m_property = value; } }
         private event IntIntDelegate privateEvent;
         private int privateMethod(int arg) {
@@ -96,6 +95,7 @@ namespace IronPythonTest {
         private static int privateStaticMethod() {
             return 100;
         }
+#pragma warning restore 169
     }
 
     internal class InternalClsPart {
@@ -656,8 +656,6 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
         // AddToPath
 
         public void ScenarioAddToPath() { // runs first to avoid path-order issues            
-            string ipc_dll = typeof(PythonContext).Assembly.Location;
-            string ipc_path = Path.GetDirectoryName(ipc_dll);
             //pe.InitializeModules(ipc_path, ipc_path + "\\ipy.exe", pe.VersionString);
             string tempFile1 = Path.GetTempFileName();
 
@@ -682,10 +680,6 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
 
         // Options.DebugMode
 #endif
-        delegate void ThrowExceptionDelegate();
-        static void ThrowException() {
-            throw new Exception("Exception from ThrowException");
-        }
 
 #if !SILVERLIGHT
         public void ScenarioPartialTrust() {
@@ -810,8 +804,6 @@ if id(a) == id(b):
             MemoryStream stdin = new MemoryStream();
             MemoryStream stderr = new MemoryStream();
             Encoding encoding = Encoding.UTF8;
-
-            byte[] buffer = new byte[50];
 
             _pe.Runtime.IO.SetInput(stdin, encoding);
             _pe.Runtime.IO.SetOutput(stdout, encoding);

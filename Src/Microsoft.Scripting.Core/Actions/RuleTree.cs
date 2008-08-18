@@ -35,51 +35,24 @@ namespace System.Scripting.Actions {
         /// <summary>
         /// Looks through the rule list, prunes invalid rules and returns rules that apply
         /// </summary>
-        internal Rule<T>[] FindApplicableRules(Type[] types, T previousTarget) {
+        internal Rule<T>[] FindApplicableRules(Type[] types) {
             //
             // 1. Get the rule list that would apply to the arguments at hand
             //
             LinkedList<Rule<T>> list = GetRuleList(types);
-            int live = 0;
 
             lock (list) {
                 //
-                // 2. Prune invalid rules from the list
+                // Clone the list for execution
                 //
-
-                LinkedListNode<Rule<T>> node = list.First;
-
-                while (node != null) {
-
-                    //
-                    //
-                    // !!! This condition is executing user code !!!
-                    //
-                    // The validators on the rule are provided by the language binders
-                    // and may be unsafe. TODO: FIX !!!
-                    //
-                    if (!node.Value.IsValid && node.Value.RuleSet.GetTarget() != previousTarget) {
-                        // only remove if it's invalid and it's not our previous target.  If it's
-                        // our previous target we can still use it for templating.
-                        LinkedListNode<Rule<T>> remove = node;
-                        node = node.Next;
-                        list.Remove(remove);
-                    } else {
-                        live++;
-                        node = node.Next;
-                    }
-                }
-
-                //
-                // 3. Clone the list for execution
-                //
+                int live = list.Count;
                 Rule<T>[] rules = null;
 
                 if (live > 0) {
                     rules = new Rule<T>[live];
                     int index = 0;
 
-                    node = list.First;
+                    LinkedListNode<Rule<T>> node = list.First;
                     while (node != null) {
                         rules[index++] = node.Value;
                         node = node.Next;

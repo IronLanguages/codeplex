@@ -364,12 +364,6 @@ namespace IronPython.Runtime.Types {
             return specialNames[newName];
         }
 
-        // Coverts a well-known CLI name to its Python equivalent
-        private static string NormalizeName(string name) {
-            if (name == "ToString") return "__str__";
-            return name;
-        }
-
         // Build a name which is unique to this TypeInfo.
         protected virtual string GetName() {
             StringBuilder name = new StringBuilder(_baseType.Namespace);
@@ -531,8 +525,6 @@ namespace IronPython.Runtime.Types {
             // we'd return a function that did a virtual call resulting in a stack overflow.
             // The addition is to a seperate cache that NewTypeMaker maintains.  TypeInfo consults this
             // cache when doing member lookup and includes these members in the returned members.
-            PythonType rt = DynamicHelpers.GetPythonTypeFromType(_baseType);
-
             foreach (MethodInfo mi in finishedType.GetMethods()) {
                 if (!ShouldOverrideVirtual(mi)) continue;
 
@@ -602,13 +594,12 @@ namespace IronPython.Runtime.Types {
 
         private void StoreOverriddenField(MethodInfo mi, string newName) {
             string fieldName = newName.Substring(FieldGetterPrefix.Length); // get_ or set_
-            ExtensionPropertyTracker newProp = null;
             foreach (FieldInfo pi in _baseType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy)) {
                 if (pi.Name == fieldName) {
                     if (newName.StartsWith(FieldGetterPrefix)) {
-                        newProp = AddPropertyInfo(fieldName, mi, null);
+                        AddPropertyInfo(fieldName, mi, null);
                     } else if (newName.StartsWith(FieldSetterPrefix)) {
-                        newProp = AddPropertyInfo(fieldName, null, mi);
+                        AddPropertyInfo(fieldName, null, mi);
                     }
                 }
             }
@@ -1958,15 +1949,6 @@ namespace IronPython.Runtime.Types {
                 sig[i] = typeof(object);
             }
             return sig;
-        }
-
-        private static Type[] CreateSignatureWithContext(int count) {
-            Type[] array = new Type[count + 1];
-            while (count > 0) {
-                array[count--] = typeof(object);
-            }
-            array[0] = typeof(CodeContext);
-            return array;
         }
     }
 

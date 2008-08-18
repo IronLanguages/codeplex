@@ -565,7 +565,7 @@ def test_sanity():
     
     #__setitem__
     #CodePlex Work Item 5085
-    #AssertError(TypeError, operator.__setitem__, "abc", 2, "d")
+    AssertError(TypeError, operator.__setitem__, "abc", 2, "d")
     t_list = [1,2,3]
     operator.__setitem__(t_list, 2, 4)
     AreEqual(t_list, [1,2,4])

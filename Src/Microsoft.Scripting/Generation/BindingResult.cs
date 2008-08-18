@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// More than one method was applicable for the provided parameters and no method was considered the best.
         /// </summary>
-        AmbigiousMatch,
+        AmbiguousMatch,
         /// <summary>
         /// There are no overloads that match the number of parameters required for the call
         /// </summary>

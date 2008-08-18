@@ -282,19 +282,7 @@ namespace IronPython.Runtime.Binding {
                     throw new InvalidOperationException(convertToAction.ResultKind.ToString());
             }
         }
-
-        /// <summary>
-        /// Helper for falling back - if we have a base object fallback to it first (which can
-        /// then fallback to the calling site), otherwise fallback to the calling site.
-        /// </summary>
-        private MetaObject/*!*/ Fallback(DeleteMemberAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            if (_baseMetaObject != null) {
-                return _baseMetaObject.DeleteMember(action, args);
-            }
-
-            return action.Fallback(args);
-        }
-
+        
         /// <summary>
         /// Helper for falling back - if we have a base object fallback to it first (which can
         /// then fallback to the calling site), otherwise fallback to the calling site.

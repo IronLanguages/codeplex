@@ -725,7 +725,7 @@ namespace Microsoft.Scripting.Generation {
                         }
 
                         // more than one method found, no clear best method, report an ambigious match
-                        return MakeAmbigiousBindingTarget(callType, types, result);
+                        return MakeAmbiguousBindingTarget(callType, types, result);
                     }
                 }
 
@@ -778,7 +778,7 @@ namespace Microsoft.Scripting.Generation {
                         }
 
                         // more than one method found, no clear best method, report an ambigious match
-                        return MakeAmbigiousBindingTarget(callType, metaObjects, result);
+                        return MakeAmbiguousBindingTarget(callType, metaObjects, result);
                     }
                 }
 
@@ -956,7 +956,7 @@ namespace Microsoft.Scripting.Generation {
                 return new BindingTarget(_binder.Name, callType == CallTypes.None ? objects.Length : objects.Length - 1, resTarget.Target, resTarget.NarrowingLevel, GetRestrictedMetaObjects(resTarget, objects, _targets));
             }
 
-            private BindingTarget MakeAmbigiousBindingTarget<T>(CallTypes callType, T[] types, List<MethodCandidate> result) {
+            private BindingTarget MakeAmbiguousBindingTarget<T>(CallTypes callType, T[] types, List<MethodCandidate> result) {
                 MethodTarget[] methods = new MethodTarget[result.Count];
                 for (int i = 0; i < result.Count; i++) {
                     methods[i] = result[i].Target;

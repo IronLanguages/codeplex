@@ -38,7 +38,7 @@ namespace IronPython.Runtime.Binding {
         #region IPythonInvokable Members
 
         public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
-            return new FunctionBinderHelper(pythonInvoke, BinderState.GetBinderState(pythonInvoke).Binder, this, args).MakeMetaObject();
+            return new FunctionBinderHelper(pythonInvoke, this, args).MakeMetaObject();
         }
 
         #endregion
@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject[] args) {
-            return new FunctionBinderHelper(call, BinderState.GetBinderState(call).Binder, this, args).MakeMetaObject();
+            return new FunctionBinderHelper(call, this, args).MakeMetaObject();
         }
 
         public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
@@ -83,7 +83,6 @@ namespace IronPython.Runtime.Binding {
             private readonly MetaObject/*!*/[]/*!*/ _args;          // the arguments for the function
             private readonly MetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
             private readonly MetaAction/*!*/ _call;               // the signature for the method call
-            private readonly DefaultBinder/*!*/ _binder;            // the binder used for producing extra meta objects
 
             private List<VariableExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
             private VariableExpression _dict, _params, _paramsLen;  // splatted dictionary & params + the initial length of the params array, null if not provided.
@@ -95,13 +94,12 @@ namespace IronPython.Runtime.Binding {
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
             private Expression _paramlessCheck;                     // tests when we have no parameters
 
-            public FunctionBinderHelper(MetaAction/*!*/ call, DefaultBinder/*!*/ binder, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
+            public FunctionBinderHelper(MetaAction/*!*/ call, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
                 _call = call;
                 _func = function;
                 _args = ArrayUtils.RemoveFirst(args);
                 _originalArgs = args;
                 _temps = new List<VariableExpression>();
-                _binder = binder;
 
                 // Remove the passed in instance argument if present
                 int instanceIndex = Signature.IndexOf(ArgumentKind.Instance);

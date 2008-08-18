@@ -113,6 +113,23 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
+        /// Creates a new PythonType which is a subclass of the specified PythonType.
+        /// 
+        /// Used for runtime defined new-style classes which require multiple inheritance.  The
+        /// primary example of this is the exception system.
+        /// </summary>
+        internal PythonType(PythonContext context, PythonType baseType, string name, string module, string doc)
+            : this(baseType, name) {
+            EnsureDict();
+
+            _dict[Symbols.Doc] = new PythonTypeValueSlot(doc);
+            _dict[Symbols.Module] = new PythonTypeValueSlot(module);
+            IsSystemType = false;
+            IsPythonType = false;
+            _pythonContext = context;
+        }
+
+        /// <summary>
         /// Creates a new PythonType object which represents an Old-style class.
         /// </summary>
         internal PythonType(OldClass oc) {
@@ -1255,8 +1272,6 @@ namespace IronPython.Runtime.Types {
         /// Adds members from a user defined type.
         /// </summary>
         private void AddUserTypeMembers(CodeContext context, Dictionary<string, string> keys, PythonType dt) {
-            int ctxId = context.LanguageContext.ContextId.Id;
-
             foreach (KeyValuePair<SymbolId, PythonTypeSlot> kvp in dt._dict) {
                 if (keys.ContainsKey(SymbolTable.IdToString(kvp.Key))) continue;
 
@@ -1522,7 +1537,6 @@ namespace IronPython.Runtime.Types {
                 // grab all the interface methods which would hide other members
                 for (int i = 0; i < mapping.TargetMethods.Length; i++) {
                     MethodInfo target = mapping.TargetMethods[i];
-                    MethodInfo iTarget = mapping.InterfaceMethods[i];
 
                     if (!target.IsPrivate) {
                         methodMap[target.Name] = null;
@@ -2078,7 +2092,7 @@ namespace IronPython.Runtime.Types {
             }            
 
             if (target == null) {
-                target = Ast.Throw(MakeAmbigiousMatchError(mg));
+                target = Ast.Throw(MakeAmbiguousMatchError(mg));
             } else {
                 target = rule.MakeReturn(ab, target);
             }
@@ -2150,10 +2164,10 @@ namespace IronPython.Runtime.Types {
                 }                
             } 
 
-            return Ast.Throw(MakeAmbigiousMatchError(mg));
+            return Ast.Throw(MakeAmbiguousMatchError(mg));
         }
 
-        private static Expression MakeAmbigiousMatchError(MemberGroup members) {
+        private static Expression MakeAmbiguousMatchError(MemberGroup members) {
             StringBuilder sb = new StringBuilder();
             foreach (MethodTracker mi in members) {
                 if (sb.Length != 0) sb.Append(", ");

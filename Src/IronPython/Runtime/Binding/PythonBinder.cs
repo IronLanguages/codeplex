@@ -277,15 +277,6 @@ namespace IronPython.Runtime.Binding {
             return DynamicHelpers.GetPythonTypeFromType(t).Name;
         }
 
-        private MemberGroup GetInstanceOpsMethod(Type extends, params string[] names) {
-            MethodTracker[] trackers = new MethodTracker[names.Length];
-            for (int i = 0; i < names.Length; i++) {
-                trackers[i] = (MethodTracker)MemberTracker.FromMemberInfo(typeof(InstanceOps).GetMethod(names[i]), extends);
-            }
-
-            return new MemberGroup(trackers);
-        }
-
         public override MemberGroup/*!*/ GetMember(OldDynamicAction action, Type type, string name) {
             MemberGroup mg;
             if (!_resolvedMembers.TryGetCachedMember(type, name, action.Kind == DynamicActionKind.GetMember, out mg)) {
@@ -721,19 +712,6 @@ namespace IronPython.Runtime.Binding {
             return Ast.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker, null, privateBinding));
         }
 
-        private static MethodInfo IncludePropertyMethod(MethodInfo method, bool privateMembers) {
-            if (privateMembers) return method;
-
-            if (method != null) {
-                if (method.IsPrivate || (method.IsAssembly && !method.IsFamilyOrAssembly)) {
-                    return null;
-                }
-            }
-
-            // method is public, protected, or null
-            return method;
-        }
-
         private static Expression ReturnTypeTracker(TypeTracker memberTracker) {
             // all non-group types get exposed as PythonType's
             return Ast.Constant(DynamicHelpers.GetPythonTypeFromType(memberTracker.Type));
@@ -791,6 +769,8 @@ namespace IronPython.Runtime.Binding {
             res[typeof(Int64)] = new Type[] { typeof(Int64Ops) };
             res[typeof(UInt64)] = new Type[] { typeof(UInt64Ops) };
             res[typeof(char)] = new Type[] { typeof(CharOps) };
+            res[typeof(decimal)] = new Type[] { typeof(DecimalOps) };
+            res[typeof(float)] = new Type[] { typeof(SingleOps) };
 
             return res;
         }
@@ -807,9 +787,7 @@ namespace IronPython.Runtime.Binding {
             res[typeof(string)] = new ExtensionTypeInfo(typeof(StringOps), "str");
             res[typeof(int)] = new ExtensionTypeInfo(typeof(Int32Ops), "int");
             res[typeof(bool)] = new ExtensionTypeInfo(typeof(BoolOps), "bool");
-            res[typeof(float)] = new ExtensionTypeInfo(typeof(SingleOps), "Single");
             res[typeof(double)] = new ExtensionTypeInfo(typeof(DoubleOps), "float");
-            res[typeof(decimal)] = new ExtensionTypeInfo(typeof(DecimalOps), "decimal");
             res[typeof(ValueType)] = new ExtensionTypeInfo(typeof(ValueType), "ValueType");   // just hiding it's methods in the inheritance hierarchy
 
             // MS.Math types

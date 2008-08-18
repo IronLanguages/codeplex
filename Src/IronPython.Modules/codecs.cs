@@ -263,11 +263,11 @@ namespace IronPython.Modules {
         }
 
         public static object unicode_internal_decode(object input, string errors) {
-            return utf_16_decode(input, errors);
+            return utf_8_decode(input, errors);
         }
 
-        public static object unicode_internal_encode(object input, string errors) {
-            return utf_16_le_encode(input, errors);
+        public static object unicode_internal_encode(object input, [Optional]string errors) {
+            return utf_8_encode(input, errors);
         }
 
         #endregion

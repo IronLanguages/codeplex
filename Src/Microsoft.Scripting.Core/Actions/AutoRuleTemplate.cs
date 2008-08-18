@@ -61,7 +61,7 @@ namespace System.Scripting.Actions {
                 // or we are further generalizing an existing rule.  We need to re-write the incoming tree 
                 // to be templated over the necessary constants and return the new rule bound to the template.
 
-                return new Rule<T>(newBody, to.Validator, null, new TemplateData<T>(), to.Parameters);
+                return new Rule<T>(newBody, null, new TemplateData<T>(), to.Parameters);
             }
 
             // we have compatible templated rules, we can just swap out the constant pool and 
@@ -80,7 +80,7 @@ namespace System.Scripting.Actions {
             }
 
             // create a new rule which is bound to the new delegate w/ the expression tree from the old code.            
-            return new Rule<T>(newBody, to.Validator, dlg, from.Template, to.Parameters);
+            return new Rule<T>(newBody, dlg, from.Template, to.Parameters);
         }
 
         private static Rule<T> FindCompatibleRuleForTemplate<T>(Rule<T> from, Rule<T> to, out List<ConstantExpression> newConstants, out bool tooSpecific) where T : class {

@@ -27,17 +27,21 @@ using IronPython.Runtime.Types;
 #if !SILVERLIGHT // Sockets
 using System.Net.Sockets;
 using Microsoft.Scripting.Runtime;
+using System.Runtime.CompilerServices;
 
 [assembly: PythonModule("select", typeof(IronPython.Modules.PythonSelect))]
 namespace IronPython.Modules {
     [Documentation("Provides support for asynchronous socket operations.")]
     public static class PythonSelect {
+        [SpecialName]
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            context.EnsureModuleException("selecterror", dict, "error", "select");
+        }
+
 #if SILVERLIGHT // RunClassConstructor workaround
         public static void __cctor() { }
 #endif
         #region Public API
-
-        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "select", "");
 
         [Documentation("select(iwtd, owtd, ewtd[, timeout]) -> readlist, writelist, errlist\n\n"
             + "Block until sockets are available for reading or writing, until an error\n"
@@ -54,7 +58,7 @@ namespace IronPython.Modules {
             + "Note that select() on IronPython works only with sockets; it will not work with\n"
             + "files or other objects."
             )]
-        public static PythonTuple select(CodeContext context, object iwtd, object owtd, object ewtd, [DefaultParameterValue(null)] object timeout) {
+        public static PythonTuple select(CodeContext/*!*/ context, object iwtd, object owtd, object ewtd, [DefaultParameterValue(null)] object timeout) {
             List readerList, writerList, errorList;
             Dictionary<Socket, object> readerOriginals, writerOriginals, errorOriginals;
             ProcessSocketSequence(context, iwtd, out readerList, out readerOriginals);
@@ -77,9 +81,9 @@ namespace IronPython.Modules {
             try {
                 Socket.Select(readerList, writerList, errorList, timeoutMicroseconds);
             } catch (ArgumentNullException) {
-                throw MakeException(SocketExceptionToTuple(new SocketException((int)SocketError.InvalidArgument)));
+                throw MakeException(context, SocketExceptionToTuple(new SocketException((int)SocketError.InvalidArgument)));
             } catch (SocketException e) {
-                throw MakeException(SocketExceptionToTuple(e));
+                throw MakeException(context, SocketExceptionToTuple(e));
             }
 
             // Convert back to what the user originally passed in
@@ -94,8 +98,8 @@ namespace IronPython.Modules {
             return PythonTuple.MakeTuple(e.ErrorCode, e.Message);
         }
 
-        private static Exception MakeException(object value) {
-            return PythonExceptions.CreateThrowable(error, value);
+        private static Exception MakeException(CodeContext/*!*/ context, object value) {
+            return PythonExceptions.CreateThrowable((PythonType)PythonContext.GetContext(context).GetModuleState("selecterror"), value);
         }
 
         /// <summary>
@@ -148,7 +152,7 @@ namespace IronPython.Modules {
             socket = PythonSocket.socket.HandleToSocket(handle);
             if (socket == null) {
                 SocketException e = new SocketException((int)SocketError.NotSocket);
-                throw PythonExceptions.CreateThrowable(error, PythonTuple.MakeTuple(e.ErrorCode, e.Message));
+                throw PythonExceptions.CreateThrowable((PythonType)PythonContext.GetContext(context).GetModuleState("selecterror"), PythonTuple.MakeTuple(e.ErrorCode, e.Message));
             }
             return socket;
         }

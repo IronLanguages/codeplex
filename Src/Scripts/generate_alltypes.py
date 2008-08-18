@@ -163,8 +163,37 @@ def gen_unaryops(cw, ty):
         cw.enter_block('public static bool __nonzero__(%s x)' % (ty.name))
         cw.writeline('return (x != 0);')
         cw.exit_block()
+        cw.writeline()
     
-    
+    if not ty.is_float:
+        if ty.max > UInt32.MaxValue:    
+            cw.enter_block('public static int __hash__(%s x)' % (ty.name))
+            if ty.is_signed:                
+                cw.writeline('%s tmp = x;' % (ty.name, ))
+                cw.enter_block('if (tmp < 0)')
+                cw.writeline('tmp *= -1;')
+                cw.exit_block()
+                
+                cw.writeline('int total = unchecked((int) (((uint)tmp) + (uint)(tmp >> 32)));')
+                cw.enter_block('if (x < 0)')
+                cw.writeline('return unchecked(-total);')
+                cw.exit_block()
+                cw.writeline('return total;')        
+                cw.exit_block()
+                cw.writeline()
+            else:
+                cw.writeline('int total = unchecked((int) (((uint)x) + (uint)(x >> 32)));')
+                cw.enter_block('if (x < 0)')
+                cw.writeline('return unchecked(-total);')
+                cw.exit_block()
+                cw.writeline('return total;')        
+                cw.exit_block()
+                cw.writeline()
+        else:
+            cw.enter_block('public static int __hash__(%s x)' % (ty.name))
+            cw.writeline('return unchecked((int)x);')
+            cw.exit_block()
+        
 binop_decl = """\
 [SpecialName]
 public static %(return_type)s %(method_name)s(%(rtype)s x, %(ltype)s y)"""

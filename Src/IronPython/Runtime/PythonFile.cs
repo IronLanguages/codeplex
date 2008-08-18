@@ -860,7 +860,7 @@ namespace IronPython.Runtime {
         private bool _isOpen;
         private Nullable<long> _reseekPosition; // always null for console
         private WeakRefTracker _weakref;
-        private readonly PythonContext/*!*/ _context;
+        internal readonly PythonContext/*!*/ _context;
 
         public bool softspace;
 
@@ -1094,9 +1094,7 @@ namespace IronPython.Runtime {
             _isOpen = true;
             _io = null;
             _fileMode = MapFileMode(mode);
-#if !SILVERLIGHT
-            _encoding = StringOps.NormalizeEncodingName(encoding.EncodingName);
-#endif
+            _encoding = StringOps.GetEncodingName(encoding);
 
             if (stream.CanRead) {
                 if (_fileMode == PythonFileMode.Binary) {
@@ -1138,10 +1136,7 @@ namespace IronPython.Runtime {
             _isOpen = true;
             _fileMode = MapFileMode(_mode);
             _name = name;
-#if !SILVERLIGHT
-
-            _encoding = StringOps.NormalizeEncodingName(io.OutputEncoding.EncodingName);
-#endif
+            _encoding = StringOps.GetEncodingName(io.OutputEncoding);
 
             if (type == ConsoleStreamType.Input) {
                 _reader = CreateConsoleReader();
@@ -1279,6 +1274,7 @@ namespace IronPython.Runtime {
             }
         }
 
+        [Documentation("gets the encoding used when reading/writing text")]
         public string encoding {
             get {
                 return _encoding;
@@ -1430,7 +1426,7 @@ namespace IronPython.Runtime {
         public virtual void write(string s) {
             lock (this) {
                 PythonStreamWriter writer = GetWriter();
-                int bytesWritten = _writer.Write(s);
+                int bytesWritten = writer.Write(s);
                 if (!IsConsole && _reader != null && _stream.CanSeek) {
                     _reader.Position += bytesWritten;
                 }

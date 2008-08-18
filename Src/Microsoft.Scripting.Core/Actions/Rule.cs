@@ -37,36 +37,29 @@ namespace System.Scripting.Actions {
         private readonly Expression _binding;
 
         /// <summary>
-        /// The validator to indicate when the rule is no longer valid
-        /// </summary>
-        private readonly Func<bool> _validator;
-
-        /// <summary>
         /// Template data - null for methods which aren't templated.  Non-null for methods which
         /// have been templated.  The same template data is shared across all templated rules with
         /// the same target method.
         /// </summary>
         private readonly TemplateData<T> _template;
 
-        public Rule(Expression binding, Func<bool> validator, params ParameterExpression[] parameters)
-            : this(binding, validator, (IEnumerable<ParameterExpression>)parameters) {
+        public Rule(Expression binding, params ParameterExpression[] parameters)
+            : this(binding, (IEnumerable<ParameterExpression>)parameters) {
         }
 
-        public Rule(Expression binding, Func<bool> validator, IEnumerable<ParameterExpression> parameters) {
+        public Rule(Expression binding, IEnumerable<ParameterExpression> parameters) {
             var @params = parameters.ToReadOnly();
             ValidateRuleParameters(typeof(T), @params);
 
             _binding = binding;
-            _validator = validator;
             _parameters = @params;
             _mySet = new SmallRuleSet<T>(new[] { this });
         }
 
-        internal Rule(Expression binding, Func<bool> validator, T target, TemplateData<T> template, ReadOnlyCollection<ParameterExpression> parameters) {
+        internal Rule(Expression binding, T target, TemplateData<T> template, ReadOnlyCollection<ParameterExpression> parameters) {
             ValidateRuleParameters(typeof(T), parameters);
 
             _binding = binding;
-            _validator = validator;
             _parameters = parameters;
             _mySet = new SmallRuleSet<T>(target, new Rule<T>[] { this });
             _template = template;
@@ -94,23 +87,6 @@ namespace System.Scripting.Actions {
         /// </summary>
         public Expression Binding {
             get { return _binding; }
-        }
-
-        /// <summary>
-        /// If not valid, this indicates that the given Test can never return true and therefore
-        /// this rule should be removed from any RuleSets when convenient in order to 
-        /// reduce memory usage and the number of active rules.
-        /// </summary>
-        public bool IsValid {
-            get {
-                return _validator != null ? _validator() : true;
-            }
-        }
-
-        internal Func<bool> Validator {
-            get {
-                return _validator;
-            }
         }
 
         internal TemplateData<T> Template {

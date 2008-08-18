@@ -66,7 +66,6 @@ namespace IronPython.Runtime {
             _tryUInt32Site     = MakeExplicitTrySite<UInt32>(),
             _tryUInt64Site     = MakeExplicitTrySite<UInt64>(),
             _tryDoubleSite     = MakeExplicitTrySite<Double>(),
-            _trySingleSite     = MakeExplicitTrySite<Single>(),
             _tryCharSite       = MakeExplicitTrySite<Char>(),
             _tryBigIntegerSite = MakeExplicitTrySite<BigInteger>(),
             _tryComplex64Site  = MakeExplicitTrySite<Complex64>(),
@@ -88,10 +87,6 @@ namespace IronPython.Runtime {
                     kind
                 )
             );
-        }
-
-        private static CallSite<DynamicSiteTarget<object, object>> MakeImplicitTrySite<T>() {
-            return MakeTrySite<T>(ConversionResultKind.ImplicitTry);
         }
 
         private static CallSite<DynamicSiteTarget<object, object>> MakeExplicitTrySite<T>() {
@@ -413,49 +408,28 @@ namespace IronPython.Runtime {
 
         #region Cached Type instances
 
-        private static readonly Type Int16Type = typeof(System.Int16);
-        private static readonly Type SByteType = typeof(System.SByte);
         private static readonly Type StringType = typeof(System.String);
-        private static readonly Type UInt64Type = typeof(System.UInt64);
         private static readonly Type Int32Type = typeof(System.Int32);
         private static readonly Type DoubleType = typeof(System.Double);
         private static readonly Type DecimalType = typeof(System.Decimal);
-        private static readonly Type ObjectType = typeof(System.Object);
         private static readonly Type Int64Type = typeof(System.Int64);
         private static readonly Type CharType = typeof(System.Char);
         private static readonly Type SingleType = typeof(System.Single);
         private static readonly Type BooleanType = typeof(System.Boolean);
-        private static readonly Type UInt16Type = typeof(System.UInt16);
-        private static readonly Type UInt32Type = typeof(System.UInt32);
-        private static readonly Type ByteType = typeof(System.Byte);
         private static readonly Type BigIntegerType = typeof(BigInteger);
         private static readonly Type Complex64Type = typeof(Complex64);
         private static readonly Type DelegateType = typeof(Delegate);
         private static readonly Type IEnumerableType = typeof(IEnumerable);
-        private static readonly Type ValueTypeType = typeof(ValueType);
         private static readonly Type TypeType = typeof(Type);
-#if !SILVERLIGHT
-        private static readonly Type ArrayListType = typeof(ArrayList);
-        private static readonly Type HashtableType = typeof(Hashtable);
-#endif
         private static readonly Type NullableOfTType = typeof(Nullable<>);
         private static readonly Type IListOfTType = typeof(System.Collections.Generic.IList<>);
-        private static readonly Type ListOfTType = typeof(System.Collections.Generic.List<>);
         private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<,>);
         private static readonly Type IEnumerableOfTType = typeof(System.Collections.Generic.IEnumerable<>);
-        private static readonly Type IEnumerableOfTWrapperType = typeof(IEnumerableOfTWrapper<>);
         private static readonly Type IListOfObjectType = typeof(System.Collections.Generic.IList<object>);
         private static readonly Type IEnumerableOfObjectType = typeof(IEnumerable<object>);
         private static readonly Type IDictionaryOfObjectType = typeof(System.Collections.Generic.IDictionary<object, object>);
-        private static readonly Type ListGenericWrapperType = typeof(ListGenericWrapper<>);
-        private static readonly Type DictionaryGenericWrapperType = typeof(DictionaryGenericWrapper<,>);
-
+        
         #endregion
-
-        private static object ConvertToNullableT(object value, Type[] typeOf) {
-            if (value == null) return null;
-            else return Convert(value, typeOf[0]);
-        }
 
         #region Entry points called from the generated code
 
@@ -501,24 +475,6 @@ namespace IronPython.Runtime {
 
 
         #endregion
-
-        private static object ConvertToIListT(object value, Type[] listOf) {
-            System.Collections.Generic.IList<object> lst = value as System.Collections.Generic.IList<object>;
-            if (lst != null) {
-                Type t = ListGenericWrapperType.MakeGenericType(listOf);
-                return Activator.CreateInstance(t, lst);
-            }
-            throw MakeTypeError("IList<T>", value);
-        }
-
-        private static object ConvertToIDictT(object value, Type[] dictOf) {
-            System.Collections.Generic.IDictionary<object, object> dict = value as System.Collections.Generic.IDictionary<object, object>;
-            if (dict != null) {
-                Type t = DictionaryGenericWrapperType.MakeGenericType(dictOf);
-                return Activator.CreateInstance(t, dict);
-            }
-            throw MakeTypeError("IDictionary<K,V>", value);
-        }
 
         public static bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
             ContractUtils.RequiresNotNull(fromType, "fromType");
@@ -880,23 +836,6 @@ namespace IronPython.Runtime {
                 lookupType = lookupType.BaseType;
             }
             return false;
-        }
-
-        private static bool IsIntegral(Type t) {
-            switch (Type.GetTypeCode(t)) {
-                case TypeCode.DateTime:
-                case TypeCode.DBNull:
-                case TypeCode.Char:
-                case TypeCode.Empty:
-                case TypeCode.String:
-                case TypeCode.Single:
-                case TypeCode.Double:
-                    return false;
-                case TypeCode.Object:
-                    return t == BigIntegerType;
-                default:
-                    return true;
-            }
         }
 
         internal static bool IsNumeric(Type t) {

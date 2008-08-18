@@ -42,9 +42,9 @@ namespace System.Scripting.Actions {
             return tree;
         }
 
-        internal Rule<T>[] FindApplicableRules(CallSiteBinder binder, Type[] types, T previousTarget) {
+        internal Rule<T>[] FindApplicableRules(CallSiteBinder binder, Type[] types) {
             RuleTree<T> tree = GetOrMakeRuleTree(binder);
-            return tree.FindApplicableRules(types, previousTarget);
+            return tree.FindApplicableRules(types);
         }
 
         internal void AddRule(CallSiteBinder binder, Type[] args, Rule<T> rule) {

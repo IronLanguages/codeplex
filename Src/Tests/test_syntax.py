@@ -205,6 +205,14 @@ compile_tests = [
     ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1),
     ('(2,3) = (3,4)', "can't assign to literal", 1),
     ('from import abc', "invalid syntax", 1),
+    ("""for x in range(100):\n"""
+     """    try:\n"""
+     """        [1,2][3]\n"""
+     """    except IndexError:\n"""
+     """        pass\n"""
+     """    finally:\n"""
+     """        continue\n""", "'continue' not supported inside 'finally' clause", 7)
+
     #CodePlex 15428
     #("'abc'.", "invalid syntax", 1),
 ]

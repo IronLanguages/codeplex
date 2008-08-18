@@ -46,7 +46,6 @@ namespace IronPython.Modules {
         }
 
         public static Complex64 tan(object x) {
-            Complex64 num = GetComplexNum(x);
             return sin(x) / cos(x);
         }
 
@@ -73,7 +72,6 @@ namespace IronPython.Modules {
         }
 
         public static Complex64 tanh(object x) {
-            Complex64 num = GetComplexNum(x);
             return sinh(x) / cosh(x);
         }
 
@@ -104,7 +102,6 @@ namespace IronPython.Modules {
         //acosh(x) = ln( x + (x*x -1)^1/2)
         public static Complex64 acosh(object x) {
             Complex64 num = GetComplexNum(x);
-            Complex64 i = Complex64.MakeImaginary(1);
 
             return log(num + sqrt(num * num - 1));
         }
@@ -112,7 +109,6 @@ namespace IronPython.Modules {
         //asin(x) = ln( x + (x*x +1)^1/2)
         public static Complex64 asinh(object x) {
             Complex64 num = GetComplexNum(x);
-            Complex64 i = Complex64.MakeImaginary(1);
 
             return log(num + sqrt(num * num + 1));
         }
@@ -120,7 +116,6 @@ namespace IronPython.Modules {
         //atanh(x) = (ln(1 +x) - ln(1-x))/2
         public static Complex64 atanh(object x) {
             Complex64 num = GetComplexNum(x);
-            Complex64 i = Complex64.MakeImaginary(1);
 
             return (log(1 + num) - log(1 - num)) / 2;
         }

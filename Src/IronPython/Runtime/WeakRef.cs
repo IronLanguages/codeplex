@@ -155,13 +155,11 @@ namespace IronPython.Runtime {
     /// </summary>
     internal sealed class InstanceFinalizer {
         private object _instance;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object>> _newSite;
 
         internal InstanceFinalizer(CodeContext/*!*/ context, object inst) {
             Debug.Assert(inst != null);
 
             _instance = inst;
-            _newSite = PythonContext.GetContext(context).FinalizerSite;
         }
 
         // This corresponds to a __del__ method on a class. 

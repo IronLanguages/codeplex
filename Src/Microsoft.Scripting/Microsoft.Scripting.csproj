@@ -147,7 +147,6 @@
     <Compile Include="Actions\MemberBinderHelper.cs" />
     <Compile Include="Actions\NoSideEffectsAttribute.cs" />
     <Compile Include="Actions\OperatorInfo.cs" />
-    <Compile Include="Actions\RuleValidator.cs" />
     <Compile Include="Actions\SetMemberBinderHelper.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
     <Compile Include="Hosting\ExceptionService.cs" />

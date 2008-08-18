@@ -1038,20 +1038,6 @@ namespace IronPython.Compiler {
             return SymbolId.Empty;
         }
 
-        //dotted_name: NAME ('.' NAME)*
-        private DottedName ParseDottedName() {
-            SourceLocation start = GetStart();
-            List<SymbolId> l = new List<SymbolId>();
-            l.Add(ReadName());
-            while (MaybeEat(TokenKind.Dot)) {
-                l.Add(ReadName());
-            }
-            SymbolId[] names = l.ToArray();
-            DottedName ret = new DottedName(names);
-            ret.SetLoc(start, GetEnd());
-            return ret;
-        }
-
         //exec_stmt: 'exec' expr ['in' expression [',' expression]]
         private ExecStatement ParseExecStmt() {
             Eat(TokenKind.KeywordExec);
@@ -1754,7 +1740,6 @@ namespace IronPython.Compiler {
         private Expression ParseConditionalTest(Expression trueExpr) {
             Expression expr = ParseOrTest();
             Eat(TokenKind.KeywordElse);
-            SourceLocation start = expr.Start;
             Expression falseExpr = ParseExpression();
             return new ConditionalExpression(expr, trueExpr, falseExpr);
         }
@@ -2338,7 +2323,7 @@ namespace IronPython.Compiler {
                 if (MaybeEat(TokenKind.Indent)) {
                     // the error is on the next token which has a useful location, unlike the indent - note we don't have an
                     // indent if we're at an EOF.  It'a also an indentation error instead of a syntax error.
-                    Token next = NextToken();
+                    NextToken();
                     ReportSyntaxError(GetStart(), GetEnd(), "unexpected indent", ErrorCodes.IndentationError);
                 } else {
                     ReportSyntaxError("invalid syntax");
@@ -2765,7 +2750,7 @@ namespace IronPython.Compiler {
                 }
             }
 
-            return new CallExpression(target, args, hasArgsTuple, hasKeywordDict, keywordCount, extraArgs);
+            return new CallExpression(target, args);
         }
 
         #endregion

@@ -121,6 +121,10 @@ namespace IronPython.Hosting {
                     ConsoleOptions.IsMta = true;
                     break;
 
+                case "-X:Debug":
+                    RuntimeSetup.DebugMode = true;
+                    break;
+
                 default:
                     base.ParseArgument(arg);
 

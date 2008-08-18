@@ -374,10 +374,6 @@ namespace IronPython.Runtime.Types {
             return res.ToString();
         }
 
-        private static string GetXmlName(PropertyInfo property) {
-            return GetXmlNameForProperty(property.DeclaringType, property.Name);
-        }
-
         private static string GetXmlNameForProperty(Type declaringType, string propertyName) {
             StringBuilder res = new StringBuilder();
             res.Append("P:");

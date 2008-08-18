@@ -157,6 +157,7 @@
     <Compile Include="Compiler\Ast\YieldExpression.cs" />
     <Compile Include="Hosting\PythonService.cs" />
     <Compile Include="MaybeNotImplementedAttribute.cs" />
+    <Compile Include="Runtime\BindingWarnings.cs" />
     <Compile Include="Runtime\Binding\Binders.cs" />
     <Compile Include="Runtime\Binding\BinderState.cs" />
     <Compile Include="Runtime\Binding\GetMemberBinder.cs" />
@@ -179,6 +180,7 @@
     <Compile Include="Runtime\CompiledLoader.cs" />
     <Compile Include="Runtime\NoLineFeedSourceContentProvider.cs" />
     <Compile Include="Runtime\ModuleLoader.cs" />
+    <Compile Include="Runtime\NullImporter.cs" />
     <Compile Include="Runtime\Reversed.cs" />
     <Compile Include="Runtime\PythonHiddenAttribute.cs" />
     <Compile Include="Runtime\PythonModuleAttribute.cs" />
@@ -379,6 +381,7 @@
     <Compile Include="Runtime\Types\PythonTypeSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeValueSlot.cs" />
     <Compile Include="Runtime\Types\DynamicHelpers.cs" />
+    <Compile Include="Runtime\WarningInfo.cs" />
     <Compile Include="Runtime\WeakRef.cs" />
     <Compile Include="Runtime\WrapperDescriptorAttribute.cs" />
     <Compile Include="Runtime\WrapperDictionary.cs" />

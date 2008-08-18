@@ -935,4 +935,20 @@ def test_nested_try():
     bar()
     AreEqual(l, [1, 3])
 
+def test_module_exceptions():    
+    """verify exceptions in modules are like user defined exception objects, not built-in types."""
+    
+    # these modules have normal types...
+    normal_types = ['sys', 'clr', 'exceptions', '__builtin__', '_winreg', 'mmap', 'nt']       
+    builtins = [x for x in sys.builtin_module_names if x not in normal_types ]
+    for module in builtins:
+        mod = __import__(module)
+        
+        for attrName in dir(mod):
+            val = getattr(mod, attrName)
+            if isinstance(val, type) and issubclass(val, Exception):
+                Assert(repr(val).startswith("<class "))
+                val.x = 2
+                AreEqual(val.x, 2)
+
 run_test(__name__)

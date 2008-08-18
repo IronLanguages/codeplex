@@ -14,17 +14,22 @@
  * ***************************************************************************/
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("binascii", typeof(IronPython.Modules.PythonBinaryAscii))]
 namespace IronPython.Modules {
     public static class PythonBinaryAscii {
-        public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "binascii", "");       
+        [SpecialName]
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            context.EnsureModuleException("binasciierror", dict, "Error", "binascii");
+        }
 
         public static string a2b_uu(string data) {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");

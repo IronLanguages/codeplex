@@ -59,7 +59,6 @@ namespace IronPython.Runtime.Types {
         public override string __doc__ {
             get {
                 StringBuilder sb = new StringBuilder();
-                IList<MethodBase> targets = ConstructorTargets;
 
                 foreach (MethodBase mb in ConstructorTargets) {
                     if (mb != null) sb.AppendLine(DocBuilder.DocOneInfo(mb, "__new__"));

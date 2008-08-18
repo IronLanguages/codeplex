@@ -91,5 +91,14 @@ def test_userhash_result():
     
     AreEqual(hash(x()), 2)
 
+@skip("win32")
+def test_cli_number_hash():
+    from lib.type_util import clr_numbers
+    
+    for name, value in clr_numbers.iteritems():
+        if name.find('Single') != -1:
+            AreEqual(hash(value), hash(float(value)))
+        else:
+            AreEqual(hash(value), hash(long(value)))
 
 run_test(__name__)

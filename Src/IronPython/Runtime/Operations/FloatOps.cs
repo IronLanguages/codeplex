@@ -448,5 +448,9 @@ namespace IronPython.Runtime.Operations {
         public static string __repr__(CodeContext/*!*/ context, float self) {
             return __str__(context, self);
         }
+
+        public static int __hash__(float x) {
+            return DoubleOps.__hash__(((double)x));
+        }
     }
 }

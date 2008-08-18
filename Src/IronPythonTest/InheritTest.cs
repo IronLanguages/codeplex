@@ -420,6 +420,12 @@ namespace IronPythonTest {
                 base.ProtectedProperty = value;
             }
         }
+
+        public string String {
+            get {
+                return _str;
+            }
+        }
     }
 
     public interface ITestIt1 {

@@ -1517,33 +1517,6 @@ namespace IronPython.Runtime.Binding {
             throw new InvalidOperationException();
         }
 
-        /// <summary>
-        /// Checks to see if any of the index types define __index__ and updates the types to indicate this.  Returns
-        /// true if at least one __index__ is found, false otherwise.
-        /// </summary>
-        private bool ResolveOperatorIndex(PythonType[] types, RuleBuilder<T> ret, Expression[] indexArgs) {
-            bool foundIndexable = false;
-
-            for (int i = 1; i < types.Length; i++) {
-                if (types[i].IsSubclassOf(TypeCache.Int32) || types[i].IsSubclassOf(TypeCache.BigInteger)) {
-                    // these are inherently indexes...
-                    continue;
-                }
-
-                PythonTypeSlot pts;
-                if (types[i].TryResolveSlot(Context, Symbols.Index, out pts)) {
-                    foundIndexable = true;
-                    VariableExpression tmp = ret.GetTemporary(typeof(object), "slotVal");
-                    indexArgs[i] = Ast.Comma(
-                        PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.Constant(types[i])),
-                        AstUtils.Call(PythonBinder, typeof(int), ret.Context, tmp)
-                    );
-                    types[i] = TypeCache.Int32;
-                }
-            }
-            return foundIndexable;
-        }                     
-
         private static Expression GetSetSlice(RuleBuilder<T> ret) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeSlice"),
@@ -1594,10 +1567,6 @@ namespace IronPython.Runtime.Binding {
 
         #endregion
 
-        private Expression MakeCall(BindingTarget target, RuleBuilder<T> block, bool reverse) {
-            return MakeCall(target, block, reverse, null);
-        }
-
         private Expression MakeCall(BindingTarget target, RuleBuilder<T> block, bool reverse, PythonType[] types) {
             IList<Expression> vars = CheckTypesAndReverse(block, reverse, types);
 
@@ -1640,15 +1609,6 @@ namespace IronPython.Runtime.Binding {
                 }
             }
             return vars;
-        }
-
-        private bool MakeOneTarget(BindingTarget target, RuleBuilder<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
-            return MakeOneTarget(target,
-                null,
-                block,
-                stmts,
-                reverse,
-                types);
         }
 
         private bool MakeOneTarget(BindingTarget target, PythonTypeSlot slotTarget, RuleBuilder<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
@@ -1732,16 +1692,6 @@ namespace IronPython.Runtime.Binding {
             }
 
             return false;
-        }
-
-        private Expression MakeUnaryThrow(RuleBuilder<T> block) {
-            return Ast.Throw(
-                Ast.Call(
-                    typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
-                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Operation))),
-                    Ast.ConvertHelper(block.Parameters[0], typeof(object))
-                )
-            );
         }
 
         private Expression MakeBinaryThrow(RuleBuilder<T> block) {
@@ -1870,13 +1820,6 @@ namespace IronPython.Runtime.Binding {
             return true;
         }
 
-        private BinderType MethodBinderType {
-            get {
-                return IsComparision ? BinderType.ComparisonOperator : BinderType.BinaryOperator;
-            }
-        }
-
-
         internal static string MakeBinaryOpErrorMessage(Operators op, string xType, string yType) {
             return string.Format("unsupported operand type(s) for {2}: '{0}' and '{1}'",
                                 xType, yType, GetOperatorDisplay(op));
@@ -1937,19 +1880,7 @@ namespace IronPython.Runtime.Binding {
         internal static string MakeUnaryOpErrorMessage(string op, string xType) {
             return string.Format("unsupported operand type for {1}: '{0}'", xType, op);
         }
-
-        private static bool FinishCompareOperation(int cmp, Operators op) {
-            switch (op) {
-                case Operators.LessThan: return cmp < 0;
-                case Operators.LessThanOrEqual: return cmp <= 0;
-                case Operators.GreaterThan: return cmp > 0;
-                case Operators.GreaterThanOrEqual: return cmp >= 0;
-                case Operators.Equals: return cmp == 0;
-                case Operators.NotEquals: return cmp != 0;
-            }
-            throw new ArgumentException("op");
-        }       
-
+        
         #region Unary Operators
 
         private RuleBuilder<T> MakeUnaryRule(PythonType[] types, Operators op) {

@@ -782,15 +782,31 @@ namespace IronPython.Runtime.Exceptions {
             return se;
         }
 
-        private static PythonType CreateSubType(PythonType baseType, string name, string documentation) {
-            return CreateSubType(baseType, name, DefaultExceptionModule, documentation);
+        /// <summary>
+        /// Creates a PythonType for a built-in module.  These types are mutable like
+        /// normal user types.
+        /// </summary>
+        internal static PythonType CreateSubType(PythonContext/*!*/ context, PythonType baseType, string name, string module, string documentation) {
+            return new PythonType(null, baseType, name, module, documentation);            
         }
 
-        internal static PythonType CreateSubType(PythonType baseType, string name, string module, string documentation) {
+
+        /// <summary>
+        /// Creates a new type for a built-in exception which derives from another Python
+        /// type.  .  These types are built-in and immutable like any other normal type.  For 
+        /// example StandardError.x = 3 is illegal.  This isn't for module exceptions which 
+        /// are like user defined types.  thread.error.x = 3 is legal.
+        /// </summary>
+        private static PythonType CreateSubType(PythonType baseType, string name) {
             return new PythonType(baseType, name);
         }
 
-        internal static PythonType CreateSubType(PythonType baseType, Type concreteType, string module, string documentation) {
+        /// <summary>
+        /// Creates a new type for a built-in exception which is the root concrete type.  
+        /// </summary>
+        private static PythonType/*!*/ CreateSubType(PythonType/*!*/ baseType, Type/*!*/ concreteType) {
+            Assert.NotNull(baseType, concreteType);
+
             PythonType myType = DynamicHelpers.GetPythonTypeFromType(concreteType);
 
             myType.ResolutionOrder = Mro.Calculate(myType, new PythonType[] { baseType });

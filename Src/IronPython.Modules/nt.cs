@@ -129,13 +129,7 @@ namespace IronPython.Modules {
             PythonContext pythonContext = PythonContext.GetContext(context);
             PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
             if (pf.IsConsole) {
-                stat_result result = new stat_result();
-                result.mode = 8192;
-                result.size = 0;
-                result.atime = 0;
-                result.mtime = 0;
-                result.ctime = 0;
-                return result;
+                return new stat_result(8192);
             }
             return lstat(pf.name);
         }
@@ -146,6 +140,40 @@ namespace IronPython.Modules {
 
         public static string getcwdu() {
             return Directory.GetCurrentDirectory();
+        }
+
+        public static string _getfullpathname(CodeContext/*!*/ context, [NotNull]string/*!*/ dir) {
+            PlatformAdaptationLayer pal = context.LanguageContext.DomainManager.Platform;
+
+            try {
+                return context.LanguageContext.DomainManager.Platform.GetFullPath(dir);
+            } catch (ArgumentException) {
+                // .NET validates the path, CPython doesn't... so we replace invalid chars with 
+                // Char.Maxvalue, get the full path, and then replace the Char.Maxvalue's back w/ 
+                // their original value.
+                string newdir = dir;
+
+                foreach (char c in Path.GetInvalidPathChars()) {
+                    newdir = newdir.Replace(c, Char.MaxValue);
+                }
+
+                // walk backwards through the path replacing the same characters.  We should have
+                // only updated the directory leaving the filename which we're fixing.
+                string res = context.LanguageContext.DomainManager.Platform.GetFullPath(newdir);
+                int curDir = dir.Length;
+                for (int curRes = res.Length - 1; curRes >= 0; curRes--) {
+                    if (res[curRes] == Char.MaxValue) {
+                        for (curDir--; curDir >= 0; curDir--) {
+                            if (newdir[curDir] == Char.MaxValue) {
+                                res = res.Substring(0, curRes) + dir[curDir] + res.Substring(curRes + 1);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return res;
+            }
         }
 
         public static int getpid() {
@@ -322,6 +350,10 @@ namespace IronPython.Modules {
         }
 
         public static string read(CodeContext/*!*/ context, int fd, int buffersize) {
+            if (buffersize < 0) {
+                throw PythonExceptions.CreateThrowable(PythonExceptions.OSError, PythonErrorNumber.EINVAL, "Invalid argument");
+            }
+
             try {
                 PythonContext pythonContext = PythonContext.GetContext(context);
                 PythonFile pf = pythonContext.FileManager.GetFileFromId(pythonContext, fd);
@@ -486,109 +518,148 @@ namespace IronPython.Modules {
 
         [PythonType]
         public class stat_result : ISequence {
-            // !!! We should convert this to be a subclass of Tuple (so that it implements
-            // the whole tuple protocol) or at least use a Tuple for internal storage rather
-            // than converting back and forth all the time. We also need to support constructors
-            // with 11-13 arguments.
+            private readonly object _mode, _size, _atime, _mtime, _ctime, _st_atime, _st_mtime, _st_ctime, _ino, _dev, _nlink, _uid, _gid;
 
             public const int n_fields = 13;
             public const int n_sequence_fields = 10;
             public const int n_unnamed_fields = 3;
 
-            internal BigInteger mode, ino, dev, nlink, size, atime, mtime, ctime;
-            internal int uid, gid;
-
-            internal stat_result() {
-                uid = 0;
-                gid = 0;
-                ino = 0;
-                dev = 0;
-                nlink = 0;
+            internal stat_result(int mode) : this(mode, BigInteger.Zero, BigInteger.Zero, BigInteger.Zero, BigInteger.Zero) {
+                _mode = mode;
             }
 
-            public stat_result(CodeContext/*!*/ context, ISequence statResult, [DefaultParameterValue(null)]object dict) {
+            internal stat_result(int mode, BigInteger size, BigInteger st_atime, BigInteger st_mtime, BigInteger st_ctime) {
+                _mode = mode;
+                _size = size;
+                _st_atime = _atime = TryShrinkToInt(st_atime);
+                _st_mtime = _mtime = TryShrinkToInt(st_mtime);
+                _st_ctime = _ctime = TryShrinkToInt(st_ctime);
+
+                _ino = _dev = _nlink = _uid = _gid = RuntimeHelpers.Int32ToObject(0);                
+            }
+
+            public stat_result(CodeContext/*!*/ context, ISequence statResult, [DefaultParameterValue(null)]PythonDictionary dict) {
                 // dict is allowed by CPython's stat_result, but doesn't seem to do anything, so we ignore it here.
 
                 if (statResult.__len__() < 10) {
                     throw PythonOps.TypeError("stat_result() takes an at least 10-sequence ({0}-sequence given)", statResult.__len__());
                 }
 
-                this.mode = Converter.ConvertToBigInteger(statResult[0]);
-                this.ino = Converter.ConvertToBigInteger(statResult[1]);
-                this.dev = Converter.ConvertToBigInteger(statResult[2]);
-                this.nlink = Converter.ConvertToBigInteger(statResult[3]);
-                this.uid = PythonContext.GetContext(context).ConvertToInt32(statResult[4]);
-                this.gid = PythonContext.GetContext(context).ConvertToInt32(statResult[5]);
-                this.size = Converter.ConvertToBigInteger(statResult[6]);
-                this.atime = Converter.ConvertToBigInteger(statResult[7]);
-                this.mtime = Converter.ConvertToBigInteger(statResult[8]);
-                this.ctime = Converter.ConvertToBigInteger(statResult[9]);
+                _mode = statResult[0];
+                _ino = statResult[1];
+                _dev = statResult[2];
+                _nlink = statResult[3];
+                _uid = statResult[4];
+                _gid = statResult[5];
+                _size = statResult[6];
+                _atime = statResult[7];
+                _mtime = statResult[8];
+                _ctime = statResult[9];
+
+                object dictTime;
+                if (statResult.__len__() >= 11) {
+                    _st_atime = TryShrinkToInt(statResult[10]);
+                } else if (TryGetDictValue(dict, "st_atime", out dictTime)) {
+                    _st_atime = dictTime;
+                } else {
+                    _st_atime = TryShrinkToInt(_atime);
+                }
+
+                if (statResult.__len__() >= 12) {
+                    _st_mtime = TryShrinkToInt(statResult[11]);
+                } else if (TryGetDictValue(dict, "st_mtime", out dictTime)) {
+                    _st_mtime = dictTime;
+                } else { 
+                    _st_mtime = TryShrinkToInt(_mtime);
+                }
+
+                if (statResult.__len__() >= 13) {
+                    _st_ctime = TryShrinkToInt(statResult[12]);
+                } else if (TryGetDictValue(dict, "st_ctime", out dictTime)) {
+                    _st_ctime = dictTime;
+                } else { 
+                    _st_ctime = TryShrinkToInt(_ctime);
+                }
             }
 
-            private static object TryShrinkToInt(BigInteger value) {
-                if (Object.ReferenceEquals(value, null)) {
-                    return null;
+            private static bool TryGetDictValue(PythonDictionary dict, string name, out object dictTime) {
+                if (dict != null && dict.TryGetValue(name, out dictTime)) {
+                    dictTime = TryShrinkToInt(dictTime);
+                    return true;
                 }
-                return BigIntegerOps.__int__(value);
+
+                dictTime = null;
+                return false;
+            }
+
+            private static object TryShrinkToInt(object value) {
+                BigInteger bi = value as BigInteger;
+
+                if (Object.ReferenceEquals(bi, null)) {
+                    return value;
+                }
+                
+                return BigIntegerOps.__int__(bi);
             }
 
             public object st_atime {
                 get {
-                    return TryShrinkToInt(atime);
+                    return _st_atime;
                 }
             }
 
             public object st_ctime {
                 get {
-                    return TryShrinkToInt(ctime);
+                    return _st_ctime;
+                }
+            }
+
+
+            public object st_mtime {
+                get {
+                    return _st_mtime;
                 }
             }
 
             public object st_dev {
                 get {
-                    return TryShrinkToInt(dev);
+                    return TryShrinkToInt(_dev);
                 }
             }
 
-            public int st_gid {
+            public object st_gid {
                 get {
-                    return gid;
+                    return _gid;
                 }
             }
 
             public object st_ino {
                 get {
-                    return ino;
+                    return _ino;
                 }
             }
 
             public object st_mode {
                 get {
-                    return TryShrinkToInt(mode);
-                }
-            }
-
-            public object st_mtime {
-                get {
-                    return TryShrinkToInt(mtime);
+                    return TryShrinkToInt(_mode);
                 }
             }
 
             public object st_nlink {
                 get {
-                    return TryShrinkToInt(nlink);
+                    return TryShrinkToInt(_nlink);
                 }
             }
 
             public object st_size {
                 get {
-                    return size;
+                    return _size;
                 }
             }
 
-            public int st_uid {
+            public object st_uid {
                 get {
-                    return uid;
+                    return _uid;
                 }
             }
 
@@ -657,9 +728,9 @@ namespace IronPython.Modules {
                     st_uid,
                     st_gid,
                     st_size,
-                    st_atime,
-                    st_mtime,
-                    st_ctime
+                    _atime,
+                    _mtime,
+                    _ctime
                 );
             }
 
@@ -690,31 +761,35 @@ namespace IronPython.Modules {
         public static object stat(string path) {
             if (path == null) throw PythonOps.TypeError("expected string, got NoneType");
 
-            stat_result sr = new stat_result();
+            stat_result sr;
 
             try {
                 FileInfo fi = new FileInfo(path);
+                int mode = 0;
+                long size;
 
                 if (Directory.Exists(path)) {
-                    sr.size = 0;
-                    sr.mode = 0x4000 | S_IEXEC;
+                    size = 0;
+                    mode = 0x4000 | S_IEXEC;
                 } else if (File.Exists(path)) {
-                    sr.size = fi.Length;
-                    sr.mode = 0x8000;
+                    size = fi.Length;
+                    mode = 0x8000;
                     if (HasExecutableExtension(path)) {
-                        sr.mode |= S_IEXEC;
+                        mode |= S_IEXEC;
                     }
                 } else {
                     throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.ENOENT, "file does not exist: " + path);
                 }
 
-                sr.atime = (long)PythonTime.TicksToTimestamp(fi.LastAccessTime.Ticks);
-                sr.ctime = (long)PythonTime.TicksToTimestamp(fi.CreationTime.Ticks);
-                sr.mtime = (long)PythonTime.TicksToTimestamp(fi.LastWriteTime.Ticks);
-                sr.mode |= S_IREAD;
+                long st_atime = (long)PythonTime.TicksToTimestamp(fi.LastAccessTime.Ticks);
+                long st_ctime = (long)PythonTime.TicksToTimestamp(fi.CreationTime.Ticks);
+                long st_mtime = (long)PythonTime.TicksToTimestamp(fi.LastWriteTime.Ticks);
+                mode |= S_IREAD;
                 if ((fi.Attributes & FileAttributes.ReadOnly) == 0) {
-                    sr.mode |= S_IWRITE;
+                    mode |= S_IWRITE;
                 }
+
+                sr = new stat_result(mode, size, st_atime, st_mtime, st_ctime);
             } catch (ArgumentException) {
                 throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.EINVAL, "The path is invalid: " + path);
             } catch (Exception e) {
@@ -976,15 +1051,15 @@ namespace IronPython.Modules {
         }
 
         private static FileMode FileModeFromFlags(int flags) {
-            if ((flags & (int)O_APPEND) != 0) return FileMode.Append;
-            if ((flags & (int)O_CREAT) != 0) return FileMode.CreateNew;
-            if ((flags & (int)O_TRUNC) != 0) return FileMode.Truncate;
+            if ((flags & O_APPEND) != 0) return FileMode.Append;
+            if ((flags & O_CREAT) != 0) return FileMode.CreateNew;
+            if ((flags & O_TRUNC) != 0) return FileMode.Truncate;
             return FileMode.Open;
         }
 
         private static FileAccess FileAccessFromFlags(int flags) {
-            if ((flags & (int)O_RDWR) != 0) return FileAccess.ReadWrite;
-            if ((flags & (int)O_WRONLY) != 0) return FileAccess.Write;
+            if ((flags & O_RDWR) != 0) return FileAccess.ReadWrite;
+            if ((flags & O_WRONLY) != 0) return FileAccess.Write;
 
             return FileAccess.Read;
         }

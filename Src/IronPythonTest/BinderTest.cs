@@ -214,7 +214,9 @@ namespace IronPythonTest.BinderTest {
 
     public class COtherOverloadConcern {
         // one is private
+#pragma warning disable 169 // unusued method...
         void M100(Int32 arg) { Flag.Value = 100; }
+#pragma warning restore 169
         public void M100(object arg) { Flag.Value = 200; }
 
         // static / instance

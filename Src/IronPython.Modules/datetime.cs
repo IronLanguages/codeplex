@@ -675,6 +675,28 @@ namespace IronPython.Modules {
                 : this(dt, 0, null) {
             }
 
+            // just present to match CPython's error messages...
+            public datetime(params object[] args) {
+                if (args.Length < 3) {
+                    throw PythonOps.TypeError("function takes at least 3 arguments ({0} given)", args.Length);
+                } else if (args.Length > 8) {
+                    throw PythonOps.TypeError("function takes at most 8 arguments ({0} given)", args.Length);
+                }
+                
+                for (int i = 0; i < args.Length && i < 7; i++) {    // 8 is offsetof tzinfo
+                    if (!(args[i] is int)) {
+                        throw PythonOps.TypeError("an integer is required");
+                    }
+                }
+
+                if (args.Length > 7 && !(args[7] is tzinfo || args[7] == null)) {
+                    throw PythonOps.TypeError("tzinfo argument must be None or of a tzinfo subclass, not type '{0}'", PythonTypeOps.GetName(args[7]));
+                }
+
+                // the above cases should cover all binding failures...
+                throw new InvalidOperationException();
+            }
+
             internal datetime(DateTime dt, int lostMicroseconds, tzinfo tzinfo) {
                 this.InternalDateTime = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
                 this._lostMicroseconds = dt.Millisecond * 1000 + lostMicroseconds;

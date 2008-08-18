@@ -1447,6 +1447,39 @@ namespace IronPython.Runtime.Operations {
             return ch == '+' || ch == '-';
         }
 
+        internal static string GetEncodingName(Encoding encoding) {
+#if !SILVERLIGHT
+            string name = null;
+
+            // if we have a valid code page try and get a reasonable name.  The
+            // web names / mail displays match tend to CPython's terse names
+            if (encoding.CodePage != 0) {
+                if (encoding.IsBrowserDisplay) {
+                    name = encoding.WebName;
+                }
+
+                if (name == null && encoding.IsMailNewsDisplay) {
+                    name = encoding.HeaderName;
+                }
+
+                // otherwise use a code page number which also matches CPython               
+                if (name == null) {
+                    name = "cp" + encoding.CodePage;
+                }
+            }
+
+            if (name == null) {
+                // otherwise just finally fall back to the human readable name
+                name = encoding.EncodingName;
+            }
+#else
+            // Silverlight only has web names
+            string name = encoding.WebName;
+#endif
+
+            return NormalizeEncodingName(name);
+        }
+
         internal static string NormalizeEncodingName(string name) {
             if (name == null) {
                 return null;
@@ -1532,8 +1565,6 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static string RawEncode(CodeContext/*!*/ context, string s, object encodingType, string errors) {
-            PythonContext pc = PythonContext.GetContext(context);
-
             string encoding = encodingType as string;
             if (encoding == null) {
                 if (encodingType == Missing.Value) {

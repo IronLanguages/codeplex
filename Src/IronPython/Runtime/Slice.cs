@@ -242,24 +242,6 @@ namespace IronPython.Runtime {
             DoSliceAssign(assign, start, stop, step, sliceData);
         }
 
-        //public static bool operator ==(Slice self, Slice other) {
-        //    return EqualsWorker(self, other);
-        //}
-
-        private static bool EqualsWorker(Slice self, Slice other) {
-            if (Object.ReferenceEquals(self, other)) return true;
-
-            if (Object.ReferenceEquals(self, null) || object.ReferenceEquals(other, null)) return false;
-
-            return PythonOps.EqualRetBool(self._start, other._start) &&
-                PythonOps.EqualRetBool(self._stop, other._stop) &&
-                PythonOps.EqualRetBool(self._step, other._step);
-        }
-
-        //public static bool operator !=(Slice self, Slice other) {
-        //    return !EqualsWorker(self, other);
-        //}
-
         #endregion
     }
 }

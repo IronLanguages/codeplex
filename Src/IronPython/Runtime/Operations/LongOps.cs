@@ -23,9 +23,6 @@ using Microsoft.Scripting.Math;
 namespace IronPython.Runtime.Operations {
 
     public static partial class BigIntegerOps {
-        private static readonly BigInteger DecimalMax = BigInteger.Create(Decimal.MaxValue);
-        private static readonly BigInteger DecimalMin = BigInteger.Create(Decimal.MinValue);        
-
         [StaticExtensionMethod]
         public static object __new__(CodeContext context, PythonType cls, string s, int radix) {
             if (radix == 16) {
