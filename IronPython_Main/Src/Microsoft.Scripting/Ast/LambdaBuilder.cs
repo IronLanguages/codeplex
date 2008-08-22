@@ -465,7 +465,7 @@ namespace Microsoft.Scripting.Ast {
                         Expression.Assign(
                             backingVariable,
                             Expression.ConvertHelper(
-                                Expression.ArrayIndex(
+                                Expression.ArrayAccess(
                                     delegateParamarray,
                                     Expression.Constant(i)
                                 ),

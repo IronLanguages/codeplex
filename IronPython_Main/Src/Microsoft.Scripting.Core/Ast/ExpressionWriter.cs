@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Scripting;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
+using System.Globalization;
 
 namespace System.Linq.Expressions {
     // TODO: debug builds only!
@@ -51,25 +52,6 @@ namespace System.Linq.Expressions {
             }
         }
 
-        private struct Alignment {
-            private readonly Expression _expression;
-            private readonly int _depth;
-
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-            internal Alignment(Expression expression, int depth) {
-                _expression = expression;
-                _depth = depth;
-            }
-
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-            internal Expression Statement {
-                get { return _expression; }
-            }
-            internal int Depth {
-                get { return _depth; }
-            }
-        }
-
         private const int Tab = 4;
         private const int MaxColumn = 80;
 
@@ -78,7 +60,7 @@ namespace System.Linq.Expressions {
 
         private Queue<LambdaId> _lambdaIds;
         private int _blockid;
-        private Stack<Alignment> _stack = new Stack<Alignment>();
+        private Stack<int> _stack = new Stack<int>();
         private int _delta;
         private Flow _flow;
 
@@ -88,7 +70,7 @@ namespace System.Linq.Expressions {
 
         private int Base {
             get {
-                return _stack.Count > 0 ? _stack.Peek().Depth : 0;
+                return _stack.Count > 0 ? _stack.Peek() : 0;
             }
         }
 
@@ -273,11 +255,11 @@ namespace System.Linq.Expressions {
             _column = 0;
         }
         private void WriteLine(string format, object arg0) {
-            string s = String.Format(format, arg0);
+            string s = String.Format(CultureInfo.CurrentCulture, format, arg0);
             WriteLine(s);
         }
         private void WriteLine(string format, object arg0, object arg1) {
-            string s = String.Format(format, arg0, arg1);
+            string s = String.Format(CultureInfo.CurrentCulture, format, arg0, arg1);
             WriteLine(s);
         }
         private void Write(string s) {
@@ -338,26 +320,18 @@ namespace System.Linq.Expressions {
             }
         }
 
-        protected override Expression Visit(ActionExpression node) {
-            return WriteCallSite(node, node.Arguments);
-        }
-
-        private Expression WriteCallSite(Expression node, params Expression[] arguments) {
-            return WriteCallSite(node, (IEnumerable<Expression>)arguments);
-        }
-
-        private Expression WriteCallSite(Expression node, IEnumerable<Expression> arguments) {
+        protected override Expression Visit(DynamicExpression node) {
             Out(".site", Flow.Space);
 
             Out("(");
             Out(node.Type.Name);
             Out(")", Flow.Space);
 
-            Out(FormatBinder(node.BindingInfo));
-            Out("( // " + node.BindingInfo.ToString());
+            Out(FormatBinder(node.Binder));
+            Out("( // " + node.Binder.ToString());
             Indent();
             NewLine();
-            foreach (Expression arg in arguments) {
+            foreach (Expression arg in node.Arguments) {
                 VisitNode(arg);
                 NewLine();
             }
@@ -368,10 +342,6 @@ namespace System.Linq.Expressions {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         protected override Expression Visit(BinaryExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Left, node.Right);
-            }
-
             if (node.NodeType == ExpressionType.ArrayIndex) {
                 VisitNode(node.Left);
                 Out("[");
@@ -423,16 +393,6 @@ namespace System.Linq.Expressions {
         }
 
         protected override Expression Visit(AssignmentExpression node) {
-            if (node.IsDynamic) {
-                if (node.Expression.NodeType == ExpressionType.MemberAccess) {
-                    MemberExpression getMember = (MemberExpression)node.Expression;
-                    return WriteCallSite(node, getMember.Expression, node.Value);
-                } else {
-                    BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
-                    return WriteCallSite(node, arrayIndex.Left, arrayIndex.Right, node.Value);
-                }
-            }
-
             VisitNode(node.Expression);
             Out(" = ");
             VisitNode(node.Value);
@@ -456,7 +416,7 @@ namespace System.Linq.Expressions {
         protected override Expression Visit(LambdaExpression node) {
             int id = Enqueue(node);
             Out(
-                String.Format(
+                String.Format(CultureInfo.CurrentCulture, 
                     "{0} ({1} {2} #{3})",
                     node.NodeType == ExpressionType.Lambda ? ".lambda" : ".generator",
                     node.Name,
@@ -485,7 +445,7 @@ namespace System.Linq.Expressions {
 
             ITemplatedValue itv = value as ITemplatedValue;
             if (itv != null) {
-                return ".template" + itv.Index.ToString() + " (" + itv.ObjectValue.ToString() + ")";
+                return ".template" + itv.Index.ToString(CultureInfo.CurrentCulture) + " (" + itv.ObjectValue.ToString() + ")";
             }
 
             Type t;
@@ -497,7 +457,7 @@ namespace System.Linq.Expressions {
                 return "\"" + s + "\"";
             }
             if (value is int || value is double) {
-                return String.Format("{0:G}", value);
+                return String.Format(CultureInfo.CurrentCulture, "{0:G}", value);
             }
             return "(" + value.GetType().Name + ")" + value.ToString();
         }
@@ -531,18 +491,11 @@ namespace System.Linq.Expressions {
         }
 
         protected override Expression Visit(MemberExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Expression);
-            }
             OutMember(node.Expression, node.Member);
             return node;
         }
 
         protected override Expression Visit(InvocationExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Arguments.AddFirst(node.Expression));
-            }
-
             Out("(");
             VisitNode(node.Expression);
             Out(").Invoke(");
@@ -559,10 +512,6 @@ namespace System.Linq.Expressions {
         }
 
         protected override Expression Visit(MethodCallExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Arguments.AddFirst(node.Object));
-            }
-
             if (node.Object != null) {
                 Out("(");
                 VisitNode(node.Object);
@@ -616,10 +565,6 @@ namespace System.Linq.Expressions {
         }
 
         protected override Expression Visit(NewExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Arguments);
-            }
-
             Out(".new " + node.Type.Name + "(");
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
@@ -641,10 +586,6 @@ namespace System.Linq.Expressions {
         }
 
         protected override Expression Visit(UnaryExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Operand);
-            }
-
             switch (node.NodeType) {
                 case ExpressionType.Convert:
                     Out("(" + node.Type.Name + ")");
@@ -720,11 +661,6 @@ namespace System.Linq.Expressions {
             DumpLabel(node.Target);
             Out(";", Flow.NewLine);
             return node;
-        }
-
-        protected override Expression Visit(DeleteExpression node) {
-            Debug.Assert(node.IsDynamic && node.Expression.NodeType == ExpressionType.MemberAccess);
-            return WriteCallSite(node, ((MemberExpression)node.Expression).Expression);
         }
 
         protected override Expression Visit(DoStatement node) {
@@ -884,27 +820,15 @@ namespace System.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(IndexedPropertyExpression node) {
-            if (node.IsDynamic) {
-                return WriteCallSite(node, node.Arguments.AddFirst(node.Object));
-            }
-
-            if (node.Object != null) {
-                Out("(");
+        protected override Expression Visit(IndexExpression node) {
+            if (node.Indexer != null) {
+                OutMember(node.Object, node.Indexer);
+            } else {
                 VisitNode(node.Object);
-                Out(").");
+                Out(".");
             }
 
-            Out("(.property");
-
-            if (node.GetMethod != null) {
-                Out(" get=" + node.GetMethod.ReflectedType.Name + "." + node.GetMethod.Name);
-            }
-            if (node.SetMethod != null) {
-                Out(" set=" + node.SetMethod.ReflectedType.Name + "." + node.SetMethod.Name);
-            }
-            Out(")(");
-
+            Out("[");
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
                 foreach (Expression e in node.Arguments) {
@@ -913,7 +837,7 @@ namespace System.Linq.Expressions {
                 }
                 Dedent();
             }
-            Out(")");
+            Out("]");
             return node;
         }
 
@@ -934,16 +858,16 @@ namespace System.Linq.Expressions {
         private static string GetLambdaInfo(LambdaExpression lambda) {
             string info = lambda.NodeType == ExpressionType.Generator ? ".generator " : ".lambda ";
 
-            info += String.Format("{0} {1} (", lambda.ReturnType, lambda.Name);
+            info += String.Format(CultureInfo.CurrentCulture, "{0} {1} (", lambda.ReturnType, lambda.Name);
             info += ")";
             return info;
         }
 
         private void DumpLabel(LabelTarget target) {
             if (string.IsNullOrEmpty(target.Name)) {
-                Out(string.Format("(.label 0x{0:x8})", target.GetHashCode()));
+                Out(String.Format(CultureInfo.CurrentCulture, "(.label 0x{0:x8})", target.GetHashCode()));
             } else {
-                Out(string.Format("(.label '{0}')", target.Name));
+                Out(String.Format(CultureInfo.CurrentCulture, "(.label '{0}')", target.Name));
             }
         }
 

@@ -13,8 +13,11 @@
  *
  * ***************************************************************************/
 
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
@@ -28,6 +31,7 @@ namespace IronPython.Runtime {
     /// not an internal member.  This enables subclasses to provide their own locking
     /// aruond large operations and call lock free functions.
     /// </summary>
+    [Serializable]
     internal abstract class DictionaryStorage  {
         public abstract void Add(object key, object value);
 
@@ -54,6 +58,15 @@ namespace IronPython.Runtime {
 
         public abstract int Count { get; }
         public abstract void Clear();
+        public virtual bool HasNonStringAttributes() {
+            foreach (KeyValuePair<object, object> o in GetItems()) {
+                if (!(o.Key is string)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public abstract List<KeyValuePair<object, object>> GetItems();
         public virtual DictionaryStorage Clone() {
             CommonDictionaryStorage storage = new CommonDictionaryStorage();

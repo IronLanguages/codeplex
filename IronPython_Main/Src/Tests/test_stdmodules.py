@@ -159,5 +159,15 @@ def test_cp12009():
             nt.unlink(t_dir + r"\stuff.txt")
             nt.rmdir(t_dir)
 
+def test_cp17040():
+    if not is_stdlib(): 
+        print "Will not run w/o the std library"
+        return
+        
+    ec = nt.system("%s -tt -c \"import os\"" %
+                   (sys.executable))
+    AreEqual(ec, 0)
+    
+
 ##MAIN#########################################################################
 run_test(__name__)

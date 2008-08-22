@@ -25,6 +25,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
+    using System.Reflection.Emit;
 
     public static class CompilerHelpers {
         public static readonly MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
@@ -635,6 +636,14 @@ namespace Microsoft.Scripting.Generation {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static Type GetReturnType(LambdaExpression lambda) {
             return lambda.Type.GetMethod("Invoke").ReturnType;
+        }
+
+        public static Type MakeCallSiteType(params Type[] types) {
+            return typeof(System.Scripting.Actions.CallSite<>).MakeGenericType(DelegateHelpers.MakeDelegate(types));
+        }
+
+        public static Type MakeCallSiteDelegateType(Type[] types) {
+            return DelegateHelpers.MakeDelegate(types);
         }
     }
 }

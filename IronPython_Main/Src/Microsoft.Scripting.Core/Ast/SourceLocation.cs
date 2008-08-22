@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 using System.Linq.Expressions;
+using System.Globalization;
 
 namespace System.Scripting {
     /// <summary>
@@ -195,7 +196,7 @@ namespace System.Scripting {
         }
 
         internal string ToDebugString() {
-            return String.Format("({0},{1},{2})", _index, _line, _column);
+            return String.Format(CultureInfo.CurrentCulture, "({0},{1},{2})", _index, _line, _column);
         }
     }
 }

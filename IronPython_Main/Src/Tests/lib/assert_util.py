@@ -182,7 +182,12 @@ def is_stdlib():
         for x in sys.path:
             if clean_lib==System.IO.Path.GetFullPath(x).lower():
                 return True
-    return False
+        return False
+    elif is_silverlight:
+        return False
+    else:
+        #CPython should always have access to the standard library
+        return True
     
 
 # test support 

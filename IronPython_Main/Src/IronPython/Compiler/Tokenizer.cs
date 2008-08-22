@@ -862,7 +862,7 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ': spaces += 1; sb.Append(' '); break;
                     case '\t': spaces += 8 - (spaces % 8); sb.Append('\t'); break;
-                    case '\f': spaces += 1; sb.Append('\f'); break;
+                    case '\f': spaces = 0; sb.Append('\f'); break;
                     
                     case '#':
                         if (_verbatim) {
@@ -887,11 +887,12 @@ namespace IronPython.Compiler {
                             break;
                         }
 
+                        _buffer.Back();
+
                         if (GroupingLevel > 0) {
                             return false;
                         }
 
-                        _buffer.Back();
                         _buffer.MarkMultiLineTokenEnd();
                         
                         // We've captured a line of significant identation (i.e. not pure whitespace).

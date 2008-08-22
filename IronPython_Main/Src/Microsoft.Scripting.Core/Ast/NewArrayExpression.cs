@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly ReadOnlyCollection<Expression> _expressions;
 
         internal NewArrayExpression(Annotations annotations, ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(nodeType, type, annotations, null) {
+            : base(nodeType, type, annotations) {
             _expressions = expressions;
         }
 

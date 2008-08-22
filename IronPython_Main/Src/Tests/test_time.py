@@ -48,8 +48,9 @@ def test_strptime():
     
     #CodePlex Work Item 2557
     AreEqual((2006, 7, 3, 7, 24, 0, 0, 184, -1), time.strptime("%07/03/06 07:24:00", "%%%c"))
-    if not is_cli and not is_silverlight:
-        AreEqual((1900, 6, 1, 0, 0, 0, 4, 152, -1), time.strptime("%6", "%%%m"))
+    AreEqual((1900, 6, 1, 0, 0, 0, 4, 152, -1), time.strptime("%6", "%%%m"))
+    AreEqual((1942, 1, 1, 0, 0, 0, 3, 1, -1), time.strptime("%1942", "%%%Y"))
+    AreEqual((1900, 1, 6, 0, 0, 0, 5, 6, -1), time.strptime("%6", "%%%d"))
         
     
     # CPY & IPY differ on daylight savings time for this parse
@@ -91,5 +92,16 @@ def test_dst():
 def test_tzname():
     AreEqual(type(time.tzname), tuple)
     AreEqual(len(time.tzname), 2)
+
+def test_struct_time():
+    AreEqual(time.struct_time("123456789"), ('1', '2', '3', '4', '5', '6', '7', '8', '9'))
+    
+    class Exc(Exception): pass
+
+    class C:
+        def __getitem__(self, i): raise Exc
+        def __len__(self): return 9
+    
+    AssertError(Exc, time.struct_time, C())
 
 run_test(__name__)

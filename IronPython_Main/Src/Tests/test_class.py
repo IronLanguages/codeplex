@@ -505,6 +505,15 @@ def test_module_name():
     AreEqual(func3().__module__, "right")
     mod.__name__ = name
     
+    def f(x): x.__module__
+    def g(x): getattr(x, '__module__')
+    import errno
+    for thing in "", 1, errno, 1L, 1+2j, (), [], {}:
+        AreEqual(getattr(thing, '__module__', 'does_not_exist'), 'does_not_exist')
+        AreEqual(hasattr(thing, '__module__'), False)
+        AssertError(AttributeError, f, thing)
+        AssertError(AttributeError, g, thing)
+    
 
 ############################################################
 def test_check_dictionary():
@@ -1521,8 +1530,17 @@ def test_slots():
     
     AreEqual(repr(Foo.abc), "<member 'abc' of 'Foo' objects>")
     AreEqual(str(Foo.abc), "<member 'abc' of 'Foo' objects>")
-    AssertErrorWithPartialMessage(AttributeError, 'abc', lambda: Foo().abc)
+    AssertErrorWithPartialMessage(AttributeError, 'abc', lambda: Foo().abc)    
+    
+    # again w/ empty __slots__ in C1 (409720)
+    class C1(object): 
+        __slots__ = []
 
+    class C2(object):
+        __slots__ = ['a']    
+    
+    class D1(C1, C2): pass
+    
 def test_slots11457():
     class COld:
         __slots__ = ['a']
@@ -1573,6 +1591,7 @@ def test_hexoct():
     AssertError(TypeError, oct, bar())
 
 #@disabled("CodePlex Work Item 766")
+@skip("multiple_execute")
 def test_no_clr_attributes():
     """verify types have no CLR attributes"""
     # list, 
@@ -1593,6 +1612,7 @@ def test_method_correct_name():
     # report the proper name in __str__
     Assert(repr(BaseException.__str__).find('__str__') != -1)
 
+@skip("multiple_execute")
 def test_no_clr_attributes_sanity():
     AreEqual(hasattr(int, 'MaxValue'), False)
     AreEqual(hasattr(int, 'MinValue'), False)
@@ -1823,7 +1843,8 @@ def test_override_container_len():
             def __len__(self): return 42
             
         AreEqual(len(C()), 42)
-        
+
+@skip("multiple_execute") #http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=17551        
 def test_dictproxy_access():
     def f():
         int.__dict__[0] = 0
@@ -3175,5 +3196,72 @@ def test_oldinstance_creation():
     
     AreEqual(id(d), id(i.__dict__))
     Assert(isinstance(i, C))
+
+    
+def test_metaclass_getattribute():
+    class mc(type):
+        def __getattr__(self, name):
+            return 42
+    
+    class nc_ga(object):
+        __metaclass__ = mc
+        
+    AreEqual(nc_ga.x, 42)
+
+def test_method_call():
+    class K(object):
+        def m(self, *args, **kwargs): 
+            return args, kwargs
+    
+    AreEqual(K().m.__call__(), ((), {}))
+    AreEqual(K().m.__call__(42), ((42, ), {}))
+    AreEqual(K().m.__call__(42, x = 23), ((42, ), {'x': 23}))
+    
+    Assert('__call__' in dir(K().m))
+    
+    
+def test_metaclass_multiple_bases():
+    global log
+    log = []
+    class C(object): pass
+    
+    class MT1(type):
+        def __new__(cls, name, bases, dict):
+            log.append('MT1')
+            return super(MT1, cls).__new__(cls, name, bases, dict)
+    
+    class D(object):
+        __metaclass__ = MT1
+    
+    AreEqual(log, ['MT1'])
+    
+    class MT2(type):
+        def __new__(cls, name, bases, dict):
+            log.append('MT2')
+            return super(MT2, cls).__new__(cls, name, bases, dict)
+    
+    class E(object):
+        __metaclass__ = MT2
+    
+    AreEqual(log, ['MT1', 'MT2'])
+    class T1(C, D): pass    
+    
+    AreEqual(log, ['MT1', 'MT2', 'MT1'])
+    
+    def f(): 
+        class T2(C, D, E): pass
+        
+    AssertError(TypeError, f)
+    
+    AreEqual(log, ['MT1', 'MT2', 'MT1'])
+
+def test_del_getattribute(): # 409747    
+    class B(object): 
+        def __getattribute__(self, name): pass
+    
+    class D(B): pass
+    
+    def f(): del D.__getattribute__  # AttributeError expected.
+    AssertError(AttributeError, f)
 
 run_test(__name__)

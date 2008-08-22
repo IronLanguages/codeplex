@@ -348,7 +348,14 @@ def test_arg_Collections():
 
 #------------------------------------------------------------------------------
 #--Boolean
-def test_arg_boolean_boolean_overload():
+def test_arg_boolean_overload():
+    '''
+    TODO:
+    In addition to test_arg_boolean_overload, we need to split up test_arg_Boolean
+    into two more functions as well - test_arg_boolean_overload_typeerror and
+    test_arg_boolean_overload_overflowerror.  This should be done for all of these
+    types of tests to make them more readable and maintainable.
+    '''
     o = COverloads_Boolean()
     
     param_method_map = {
@@ -376,29 +383,6 @@ def test_arg_boolean_boolean_overload():
             meth(param)
             AreEqual(expected_flag, Flag.Value)
     
-    #True, False
-    #'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '
-    
-    """
-    for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        
-(        True, _merge(_first(), _second('')), '', '', ),
-(       False, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('')), '', '', ),
-(         100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(        -100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(   UInt32Max, _merge(_first('M100 M106 '), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 ', '', ),
-(        200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(       -200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(      Byte10, _merge(_first('M100 '), _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 ')), 'M102 ', '', ),
-(    SBytem10, _merge(_first('M100 '), _second('M102 M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M103 M105 M107 ', '', ),
-(     Int1610, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
-(    Int16m20, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
-(       12.34, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 '), _second('M111 M112 ')), '', '', ),
-    ]:
-        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
-    """
-
 
 def test_arg_Boolean():
     target = COverloads_Boolean()

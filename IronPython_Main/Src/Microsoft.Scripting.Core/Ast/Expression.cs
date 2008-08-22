@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
 using System.Text;
+using System.Globalization;
 using System.Diagnostics;
 
 namespace System.Linq.Expressions {
@@ -38,55 +39,44 @@ namespace System.Linq.Expressions {
         private readonly NodeFlags _flags;
 
         private readonly Type _type;
-        private readonly CallSiteBinder _binder;
         private readonly Annotations _annotations;
 
         // protected ctors are part of API surface area
 
         // LinqV1 ctor
-        // obsolete this?
-        protected Expression(ExpressionType nodeType, Type type)
-            : this(nodeType, type, false, null, true, false, null) {
+        [Obsolete("use a different constructor that does not take ExpressionType")]
+        protected Expression(ExpressionType nodeType, Type type) {
+            // Can't enforce anything that V1 didn't
+            _nodeType = nodeType;
+            _type = type;
+            _flags = NodeFlags.CanRead;
         }
 
         // LinqV2: ctor for extension nodes
         protected Expression(Type type, bool reducible, Annotations annotations)
-            : this(ExpressionType.Extension, type, reducible, annotations, true, false, null) {
+            : this(ExpressionType.Extension, type, reducible, annotations, true, false) {
         }
 
         // LinqV2: ctor for extension nodes with read/write flags
         protected Expression(Type type, bool reducible, Annotations annotations, bool canRead, bool canWrite)
-            : this(ExpressionType.Extension, type, reducible, annotations, canRead, canWrite, null) {
+            : this(ExpressionType.Extension, type, reducible, annotations, canRead, canWrite) {
         }
 
-        // LinqV2: ctor for dynamic extension nodes
-        // TODO: remove dynamic node support from Expression?
-        protected Expression(Type type, bool reducible, Annotations annotations, CallSiteBinder binder)
-            : this(ExpressionType.Extension, type, reducible, annotations, true, false, binder) {
+        // internal ctor -- not exposed API
+        internal Expression(ExpressionType nodeType, Type type, Annotations annotations)
+            : this(nodeType, type, false, annotations, true, false) {
         }
 
-        // internal ctors -- not exposed API
-
-        internal Expression(ExpressionType nodeType, Type type, Annotations annotations, CallSiteBinder binder)
-            : this(nodeType, type, false, annotations, true, false, binder) {
-        }
-
-        internal Expression(ExpressionType nodeType, Type type, bool reducible, Annotations annotations, bool canRead, bool canWrite, CallSiteBinder binder) {
+        // internal ctor -- not exposed API
+        // but it is called from protected ctors, so we validate parameters
+        // that could be passed from those
+        internal Expression(ExpressionType nodeType, Type type, bool reducible, Annotations annotations, bool canRead, bool canWrite) {
+            ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(canRead || canWrite, "canRead", Strings.MustBeReadableOrWriteable);
-
-            // We should also enforce that subtrees of a bound node are also bound.
-            // But it's up to the subclasses of Expression to enforce that
-            if (type == null && binder == null) {
-                throw Error.TypeOrBindingInfoMustBeNonNull();
-            }
-
-            // Enforced by protected ctors, also we must do the right thing internally
-            Debug.Assert(binder == null || (canRead == true && canWrite == false), "dynamic nodes are only readable");
 
             _annotations = annotations ?? Annotations.Empty;
             _nodeType = nodeType;
             _type = type;
-            _binder = binder;
             _flags = (reducible ? NodeFlags.Reducible : 0) | (canRead ? NodeFlags.CanRead : 0) | (canWrite ? NodeFlags.CanWrite : 0);
         }
 
@@ -99,29 +89,6 @@ namespace System.Linq.Expressions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")]
         public Type Type {
             get { return _type; }
-        }
-
-        /// <summary>
-        /// Information that can be used to bind this tree,
-        /// either statically or dynamically
-        /// </summary>
-        public CallSiteBinder BindingInfo {
-            get { return _binder; }
-        }
-
-        /// <summary>
-        /// Returns true if the tree is fully bound, i.e. Type is not null
-        /// </summary>
-        public bool IsBound {
-            get { return _type != null; }
-        }
-
-        /// <summary>
-        /// Returns true if this tree is dynamically bound, i.e.
-        /// Type is not null and BindingInfo is not null
-        /// </summary>
-        public bool IsDynamic {
-            get { return _type != null && _binder != null; }
         }
 
         public Annotations Annotations {
@@ -217,7 +184,7 @@ namespace System.Linq.Expressions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         private string Dump {
             get {
-                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {
                     ExpressionWriter.Dump(this, GetType().Name, writer);
                     return writer.ToString();
                 }
@@ -227,26 +194,6 @@ namespace System.Linq.Expressions {
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public partial class Expression {
-        /// <summary>
-        /// Verifies that the expression is fully bound (i.e. it has a non-null type)
-        /// </summary>
-        internal static void RequiresBound(Expression expression, string paramName) {
-            if (expression != null && !expression.IsBound) {
-                throw new ArgumentException(Strings.SubtreesMustBeBound, paramName);
-            }
-        }
-
-        /// <summary>
-        /// Verifies that all expressions in the list are fully bound
-        /// </summary>
-        internal static void RequiresBoundItems(IList<Expression> items, string paramName) {
-            if (items != null) {
-                for (int i = 0, n = items.Count; i < n; i++) {
-                    RequiresBound(items[i], paramName);
-                }
-            }
-        }
-
         internal static void RequiresCanRead(Expression expression, string paramName) {
             if (expression == null) {
                 throw new ArgumentNullException(paramName);
@@ -269,16 +216,6 @@ namespace System.Linq.Expressions {
             if (!expression.CanWrite) {
                 throw new ArgumentException(Strings.ExpressionMustBeWriteable, paramName);
             }
-        }
-
-        /// <summary>
-        /// Reduces the expression to a known node type (i.e. not an Extension node)
-        /// or simply returns the expression if it is already a known type.
-        /// </summary>
-        [Obsolete("use the instance method ReduceToKnown instead")]
-        public static Expression ReduceToKnown(Expression node) {
-            ContractUtils.RequiresNotNull(node, "node");
-            return node.ReduceToKnown();
         }
     }
 }

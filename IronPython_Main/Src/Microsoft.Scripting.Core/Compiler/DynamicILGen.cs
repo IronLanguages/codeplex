@@ -34,7 +34,7 @@ namespace System.Linq.Expressions.Compiler {
         internal abstract MethodInfo Finish();
     }
 
-    class DynamicILGenMethod : DynamicILGen {
+    internal class DynamicILGenMethod : DynamicILGen {
         private readonly DynamicMethod _dm;
 
         internal DynamicILGenMethod(DynamicMethod dm, ILGenerator il)
@@ -53,7 +53,7 @@ namespace System.Linq.Expressions.Compiler {
         }
     }
 
-    class DynamicILGenType : DynamicILGen {
+    internal class DynamicILGenType : DynamicILGen {
         private readonly TypeBuilder _tb;
         private readonly MethodBuilder _mb;
 

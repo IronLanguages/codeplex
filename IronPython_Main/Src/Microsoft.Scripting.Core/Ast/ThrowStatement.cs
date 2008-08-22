@@ -20,7 +20,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _val;
 
         internal ThrowStatement(Annotations annotations, Expression value)
-            : base(ExpressionType.ThrowStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.ThrowStatement, typeof(void), annotations) {
             _val = value;
         }
 

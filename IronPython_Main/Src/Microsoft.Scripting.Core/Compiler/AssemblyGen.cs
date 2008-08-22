@@ -189,7 +189,7 @@ namespace System.Linq.Expressions.Compiler {
             try {
                 string pythonPath = new FileInfo(Assembly.GetEntryAssembly().Location).DirectoryName;
 
-                string assemblyFile = Path.Combine(_outDir, _outFileName).ToLower(CultureInfo.InvariantCulture);
+                string assemblyFile = Path.Combine(_outDir, _outFileName).ToUpperInvariant();
                 string assemblyName = Path.GetFileNameWithoutExtension(_outFileName);
                 string assemblyExtension = Path.GetExtension(_outFileName);
                 Random rnd = new System.Random();
@@ -276,7 +276,7 @@ namespace System.Linq.Expressions.Compiler {
                 string toFile = Path.Combine(to, fi.Name);
                 FileInfo toInfo = new FileInfo(toFile);
 
-                if (fi.Extension.ToLowerInvariant() == ".dll" || fi.Extension.ToLowerInvariant() == ".exe") {
+                if (fi.Extension.ToUpperInvariant() == ".DLL" || fi.Extension.ToUpperInvariant() == ".EXE") {
                     if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
                         try {
                             File.Copy(filename, toFile, true);

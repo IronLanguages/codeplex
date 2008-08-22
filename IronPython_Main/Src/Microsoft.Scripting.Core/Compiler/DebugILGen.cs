@@ -341,7 +341,7 @@ namespace System.Linq.Expressions.Compiler {
         /// Marks a sequence point.
         /// </summary>
         internal override void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
-            WriteImpl(String.Format(".seq {0}:{1}-{2}:{3}", startLine, startColumn, endLine, endColumn));
+            WriteImpl(String.Format(CultureInfo.CurrentCulture, ".seq {0}:{1}-{2}:{3}", startLine, startColumn, endLine, endColumn));
             base.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
         }
 

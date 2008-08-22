@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
         internal LocalScopeExpression(
             Annotations annotations,
             ReadOnlyCollection<Expression> variables)
-            : base(ExpressionType.LocalScope, typeof(ILocalVariables), annotations, null) {
+            : base(ExpressionType.LocalScope, typeof(ILocalVariables), annotations) {
             _variables = variables;
         }
 
@@ -74,7 +74,7 @@ namespace System.Linq.Expressions {
             for (int i = 0; i < vars.Count; i++) {
                 Expression v = vars[i];
                 if (v == null) {
-                    throw new ArgumentNullException(string.Format("variables[{0}]", i));
+                    throw new ArgumentNullException(string.Format(Globalization.CultureInfo.CurrentUICulture, "variables[{0}]", i));
                 }
                 ExpressionType kind = vars[i].NodeType;
                 if (kind != ExpressionType.Variable && kind != ExpressionType.Parameter) {

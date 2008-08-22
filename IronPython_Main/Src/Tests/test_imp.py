@@ -904,6 +904,7 @@ def test_import_list_empty_string():
     x = __import__('lib', {}, {}, [''])
     Assert(not '' in dir(x))
 
+@skip("silverlight") #BUG?
 def test_cp7050():
     '''
     This test case complements CPython's test_import.py
@@ -915,9 +916,8 @@ def test_cp7050():
         pass
 
     AssertError(ImportError, __import__, "Nt")
-    #CodePlex 7050
-    #AssertError(ImportError, __import__, "Lib")
-    #AssertError(ImportError, __import__, "lib.Assert_Util")
+    AssertError(ImportError, __import__, "Lib")
+    AssertError(ImportError, __import__, "lib.Assert_Util")
             
 
 def test_meta_path_before_builtins():

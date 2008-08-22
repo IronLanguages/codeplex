@@ -28,7 +28,7 @@ namespace System.Scripting.Actions {
     /// MatchCaller allows to call match maker delegate with the signature (object, CallSite, object[])
     /// It is used by the call site cache lookup logic when searching for applicable rule.
     /// </summary>
-    public static partial class MatchCaller {
+    internal static partial class MatchCaller {
         private struct RefFixer {
             internal readonly LocalBuilder Temp;
             internal readonly int Index;
@@ -58,9 +58,9 @@ namespace System.Scripting.Actions {
             if (target.IsGenericType && DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
                 MethodInfo method;
                 if (invoke.ReturnType == typeof(void)) {
-                    method = typeof(MatchCaller).GetMethod("CallVoid" + args.Length);
+                    method = typeof(MatchCaller).GetMethod("CallVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
                 } else {
-                    method = typeof(MatchCaller).GetMethod("Call" + (args.Length - 1));
+                    method = typeof(MatchCaller).GetMethod("Call" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
                 }
                 if (method != null) {
                     method = method.MakeGenericMethod(args);
@@ -211,13 +211,17 @@ namespace System.Runtime.CompilerServices {
         [Obsolete("Do not call this method.")]
         public static bool RuleMatched(Delegate d) {
             //
-            // The "Matchmaker" delegate is closed over the instance of
-            // Matchmaker which is updated should the rule not match.
-            // If the rule matched, we detect it here and the ref arguments
-            // will get propagated to the argument array by the MatchCaller
+            // The "Matchmaker" delegate is closed over a StrongBox<bool>,
+            // which is updated should the rule not match. If the rule matched,
+            // we detect it here and the ref arguments will get propagated to
+            // the argument array by the MatchCaller
             //
-            Matchmaker mm = (Matchmaker)d.Target;
-            return mm.Match;
+            StrongBox<bool> mm;
+            if (d != null && (mm = d.Target as StrongBox<bool>) != null) {
+                return mm.Value;
+            }
+
+            throw System.Linq.Expressions.Error.BadDelegateData();
         }
     }
 }

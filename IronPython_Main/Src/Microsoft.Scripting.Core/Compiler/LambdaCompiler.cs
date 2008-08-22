@@ -35,16 +35,7 @@ namespace System.Linq.Expressions.Compiler {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")] // TODO: fix
     internal sealed partial class LambdaCompiler {
 
-        //CONFORMING
-        private struct WriteBack {
-            internal LocalBuilder Local;
-            internal Expression Argument;
-
-            internal WriteBack(LocalBuilder loc, Expression arg) {
-                Local = loc;
-                Argument = arg;
-            }
-        }
+        private delegate void WriteBack();
 
         // Indicates that the method should logically be treated as a
         // DynamicMethod. We need this because in debuggable code we have to
@@ -302,18 +293,14 @@ namespace System.Linq.Expressions.Compiler {
         private static CompilerScope AnalyzeLambda(LambdaExpression lambda) {
             DumpLambda(lambda);
 
-            // first re-write all DynamicSite's into normal nodes
-            lambda = (LambdaExpression)new DynamicNodeRewriter().VisitNode(lambda);
-
-            // then spill the stack for any exception handling blocks or other
-            // constructs which require entering w/ an empty stack
+            // Spill the stack for any exception handling blocks or other
+            // constructs which require entering with an empty stack
             lambda = StackSpiller.AnalyzeLambda(lambda);
 
-            // finally bind any variable references in this lambda
-            CompilerScope scope = VariableBinder.Bind(null, lambda);
             DumpLambda(lambda);
 
-            return scope;
+            // Bind any variable references in this lambda
+            return VariableBinder.Bind(null, lambda);
         }
 
         [Conditional("DEBUG")]
@@ -521,7 +508,7 @@ namespace System.Linq.Expressions.Compiler {
             // 1) we want to dump all geneated IL to an assembly on disk (SaveSnippets on)
             // 2) the method is debuggable, i.e. DebugMode is on and a source unit is associated with the method
             //
-            if ((Snippets.Shared.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
+            if ((DebugOptions.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
                 var typeBuilder = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
                 lc = CreateStaticLambdaCompiler(
                     scope,

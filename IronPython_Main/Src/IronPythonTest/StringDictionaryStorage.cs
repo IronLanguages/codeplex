@@ -23,6 +23,7 @@ using Microsoft.Scripting.Runtime;
 using IronPython.Runtime;
 
 namespace IronPythonTest {
+    [Serializable]
     internal class StringDictionaryStorage : DictionaryStorage {
         private readonly IDictionary<string, object>/*!*/ _dict; // the underlying dictionary
         private Dictionary<object, object> _objDict;

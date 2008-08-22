@@ -108,7 +108,7 @@ namespace IronPython.Runtime {
         private CallSite<DynamicSiteTarget<object, int>> _intSite;
         private CallSite<DynamicSiteTarget<object, string>> _tryStringSite;
         private CallSite<DynamicSiteTarget<object, object>> _tryIntSite, _hashSite;
-        private CallSite<DynamicSiteTarget<object, IEnumerator>> _tryIEnumeratorSite;
+        private CallSite<DynamicSiteTarget<object, IEnumerable>> _tryIEnumerableSite;
         private Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>> _implicitConvertSites;
         private Dictionary<string, CallSite<DynamicSiteTarget<object, object, object>>> _binarySites;
 
@@ -2084,12 +2084,12 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        internal bool TryConvertToIEnumerator(object enumerable, out IEnumerator res) {
-            if (_tryIEnumeratorSite == null) {
-                Interlocked.CompareExchange(ref _tryIEnumeratorSite, MakeExplicitTrySite<IEnumerator>(), null);
+        internal bool TryConvertToIEnumerable(object enumerable, out IEnumerable res) {
+            if (_tryIEnumerableSite == null) {
+                Interlocked.CompareExchange(ref _tryIEnumerableSite, MakeExplicitTrySite<IEnumerable>(), null);
             }
 
-            res = _tryIEnumeratorSite.Target(_tryIEnumeratorSite, enumerable);
+            res = _tryIEnumerableSite.Target(_tryIEnumerableSite, enumerable);
             return res != null;
         }
 

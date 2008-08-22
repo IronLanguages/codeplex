@@ -115,6 +115,8 @@ namespace System.Scripting.Actions {
         }
 
         public virtual MetaObject Restrict(Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+
             if (type == Expression.Type && type.IsSealedOrValueType()) {
                 return this;
             }
@@ -161,60 +163,44 @@ namespace System.Scripting.Actions {
             );
         }
 
-        // Operations
-        internal MetaObject DoAction(StandardAction action, MetaObject[] args) {
-            switch (action.Kind) {
-                case StandardActionKind.Operation:
-                    return Operation((OperationAction)action, args);
-                case StandardActionKind.GetMember:
-                    return GetMember((GetMemberAction)action, args);
-                case StandardActionKind.SetMember:
-                    return SetMember((SetMemberAction)action, args);
-                case StandardActionKind.DeleteMember:
-                    return DeleteMember((DeleteMemberAction)action, args);
-                case StandardActionKind.Call:
-                    return Call((CallAction)action, args);
-                case StandardActionKind.Convert:
-                    return Convert((ConvertAction)action, args);
-                case StandardActionKind.Create:
-                    return Create((CreateAction)action, args);
-                case StandardActionKind.Invoke:
-                    return Invoke((InvokeAction)action, args);
-                default:
-                    throw Assert.Unreachable;
-            }
-        }
-
         public virtual MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         public virtual MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         public virtual MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         public virtual MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         public virtual MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")]
         public virtual MetaObject Call(CallAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         public virtual MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
         public virtual MetaObject Create(CreateAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
         }
 
@@ -230,9 +216,15 @@ namespace System.Scripting.Actions {
         }
 
         public static Expression[] GetExpressions(MetaObject[] objects) {
+            ContractUtils.RequiresNotNull(objects, "objects");
+
             Expression[] res = new Expression[objects.Length];
             for (int i = 0; i < objects.Length; i++) {
-                res[i] = objects[i].Expression;
+                MetaObject mo = objects[i];
+                ContractUtils.RequiresNotNull(mo, "objects");
+                Expression expr = mo.Expression;
+                ContractUtils.RequiresNotNull(expr, "objects");
+                res[i] = expr;
             }
 
             return res;

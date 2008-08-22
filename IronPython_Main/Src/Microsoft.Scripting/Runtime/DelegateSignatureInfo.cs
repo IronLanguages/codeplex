@@ -123,7 +123,7 @@ namespace Microsoft.Scripting.Runtime {
                 siteTypes[siteTypes.Length - 1] = _returnType;
             }
 
-            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(siteTypes);
+            Type siteType = DynamicSiteHelpers.MakeCallSiteType(siteTypes);
             CallSite callSite = DynamicSiteHelpers.MakeSite(action, siteType);
 
             // build up constants array

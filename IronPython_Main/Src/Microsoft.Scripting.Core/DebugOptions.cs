@@ -39,7 +39,7 @@ namespace System.Scripting {
 #if MICROSOFT_SCRIPTING_CORE && !SILVERLIGHT
             try {
                 string envVar = Environment.GetEnvironmentVariable("DLR_" + name);
-                return envVar != null && envVar.ToLowerInvariant() == "true";
+                return envVar != null && envVar.ToUpperInvariant() == "TRUE";
             } catch (SecurityException) {
                 return false;
             }
@@ -52,7 +52,7 @@ namespace System.Scripting {
         private static bool ReadDebugOption(string name) {
 #if DEBUG && !SILVERLIGHT
             string envVar = ReadDebugString(name);
-            return envVar != null && envVar.ToLowerInvariant() == "true";
+            return envVar != null && envVar.ToUpperInvariant() == "TRUE";
 #else
             return false;
 #endif

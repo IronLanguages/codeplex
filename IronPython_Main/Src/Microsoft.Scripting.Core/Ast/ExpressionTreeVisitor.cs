@@ -84,21 +84,13 @@ namespace System.Linq.Expressions {
 
         #region Individual Expression Visitors
 
-        protected virtual Expression Visit(ActionExpression node) {
-            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
-            if (a == node.Arguments) {
-                return node;
-            }
-            return new ActionExpression(node.Annotations, node.BindingInfo, a, node.Type);
-        }
-
         protected virtual Expression Visit(AssignmentExpression node) {
             Expression e = VisitNode(node.Expression);
             Expression v = VisitNode(node.Value);
             if (e == node.Expression && v == node.Value) {
                 return node;
             }
-            return new AssignmentExpression(node.Annotations, e, v, node.Type, node.BindingInfo);
+            return new AssignmentExpression(node.Annotations, e, v);
         }
 
         protected virtual Expression Visit(BinaryExpression node) {
@@ -109,7 +101,7 @@ namespace System.Linq.Expressions {
             if (l == node.Left && r == node.Right) {
                 return node;
             }
-            return new BinaryExpression(node.Annotations, node.NodeType, l, r, node.Type, node.Method, node.Conversion, node.BindingInfo);
+            return new BinaryExpression(node.Annotations, node.NodeType, l, r, node.Type, node.Method, node.Conversion);
         }
 
         protected virtual Expression Visit(Block node) {
@@ -142,14 +134,6 @@ namespace System.Linq.Expressions {
             return node;
         }
 
-        protected virtual Expression Visit(DeleteExpression node) {
-            Expression e = VisitNode(node.Expression);
-            if (e == node.Expression) {
-                return node;
-            }
-            return new DeleteExpression(node.Annotations, e, node.BindingInfo);
-        }
-
         protected virtual Expression Visit(DoStatement node) {
             Expression t = VisitNode(node.Test);
             Expression b = VisitNode(node.Body);
@@ -157,6 +141,14 @@ namespace System.Linq.Expressions {
                 return node;
             }
             return new DoStatement(node.Annotations, node.Label, t, b);
+        }
+
+        protected virtual Expression Visit(DynamicExpression node) {
+            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
+            if (a == node.Arguments) {
+                return node;
+            }
+            return new DynamicExpression(node.Type, node.Annotations, node.DelegateType, node.Binder, a);
         }
 
         protected virtual Expression Visit(EmptyStatement node) {
@@ -182,7 +174,7 @@ namespace System.Linq.Expressions {
             if (e == node.Expression && a == node.Arguments) {
                 return node;
             }
-            return new InvocationExpression(node.Annotations, e, node.Type, node.BindingInfo, a);
+            return new InvocationExpression(e, node.Annotations, a, node.Type);
         }
 
         protected virtual Expression Visit(LabeledStatement node) {
@@ -227,16 +219,16 @@ namespace System.Linq.Expressions {
             if (e == node.Expression) {
                 return node;
             }
-            return new MemberExpression(e, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite, node.BindingInfo);
+            return new MemberExpression(e, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite);
         }
 
-        protected virtual Expression Visit(IndexedPropertyExpression node) {
+        protected virtual Expression Visit(IndexExpression node) {
             Expression o = VisitNode(node.Object);
             ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
             if (o == node.Object && a == node.Arguments) {
                 return node;
             }
-            return new IndexedPropertyExpression(node.Annotations, o, node.GetMethod, node.SetMethod, a, node.Type, node.BindingInfo);
+            return new IndexExpression(o, node.Indexer, node.Annotations, a, node.Type, node.CanRead, node.CanWrite);
         }
 
         protected virtual Expression Visit(MethodCallExpression node) {
@@ -245,7 +237,7 @@ namespace System.Linq.Expressions {
             if (o == node.Object && a == node.Arguments) {
                 return node;
             }
-            return new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo, node.Method, o, a);
+            return new MethodCallExpression(node.Annotations, node.Type, node.Method, o, a);
         }
 
         protected virtual Expression Visit(NewArrayExpression node) {
@@ -261,7 +253,7 @@ namespace System.Linq.Expressions {
             if (a == node.Arguments) {
                 return node;
             }
-            return new NewExpression(node.Annotations, node.Type, node.Constructor, a, node.BindingInfo);
+            return new NewExpression(node.Annotations, node.Type, node.Constructor, a, node.Members);
         }
 
         protected virtual Expression Visit(ParameterExpression node) {
@@ -351,7 +343,7 @@ namespace System.Linq.Expressions {
             if (o == node.Operand) {
                 return node;
             }
-            return new UnaryExpression(node.Annotations, node.NodeType, o, node.Type, node.Method, node.BindingInfo);
+            return new UnaryExpression(node.Annotations, node.NodeType, o, node.Type, node.Method);
         }
 
         protected virtual Expression Visit(VariableExpression node) {
@@ -371,7 +363,7 @@ namespace System.Linq.Expressions {
             NewExpression n = node.NewExpression;
             ReadOnlyCollection<Expression> a = VisitNodes(n.Arguments);
             if (a != n.Arguments) {
-                n = new NewExpression(n.Annotations, n.Type, n.Constructor, a, n.BindingInfo);
+                n = new NewExpression(n.Annotations, n.Type, n.Constructor, a, n.Members);
             }
 
             ReadOnlyCollection<MemberBinding> bindings = VisitNodes(node.Bindings, Visit);
@@ -386,7 +378,7 @@ namespace System.Linq.Expressions {
             NewExpression n = node.NewExpression;
             ReadOnlyCollection<Expression> a = VisitNodes(n.Arguments);
             if (a != n.Arguments) {
-                n = new NewExpression(n.Annotations, n.Type, n.Constructor, a, n.BindingInfo);
+                n = new NewExpression(n.Annotations, n.Type, n.Constructor, a, n.Members);
             }
 
             ReadOnlyCollection<ElementInit> initializers = VisitNodes(node.Initializers, Visit);

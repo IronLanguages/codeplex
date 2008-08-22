@@ -28,7 +28,6 @@ import nt
 import System
 from   System.Collections.Generic import List
 
-
 remove_ironpython_dlls(testpath.public_testdir)
 load_iron_python_dll()
 
@@ -389,7 +388,13 @@ def test_ip_hosting_resource_file():
         AreEqual(rf_list[i].PublicResource, True)
 
 
+@skip("multiple_execute")
 def test_compiled_code():
+    if System.Environment.GetEnvironmentVariable('DLR_SaveAssemblies'):
+        # The SaveAssemblies option is not compatible with saving code to disk
+        print '... skipping test if DLR_SaveAssemblies is set...'
+        return
+
     import clr
     
     # make sure we can compile

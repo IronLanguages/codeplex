@@ -148,7 +148,7 @@ namespace Microsoft.Scripting.Actions {
 
     /// <summary>
     /// Provides a mapping for inputs of combo action expressions.  The input can map
-    /// to either an input of the new dynamic site, an input of a previous ActionExpression,
+    /// to either an input of the new dynamic site, an input of a previous DynamicExpression,
     /// or a ConstantExpression which has been pulled out of the dynamic site arguments.
     /// </summary>
     public class ParameterMappingInfo {

@@ -753,9 +753,12 @@ namespace IronPython.Runtime.Operations {
                     Ast.NotEqual(
                         Ast.Assign(
                             tmp,
-                            Ast.SimpleCallHelper(
-                                rsp.GetterMethod,
-                                rule.Parameters[0]
+                            Ast.ArrayIndex(
+                                Ast.Call(
+                                    Ast.Convert(rule.Parameters[0], typeof(IObjectWithSlots)),
+                                    typeof(IObjectWithSlots).GetMethod("GetSlots")
+                                ),
+                                Ast.Constant(rsp.Index)
                             )
                         ),
                         Ast.Field(null, typeof(Uninitialized).GetField("Instance"))
@@ -993,7 +996,14 @@ namespace IronPython.Runtime.Operations {
                 context.LanguageContext.Binder,
                 Ast.Assign(tmp,
                     Ast.Convert(
-                        Ast.SimpleCallHelper(rsp.SetterMethod, rule.Parameters[0], value),
+                        Ast.AssignArrayIndex(
+                            Ast.Call(
+                                Ast.Convert(rule.Parameters[0], typeof(IObjectWithSlots)),
+                                typeof(IObjectWithSlots).GetMethod("GetSlots")
+                            ),
+                            Ast.Constant(rsp.Index),
+                            Ast.ConvertHelper(value, typeof(object))
+                        ), 
                         tmp.Type
                     )
                 )

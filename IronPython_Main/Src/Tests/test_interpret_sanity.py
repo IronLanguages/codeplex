@@ -72,8 +72,9 @@ def test_interpreted():
         restore_syspath()
         import test_property
         restore_syspath()
-        import test_weakref
-        restore_syspath()
+        if not is_silverlight:
+            import test_weakref
+            restore_syspath()
         import test_specialcontext
         restore_syspath()
         import test_thread
@@ -86,10 +87,8 @@ def test_interpreted():
         restore_syspath()
         import test_class
         restore_syspath()
-        if not is_silverlight:
-            #This particular test corrupts the run - CodePlex Work Item 11830
-            import test_syntax
-            restore_syspath()
+        import test_syntax
+        restore_syspath()
     finally:
         IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode = save
         # "Un-import" these modules so that they get re-imported in emit mode

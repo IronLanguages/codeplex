@@ -97,7 +97,7 @@ namespace IronPython.Runtime.Operations {
 
         private static IList<string>/*!*/ GetMemberNames_inner(CodeContext/*!*/ context, ComObject/*!*/ self) {
             List<string> res = new List<string>();
-            foreach (string name in self.GetMemberNames()) {
+            foreach (string name in self.MemberNames) {
                 res.Add(name);
             }
             return res;

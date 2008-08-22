@@ -68,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
             Debug.Assert(!_names.IsReadOnly);
             int index = _names.Count;
             _names.Add(variable.Name);
-            return Expression.ArrayIndex(_array, Expression.Constant(index));
+            return Expression.ArrayAccess(_array, Expression.Constant(index));
         }
 
         internal IAttributesCollection CreateDictionary() {

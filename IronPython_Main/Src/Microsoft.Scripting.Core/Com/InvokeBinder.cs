@@ -184,7 +184,7 @@ namespace System.Scripting.Com {
                 expr = Expression.AssignField(
                     DispParamsVariable,
                     typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs"),
-                    Expression.Call(typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("GetIdsOfNamedParameters"),
+                    Expression.Call(typeof(UnsafeMethods).GetMethod("GetIdsOfNamedParameters"),
                         DispatchObjectVariable,
                         Expression.Constant(names),
                         DispIdVariable,
@@ -229,7 +229,7 @@ namespace System.Scripting.Com {
             // Call Invoke
             //
             MethodCallExpression invoke = Expression.Call(
-                typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("IDispatchInvoke"),
+                typeof(UnsafeMethods).GetMethod("IDispatchInvoke"),
                 DispatchPointerVariable,
                 DispIdVariable,
                 Expression.Constant(
@@ -354,7 +354,7 @@ namespace System.Scripting.Com {
             //
             if (_totalExplicitArgs != 0) {
                 MethodCallExpression addrOfParamVariants = Expression.Call(
-                    typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
+                    typeof(UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
                     Expression.Field(
                         ParamVariantsVariable,
                         VariantArray.GetField(0)));
@@ -392,7 +392,7 @@ namespace System.Scripting.Com {
                 exprs.Add(expr);
 
                 MethodCallExpression rgdispidNamedArgs = Expression.Call(
-                    typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("ConvertInt32ByrefToPtr"),
+                    typeof(UnsafeMethods).GetMethod("ConvertInt32ByrefToPtr"),
                     PropertyPutDispIdVariable
                 );
 

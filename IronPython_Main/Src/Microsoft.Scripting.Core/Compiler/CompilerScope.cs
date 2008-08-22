@@ -290,18 +290,23 @@ namespace System.Linq.Expressions.Compiler {
                 }
             }
 
-            // not found
-            string msg = string.Format(
-                "variable '{0}' of type '{1}' referenced from scope '{2}', but it is not defined",
+            // If this is a genuine unbound variable, the error should be
+            // thrown in VariableBinder
+            Debug.Assert(
+                false, 
+                Strings.UndefinedVariable(
+                    CompilerScope.GetName(variable),
+                    variable.Type,
+                    GetName(Expression)
+                )
+            );
+
+            throw Error.UndefinedVariable(
                 CompilerScope.GetName(variable),
                 variable.Type,
                 GetName(Expression)
             );
 
-            // If this is a genuine unbound variable, the error should be
-            // thrown in VariableBinder
-            Debug.Assert(false, msg);
-            throw new InvalidOperationException(msg);
         }
 
         #endregion

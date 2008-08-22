@@ -1,0 +1,75 @@
+<html>
+<head>
+  <title>Weekly IronPython Bug Report</title>
+  <style type="text/css">
+    body {
+      font-family: Arial, Helvetica;    
+      font-size:11pt;
+    }
+    table {border-collapse:collapse;}
+    th { border: 1px solid gray; background-color: #66A7C5; color:#f0f0f0;}  
+    td {border: 1px solid gray; font-size:11pt;}  
+    .ar { background-color: #CEEBFB; }
+    .title { text-align:center; 
+        color:#4C88BE;                     
+    }
+    .timestamp {font-size: 90%%; }
+    .header {text-align:center; }
+    .p1 { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold;background-color:#FF3333;}
+    .p2 { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold;background-color:#E86850;}
+    .active { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold; background-color:#FE8402;}
+    .resolved { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold; background-color: #41924B;}
+    .last { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold; background-color: #6BCAE2;}   
+    .weekbugs { text-align:center; }
+    .neg { background-color: #F9F9F9; text-align:right; font-size: 130%%; font-weight:bold;color: #28AF63; }
+    .pos { background-color: #F9F9F9; text-align:right; font-size: 130%%; font-weight:bold;color: Red; }
+    .zero { background-color: #F9F9F9; text-align:right; font-size: 130%%; font-weight:bold;color: Blue; }
+  </style>
+</head>
+
+<body>
+<h2 class="title">IronPython Weekly Bug Report, <span class="timestamp">%s</span></h2>
+<p class="header">
+<table border="0" cellpadding="10">
+    <tr>
+        <td class="p1">P1 bugs</td>
+        <td class="%s">%d (%+d)</td>
+    </tr>
+    <tr>
+        <td class="p2">P2 bugs</td>
+        <td class="%s">%d (%+d)</td>
+    </tr>
+    <tr>
+        <td class="active">Total Active Bugs</td>
+        <td class="%s">%d (%+d)</td>
+    </tr>
+    <tr>
+        <td class="resolved">Total Resolved Bugs</td>
+        <td class="%s">%d (%+d)</td>
+    </tr>
+    <tr>
+        <td class="last">New bugs last week</td>
+        <td class="%s">%d (%+d)</td>
+    </tr>
+</table>
+</p>
+<p class="weekbugs">Last week bugs:</p>
+<table width="100%%" border="0" cellspacing="0" cellpadding="3">      
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Reported By</th>
+        <th>Assigned To</th>
+        <th>State</th>
+        <th>Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+    %s
+    </tbody>
+  </table>
+</body>
+
+</html>
+

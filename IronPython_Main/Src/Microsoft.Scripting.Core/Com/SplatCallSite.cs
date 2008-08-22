@@ -72,7 +72,7 @@ namespace System.Scripting.Com {
         /// <returns>a SplatCaller delegate.</returns>
         private SplatCaller MakeBigCaller(int args) {
             // Get the dynamic site type
-            Type siteDelegateType = DynamicSiteHelpers.MakeDynamicSiteTargetType(Helpers.RepeatedArray(typeof(object), args + 1));
+            Type siteDelegateType = DynamicSiteHelpers.MakeCallSiteDelegate(Helpers.RepeatedArray(typeof(object), args + 1));
             Type siteType = typeof(CallSite<>).MakeGenericType(new Type[] { siteDelegateType });
 
             DynamicILGen gen = Snippets.Shared.CreateDynamicMethod("_stub_SplatCaller", typeof(object), new Type[] { siteType, typeof(object[]) }, false);

@@ -58,13 +58,9 @@ namespace Microsoft.Scripting.Runtime {
         /// Provides the ContextId which includes members that should only be shown for this LanguageContext.
         /// 
         /// ContextId's are used for filtering by Scope's.
-        /// 
-        /// TODO: Not virtual, TestContext currently depends on being able to override.
         /// </summary>
-        public virtual ContextId ContextId {
-            get {
-                return _id;
-            }
+        public ContextId ContextId {
+            get { return _id; }
         }
 
         /// <summary>
@@ -485,8 +481,8 @@ namespace Microsoft.Scripting.Runtime {
 
             CodeContext context = new CodeContext(new Scope(), this);
 
-            CallSite<DynamicSiteTarget<CodeContext, object, object>> site =
-                CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(OldConvertToAction.Make(Binder, typeof(int), ConversionResultKind.ExplicitTry));
+            CallSite<Func<CallSite, CodeContext, object, object>> site =
+                CallSite<Func<CallSite, CodeContext, object, object>>.Create(OldConvertToAction.Make(Binder, typeof(int), ConversionResultKind.ExplicitTry));
 
             object exitCode = site.Target(site, context, returnValue);
             return (exitCode != null) ? (int)exitCode : 0;

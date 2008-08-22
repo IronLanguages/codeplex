@@ -18,7 +18,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _expr;
 
         internal ReturnStatement(Annotations annotations, Expression expression)
-            : base(ExpressionType.ReturnStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.ReturnStatement, typeof(void), annotations) {
             _expr = expression;
         }
 

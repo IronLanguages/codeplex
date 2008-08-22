@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Scripting;
+using System.Scripting.Actions;
 using System.Scripting.Utils;
 
 namespace System.Linq.Expressions.Compiler {
@@ -126,17 +127,89 @@ namespace System.Linq.Expressions.Compiler {
 
         #endregion
 
-        #region IndexedPropertyExpression
+        #region IndexExpression
 
-        private static void EmitIndexedPropertyExpression(LambdaCompiler lc, Expression expr) {
-            IndexedPropertyExpression node = (IndexedPropertyExpression)expr;
+        private static void EmitIndexExpression(LambdaCompiler lc, Expression expr) {
+            var node = (IndexExpression)expr;
 
-            MethodInfo getMethod = node.GetMethod;
-            lc.EmitMethodCall(node.Object, getMethod, node.Arguments);
+            // Emit instance, if calling an instance method
+            Type objectType = null;
+            if (node.Object != null) {
+                lc.EmitInstance(node.Object, objectType = node.Object.Type);
+            }
+
+            // Emit indexes. We don't allow byref args, so no need to worry
+            // about writebacks or EmitAddress
+            foreach (var arg in node.Arguments) {
+                lc.EmitExpression(arg);
+            }
+
+            lc.EmitGetIndexCall(node, objectType);
+        }
+
+        private void EmitIndexAssignment(AssignmentExpression node, EmitAs emitAs) {
+            var index = (IndexExpression)node.Expression;
+
+            // Emit instance, if calling an instance method
+            Type objectType = null;
+            if (index.Object != null) {
+                EmitInstance(index.Object, objectType = index.Object.Type);
+            }
+
+            // Emit indexes. We don't allow byref args, so no need to worry
+            // about writebacks or EmitAddress
+            foreach (var arg in index.Arguments) {
+                EmitExpression(arg);
+            }
+
+            // Emit value
+            EmitExpression(node.Value);
+
+            // Save the expression value, if needed
+            LocalBuilder temp = null;
+            if (emitAs != EmitAs.Void) {
+                _ilg.Emit(OpCodes.Dup);
+                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
+            }
+
+            EmitSetIndexCall(index, objectType);
+
+            // Restore the value
+            if (emitAs != EmitAs.Void) {
+                _ilg.Emit(OpCodes.Ldloc, temp);
+                _ilg.FreeLocal(temp);
+            }
+        }
+
+        private void EmitGetIndexCall(IndexExpression node, Type objectType) {
+            if (node.Indexer != null) {
+                // For indexed properties, just call the getter
+                var method = node.Indexer.GetGetMethod(true);
+                EmitCall(objectType, method);
+            } else if (node.Arguments.Count != 1) {
+                // Multidimensional arrays, call get
+                _ilg.Emit(OpCodes.Call, node.Object.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance));
+            } else {
+                // For one dimensional arrays, emit load
+                _ilg.EmitLoadElement(node.Type);
+            }
+        }
+
+        private void EmitSetIndexCall(IndexExpression node, Type objectType) {
+            if (node.Indexer != null) {
+                // For indexed properties, just call the setter
+                var method = node.Indexer.GetSetMethod(true);
+                EmitCall(objectType, method);
+            } else if (node.Arguments.Count != 1) {
+                // Multidimensional arrays, call set
+                _ilg.Emit(OpCodes.Call, node.Object.Type.GetMethod("Set", BindingFlags.Public | BindingFlags.Instance));
+            } else {
+                // For one dimensional arrays, emit store
+                _ilg.EmitStoreElement(node.Type);
+            }
         }
 
         #endregion
-
 
         #region MethodCallExpression
 
@@ -181,6 +254,18 @@ namespace System.Linq.Expressions.Compiler {
             EmitWriteBack(wb);
         }
 
+        private void EmitCall(Type objectType, MethodInfo method) {
+            if (method.CallingConvention == CallingConventions.VarArgs) {
+                throw Error.UnexpectedVarArgsCall(method.FormatSignature());
+            }
+
+            OpCode callOp = UseVirtual(method) ? OpCodes.Callvirt : OpCodes.Call;
+            if (callOp == OpCodes.Callvirt && objectType.IsValueType) {
+                _ilg.Emit(OpCodes.Constrained, objectType);
+            }
+            _ilg.Emit(callOp, method);
+        }
+
         //CONFORMING
         // TODO: ILGen's EmitCall only does callvirt for the (virtual, ref)
         // case. We should probably fix it to work like UseVirtual, so ETs have
@@ -215,12 +300,13 @@ namespace System.Linq.Expressions.Compiler {
             return true;
         }
 
+
         //CONFORMING
-        private List<WriteBack> EmitArguments(MethodBase method, ReadOnlyCollection<Expression> args) {
+        private List<WriteBack> EmitArguments(MethodBase method, IList<Expression> args) {
             ParameterInfo[] pis = method.GetParameters();
             Debug.Assert(args.Count == pis.Length);
 
-            List<WriteBack> locals = new List<WriteBack>();
+            var writeBacks = new List<WriteBack>();
             for (int i = 0, n = pis.Length; i < n; i++) {
                 ParameterInfo parameter = pis[i];
                 Expression argument = args[i];
@@ -229,64 +315,21 @@ namespace System.Linq.Expressions.Compiler {
                 if (type.IsByRef) {
                     type = type.GetElementType();
 
-                    // For properties, we want to write back into the property
-                    // 
-                    // Note: ExpressionCompiler thinks it needs to writeback
-                    // fields, but as far as I can tell, that code path is
-                    // unreachable because fields can always emit their address
-                    //
-                    MemberExpression member = argument as MemberExpression;
-                    if (member != null) {
-
-                        PropertyInfo pi = member.Member as PropertyInfo;
-                        if (pi != null) {
-
-                            MethodInfo mi = pi.GetSetMethod(true);
-                            if (mi != null) {
-                                EmitExpression(argument);
-                                LocalBuilder loc = _ilg.GetLocal(type);
-                                _ilg.Emit(OpCodes.Stloc, loc);
-                                _ilg.Emit(OpCodes.Ldloca, loc);
-                                locals.Add(new WriteBack(loc, member));
-
-                                continue;
-                            }
-                        }
+                    WriteBack wb = EmitAddressWriteBack(argument, type);
+                    if (wb != null) {
+                        writeBacks.Add(wb);
                     }
-
-                    EmitAddress(argument, type);
                 } else {
                     EmitExpression(argument);
                 }
             }
-            return locals;
+            return writeBacks;
         }
 
         //CONFORMING
-        // Note: removed support for writebacks that appeared unreachable
-        private void EmitWriteBack(IList<WriteBack> locals) {
-            foreach (WriteBack wb in locals) {
-                MemberExpression member = wb.Argument as MemberExpression;
-                if (member != null) {
-
-                    PropertyInfo pi = member.Member as PropertyInfo;
-                    if (pi != null) {
-
-                        MethodInfo mi = pi.GetSetMethod(true);
-                        if (mi != null) {
-
-                            if (!mi.IsStatic) {
-                                EmitExpression(member.Expression);
-                            }
-                            _ilg.Emit(OpCodes.Ldloc, wb.Local);
-                            _ilg.EmitCall(mi);
-                            _ilg.FreeLocal(wb.Local);
-
-                            continue;
-                        }
-                    }
-                }
-                throw Assert.Unreachable;
+        private static void EmitWriteBack(IList<WriteBack> writeBacks) {
+            foreach (WriteBack wb in writeBacks) {
+                wb();
             }
         }
 
@@ -332,14 +375,37 @@ namespace System.Linq.Expressions.Compiler {
             }
         }
 
+        private static void EmitDynamicExpression(LambdaCompiler lc, Expression expr) {
+            var node = (DynamicExpression)expr;
+
+            Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
+            // TODO: is it worthwhile to lazy initialize CallSites?
+            CallSite site = DynamicSiteHelpers.MakeSite(node.Binder, siteType);
+
+            var invoke = node.DelegateType.GetMethod("Invoke");
+
+            var siteVar = Expression.Variable(siteType, null);
+            lc._scope.AddLocal(lc, siteVar);
+
+            // site.Target.Invoke(site, args)
+            lc.EmitConstant(site, siteType);
+            lc._ilg.Emit(OpCodes.Dup);
+            lc._scope.EmitSet(siteVar);
+            lc._ilg.Emit(OpCodes.Ldfld, siteType.GetField("Target"));
+
+            List<WriteBack> wb = lc.EmitArguments(invoke, node.Arguments.AddFirst(siteVar));
+            lc._ilg.EmitCall(invoke);
+            EmitWriteBack(wb);
+        }
+
         //CONFORMING
         private static void EmitNewExpression(LambdaCompiler lc, Expression expr) {
             NewExpression node = (NewExpression)expr;
 
             if (node.Constructor != null) {
-                // Note: constructors don't do writebacks in Linq
-                lc.EmitArguments(node.Constructor, node.Arguments);
+                List<WriteBack> wb = lc.EmitArguments(node.Constructor, node.Arguments);
                 lc._ilg.Emit(OpCodes.Newobj, node.Constructor);
+                EmitWriteBack(wb);
             } else {
                 Debug.Assert(node.Arguments.Count == 0, "Node with arguments must have a constructor.");
                 Debug.Assert(node.Type.IsValueType, "Only value type may have constructor not set.");
@@ -352,10 +418,9 @@ namespace System.Linq.Expressions.Compiler {
         }
 
         //CONFORMING
-        // TODO: there's plenty of room to optimize here. The C# compiler will
-        // emit evaluate the argument and then emit a constant value or a
-        // null/hasvalue check if it can determine the answer for sure based on
-        // the known type information
+        // TODO: There's plenty of room to optimize here, if we can determine
+        // the answer statically. Be careful to use CLR semantics and not C#
+        // semantics, however. The result must be identical to emitting isinst
         private static void EmitTypeBinaryExpression(LambdaCompiler lc, Expression expr) {
             TypeBinaryExpression node = (TypeBinaryExpression)expr;
 
@@ -375,79 +440,6 @@ namespace System.Linq.Expressions.Compiler {
             lc._ilg.Emit(OpCodes.Isinst, node.TypeOperand);
             lc._ilg.Emit(OpCodes.Ldnull);
             lc._ilg.Emit(OpCodes.Cgt_Un);
-        }
-
-        private void EmitArrayIndexAssignment(AssignmentExpression node, EmitAs emitAs) {
-            BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
-
-            // Emit the array reference
-            EmitExpression(arrayIndex.Left);
-            // Emit the index (integer)
-            EmitExpression(arrayIndex.Right);
-            // Emit the value
-            EmitExpression(node.Value);
-
-            LocalBuilder temp = null;
-            if (emitAs != EmitAs.Void) {
-                // Save the expression value
-                _ilg.Emit(OpCodes.Dup);
-                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
-            }
-
-            // Store it in the array
-            _ilg.EmitStoreElement(node.Type);
-
-            if (emitAs != EmitAs.Void) {
-                // Restore the value
-                _ilg.Emit(OpCodes.Ldloc, temp);
-                _ilg.FreeLocal(temp);
-            }
-        }
-
-        private void EmitIndexedPropertyAssignment(AssignmentExpression node, EmitAs emitAs) {
-            IndexedPropertyExpression propertyExpression = (IndexedPropertyExpression)node.Expression;
-
-            Expression instance = propertyExpression.Object;
-            MethodInfo method = propertyExpression.SetMethod;
-            ReadOnlyCollection<Expression> arguments = propertyExpression.Arguments;
-
-            Type instanceType = null;
-            if (!method.IsStatic) {
-                instanceType = instance.Type;
-
-                if (instanceType.IsValueType) {
-                    EmitAddress(instance, instanceType);
-                } else {
-                    EmitExpression(instance);
-                }
-            }
-
-            // emit indexes
-            for (int i = 0; i < arguments.Count; i++) {
-                EmitExpression(arguments[i]);
-            }
-            // emit value
-            EmitExpression(node.Value);
-
-            LocalBuilder temp = null;
-            if (emitAs != EmitAs.Void) {
-                // Save the expression value
-                _ilg.Emit(OpCodes.Dup);
-                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
-            }
-
-            // Call the setter
-            OpCode callOp = UseVirtual(method) ? OpCodes.Callvirt : OpCodes.Call;
-            if (callOp == OpCodes.Callvirt && instanceType.IsValueType) {
-                // This automatically boxes value types if necessary.
-                _ilg.Emit(OpCodes.Constrained, instanceType);
-            }
-            _ilg.Emit(callOp, method);
-            if (emitAs != EmitAs.Void) {
-                // Restore the value
-                _ilg.Emit(OpCodes.Ldloc, temp);
-                _ilg.FreeLocal(temp);
-            }
         }
 
         private void EmitVariableAssignment(AssignmentExpression node, EmitAs emitAs) {
@@ -480,11 +472,8 @@ namespace System.Linq.Expressions.Compiler {
 
         private void Emit(AssignmentExpression node, EmitAs emitAs) {
             switch (node.Expression.NodeType) {
-                case ExpressionType.ArrayIndex:
-                    EmitArrayIndexAssignment(node, emitAs);
-                    return;
-                case ExpressionType.IndexedProperty:
-                    EmitIndexedPropertyAssignment(node, emitAs);
+                case ExpressionType.Index:
+                    EmitIndexAssignment(node, emitAs);
                     return;
                 case ExpressionType.MemberAccess:
                     EmitMemberAssignment(node, emitAs);
@@ -522,9 +511,13 @@ namespace System.Linq.Expressions.Compiler {
 
         private void EmitMemberAssignment(AssignmentExpression node, EmitAs emitAs) {
             MemberExpression lvalue = (MemberExpression)node.Expression;
+            MemberInfo member = lvalue.Member;
 
             // emit "this", if any
-            EmitInstance(lvalue.Expression, lvalue.Member.DeclaringType);
+            Type objectType = null;
+            if (lvalue.Expression != null) {
+                EmitInstance(lvalue.Expression, objectType = lvalue.Expression.Type);
+            }
 
             // emit value
             EmitExpression(node.Value);
@@ -536,15 +529,15 @@ namespace System.Linq.Expressions.Compiler {
                 _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
             }
 
-            switch (lvalue.Member.MemberType) {
+            switch (member.MemberType) {
                 case MemberTypes.Field:
-                    _ilg.EmitFieldSet((FieldInfo)lvalue.Member);
+                    _ilg.EmitFieldSet((FieldInfo)member);
                     break;
                 case MemberTypes.Property:
-                    _ilg.EmitPropertySet((PropertyInfo)lvalue.Member);
+                    EmitCall(objectType, ((PropertyInfo)member).GetSetMethod(true));
                     break;
                 default:
-                    throw Error.InvalidMemberType(lvalue.Member.MemberType);
+                    throw Error.InvalidMemberType(member.MemberType);
             }
 
             if (emitAs != EmitAs.Void) {
@@ -578,14 +571,7 @@ namespace System.Linq.Expressions.Compiler {
                     }
                     break;
                 case MemberTypes.Property:
-                    MethodInfo mi = ((PropertyInfo)member).GetGetMethod(true);
-                    // Emit the actual call
-                    OpCode callOp = UseVirtual(mi) ? OpCodes.Callvirt : OpCodes.Call;
-                    if (callOp == OpCodes.Callvirt && objectType.IsValueType) {
-                        // This automatically boxes value types if necessary.
-                        _ilg.Emit(OpCodes.Constrained, objectType);
-                    }
-                    _ilg.Emit(callOp, mi);
+                    EmitCall(objectType, ((PropertyInfo)member).GetGetMethod(true));
                     break;
                 default:
                     throw Assert.Unreachable;
@@ -651,18 +637,6 @@ namespace System.Linq.Expressions.Compiler {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static void EmitActionExpression(LambdaCompiler lc, Expression expr) {
-            throw Error.ActionNotReduced();
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static void EmitDeleteExpression(LambdaCompiler lc, Expression expr) {
-            throw Error.DeleteNotReduced();
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitExtensionExpression(LambdaCompiler lc, Expression expr) {
             throw Error.ExtensionNotReduced();
         }
@@ -700,16 +674,8 @@ namespace System.Linq.Expressions.Compiler {
                 _ilg.Emit(OpCodes.Stfld, fi);
             } else {
                 PropertyInfo pi = binding.Member as PropertyInfo;
-                MethodInfo mi = pi.GetSetMethod(true);
                 if (pi != null) {
-                    if (UseVirtual(mi)) {
-                        if (objectType.IsValueType) {
-                            _ilg.Emit(OpCodes.Constrained, objectType);
-                        }
-                        _ilg.Emit(OpCodes.Callvirt, mi);
-                    } else {
-                        _ilg.Emit(OpCodes.Call, mi);
-                    }
+                    EmitCall(objectType, pi.GetSetMethod(true));
                 } else {
                     throw Error.UnhandledBinding();
                 }

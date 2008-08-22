@@ -14,7 +14,11 @@
  * ***************************************************************************/
 
 namespace System.Scripting.Actions {
-    public static partial class UpdateDelegates {
+    internal static partial class UpdateDelegates {
+
+        // Disable the 'obsolete' warning.
+#pragma warning disable 618
+
         #region Generated Predefined Update Targets
 
         // *** BEGIN GENERATED CODE ***
@@ -23,63 +27,63 @@ namespace System.Scripting.Actions {
         /// <summary>
         /// Site update code - arity 1
         /// </summary>
-        public static TRet Update1<T, T0, TRet>(CallSite site, T0 arg0) where T : class {
+        internal static TRet Update1<T, T0, TRet>(CallSite site, T0 arg0) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0 });
         }
 
         /// <summary>
         /// Site update code - arity 2
         /// </summary>
-        public static TRet Update2<T, T0, T1, TRet>(CallSite site, T0 arg0, T1 arg1) where T : class {
+        internal static TRet Update2<T, T0, T1, TRet>(CallSite site, T0 arg0, T1 arg1) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1 });
         }
 
         /// <summary>
         /// Site update code - arity 3
         /// </summary>
-        public static TRet Update3<T, T0, T1, T2, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2) where T : class {
+        internal static TRet Update3<T, T0, T1, T2, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2 });
         }
 
         /// <summary>
         /// Site update code - arity 4
         /// </summary>
-        public static TRet Update4<T, T0, T1, T2, T3, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) where T : class {
+        internal static TRet Update4<T, T0, T1, T2, T3, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3 });
         }
 
         /// <summary>
         /// Site update code - arity 5
         /// </summary>
-        public static TRet Update5<T, T0, T1, T2, T3, T4, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) where T : class {
+        internal static TRet Update5<T, T0, T1, T2, T3, T4, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
 
         /// <summary>
         /// Site update code - arity 6
         /// </summary>
-        public static TRet Update6<T, T0, T1, T2, T3, T4, T5, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) where T : class {
+        internal static TRet Update6<T, T0, T1, T2, T3, T4, T5, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
         }
 
         /// <summary>
         /// Site update code - arity 7
         /// </summary>
-        public static TRet Update7<T, T0, T1, T2, T3, T4, T5, T6, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) where T : class {
+        internal static TRet Update7<T, T0, T1, T2, T3, T4, T5, T6, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
         }
 
         /// <summary>
         /// Site update code - arity 8
         /// </summary>
-        public static TRet Update8<T, T0, T1, T2, T3, T4, T5, T6, T7, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) where T : class {
+        internal static TRet Update8<T, T0, T1, T2, T3, T4, T5, T6, T7, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
         }
 
         /// <summary>
         /// Site update code - arity 9
         /// </summary>
-        public static TRet Update9<T, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) where T : class {
+        internal static TRet Update9<T, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) where T : class {
             return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
         }
 
@@ -96,63 +100,63 @@ namespace System.Scripting.Actions {
         /// <summary>
         /// Site update code - arity 1
         /// </summary>
-        public static void UpdateVoid1<T, T0>(CallSite site, T0 arg0) where T : class {
+        internal static void UpdateVoid1<T, T0>(CallSite site, T0 arg0) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0 });
         }
 
         /// <summary>
         /// Site update code - arity 2
         /// </summary>
-        public static void UpdateVoid2<T, T0, T1>(CallSite site, T0 arg0, T1 arg1) where T : class {
+        internal static void UpdateVoid2<T, T0, T1>(CallSite site, T0 arg0, T1 arg1) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1 });
         }
 
         /// <summary>
         /// Site update code - arity 3
         /// </summary>
-        public static void UpdateVoid3<T, T0, T1, T2>(CallSite site, T0 arg0, T1 arg1, T2 arg2) where T : class {
+        internal static void UpdateVoid3<T, T0, T1, T2>(CallSite site, T0 arg0, T1 arg1, T2 arg2) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2 });
         }
 
         /// <summary>
         /// Site update code - arity 4
         /// </summary>
-        public static void UpdateVoid4<T, T0, T1, T2, T3>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) where T : class {
+        internal static void UpdateVoid4<T, T0, T1, T2, T3>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3 });
         }
 
         /// <summary>
         /// Site update code - arity 5
         /// </summary>
-        public static void UpdateVoid5<T, T0, T1, T2, T3, T4>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) where T : class {
+        internal static void UpdateVoid5<T, T0, T1, T2, T3, T4>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
 
         /// <summary>
         /// Site update code - arity 6
         /// </summary>
-        public static void UpdateVoid6<T, T0, T1, T2, T3, T4, T5>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) where T : class {
+        internal static void UpdateVoid6<T, T0, T1, T2, T3, T4, T5>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
         }
 
         /// <summary>
         /// Site update code - arity 7
         /// </summary>
-        public static void UpdateVoid7<T, T0, T1, T2, T3, T4, T5, T6>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) where T : class {
+        internal static void UpdateVoid7<T, T0, T1, T2, T3, T4, T5, T6>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
         }
 
         /// <summary>
         /// Site update code - arity 8
         /// </summary>
-        public static void UpdateVoid8<T, T0, T1, T2, T3, T4, T5, T6, T7>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) where T : class {
+        internal static void UpdateVoid8<T, T0, T1, T2, T3, T4, T5, T6, T7>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
         }
 
         /// <summary>
         /// Site update code - arity 9
         /// </summary>
-        public static void UpdateVoid9<T, T0, T1, T2, T3, T4, T5, T6, T7, T8>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) where T : class {
+        internal static void UpdateVoid9<T, T0, T1, T2, T3, T4, T5, T6, T7, T8>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) where T : class {
             ((CallSite<T>)site).UpdateAndExecute(new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
         }
 
@@ -161,4 +165,7 @@ namespace System.Scripting.Actions {
 
         #endregion
     }
+
+#pragma warning restore 618
+
 }

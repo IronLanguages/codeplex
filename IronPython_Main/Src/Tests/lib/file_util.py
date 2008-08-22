@@ -143,14 +143,6 @@ def filecopy(oldpath, newpath):
     finally:
         if of: of.close()
         if nf: nf.close()
-
-def ensure_future_present(path):
-    futureFile = path_combine(path, "__future__.py")
-    write_to_file(futureFile, 
-    '''division=1
-with_statement=1
-generators=1
-absolute_import=1''')
         
 def clean_directory(path):
     for f in nt.listdir(path):

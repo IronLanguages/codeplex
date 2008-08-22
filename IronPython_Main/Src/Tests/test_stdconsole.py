@@ -182,6 +182,15 @@ def test_t():
     TestCommandLine(("-t", tmpscript), ("lastline", "SyntaxWarning: %s (%s, line %d)"  % (msg, tmpscript, 3)), 1)
     TestCommandLine(("-tt", tmpscript), ("lastline", "TabError: " + msg + "\n"), 1)
 
+    tmpscript = tmpdir + "\\funcdef.py"
+    f = file(tmpscript, "w")
+    f.write("""def f(a,
+    b,
+    c): pass""")
+    f.close()
+
+    TestCommandLine(("-tt", tmpscript, ), "")
+
 def test_E():
     # Test the -E (suppress use of environment variables) option.
     

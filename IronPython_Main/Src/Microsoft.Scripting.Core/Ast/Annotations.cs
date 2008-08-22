@@ -69,7 +69,7 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// Returns clone with annotation(s) of type T removed
         /// </summary>
-         public Annotations Remove<T>() {
+        public Annotations Remove<T>() {
             int count = 0;
             object[] filtered = new object[_annotations.Length];
             for (int i = 0; i < _annotations.Length; i++) {
@@ -118,9 +118,13 @@ namespace System.Linq.Expressions {
     /// </summary>
     public partial class Expression {
         public static Annotations Annotate(params object[] items) {
-            if (items == null || items.Length == 0) {
+            if (items == null) {
                 return Annotations.Empty;
             }
+            if (items.Length == 0) {
+                return Annotations.Empty;
+            }
+
             return new Annotations((object[])items.Clone());
         }
     }

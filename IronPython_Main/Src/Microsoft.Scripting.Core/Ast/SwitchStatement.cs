@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _label;
 
         internal SwitchStatement(Expression testValue, LabelTarget label, Annotations annotations, ReadOnlyCollection<SwitchCase> cases)
-            : base(ExpressionType.SwitchStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.SwitchStatement, typeof(void), annotations) {
             Assert.NotNullItems(cases);
 
             _label = label;

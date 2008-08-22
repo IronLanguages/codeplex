@@ -1683,6 +1683,9 @@ namespace IronPython.Modules {
             public void __init__(params object[] args) {
             }
 
+            public void __init__([ParamDictionary]IAttributesCollection kwargs, params object[] args) {
+            }
+
             public void __del__() {
             }
 

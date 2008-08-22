@@ -383,11 +383,11 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object spawnl(int mode, string path, params object[] args) {
-            return SpawnProcessImpl(MakeProcess(), mode, path, args);
+        public static object spawnl(CodeContext/*!*/ context, int mode, string path, params object[] args) {
+            return SpawnProcessImpl(context, MakeProcess(), mode, path, args);
         }
 
-        public static object spawnle(int mode, string path, params object[] args) {
+        public static object spawnle(CodeContext/*!*/ context, int mode, string path, params object[] args) {
             if (args.Length < 1) {
                 throw PythonOps.TypeError("spawnle() takes at least three arguments ({0} given)", 2 + args.Length);
             }
@@ -398,18 +398,18 @@ namespace IronPython.Modules {
             Process process = MakeProcess();
             SetEnvironment(process.StartInfo.EnvironmentVariables, env);
 
-            return SpawnProcessImpl(process, mode, path, slicedArgs);
+            return SpawnProcessImpl(context, process, mode, path, slicedArgs);
         }
 
-        public static object spawnv(int mode, string path, object args) {
-            return SpawnProcessImpl(MakeProcess(), mode, path, args);
+        public static object spawnv(CodeContext/*!*/ context, int mode, string path, object args) {
+            return SpawnProcessImpl(context, MakeProcess(), mode, path, args);
         }
 
-        public static object spawnve(int mode, string path, object args, object env) {
+        public static object spawnve(CodeContext/*!*/ context, int mode, string path, object args, object env) {
             Process process = MakeProcess();
             SetEnvironment(process.StartInfo.EnvironmentVariables, env);
 
-            return SpawnProcessImpl(process, mode, path, args);
+            return SpawnProcessImpl(context, process, mode, path, args);
         }
 
         private static Process MakeProcess() {
@@ -420,9 +420,9 @@ namespace IronPython.Modules {
             }
         }
 
-        private static object SpawnProcessImpl(Process process, int mode, string path, object args) {
+        private static object SpawnProcessImpl(CodeContext/*!*/ context, Process process, int mode, string path, object args) {
             try {
-                process.StartInfo.Arguments = ArgumentsToString(args);
+                process.StartInfo.Arguments = ArgumentsToString(context, args);
                 process.StartInfo.FileName = path;
                 process.StartInfo.UseShellExecute = false;
             } catch (Exception e) {
@@ -468,10 +468,10 @@ namespace IronPython.Modules {
         /// <summary>
         /// Convert a sequence of args to a string suitable for using to spawn a process.
         /// </summary>
-        private static string ArgumentsToString(object args) {
+        private static string ArgumentsToString(CodeContext/*!*/ context, object args) {
             IEnumerator argsEnumerator;
             System.Text.StringBuilder sb = null;
-            if (!Converter.TryConvertToIEnumerator(args, out argsEnumerator)) {
+            if (!PythonOps.TryGetEnumerator(context, args, out argsEnumerator)) {
                 throw PythonOps.TypeError("args parameter must be sequence, not {0}", DynamicHelpers.GetPythonType(args));
             }
 

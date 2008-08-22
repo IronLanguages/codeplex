@@ -27,9 +27,27 @@ using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    [PythonType("tuple")]
+    [PythonType("tuple"), Serializable]
     public class PythonTuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
+        internal readonly object[] _data;
+        
         internal static readonly PythonTuple EMPTY = new PythonTuple();
+
+        public PythonTuple(object o) {
+            this._data = MakeItems(o);
+        }
+
+        protected PythonTuple(object[] items) {
+            this._data = items;
+        }
+
+        public PythonTuple() {
+            this._data = ArrayUtils.EmptyObjects;
+        }
+
+        internal PythonTuple(IParameterSequence other, object o) {
+            this._data = other.Expand(o);
+        }
 
         #region Python Constructors
 
@@ -98,25 +116,7 @@ namespace IronPython.Runtime {
                 return l.ToArray();
             }
         }
-
-        internal readonly object[] _data;        
-
-        public PythonTuple(object o) {
-            this._data = MakeItems(o);
-        }
-
-        protected PythonTuple(object[] items) {
-            this._data = items;
-        }
-
-        public PythonTuple() {
-            this._data = ArrayUtils.EmptyObjects;
-        }
-
-        internal PythonTuple(IParameterSequence other, object o) {
-            this._data = other.Expand(o);
-        }
-
+        
         /// <summary>
         /// Return a copy of this tuple's data array.
         /// </summary>
@@ -168,8 +168,12 @@ namespace IronPython.Runtime {
         }
 
         private static PythonTuple MultiplyWorker(PythonTuple self, int count) {
-            if (count <= 0) return EMPTY;
-            if (count == 1) return self;
+            if (count <= 0) {
+                return EMPTY;
+            } else if (count == 1 && self.GetType() == typeof(PythonTuple)) {
+                return self;
+            }
+
             return MakeTuple(ArrayOps.Multiply(self._data, self._data.Length, count));
         }
 

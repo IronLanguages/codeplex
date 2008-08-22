@@ -36,47 +36,47 @@ namespace System.Scripting.Com {
         //
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper1(CallSite<DynamicSiteTarget<object, object>> site, object[] args) {
+        public static object CallHelper1(CallSite<Func<CallSite, object, object>> site, object[] args) {
             return site.Target(site, args[0]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper2(CallSite<DynamicSiteTarget<object, object, object>> site, object[] args) {
+        public static object CallHelper2(CallSite<Func<CallSite, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper3(CallSite<DynamicSiteTarget<object, object, object, object>> site, object[] args) {
+        public static object CallHelper3(CallSite<Func<CallSite, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper4(CallSite<DynamicSiteTarget<object, object, object, object, object>> site, object[] args) {
+        public static object CallHelper4(CallSite<Func<CallSite, object, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2], args[3]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper5(CallSite<DynamicSiteTarget<object, object, object, object, object, object>> site, object[] args) {
+        public static object CallHelper5(CallSite<Func<CallSite, object, object, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2], args[3], args[4]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper6(CallSite<DynamicSiteTarget<object, object, object, object, object, object, object>> site, object[] args) {
+        public static object CallHelper6(CallSite<Func<CallSite, object, object, object, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper7(CallSite<DynamicSiteTarget<object, object, object, object, object, object, object, object>> site, object[] args) {
+        public static object CallHelper7(CallSite<Func<CallSite, object, object, object, object, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper8(CallSite<DynamicSiteTarget<object, object, object, object, object, object, object, object, object>> site, object[] args) {
+        public static object CallHelper8(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
         }
 
         [Obsolete("used by generated code", true)]
-        public static object CallHelper9(CallSite<DynamicSiteTarget<object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+        public static object CallHelper9(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
             return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
         }
 

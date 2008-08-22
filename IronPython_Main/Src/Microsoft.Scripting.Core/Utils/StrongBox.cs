@@ -20,6 +20,7 @@ namespace System.Runtime.CompilerServices {
         /// Gets the strongly typed value associated with the StrongBox.  This is explicitly
         /// exposed as a field instead of a property to enable loading the address of the field.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         public T Value;
 
         /// <summary>

@@ -23,7 +23,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _target;
 
         internal ContinueStatement(Annotations annotations, LabelTarget target)
-            : base(ExpressionType.ContinueStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.ContinueStatement, typeof(void), annotations) {
             _target = target;
         }
 

@@ -328,6 +328,19 @@ namespace Microsoft.Scripting.Generation {
         internal ModuleBuilder ModuleBuilder {
             get { return _myModule; }
         }
+
+        private const MethodAttributes CtorAttributes = MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public;
+        private const MethodImplAttributes ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed;
+        private const MethodAttributes InvokeAttributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual;
+        private const TypeAttributes DelegateAttributes = TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.AutoClass;
+        private static readonly Type[] _DelegateCtorSignature = new Type[] { typeof(object), typeof(IntPtr) };
+
+        internal Type MakeDelegateType(string name, Type[] parameters, Type returnType) {
+            TypeBuilder builder = DefineType(name, typeof(MulticastDelegate), DelegateAttributes, false);
+            builder.DefineConstructor(CtorAttributes, CallingConventions.Standard, _DelegateCtorSignature).SetImplementationFlags(ImplAttributes);
+            builder.DefineMethod("Invoke", InvokeAttributes, returnType, parameters).SetImplementationFlags(ImplAttributes);
+            return builder.CreateType();
+        }
     }
 
     internal static class SymbolGuids {

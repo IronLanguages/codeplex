@@ -32,6 +32,8 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+
             ComMethodDesc methodDesc;
 
             if (_wrapperType.Funcs.TryGetValue(action.Name, out methodDesc)) {
@@ -52,6 +54,8 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+
             if (action.ToType.IsInterface) {
                 Expression result =
                     Expression.Convert(
@@ -80,6 +84,8 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+
             ComMethodDesc method;
             ComEventDesc @event;
 
@@ -167,6 +173,8 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+
             switch (action.Operation) {
                 case "GetItem":
                     return IndexOperation(action, args, "TryGetGetItem");
@@ -201,7 +209,7 @@ namespace System.Scripting.Com {
                         typeof(IDispatchComObject).GetMethod(method),
                         callable
                     ),
-                    Expression.ActionExpression(new ComInvokeAction(), typeof(object), callArgs),
+                    Expression.Dynamic(new ComInvokeAction(), typeof(object), callArgs),
                     Expression.ConvertHelper(fallback.Expression, typeof(object))
                 ),
                 callable
@@ -254,6 +262,8 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+
             return 
                 // 1. Check for simple property put
                 TryPropertyPut(action, args) ??

@@ -16,92 +16,90 @@
 from generate import generate
 
 class Expression:
-    def __init__(self, kind, type, enabled):
+    def __init__(self, kind, type):
         self.kind = kind
         self.type = type
-        self.enabled = enabled
 
 expressions = [
     #
-    #          enum kind                        tree node type                          enabled
+    #          enum kind                        tree node type
     #
 
     #
-    #   DO NOT REORDER THESE, THEY COME FROM THE LINQ ENUM
+    #   DO NOT REORDER THESE, THEY COME FROM THE LINQ V1 ENUM
     #
 
-    Expression("Add",                           "BinaryExpression",                     True),
-    Expression("AddChecked",                    "BinaryExpression",                     True),
-    Expression("And",                           "BinaryExpression",                     True),
-    Expression("AndAlso",                       "BinaryExpression",                     True),
-    Expression("ArrayLength",                   "UnaryExpression",                      True),
-    Expression("ArrayIndex",                    "BinaryExpression",                     True),
-    Expression("Call",                          "MethodCallExpression",                 True),
-    Expression("Coalesce",                      "BinaryExpression",                     True),
-    Expression("Conditional",                   "ConditionalExpression",                True),
-    Expression("Constant",                      "ConstantExpression",                   True),
-    Expression("Convert",                       "UnaryExpression",                      True),
-    Expression("ConvertChecked",                "UnaryExpression",                      True),
-    Expression("Divide",                        "BinaryExpression",                     True),
-    Expression("Equal",                         "BinaryExpression",                     True),
-    Expression("ExclusiveOr",                   "BinaryExpression",                     True),
-    Expression("GreaterThan",                   "BinaryExpression",                     True),
-    Expression("GreaterThanOrEqual",            "BinaryExpression",                     True),
-    Expression("Invoke",                        "InvocationExpression",                 True),
-    Expression("Lambda",                        "LambdaExpression",                     True),
-    Expression("LeftShift",                     "BinaryExpression",                     True),
-    Expression("LessThan",                      "BinaryExpression",                     True),
-    Expression("LessThanOrEqual",               "BinaryExpression",                     True),
-    Expression("ListInit",                      "ListInitExpression",                   True),
-    Expression("MemberAccess",                  "MemberExpression",                     True),
-    Expression("MemberInit",                    "MemberInitExpression",                 True),
-    Expression("Modulo",                        "BinaryExpression",                     True),
-    Expression("Multiply",                      "BinaryExpression",                     True),
-    Expression("MultiplyChecked",               "BinaryExpression",                     True),
-    Expression("Negate",                        "UnaryExpression",                      True),
-    Expression("UnaryPlus",                     "UnaryExpression",                      True),
-    Expression("NegateChecked",                 "UnaryExpression",                      True),
-    Expression("New",                           "NewExpression",                        True),
-    Expression("NewArrayInit",                  "NewArrayExpression",                   True),
-    Expression("NewArrayBounds",                "NewArrayExpression",                   True),
-    Expression("Not",                           "UnaryExpression",                      True),
-    Expression("NotEqual",                      "BinaryExpression",                     True),
-    Expression("Or",                            "BinaryExpression",                     True),
-    Expression("OrElse",                        "BinaryExpression",                     True),
-    Expression("Parameter",                     "ParameterExpression",                  True),
-    Expression("Power",                         "BinaryExpression",                     True),
-    Expression("Quote",                         "UnaryExpression",                      True),
-    Expression("RightShift",                    "BinaryExpression",                     True),
-    Expression("Subtract",                      "BinaryExpression",                     True),
-    Expression("SubtractChecked",               "BinaryExpression",                     True),
-    Expression("TypeAs",                        "UnaryExpression",                      True),
-    Expression("TypeIs",                        "TypeBinaryExpression",                 True),
+    Expression("Add",                "BinaryExpression"),
+    Expression("AddChecked",         "BinaryExpression"),
+    Expression("And",                "BinaryExpression"),
+    Expression("AndAlso",            "BinaryExpression"),
+    Expression("ArrayLength",        "UnaryExpression"),
+    Expression("ArrayIndex",         "BinaryExpression"),
+    Expression("Call",               "MethodCallExpression"),
+    Expression("Coalesce",           "BinaryExpression"),
+    Expression("Conditional",        "ConditionalExpression"),
+    Expression("Constant",           "ConstantExpression"),
+    Expression("Convert",            "UnaryExpression"),
+    Expression("ConvertChecked",     "UnaryExpression"),
+    Expression("Divide",             "BinaryExpression"),
+    Expression("Equal",              "BinaryExpression"),
+    Expression("ExclusiveOr",        "BinaryExpression"),
+    Expression("GreaterThan",        "BinaryExpression"),
+    Expression("GreaterThanOrEqual", "BinaryExpression"),
+    Expression("Invoke",             "InvocationExpression"),
+    Expression("Lambda",             "LambdaExpression"),
+    Expression("LeftShift",          "BinaryExpression"),
+    Expression("LessThan",           "BinaryExpression"),
+    Expression("LessThanOrEqual",    "BinaryExpression"),
+    Expression("ListInit",           "ListInitExpression"),
+    Expression("MemberAccess",       "MemberExpression"),
+    Expression("MemberInit",         "MemberInitExpression"),
+    Expression("Modulo",             "BinaryExpression"),
+    Expression("Multiply",           "BinaryExpression"),
+    Expression("MultiplyChecked",    "BinaryExpression"),
+    Expression("Negate",             "UnaryExpression"),
+    Expression("UnaryPlus",          "UnaryExpression"),
+    Expression("NegateChecked",      "UnaryExpression"),
+    Expression("New",                "NewExpression"),
+    Expression("NewArrayInit",       "NewArrayExpression"),
+    Expression("NewArrayBounds",     "NewArrayExpression"),
+    Expression("Not",                "UnaryExpression"),
+    Expression("NotEqual",           "BinaryExpression"),
+    Expression("Or",                 "BinaryExpression"),
+    Expression("OrElse",             "BinaryExpression"),
+    Expression("Parameter",          "ParameterExpression"),
+    Expression("Power",              "BinaryExpression"),
+    Expression("Quote",              "UnaryExpression"),
+    Expression("RightShift",         "BinaryExpression"),
+    Expression("Subtract",           "BinaryExpression"),
+    Expression("SubtractChecked",    "BinaryExpression"),
+    Expression("TypeAs",             "UnaryExpression"),
+    Expression("TypeIs",             "TypeBinaryExpression"),
 
     # New types in LINQ V2
 
-    Expression("ActionExpression",              "ActionExpression",                     True),
-    Expression("Assign",                        "AssignmentExpression",                 True),
-    Expression("Block",                         "Block",                                True),
-    Expression("BreakStatement",                "BreakStatement",                       True),
-    Expression("Generator",                     "LambdaExpression",                     True),
-    Expression("ContinueStatement",             "ContinueStatement",                    True),
-    Expression("Delete",                        "DeleteExpression",                     True),
-    Expression("DoStatement",                   "DoStatement",                          True),
-    Expression("EmptyStatement",                "EmptyStatement",                       True),
-    Expression("Extension",                     "ExtensionExpression",                  True),
-    Expression("IndexedProperty",               "IndexedPropertyExpression",            True),
-    Expression("LabeledStatement",              "LabeledStatement",                     True),
-    Expression("LocalScope",                    "LocalScopeExpression",                 True),
-    Expression("LoopStatement",                 "LoopStatement",                        True),
-    Expression("OnesComplement",                "UnaryExpression",                      True),
-    Expression("ReturnStatement",               "ReturnStatement",                      True),
-    Expression("Scope",                         "ScopeExpression",                      True),
-    Expression("SwitchStatement",               "SwitchStatement",                      True),
-    Expression("ThrowStatement",                "ThrowStatement",                       True),
-    Expression("TryStatement",                  "TryStatement",                         True),
-    Expression("Unbox",                         "UnaryExpression",                      True),
-    Expression("Variable",                      "VariableExpression",                   True),
-    Expression("YieldStatement",                "YieldStatement",                       True),
+    Expression("Assign",             "AssignmentExpression"),
+    Expression("Block",              "Block"),
+    Expression("BreakStatement",     "BreakStatement"),
+    Expression("Generator",          "LambdaExpression"),
+    Expression("ContinueStatement",  "ContinueStatement"),
+    Expression("DoStatement",        "DoStatement"),
+    Expression("Dynamic",            "DynamicExpression"),
+    Expression("EmptyStatement",     "EmptyStatement"),
+    Expression("Extension",          "ExtensionExpression"),
+    Expression("Index",              "IndexExpression"),
+    Expression("LabeledStatement",   "LabeledStatement"),
+    Expression("LocalScope",         "LocalScopeExpression"),
+    Expression("LoopStatement",      "LoopStatement"),
+    Expression("OnesComplement",     "UnaryExpression"),
+    Expression("ReturnStatement",    "ReturnStatement"),
+    Expression("Scope",              "ScopeExpression"),
+    Expression("SwitchStatement",    "SwitchStatement"),
+    Expression("ThrowStatement",     "ThrowStatement"),
+    Expression("TryStatement",       "TryStatement"),
+    Expression("Unbox",              "UnaryExpression"),
+    Expression("Variable",           "VariableExpression"),
+    Expression("YieldStatement",     "YieldStatement"),
 ]
 
 def get_unique_types():
@@ -143,19 +141,13 @@ def gen_visitor_switch(cw):
     for node in expressions:
         method = "DefaultVisit"
 
-        if node.enabled:
-            cw.write("// " + node.kind)
-            cw.write("case ExpressionType." + node.kind + ":")
-            cw.write("    return " + method + node.type + "(node);")
-        else:
-            cw.write("// ** " + node.kind)        
+        cw.write("// " + node.kind)
+        cw.write("case ExpressionType." + node.kind + ":")
+        cw.write("    return " + method + node.type + "(node);")
 
 def gen_tree_nodes(cw):
     for node in expressions:
-        text = node.kind
-        if not node.enabled:
-            text = "//    " + text
-        cw.write(text + ",")
+        cw.write(node.kind + ",")
 
 def gen_stackspiller_switch(cw):
     for node in expressions:
@@ -165,13 +157,10 @@ def gen_stackspiller_switch(cw):
         if node.kind == "AndAlso" or node.kind == "OrElse":
             method += "Logical"
 
-        if node.enabled:
-            cw.write("// " + node.kind)
-            cw.write("case ExpressionType." + node.kind + ":")
-            cw.write("    result = " + method + node.type + "(self, node, stack);")
-            cw.write("    break;")
-        else:
-            cw.write("// ** " + node.kind)
+        cw.write("// " + node.kind)
+        cw.write("case ExpressionType." + node.kind + ":")
+        cw.write("    result = " + method + node.type + "(self, node, stack);")
+        cw.write("    break;")
 
 def gen_compiler(cw):
     for node in expressions:
@@ -183,13 +172,10 @@ def gen_compiler(cw):
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"
 
-        if node.enabled:
-            cw.write("// " + node.kind)
-            cw.write("case ExpressionType." + node.kind + ":")
-            cw.write("    " + method + node.type + "(this, node);")
-            cw.write("    break;")
-        else:
-            cw.write("// ** " + node.kind)
+        cw.write("// " + node.kind)
+        cw.write("case ExpressionType." + node.kind + ":")
+        cw.write("    " + method + node.type + "(this, node);")
+        cw.write("    break;")
 
 def gen_interpreter(cw):
    for node in expressions:
@@ -202,22 +188,13 @@ def gen_interpreter(cw):
             method += "Convert"
 
         method += node.type           
-        
-        if node.enabled:
-            comment = ""
-        else:
-            comment = "//"            
 			
-        cw.write("%s case ExpressionType.%s: return %s(state, expr);" % (comment, node.kind, method))
+        cw.write(" case ExpressionType.%s: return %s(state, expr);" % (node.kind, method))
 
 def gen_ast_dispatch(cw, name):
     for node in expressions:
-        if node.enabled:
-            text = name + node.type + ","
-            comment = "//    " + node.kind
-        else:
-            text = ""
-            comment = "// ** " + node.kind
+        text = name + node.type + ","
+        comment = "//    " + node.kind
 
         cw.write(text + (40 - len(text)) * " " + comment)
 

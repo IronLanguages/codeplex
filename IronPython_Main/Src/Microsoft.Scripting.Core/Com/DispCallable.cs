@@ -18,6 +18,7 @@
 using System.Linq.Expressions;
 using System.Scripting.Actions;
 using Microsoft.Contracts;
+using System.Globalization;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -35,7 +36,7 @@ namespace System.Scripting.Com {
 
         [Confined]
         public override string ToString() {
-            return String.Format("<bound dispmethod {0}>", _methodDesc.Name);
+            return String.Format(CultureInfo.CurrentCulture, "<bound dispmethod {0}>", _methodDesc.Name);
         }
 
         public IDispatchObject DispatchObject {
@@ -48,7 +49,7 @@ namespace System.Scripting.Com {
 
         #region IDynamicObject Members
 
-        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
+        public MetaObject GetMetaObject(Expression parameter) {
             return new DispCallableMetaObject(parameter, this);
         }
 

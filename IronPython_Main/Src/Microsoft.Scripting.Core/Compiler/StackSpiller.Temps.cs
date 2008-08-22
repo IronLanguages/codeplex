@@ -204,6 +204,9 @@ namespace System.Linq.Expressions.Compiler {
             internal Expression this[int index] {
                 get {
                     EnsureDone();
+                    if (index < 0) {
+                        index += _expressions.Length;
+                    }
                     return _expressions[index];
                 }
             }

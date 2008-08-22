@@ -267,6 +267,8 @@ def test_array_array_B():
     a = array.array('B', [0]) * 2L
     AreEqual(2, len(a))
     AreEqual("array('B', [0, 0])", str(a))
+    
+    AreEqual(array.array('b', 'foo'), array.array('b', [102, 111, 111]))
 
 def test_array_typecode():
     x = array.array('i')

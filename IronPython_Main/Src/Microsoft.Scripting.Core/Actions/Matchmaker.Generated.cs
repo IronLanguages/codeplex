@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.CodeDom.Compiler;
+using System.Runtime.CompilerServices;
 
 namespace System.Scripting.Actions {
     /// <summary>
@@ -22,7 +23,7 @@ namespace System.Scripting.Actions {
     /// code delegates here.
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
-    public partial class Matchmaker {
+    internal partial class Matchmaker {
         #region Generated Matchmaker
 
         // *** BEGIN GENERATED CODE ***
@@ -33,62 +34,62 @@ namespace System.Scripting.Actions {
         //
 
         // Mismatch detection - arity 0
-        public static TRet Mismatch0<TRet>(Matchmaker mm, CallSite site) {
-            mm.Match = false;
+        internal static TRet Mismatch0<TRet>(StrongBox<bool> box, CallSite site) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 1
-        public static TRet Mismatch1<T0, TRet>(Matchmaker mm, CallSite site, T0 arg0) {
-            mm.Match = false;
+        internal static TRet Mismatch1<T0, TRet>(StrongBox<bool> box, CallSite site, T0 arg0) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 2
-        public static TRet Mismatch2<T0, T1, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1) {
-            mm.Match = false;
+        internal static TRet Mismatch2<T0, T1, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 3
-        public static TRet Mismatch3<T0, T1, T2, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2) {
-            mm.Match = false;
+        internal static TRet Mismatch3<T0, T1, T2, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 4
-        public static TRet Mismatch4<T0, T1, T2, T3, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-            mm.Match = false;
+        internal static TRet Mismatch4<T0, T1, T2, T3, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 5
-        public static TRet Mismatch5<T0, T1, T2, T3, T4, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
-            mm.Match = false;
+        internal static TRet Mismatch5<T0, T1, T2, T3, T4, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 6
-        public static TRet Mismatch6<T0, T1, T2, T3, T4, T5, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
-            mm.Match = false;
+        internal static TRet Mismatch6<T0, T1, T2, T3, T4, T5, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 7
-        public static TRet Mismatch7<T0, T1, T2, T3, T4, T5, T6, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
-            mm.Match = false;
+        internal static TRet Mismatch7<T0, T1, T2, T3, T4, T5, T6, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 8
-        public static TRet Mismatch8<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
-            mm.Match = false;
+        internal static TRet Mismatch8<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
+            box.Value = false;
             return default(TRet);
         }
 
         // Mismatch detection - arity 9
-        public static TRet Mismatch9<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
-            mm.Match = false;
+        internal static TRet Mismatch9<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
+            box.Value = false;
             return default(TRet);
         }
 
@@ -107,48 +108,48 @@ namespace System.Scripting.Actions {
         //
 
         // Mismatch detection - arity 1
-        public static void MismatchVoid1<T0>(Matchmaker mm, CallSite site, T0 arg0) {
-            mm.Match = false;
+        internal static void MismatchVoid1<T0>(StrongBox<bool> box, CallSite site, T0 arg0) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 2
-        public static void MismatchVoid2<T0, T1>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1) {
-            mm.Match = false;
+        internal static void MismatchVoid2<T0, T1>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 3
-        public static void MismatchVoid3<T0, T1, T2>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2) {
-            mm.Match = false;
+        internal static void MismatchVoid3<T0, T1, T2>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 4
-        public static void MismatchVoid4<T0, T1, T2, T3>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-            mm.Match = false;
+        internal static void MismatchVoid4<T0, T1, T2, T3>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 5
-        public static void MismatchVoid5<T0, T1, T2, T3, T4>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
-            mm.Match = false;
+        internal static void MismatchVoid5<T0, T1, T2, T3, T4>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 6
-        public static void MismatchVoid6<T0, T1, T2, T3, T4, T5>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
-            mm.Match = false;
+        internal static void MismatchVoid6<T0, T1, T2, T3, T4, T5>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 7
-        public static void MismatchVoid7<T0, T1, T2, T3, T4, T5, T6>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
-            mm.Match = false;
+        internal static void MismatchVoid7<T0, T1, T2, T3, T4, T5, T6>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 8
-        public static void MismatchVoid8<T0, T1, T2, T3, T4, T5, T6, T7>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
-            mm.Match = false;
+        internal static void MismatchVoid8<T0, T1, T2, T3, T4, T5, T6, T7>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
+            box.Value = false;
         }
 
         // Mismatch detection - arity 9
-        public static void MismatchVoid9<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Matchmaker mm, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
-            mm.Match = false;
+        internal static void MismatchVoid9<T0, T1, T2, T3, T4, T5, T6, T7, T8>(StrongBox<bool> box, CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
+            box.Value = false;
         }
 
 

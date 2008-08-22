@@ -30,6 +30,7 @@ namespace System.Scripting.Com {
         private static readonly object _ComObjectEventSinksKey = new object();
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1002:DoNotExposeGenericLists")]
         public static ComEventSinksContainer FromRuntimeCallableWrapper(object rcw, bool createIfNotFound) {
             // !!! Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
             // a full demand. We need to avoid this by making this method SecurityCritical

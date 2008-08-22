@@ -91,7 +91,7 @@ class VariantType:
             cw.enter_block("public void SetAsByref%s(ref %s value)" % (self.name, self.unmanagedRepresentationType))
             cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
             cw.write("VariantType = (VarEnum.VT_%s | VarEnum.VT_BYREF);" % self.variantType)
-            cw.write("_typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.Convert%sByrefToPtr(ref value);" % self.unmanagedRepresentationType)
+            cw.write("_typeUnion._unionTypes._byref = UnsafeMethods.Convert%sByrefToPtr(ref value);" % self.unmanagedRepresentationType)
             cw.exit_block()
 
         cw.writeline()
@@ -171,8 +171,8 @@ variantTypes = [
         setStatements=["_typeUnion._unionTypes._date = value.ToOADate();"]),
     VariantType('BSTR', "String", 
         unmanagedRepresentationType="IntPtr",
-        getStatements=["return (string)Marshal.GetObjectForNativeVariant(ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
-        setStatements=["Marshal.GetNativeVariantForObject(value, ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this));"]),
+        getStatements=["return (string)Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
+        setStatements=["Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));"]),
     VariantType("UNKNOWN", "Object", 
         isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",

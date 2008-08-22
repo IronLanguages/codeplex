@@ -40,8 +40,10 @@ namespace System.Scripting.Com {
 
         #region IMembersList Members
 
-        public override IList<string> GetMemberNames() {
-            return new string[0];
+        public override IList<string> MemberNames {
+            get {
+                return new string[0];
+            }
         }
 
         #endregion

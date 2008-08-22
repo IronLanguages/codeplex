@@ -399,7 +399,10 @@ namespace IronPython.Runtime.Binding {
                             tmp,
                             Ast.Constant(member.Name)
                         ),
-                        error
+                        Ast.ConvertHelper(
+                            error,
+                            typeof(object)
+                        )
                     ),
                     tmp
                 );

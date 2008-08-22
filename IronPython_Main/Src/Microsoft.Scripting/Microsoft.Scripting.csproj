@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30718</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -106,12 +106,14 @@
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
     <Compile Include="ArgumentTypeException.cs" />
+    <Compile Include="Ast\ActionExpression.cs" />
     <Compile Include="Ast\SymbolConstantExpression.cs" />
+    <Compile Include="Generation\DelegateHelpers.cs" />
+    <Compile Include="Generation\DelegateHelpers.Generated.cs" />
     <Compile Include="InvalidImplementationException.cs" />
     <Compile Include="Generation\AssemblyGen.cs" />
     <Compile Include="Generation\ConstantCheck.cs" />
     <Compile Include="Generation\DynamicILGen.cs" />
-    <Compile Include="Generation\DynamicNodeRewriter.cs" />
     <Compile Include="Generation\ILGen.cs" />
     <Compile Include="Generation\KeyedQueue.cs" />
     <Compile Include="Generation\Snippets.cs" />
@@ -143,12 +145,10 @@
     <Compile Include="Actions\DoOperationBinderHelper.cs" />
     <Compile Include="Actions\DynamicSite.Generated.cs" />
     <Compile Include="Actions\GetMemberBinderHelper.cs" />
-    <Compile Include="Actions\InvokeMemberBinderHelper.cs" />
     <Compile Include="Actions\MemberBinderHelper.cs" />
     <Compile Include="Actions\NoSideEffectsAttribute.cs" />
     <Compile Include="Actions\OperatorInfo.cs" />
     <Compile Include="Actions\SetMemberBinderHelper.cs" />
-    <Compile Include="Ast\ActionExpression.cs" />
     <Compile Include="Hosting\ExceptionService.cs" />
     <Compile Include="Ast\AssignmentExpression.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
@@ -274,6 +274,7 @@
     <Compile Include="Runtime\TokenTriggers.cs" />
     <Compile Include="Utils\CollectionExtensions.cs" />
     <Compile Include="Utils\CopyOnWriteList.cs" />
+    <Compile Include="Utils\ListEqualityComparer.cs" />
     <Compile Include="Utils\MathUtils.cs" />
     <Compile Include="Utils\Publisher.cs" />
     <Compile Include="Utils\ReferenceEqualityComparer.cs" />
@@ -295,7 +296,6 @@
     <Compile Include="Actions\Old\OldDoOperationAction.cs" />
     <Compile Include="Actions\Old\OldDynamicAction.cs" />
     <Compile Include="Actions\Old\OldGetMemberAction.cs" />
-    <Compile Include="Actions\Old\OldInvokeMemberAction.cs" />
     <Compile Include="Actions\Old\OldMemberAction.cs" />
     <Compile Include="Actions\Old\OldSetMemberAction.cs" />
     <Compile Include="Actions\ActionBinder.cs" />
@@ -436,9 +436,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Microsoft.Scripting.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Compilers\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
   <Import Project="..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />

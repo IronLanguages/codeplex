@@ -27,18 +27,11 @@ namespace System.Linq.Expressions {
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly ReadOnlyCollection<MemberInfo> _members;
 
-        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, CallSiteBinder bindingInfo)
-            : base(ExpressionType.New, type, annotations, bindingInfo) {
-            if (IsBound) {
-                RequiresBoundItems(arguments, "arguments");
-            }
+        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
+            : base(ExpressionType.New, type, annotations) {
+
             _constructor = constructor;
             _arguments = arguments;
-        }
-
-        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, CallSiteBinder bindingInfo, ReadOnlyCollection<MemberInfo> members)
-            : this(annotations, type, constructor, arguments, bindingInfo) {
-
             _members = members;
         }
 
@@ -54,26 +47,6 @@ namespace System.Linq.Expressions {
             get { return _members; }
         }
 
-
-        private static PropertyInfo GetPropertyNoThrow(MethodInfo method) {
-            if (method == null) {
-                return null;
-            }
-            Type type = method.DeclaringType;
-            BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic;
-            flags |= (method.IsStatic) ? BindingFlags.Static : BindingFlags.Instance;
-            PropertyInfo[] props = type.GetProperties(flags);
-            foreach (PropertyInfo pi in props) {
-                if (pi.CanRead && method == pi.GetGetMethod(true)) {
-                    return pi;
-                }
-                if (pi.CanWrite && method == pi.GetSetMethod(true)) {
-                    return pi;
-                }
-            }
-            return null;
-        }
-
         internal override void BuildString(StringBuilder builder) {
             Type type = (_constructor == null) ? type = this.Type : _constructor.DeclaringType;
             builder.Append("new ");
@@ -86,12 +59,7 @@ namespace System.Linq.Expressions {
                         builder.Append(", ");
                     }
                     if (_members != null) {
-                        PropertyInfo pi = null;
-                        if (_members[i].MemberType == MemberTypes.Method && (pi = GetPropertyNoThrow((MethodInfo)_members[i])) != null) {
-                            builder.Append(pi.Name);
-                        } else {
-                            builder.Append(_members[i].Name);
-                        }
+                        builder.Append(_members[i].Name);
                         builder.Append(" = ");
                     }
                     _arguments[i].BuildString(builder);
@@ -118,8 +86,11 @@ namespace System.Linq.Expressions {
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
+            ContractUtils.RequiresNotNull(constructor.DeclaringType, "constructor.DeclaringType");
+            TypeUtils.ValidateType(constructor.DeclaringType);
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
-            ValidateNewArgs(constructor.DeclaringType, constructor, ref argList);
+            ValidateArgumentTypes(constructor, ExpressionType.New, ref argList);
+
             return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, null);
         }
 
@@ -128,8 +99,8 @@ namespace System.Linq.Expressions {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ReadOnlyCollection<MemberInfo> memberList = members.ToReadOnly();
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
-            ValidateNewArgs(constructor, ref argList, memberList);
-            return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, null, memberList);
+            ValidateNewArgs(constructor, ref argList, ref memberList);
+            return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, memberList);
         }
 
         //CONFORMING
@@ -156,7 +127,8 @@ namespace System.Linq.Expressions {
 
 
         //CONFORMING
-        private static void ValidateNewArgs(ConstructorInfo constructor, ref ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        private static void ValidateNewArgs(ConstructorInfo constructor, ref ReadOnlyCollection<Expression> arguments, ref ReadOnlyCollection<MemberInfo> members) {
             ParameterInfo[] pis;
             if ((pis = constructor.GetParameters()).Length > 0) {
                 if (arguments.Count != pis.Length) {
@@ -166,17 +138,18 @@ namespace System.Linq.Expressions {
                     throw Error.IncorrectNumberOfArgumentsForMembers();
                 }
                 Expression[] newArguments = null;
+                MemberInfo[] newMembers = null;
                 for (int i = 0, n = arguments.Count; i < n; i++) {
                     Expression arg = arguments[i];
-                    ContractUtils.RequiresNotNull(arg, "argument");
+                    RequiresCanRead(arg, "argument");
                     MemberInfo member = members[i];
                     ContractUtils.RequiresNotNull(member, "member");
                     if (member.DeclaringType != constructor.DeclaringType) {
                         throw Error.ArgumentMemberNotDeclOnType(member.Name, constructor.DeclaringType.Name);
                     }
                     Type memberType;
-                    ValidateAnonymousTypeMember(member, out memberType);
-                    if (!TypeUtils.AreReferenceAssignable(arg.Type, memberType)) {
+                    ValidateAnonymousTypeMember(ref member, out memberType);
+                    if (!TypeUtils.AreReferenceAssignable(memberType, arg.Type)) {
                         if (TypeUtils.IsSameOrSubclass(typeof(Expression), memberType) && TypeUtils.AreAssignable(memberType, arg.GetType())) {
                             arg = Expression.Quote(arg);
                         } else {
@@ -204,9 +177,22 @@ namespace System.Linq.Expressions {
                     if (newArguments != null) {
                         newArguments[i] = arg;
                     }
+
+                    if (newMembers == null && member != members[i]) {
+                        newMembers = new MemberInfo[members.Count];
+                        for (int j = 0; j < i; j++) {
+                            newMembers[j] = members[j];
+                        }
+                    }
+                    if (newMembers != null) {
+                        newMembers[i] = member;
+                    }
                 }
                 if (newArguments != null) {
                     arguments = new ReadOnlyCollection<Expression>(newArguments);
+                }
+                if (newMembers != null) {
+                    members = new ReadOnlyCollection<MemberInfo>(newMembers);
                 }
             } else if (arguments != null && arguments.Count > 0) {
                 throw Error.IncorrectNumberOfConstructorArguments();
@@ -216,53 +202,7 @@ namespace System.Linq.Expressions {
         }
 
         //CONFORMING
-        private static void ValidateNewArgs(Type type, ConstructorInfo constructor, ref ReadOnlyCollection<Expression> arguments) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.RequiresNotNull(constructor, "constructor");
-
-            TypeUtils.ValidateType(type);
-
-            ParameterInfo[] pis;
-            if (constructor != null && (pis = constructor.GetParameters()).Length > 0) {
-                if (arguments.Count != pis.Length) {
-                    throw Error.IncorrectNumberOfConstructorArguments();
-                }
-                Expression[] newArgs = null;
-                for (int i = 0, n = arguments.Count; i < n; i++) {
-                    Expression arg = arguments[i];
-                    ParameterInfo pi = pis[i];
-                    RequiresCanRead(arg, "arguments");
-                    Type pType = pi.ParameterType;
-                    if (pType.IsByRef) {
-                        pType = pType.GetElementType();
-                    }
-                    if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {
-                        if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType())) {
-                            arg = Expression.Quote(arg);
-                        } else {
-                            throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arg.Type, pType);
-                        }
-                    }
-                    if (newArgs == null && arg != arguments[i]) {
-                        newArgs = new Expression[arguments.Count];
-                        for (int j = 0; j < i; j++) {
-                            newArgs[j] = arguments[j];
-                        }
-                    }
-                    if (newArgs != null) {
-                        newArgs[i] = arg;
-                    }
-                }
-                if (newArgs != null) {
-                    arguments = new ReadOnlyCollection<Expression>(newArgs);
-                }
-            } else if (arguments != null && arguments.Count > 0) {
-                throw Error.IncorrectNumberOfConstructorArguments();
-            }
-        }
-
-        //CONFORMING
-        private static void ValidateAnonymousTypeMember(MemberInfo member, out Type memberType) {
+        private static void ValidateAnonymousTypeMember(ref MemberInfo member, out Type memberType) {
             switch (member.MemberType) {
                 case MemberTypes.Field:
                     FieldInfo field = member as FieldInfo;
@@ -286,23 +226,14 @@ namespace System.Linq.Expressions {
                     if (method.IsStatic) {
                         throw Error.ArgumentMustBeInstanceMember();
                     }
-                    memberType = method.ReturnType;
+
+                    PropertyInfo prop = GetProperty(method);
+                    member = prop;
+                    memberType = prop.PropertyType;
                     break;
                 default:
                     throw Error.ArgumentMustBeFieldInfoOrPropertInfoOrMethod();
             }
-        }
-
-
-
-        public static NewExpression New(Type result, CallSiteBinder bindingInfo, params Expression[] arguments) {
-            return New(result, bindingInfo, (IList<Expression>)arguments);
-        }
-
-        public static NewExpression New(Type result, CallSiteBinder bindingInfo, IList<Expression> arguments) {
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            RequiresCanRead(arguments, "arguments");
-            return new NewExpression(Annotations.Empty, result, null, arguments.ToReadOnly(), bindingInfo);
         }
 
         public static NewExpression SimpleNewHelper(ConstructorInfo constructor, params Expression[] arguments) {

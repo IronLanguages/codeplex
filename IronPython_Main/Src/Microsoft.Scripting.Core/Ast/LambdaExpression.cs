@@ -44,7 +44,7 @@ namespace System.Linq.Expressions {
             Expression body,
             ReadOnlyCollection<ParameterExpression> parameters
         )
-            : base(nodeType, delegateType, annotations, null) {
+            : base(nodeType, delegateType, annotations) {
 
             Assert.NotNull(delegateType);
 

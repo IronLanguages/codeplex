@@ -13,12 +13,14 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using System.Threading;
 
 namespace IronPython.Runtime {
+    [Serializable]
     internal class SymbolIdDictionaryStorage : DictionaryStorage {
         private Dictionary<SymbolId, object> _data;
 
@@ -49,9 +51,11 @@ namespace IronPython.Runtime {
         }
 
         public override void Add(SymbolId key, object value) {
-            EnsureData();
+            lock (this) {
+                EnsureData();
 
-            lock (this) _data[key] = value;
+                _data[key] = value;
+            }
         }
 
         public override bool Contains(object key) {
@@ -174,6 +178,18 @@ namespace IronPython.Runtime {
             return res;
         }
 
+        public override bool HasNonStringAttributes() {
+            if (_data != null) {
+                lock (this) {
+                    if (TryGetObjectDictionary() != null) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
         private Dictionary<object, object> TryGetObjectDictionary() {
             if (_data != null) {
                 object dict;
@@ -186,22 +202,24 @@ namespace IronPython.Runtime {
         }
 
         private Dictionary<object, object> GetObjectDictionary() {
-            EnsureData();
+            lock (this) {
+                EnsureData();
 
-            object dict;
-            if (_data.TryGetValue(SymbolId.Empty, out dict)) {
-                return (Dictionary<object, object>)dict;
+                object dict;
+                if (_data.TryGetValue(SymbolId.Empty, out dict)) {
+                    return (Dictionary<object, object>)dict;
+                }
+
+                Dictionary<object, object> res = new Dictionary<object, object>();
+                _data[SymbolId.Empty] = res;
+
+                return res;
             }
-
-            Dictionary<object, object> res = new Dictionary<object, object>();
-            _data[SymbolId.Empty] = res;
-
-            return res;
         }
 
         private void EnsureData() {
             if (_data == null) {
-                Interlocked.CompareExchange<Dictionary<SymbolId, object>>(ref _data, new Dictionary<SymbolId, object>(), null);
+                _data = new Dictionary<SymbolId, object>();
             }
         }
     }

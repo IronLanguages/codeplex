@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 using System.Security;
 
 using Microsoft.Scripting;
@@ -27,7 +28,7 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
-    [PythonType("dict")]
+    [PythonType("dict"), Serializable]
     public class PythonDictionary : IDictionary<object, object>, IValueEquality,
         IDictionary, ICodeFormattable, IAttributesCollection {
         [MultiRuntimeAware]
@@ -51,11 +52,17 @@ namespace IronPython.Runtime {
             _storage = storage;
         }
 
-        internal PythonDictionary(IDictionary dict)
-            : this() {
-            foreach (DictionaryEntry de in dict) {
-                this[de.Key] = de.Value;
+        internal PythonDictionary(IDictionary dict) {
+            _storage = new CommonDictionaryStorage();
+            lock (_storage) {
+                foreach (DictionaryEntry de in dict) {
+                    _storage.AddNoLock(de.Key, de.Value);
+                }
             }
+        }
+
+        internal PythonDictionary(PythonDictionary dict) {
+            _storage = dict._storage.Clone();
         }
 
         internal PythonDictionary(CodeContext/*!*/ context, object o)
@@ -718,8 +725,15 @@ namespace IronPython.Runtime {
     }
 
 #if !SILVERLIGHT // environment variables not available
-    internal class EnvironmentDictionaryStorage : CommonDictionaryStorage {
+    [Serializable]
+    internal sealed class EnvironmentDictionaryStorage : DictionaryStorage {
+        private readonly CommonDictionaryStorage/*!*/ _storage = new CommonDictionaryStorage();
+
         public EnvironmentDictionaryStorage() {
+            AddEnvironmentVars();
+        }
+
+        private void AddEnvironmentVars() {
             try {
                 foreach (DictionaryEntry de in Environment.GetEnvironmentVariables()) {
                     Add(de.Key, de.Value);
@@ -730,7 +744,7 @@ namespace IronPython.Runtime {
         }
 
         public override void Add(object key, object value) {
-            base.Add(key, value);
+            _storage.Add(key, value);
 
             string s1 = key as string;
             string s2 = value as string;
@@ -740,7 +754,7 @@ namespace IronPython.Runtime {
         }
 
         public override bool Remove(object key) {
-            bool res = base.Remove(key);
+            bool res = _storage.Remove(key);
 
             string s = key as string;
             if (s != null) {
@@ -748,6 +762,26 @@ namespace IronPython.Runtime {
             }
 
             return res;
+        }
+
+        public override bool Contains(object key) {
+            return _storage.Contains(key);
+        }
+
+        public override bool TryGetValue(object key, out object value) {
+            return _storage.TryGetValue(key, out value);
+        }
+
+        public override int Count {
+            get { return _storage.Count; }
+        }
+
+        public override void Clear() {
+            _storage.Clear();
+        }
+
+        public override List<KeyValuePair<object, object>> GetItems() {
+            return _storage.GetItems();
         }
     }
 #endif

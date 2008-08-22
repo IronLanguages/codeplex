@@ -28,6 +28,7 @@ namespace System.Runtime.CompilerServices {
         /// The constant pool
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         public readonly object[] Constants;
 
         /// <summary>
@@ -35,6 +36,7 @@ namespace System.Runtime.CompilerServices {
         /// scope
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         public readonly object[] Locals;
         
         public Closure(object[] constants, object[] locals) {

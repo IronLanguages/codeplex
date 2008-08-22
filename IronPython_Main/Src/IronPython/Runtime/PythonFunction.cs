@@ -93,11 +93,12 @@ namespace IronPython.Runtime {
             Debug.Assert(_defaults.Length <= _nparams);
 
             object modName;
-            if (context.Scope.TryLookupName(Symbols.Name, out modName)) {
+            if (context.GlobalScope.Dict.TryGetValue(Symbols.Name, out modName)) {
                 _module = modName;
             }
             
             _compat = CalculatedCachedCompat();
+            _code = new FunctionCode(this);
         }
 
         #region Public APIs
@@ -195,9 +196,6 @@ namespace IronPython.Runtime {
 
         public FunctionCode func_code {
             get {
-                if (_code == null) {
-                    Interlocked.CompareExchange(ref _code, new FunctionCode(this), null);
-                }
                 return _code; 
             }
             set {

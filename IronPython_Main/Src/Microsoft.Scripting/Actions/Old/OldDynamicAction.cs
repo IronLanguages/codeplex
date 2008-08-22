@@ -26,7 +26,6 @@ namespace Microsoft.Scripting.Actions {
         GetMember,
         SetMember,
         DeleteMember,
-        InvokeMember,
         Call,
         CreateInstance
     }

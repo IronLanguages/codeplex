@@ -343,7 +343,7 @@ namespace System.Linq.Expressions.Compiler {
             }
 
             EmitLambdaArgument(0);
-            _ilg.EmitFieldGet(typeof(Generator), "location");
+            _ilg.EmitCall(typeof(Generator).GetProperty("Location").GetGetMethod());
             _ilg.Emit(OpCodes.Dup);
             GotoRouter = _ilg.GetLocal(typeof(int));
             _ilg.Emit(OpCodes.Stloc, GotoRouter);

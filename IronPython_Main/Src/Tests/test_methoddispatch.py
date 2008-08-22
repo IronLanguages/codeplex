@@ -1414,4 +1414,11 @@ def test_max_args():
     """verify the correct number of max args are reported, this may need to be updated if file ever takes more args"""
     AssertErrorWithMatch(TypeError, '.*takes at most 4 arguments.*', file, 2, 3, 4, 5, 6, 7, 8, 9)
 
+
+def test_enumerator_conversions():
+    AssertError(TypeError, cd.StringEnumerator, 'abc')
+    for seq in ((2,3,4), [2,3,4]):
+        AssertError(TypeError, cd.ObjectEnumerator, seq)
+        AssertError(TypeError, cd.NonGenericEnumerator, seq)
+
 run_test(__name__)

@@ -270,7 +270,7 @@ namespace System.Linq.Expressions.Compiler {
         private void EmitUpdateGeneratorLocation(int index) {
             EmitLambdaArgument(0);
             _ilg.EmitInt(index);
-            _ilg.EmitFieldSet(typeof(Generator).GetField("location"));
+            _ilg.EmitCall(typeof(Generator).GetProperty("Location").GetSetMethod());
         }
 
         private void EnsureReturnBlock() {

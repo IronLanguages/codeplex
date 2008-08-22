@@ -73,7 +73,7 @@ namespace System.Scripting.Com {
                 Debug.Assert(_dispatchPointersByApartment[Thread.CurrentThread] == dispatchPointer);
                 return;
             } else {
-                ComRuntimeHelpers.UnsafeMethods.IUnknownRelease(dispatchPointer);
+                UnsafeMethods.IUnknownRelease(dispatchPointer);
             }
         }
 

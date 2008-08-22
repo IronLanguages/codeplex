@@ -198,7 +198,7 @@ def test_boxing_conversion():
 
 # http://msdn2.microsoft.com/en-us/library/aa691283(vs.71).aspx
 def test_implicit_enum_conversion():
-    # Consumer.EatEnum(0); Flag.Check(640)  # tracking as 316744
+    Consumer.EatEnum(System.Int16(0)); Flag.Check(640)  # tracking as 316744
     AssertError(TypeError, Consumer.EatEnum, 1)
     
     

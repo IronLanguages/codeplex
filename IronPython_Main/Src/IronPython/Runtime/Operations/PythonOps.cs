@@ -24,11 +24,7 @@ using System.Scripting;
 using System.Scripting.Actions;
 using System.Text;
 using System.Threading;
-using IronPython.Compiler;
-using IronPython.Hosting;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
@@ -37,6 +33,12 @@ using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Compiler;
+using IronPython.Hosting;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
 
@@ -62,6 +64,15 @@ namespace IronPython.Runtime.Operations {
 
         public static PythonDictionary MakeDict(int size) {
             return new PythonDictionary(size);
+        }
+
+        /// <summary>
+        /// Creates a new dictionary extracting the keys & valeus from the
+        /// provided data array.  Keys/values are adjacent in the array with
+        /// the value coming first.
+        /// </summary>
+        public static PythonDictionary MakeDictFromItems(object[] data) {
+            return new PythonDictionary(new CommonDictionaryStorage(data));
         }
 
         public static bool IsCallable(CodeContext/*!*/ context, object o) {
@@ -451,8 +462,6 @@ namespace IronPython.Runtime.Operations {
         public static bool EqualRetBool(object x, object y) {
             //TODO just can't seem to shake these fast paths
             if (x is int && y is int) { return ((int)x) == ((int)y); }
-            if (x is double && y is double) { return ((double)x) == ((double)y); }
-            if (x is string && y is string) { return ((string)x).Equals((string)y); }
 
             return DefaultContext.DefaultPythonContext.Equal(x, y);
         }
@@ -460,8 +469,6 @@ namespace IronPython.Runtime.Operations {
         public static bool EqualRetBool(CodeContext/*!*/ context, object x, object y) {
             //TODO just can't seem to shake these fast paths
             if (x is int && y is int) { return ((int)x) == ((int)y); }
-            if (x is double && y is double) { return ((double)x) == ((double)y); }
-            if (x is string && y is string) { return ((string)x).Equals((string)y); }
 
             return PythonContext.GetContext(context).Equal(x, y);
         }
@@ -648,21 +655,20 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static IEnumerator GetEnumerator(object o) {
-            IEnumerator ie = Converter.ConvertToIEnumerator(o);
-            if (ie == null) {
+            IEnumerator ie;
+            if (!TryGetEnumerator(DefaultContext.Default, o, out ie)) {
                 throw PythonOps.TypeError("{0} is not enumerable", PythonTypeOps.GetName(o));
             }
             return ie;
         }
 
         public static IEnumerator GetEnumeratorForUnpack(CodeContext/*!*/ context, object enumerable) {
-            PythonContext pc = PythonContext.GetContext(context);
-
-            IEnumerator ie;
-            if (!pc.TryConvertToIEnumerator(enumerable, out ie)) {
+            IEnumerator enumerator;
+            if (!TryGetEnumerator(context, enumerable, out enumerator)) {
                 throw PythonOps.TypeError("'{0}' object is not iterable", PythonTypeOps.GetName(enumerable));
             }
-            return ie;
+
+            return enumerator;
         }
 
         public static long Id(object o) {
@@ -952,7 +958,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    foreach (string name in System.Scripting.Com.ComObject.ObjectToComObject(o).GetMemberNames()) {
+                    foreach (string name in System.Scripting.Com.ComObject.ObjectToComObject(o).MemberNames) {
                         res.AddNoLock(name);
                     }
                 }
@@ -1725,14 +1731,42 @@ namespace IronPython.Runtime.Operations {
         #endregion        
 
         public static IEnumerator GetEnumeratorForIteration(CodeContext/*!*/ context, object enumerable) {
-            PythonContext pc = PythonContext.GetContext(context);
-
-            IEnumerator ie;
-            if (!pc.TryConvertToIEnumerator(enumerable, out ie)) {
-                throw PythonOps.TypeError("iteration over non-sequence of type {0}",
-                    PythonOps.Repr(context, DynamicHelpers.GetPythonType(enumerable)));
+            IEnumerator enumerator;
+            if (!TryGetEnumerator(context, enumerable, out enumerator)) {
+                throw PythonOps.TypeError(
+                    "iteration over non-sequence of type {0}",
+                    PythonOps.Repr(context, DynamicHelpers.GetPythonType(enumerable))
+                );
             }
-            return ie;
+
+            return enumerator;
+        }
+
+        internal static bool TryGetEnumerator(CodeContext/*!*/ context, object enumerable, out IEnumerator enumerator) {
+            string str = enumerable as string;
+            if (str != null) {
+                enumerator = StringOps.StringEnumerator(str);
+                return true;
+            }
+
+            IEnumerable enumer = enumerable as IEnumerable;
+            if (enumer != null) {
+                enumerator = enumer.GetEnumerator();
+                return true;
+            }
+
+            enumerator = enumerable as IEnumerator;
+            if (enumerator != null) {
+                return true;
+            }
+
+            IEnumerable ie;
+            if (!PythonContext.GetContext(context).TryConvertToIEnumerable(enumerable, out ie)) {
+                return false;
+            }
+
+            enumerator = ie.GetEnumerator();
+            return true;
         }
 
         #region Exception handling
@@ -2018,6 +2052,14 @@ namespace IronPython.Runtime.Operations {
             return new PythonDictionary(dict);
         }
 
+        public static PythonDictionary CopyAndVerifyPythonDictionary(PythonFunction function, PythonDictionary dict) {
+            if (dict._storage.HasNonStringAttributes()) {
+                throw TypeError("{0}() keywords most be strings", function.__name__);
+            }
+
+            return new PythonDictionary(dict);
+        }
+
         public static object ExtractDictionaryArgument(PythonFunction function, string name, int argCnt, IAttributesCollection dict) {
             object val;
             if (dict.TryGetObjectValue(name, out val)) {
@@ -2174,9 +2216,17 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        public static object InitializeUserTypeSlots(Type type) {
-            return Tuple.MakeTuple(type, 
-                CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, Tuple.GetSize(type)));
+        /// <summary>
+        /// Creates a new array the values set to Uninitialized.Instance.  The array
+        /// is large enough to hold for all of the slots allocated for the type and
+        /// its sub types.
+        /// </summary>
+        public static object[]/*!*/ InitializeUserTypeSlots(PythonType/*!*/ type) {
+            object[] res = new object[type.SlotCount];
+            for (int i = 0; i < res.Length; i++) {
+                res[i] = Uninitialized.Instance;
+            }
+            return res;
         }
 
         public static bool IsClsVisible(CodeContext/*!*/ context) {            
@@ -2188,6 +2238,15 @@ namespace IronPython.Runtime.Operations {
             object value;
             bool res = type.TryGetNonCustomBoundMember(context, instance, Symbols.Init, out value);
             Debug.Assert(res);
+
+            return value;
+        }
+
+        public static object GetInitSlotMember(CodeContext/*!*/ context, PythonType type, PythonTypeSlot slot, object instance) {
+            object value;
+            if (!slot.TryGetBoundValue(context, instance, type, out value)) {
+                throw PythonOps.TypeError("bad __init__");
+            }
 
             return value;
         }
@@ -3391,6 +3450,14 @@ namespace IronPython.Runtime.Operations {
             }
 
             return TypeError("object cannot be interpreted as an index");
+        }
+
+        public static Exception/*!*/ TypeErrorForBadDictionaryArgument(PythonFunction/*!*/ f) {
+            return PythonOps.TypeError("{0}() argument after ** must be a dictionary", f.__name__);
+        }
+
+        public static T TypeErrorForBadEnumConversion<T>(object value) {
+            throw TypeError("Cannot convert numeric value {0} to {1}.  The value must be zero.", value, NameConverter.GetTypeName(typeof(T)));
         }
 
         #endregion        

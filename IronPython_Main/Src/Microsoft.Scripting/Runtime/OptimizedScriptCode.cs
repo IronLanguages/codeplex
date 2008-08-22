@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Runtime {
 
     public class OptimizedScriptCode : ScriptCode {
         private Scope _optimizedScope;
-        private DlrMainCallTarget _optimizedTarget;
+        private DlrMainCallTarget _optimizedTarget, _unoptimizedTarget;
 
         public OptimizedScriptCode(LambdaExpression code, SourceUnit sourceUnit)
             : base(code, null, sourceUnit) {
@@ -64,12 +64,19 @@ namespace Microsoft.Scripting.Runtime {
         protected override object InvokeTarget(LambdaExpression code, Scope scope) {
             if (scope == _optimizedScope) {
                 return _optimizedTarget(scope, LanguageContext);
-            } else {
-                // TODO: fix generated DLR ASTs
+            } 
+
+            // new scope, compile unoptimized code and use that.
+            if (_unoptimizedTarget == null) {
+                // TODO: fix generated DLR ASTs - languages should remove their usage
+                // of GlobalVariables and then this can go away.
                 code = new GlobalLookupRewriter().RewriteLambda(code);
 
-                return base.InvokeTarget(code, scope);
+                _unoptimizedTarget = code.Compile<DlrMainCallTarget>(SourceUnit.EmitDebugSymbols);
             }
+
+
+            return _unoptimizedTarget(scope, LanguageContext);            
         }
 
         /// <summary>

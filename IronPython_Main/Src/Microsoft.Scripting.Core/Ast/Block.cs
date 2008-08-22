@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         }
 
         internal Block(Annotations annotations, ReadOnlyCollection<Expression> expressions, Type type)
-            : base(ExpressionType.Block, type, annotations, null) {
+            : base(ExpressionType.Block, type, annotations) {
             _expressions = expressions;
         }
     }

@@ -15,11 +15,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -33,10 +36,10 @@ namespace Microsoft.Scripting.Hosting {
     /// Hosting API counterpart for <see cref="Scope"/>.
     /// </summary>
 #if SILVERLIGHT
-    public sealed class ScriptScope {
+    public sealed class ScriptScope : IDynamicObject {
 #else
     [DebuggerTypeProxy(typeof(ScriptScope.DebugView))]
-    public sealed class ScriptScope : MarshalByRefObject {
+    public sealed class ScriptScope : MarshalByRefObject, IDynamicObject {
 #endif
         private readonly Scope _scope;
         private readonly ScriptEngine _engine;
@@ -258,6 +261,141 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 #endif
+        #endregion
+
+        #region IDynamicObject implementation
+
+        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
+            return new Meta(parameter, this);
+        }
+
+        private sealed class Meta : MetaObject {
+            internal Meta(Expression parameter, ScriptScope scope)
+                : base(parameter, Restrictions.Empty, scope) {
+            }
+
+            // TODO: support for IgnoreCase in underlying ScriptScope APIs
+            public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+                var result = Expression.Variable(typeof(object), "result");
+                var fallback = action.Fallback(args);
+                var instance = Restrict(typeof(ScriptScope));
+                return new MetaObject(
+                    Expression.Scope(
+                        Expression.Condition(
+                            Expression.Call(
+                                instance.Expression,
+                                typeof(ScriptScope).GetMethod("TryGetVariable"),
+                                Expression.Constant(action.Name),
+                                result
+                            ),
+                            result,
+                            Expression.Convert(fallback.Expression, typeof(object))
+                        ),
+                        result
+                    ),
+                    instance.Restrictions.Merge(Restrictions.Combine(args)).Merge(fallback.Restrictions)
+                );
+            }
+
+            // TODO: support for IgnoreCase in underlying ScriptScope APIs
+            public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+                var instance = Restrict(typeof(ScriptScope));
+                return new MetaObject(
+                    Expression.Call(
+                        instance.Expression,
+                        typeof(ScriptScope).GetMethod("SetVariable", new[] { typeof(string), typeof(object) }),
+                        Expression.Constant(action.Name),
+                        Expression.Convert(args[1].Expression, typeof(object))
+                    ),
+                    instance.Restrictions.Merge(Restrictions.Combine(args))
+                );
+            }
+
+            // TODO: support for IgnoreCase in underlying ScriptScope APIs
+            public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+                var fallback = action.Fallback(args);
+                var instance = Restrict(typeof(ScriptScope));
+                return new MetaObject(
+                    Expression.Condition(
+                        Expression.Call(
+                            instance.Expression,
+                            typeof(ScriptScope).GetMethod("RemoveVariable"),
+                            Expression.Constant(action.Name)
+                        ),
+                        Expression.Empty(),
+                        Expression.Convert(fallback.Expression, typeof(void))
+                    ),
+                    instance.Restrictions.Merge(Restrictions.Combine(args)).Merge(fallback.Restrictions)
+                );
+            }
+
+            // helper class for FallbackInvoke
+            private sealed class InvokeAdapter : InvokeAction {
+                private readonly CallAction _call;
+
+                internal InvokeAdapter(CallAction call)
+                    : base(RemoveFirst(call.Arguments)) {
+                    _call = call;
+                }
+
+                private static ReadOnlyCollection<Argument> RemoveFirst(ReadOnlyCollection<Argument> args) {
+                    if (args.Count == 0) {
+                        return args;
+                    }
+                    var result = new Argument[args.Count - 1];
+                    for (int i = 0, n = result.Length; i < n; i++) {
+                        result[i] = args[i + 1];
+                    }
+                    return new ReadOnlyCollection<Argument>(result);
+                }
+
+                public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                    return _call.FallbackInvoke(args, onBindingError);
+                }
+
+                public override object HashCookie {
+                    get { return this; }
+                }
+
+                public override bool Equals(object obj) {
+                    var other = obj as InvokeAdapter;
+                    return other != null && _call.Equals(other._call) && base.Equals(obj);
+                }
+
+                public override int GetHashCode() {
+                    return base.GetHashCode() ^ _call.GetHashCode();
+                }
+            }
+
+            // TODO: support for IgnoreCase in underlying ScriptScope APIs
+            public override MetaObject Call(CallAction action, MetaObject[] args) {
+                var fallback = action.Fallback(args);
+                var result = Expression.Variable(typeof(object), "result");
+
+                var invokeArgs = (MetaObject[])args.Clone();
+                invokeArgs[0] = new MetaObject(result, Restrictions.Empty);
+                var fallbackInvoke = new InvokeAdapter(action).Defer(invokeArgs);
+
+                var instance = Restrict(typeof(ScriptScope));
+                return new MetaObject(
+                    Expression.Scope(
+                        Expression.Condition(
+                            Expression.Call(
+                                instance.Expression,
+                                typeof(ScriptScope).GetMethod("TryGetVariable"),
+                                Expression.Constant(action.Name),
+                                result
+                            ),
+                            Expression.Convert(fallbackInvoke.Expression, typeof(object)),
+                            Expression.Convert(fallback.Expression, typeof(object))
+                        ),
+                        result
+                    ),
+                    instance.Restrictions.Merge(Restrictions.Combine(args)).Merge(fallback.Restrictions)
+                );
+            }
+        }
+
         #endregion
     }
 }

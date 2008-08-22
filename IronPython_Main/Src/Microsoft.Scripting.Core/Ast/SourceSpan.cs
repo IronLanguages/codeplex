@@ -15,6 +15,7 @@
 
 using System.Scripting.Utils;
 using System.Linq.Expressions;
+using System.Globalization;
 
 namespace System.Scripting {
     /// <summary>
@@ -127,7 +128,7 @@ namespace System.Scripting {
         }
 
         internal string ToDebugString() {
-            return String.Format("{0}-{1}", _start.ToDebugString(), _end.ToDebugString());
+            return String.Format(CultureInfo.CurrentCulture, "{0}-{1}", _start.ToDebugString(), _end.ToDebugString());
         }
     }
 }

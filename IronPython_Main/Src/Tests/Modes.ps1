@@ -229,10 +229,9 @@ function test-pymodes($pyexe)
 	#-? compared to -h
 	$stuff_h = pyexe -h
 	$stuff_q = pyexe -?
-	#CodePlex 16979
-	#if($stuff_h.Count -ne $stuff_q.Count) {
-	#	show-failure "Failed: results of '-h' and '-?' should be the same."; 
-	#}
+	if($stuff_h.Count -ne $stuff_q.Count) {
+		show-failure "Failed: results of '-h' and '-?' should be the same."; 
+	}
 	
 	
 	#------------------------------------------------------------------------------

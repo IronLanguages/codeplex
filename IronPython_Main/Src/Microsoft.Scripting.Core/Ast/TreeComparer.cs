@@ -40,7 +40,7 @@ namespace System.Linq.Expressions {
                 return _templated.ContainsKey(constantExpr);
             }
 
-            protected override Expression Visit(ActionExpression node) {
+            protected override Expression Visit(DynamicExpression node) {
                 Expressions.Add(node);
                 return base.Visit(node);
             }
@@ -205,11 +205,6 @@ namespace System.Linq.Expressions {
                 return base.Visit(node);
             }
 
-            protected override Expression Visit(DeleteExpression node) {
-                Expressions.Add(node);
-                return base.Visit(node);
-            }
-
             protected override Expression VisitExtension(Expression node) {
                 if (!node.IsReducible) {
                     Expressions.Add(node);
@@ -291,13 +286,6 @@ namespace System.Linq.Expressions {
                 } else if (currentLeft.Type != currentRight.Type) {
                     // they can't possibly be a match
                     return false;
-                } else if (currentLeft.BindingInfo != null) {
-                    if (currentRight.BindingInfo == null ||
-                        !currentRight.BindingInfo.HashCookie.Equals(currentLeft.BindingInfo.HashCookie)) {
-                        return false;
-                    }
-                } else if (currentRight.BindingInfo != null) {
-                    return false;
                 }
 
                 if (!CompareTwoNodes(walkRight, needsReplacement, varInfo, currentLeft, currentRight, ref tooSpecific)) {
@@ -313,6 +301,14 @@ namespace System.Linq.Expressions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         private static bool CompareTwoNodes(FlatTreeWalker walkRight, List<ConstantExpression> needsReplacement, VariableInfo varInfo, Expression currentLeft, Expression currentRight, ref bool tooSpecific) {
             switch (currentLeft.NodeType) {
+                case ExpressionType.Dynamic:
+                    var dynLeft = (DynamicExpression)currentLeft;
+                    var dynRight = (DynamicExpression)currentRight;
+
+                    if (!dynRight.Binder.HashCookie.Equals(dynLeft.Binder.HashCookie)) {
+                        return false;
+                    }
+                    break;
                 case ExpressionType.Constant:
                     // check constant value                        
                     ConstantExpression ceLeft = (ConstantExpression)currentLeft;
@@ -444,7 +440,6 @@ namespace System.Linq.Expressions {
                 case ExpressionType.Not:
                 case ExpressionType.OnesComplement:
                 case ExpressionType.Conditional:
-                case ExpressionType.ActionExpression:
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
                 case ExpressionType.Invoke:

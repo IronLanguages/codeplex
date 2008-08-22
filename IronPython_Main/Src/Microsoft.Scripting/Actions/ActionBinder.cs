@@ -136,7 +136,7 @@ namespace Microsoft.Scripting.Actions {
                 args = new Expression[] { expr };
             }
 
-            return Expression.ActionExpression(
+            return Expression.Dynamic(
                 OldConvertToAction.Make(this, visType, kind),
                 visType,
                 args

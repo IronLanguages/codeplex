@@ -488,7 +488,8 @@ namespace Microsoft.Scripting.Actions {
             
             // ConvertSelfToT -> Nullable<T>
             if (Action.ResultKind == ConversionResultKind.ExplicitCast) {
-                Expression conversion = AstUtils.ConvertTo(OldConvertToAction.Make(Binder, valueType, Action.ResultKind), _rule.Context, _rule.Parameters[0]);
+                var action = OldConvertToAction.Make(Binder, valueType, Action.ResultKind);
+                var conversion = Expression.Dynamic(action, action.ToType, _rule.Context, _rule.Parameters[0]);
                 // if the conversion to T fails we just throw
                 _rule.Target =
                     _rule.MakeReturn(
@@ -500,7 +501,8 @@ namespace Microsoft.Scripting.Actions {
                     );
             } else {
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
-                Expression conversion = AstUtils.ConvertTo(Binder, valueType, Action.ResultKind, typeof(object), _rule.Context, _rule.Parameters[0]);
+                var conversion = Expression.Dynamic(OldConvertToAction.Make(Binder, valueType, Action.ResultKind), typeof(object), _rule.Context, _rule.Parameters[0]);
+
                 VariableExpression tmp = _rule.GetTemporary(typeof(object), "tmp");
                 _rule.Target =
                     AstUtils.If(

@@ -42,7 +42,20 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
-            return onBindingError ?? new ErrorMetaObject(typeof(NotSupportedException), "Cannot perform call", Restrictions.Combine(args));
+            if (onBindingError == null) {
+                onBindingError =
+                    new MetaObject(
+                        Expression.Throw(
+                            Expression.New(
+                                typeof(NotSupportedException).GetConstructor(new Type[] { typeof(string) }),
+                                Expression.Constant("Cannot perform call")
+                            )
+                        ),
+                        Restrictions.Combine(args)
+                    );
+            }
+
+            return onBindingError;
         }
     }
 }

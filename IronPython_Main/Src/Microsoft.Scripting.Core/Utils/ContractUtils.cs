@@ -142,7 +142,7 @@ namespace System.Scripting.Utils {
 
             for (int i = 0; i < array.Count; i++) {
                 if (array[i] == null) {
-                    throw new ArgumentNullException(string.Format("{0}[{1}]", arrayName, i));
+                    throw new ArgumentNullException(string.Format(Globalization.CultureInfo.CurrentCulture, "{0}[{1}]", arrayName, i));
                 }
             }
         }

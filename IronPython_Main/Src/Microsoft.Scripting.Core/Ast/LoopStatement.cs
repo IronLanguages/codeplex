@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
         /// Null test means infinite loop.
         /// </summary>
         internal LoopStatement(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else)
-            : base(ExpressionType.LoopStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.LoopStatement, typeof(void), annotations) {
             _test = test;
             _increment = increment;
             _body = body;

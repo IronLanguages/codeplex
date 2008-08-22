@@ -107,12 +107,7 @@ def test_namedArgs():
 #TODO: add more tests for enumerators - bad enumerator, different array sizes, different types.
 def test_enumerator():
     AreEqual( [x for x in com_obj.GetEnumerator()] , [ 42, True, "DLR"] )
-    
-    # CodePlex bug 17425 - com_obj shouldn't be enumerable
-    if preferComDispatch:
-        def f(): [x for x in com_obj]
-    
-        AssertError(TypeError, f)
+    AreEqual( [x for x in com_obj] , [ 42, True, "DLR"] )
     
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

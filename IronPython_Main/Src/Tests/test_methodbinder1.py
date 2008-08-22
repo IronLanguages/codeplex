@@ -624,9 +624,8 @@ def test_iterator_sequence():
         target.M620(x)
         AreEqual(Flag.Value, len(x)); Flag.Value = 0
         
-        # str is not an enumerator, technically neither are list1 and tuple but that's a bug.
-        # CodePlex bug #17425
-        if type(x) is str:
+        # built in types are not IEnumerator, they are enumerable
+        if not isinstance(x, C):
             AssertError(TypeError, target.M621, x)
         else:
             target.M621(x)
@@ -822,7 +821,47 @@ def test_interface_only_access():
     AreEqual(fired, True)
     # remove event
     pc.MyEvent -= fired
+
+def test_ref_bytearr():
+    target = COtherConcern()
     
+    arr = System.Array[System.Byte]((2,3,4))
+    
+    res = target.M702(arr)
+    AreEqual(Flag.Value, 702)
+    AreEqual(type(res), System.Array[System.Byte])
+    AreEqual(len(res), 0)
+    
+    i, res = target.M703(arr)
+    AreEqual(Flag.Value, 703)
+    AreEqual(i, 42)
+    AreEqual(type(res), System.Array[System.Byte])
+    AreEqual(len(res), 0)
+    
+    i, res = target.M704(arr, arr)
+    AreEqual(Flag.Value, 704)
+    AreEqual(i, 42)
+    AreEqual(arr, res)
+    
+    sarr = clr.StrongBox[System.Array[System.Byte]](arr)
+    res = target.M702(sarr)
+    AreEqual(Flag.Value, 702)
+    AreEqual(res, None)
+    res = sarr.Value
+    AreEqual(type(res), System.Array[System.Byte])
+    AreEqual(len(res), 0)
+    
+    sarr.Value = arr
+    i = target.M703(sarr)
+    AreEqual(Flag.Value, 703)
+    AreEqual(i, 42)
+    AreEqual(len(sarr.Value), 0)
+    
+    i = target.M704(arr, sarr)
+    AreEqual(Flag.Value, 704)
+    AreEqual(i, 42)
+    AreEqual(sarr.Value, arr)
+
 print '>>>> methods in reference type'
 target = CNoOverloads()
 run_test(__name__)

@@ -140,35 +140,49 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretInvocationExpression(InterpreterState state, Expression expr) {
             InvocationExpression node = (InvocationExpression)expr;
 
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, ArrayUtils.Insert(node.Expression, node.Arguments));
-            }
-
             // TODO: this should have the same semantics of the compiler
             // in particular, it doesn't handle the case where the left hand
             // side returns a lambda that we need to interpret
             return InterpretMethodCallExpression(state, Expression.Call(node.Expression, node.Expression.Type.GetMethod("Invoke"), ArrayUtils.ToArray(node.Arguments)));
         }
 
-        private static object InterpretIndexedPropertyExpression(InterpreterState state, Expression expr) {
-            IndexedPropertyExpression node = (IndexedPropertyExpression)expr;
+        private static object InterpretIndexExpression(InterpreterState state, Expression expr) {
+            var node = (IndexExpression)expr;
 
-            if (node.IsDynamic) {
-                throw new NotImplementedException("interpretation of dynamic indexed properties NYI");
+            if (node.Indexer != null) {
+                return InterpretMethodCallExpression(
+                    state,
+                    Expression.Call(node.Object, node.Indexer.GetGetMethod(true), node.Arguments)
+                );
             }
 
-            MethodInfo getMethod = node.GetMethod;
-            return InterpretMethodCallExpression(state, Expression.Call(node.Object, getMethod, ArrayUtils.ToArray(node.Arguments)));
-        }
+            if (node.Arguments.Count != 1) {
+                var get = node.Object.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance);
+                return InterpretMethodCallExpression(
+                    state,
+                    Expression.Call(node.Object, get, node.Arguments)
+                );
+            }
 
+            object array, index;
+
+            if (InterpretAndCheckFlow(state, node.Object, out array)) {
+                return array;
+            }
+            if (InterpretAndCheckFlow(state, node.Arguments[0], out index)) {
+                return index;
+            }
+
+            if (state.CurrentYield != null) {
+                return ControlFlow.NextForYield;
+            }
+
+            return ((Array)array).GetValue((int)index);
+        }
 
         private static object InterpretMethodCallExpression(InterpreterState state, Expression expr) {
             MethodCallExpression node = (MethodCallExpression)expr;
             SetSourceLocation(state, node);
-
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, ArrayUtils.Insert(node.Object, node.Arguments));
-            }
 
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
@@ -307,10 +321,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretBinaryExpression(InterpreterState state, Expression expr) {
             BinaryExpression node = (BinaryExpression)expr;
-
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, node.Left, node.Right);
-            }
 
             object left, right;
 
@@ -527,13 +537,11 @@ namespace Microsoft.Scripting.Interpretation {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
         private static object InterpretQuoteUnaryExpression(InterpreterState state, Expression expr) {
-            Debug.Assert(!expr.IsDynamic);
             // TODO: should we do all the fancy tree rewrite stuff here?
             return ((UnaryExpression)expr).Operand;
         }
 
         private static object InterpretUnboxUnaryExpression(InterpreterState state, Expression expr) {
-            Debug.Assert(!expr.IsDynamic);
             UnaryExpression node = (UnaryExpression)expr;
 
             object value;
@@ -553,8 +561,6 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretConvertUnaryExpression(InterpreterState state, Expression expr) {
-            Debug.Assert(!expr.IsDynamic);
-
             UnaryExpression node = (UnaryExpression)expr;
 
             object value;
@@ -578,10 +584,6 @@ namespace Microsoft.Scripting.Interpretation {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private static object InterpretUnaryExpression(InterpreterState state, Expression expr) {
             UnaryExpression node = (UnaryExpression)expr;
-
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, node.Operand);
-            }
 
             object value;
             if (InterpretAndCheckFlow(state, node.Operand, out value)) {
@@ -660,10 +662,6 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretNewExpression(InterpreterState state, Expression expr) {
             NewExpression node = (NewExpression)expr;
 
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, node.Arguments);
-            }
-
             object[] args = new object[node.Arguments.Count];
             for (int i = 0; i < node.Arguments.Count; i++) {
                 object argValue;
@@ -710,23 +708,17 @@ namespace Microsoft.Scripting.Interpretation {
             );
         }
 
-        private static object InterpretActionExpression(InterpreterState state, Expression expr) {
-            ActionExpression node = (ActionExpression)expr;
+        private static object InterpretDynamicExpression(InterpreterState state, Expression expr) {
+            DynamicExpression node = (DynamicExpression)expr;
             SetSourceLocation(state, node);
-            return InterpretCallSite(state, node, node.Arguments);
-        }
+            var arguments = node.Arguments;
 
-        private static object InterpretCallSite(InterpreterState state, Expression node, params Expression[] arguments) {
-            return InterpretCallSite(state, node, arguments);
-        }
-
-        private static object InterpretCallSite(InterpreterState state, Expression node, IList<Expression> arguments) {
             object[] args;
             if (!state.TryGetStackState(node, out args)) {
                 args = new object[arguments.Count];
             }
 
-            for (int i = 0; i < arguments.Count; i++) {
+            for (int i = 0, n = arguments.Count; i < n; i++) {
                 object argValue;
                 if (InterpretAndCheckFlow(state, arguments[i], out argValue)) {
                     if (state.CurrentYield != null) {
@@ -744,20 +736,20 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            var callSite = GetCallSite(state, node, arguments);
+            var callSite = GetCallSite(state, node);
             MatchCallerTarget caller = MatchCaller.GetCaller(callSite.GetType().GetGenericArguments()[0]);
             return caller(callSite, args);
         }
 
-        private static CallSite GetCallSite(InterpreterState state, Expression node, IList<Expression> arguments) {
+        private static CallSite GetCallSite(InterpreterState state, DynamicExpression node) {
             CallSite callSite;
             var callSites = state.LambdaState.ScriptCode.CallSites;
 
             // TODO: better locking
             lock (callSites) {
                 if (!callSites.TryGetValue(node, out callSite)) {
-                    ReflectedCaller factory = GetCallSiteFactory(node, arguments);
-                    callSite = (CallSite)factory.Invoke(node.BindingInfo);
+                    ReflectedCaller factory = GetCallSiteFactory(node);
+                    callSite = (CallSite)factory.Invoke(node.Binder);
                     callSites.Add(node, callSite);
                 }
             }
@@ -768,7 +760,8 @@ namespace Microsoft.Scripting.Interpretation {
         // The ReflectiveCaller cache
         private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
         
-        private static ReflectedCaller GetCallSiteFactory(Expression node, IList<Expression> arguments) {
+        private static ReflectedCaller GetCallSiteFactory(DynamicExpression node) {
+            var arguments = node.Arguments;
             Type[] types = CompilerHelpers.GetSiteTypes(arguments, node.Type);
 
             // TODO: remove CodeContext special case:
@@ -781,40 +774,51 @@ namespace Microsoft.Scripting.Interpretation {
             lock (_executeSites) {
                 ValueArray<Type> array = new ValueArray<Type>(types);
                 if (!_executeSites.TryGetValue(array, out rc)) {
-                    Type siteType = DynamicSiteHelpers.MakeDynamicSiteTargetType(types);
-                    MethodInfo target = typeof(InterpreterHelpers).GetMethod("CreateSite").MakeGenericMethod(siteType);
+                    Type delegateType = DynamicSiteHelpers.MakeCallSiteDelegate(types);
+                    MethodInfo target = typeof(InterpreterHelpers).GetMethod("CreateSite").MakeGenericMethod(delegateType);
                     _executeSites[array] = rc = ReflectedCaller.Create(target);
                 }
             }
             return rc;
         }
 
+        private static object InterpretIndexAssignment(InterpreterState state, AssignmentExpression node) {
+            var index = (IndexExpression)node.Expression;
 
-        private static object InterpretArrayIndexAssignment(InterpreterState state, AssignmentExpression node) {
-            BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
+            object instance, value;
+            var args = new object[index.Arguments.Count];
 
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, arrayIndex.Left, arrayIndex.Right, node.Value);
+            if (InterpretAndCheckFlow(state, index.Object, out instance)) {
+                return instance;
             }
 
-            object value, array, index;
+            for (int i = 0; i < index.Arguments.Count; i++) {
+                object arg;
+                if (InterpretAndCheckFlow(state, index.Arguments[i], out arg)) {
+                    return arg;
+                }
+                args[i] = arg;
+            }
 
-            // evaluate the value first
             if (InterpretAndCheckFlow(state, node.Value, out value)) {
                 return value;
-            }
-            if (InterpretAndCheckFlow(state, arrayIndex.Left, out array)) {
-                return array;
-            }
-            if (InterpretAndCheckFlow(state, arrayIndex.Right, out index)) {
-                return index;
             }
 
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
             }
 
-            ((Array)array).SetValue(value, (int)index);
+            if (index.Indexer != null) {
+                // For indexed properties, just call the setter
+                InvokeMethod(index.Indexer.GetSetMethod(true), instance, args);
+            } else if (index.Arguments.Count != 1) {
+                // Multidimensional arrays, call set
+                var set = index.Object.Type.GetMethod("Set", BindingFlags.Public | BindingFlags.Instance);
+                InvokeMethod(set, instance, args);
+            } else {
+                ((Array)instance).SetValue(value, (int)args[0]);
+            }
+
             return value;
         }
 
@@ -837,8 +841,8 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretAssignmentExpression(InterpreterState state, Expression expr) {
             AssignmentExpression node = (AssignmentExpression)expr;
             switch (node.Expression.NodeType) {
-                case ExpressionType.ArrayIndex:
-                    return InterpretArrayIndexAssignment(state, node);
+                case ExpressionType.Index:
+                    return InterpretIndexAssignment(state, node);
                 case ExpressionType.MemberAccess:
                     return InterpretMemberAssignment(state, node);
                 case ExpressionType.Parameter:
@@ -878,10 +882,6 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretMemberAssignment(InterpreterState state, AssignmentExpression node) {
             MemberExpression lvalue = (MemberExpression)node.Expression;
 
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, lvalue.Expression, node.Value);
-            }
-
             object target = null, value;
             if (lvalue.Expression != null) {
                 if (InterpretAndCheckFlow(state, lvalue.Expression, out target)) {
@@ -912,34 +912,8 @@ namespace Microsoft.Scripting.Interpretation {
             return value;
         }
 
-        private static object InterpretIndexedPropertyAssignment(InterpreterState state, AssignmentExpression node) {
-            IndexedPropertyExpression lvalue = (IndexedPropertyExpression)node.Expression;
-
-            if (node.IsDynamic) {
-                throw new NotImplementedException("interpretation of dynamic indexed properties NYI");
-            }
-
-            Expression[] setArgs = new Expression[lvalue.Arguments.Count + 1];
-            lvalue.Arguments.CopyTo(setArgs, 0);
-            setArgs[lvalue.Arguments.Count] = node.Value;
-
-            MethodCallExpression setCall = Expression.Call(
-                lvalue.Object,
-                lvalue.SetMethod,
-                setArgs
-            );
-
-            return InterpretMethodCallExpression(state, setCall);
-
-        }
-
-
         private static object InterpretMemberExpression(InterpreterState state, Expression expr) {
             MemberExpression node = (MemberExpression)expr;
-
-            if (node.IsDynamic) {
-                return InterpretCallSite(state, node, node.Expression);
-            }
 
             object self = null;
             if (node.Expression != null) {
@@ -1075,15 +1049,6 @@ namespace Microsoft.Scripting.Interpretation {
             ContinueStatement node = (ContinueStatement)expr;
             SetSourceLocation(state, node);
             return ControlFlow.Continue;
-        }
-
-        private static object InterpretDeleteExpression(InterpreterState state, Expression expr) {
-            DeleteExpression node = (DeleteExpression)expr;
-            SetSourceLocation(state, node);
-
-            Debug.Assert(node.IsDynamic && node.Expression.NodeType == ExpressionType.MemberAccess);
-
-            return InterpretCallSite(state, node, ((MemberExpression)node.Expression).Expression);
         }
 
         private static object InterpretDoStatement(InterpreterState state, Expression expr) {
