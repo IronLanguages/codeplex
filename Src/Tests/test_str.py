@@ -134,7 +134,9 @@ def test_rsplit():
 
     Assert("1--2--3--4--5--6--7--8--9--0".rsplit("--", 2) == ['1--2--3--4--5--6--7--8', '9', '0'])
 
-    AreEqual("".rsplit(None), [])
+    for temp_string in ["", "  ", "   ", "\t", " \t", "\t ", "\t\t", "\n", "\n\n", "\n \n"]:
+        AreEqual(temp_string.rsplit(None), [])
+    
     AreEqual("ab".rsplit(None), ["ab"])
     AreEqual("a b".rsplit(None), ["a", "b"])
 

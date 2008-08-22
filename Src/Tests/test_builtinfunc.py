@@ -470,12 +470,41 @@ def test_cp16000():
         Assert(type(id(x)) in [int, long], 
                str(type(id(x))))
 
+#------------------------------------------------------------------------------
 def test_locals_contains():
-    global x
-    x = 2
+    global locals_globals
+    locals_globals = 2
     def func():
-        Assert(not 'x' in locals())
+        Assert(not 'locals_globals' in locals())
     func()
 
+def in_main():
+    Assert(not 'locals_globals' in locals())
+    Assert(not 'locals_globals' in globals())
+    
+    def in_main_sub1():
+        Assert(not 'locals_globals' in locals())
+        Assert(not 'locals_globals' in globals())
+    
+    def in_main_sub2():
+        global local_globals
+        Assert(not 'locals_globals' in locals())
+        Assert('locals_globals' in globals())
+        
+        def in_main_sub3():
+            local_globals = 42
+            Assert(not 'locals_globals' in locals())
+            Assert('locals_globals' in globals())
+        
+        in_main_sub3()
+    
+    in_main_sub1()
+    return in_main_sub2
+    
+temp_func = in_main()
+locals_globals = 7
+temp_func()
+
+#------------------------------------------------------------------------------
 run_test(__name__)
 

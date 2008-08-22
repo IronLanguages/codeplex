@@ -1001,6 +1001,9 @@ class Test(object):
 def test_import_path_seperator():
     """verify using the path seperator in a direct call will result in an ImportError"""
     AssertError(ImportError, __import__, 'lib\\warning_util')
+    __import__('lib.warning_util')
+    
+    
 def test_load_package():
     import lib
     pkg = imp.load_package('libcopy', lib.__path__[0])
