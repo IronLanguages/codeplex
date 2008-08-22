@@ -97,7 +97,16 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             MSAst.Expression variable = _reference.Variable;
             if (variable != null && !ag.Block.Global) {
-                MSAst.Expression del = AstUtils.Delete(variable, Span);
+                // keep the variable alive until we hit the del statement to
+                // better match CPython's lifetimes
+                MSAst.Expression del = Ast.Comma(
+                    Ast.Call(                                   
+                        typeof(GC).GetMethod("KeepAlive"),
+                        variable
+                    ),
+                    AstUtils.Delete(variable, Span)
+                );
+                    
                 if (!_assigned) {
                     del = Ast.Block(
                         Transform(ag, variable.Type),

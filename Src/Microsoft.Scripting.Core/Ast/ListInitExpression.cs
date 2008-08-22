@@ -26,7 +26,7 @@ namespace System.Linq.Expressions {
         NewExpression _newExpression;
         ReadOnlyCollection<ElementInit> _initializers;
         internal ListInitExpression(NewExpression newExpression, ReadOnlyCollection<ElementInit> initializers)
-            : base(ExpressionType.ListInit, newExpression.Type, null, null) {
+            : base(ExpressionType.ListInit, newExpression.Type, null) {
             _newExpression = newExpression;
             _initializers = initializers;
         }

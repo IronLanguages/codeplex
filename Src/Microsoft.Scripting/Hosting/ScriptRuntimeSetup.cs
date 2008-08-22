@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Hosting {
                     new[] { ".jsx", ".js" }
                 );
 
-                AddLanguage("Ruby.Runtime.RubyContext", IronRubyAssembly, 
+                AddLanguage("IronRuby.Runtime.RubyContext", IronRubyAssembly, 
                     "IronRuby",
                     new[] { "rb", "ruby", "ironruby" },
                     new[] { ".rb" }

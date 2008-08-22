@@ -20,7 +20,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _expr;
 
         internal YieldStatement(Annotations annotations, Expression expression)
-            : base(ExpressionType.YieldStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.YieldStatement, typeof(void), annotations) {
             _expr = expression;
         }
 

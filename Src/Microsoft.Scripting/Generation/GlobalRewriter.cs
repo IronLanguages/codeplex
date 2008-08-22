@@ -13,11 +13,14 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -32,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
     /// nodes go away. All that should be left is global support, and even that
     /// can go once OptimizedModules moves into Python.
     /// </summary>
-    public abstract class GlobalRewriter : DynamicNodeRewriter {
+    public abstract class GlobalRewriter : ExpressionTreeVisitor {
         private Expression _context;
 
         // Rewrite entry points
@@ -85,7 +88,9 @@ namespace Microsoft.Scripting.Generation {
                 return Rewrite(ccs);
             }
 
-            return base.VisitExtension(node);
+            // Must remove extension nodes because they could contain
+            // one of the above node types. See, e.g. DeleteUnboundExpression
+            return VisitNode(node.ReduceToKnown());
         }
 
         protected override Expression Visit(AssignmentExpression node) {
@@ -97,6 +102,29 @@ namespace Microsoft.Scripting.Generation {
             }
 
             return base.Visit(node);
+        }
+        
+        protected override Expression Visit(DynamicExpression node) {
+            Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
+
+            // Rewite call site as constant
+            var siteExpr = Visit(Expression.Constant(DynamicSiteHelpers.MakeSite(node.Binder, siteType)));
+
+            // Rewrite all of the arguments
+            var args = VisitNodes(node.Arguments);
+
+            // TODO: this expands the site's expression twice, which is only
+            // correct when it's a constant
+            //
+            // site.Target.Invoke(site, *args)
+            return Expression.Call(
+                Expression.Field(
+                    siteExpr,
+                    siteType.GetField("Target")
+                ),
+                node.DelegateType.GetMethod("Invoke"),
+                ArrayUtils.Insert(siteExpr, args)
+            );
         }
 
         #endregion

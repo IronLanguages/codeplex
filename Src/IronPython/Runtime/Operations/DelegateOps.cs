@@ -16,6 +16,8 @@
 using System;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Operations {
 
@@ -34,6 +36,29 @@ namespace IronPython.Runtime.Operations {
 
             return BinderOps.GetDelegate(context, function, type.UnderlyingSystemType);
         }
+
+        public static Delegate/*!*/ InPlaceAdd(Delegate/*!*/ self, Delegate/*!*/ other) {
+            ContractUtils.RequiresNotNull(self, "self");
+            ContractUtils.RequiresNotNull(other, "other");
+
+            return Delegate.Combine(self, other);            
+        }
+
+        public static Delegate/*!*/ InPlaceSubtract(Delegate/*!*/ self, Delegate/*!*/ other) {
+            ContractUtils.RequiresNotNull(self, "self");
+            ContractUtils.RequiresNotNull(other, "other");
+
+            return Delegate.Remove(self, other);
+        }
+
+        public static object Call(CodeContext/*!*/ context, Delegate @delegate, params object[] args) {
+            return PythonContext.GetContext(context).Call(@delegate, args);
+        }
+
+        public static object Call(CodeContext/*!*/ context, Delegate @delegate, [ParamDictionary]IAttributesCollection dict, params object[] args) {
+            return PythonContext.GetContext(context).CallWithKeywords(@delegate, args, dict);
+        }
+
     }
 
     /// <summary>

@@ -119,6 +119,30 @@ namespace Microsoft.Scripting.Utils {
             return new List<T>(enumerable).ToArray();
         }
 
+        internal static bool Any<T>(this IEnumerable<T> source) {
+            using (IEnumerator<T> e = source.GetEnumerator()) {
+                return e.MoveNext();
+            }
+        }
+
+        internal static bool Any<T>(this IEnumerable<T> source, Func<T, bool> predicate) {
+            foreach (T element in source) {
+                if (predicate(element)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        internal static bool All<T>(this IEnumerable<T> source, Func<T, bool> predicate) {
+            foreach (T element in source) {
+                if (!predicate(element)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
 #if !SILVERLIGHT // ICloneable
         internal static T Copy<T>(this T obj) where T : ICloneable {
             return (T)obj.Clone();

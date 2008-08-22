@@ -187,7 +187,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldInstanceConvertToIEnumerableNonThrowing"),
                                     Ast.Constant(BinderState.GetBinderState(conversion).Context),
-                                    Expression
+                                    self.Expression
                                 )
                             ),
                             Ast.Null()

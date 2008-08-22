@@ -814,6 +814,7 @@ namespace IronPython.Runtime {
             }
 
             if (fromType == BigIntegerType && toType == Int64Type) return true;
+            if (toType.IsEnum && fromType == Enum.GetUnderlyingType(toType)) return true;
 
             return false;
         }

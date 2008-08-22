@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _label;
 
         internal DoStatement(Annotations annotations, LabelTarget label, Expression test, Expression body)
-            : base(ExpressionType.DoStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.DoStatement, typeof(void), annotations) {
             _test = test;
             _body = body;
             _label = label;

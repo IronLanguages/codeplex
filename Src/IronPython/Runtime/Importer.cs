@@ -272,7 +272,11 @@ namespace IronPython.Runtime {
             if (TryGetGlobalValue(globals, Symbols.Path, out attribute) && (path = attribute as List) != null) {
                 // found __path__, importing nested module. The actual name of the nested module
                 // is the name of the mod plus the name of the imported module
-                full = (StringOps.rsplit(modName, ".", level - 1)[0] as string) + "." + name;
+                if (level == -1) {
+                    full = modName + "." + name;
+                } else {
+                    full = (StringOps.rsplit(modName, ".", level - 1)[0] as string) + "." + name;
+                }
                 return true;                
             }
 
@@ -619,6 +623,10 @@ namespace IronPython.Runtime {
             }
 
             var scope = ExecuteSourceUnit(sourceUnit);
+            if (sourceUnit.LanguageContext != context) {
+                // foreign language, we should publish in sys.modules too
+                context.SystemStateModules[name] = scope;
+            }
             sourceUnit.LanguageContext.DomainManager.Globals.SetName(SymbolTable.StringToId(name), scope);
             return scope;
         }

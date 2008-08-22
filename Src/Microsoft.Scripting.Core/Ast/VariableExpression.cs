@@ -26,7 +26,7 @@ namespace System.Linq.Expressions {
         private readonly string _name;
 
         internal VariableExpression(Type type, string name, Annotations annotations)
-            : base(ExpressionType.Variable, type, false, annotations, true, true, null) {
+            : base(ExpressionType.Variable, type, false, annotations, true, true) {
             Debug.Assert(type != typeof(void));
 
             _name = name;

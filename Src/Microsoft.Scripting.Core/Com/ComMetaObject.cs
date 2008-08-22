@@ -28,34 +28,42 @@ namespace System.Scripting.Com {
         #region MetaObject
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 
         public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(Wrap(args));
         }
 

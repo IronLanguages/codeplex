@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly Type _typeOperand;
 
         internal TypeBinaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type typeOperand)
-            : base(nodeType, typeof(bool), annotations, null) {
+            : base(nodeType, typeof(bool), annotations) {
             _expression = expression;
             _typeOperand = typeOperand;
         }

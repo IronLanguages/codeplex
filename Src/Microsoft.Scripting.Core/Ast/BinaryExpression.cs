@@ -32,19 +32,11 @@ namespace System.Linq.Expressions {
         private readonly LambdaExpression _conversion;
 
         internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type)
-            : this(annotations, nodeType, left, right, type, null, null, null) {
+            : this(annotations, nodeType, left, right, type, null, null) {
         }
 
         internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type, MethodInfo method)
-            : this(annotations, nodeType, left, right, type, method, null, null) {
-        }
-
-        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type, CallSiteBinder bindingInfo)
-            : this(annotations, nodeType, left, right, type, null, null, bindingInfo) {
-        }
-
-        internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type, LambdaExpression conversion)
-            : this(annotations, nodeType, left, right, type, null, conversion, null) {
+            : this(annotations, nodeType, left, right, type, method, null) {
         }
 
         internal BinaryExpression(Annotations annotations,
@@ -53,14 +45,9 @@ namespace System.Linq.Expressions {
                                   Expression right,
                                   Type type,
                                   MethodInfo method,
-                                  LambdaExpression conversion,
-                                  CallSiteBinder bindingInfo)
+                                  LambdaExpression conversion)
 
-            : base(nodeType, type, false, annotations, true, nodeType == ExpressionType.ArrayIndex, bindingInfo) {
-            if (IsBound) {
-                RequiresBound(left, "left");
-                RequiresBound(right, "right");
-            }
+            : base(nodeType, type, false, annotations, true, nodeType == ExpressionType.ArrayIndex) {
             _left = left;
             _right = right;
             _method = method;
@@ -420,7 +407,10 @@ namespace System.Linq.Expressions {
                 case ExpressionType.Coalesce:
                     return Expression.Coalesce(left, right, conversion);
                 case ExpressionType.ArrayIndex:
+                    // We need to return the LinqV1 ArrayIndex node
+#pragma warning disable 618
                     return Expression.ArrayIndex(left, right);
+#pragma warning restore 618
                 case ExpressionType.RightShift:
                     return Expression.RightShift(left, right, method);
                 case ExpressionType.LeftShift:
@@ -679,7 +669,7 @@ namespace System.Linq.Expressions {
                 !ParameterIsAssignable(pms[0], left.Type)) {
                 throw Error.OperandTypesDoNotMatchParameters(ExpressionType.Coalesce, conversion.ToString());
             }
-            return new BinaryExpression(Annotations.Empty, ExpressionType.Coalesce, left, right, right.Type, conversion);
+            return new BinaryExpression(Annotations.Empty, ExpressionType.Coalesce, left, right, right.Type, null, conversion);
         }
 
         //CONFORMING
@@ -1037,9 +1027,10 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// Creates a binary expression representing array indexing: array[index]
         /// </summary>
+        [Obsolete("use Expression.ArrayAccess instead")]
         public static BinaryExpression ArrayIndex(Expression array, Expression index) {
-            ContractUtils.RequiresNotNull(array, "array");
-            ContractUtils.RequiresNotNull(index, "index");
+            RequiresCanRead(array, "array");
+            RequiresCanRead(index, "index");
             if (index.Type != typeof(int))
                 throw Error.ArgumentMustBeArrayIndexType();
 
@@ -1052,116 +1043,6 @@ namespace System.Linq.Expressions {
             return new BinaryExpression(Annotations.Empty, ExpressionType.ArrayIndex, array, index, arrayType.GetElementType());
         }
 
-        #endregion
-
-        #region dynamic operations
-
-        private static BinaryExpression MakeDynamicBinaryExpression(ExpressionType nodeType, Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            RequiresCanRead(left, "left");
-            RequiresCanRead(right, "right");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-
-            return new BinaryExpression(annotations, nodeType, left, right, result, bindingInfo);
-        }
-
-        public static BinaryExpression ArrayIndex(Annotations annotations, Expression array, Expression index, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.ArrayIndex, annotations, array, index, result, bindingInfo);
-        }
-
-        public static BinaryExpression Equal(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Equal, annotations, left, right, result, bindingInfo);
-        }
-
-        public static BinaryExpression NotEqual(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.NotEqual, annotations, left, right, result, bindingInfo);
-        }
-
-        public static BinaryExpression GreaterThan(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.GreaterThan, annotations, left, right, result, bindingInfo);
-        }
-
-        public static BinaryExpression LessThan(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.LessThan, annotations, left, right, result, bindingInfo);
-        }
-
-        public static BinaryExpression GreaterThanOrEqual(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.GreaterThanOrEqual, annotations, left, right, result, bindingInfo);
-        }
-
-        public static BinaryExpression LessThanOrEqual(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.LessThanOrEqual, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Adds two arithmetic values of the same type.
-        /// </summary>
-        public static BinaryExpression Add(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Add, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Subtracts two arithmetic values of the same type.
-        /// </summary>
-        public static BinaryExpression Subtract(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Subtract, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Divides two arithmetic values of the same type.
-        /// </summary>
-        public static BinaryExpression Divide(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Divide, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Modulos two arithmetic values of the same type.
-        /// </summary>
-        public static BinaryExpression Modulo(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Modulo, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Multiples two arithmetic values of the same type.
-        /// </summary>
-        public static BinaryExpression Multiply(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Multiply, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Left shifts one arithmetic value by another aritmetic value of the same type.
-        /// </summary>
-        public static BinaryExpression LeftShift(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.LeftShift, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Right shifts one arithmetic value by another aritmetic value of the same type.
-        /// </summary>
-        public static BinaryExpression RightShift(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.RightShift, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Performs bitwise and of two values of the same type.
-        /// </summary>
-        public static BinaryExpression And(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.And, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Performs bitwise or of two values of the same type.
-        /// </summary>
-        public static BinaryExpression Or(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.Or, annotations, left, right, result, bindingInfo);
-        }
-
-        /// <summary>
-        /// Performs exclusive or of two values of the same type.
-        /// </summary>
-        public static BinaryExpression ExclusiveOr(Annotations annotations, Expression left, Expression right, Type result, CallSiteBinder bindingInfo) {
-            return MakeDynamicBinaryExpression(ExpressionType.ExclusiveOr, annotations, left, right, result, bindingInfo);
-        }
-
-        #endregion
+        #endregion        
     }
 }

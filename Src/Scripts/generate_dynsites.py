@@ -56,10 +56,10 @@ easy_sites="""/// <summary>
 /// </summary>
 [GeneratedCode("DLR", "2.0")]
 public struct DynamicSite<%(ts)s> {
-    private CallSite<DynamicSiteTarget<CodeContext, %(ts)s>> _site;
+    private CallSite<Func<CallSite, CodeContext, %(ts)s>> _site;
     
     public DynamicSite(OldDynamicAction action) {
-        _site = CallSite<DynamicSiteTarget<CodeContext, %(ts)s>>.Create(action);
+        _site = CallSite<Func<CallSite, CodeContext, %(ts)s>>.Create(action);
     }
 
     public static DynamicSite<%(ts)s> Create(OldDynamicAction action) {
@@ -74,7 +74,7 @@ public struct DynamicSite<%(ts)s> {
     
     public void EnsureInitialized(OldDynamicAction action) {
         if (_site == null) {
-            Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, %(ts)s>>.Create(action), null);
+            Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, %(ts)s>>.Create(action), null);
         }
     }
 
@@ -92,6 +92,7 @@ site_targets = """/// <summary>
 /// Dynamic site delegate type - arity %(arity)d
 /// </summary>
 [GeneratedCode("DLR", "2.0")]
+[Obsolete("use Func<CallSite, %(ts)s> or a custom delegate instead")]
 public delegate TRet DynamicSiteTarget<%(ts)s>(CallSite site%(tparams)s);
 """
 
@@ -101,16 +102,20 @@ def gen_dynamic_site_targets(cw):
     for n in range(MaxTypes):
         cw.write(site_targets, ts = gsig(n), tparams = gparms(n), arity = n)
 
-def gen_site_target_maker(cw):
-    for i in range(MaxTypes):
-        cw.write("case %(length)d: return typeof(DynamicSiteTarget<%(targs)s>).MakeGenericType(types);", length = i + 1, targs = "," * i)
+def gen_delegate_func(cw):
+    for i in range(MaxTypes + 1):
+        cw.write("case %(length)d: return typeof(Func<%(targs)s>).MakeGenericType(types);", length = i + 1, targs = "," * i)
 
-def gen_max_arity(cw):
-    cw.write('internal const int MaximumArity = %d;' % MaxTypes)
+def gen_delegate_action(cw):
+    for i in range(MaxTypes):
+        cw.write("case %(length)d: return typeof(Action<%(targs)s>).MakeGenericType(types);", length = i + 1, targs = "," * i)
+
+def gen_max_delegate_arity(cw):
+    cw.write('private const int MaximumArity = %d;' % (MaxTypes + 1))
 
 mismatch = """// Mismatch detection - arity %(size)d
-public static TRet Mismatch%(size)d<%(ts)s>(Matchmaker mm, %(params)s) {
-    mm.Match = false;
+internal static TRet Mismatch%(size)d<%(ts)s>(StrongBox<bool> box, %(params)s) {
+    box.Value = false;
     return default(TRet);
 }
 """
@@ -121,8 +126,8 @@ def gen_matchmaker(cw):
         cw.write(mismatch, ts = gsig(n), size = n, params = "CallSite site" + gparms(n))
 
 mismatch_void = """// Mismatch detection - arity %(size)d
-public static void MismatchVoid%(size)d<%(ts)s>(Matchmaker mm, %(params)s) {
-    mm.Match = false;
+internal static void MismatchVoid%(size)d<%(ts)s>(StrongBox<bool> box, %(params)s) {
+    box.Value = false;
 }
 """
 
@@ -132,7 +137,7 @@ def gen_void_matchmaker(cw):
         cw.write(mismatch_void, ts = gsig_noret(n), size = n, params = "CallSite site" + gparms(n))
 
 splatcaller = """[Obsolete("used by generated code", true)]
-public static object CallHelper%(size)d(CallSite<DynamicSiteTarget<object%(ts)s>> site, object[] args) {
+public static object CallHelper%(size)d(CallSite<Func<CallSite, object%(ts)s>> site, object[] args) {
     return site.Target(site%(args)s);
 }
 """
@@ -169,7 +174,7 @@ def gen_construction_helpers(cw):
 update_target="""/// <summary>
 /// Site update code - arity %(arity)d
 /// </summary>
-public static TRet Update%(arity)d<T, %(ts)s>(CallSite site%(tparams)s) where T : class {
+internal static TRet Update%(arity)d<T, %(ts)s>(CallSite site%(tparams)s) where T : class {
     return (TRet)((CallSite<T>)site).UpdateAndExecute(new object[] { %(targs)s });
 }
 """
@@ -181,7 +186,7 @@ def gen_update_targets(cw):
 update_target_void = """/// <summary>
 /// Site update code - arity %(arity)d
 /// </summary>
-public static void UpdateVoid%(arity)d<T, %(ts)s>(CallSite site%(tparams)s) where T : class {
+internal static void UpdateVoid%(arity)d<T, %(ts)s>(CallSite site%(tparams)s) where T : class {
     ((CallSite<T>)site).UpdateAndExecute(new object[] { %(targs)s });
 }
 """
@@ -193,7 +198,7 @@ def gen_void_update_targets(cw):
 
 
 matchcaller_target="""/// Matchcaller - arity %(arity)d
-public static object Call%(arity)d<%(ts)s>(Func<CallSite, %(ts)s> target, CallSite site, object[] args) {
+internal static object Call%(arity)d<%(ts)s>(Func<CallSite, %(ts)s> target, CallSite site, object[] args) {
     return (object)target(site%(targs)s);
 }
 """
@@ -203,7 +208,7 @@ def gen_matchcaller_targets(cw):
         cw.write(matchcaller_target, ts = gsig(n), targs = gargs_indexwithcast(n), arity = n)
 
 matchcaller_target_void = """// Matchcaller - arity %(arity)d
-public static object CallVoid%(arity)d<%(ts)s>(Action<CallSite, %(ts)s> target, CallSite site, object[] args) {
+internal static object CallVoid%(arity)d<%(ts)s>(Action<CallSite, %(ts)s> target, CallSite site, object[] args) {
     target(site%(targs)s);
     return null;
 }
@@ -215,18 +220,19 @@ def gen_void_matchcaller_targets(cw):
 
 def main():
     return generate(
+        ("Delegate Action Types", gen_delegate_action),
+        ("Delegate Func Types", gen_delegate_func),
+        ("Maximum Delegate Arity", gen_max_delegate_arity),
         ("Predefined Update Targets", gen_update_targets),
         ("Predefined Void Update Targets", gen_void_update_targets),
         ("Dynamic Site Targets", gen_dynamic_site_targets),
         ("Easy Dynamic Sites", gen_easy_sites),
-        ("Maximum Site Target Arity", gen_max_arity),
         ("Matchmaker", gen_matchmaker),
         ("Void Matchmaker", gen_void_matchmaker),
         ("Matchcaller Targets", gen_matchcaller_targets),
         ("Matchcaller Void Targets", gen_void_matchcaller_targets),
         ("SplatCallSite call helpers", gen_splatsite),
         ("Dynamic Sites Construction Helpers", gen_construction_helpers),
-        ("Dynamic Site Target Type Maker", gen_site_target_maker)
     )
 
 if __name__ == "__main__":

@@ -71,10 +71,9 @@ namespace Microsoft.Scripting.Actions {
             return
                 TryAssignableConversion(toType, knownType, restrictions, arg) ??           // known type -> known type
                 TryExtensibleConversion(toType, knownType, restrictions, arg) ??           // Extensible<T> -> Extensible<T>.Value
-                TryUserDefinedConversion(kind, toType, knownType, restrictions, arg) ?? // op_Implicit
+                TryUserDefinedConversion(kind, toType, knownType, restrictions, arg) ??    // op_Implicit
                 TryImplicitNumericConversion(toType, knownType, restrictions, arg) ??      // op_Implicit
-                TryNullableConversion(toType, kind, knownType, restrictions, arg) ??         // null -> Nullable<T> or T -> Nullable<T>
-                TryEnumerableConversion(toType, knownType, restrictions, arg) ??           // IEnumerator -> IEnumerable / IEnumerator<T> -> IEnumerable<T>
+                TryNullableConversion(toType, kind, knownType, restrictions, arg) ??       // null -> Nullable<T> or T -> Nullable<T>
                 TryNullConversion(toType, knownType, restrictions);                        // null -> reference type
         }
 
@@ -84,10 +83,6 @@ namespace Microsoft.Scripting.Actions {
         private static MetaObject TryAssignableConversion(Type toType, Type type, Restrictions restrictions, MetaObject arg) {
             if (toType.IsAssignableFrom(type) ||
                 (type == typeof(None) && (toType.IsClass || toType.IsInterface))) {
-                if (toType == typeof(IEnumerator) && typeof(IEnumerable).IsAssignableFrom(type)) {
-                    // Special case to handle C#-defined enumerators that implement both IEnumerable and IEnumerator
-                    return null;
-                }
                 // MakeSimpleConversionTarget handles the ConversionResultKind check
                 return MakeSimpleConversionTarget(toType, restrictions, arg);
             }
@@ -222,18 +217,6 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
-            return null;
-        }
-
-        /// <summary>
-        /// Checks if there's a conversion to IEnumerator or IEnumerator of T via calling GetEnumerator
-        /// </summary>
-        private static MetaObject TryEnumerableConversion(Type toType, Type knownType, Restrictions restrictions, MetaObject arg) {
-            if (toType == typeof(IEnumerator)) {
-                return MakeIEnumerableTarget(knownType, restrictions, arg);
-            } else if (toType.IsInterface && toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(IEnumerator<>)) {
-                return MakeIEnumeratorOfTTarget(toType, knownType, restrictions, arg);
-            }
             return null;
         }
 
@@ -521,41 +504,6 @@ namespace Microsoft.Scripting.Actions {
                 curType = curType.BaseType;
             } while (curType != null);
             return fromType;
-        }
-
-        /// <summary>
-        /// Makes a conversion target which converts IEnumerable -> IEnumerator
-        /// </summary>
-        private static MetaObject MakeIEnumerableTarget(Type knownType, Restrictions restrictions, MetaObject arg) {
-            bool canConvert = typeof(IEnumerable).IsAssignableFrom(knownType);
-
-            if (canConvert) {
-                return new MetaObject(
-                    Ast.Call(
-                        Ast.ConvertHelper(arg.Expression, typeof(IEnumerable)),
-                        typeof(IEnumerable).GetMethod("GetEnumerator")
-                    ),
-                    restrictions
-                );
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Makes a conversion target which converts IEnumerable of T to IEnumerator of T
-        /// </summary>
-        private static MetaObject MakeIEnumeratorOfTTarget(Type toType, Type knownType, Restrictions restrictions, MetaObject arg) {
-            Type enumType = typeof(IEnumerable<>).MakeGenericType(toType.GetGenericArguments()[0]);
-            if (enumType.IsAssignableFrom(knownType)) {
-                return new MetaObject(
-                    Ast.Call(
-                        Ast.ConvertHelper(arg.Expression, enumType),
-                        toType.GetMethod("GetEnumerator")
-                    ),
-                    restrictions
-                );
-            }
-            return null;
         }
 
         /// <summary>

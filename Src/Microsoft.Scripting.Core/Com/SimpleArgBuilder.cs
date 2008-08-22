@@ -18,6 +18,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Globalization;
 
 namespace System.Scripting.Com {
     /// <summary>
@@ -80,7 +81,7 @@ namespace System.Scripting.Com {
                 }
             }
 
-            return System.Convert.ChangeType(obj, toType);
+            return System.Convert.ChangeType(obj, toType, CultureInfo.InvariantCulture);
         }
     }
 }

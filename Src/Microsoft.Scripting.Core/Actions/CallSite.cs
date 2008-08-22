@@ -19,6 +19,7 @@ using System.Linq.Expressions;
 using System.Scripting.Utils;
 using System.Text;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace System.Scripting.Actions {
 
@@ -77,12 +78,14 @@ namespace System.Scripting.Actions {
         /// <summary>
         /// The update delegate. Called when the dynamic site experiences cache miss
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public readonly T Update;
 
         /// <summary>
         /// The Level 0 cache - a delegate specialized based on the site history.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         public T Target;
 
         /// <summary>
@@ -124,6 +127,7 @@ namespace System.Scripting.Actions {
         /// </summary>
         /// <param name="args">The arguments to the rule as provided from the call site at runtime.</param>
         /// <returns>The result of executing the rule.</returns>
+        [Obsolete("Do not call this method")]
         public object UpdateAndExecute(object[] args) {
             //
             // Declare the locals here upfront. It actually saves JIT stack space.
@@ -141,8 +145,8 @@ namespace System.Scripting.Actions {
             //
             Type typeofT = typeof(T);               // Calculate this only once
 
-            Matchmaker mm = new Matchmaker();
-            CallSite site = CreateMatchmakerCallSite(mm);
+            StrongBox<bool> match = new StrongBox<bool>();
+            CallSite site = CreateMatchmakerCallSite(match);
             MatchCallerTarget<T> caller = MatchCaller.MakeCaller<T>();
 
             //
@@ -167,7 +171,8 @@ namespace System.Scripting.Actions {
                         originalMonomorphicRule = rule;
                     }
 
-                    mm.Reset();
+                    // Reset
+                    match.Value = true;
 
                     //
                     // Execute the rule
@@ -176,11 +181,11 @@ namespace System.Scripting.Actions {
 
                     try {
                         result = caller(ruleTarget, site, args);
-                        if (mm.Match) {
+                        if (match.Value) {
                             return result;
                         }
                     } finally {
-                        if (mm.Match) {
+                        if (match.Value) {
                             //
                             // Match in Level 1 cache. We saw the arguments that match the rule before and now we
                             // see them again. The site is polymorphic. Update the delegate and keep running
@@ -213,7 +218,8 @@ namespace System.Scripting.Actions {
                         originalMonomorphicRule = rule;
                     }
 
-                    mm.Reset();
+                    // Reset
+                    match.Value = true;
 
                     //
                     // Execute the rule
@@ -222,11 +228,11 @@ namespace System.Scripting.Actions {
 
                     try {
                         result = caller(ruleTarget, site, args);
-                        if (mm.Match) {
+                        if (match.Value) {
                             return result;
                         }
                     } finally {
-                        if (mm.Match) {
+                        if (match.Value) {
                             //
                             // Rule worked. Add it to level 1 cache
                             //
@@ -259,18 +265,19 @@ namespace System.Scripting.Actions {
                 //
                 // Execute the rule on the matchmaker site
                 //
-
-                mm.Reset();
+                
+                // Reset 
+                match.Value = true;
 
                 Target = ruleTarget = rule.RuleSet.GetTarget();
 
                 try {
                     result = caller(ruleTarget, site, args);
-                    if (mm.Match) {
+                    if (match.Value) {
                         return result;
                     }
                 } finally {
-                    if (mm.Match) {
+                    if (match.Value) {
                         //
                         // The rule worked. Add it to level 1 cache.
                         //
@@ -286,8 +293,8 @@ namespace System.Scripting.Actions {
             }
         }
 
-        private CallSite CreateMatchmakerCallSite(Matchmaker mm) {
-            return new CallSite<T>(_binder, mm.CreateMatchMakingDelegate<T>());
+        private CallSite CreateMatchmakerCallSite(StrongBox<bool> box) {
+            return new CallSite<T>(_binder, Matchmaker.CreateMatchMakingDelegate<T>(box));
         }
 
         private Rule<T> CreateNewRule(Rule<T> originalMonomorphicRule, object[] args) {

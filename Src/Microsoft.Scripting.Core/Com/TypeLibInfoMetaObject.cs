@@ -29,6 +29,7 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             string name = action.Name;
 
             if (name == _info.Name) {
@@ -51,6 +52,8 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+
             if (action.Operation == "GetMemberNames" || action.Operation == "MemberNames") {
                 return new MetaObject(
                     Expression.Call(

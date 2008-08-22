@@ -1080,7 +1080,6 @@ def test_cli_interop():
     AreEqual(pyNow.day, now.Day)
     AreEqual(pyNow.year, now.Year)
 
-#@skip("win32")  #Because datetime.datetime.__init__ takes a System.DateTime.Now
 def test_cp13704():
     '''
     TODO: 

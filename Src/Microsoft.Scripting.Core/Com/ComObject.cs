@@ -111,9 +111,9 @@ namespace System.Scripting.Com {
 
         #region Abstract Members
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]   // TODO: Fix
-        public abstract IList<string> GetMemberNames();
-
+        public abstract IList<string> MemberNames {
+            get;
+        }
 
         public abstract string Documentation {
             get;

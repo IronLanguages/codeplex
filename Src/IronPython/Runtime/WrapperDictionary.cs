@@ -13,10 +13,12 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
+    [Serializable]
     internal class WrapperDictionaryStorage : DictionaryStorage {
         private IAttributesCollection/*!*/ _data;
 

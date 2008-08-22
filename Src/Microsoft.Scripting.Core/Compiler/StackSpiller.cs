@@ -118,10 +118,20 @@ namespace System.Linq.Expressions.Compiler {
 
         [Conditional("DEBUG")]
         private static void VerifyRewrite(Result result, Expression node) {
+            Debug.Assert(result.Node != null);
+
             // (result.Action == RewriteAction.None) if and only if (node == result.Node)
             Debug.Assert((result.Action == RewriteAction.None) ^ (node != result.Node), "rewrite action does not match node object identity");
-            // if we have Copy, then node type must match.
-            Debug.Assert(((result.Action != RewriteAction.Copy) || (node.NodeType == result.Node.NodeType)), "rewrite action does not match node object kind");
+
+            // if the original node is an extension node, it should have been rewritten
+            Debug.Assert(result.Node.NodeType != ExpressionType.Extension, "extension nodes must be rewritten");
+
+            // if we have Copy, then node type must match
+            Debug.Assert(
+                result.Action != RewriteAction.Copy || node.NodeType == result.Node.NodeType || node.NodeType == ExpressionType.Extension,
+                "rewrite action does not match node object kind"
+            );
+
             // Type must always match.
             Debug.Assert(node.Type == result.Node.Type, "rewritten object must have same type as original");
         }
@@ -133,52 +143,39 @@ namespace System.Linq.Expressions.Compiler {
             return result;
         }
 
-        // ActionExpression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
+        // DynamicExpression
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static Result RewriteActionExpression(StackSpiller self, Expression expr, Stack stack) {
-            throw Error.DynamicNotReduced();
+        private static Result RewriteDynamicExpression(StackSpiller self, Expression expr, Stack stack) {
+            var node = (DynamicExpression)expr;
+
+            // CallSite is on the stack
+            ChildRewriter cr = new ChildRewriter(self, Stack.NonEmpty, node.Arguments.Count);
+            cr.Add(node.Arguments);
+            return cr.Finish(cr.Rewrite ? new DynamicExpression(node.Type, node.Annotations, node.DelegateType, node.Binder, cr[0, -1]) : expr);
         }
 
-        // array index assignment
-        private static Result RewriteArrayIndexAssignment(StackSpiller self, AssignmentExpression node, Stack stack) {
-            BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
+        private static Result RewriteIndexAssignment(StackSpiller self, AssignmentExpression node, Stack stack) {
+            IndexExpression index = (IndexExpression)node.Expression;
 
-            ChildRewriter cr = new ChildRewriter(self, stack, 3);
+            ChildRewriter cr = new ChildRewriter(self, stack, 2 + index.Arguments.Count);
 
-            // Evaluation order is: array, index, value
-            cr.Add(arrayIndex.Left);
-            cr.Add(arrayIndex.Right);
-            cr.Add(node.Value);
-
-            return cr.Finish(cr.Rewrite ? Expression.AssignArrayIndex(cr[0], cr[1], cr[2]) : node);
-        }
-
-        private static Result RewriteIndexedPropertyAssignment(StackSpiller self, AssignmentExpression node, Stack stack) {
-            IndexedPropertyExpression pExpression = (IndexedPropertyExpression)node.Expression;
-
-            ChildRewriter cr = new ChildRewriter(self, stack, 2 + pExpression.Arguments.Count);
-
-            cr.Add(pExpression.Object);
-            cr.Add(pExpression.Arguments);
+            cr.Add(index.Object);
+            cr.Add(index.Arguments);
             cr.Add(node.Value);
 
             if (cr.Rewrite) {
                 node = new AssignmentExpression(
                     node.Annotations,
-                    new IndexedPropertyExpression(
-                        node.Annotations,
+                    new IndexExpression(
                         cr[0],                              // Object
-                        pExpression.GetMethod,
-                        pExpression.SetMethod,
+                        index.Indexer,
+                        index.Annotations,
                         cr[1, -2],                          // arguments
-                        node.Type,
-                        node.BindingInfo
+                        index.Type,
+                        index.CanRead,
+                        index.CanWrite
                     ),
-                    cr[pExpression.Arguments.Count + 1],    // value
-                    node.Type,
-                    node.BindingInfo
+                    cr[-1]                                  // value
                 );
             }
 
@@ -197,14 +194,15 @@ namespace System.Linq.Expressions.Compiler {
 
             RewriteAction action = left.Action | right.Action | conversion.Action;
             if (action != RewriteAction.None) {
-                expr = new BinaryExpression(node.Annotations,
-                            node.NodeType,
-                            left.Node,
-                            right.Node,
-                            node.Type,
-                            node.Method,
-                            (LambdaExpression)conversion.Node,
-                            node.BindingInfo);
+                expr = new BinaryExpression(
+                    node.Annotations,
+                    node.NodeType,
+                    left.Node,
+                    right.Node,
+                    node.Type,
+                    node.Method,
+                    (LambdaExpression)conversion.Node
+                );
             }
             return new Result(action, expr);
         }
@@ -228,8 +226,7 @@ namespace System.Linq.Expressions.Compiler {
                                             cr[1],
                                             node.Type,
                                             node.Method,
-                                            (LambdaExpression)cr[2],
-                                            node.BindingInfo) :
+                                            (LambdaExpression)cr[2]) :
                                     expr);
         }
 
@@ -247,10 +244,8 @@ namespace System.Linq.Expressions.Compiler {
         private static Result RewriteAssignmentExpression(StackSpiller self, Expression expr, Stack stack) {
             AssignmentExpression node = (AssignmentExpression)expr;
             switch (node.Expression.NodeType) {
-                case ExpressionType.ArrayIndex:
-                    return RewriteArrayIndexAssignment(self, node, stack);
-                case ExpressionType.IndexedProperty:
-                    return RewriteIndexedPropertyAssignment(self, node, stack);
+                case ExpressionType.Index:
+                    return RewriteIndexAssignment(self, node, stack);
                 case ExpressionType.MemberAccess:
                     return RewriteMemberAssignment(self, node, stack);
                 case ExpressionType.Parameter:
@@ -344,10 +339,8 @@ namespace System.Linq.Expressions.Compiler {
                 return cr.Finish(
                     new AssignmentExpression(
                         node.Annotations,
-                        new MemberExpression(cr[0], lvalue.Member, lvalue.Annotations, lvalue.Type, lvalue.CanRead, lvalue.CanWrite, lvalue.BindingInfo),
-                        cr[1],
-                        node.Type,
-                        node.BindingInfo
+                        new MemberExpression(cr[0], lvalue.Member, lvalue.Annotations, lvalue.Type, lvalue.CanRead, lvalue.CanWrite),
+                        cr[1]
                     )
                 );
             }
@@ -361,14 +354,14 @@ namespace System.Linq.Expressions.Compiler {
             // Expression is emitted on top of the stack in current state
             Result expression = RewriteExpression(self, node.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = new MemberExpression(expression.Node, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite, node.BindingInfo);
+                expr = new MemberExpression(expression.Node, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite);
             }
             return new Result(expression.Action, expr);
         }
 
-        //RewriteIndexedPropertyExpression
-        private static Result RewriteIndexedPropertyExpression(StackSpiller self, Expression expr, Stack stack) {
-            IndexedPropertyExpression node = (IndexedPropertyExpression)expr;
+        //RewriteIndexExpression
+        private static Result RewriteIndexExpression(StackSpiller self, Expression expr, Stack stack) {
+            IndexExpression node = (IndexExpression)expr;
 
             ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count + 1);
 
@@ -378,20 +371,19 @@ namespace System.Linq.Expressions.Compiler {
             cr.Add(node.Arguments);
 
             if (cr.Rewrite) {
-                expr = new IndexedPropertyExpression(
-                    node.Annotations,
+                expr = new IndexExpression(
                     cr[0],
-                    node.GetMethod,
-                    node.SetMethod,
+                    node.Indexer,
+                    node.Annotations,
                     cr[1, -1],
                     node.Type,
-                    node.BindingInfo
+                    node.CanRead,
+                    node.CanWrite
                 );
             }
 
             return cr.Finish(expr);
         }
-
 
         // MethodCallExpression
         // TODO: ref parameters!!!
@@ -406,7 +398,7 @@ namespace System.Linq.Expressions.Compiler {
 
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.BindingInfo, node.Method, cr[0], cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.Method, cr[0], cr[1, -1]) : expr);
         }
 
         // NewArrayExpression
@@ -440,7 +432,7 @@ namespace System.Linq.Expressions.Compiler {
             // rest of arguments have non-empty stack (delegate instance on the stack)
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new InvocationExpression(node.Annotations, cr[0], node.Type, node.BindingInfo, cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? new InvocationExpression(cr[0], node.Annotations, cr[1, -1], node.Type) : expr);
         }
 
         // NewExpression
@@ -452,7 +444,7 @@ namespace System.Linq.Expressions.Compiler {
             ChildRewriter cr = new ChildRewriter(self, stack, node.Arguments.Count);
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.BindingInfo) : expr);
+            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.Members) : expr);
         }
 
         // TypeBinaryExpression
@@ -479,7 +471,7 @@ namespace System.Linq.Expressions.Compiler {
             // Operand is emitted on top of the stack as is
             Result expression = RewriteExpression(self, node.Operand, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = new UnaryExpression(node.Annotations, node.NodeType, expression.Node, node.Type, node.Method, node.BindingInfo);
+                expr = new UnaryExpression(node.Annotations, node.NodeType, expression.Node, node.Type, node.Method);
             }
             return new Result(expression.Action, expr);
         }
@@ -638,21 +630,6 @@ namespace System.Linq.Expressions.Compiler {
         private static Result RewriteContinueStatement(StackSpiller self, Expression expr, Stack stack) {
             // No action necessary
             return new Result(RewriteAction.None, expr);
-        }
-
-        // DeleteExpression
-        private static Result RewriteDeleteExpression(StackSpiller self, Expression expr, Stack stack) {
-            DeleteExpression node = (DeleteExpression)expr;
-
-            Debug.Assert(node.Expression.NodeType == ExpressionType.MemberAccess);
-            MemberExpression lvalue = (MemberExpression)node.Expression;
-
-            // Operand is emitted on top of the stack as is
-            Result expression = RewriteExpression(self, lvalue.Expression, stack);
-            if (expression.Action != RewriteAction.None) {
-                expr = Expression.DeleteMember(expression.Node, (DeleteMemberAction)node.BindingInfo, node.Annotations);
-            }
-            return new Result(expression.Action, expr);
         }
 
         // DoStatement
@@ -909,12 +886,10 @@ namespace System.Linq.Expressions.Compiler {
             return new Result(action, expr);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static Result RewriteExtensionExpression(StackSpiller self, Expression expr, Stack stack) {
-            // can't get here because DynamicNodeRewriter runs first and will take care of this
-            throw Error.ExtensionNotReduced();
+            Result result = RewriteExpression(self, expr.ReduceToKnown(), stack);
+            // it's at least Copy because we reduced the node
+            return new Result(result.Action | RewriteAction.Copy, result.Node);
         }
 
         #endregion

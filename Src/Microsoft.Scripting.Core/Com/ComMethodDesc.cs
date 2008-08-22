@@ -18,6 +18,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using System.Globalization;
 using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace System.Scripting.Com {
@@ -42,18 +43,18 @@ namespace System.Scripting.Com {
             _memid = dispId;
         }
 
-        public ComMethodDesc(string name, int dispId)
+        internal ComMethodDesc(string name, int dispId)
             : this(dispId) {
             // no ITypeInfo constructor
             _name = name;
         }
 
-        public ComMethodDesc(string name, int dispId, INVOKEKIND invkind)
+        internal ComMethodDesc(string name, int dispId, INVOKEKIND invkind)
             : this(name, dispId) {
             InvokeKind = invkind;
         }
 
-        public ComMethodDesc(ITypeInfo typeInfo, FUNCDESC funcDesc)
+        internal ComMethodDesc(ITypeInfo typeInfo, FUNCDESC funcDesc)
             : this(funcDesc.memid) {
 
             _hasTypeInfo = true;
@@ -98,7 +99,7 @@ namespace System.Scripting.Com {
 
         internal string DispIdString {
             get {
-                return String.Format("[DISPID={0}]", _memid);
+                return String.Format(CultureInfo.InvariantCulture, "[DISPID={0}]", _memid);
             }
         }
 

@@ -18,7 +18,7 @@ using System.Linq.Expressions;
 using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
-    public class Restrictions {
+    public sealed class Restrictions {
         private class Restriction {
             internal enum RestrictionKind {
                 Type,

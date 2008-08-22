@@ -38,11 +38,9 @@ namespace System.Linq.Expressions {
         }
 
         // param order: factories args in order, then other args
-        internal MemberExpression(Expression expression, MemberInfo member, Annotations annotations, Type type, bool canRead, bool canWrite, CallSiteBinder binder)
-            : base(ExpressionType.MemberAccess, type, false, annotations, canRead, canWrite, binder) {
-            if (IsBound) {
-                RequiresBound(expression, "expression");
-            }
+        internal MemberExpression(Expression expression, MemberInfo member, Annotations annotations, Type type, bool canRead, bool canWrite)
+            : base(ExpressionType.MemberAccess, type, false, annotations, canRead, canWrite) {
+
             _member = member;
             _expression = expression;
         }
@@ -64,39 +62,6 @@ namespace System.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-
-        //TODO: thse two checks should be unified with checks that are done inside
-        //Field and Property factories when CanRead/CanWrite are implemented
-        internal static void CheckField(FieldInfo info, Expression instance, Expression rightValue) {
-            ContractUtils.RequiresNotNull(info, "field");
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", Strings.IncorrectInstanceTypeField);
-            ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", Strings.IncorrectValueTypeField);
-        }
-
-        internal static void CheckProperty(PropertyInfo info, Expression instance, Expression rightValue) {
-            ContractUtils.RequiresNotNull(info, "property");
-            if (rightValue == null) {
-                CheckPropertyGet(info.GetGetMethod(true), instance);
-            } else {
-                CheckPropertySet(info.GetSetMethod(true), instance, rightValue);
-            }
-        }
-
-        internal static void CheckPropertyGet(MethodInfo getMethod, Expression instance) {
-            ContractUtils.Requires(getMethod != null, "getMethod", Strings.PropertyNotReadable);
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(getMethod.DeclaringType, instance.Type), "expression", Strings.IncorrectinstanceTypeProperty);
-        }
-
-        internal static void CheckPropertySet(MethodInfo setMethod, Expression instance, Expression rightValue) {
-            ContractUtils.Requires(setMethod != null, "setMethod", Strings.PropertyNotWriteable);
-            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(setMethod.DeclaringType, instance.Type), "expression", Strings.IncorrectinstanceTypeProperty);
-
-            ParameterInfo[] parameters = setMethod.GetParameters();
-            ContractUtils.Requires(parameters.Length > 0, "setMethod", Strings.SetMustHaveParams);
-            Type valueType = parameters[parameters.Length - 1].ParameterType;
-            ContractUtils.Requires(TypeUtils.CanAssign(valueType, rightValue.Type), "value", Strings.IncorrectValueTypeForProperty);
-        }
-
 
         #region Field
 
@@ -120,7 +85,7 @@ namespace System.Linq.Expressions {
                     throw Error.FieldNotDefinedForType(field, expression.Type);
                 }
             }
-            return new MemberExpression(expression, field, annotations, field.FieldType, true, !(field.IsLiteral | field.IsInitOnly), null);
+            return new MemberExpression(expression, field, annotations, field.FieldType, true, !(field.IsLiteral | field.IsInitOnly));
         }
 
         //CONFORMING
@@ -209,7 +174,7 @@ namespace System.Linq.Expressions {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);
                 }
             }
-            return new MemberExpression(expression, property, annotations, property.PropertyType, property.CanRead, property.CanWrite, null);
+            return new MemberExpression(expression, property, annotations, property.PropertyType, property.CanRead, property.CanWrite);
         }
         //CONFORMING
         public static MemberExpression Property(Expression expression, MethodInfo propertyAccessor) {
@@ -285,16 +250,6 @@ namespace System.Linq.Expressions {
                 return Expression.Property(expression, pi);
             }
             throw Error.MemberNotFieldOrProperty(member);
-        }
-
-
-        /// <summary>
-        /// A dynamic or unbound get member
-        /// </summary>
-        public static MemberExpression GetMember(Expression expression, Type result, CallSiteBinder binder) {
-            RequiresCanRead(expression, "expression");
-            ContractUtils.RequiresNotNull(binder, "bindingInfo");
-            return new MemberExpression(expression, null, null, result, true, false, binder);
         }
     }
 }

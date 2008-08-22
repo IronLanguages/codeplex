@@ -36,7 +36,7 @@ namespace System.Scripting.Com {
         /// RCW's type.  On the rule creation side, the type is encoded in the test so that when the rule cache is searched the test will 
         /// succeed only if the wrapper's returned RCW type matches that expected by the test. 
         /// </summary>
-        public Restrictions MakeComRestrictions(Type type, PropertyInfo testProperty, object targetObject) {
+        internal Restrictions MakeComRestrictions(Type type, PropertyInfo testProperty, object targetObject) {
             Restrictions r1 = Restrictions.TypeRestriction(Expression, type);
             Restrictions r2 = Restrictions.ExpressionRestriction(
                 Expression.Equal(
@@ -55,34 +55,42 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
         public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(UnwrapComObject(args));
         }
 
@@ -102,12 +110,6 @@ namespace System.Scripting.Com {
             );
 
             return copy;
-        }
-
-        internal new ComObjectWithTypeInfo Value {
-            get {
-                return (ComObjectWithTypeInfo)base.Value;
-            }
         }
     }    
 }

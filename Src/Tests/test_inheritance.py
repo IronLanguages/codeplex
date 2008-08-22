@@ -279,10 +279,9 @@ def test_interface_inheritance():
     AreEqual(TestIt.DoIt1(o), "Python")
     AreEqual(TestIt.DoIt2(o), "Python42")
     
-    # @disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=8121")
-    # Assert(isinstance(o, ITestIt2))
-    # Assert(issubclass(C, ITestIt2))
-    # Assert(ITestIt2 in C.__bases__)
+    Assert(isinstance(o, ITestIt2))
+    Assert(issubclass(C, ITestIt2))
+    Assert(ITestIt2 in C.__bases__)
         
     # inheritance from a single interface should be verifable
         
@@ -304,6 +303,7 @@ def test_more_interface_inheritance():
     AreEqual(p.ToString('x', None), "(1, 2)")
     #System.Console.WriteLine("{0}", p)
 
+@skip("win32")
 def test_interface_hierarchy():
     import System
     Assert(System.Collections.IEnumerable in System.Collections.IList.__bases__)
@@ -938,7 +938,7 @@ def test_inherit_returntypes():
             def M_RtDelegate(self): return func
             def M_RtStruct(self): return RtStruct(20)
             def M_RtClass(self): return RtClass(30)
-            def M_IEnumerator(self): return [1, 2, 3, 4, 5]
+            def M_IEnumerator(self): return iter([1, 2, 3, 4, 5])
         
         used = UseCReturnTypes(DReturnTypes())
         used.Use_void()
@@ -1154,20 +1154,20 @@ if is_silverlight or is_cli:
         AreEqual(used.Use_RtClass().F, 500)
         
         ## IEnumerator
-        DReturnTypes.M_IEnumerator = lambda self: (2, 20, 200, 2000)
+        DReturnTypes.M_IEnumerator = lambda self: iter((2, 20, 200, 2000))
         AreEqual(tuple(used.Use_IEnumerator()), (2, 20, 200, 2000))
         
         ## IEnumerable
         DReturnTypes.M_IEnumerable = lambda self: (2, 20, 200, 2000)
         AreEqual(reduce(add, used.Use_IEnumerable()), 2222)
         
-        DReturnTypes.M_IEnumerator = lambda self: { 1 : "one", 10: "two", 100: "three"}
+        DReturnTypes.M_IEnumerator = lambda self: iter({ 1 : "one", 10: "two", 100: "three"})
         AreEqual(set(used.Use_IEnumerator()), set([1, 10, 100]))
         
         DReturnTypes.M_IEnumerable = lambda self: { 1 : "one", 10: "two", 100: "three"}
         AreEqual(reduce(add, used.Use_IEnumerable()), 111)
         
-        DReturnTypes.M_IEnumerator = lambda self: System.Array[int](range(10))
+        DReturnTypes.M_IEnumerator = lambda self: iter(System.Array[int](range(10)))
         AreEqual(list(used.Use_IEnumerator()), range(10))
         
         DReturnTypes.M_IEnumerable = lambda self: System.Array[int](range(10))
@@ -1234,7 +1234,7 @@ if is_silverlight or is_cli:
                 def M_RtDelegate(self): return lambda arg: arg * 5
                 def M_RtStruct(self): return RtStruct(20)
                 def M_RtClass(self): return RtClass(30)
-                def M_IEnumerator(self): return [1, 2, 3, 4, 5]
+                def M_IEnumerator(self): return iter([1, 2, 3, 4, 5])
                 def M_IEnumerable(self): return [7, 8, 9, 10, 11]
         
             used = usetype(derived())

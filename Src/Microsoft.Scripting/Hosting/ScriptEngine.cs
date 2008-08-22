@@ -692,10 +692,6 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public void Shutdown() {
-            _language.Shutdown();
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public ErrorSink GetCompilerErrorSink() {
             return _language.GetCompilerErrorSink();

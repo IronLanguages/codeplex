@@ -321,6 +321,18 @@ namespace IronPythonTest {
             return enm;
         }
 
+        public object StringEnumerator(IEnumerator<string> enm) {
+            return enm;
+        }
+
+        public object ObjectEnumerator(IEnumerator<object> enm) {
+            return enm;
+        }
+
+        public object NonGenericEnumerator(IEnumerator enm) {
+            return enm;
+        }
+
         public object IntEnumerable(IEnumerable<int> enm) {
             return enm;
         }

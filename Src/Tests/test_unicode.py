@@ -53,6 +53,10 @@ def test_unicode_error():
     for mode in ip_supported_encodings:  unichr(0xac00).encode(mode, "test_unicode_error")
 
 
-
+@skip("silverlight") # only UTF8, no encoding fallbacks...
+def test_ignore():
+    AreEqual(unicode('', 'ascii', 'ignore'), '')
+    AreEqual(unicode('\xff', 'ascii', 'ignore'), '')
+    AreEqual(unicode('a\xffb\xffc\xff', 'ascii', 'ignore'), 'abc')
 
 run_test(__name__)

@@ -194,6 +194,11 @@ namespace IronPythonTest.BinderTest {
         }
         public void M701(IntIntDelegate d) { Flag.Value = d(10); }
 
+        // byte array
+        public void M702(ref Byte[] arg) { arg = new Byte[0]; Flag.Value = 702; }
+        public int M703(ref Byte[] arg) { arg = new Byte[0]; Flag.Value = 703; return 42; }
+        public int M704(Byte[] inp, ref Byte[] arg) { arg = inp; Flag.Value = 704; return 42; }
+
         // keywords 
         public void M800(Int32 arg1, object arg2, ref string arg3) { arg3 = arg3.ToUpper(); }
 

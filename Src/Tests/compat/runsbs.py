@@ -77,8 +77,6 @@ def run_sbs_test(l):
 def run(type="long", tests = "full", compare=True):
     if type in ["short", "medium"]:
         return 1
-
-    ensure_future_present()
     
     print "*** generated result logs/scripts @", compat_test_path
     if tests == "full": tests = get_sbs_tests()

@@ -1045,17 +1045,63 @@ def test_serialization():
     import cPickle
     import clr
     
-    # test the primitive data types...
+    # test the primitive data types...    
     data = [1, 1.0, 2j, 2L, System.Int64(1), System.UInt64(1), 
             System.UInt32(1), System.Int16(1), System.UInt16(1), 
             System.Byte(1), System.SByte(1), System.Decimal(1),
             System.Char.MaxValue, System.DBNull.Value, System.Single(1.0),
-            System.DateTime.Now, None]
+            System.DateTime.Now, None, {}, (), [], {'a': 2}, (42, ), [42, ]]
+    
+    data.append(list(data))     # list of all the data..
+    data.append(tuple(data))    # tuple of all the data...
+    
+    class X:
+        def __init__(self):
+            self.abc = 3
+    
+    class Y(object):
+        def __init__(self):
+            self.abc = 3
+
+    # instance dictionaries...
+    data.append(X().__dict__)
+    data.append(Y().__dict__)
+
+    # recursive list
+    l = []
+    l.append(l)
+    data.append(l)
+    
+    # dict of all the data
+    d = {}
+    cnt = 100
+    for x in data:
+        d[cnt] = x
+        cnt += 1
+        
+    data.append(d)
+    
+    # recursive dict...
+    d1 = {}
+    d2 = {}
+    
+    d1['abc'] = d2
+    d1['foo'] = 'baz'
+    d2['abc'] = d1
+    
+    data.append(d1)
+    data.append(d2)
+    
     for value in data:
         # use cPickle & clr.Serialize/Deserialize directly
         for newVal in (cPickle.loads(cPickle.dumps(value)), clr.Deserialize(*clr.Serialize(value))):
             AreEqual(type(newVal), type(value))
-            AreEqual(newVal, value)
+            try:
+                AreEqual(newVal, value)
+            except RuntimeError, e:
+                # we hit one of our recursive structures...
+                AreEqual(e.message, "maximum recursion depth exceeded in cmp")
+                Assert(type(newVal) is list or type(newVal) is dict)
     
     # passing an unknown format raises...
     AssertError(ValueError, clr.Deserialize, "unknown", "foo")

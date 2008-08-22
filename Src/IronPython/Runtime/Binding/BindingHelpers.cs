@@ -64,7 +64,7 @@ namespace IronPython.Runtime.Binding {
         internal static Expression GetSiteCodeContext() {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetContextFromPythonSite"),
-                MetaAction.GetSelfExpression()
+                MetaAction.SelfExpression()
             );
         }
 

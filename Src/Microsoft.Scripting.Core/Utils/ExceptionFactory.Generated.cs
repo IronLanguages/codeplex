@@ -15,6 +15,12 @@
 
 namespace System.Linq.Expressions {
 
+    internal static partial class Strings {
+        private static string FormatString(string format, params object[] args) {
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, format, args);
+        }
+    }
+    
     #region Generated Exception Factory
 
     // *** BEGIN GENERATED CODE ***
@@ -584,6 +590,24 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Type must be derived from System.Delegate"
+        /// </summary>
+        internal static string TypeMustBeDerivedFromSystemDelegate {
+            get {
+                return "Type must be derived from System.Delegate";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Argument type cannot be void"
+        /// </summary>
+        internal static string ArgumentTypeCannotBeVoid {
+            get {
+                return "Argument type cannot be void";
+            }
+        }
+
+        /// <summary>
         /// A string like  "type or bindingInfo must be non-null"
         /// </summary>
         internal static string TypeOrBindingInfoMustBeNonNull {
@@ -632,42 +656,42 @@ namespace System.Linq.Expressions {
         /// A string like  "User-defined operator method '{0}' must be static."
         /// </summary>
         internal static string UserDefinedOperatorMustBeStatic(object p0) {
-            return string.Format("User-defined operator method '{0}' must be static.", p0);
+            return FormatString("User-defined operator method '{0}' must be static.", p0);
         }
 
         /// <summary>
         /// A string like  "User-defined operator method '{0}' must not be void."
         /// </summary>
         internal static string UserDefinedOperatorMustNotBeVoid(object p0) {
-            return string.Format("User-defined operator method '{0}' must not be void.", p0);
+            return FormatString("User-defined operator method '{0}' must not be void.", p0);
         }
 
         /// <summary>
         /// A string like  "No coercion operator is defined between types '{0}' and '{1}'."
         /// </summary>
         internal static string CoercionOperatorNotDefined(object p0, object p1) {
-            return string.Format("No coercion operator is defined between types '{0}' and '{1}'.", p0, p1);
+            return FormatString("No coercion operator is defined between types '{0}' and '{1}'.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "The unary operator {0} is not defined for the type '{1}'."
         /// </summary>
         internal static string UnaryOperatorNotDefined(object p0, object p1) {
-            return string.Format("The unary operator {0} is not defined for the type '{1}'.", p0, p1);
+            return FormatString("The unary operator {0} is not defined for the type '{1}'.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "The binary operator {0} is not defined for the types '{1}' and '{2}'."
         /// </summary>
         internal static string BinaryOperatorNotDefined(object p0, object p1, object p2) {
-            return string.Format("The binary operator {0} is not defined for the types '{1}' and '{2}'.", p0, p1, p2);
+            return FormatString("The binary operator {0} is not defined for the types '{1}' and '{2}'.", p0, p1, p2);
         }
 
         /// <summary>
         /// A string like  "The operands for operator '{0}' do not match the parameters of method '{1}'."
         /// </summary>
         internal static string OperandTypesDoNotMatchParameters(object p0, object p1) {
-            return string.Format("The operands for operator '{0}' do not match the parameters of method '{1}'.", p0, p1);
+            return FormatString("The operands for operator '{0}' do not match the parameters of method '{1}'.", p0, p1);
         }
 
         /// <summary>
@@ -755,28 +779,28 @@ namespace System.Linq.Expressions {
         /// A string like  "Cannot auto initialize elements of value type through property '{0}', use assignment instead"
         /// </summary>
         internal static string CannotAutoInitializeValueTypeElementThroughProperty(object p0) {
-            return string.Format("Cannot auto initialize elements of value type through property '{0}', use assignment instead", p0);
+            return FormatString("Cannot auto initialize elements of value type through property '{0}', use assignment instead", p0);
         }
 
         /// <summary>
         /// A string like  "Cannot auto initialize members of value type through property '{0}', use assignment instead"
         /// </summary>
         internal static string CannotAutoInitializeValueTypeMemberThroughProperty(object p0) {
-            return string.Format("Cannot auto initialize members of value type through property '{0}', use assignment instead", p0);
+            return FormatString("Cannot auto initialize members of value type through property '{0}', use assignment instead", p0);
         }
 
         /// <summary>
         /// A string like  "An expression of type '{0}' cannot be cast to type '{1}'"
         /// </summary>
         internal static string CannotCastTypeToType(object p0, object p1) {
-            return string.Format("An expression of type '{0}' cannot be cast to type '{1}'", p0, p1);
+            return FormatString("An expression of type '{0}' cannot be cast to type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "The type used in TypeAs Expression must be of reference or nullable type, {0} is neither"
         /// </summary>
         internal static string IncorrectTypeForTypeAs(object p0) {
-            return string.Format("The type used in TypeAs Expression must be of reference or nullable type, {0} is neither", p0);
+            return FormatString("The type used in TypeAs Expression must be of reference or nullable type, {0} is neither", p0);
         }
 
         /// <summary>
@@ -792,70 +816,70 @@ namespace System.Linq.Expressions {
         /// A string like  "An expression of type '{0}' cannot be used to initialize an array of type '{1}'"
         /// </summary>
         internal static string ExpressionTypeCannotInitializeArrayType(object p0, object p1) {
-            return string.Format("An expression of type '{0}' cannot be used to initialize an array of type '{1}'", p0, p1);
+            return FormatString("An expression of type '{0}' cannot be used to initialize an array of type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for constructor parameter of type '{1}'"
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchConstructorParameter(object p0, object p1) {
-            return string.Format("Expression of type '{0}' cannot be used for constructor parameter of type '{1}'", p0, p1);
+            return FormatString("Expression of type '{0}' cannot be used for constructor parameter of type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  " Argument type '{0}' does not match the corresponding member type '{1}'"
         /// </summary>
         internal static string ArgumentTypeDoesNotMatchMember(object p0, object p1) {
-            return string.Format(" Argument type '{0}' does not match the corresponding member type '{1}'", p0, p1);
+            return FormatString(" Argument type '{0}' does not match the corresponding member type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  " The member '{0}' is not declared on type '{1}' being created"
         /// </summary>
         internal static string ArgumentMemberNotDeclOnType(object p0, object p1) {
-            return string.Format(" The member '{0}' is not declared on type '{1}' being created", p0, p1);
+            return FormatString(" The member '{0}' is not declared on type '{1}' being created", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for parameter of type '{1}' of method '{2}'"
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchMethodParameter(object p0, object p1, object p2) {
-            return string.Format("Expression of type '{0}' cannot be used for parameter of type '{1}' of method '{2}'", p0, p1, p2);
+            return FormatString("Expression of type '{0}' cannot be used for parameter of type '{1}' of method '{2}'", p0, p1, p2);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for parameter of type '{1}'"
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchParameter(object p0, object p1) {
-            return string.Format("Expression of type '{0}' cannot be used for parameter of type '{1}'", p0, p1);
+            return FormatString("Expression of type '{0}' cannot be used for parameter of type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for return type '{1}'"
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchReturn(object p0, object p1) {
-            return string.Format("Expression of type '{0}' cannot be used for return type '{1}'", p0, p1);
+            return FormatString("Expression of type '{0}' cannot be used for return type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for assignment to type '{1}'"
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchAssignment(object p0, object p1) {
-            return string.Format("Expression of type '{0}' cannot be used for assignment to type '{1}'", p0, p1);
+            return FormatString("Expression of type '{0}' cannot be used for assignment to type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be invoked"
         /// </summary>
         internal static string ExpressionTypeNotInvocable(object p0) {
-            return string.Format("Expression of type '{0}' cannot be invoked", p0);
+            return FormatString("Expression of type '{0}' cannot be invoked", p0);
         }
 
         /// <summary>
         /// A string like  "Field '{0}' is not defined for type '{1}'"
         /// </summary>
         internal static string FieldNotDefinedForType(object p0, object p1) {
-            return string.Format("Field '{0}' is not defined for type '{1}'", p0, p1);
+            return FormatString("Field '{0}' is not defined for type '{1}'", p0, p1);
         }
 
         /// <summary>
@@ -889,7 +913,7 @@ namespace System.Linq.Expressions {
         /// A string like  "Incorrect number of arguments supplied for call to method '{0}'"
         /// </summary>
         internal static string IncorrectNumberOfMethodCallArguments(object p0) {
-            return string.Format("Incorrect number of arguments supplied for call to method '{0}'", p0);
+            return FormatString("Incorrect number of arguments supplied for call to method '{0}'", p0);
         }
 
         /// <summary>
@@ -932,98 +956,98 @@ namespace System.Linq.Expressions {
         /// A string like  "Member '{0}' not field or property"
         /// </summary>
         internal static string MemberNotFieldOrProperty(object p0) {
-            return string.Format("Member '{0}' not field or property", p0);
+            return FormatString("Member '{0}' not field or property", p0);
         }
 
         /// <summary>
         /// A string like  "Method {0} contains generic parameters"
         /// </summary>
         internal static string MethodContainsGenericParameters(object p0) {
-            return string.Format("Method {0} contains generic parameters", p0);
+            return FormatString("Method {0} contains generic parameters", p0);
         }
 
         /// <summary>
         /// A string like  "Method {0} is a generic method definition"
         /// </summary>
         internal static string MethodIsGeneric(object p0) {
-            return string.Format("Method {0} is a generic method definition", p0);
+            return FormatString("Method {0} is a generic method definition", p0);
         }
 
         /// <summary>
         /// A string like  "The method '{0}.{1}' is not a property accessor"
         /// </summary>
         internal static string MethodNotPropertyAccessor(object p0, object p1) {
-            return string.Format("The method '{0}.{1}' is not a property accessor", p0, p1);
+            return FormatString("The method '{0}.{1}' is not a property accessor", p0, p1);
         }
 
         /// <summary>
         /// A string like  "The property '{0}' has no 'get' accessor"
         /// </summary>
         internal static string PropertyDoesNotHaveGetter(object p0) {
-            return string.Format("The property '{0}' has no 'get' accessor", p0);
+            return FormatString("The property '{0}' has no 'get' accessor", p0);
         }
 
         /// <summary>
         /// A string like  "The property '{0}' has no 'set' accessor"
         /// </summary>
         internal static string PropertyDoesNotHaveSetter(object p0) {
-            return string.Format("The property '{0}' has no 'set' accessor", p0);
+            return FormatString("The property '{0}' has no 'set' accessor", p0);
         }
 
         /// <summary>
         /// A string like  "'{0}' is not a member of type '{1}'"
         /// </summary>
         internal static string NotAMemberOfType(object p0, object p1) {
-            return string.Format("'{0}' is not a member of type '{1}'", p0, p1);
+            return FormatString("'{0}' is not a member of type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "The operator '{0}' is not implemented for type '{1}'"
         /// </summary>
         internal static string OperatorNotImplementedForType(object p0, object p1) {
-            return string.Format("The operator '{0}' is not implemented for type '{1}'", p0, p1);
+            return FormatString("The operator '{0}' is not implemented for type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "ParameterExpression of type '{0}' cannot be used for delegate parameter of type '{1}'"
         /// </summary>
         internal static string ParameterExpressionNotValidAsDelegate(object p0, object p1) {
-            return string.Format("ParameterExpression of type '{0}' cannot be used for delegate parameter of type '{1}'", p0, p1);
+            return FormatString("ParameterExpression of type '{0}' cannot be used for delegate parameter of type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Property '{0}' is not defined for type '{1}'"
         /// </summary>
         internal static string PropertyNotDefinedForType(object p0, object p1) {
-            return string.Format("Property '{0}' is not defined for type '{1}'", p0, p1);
+            return FormatString("Property '{0}' is not defined for type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Method '{0}' is not defined for type '{1}'"
         /// </summary>
         internal static string MethodNotDefinedForType(object p0, object p1) {
-            return string.Format("Method '{0}' is not defined for type '{1}'", p0, p1);
+            return FormatString("Method '{0}' is not defined for type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Type {0} contains generic parameters"
         /// </summary>
         internal static string TypeContainsGenericParameters(object p0) {
-            return string.Format("Type {0} contains generic parameters", p0);
+            return FormatString("Type {0} contains generic parameters", p0);
         }
 
         /// <summary>
         /// A string like  "Type {0} is a generic type definition"
         /// </summary>
         internal static string TypeIsGeneric(object p0) {
-            return string.Format("Type {0} is a generic type definition", p0);
+            return FormatString("Type {0} is a generic type definition", p0);
         }
 
         /// <summary>
         /// A string like  "Type '{0}' does not have a default constructor"
         /// </summary>
         internal static string TypeMissingDefaultConstructor(object p0) {
-            return string.Format("Type '{0}' does not have a default constructor", p0);
+            return FormatString("Type '{0}' does not have a default constructor", p0);
         }
 
         /// <summary>
@@ -1048,7 +1072,7 @@ namespace System.Linq.Expressions {
         /// A string like  "Parameter '{0}' of element initializer method '{1}' must not be a pass by reference parameter"
         /// </summary>
         internal static string ElementInitializerMethodNoRefOutParam(object p0, object p1) {
-            return string.Format("Parameter '{0}' of element initializer method '{1}' must not be a pass by reference parameter", p0, p1);
+            return FormatString("Parameter '{0}' of element initializer method '{1}' must not be a pass by reference parameter", p0, p1);
         }
 
         /// <summary>
@@ -1073,14 +1097,14 @@ namespace System.Linq.Expressions {
         /// A string like  "Type '{0}' is not IEnumerable"
         /// </summary>
         internal static string TypeNotIEnumerable(object p0) {
-            return string.Format("Type '{0}' is not IEnumerable", p0);
+            return FormatString("Type '{0}' is not IEnumerable", p0);
         }
 
         /// <summary>
         /// A string like  "Type parameter is {0}. Expected a delegate."
         /// </summary>
         internal static string TypeParameterIsNotDelegate(object p0) {
-            return string.Format("Type parameter is {0}. Expected a delegate.", p0);
+            return FormatString("Type parameter is {0}. Expected a delegate.", p0);
         }
 
         /// <summary>
@@ -1096,14 +1120,14 @@ namespace System.Linq.Expressions {
         /// A string like  "Cannot cast from type '{0}' to type '{1}"
         /// </summary>
         internal static string InvalidCast(object p0, object p1) {
-            return string.Format("Cannot cast from type '{0}' to type '{1}", p0, p1);
+            return FormatString("Cannot cast from type '{0}' to type '{1}", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Unhandled binary: {0}"
         /// </summary>
         internal static string UnhandledBinary(object p0) {
-            return string.Format("Unhandled binary: {0}", p0);
+            return FormatString("Unhandled binary: {0}", p0);
         }
 
         /// <summary>
@@ -1119,28 +1143,28 @@ namespace System.Linq.Expressions {
         /// A string like  "Unhandled Binding Type: {0}"
         /// </summary>
         internal static string UnhandledBindingType(object p0) {
-            return string.Format("Unhandled Binding Type: {0}", p0);
+            return FormatString("Unhandled Binding Type: {0}", p0);
         }
 
         /// <summary>
         /// A string like  "Unhandled convert: {0}"
         /// </summary>
         internal static string UnhandledConvert(object p0) {
-            return string.Format("Unhandled convert: {0}", p0);
+            return FormatString("Unhandled convert: {0}", p0);
         }
 
         /// <summary>
         /// A string like  "Unhandled Expression Type: {0}"
         /// </summary>
         internal static string UnhandledExpressionType(object p0) {
-            return string.Format("Unhandled Expression Type: {0}", p0);
+            return FormatString("Unhandled Expression Type: {0}", p0);
         }
 
         /// <summary>
         /// A string like  "Unhandled unary: {0}"
         /// </summary>
         internal static string UnhandledUnary(object p0) {
-            return string.Format("Unhandled unary: {0}", p0);
+            return FormatString("Unhandled unary: {0}", p0);
         }
 
         /// <summary>
@@ -1156,35 +1180,35 @@ namespace System.Linq.Expressions {
         /// A string like  "The user-defined operator method '{1}' for operator '{0}' must have identical parameter and return types."
         /// </summary>
         internal static string LogicalOperatorMustHaveConsistentTypes(object p0, object p1) {
-            return string.Format("The user-defined operator method '{1}' for operator '{0}' must have identical parameter and return types.", p0, p1);
+            return FormatString("The user-defined operator method '{1}' for operator '{0}' must have identical parameter and return types.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "The user-defined operator method '{1}' for operator '{0}' must have associated boolean True and False operators."
         /// </summary>
         internal static string LogicalOperatorMustHaveBooleanOperators(object p0, object p1) {
-            return string.Format("The user-defined operator method '{1}' for operator '{0}' must have associated boolean True and False operators.", p0, p1);
+            return FormatString("The user-defined operator method '{1}' for operator '{0}' must have associated boolean True and False operators.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "No method '{0}' exists on type '{1}'."
         /// </summary>
         internal static string MethodDoesNotExistOnType(object p0, object p1) {
-            return string.Format("No method '{0}' exists on type '{1}'.", p0, p1);
+            return FormatString("No method '{0}' exists on type '{1}'.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "No method '{0}' on type '{1}' is compatible with the supplied arguments."
         /// </summary>
         internal static string MethodWithArgsDoesNotExistOnType(object p0, object p1) {
-            return string.Format("No method '{0}' on type '{1}' is compatible with the supplied arguments.", p0, p1);
+            return FormatString("No method '{0}' on type '{1}' is compatible with the supplied arguments.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "More than one method '{0}' on type '{1}' is compatible with the supplied arguments."
         /// </summary>
         internal static string MethodWithMoreThanOneMatch(object p0, object p1) {
-            return string.Format("More than one method '{0}' on type '{1}' is compatible with the supplied arguments.", p0, p1);
+            return FormatString("More than one method '{0}' on type '{1}' is compatible with the supplied arguments.", p0, p1);
         }
 
         /// <summary>
@@ -1233,11 +1257,20 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "RuleBuilder can only be used with delegates whose first argument is CallSite."
+        /// A string like  "First argument of delegate must be CallSite"
         /// </summary>
         internal static string FirstArgumentMustBeCallSite {
             get {
-                return "RuleBuilder can only be used with delegates whose first argument is CallSite.";
+                return "First argument of delegate must be CallSite";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "expected StrongBox, but found null."
+        /// </summary>
+        internal static string FirstArgumentMustBeStrongBox {
+            get {
+                return "expected StrongBox, but found null.";
             }
         }
 
@@ -1281,28 +1314,28 @@ namespace System.Linq.Expressions {
         /// A string like  "Elements must be variables or parameters: {0}"
         /// </summary>
         internal static string MustBeVariableOrParameter(object p0) {
-            return string.Format("Elements must be variables or parameters: {0}", p0);
+            return FormatString("Elements must be variables or parameters: {0}", p0);
         }
 
         /// <summary>
         /// A string like  "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'"
         /// </summary>
         internal static string ArgumentCountMustMatchBinding(object p0, object p1) {
-            return string.Format("Argument count (including instance) '{0}' must match arguments in the binding information '{1}'", p0, p1);
+            return FormatString("Argument count (including instance) '{0}' must match arguments in the binding information '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Invalid operation: '{0}'"
         /// </summary>
         internal static string InvalidOperation(object p0) {
-            return string.Format("Invalid operation: '{0}'", p0);
+            return FormatString("Invalid operation: '{0}'", p0);
         }
 
         /// <summary>
         /// A string like  "{0} must be greater than or equal to {1}"
         /// </summary>
         internal static string OutOfRange(object p0, object p1) {
-            return string.Format("{0} must be greater than or equal to {1}", p0, p1);
+            return FormatString("{0} must be greater than or equal to {1}", p0, p1);
         }
 
         /// <summary>
@@ -1354,7 +1387,7 @@ namespace System.Linq.Expressions {
         /// A string like  "TypeLib '{0}' does not contain COM interface '{1}'."
         /// </summary>
         internal static string TypeLibDoesNotContainInterface(object p0, object p1) {
-            return string.Format("TypeLib '{0}' does not contain COM interface '{1}'.", p0, p1);
+            return FormatString("TypeLib '{0}' does not contain COM interface '{1}'.", p0, p1);
         }
 
         /// <summary>
@@ -1379,49 +1412,49 @@ namespace System.Linq.Expressions {
         /// A string like  "Unexpected VarEnum {0}."
         /// </summary>
         internal static string UnexpectedVarEnum(object p0) {
-            return string.Format("Unexpected VarEnum {0}.", p0);
+            return FormatString("Unexpected VarEnum {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Error while invoking {0}."
         /// </summary>
         internal static string DispBadParamCount(object p0) {
-            return string.Format("Error while invoking {0}.", p0);
+            return FormatString("Error while invoking {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Error while invoking {0}."
         /// </summary>
         internal static string DispMemberNotFound(object p0) {
-            return string.Format("Error while invoking {0}.", p0);
+            return FormatString("Error while invoking {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Error while invoking {0}. Named arguments are not supported."
         /// </summary>
         internal static string DispNoNamedArgs(object p0) {
-            return string.Format("Error while invoking {0}. Named arguments are not supported.", p0);
+            return FormatString("Error while invoking {0}. Named arguments are not supported.", p0);
         }
 
         /// <summary>
         /// A string like  "Error while invoking {0}."
         /// </summary>
         internal static string DispOverflow(object p0) {
-            return string.Format("Error while invoking {0}.", p0);
+            return FormatString("Error while invoking {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Could not convert argument {0} for call to {1}."
         /// </summary>
         internal static string DispTypeMismatch(object p0, object p1) {
-            return string.Format("Could not convert argument {0} for call to {1}.", p0, p1);
+            return FormatString("Could not convert argument {0} for call to {1}.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Error while invoking {0}. A required parameter was omitted."
         /// </summary>
         internal static string DispParamNotOptional(object p0) {
-            return string.Format("Error while invoking {0}. A required parameter was omitted.", p0);
+            return FormatString("Error while invoking {0}. A required parameter was omitted.", p0);
         }
 
         /// <summary>
@@ -1437,7 +1470,7 @@ namespace System.Linq.Expressions {
         /// A string like  "IDispatch::GetIDsOfNames behaved unexpectedly for {0}."
         /// </summary>
         internal static string GetIDsOfNamesInvalid(object p0) {
-            return string.Format("IDispatch::GetIDsOfNames behaved unexpectedly for {0}.", p0);
+            return FormatString("IDispatch::GetIDsOfNames behaved unexpectedly for {0}.", p0);
         }
 
         /// <summary>
@@ -1462,28 +1495,28 @@ namespace System.Linq.Expressions {
         /// A string like  "Could not get DispId for {0} (error:{1})."
         /// </summary>
         internal static string CouldNotGetDispId(object p0, object p1) {
-            return string.Format("Could not get DispId for {0} (error:{1}).", p0, p1);
+            return FormatString("Could not get DispId for {0} (error:{1}).", p0, p1);
         }
 
         /// <summary>
         /// A string like  "There are valid conversions from {0} to {1}."
         /// </summary>
         internal static string AmbiguousConversion(object p0, object p1) {
-            return string.Format("There are valid conversions from {0} to {1}.", p0, p1);
+            return FormatString("There are valid conversions from {0} to {1}.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Variant.ToObject cannot handle {0}."
         /// </summary>
         internal static string VariantToObjectNYI(object p0) {
-            return string.Format("Variant.ToObject cannot handle {0}.", p0);
+            return FormatString("Variant.ToObject cannot handle {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Variant.GetAccessor cannot handle {0}."
         /// </summary>
         internal static string VariantGetAccessorNYI(object p0) {
-            return string.Format("Variant.GetAccessor cannot handle {0}.", p0);
+            return FormatString("Variant.GetAccessor cannot handle {0}.", p0);
         }
 
         /// <summary>
@@ -1562,21 +1595,21 @@ namespace System.Linq.Expressions {
         /// A string like  "Invalid lvalue for assignment: {0}."
         /// </summary>
         internal static string InvalidLvalue(object p0) {
-            return string.Format("Invalid lvalue for assignment: {0}.", p0);
+            return FormatString("Invalid lvalue for assignment: {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Invalid member type: {0}."
         /// </summary>
         internal static string InvalidMemberType(object p0) {
-            return string.Format("Invalid member type: {0}.", p0);
+            return FormatString("Invalid member type: {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "unknown lift type: '{0}'."
         /// </summary>
         internal static string UnknownLiftType(object p0) {
-            return string.Format("unknown lift type: '{0}'.", p0);
+            return FormatString("unknown lift type: '{0}'.", p0);
         }
 
         /// <summary>
@@ -1601,21 +1634,21 @@ namespace System.Linq.Expressions {
         /// A string like  "Cannot emit constant {0} ({1})"
         /// </summary>
         internal static string CanotEmitConstant(object p0, object p1) {
-            return string.Format("Cannot emit constant {0} ({1})", p0, p1);
+            return FormatString("Cannot emit constant {0} ({1})", p0, p1);
         }
 
         /// <summary>
         /// A string like  "No implicit cast from {0} to {1}"
         /// </summary>
         internal static string NoImplicitCast(object p0, object p1) {
-            return string.Format("No implicit cast from {0} to {1}", p0, p1);
+            return FormatString("No implicit cast from {0} to {1}", p0, p1);
         }
 
         /// <summary>
         /// A string like  "No explicit cast from {0} to {1}"
         /// </summary>
         internal static string NoExplicitCast(object p0, object p1) {
-            return string.Format("No explicit cast from {0} to {1}", p0, p1);
+            return FormatString("No explicit cast from {0} to {1}", p0, p1);
         }
 
         /// <summary>
@@ -1666,57 +1699,80 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// A string like  "Cannot create instance of {0} because it contains generic parameters"
         /// </summary>
-        internal static string IllegalNew_GenericParams(object p0) {
-            return string.Format("Cannot create instance of {0} because it contains generic parameters", p0);
+        internal static string IllegalNewGenericParams(object p0) {
+            return FormatString("Cannot create instance of {0} because it contains generic parameters", p0);
         }
 
         /// <summary>
         /// A string like  "Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n"
         /// </summary>
         internal static string VerificationException(object p0, object p1, object p2) {
-            return string.Format("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n", p0, p1, p2);
+            return FormatString("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n", p0, p1, p2);
         }
 
         /// <summary>
         /// A string like  "Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope"
         /// </summary>
         internal static string UnboundVariable(object p0, object p1) {
-            return string.Format("Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope", p0, p1);
+            return FormatString("Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope", p0, p1);
+        }
+
+        /// <summary>
+        /// A string like  "variable '{0}' of type '{1}' referenced from scope '{2}', but it is not defined"
+        /// </summary>
+        internal static string UndefinedVariable(object p0, object p1, object p2) {
+            return FormatString("variable '{0}' of type '{1}' referenced from scope '{2}', but it is not defined", p0, p1, p2);
         }
 
         /// <summary>
         /// A string like  "yield outside of generator in lambda '{0}'"
         /// </summary>
         internal static string YieldOutsideOfGenerator(object p0) {
-            return string.Format("yield outside of generator in lambda '{0}'", p0);
+            return FormatString("yield outside of generator in lambda '{0}'", p0);
         }
 
         /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'"
         /// </summary>
         internal static string InvalidReturnTypeOfLambda(object p0, object p1, object p2) {
-            return string.Format("Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'", p0, p1, p2);
+            return FormatString("Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'", p0, p1, p2);
         }
 
         /// <summary>
         /// A string like  "Expression missing for return in lambda '{0}', must have return type '{1}'"
         /// </summary>
         internal static string MissingReturnForLambda(object p0, object p1) {
-            return string.Format("Expression missing for return in lambda '{0}', must have return type '{1}'", p0, p1);
+            return FormatString("Expression missing for return in lambda '{0}', must have return type '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Cannot close over byref parameter '{0}' referenced in lambda '{1}'"
         /// </summary>
         internal static string CannotCloseOverByRef(object p0, object p1) {
-            return string.Format("Cannot close over byref parameter '{0}' referenced in lambda '{1}'", p0, p1);
+            return FormatString("Cannot close over byref parameter '{0}' referenced in lambda '{1}'", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Expected type {0}, got {1}."
         /// </summary>
         internal static string UnexpectedType(object p0, object p1) {
-            return string.Format("Expected type {0}, got {1}.", p0, p1);
+            return FormatString("Expected type {0}, got {1}.", p0, p1);
+        }
+
+        /// <summary>
+        /// A string like  "Unexpected VarArgs call to method '{0}'"
+        /// </summary>
+        internal static string UnexpectedVarArgsCall(object p0) {
+            return FormatString("Unexpected VarArgs call to method '{0}'", p0);
+        }
+
+        /// <summary>
+        /// A string like  "missing parameter value not yet supported"
+        /// </summary>
+        internal static string MissingValueNotSupported {
+            get {
+                return "missing parameter value not yet supported";
+            }
         }
 
     }
@@ -2307,10 +2363,17 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "RuleBuilder can only be used with delegates whose first argument is CallSite."
+        /// ArgumentException with message like "First argument of delegate must be CallSite"
         /// </summary>
         internal static Exception FirstArgumentMustBeCallSite() {
-            return new InvalidOperationException(Strings.FirstArgumentMustBeCallSite);
+            return new ArgumentException(Strings.FirstArgumentMustBeCallSite);
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "expected StrongBox, but found null."
+        /// </summary>
+        internal static Exception FirstArgumentMustBeStrongBox() {
+            return new ArgumentException(Strings.FirstArgumentMustBeStrongBox);
         }
 
         /// <summary>
@@ -2689,8 +2752,8 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// ArgumentException with message like "Cannot create instance of {0} because it contains generic parameters"
         /// </summary>
-        internal static Exception IllegalNew_GenericParams(object p0) {
-            return new ArgumentException(Strings.IllegalNew_GenericParams(p0));
+        internal static Exception IllegalNewGenericParams(object p0) {
+            return new ArgumentException(Strings.IllegalNewGenericParams(p0));
         }
 
         /// <summary>
@@ -2705,6 +2768,13 @@ namespace System.Linq.Expressions {
         /// </summary>
         internal static Exception UnboundVariable(object p0, object p1) {
             return new InvalidOperationException(Strings.UnboundVariable(p0, p1));
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "variable '{0}' of type '{1}' referenced from scope '{2}', but it is not defined"
+        /// </summary>
+        internal static Exception UndefinedVariable(object p0, object p1, object p2) {
+            return new InvalidOperationException(Strings.UndefinedVariable(p0, p1, p2));
         }
 
         /// <summary>
@@ -2740,6 +2810,20 @@ namespace System.Linq.Expressions {
         /// </summary>
         internal static Exception UnexpectedType(object p0, object p1) {
             return new ArgumentException(Strings.UnexpectedType(p0, p1));
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Unexpected VarArgs call to method '{0}'"
+        /// </summary>
+        internal static Exception UnexpectedVarArgsCall(object p0) {
+            return new InvalidOperationException(Strings.UnexpectedVarArgsCall(p0));
+        }
+
+        /// <summary>
+        /// NotSupportedException with message like "missing parameter value not yet supported"
+        /// </summary>
+        internal static Exception MissingValueNotSupported() {
+            return new NotSupportedException(Strings.MissingValueNotSupported);
         }
 
     }

@@ -25,60 +25,70 @@ namespace System.Scripting.Actions {
     /// Dynamic site delegate type - arity 0
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<TRet>(CallSite site);
 
     /// <summary>
     /// Dynamic site delegate type - arity 1
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, TRet>(CallSite site, T0 arg0);
 
     /// <summary>
     /// Dynamic site delegate type - arity 2
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, TRet>(CallSite site, T0 arg0, T1 arg1);
 
     /// <summary>
     /// Dynamic site delegate type - arity 3
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2);
 
     /// <summary>
     /// Dynamic site delegate type - arity 4
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, T3, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3);
 
     /// <summary>
     /// Dynamic site delegate type - arity 5
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, T3, T4, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
 
     /// <summary>
     /// Dynamic site delegate type - arity 6
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, T3, T4, T5, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, T5, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
 
     /// <summary>
     /// Dynamic site delegate type - arity 7
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, T5, T6, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
 
     /// <summary>
     /// Dynamic site delegate type - arity 8
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
 
     /// <summary>
     /// Dynamic site delegate type - arity 9
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
+    [Obsolete("use Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet> or a custom delegate instead")]
     public delegate TRet DynamicSiteTarget<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8);
 
 

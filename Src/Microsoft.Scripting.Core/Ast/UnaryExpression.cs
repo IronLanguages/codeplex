@@ -26,14 +26,8 @@ namespace System.Linq.Expressions {
         private readonly MethodInfo _method;
 
         internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type type, MethodInfo method)
-            : this(annotations, nodeType, expression, type, method, null) {
-        }
+            : base(nodeType, type, annotations) {
 
-        internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type type, MethodInfo method, CallSiteBinder bindingInfo)
-            : base(nodeType, type, annotations, bindingInfo) {
-            if (IsBound) {
-                RequiresBound(expression, "expression");
-            }
             _operand = expression;
             _method = method;
         }
@@ -415,31 +409,6 @@ namespace System.Linq.Expressions {
             return new UnaryExpression(Annotations.Empty, ExpressionType.Quote, expression, expression.GetType(), null);
         }
 
-        //TODO: The signature of this method differs from other dynamic factories as it takes annotations
-        //      we are not adding annotations parameter to all dynamic factories until design is finalized.
-        //      for this method, however, we need an extra parameter to disambiguate with nondynamic Convert 
-        //      when called with null for the method.
-        //      Example of ambiguos call
-        //          Convert( expr1, typeof(int), null )
-        //        this call would be ambiguous between Convert(expression, type, annotations)
-        //                                         and Convert(expression, type, bindingInfo)
-        //
-        /// <summary>
-        /// A dynamic or unbound conversion
-        /// </summary>
-        /// <param name="expression">the expression to convert</param>
-        /// <param name="type">the type that the conversion returns, or null for an unbound node</param>
-        /// <param name="bindingInfo">convert binding information</param>
-        /// <param name="annotations">annotations for the node</param>
-        /// <returns></returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static UnaryExpression Convert(Expression expression, Type type, CallSiteBinder bindingInfo, Annotations annotations) {
-            RequiresCanRead(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-
-            return new UnaryExpression(annotations, ExpressionType.Convert, expression, type, null, bindingInfo);
-        }
-
         public static Expression ConvertHelper(Expression expression, Type type) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
@@ -453,31 +422,6 @@ namespace System.Linq.Expressions {
         public static Expression Void(Expression expression) {
             RequiresCanRead(expression, "expression");
             return ConvertHelper(expression, typeof(void));
-        }
-
-
-        public static UnaryExpression Negate(Annotations annotations, Expression expression, Type result, OperationAction bindingInfo) {
-            RequiresCanRead(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == "Negate", "bindingInfo", Strings.OperationKindMustMatchNodeType);
-
-            return new UnaryExpression(annotations, ExpressionType.Negate, expression, result, null, bindingInfo);
-        }
-
-        public static UnaryExpression Not(Annotations annotations, Expression expression, Type result, OperationAction bindingInfo) {
-            RequiresCanRead(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == "Not", "bindingInfo", Strings.OperationKindMustMatchNodeType);
-
-            return new UnaryExpression(annotations, ExpressionType.Not, expression, result, null, bindingInfo);
-        }
-
-        public static UnaryExpression OnesComplement(Annotations annotations, Expression expression, Type result, OperationAction bindingInfo) {
-            RequiresCanRead(expression, "expression");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-            ContractUtils.Requires(bindingInfo.Operation == "OnesComplement", "bindingInfo", Strings.OperationKindMustMatchNodeType);
-
-            return new UnaryExpression(annotations, ExpressionType.OnesComplement, expression, result, null, bindingInfo);
         }
     }
 }

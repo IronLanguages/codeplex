@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -22,9 +23,23 @@ using System.Threading;
 
 namespace System.Scripting.Actions {
     public static partial class DynamicSiteHelpers {
+
         private static readonly Dictionary<Type, CreateSite> _siteCtors = new Dictionary<Type, CreateSite>();
 
         private delegate object CreateSite(CallSiteBinder binder);
+
+
+        // TODO: do we need this helper?
+        // if so, should it live on Expression?
+        public static Type MakeCallSiteType(params Type[] types) {
+            return typeof(CallSite<>).MakeGenericType(MakeCallSiteDelegate(types));
+        }
+        // TODO: do we need this helper?
+        // if so, should it live on Expression?
+        public static Type MakeCallSiteDelegate(params Type[] types) {
+            ContractUtils.RequiresNotNull(types, "types");
+            return DelegateHelpers.MakeDelegate(types.AddFirst(typeof(CallSite)));
+        }
 
         public static CallSite MakeSite(CallSiteBinder binder, Type siteType) {
             CreateSite ctor;
@@ -66,7 +81,7 @@ namespace System.Scripting.Actions {
 
             internal Signature(Type[] types) {
                 _types = types;
-                _hash = CalculateHash(types);
+                _hash = types.ListHashCode();
             }
 
             public override int GetHashCode() {
@@ -74,6 +89,9 @@ namespace System.Scripting.Actions {
             }
 
             public override bool Equals(object obj) {
+                if (obj == this) {
+                    return true;
+                }
                 Signature sig = obj as Signature;
                 if (sig == null) {
                     return false;
@@ -81,24 +99,7 @@ namespace System.Scripting.Actions {
                 if (sig._hash != _hash) {
                     return false;
                 }
-                if (sig._types.Length != _types.Length) {
-                    return false;
-                }
-                for (int i = 0; i < _types.Length; i++) {
-                    if (sig._types[i] != _types[i]) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            private static int CalculateHash(Type[] types) {
-                int hash = 0;
-                for (int i = 0; i < types.Length; i++) {
-                    hash ^= types[i].GetHashCode();
-                }
-                return hash;
+                return sig._types.ListEquals(_types);
             }
         }
 

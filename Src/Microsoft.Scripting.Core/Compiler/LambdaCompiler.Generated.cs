@@ -23,10 +23,6 @@ namespace System.Linq.Expressions.Compiler {
         private void EmitExpression(Expression node, bool emitDebugMarkers) {
             Debug.Assert(node != null);
 
-            if (node.IsDynamic) {
-                throw Error.DynamicNotReduced();
-            }
-
             bool startEmitted = emitDebugMarkers && EmitExpressionStart(node);
 
             switch (node.NodeType) {
@@ -219,10 +215,6 @@ namespace System.Linq.Expressions.Compiler {
                 case ExpressionType.TypeIs:
                     EmitTypeBinaryExpression(this, node);
                     break;
-                // ActionExpression
-                case ExpressionType.ActionExpression:
-                    EmitActionExpression(this, node);
-                    break;
                 // Assign
                 case ExpressionType.Assign:
                     EmitAssignmentExpression(this, node);
@@ -243,13 +235,13 @@ namespace System.Linq.Expressions.Compiler {
                 case ExpressionType.ContinueStatement:
                     EmitContinueStatement(this, node);
                     break;
-                // Delete
-                case ExpressionType.Delete:
-                    EmitDeleteExpression(this, node);
-                    break;
                 // DoStatement
                 case ExpressionType.DoStatement:
                     EmitDoStatement(this, node);
+                    break;
+                // Dynamic
+                case ExpressionType.Dynamic:
+                    EmitDynamicExpression(this, node);
                     break;
                 // EmptyStatement
                 case ExpressionType.EmptyStatement:
@@ -259,9 +251,9 @@ namespace System.Linq.Expressions.Compiler {
                 case ExpressionType.Extension:
                     EmitExtensionExpression(this, node);
                     break;
-                // IndexedProperty
-                case ExpressionType.IndexedProperty:
-                    EmitIndexedPropertyExpression(this, node);
+                // Index
+                case ExpressionType.Index:
+                    EmitIndexExpression(this, node);
                     break;
                 // LabeledStatement
                 case ExpressionType.LabeledStatement:

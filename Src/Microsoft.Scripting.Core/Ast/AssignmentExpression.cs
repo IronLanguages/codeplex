@@ -25,23 +25,16 @@ namespace System.Linq.Expressions {
     ///   VariableExpression
     ///   ParameterExpression
     ///   MemberExpression with writable property/field
-    ///   BinaryExpression with NodeType == ArrayIndex
-    ///   (future) IndexedPropertyExpression
+    ///   IndexExpression
+    ///   
+    /// TODO: merge into BinaryExpression
     /// </summary>
     public sealed class AssignmentExpression : Expression {
         private readonly Expression _expression;
         private readonly Expression _value;
 
         internal AssignmentExpression(Annotations annotations, Expression expression, Expression value)
-            : this(annotations, expression, value, expression.Type, null) {
-        }
-
-        internal AssignmentExpression(Annotations annotations, Expression expression, Expression value, Type result, CallSiteBinder bindingInfo)
-            : base(ExpressionType.Assign, result, annotations, bindingInfo) {
-            if (IsBound) {
-                RequiresBound(expression, "expression");
-                RequiresBound(value, "value");
-            }
+            : base(ExpressionType.Assign, expression.Type, annotations) {
             _expression = expression;
             _value = value;
         }
@@ -83,6 +76,7 @@ namespace System.Linq.Expressions {
             return new AssignmentExpression(annotations, left, right);
         }
 
+        // TODO: remove?
         /// <summary>
         /// Creates MemberExpression representing field access, instance or static.
         /// For static field, expression must be null and FieldInfo.IsStatic == true
@@ -96,6 +90,7 @@ namespace System.Linq.Expressions {
             return Assign(Field(expression, field), value);
         }
 
+        // TODO: remove?
         /// <summary>
         /// Creates MemberExpression representing property access, instance or static.
         /// For static properties, expression must be null and property.IsStatic == true.
@@ -109,39 +104,9 @@ namespace System.Linq.Expressions {
             return Assign(Property(expression, property), value);
         }
 
+        // TODO: remove or rename to 'AssignArrayAccess', allow multiple indexes
         public static AssignmentExpression AssignArrayIndex(Expression array, Expression index, Expression value) {
-            return Assign(ArrayIndex(array, index), value);
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static AssignmentExpression AssignArrayIndex(Expression array, Expression index, Expression value, Type result, CallSiteBinder bindingInfo, Annotations annotations) {
-            RequiresCanRead(array, "array");
-            RequiresCanRead(index, "index");
-            RequiresCanRead(value, "value");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-
-            // TODO: don't pass bindinginfo to nested MemberExpression
-            return new AssignmentExpression(
-                annotations,
-                new BinaryExpression(Annotations.Empty, ExpressionType.ArrayIndex, array, index, result, bindingInfo),
-                value,
-                result,
-                bindingInfo
-            );
-        }
-
-        public static AssignmentExpression SetMember(Expression expression, Type result, SetMemberAction bindingInfo, Expression value) {
-            return SetMember(expression, result, bindingInfo, value, Annotations.Empty);
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
-        public static AssignmentExpression SetMember(Expression expression, Type result, SetMemberAction binder, Expression value, Annotations annotations) {
-            RequiresCanRead(expression, "expression");
-            ContractUtils.RequiresNotNull(binder, "binder");
-            RequiresCanRead(value, "value");
-
-            // TODO: don't pass bindinginfo to nested MemberExpression
-            return new AssignmentExpression(annotations, new MemberExpression(expression, null, null, expression.Type, true, false, binder), value, result, binder);
+            return Assign(ArrayAccess(array, index), value);
         }
     }
 }

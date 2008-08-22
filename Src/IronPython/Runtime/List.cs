@@ -21,18 +21,21 @@ using System.Runtime.InteropServices;
 using System.Scripting.Actions;
 using System.Text;
 using System.Threading;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {
 
-    [PythonType("list"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
+    [PythonType("list"), Serializable, System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public class List : IMutableSequence, IList, ICodeFormattable, IValueEquality, IList<object> {
         internal int _size;
         internal volatile object[] _data;
@@ -181,14 +184,31 @@ namespace IronPython.Runtime {
         #region binary operators
 
         public static List operator +([NotNull]List l1, [NotNull]List l2) {
-            object[] them = l2.GetObjectArray();
-            lock (l1) {
-                object[] ret = ArrayOps.CopyArray(l1._data, l1._size + them.Length);
+            using (new OrderedLocker(l1, l2)) {
+                object[] them = l2._data;
+                object[] ret = ArrayOps.CopyArray(l1._data, GetAddSize(l1._size , l2._size));
 
-                Array.Copy(them, 0, ret, l1._size, them.Length);
+                Array.Copy(them, 0, ret, l1._size, l2._size);
 
-                return new List(ret);
+                List lret = new List(ret);
+                lret._size = l1._size + l2._size;
+                return lret;
             }
+        }
+
+        /// <summary>
+        /// Gets a reasonable size for the addition of two arrays.  We round
+        /// to a power of two so that we usually have some extra space if
+        /// the resulting array gets added to.
+        /// </summary>
+        private static int GetAddSize(int s1, int s2) {
+            int length = s1 + s2;
+
+            if (length > 256) {
+                return length + (128 - 1) & ~(128 - 1);
+            }
+
+            return length + (16 - 1) & ~(16 - 1);
         }
 
         public static List operator *([NotNull]List l, int count) {
@@ -616,6 +636,28 @@ namespace IronPython.Runtime {
                     }
                 }
                 return cnt;
+            }
+        }
+
+        public void extend([NotNull]List/*!*/ seq) {
+            using(new OrderedLocker(this, seq)) {
+                // use the original count for if we're extending this w/ this
+                int count = seq.Count;  
+                EnsureSize(Count + count);
+
+                for (int i = 0; i < count; i++) {
+                    AddNoLock(seq[i]);
+                }
+            }
+        }
+
+        public void extend([NotNull]PythonTuple/*!*/ seq) {
+            lock (this) {
+                EnsureSize(Count + seq.Count);
+
+                for (int i = 0; i < seq.Count; i++) {
+                    AddNoLock(seq[i]);
+                }
             }
         }
 
@@ -1357,7 +1399,7 @@ namespace IronPython.Runtime {
     /// then compare, which is bad).  Therefore we have a strong order for locking on 
     /// the two objects based upon the hash code or object identity in case of a collision
     /// </summary>
-    public class OrderedLocker : IDisposable {
+    public struct OrderedLocker : IDisposable {
         private readonly object _one, _two;
 
         public OrderedLocker(object/*!*/ one, object/*!*/ two) {
@@ -1365,6 +1407,11 @@ namespace IronPython.Runtime {
 
             _one = one;
             _two = two;
+
+            if (one == two) {
+                Monitor.Enter(one);
+                return;
+            }
 
             int hc1 = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_one);
             int hc2 = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_two);
@@ -1391,7 +1438,9 @@ namespace IronPython.Runtime {
 
         public void Dispose() {
             Monitor.Exit(_one);
-            Monitor.Exit(_two);
+            if (_one != _two) {
+                Monitor.Exit(_two);
+            }
         }
 
         #endregion

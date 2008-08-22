@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting;
@@ -20,6 +21,7 @@ using Microsoft.Scripting.Runtime;
 using System.Threading;
 
 namespace IronPython.Runtime.Types {
+    [Serializable]
     internal sealed class CustomOldClassDictionaryStorage : SymbolIdDictionaryStorage {
         private int _keyVersion;
         private SymbolId[] _extraKeys;

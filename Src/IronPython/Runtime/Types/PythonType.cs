@@ -24,14 +24,17 @@ using System.Scripting;
 using System.Scripting.Actions;
 using System.Text;
 using System.Threading;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Operations;
+
 using Ast = System.Linq.Expressions.Expression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
@@ -60,7 +63,8 @@ namespace IronPython.Runtime.Types {
 
         // fields that frequently remain null
         private WeakRefTracker _weakrefTracker;             // storage for Python style weak references
-        private OldClass _oldClass;                         // the associated OldClass or null for new-style types        
+        private OldClass _oldClass;                         // the associated OldClass or null for new-style types  
+        private int _originalSlotCount;                     // the number of slots when the type was created
         private CallSite<DynamicSiteTarget<CodeContext, object, object>> _newDirSite;
         private CallSite<DynamicSiteTarget<CodeContext, object, object[], object>> _newCtorSite;
         private CallSite<DynamicSiteTarget<CodeContext, object, string, object>> _newGetattributeSite;
@@ -455,6 +459,12 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         #region Internal API
+
+        internal int SlotCount {
+            get {
+                return _originalSlotCount;
+            }
+        }
 
         /// <summary>
         /// Gets the name of the dynamic type
@@ -1366,6 +1376,7 @@ namespace IronPython.Runtime.Types {
 
             foreach (PythonType pt in _bases) {
                 pt.AddSubType(this);
+                _originalSlotCount += pt.SlotCount;
             }
 
             BuildUserTypeDictionary(context, vars);
@@ -1373,8 +1384,10 @@ namespace IronPython.Runtime.Types {
 
         private void BuildUserTypeDictionary(CodeContext context, IAttributesCollection vars) {
             bool hasDictionary = false, hasWeakRef = false;
+
             if (vars.ContainsKey(Symbols.Slots)) {
                 List<string> slots = NewTypeMaker.SlotsToList(vars[Symbols.Slots]);
+                _originalSlotCount += slots.Count;
                 if (slots.Contains("__dict__")) hasDictionary = true;
                 if (slots.Contains("__weakref__")) hasWeakRef = true;
             } else {

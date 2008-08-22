@@ -78,6 +78,16 @@ namespace IronPython.Runtime {
             }
         }
 
+        [SpecialName]
+        public object Call(CodeContext/*!*/ context, params object[] args) {
+            return PythonContext.GetContext(context).Call(this, args);
+        }
+
+        [SpecialName]
+        public object Call(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection kwArgs, params object[] args) {
+            return PythonContext.GetContext(context).CallWithKeywords(this, args, kwArgs);
+        }
+
         private Exception BadSelf(object got) {
             OldClass dt = im_class as OldClass;            
 

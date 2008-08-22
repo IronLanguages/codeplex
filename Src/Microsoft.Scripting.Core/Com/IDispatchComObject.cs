@@ -111,7 +111,7 @@ namespace System.Scripting.Com {
             if (String.IsNullOrEmpty(typeName))
                 typeName = "IDispatch";
 
-            return String.Format("{0} ({1})", Obj.ToString(), typeName);
+            return String.Format(CultureInfo.CurrentCulture, "{0} ({1})", Obj.ToString(), typeName);
         }
 
         public ComTypeDesc ComTypeDesc {
@@ -195,7 +195,7 @@ namespace System.Scripting.Com {
                     value = null;
                     return false;
                 } else if (hresult != ComHresults.S_OK) {
-                    throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
+                    throw Error.CouldNotGetDispId(name, string.Format(CultureInfo.InvariantCulture, "0x{1:X})", hresult));
                 }
 
                 methodDesc = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYGET);
@@ -225,7 +225,7 @@ namespace System.Scripting.Com {
                     value = null;
                     return false;
                 } else if (hresult != ComHresults.S_OK) {
-                    throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
+                    throw Error.CouldNotGetDispId(name, string.Format(CultureInfo.InvariantCulture, "0x{1:X})", hresult));
                 } else if (dispId != ComDispIds.DISPID_VALUE) {
                     value = null;
                     return false;
@@ -274,7 +274,7 @@ namespace System.Scripting.Com {
                 method = null;
                 return false;
             } else {
-                throw Error.CouldNotGetDispId(name, string.Format("0x{1:X})", hresult));
+                throw Error.CouldNotGetDispId(name, string.Format(CultureInfo.InvariantCulture, "0x{1:X})", hresult));
             }
         }
 
@@ -294,22 +294,24 @@ namespace System.Scripting.Com {
 
         #region IMembersList
 
-        public override IList<string> GetMemberNames() {
-            EnsureScanDefinedMethods();
-            EnsureScanDefinedEvents();
-            List<string> list = new List<string>();
+        public override IList<string> MemberNames {
+            get {
+                EnsureScanDefinedMethods();
+                EnsureScanDefinedEvents();
+                List<string> list = new List<string>();
 
-            foreach (string symbol in _comTypeDesc.Funcs.Keys) {
-                list.Add(symbol);
-            }
-
-            if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
-                foreach (string symbol in _comTypeDesc.Events.Keys) {
+                foreach (string symbol in _comTypeDesc.Funcs.Keys) {
                     list.Add(symbol);
                 }
-            }
 
-            return list;
+                if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
+                    foreach (string symbol in _comTypeDesc.Events.Keys) {
+                        list.Add(symbol);
+                    }
+                }
+
+                return list;
+            }
         }
 
         #endregion

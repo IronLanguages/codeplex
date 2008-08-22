@@ -21,7 +21,7 @@ using System.Scripting.Utils;
 using System.Threading;
 
 namespace System.Scripting.Actions {
-    public static partial class UpdateDelegates {
+    internal static partial class UpdateDelegates {
 
         private static Dictionary<Type, WeakReference> _Updaters;
 
@@ -33,9 +33,9 @@ namespace System.Scripting.Actions {
             if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
                 MethodInfo method;
                 if (invoke.ReturnType == typeof(void)) {
-                    method = typeof(UpdateDelegates).GetMethod("UpdateVoid" + args.Length);
+                    method = typeof(UpdateDelegates).GetMethod("UpdateVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
                 } else {
-                    method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1));
+                    method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
                 }
                 if (method != null) {
                     return (T)(object)Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));

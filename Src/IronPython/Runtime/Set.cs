@@ -19,11 +19,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
@@ -52,7 +53,7 @@ namespace IronPython.Runtime {
     /// Contains common set functionality between set and forzenSet
     /// </summary>
     static class SetHelpers {
-        public static string SetToString(CodeContext/*!*/ context, object set, IEnumerable items) {
+        public static string SetToString(CodeContext/*!*/ context, object set, CommonDictionaryStorage items) {
             string setTypeStr;
             Type setType = set.GetType();
             if (setType == typeof(SetCollection)) {
@@ -66,9 +67,9 @@ namespace IronPython.Runtime {
             sb.Append(setTypeStr);
             sb.Append("([");
             string comma = "";
-            foreach (object o in items) {
+            foreach (KeyValuePair<object, object> o in items.GetItems()) {
                 sb.Append(comma);
-                sb.Append(PythonOps.Repr(context, o));
+                sb.Append(PythonOps.Repr(context, o.Key));
                 comma = ", ";
             }
             sb.Append("])");
@@ -188,10 +189,21 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        public static PythonTuple Reduce(PythonDictionary items, PythonType type) {
-            object[] keys = new object[items.keys().__len__()];
-            ((IList)items.keys()).CopyTo(keys, 0);
+        public static PythonTuple Reduce(CommonDictionaryStorage items, PythonType type) {
+            object[] keys = new object[items.Count];
+            int i = 0;
+            foreach (KeyValuePair<object, object> kvp in items.GetItems()) {
+                keys[i++] = kvp.Key;
+            }
             return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(List.FromArrayNoCopy(keys)), null);
+        }
+
+        public static IEnumerator<object> GetListEnumerator(CommonDictionaryStorage storage) {
+            List res = new List(storage.Count);
+            foreach (KeyValuePair<object, object> kvp in storage.GetItems()) {
+                res.Add(kvp.Key);
+            }
+            return ((IEnumerable<object>)res).GetEnumerator();
         }
     }
 
@@ -200,7 +212,7 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType("set")]
     public class SetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
-        PythonDictionary items;
+        private CommonDictionaryStorage _items;
 
         #region Set contruction
 
@@ -214,7 +226,7 @@ namespace IronPython.Runtime {
         }
 
         public SetCollection() {
-            items = new PythonDictionary();
+            _items = new CommonDictionaryStorage();
         }
 
         internal SetCollection(object setData) {
@@ -222,14 +234,10 @@ namespace IronPython.Runtime {
         }
 
         internal SetCollection(IEnumerator setData) {
-            items = new PythonDictionary();
+            _items = new CommonDictionaryStorage();
             while (setData.MoveNext()) {
                 add(setData.Current);
             }
-        }
-
-        internal SetCollection(PythonDictionary setData) {
-            items = setData;
         }
 
         #endregion
@@ -237,15 +245,17 @@ namespace IronPython.Runtime {
         #region ISet
 
         public int __len__() {
-            return items.__len__();
+            return _items.Count;
         }
 
         public bool __contains__(object value) {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
 
-            PythonOps.Hash(DefaultContext.Default, value);    // make sure we have a hashable item
-            return items.__contains__(value);
+            if (_items.Count == 0) {
+                PythonOps.Hash(DefaultContext.Default, value);    // make sure we have a hashable item
+            }
+            return _items.Contains(value);
         }
 
         public bool issubset(object set) {
@@ -285,9 +295,9 @@ namespace IronPython.Runtime {
         }
 
         void ISet.SetData(IEnumerable set) {
-            items = new PythonDictionary();
+            _items = new CommonDictionaryStorage();
             foreach (object o in set) {
-                items[o] = o;
+                _items.Add(o, o);
             }
         }
 
@@ -316,13 +326,13 @@ namespace IronPython.Runtime {
         }
 
         public PythonTuple __reduce__() {
-            return SetHelpers.Reduce(items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
+            return SetHelpers.Reduce(_items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
         }
 
         private void Init(params object[] o) {
             if (o.Length > 1) throw PythonOps.TypeError("set expected at most 1 arguments, got {0}", o.Length);
 
-            items = new PythonDictionary();
+            _items = new CommonDictionaryStorage();
             if (o.Length != 0) {
                 IEnumerator setData = PythonOps.GetEnumerator(o[0]);
                 while (setData.MoveNext()) {
@@ -342,23 +352,17 @@ namespace IronPython.Runtime {
         public void update(object s) {
             IEnumerator ie = PythonOps.GetEnumerator(s);
             while (ie.MoveNext()) {
-                object o = ie.Current;
-                if (!__contains__(o)) {
-                    add(o);
-                }
+                add(ie.Current);
             }
         }
 
         public void add(object o) {
-            PythonOps.Hash(DefaultContext.Default, o);// make sure we're hashable
-            if (!items.__contains__(o)) {
-                items[o] = o;
-            }
+            _items.Add(o, o);
         }
 
         public void intersection_update(object s) {
             SetCollection set = intersection(s) as SetCollection;
-            items = set.items;
+            _items = set._items;
         }
 
         public void difference_update(object s) {
@@ -385,27 +389,27 @@ namespace IronPython.Runtime {
             o = SetHelpers.GetHashableSetIfSet(o);
 
             PythonOps.Hash(DefaultContext.Default, o);
-            if (!items.__contains__(o)) throw PythonOps.KeyError(o);
+            if (!_items.Contains(o)) throw PythonOps.KeyError(o);
 
-            items.__delitem__(o);
+            _items.Remove(o);
         }
 
         public void discard(object o) {
             o = SetHelpers.GetHashableSetIfSet(o);
 
-            ((IDictionary)items).Remove(o);
+            _items.Remove(o);
         }
 
         public object pop() {
-            foreach (object o in items.keys()) {
-                items.__delitem__(o);
-                return o;
+            foreach (KeyValuePair<object, object> o in _items.GetItems()) {
+                _items.Remove(o.Key);
+                return o.Key;
             }
             throw PythonOps.KeyError("pop from an empty set");
         }
 
         public void clear() {
-            items.clear();
+            _items.Clear();
         }
 
         #endregion
@@ -521,14 +525,14 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            int count = this.items.__len__();
+            int count = this._items.Count;
 
-            foreach (object o in items.keys()) {
-                if (count != this.items.__len__()) {
+            foreach (KeyValuePair<object, object> o in _items.GetItems()) {
+                if (count != this._items.Count) {
                     throw PythonOps.RuntimeError("set changed during iteration");
                 }
 
-                yield return o;
+                yield return o.Key;
             }
         }
 
@@ -605,14 +609,14 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         public IEnumerator<object> GetEnumerator() {
-            int count = this.items.__len__();
+            int count = _items.Count;
 
-            foreach (object o in items.keys()) {
-                if (count != this.items.__len__()) {
+            foreach (KeyValuePair<object,object> o in _items.GetItems()) {
+                if (count != _items.Count) {
                     throw PythonOps.RuntimeError("set changed during iteration");
                 }
 
-                yield return o;
+                yield return o.Key;
             }
         }
 
@@ -621,7 +625,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return SetHelpers.SetToString(context, this, this.items.keys());
+            return SetHelpers.SetToString(context, this, _items);
         }
 
         #endregion
@@ -634,7 +638,7 @@ namespace IronPython.Runtime {
 
         public int Count {
             [PythonHidden]
-            get { return this.items.__len__(); }
+            get { return this._items.Count; }
         }
 
         bool ICollection.IsSynchronized {
@@ -656,10 +660,10 @@ namespace IronPython.Runtime {
     public class FrozenSetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
         internal static readonly FrozenSetCollection EMPTY = new FrozenSetCollection();
 
-        PythonDictionary items;
-        int hashCode;
+        private CommonDictionaryStorage _items;
+        private int _hashCode;
 #if DEBUG
-        int returnedHc;
+        private int _returnedHc;
 #endif
 
         #region Set Construction
@@ -702,9 +706,9 @@ namespace IronPython.Runtime {
                 return fs;
             }
 
-            PythonDictionary items = ListToDictionary(setData);
+            CommonDictionaryStorage items = ListToDictionary(setData);
 
-            if (items.__len__() == 0) {
+            if (items.Count == 0) {
                 fs = EMPTY;
             } else {
                 fs = new FrozenSetCollection(items);
@@ -713,26 +717,24 @@ namespace IronPython.Runtime {
             return fs;
         }
 
-        private static PythonDictionary ListToDictionary(object set) {
+        private static CommonDictionaryStorage ListToDictionary(object set) {
             IEnumerator setData = PythonOps.GetEnumerator(set);
-            PythonDictionary items = new PythonDictionary();
+            CommonDictionaryStorage items = new CommonDictionaryStorage();
             while (setData.MoveNext()) {
                 object o = setData.Current;
-                if (!items.__contains__(o)) {
-                    items[o] = o;
-                }
+                items.Add(o, o);
             }
             return items;
         }
 
         public FrozenSetCollection() {
-            items = new PythonDictionary();
+            _items = new CommonDictionaryStorage();
             // hash code is 0 for empty set
             CalculateHashCode();
         }
 
-        private FrozenSetCollection(PythonDictionary set) {
-            items = set;
+        private FrozenSetCollection(CommonDictionaryStorage set) {
+            _items = set;
             CalculateHashCode();
         }
 
@@ -749,7 +751,7 @@ namespace IronPython.Runtime {
         #region ISet
 
         public int __len__() {
-            return items.__len__();
+            return _items.Count;
         }
 
         public bool __contains__(object value) {
@@ -757,7 +759,7 @@ namespace IronPython.Runtime {
             value = SetHelpers.GetHashableSetIfSet(value);
 
             PythonOps.Hash(DefaultContext.Default, value);// make sure we have a hashable item
-            return items.__contains__(value);
+            return _items.Contains(value);
         }
 
         public bool issubset(object set) {
@@ -786,20 +788,18 @@ namespace IronPython.Runtime {
 
         void ISet.PrivAdd(object adding) {
             PythonOps.Hash(DefaultContext.Default, adding);// make sure we're hashable
-            if (!items.__contains__(adding)) {
-                items[adding] = adding;
-            }
+            _items.Add(adding, adding);
         }
 
         void ISet.PrivRemove(object removing) {
             PythonOps.Hash(DefaultContext.Default, removing);// make sure we're hashable
-            items.__delitem__(removing);
+            _items.Remove(removing);
         }
 
         void ISet.SetData(IEnumerable set) {
-            items = new PythonDictionary();
+            _items = new CommonDictionaryStorage();
             foreach (object o in set) {
-                items[o] = o;
+                _items.Add(o, o);
             }
             CalculateHashCode();
         }
@@ -856,7 +856,7 @@ namespace IronPython.Runtime {
         }
 
         public PythonTuple __reduce__() {
-            return SetHelpers.Reduce(items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
+            return SetHelpers.Reduce(_items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
         }
 
         #endregion
@@ -933,7 +933,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return ((IEnumerable)items.keys()).GetEnumerator();
+            return SetHelpers.GetListEnumerator(_items);
         }
 
         #endregion
@@ -941,13 +941,13 @@ namespace IronPython.Runtime {
         private void CalculateHashCode() {
             // hash code needs be stable across collections (even if keys are
             // added in different order) and needs to be fairly collision free.
-            hashCode = 6551;
+            _hashCode = 6551;
 
-            int[] hash_codes = new int[items.keys().__len__()];
+            int[] hash_codes = new int[_items.Count];
 
             int i = 0;
-            foreach (object o in items.keys()) {
-                hash_codes[i++] = PythonOps.Hash(DefaultContext.Default, o);
+            foreach (KeyValuePair<object, object> o in _items.GetItems()) {
+                hash_codes[i++] = PythonOps.Hash(DefaultContext.Default, o.Key);
             }
 
             Array.Sort(hash_codes);
@@ -964,7 +964,7 @@ namespace IronPython.Runtime {
                 hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ hash_codes[i + 1];
             }
 
-            hashCode = hash1 + (hash2 * 1566083941);
+            _hashCode = hash1 + (hash2 * 1566083941);
         }
 
         #region IRichComparable
@@ -1012,10 +1012,10 @@ namespace IronPython.Runtime {
             // make sure we never change the hashcode we hand out in debug builds.
             // if we do then it means we somehow called PrivAdd/PrivRemove after
             // already using the hash code.
-            Debug.Assert(returnedHc == hashCode || returnedHc == 0);
-            returnedHc = hashCode;
+            Debug.Assert(_returnedHc == _hashCode || _returnedHc == 0);
+            _returnedHc = _hashCode;
 #endif
-            return hashCode;
+            return _hashCode;
         }
         
         // default conversion of protocol methods only allow's our specific type for equality,
@@ -1045,7 +1045,7 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         public IEnumerator<object> GetEnumerator() {
-            return ((ICollection<object>)items.keys()).GetEnumerator();
+            return SetHelpers.GetListEnumerator(_items);
         }
 
         #endregion
@@ -1053,7 +1053,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return SetHelpers.SetToString(context, this, this.items.keys());
+            return SetHelpers.SetToString(context, this, _items);
         }
 
         #endregion
@@ -1066,7 +1066,7 @@ namespace IronPython.Runtime {
 
         public int Count {
             [PythonHidden]
-            get { return items.__len__(); }
+            get { return _items.Count; }
         }
 
         bool ICollection.IsSynchronized {

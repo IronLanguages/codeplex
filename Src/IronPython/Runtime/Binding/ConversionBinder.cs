@@ -79,17 +79,47 @@ namespace IronPython.Runtime.Binding {
                             res = TryToGenericInterfaceConversion(arg, type, typeof(IEnumerable), typeof(IEnumerableOfTWrapper<>));
                         }
                     } else if (type == typeof(IEnumerable)) {
-                        if (!typeof(IEnumerable).IsAssignableFrom(arg.LimitType) && IsIndexless(arg)) {
+                        if (arg.LimitType == typeof(string)) {
+                            // replace strings normal enumeration with our own which returns strings instead of chars.
+                            res = new MetaObject(
+                                Ast.Call(
+                                    typeof(StringOps).GetMethod("ConvertToIEnumerable"),
+                                    Ast.ConvertHelper(args[0].Expression, typeof(string))
+                                ),
+                                Restrictions.TypeRestriction(args[0].Expression, typeof(string))
+                            );
+                        } else if (!typeof(IEnumerable).IsAssignableFrom(arg.LimitType) && IsIndexless(arg)) {
                             res = PythonProtocol.ConvertToIEnumerable(this, args[0].Restrict(args[0].LimitType));
                         }
                     } else if (type == typeof(IEnumerator) ) {
-                        if (!typeof(IEnumerator).IsAssignableFrom(arg.LimitType) &&
-                            !typeof(IEnumerable).IsAssignableFrom(arg.LimitType) && 
+                        if (!typeof(IEnumerator).IsAssignableFrom(arg.LimitType) && 
+                            !typeof(IEnumerable).IsAssignableFrom(arg.LimitType) &&
                             IsIndexless(arg)) {
                             res = PythonProtocol.ConvertToIEnumerator(this, args[0].Restrict(args[0].LimitType));
                         }
                     }
                     break;
+            }
+
+            if (type.IsEnum && Enum.GetUnderlyingType(type) == args[0].LimitType) {
+                // numeric type to enum, this is ok if the value is zero
+                object value = Activator.CreateInstance(type);
+
+                return new MetaObject(
+                    Ast.Condition(
+                        Ast.Equal(
+                            Ast.ConvertHelper(args[0].Expression, Enum.GetUnderlyingType(type)),
+                            Ast.Constant(Activator.CreateInstance(args[0].LimitType))
+                        ),
+                        Ast.Constant(value),
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("TypeErrorForBadEnumConversion").MakeGenericMethod(type),
+                            Ast.ConvertHelper(args[0].Expression, typeof(object))
+                        )
+                    ),
+                    args[0].Restrictions.Merge(Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType)),
+                    value
+                );
             }
 
             return res ?? Binder.Binder.ConvertTo(ToType, ResultKind, arg);

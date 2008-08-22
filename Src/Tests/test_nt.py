@@ -54,6 +54,13 @@ def test_stat():
         
     #lstat
     AssertError(nt.error, nt.lstat, 'doesnotexist.txt')
+    
+    try:
+        nt.stat('doesnotexist.txt')
+        AssertUnreachable("nt.stat on a file which doesn't exist should throw")
+    except Exception, e:
+        if sys.platform=="win32": #CodePlex 16453
+            AreEqual(e.errno, 2)
  
     
 # getcwdu test
@@ -191,8 +198,7 @@ def test_fdopen():
     AssertError(OSError,nt.fdopen,3, "w", 1024)
     
     # The file mode does not exist
-    #CodePlex Work Item #8617
-    # AssertError(ValueError,nt.fdopen,0,"p")
+    AssertError(ValueError,nt.fdopen,0,"p")
  
     stuff = "\x00a\x01\x02b\x03 \x04  \x05\n\x06_\0xFE\0xFFxyz"
     name = "cp5633.txt"

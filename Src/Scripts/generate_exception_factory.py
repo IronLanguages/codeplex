@@ -99,7 +99,7 @@ def make_format(text, cnt):
 	if cnt == 0:
 		return '"' + text + '"'
 		
-	format = 'string.Format("' + text + '", '
+	format = 'FormatString("' + text + '", '
 	for i in range(cnt - 1):
 		format += "p" + str(i) + ", "
 	

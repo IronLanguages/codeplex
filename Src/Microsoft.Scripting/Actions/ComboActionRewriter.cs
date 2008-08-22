@@ -29,82 +29,6 @@ namespace Microsoft.Scripting.Actions {
     /// individual meta binders and produce the resulting code in a single dynamic site.
     /// </summary>
     public class ComboActionRewriter : ExpressionTreeVisitor {
-        protected override Expression Visit(ActionExpression node) {
-            Debug.Assert(node.IsDynamic);
-
-            return RewriteSite(node, node.Arguments);
-        }
-
-        protected override Expression Visit(BinaryExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, node.Left, node.Right);
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(UnaryExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, node.Operand);
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(InvocationExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, ArrayUtils.Insert(node.Expression, node.Arguments));
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(MethodCallExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, node.Arguments);
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(NewExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, node.Arguments);
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(DeleteExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, node.Expression);
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(AssignmentExpression node) {
-            if (node.IsDynamic) {
-                switch (node.Expression.NodeType) {
-                    case ExpressionType.ArrayIndex:
-                        BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
-                        return RewriteSite(node, arrayIndex.Left, arrayIndex.Right, node.Value);
-                    case ExpressionType.MemberAccess:
-                        return RewriteSite(node, ((MemberExpression)node.Expression).Expression, node.Value);
-                }
-            }
-
-            return base.Visit(node);
-        }
-
-        protected override Expression Visit(MemberExpression node) {
-            if (node.IsDynamic) {
-                return RewriteSite(node, node.Expression);
-            }
-
-            return base.Visit(node);
-        }
-
         protected override Expression VisitExtension(Expression node) {
             CodeContextScopeExpression contextScope = node as CodeContextScopeExpression;
             if (contextScope != null) {
@@ -147,8 +71,8 @@ namespace Microsoft.Scripting.Actions {
             }
 
             public override Expression Reduce() {
-                // we just reduce to a simple ActionExpression
-                return Expression.ActionExpression(
+                // we just reduce to a simple DynamicExpression
+                return Expression.Dynamic(
                     new ComboBinder(_binders),
                     Type,
                     _inputs
@@ -156,18 +80,16 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private Expression RewriteSite(Expression node, params Expression[] args) {
-            return RewriteSite(node, (IList<Expression>)args);
-        }
+        protected override Expression Visit(DynamicExpression node) {
+            MetaAction metaBinder = node.Binder as MetaAction;
 
-        private Expression RewriteSite(Expression node, IList<Expression> args) {
-            MetaAction metaBinder = node.BindingInfo as MetaAction;
             if (metaBinder == null) {
                 // don't rewrite non meta-binder nodes, we can't compose them
                 return node;
             }
 
             // gather the real arguments for the new dynamic site node
+            var args = node.Arguments;
             bool foundSideEffectingArgs = false;
             List<Expression> inputs = new List<Expression>();
 
@@ -257,7 +179,7 @@ namespace Microsoft.Scripting.Actions {
 
             BinaryExpression be = rewritten as BinaryExpression;
             if (be != null) {
-                if (be.Method == null && !be.IsDynamic && IsSideEffectFree(be.Left) && IsSideEffectFree(be.Right)) {
+                if (be.Method == null && IsSideEffectFree(be.Left) && IsSideEffectFree(be.Right)) {
                     return true;
                 }
             }

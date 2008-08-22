@@ -66,6 +66,7 @@ namespace IronPython.Runtime {
 
         public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
             int charEnd = charIndex + charCount;
+            int outputBytes = 0;
             while (charIndex < charEnd) {
                 char c = chars[charIndex];
 #if !SILVERLIGHT
@@ -74,25 +75,47 @@ namespace IronPython.Runtime {
                     if (efb.Fallback(c, charIndex)) {
                         while (efb.Remaining != 0) {
                             bytes[byteIndex++] = (byte)efb.GetNextChar();
+                            outputBytes++;
                         }
                     }
                 } else {
                     bytes[byteIndex++] = (byte)c;
+                    outputBytes++;
                 }
 #else
                 bytes[byteIndex++] = (byte)c;
+                outputBytes++;
 #endif
                 charIndex++;
             }
-            return charCount;
+            return outputBytes;
         }
 
         public override int GetCharCount(byte[] bytes, int index, int count) {
-            return count;
+            int byteEnd = index + count;
+            int outputChars = 0;
+            while (index < byteEnd) {
+                byte b = bytes[index];
+#if !SILVERLIGHT
+                if (b > 0x7f) {
+                    DecoderFallbackBuffer dfb = DecoderFallback.CreateFallbackBuffer();
+                    if (dfb.Fallback(new byte[] { b }, index)) {
+                        outputChars += dfb.Remaining;
+                    }
+                } else {
+                    outputChars++;
+                }
+#else
+                outputChars++;
+#endif
+                index++;
+            }
+            return outputChars;
         }
 
         public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex) {
             int byteEnd = byteIndex + byteCount;
+            int outputChars = 0;
             while (byteIndex < byteEnd) {
                 byte b = bytes[byteIndex];
 #if !SILVERLIGHT
@@ -101,17 +124,20 @@ namespace IronPython.Runtime {
                     if (dfb.Fallback(new byte[] { b }, byteIndex)) {
                         while (dfb.Remaining != 0) {
                             chars[charIndex++] = dfb.GetNextChar();
+                            outputChars++;
                         }
                     }
                 } else {
                     chars[charIndex++] = (char)b;
+                    outputChars++;
                 }
 #else
                 chars[charIndex++] = (char)b;
+                outputChars++;
 #endif
                 byteIndex++;
             }
-            return byteCount;
+            return outputChars;
         }
 
         public override int GetMaxByteCount(int charCount) {

@@ -651,6 +651,24 @@ def test_ipy_dash_m():
         AreEqual(lines[0], 'hello')
     finally:
         nt.unlink(filename)
+
+@disabled("CodePlex Work Item 10925")
+def test_ipy_dash_m_negative():        
+    # builtin modules should not work
+    for modname in [ "sys", "datetime" ]:
+        ipi = IronPythonInstance(executable, exec_prefix,
+                                 extraArgs + " -m " + modname)
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(exit, -1)
+
+    # Modules within packages should not work
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib.assert_util")
+    res, output, err, exit = ipi.StartAndRunToCompletion()
+    AreEqual(res, True) # run should have worked
+    AreEqual(exit, 1)   # should have returned 0
+    Assert("SyntaxError: invalid syntax" in err,
+           "stderr is:" + str(err))
+
         
 def test_ipy_dash_m_pkgs(): 
     # Python packages work
@@ -675,26 +693,7 @@ def test_ipy_dash_m_pkgs():
                "stderr is:" + str(err))
     finally:
         nt.environ["IRONPYTHONPATH"] = old_ipy_path  
-    
-        
-@disabled("CodePlex Work Item 10925")
-def test_ipy_dash_m_negative():
-    # builtin modules should not work
-    for modname in [ "sys", "datetime" ]:
-        ipi = IronPythonInstance(executable, exec_prefix,
-                                 extraArgs + " -m " + modname)
-        res, output, err, exit = ipi.StartAndRunToCompletion()
-        AreEqual(exit, 1)
-        AreEqual(output, "")
-        Assert("ImportError" in err)
 
-    # Modules within packages should not work
-    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib.assert_util")
-    res, output, err, exit = ipi.StartAndRunToCompletion()
-    AreEqual(res, True) # run should have worked
-    AreEqual(exit, 1)   # should have returned 0
-    Assert("SyntaxError: invalid syntax" in err,
-           "stderr is:" + str(err))
     
 def test_ipy_dash_c():
     """verify ipy -c cmd doesn't print expression statements"""

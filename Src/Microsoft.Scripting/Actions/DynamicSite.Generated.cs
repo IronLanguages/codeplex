@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.CodeDom.Compiler;
 using System.Scripting.Actions;
 using System.Threading;
@@ -29,10 +30,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, TRet>>.Create(action);
         }
 
         public static DynamicSite<TRet> Create(OldDynamicAction action) {
@@ -47,7 +48,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, TRet>>.Create(action), null);
             }
         }
 
@@ -61,10 +62,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, TRet> Create(OldDynamicAction action) {
@@ -79,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, TRet>>.Create(action), null);
             }
         }
 
@@ -93,10 +94,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, TRet> Create(OldDynamicAction action) {
@@ -111,7 +112,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, TRet>>.Create(action), null);
             }
         }
 
@@ -125,10 +126,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, T2, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, T2, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, T2, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, T2, TRet> Create(OldDynamicAction action) {
@@ -143,7 +144,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, T2, TRet>>.Create(action), null);
             }
         }
 
@@ -157,10 +158,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, T2, T3, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, T2, T3, TRet> Create(OldDynamicAction action) {
@@ -175,7 +176,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, TRet>>.Create(action), null);
             }
         }
 
@@ -189,10 +190,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, T2, T3, T4, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, T2, T3, T4, TRet> Create(OldDynamicAction action) {
@@ -207,7 +208,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, TRet>>.Create(action), null);
             }
         }
 
@@ -221,10 +222,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, T2, T3, T4, T5, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, T2, T3, T4, T5, TRet> Create(OldDynamicAction action) {
@@ -239,7 +240,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, TRet>>.Create(action), null);
             }
         }
 
@@ -253,10 +254,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, T2, T3, T4, T5, T6, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, T6, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, T6, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, T6, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, T6, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, TRet> Create(OldDynamicAction action) {
@@ -271,7 +272,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, T6, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, T6, TRet>>.Create(action), null);
             }
         }
 
@@ -285,10 +286,10 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     [GeneratedCode("DLR", "2.0")]
     public struct DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, TRet> {
-        private CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, T6, T7, TRet>> _site;
+        private CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, T6, T7, TRet>> _site;
 
         public DynamicSite(OldDynamicAction action) {
-            _site = CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, T6, T7, TRet>>.Create(action);
+            _site = CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, T6, T7, TRet>>.Create(action);
         }
 
         public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, TRet> Create(OldDynamicAction action) {
@@ -303,7 +304,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void EnsureInitialized(OldDynamicAction action) {
             if (_site == null) {
-                Interlocked.CompareExchange(ref _site, CallSite<DynamicSiteTarget<CodeContext, T0, T1, T2, T3, T4, T5, T6, T7, TRet>>.Create(action), null);
+                Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, T0, T1, T2, T3, T4, T5, T6, T7, TRet>>.Create(action), null);
             }
         }
 

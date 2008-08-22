@@ -19,15 +19,13 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting;
-using Microsoft.Scripting.Utils;
 using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
-
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class DoOperationBinderHelper<T> : BinderHelper<T, OldDoOperationAction> where T : class {
         private object[] _args;                                     // arguments we were created with
@@ -348,7 +346,7 @@ namespace Microsoft.Scripting.Actions {
                 if (Binder.CanConvertFrom(_types[1], typeof(int), NarrowingLevel.All)) {
                     if(oper == Operators.GetItem) {
                         _rule.Target = _rule.MakeReturn(Binder,
-                            Ast.ArrayIndex(
+                            Ast.ArrayAccess(
                                 Param0,
                                 ConvertIfNeeded(Param1, typeof(int))
                             )
@@ -488,7 +486,12 @@ namespace Microsoft.Scripting.Actions {
 
         private Expression ConvertIfNeeded(Expression expression, Type type) {
             if (expression.Type != type) {
-                return AstUtils.ConvertTo(Binder, type, ConversionResultKind.ExplicitCast, _rule.Context, expression);
+                return Expression.Dynamic(
+                    OldConvertToAction.Make(Binder, type, ConversionResultKind.ExplicitCast),
+                    type,
+                    _rule.Context,
+                    expression
+                );
             }
             return expression;
         }

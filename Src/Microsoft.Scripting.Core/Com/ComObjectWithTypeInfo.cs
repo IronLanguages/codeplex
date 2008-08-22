@@ -23,6 +23,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Scripting.Actions;
 using System.Scripting.Utils;
+using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace System.Scripting.Com {
@@ -59,7 +60,7 @@ namespace System.Scripting.Com {
         }
 
         public override string ToString() {
-            return String.Format("{0} ({1})", Obj.ToString(), _comType.Name);
+            return String.Format(CultureInfo.CurrentCulture, "{0} ({1})", Obj.ToString(), _comType.Name);
         }
 
         public Type ComType {
@@ -88,12 +89,14 @@ namespace System.Scripting.Com {
 
         #region IMembersList
 
-        public override IList<string> GetMemberNames() {
-            if (_comTypeMemberNames == null) {
-                InitializeMemberNames();
-            }
+        public override IList<string> MemberNames {
+            get {
+                if (_comTypeMemberNames == null) {
+                    InitializeMemberNames();
+                }
 
-            return _comTypeMemberNames.ToArray();
+                return _comTypeMemberNames.ToArray();
+            }
         }
 
         private void InitializeMemberNames() {

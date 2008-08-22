@@ -17,12 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = System.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Updates fields/properties of the returned value with unused keyword parameters.
@@ -143,7 +143,7 @@ namespace Microsoft.Scripting.Generation {
                 return Ast.ConvertHelper(value, type);
             }
 
-            return AstUtils.ConvertTo(context.Binder, type, context.ContextExpression, value);
+            return Expression.Dynamic(OldConvertToAction.Make(context.Binder, type), type, context.ContextExpression, value);
         }
     }
 }

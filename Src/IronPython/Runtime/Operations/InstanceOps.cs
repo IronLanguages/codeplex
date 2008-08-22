@@ -19,16 +19,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting;
 using System.Scripting.Actions;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
@@ -183,7 +180,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object IterMethod(CodeContext/*!*/ context, object self) {
-            return PythonOps.GetEnumeratorForIteration(context, self);
+            return self;
         }
 
         public static object NextMethod(object self) {

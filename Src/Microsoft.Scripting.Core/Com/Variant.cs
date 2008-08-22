@@ -19,6 +19,7 @@ using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
+using System.Globalization;
 
 namespace System.Scripting.Com {
 
@@ -111,7 +112,7 @@ namespace System.Scripting.Com {
         }
 
         public override string ToString() {
-            return String.Format("{0} ({1}", ToObject().ToString(), VariantType);
+            return String.Format(CultureInfo.CurrentCulture, "{0} ({1}", ToObject().ToString(), VariantType);
         }
 
         # region FxCop-required APIs
@@ -234,7 +235,7 @@ namespace System.Scripting.Com {
 
                 default:
                     try {
-                        IntPtr variantPtr = ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this);
+                        IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
                         return Marshal.GetObjectForNativeVariant(variantPtr);
                     }
                     catch (Exception) {
@@ -264,8 +265,8 @@ namespace System.Scripting.Com {
                 ((vt) == VarEnum.VT_DISPATCH) ||
                 ((vt) == VarEnum.VT_RECORD)
                 ) {
-                IntPtr variantPtr = ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this);
-                ComRuntimeHelpers.UnsafeNativeMethods.VariantClear(variantPtr);
+                IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
+                UnsafeNativeMethods.VariantClear(variantPtr);
                 Debug.Assert(IsEmpty);
             } else {
                 VariantType = VarEnum.VT_EMPTY;
@@ -287,8 +288,7 @@ namespace System.Scripting.Com {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly")] // TODO: fix
-        public void SetAsNULL() {
+        public void SetAsNull() {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = VarEnum.VT_NULL;
         }
@@ -318,7 +318,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefI1(ref SByte value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I1 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertSByteByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertSByteByrefToPtr(ref value);
         }
 
         // VT_I2
@@ -339,7 +339,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefI2(ref Int16 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I2 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertInt16ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertInt16ByrefToPtr(ref value);
         }
 
         // VT_I4
@@ -360,7 +360,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefI4(ref Int32 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I4 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertInt32ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertInt32ByrefToPtr(ref value);
         }
 
         // VT_I8
@@ -381,7 +381,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefI8(ref Int64 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I8 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertInt64ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertInt64ByrefToPtr(ref value);
         }
 
         // VT_UI1
@@ -404,7 +404,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefUi1(ref Byte value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI1 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertByteByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertByteByrefToPtr(ref value);
         }
 
         // VT_UI2
@@ -427,7 +427,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefUi2(ref UInt16 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI2 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertUInt16ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertUInt16ByrefToPtr(ref value);
         }
 
         // VT_UI4
@@ -450,7 +450,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefUi4(ref UInt32 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI4 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertUInt32ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertUInt32ByrefToPtr(ref value);
         }
 
         // VT_UI8
@@ -473,7 +473,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefUi8(ref UInt64 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI8 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertUInt64ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertUInt64ByrefToPtr(ref value);
         }
 
         // VT_INT
@@ -494,7 +494,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefInt(ref IntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_INT | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
         }
 
         // VT_UINT
@@ -517,7 +517,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefUint(ref UIntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UINT | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertUIntPtrByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertUIntPtrByrefToPtr(ref value);
         }
 
         // VT_BOOL
@@ -552,7 +552,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefError(ref Int32 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_ERROR | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertInt32ByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertInt32ByrefToPtr(ref value);
         }
 
         // VT_R4
@@ -573,7 +573,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefR4(ref Single value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_R4 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertSingleByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertSingleByrefToPtr(ref value);
         }
 
         // VT_R8
@@ -594,7 +594,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefR8(ref Double value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_R8 | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertDoubleByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertDoubleByrefToPtr(ref value);
         }
 
         // VT_DECIMAL
@@ -620,7 +620,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefDecimal(ref Decimal value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_DECIMAL | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertDecimalByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertDecimalByrefToPtr(ref value);
         }
 
         // VT_CY
@@ -656,12 +656,12 @@ namespace System.Scripting.Com {
         public String AsBstr {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_BSTR);
-                return (string)Marshal.GetObjectForNativeVariant(ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this));
+                return (string)Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));
             }
             set {
                 Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
                 VariantType = VarEnum.VT_BSTR;
-                Marshal.GetNativeVariantForObject(value, ComRuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref this));
+                Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));
             }
         }
 
@@ -669,7 +669,7 @@ namespace System.Scripting.Com {
         public void SetAsByrefBstr(ref IntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_BSTR | VarEnum.VT_BYREF);
-            _typeUnion._unionTypes._byref = ComRuntimeHelpers.UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
         }
 
         // VT_UNKNOWN

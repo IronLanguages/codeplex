@@ -477,8 +477,8 @@ def unverified_raw_input():
 #Run this first to corrupt other test cases if it's broken.
 unverified_raw_input()
 
-@disabled("CodePlex 16497")
-def test_cp16497():
+@disabled("CodePlex 4299")
+def test_cp4299():
     superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
     superConsole.SendKeys('import sys{ENTER}')
     superConsole.SendKeys('print sys.ps1{ENTER}')

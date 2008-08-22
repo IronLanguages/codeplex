@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Scripting.Utils;
+using System.Globalization;
 
 namespace System.Scripting.Actions {
     public class Rule<T> where T : class {
@@ -121,7 +122,7 @@ namespace System.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         private string Dump {
             get {
-                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {
                     ExpressionWriter.Dump(_binding, "Rule", writer);
                     return writer.ToString();
                 }

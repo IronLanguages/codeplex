@@ -17,6 +17,12 @@ using System;
 
 namespace Microsoft.Scripting {
 
+    internal static partial class Strings {
+        private static string FormatString(string format, params object[] args) {
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, format, args);
+        }
+    }
+
     #region Generated Microsoft.Scripting Exception Factory
 
     // *** BEGIN GENERATED CODE ***
@@ -31,28 +37,28 @@ namespace Microsoft.Scripting {
         /// A string like  "Cannot access member {1} declared on type {0} because the type contains generic parameters."
         /// </summary>
         internal static string InvalidOperation_ContainsGenericParameters(object p0, object p1) {
-            return string.Format("Cannot access member {1} declared on type {0} because the type contains generic parameters.", p0, p1);
+            return FormatString("Cannot access member {1} declared on type {0} because the type contains generic parameters.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "Type '{0}' is missing or cannot be loaded."
         /// </summary>
         internal static string MissingType(object p0) {
-            return string.Format("Type '{0}' is missing or cannot be loaded.", p0);
+            return FormatString("Type '{0}' is missing or cannot be loaded.", p0);
         }
 
         /// <summary>
         /// A string like  "static property "{0}" of "{1}" can only be read through a type, not an instance"
         /// </summary>
         internal static string StaticAccessFromInstanceError(object p0, object p1) {
-            return string.Format("static property \"{0}\" of \"{1}\" can only be read through a type, not an instance", p0, p1);
+            return FormatString("static property \"{0}\" of \"{1}\" can only be read through a type, not an instance", p0, p1);
         }
 
         /// <summary>
         /// A string like  "static property "{0}" of "{1}" can only be assigned to through a type, not an instance"
         /// </summary>
         internal static string StaticAssignmentFromInstanceError(object p0, object p1) {
-            return string.Format("static property \"{0}\" of \"{1}\" can only be assigned to through a type, not an instance", p0, p1);
+            return FormatString("static property \"{0}\" of \"{1}\" can only be assigned to through a type, not an instance", p0, p1);
         }
 
         /// <summary>
@@ -221,21 +227,21 @@ namespace Microsoft.Scripting {
         /// A string like  "Type parameter is {0}. Expected a delegate."
         /// </summary>
         internal static string TypeParameterIsNotDelegate(object p0) {
-            return string.Format("Type parameter is {0}. Expected a delegate.", p0);
+            return FormatString("Type parameter is {0}. Expected a delegate.", p0);
         }
 
         /// <summary>
         /// A string like  "Cannot cast from type '{0}' to type '{1}"
         /// </summary>
         internal static string InvalidCast(object p0, object p1) {
-            return string.Format("Cannot cast from type '{0}' to type '{1}", p0, p1);
+            return FormatString("Cannot cast from type '{0}' to type '{1}", p0, p1);
         }
 
         /// <summary>
         /// A string like  "unknown member type: '{0}'. "
         /// </summary>
         internal static string UnknownMemberType(object p0) {
-            return string.Format("unknown member type: '{0}'. ", p0);
+            return FormatString("unknown member type: '{0}'. ", p0);
         }
 
         /// <summary>
@@ -278,14 +284,14 @@ namespace Microsoft.Scripting {
         /// A string like  "The operation requires a non-generic type for {0}, but this represents generic types only"
         /// </summary>
         internal static string NonGenericWithGenericGroup(object p0) {
-            return string.Format("The operation requires a non-generic type for {0}, but this represents generic types only", p0);
+            return FormatString("The operation requires a non-generic type for {0}, but this represents generic types only", p0);
         }
 
         /// <summary>
         /// A string like  "Invalid operation: '{0}'"
         /// </summary>
         internal static string InvalidOperation(object p0) {
-            return string.Format("Invalid operation: '{0}'", p0);
+            return FormatString("Invalid operation: '{0}'", p0);
         }
 
         /// <summary>
@@ -319,21 +325,21 @@ namespace Microsoft.Scripting {
         /// A string like  "Cannot create default value for type {0}."
         /// </summary>
         internal static string CantCreateDefaultTypeFor(object p0) {
-            return string.Format("Cannot create default value for type {0}.", p0);
+            return FormatString("Cannot create default value for type {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Unhandled convert: {0}"
         /// </summary>
         internal static string UnhandledConvert(object p0) {
-            return string.Format("Unhandled convert: {0}", p0);
+            return FormatString("Unhandled convert: {0}", p0);
         }
 
         /// <summary>
         /// A string like  "{0}.{1} has no publiclly visible method."
         /// </summary>
         internal static string NoCallableMethods(object p0, object p1) {
-            return string.Format("{0}.{1} has no publiclly visible method.", p0, p1);
+            return FormatString("{0}.{1} has no publiclly visible method.", p0, p1);
         }
 
         /// <summary>
@@ -403,7 +409,7 @@ namespace Microsoft.Scripting {
         /// A string like  "Extension type {0} must be public."
         /// </summary>
         internal static string ExtensionMustBePublic(object p0) {
-            return string.Format("Extension type {0} must be public.", p0);
+            return FormatString("Extension type {0} must be public.", p0);
         }
 
         /// <summary>
@@ -437,7 +443,7 @@ namespace Microsoft.Scripting {
         /// A string like  "Invalid type of argument {0}; expecting {1}."
         /// </summary>
         internal static string InvalidArgumentType(object p0, object p1) {
-            return string.Format("Invalid type of argument {0}; expecting {1}.", p0, p1);
+            return FormatString("Invalid type of argument {0}; expecting {1}.", p0, p1);
         }
 
         /// <summary>
@@ -453,49 +459,49 @@ namespace Microsoft.Scripting {
         /// A string like  "Local variable '{0}' referenced before assignment."
         /// </summary>
         internal static string ReferencedBeforeAssignment(object p0) {
-            return string.Format("Local variable '{0}' referenced before assignment.", p0);
+            return FormatString("Local variable '{0}' referenced before assignment.", p0);
         }
 
         /// <summary>
         /// A string like  "Field {0} is read-only"
         /// </summary>
         internal static string FieldReadonly(object p0) {
-            return string.Format("Field {0} is read-only", p0);
+            return FormatString("Field {0} is read-only", p0);
         }
 
         /// <summary>
         /// A string like  "Property {0} is read-only"
         /// </summary>
         internal static string PropertyReadonly(object p0) {
-            return string.Format("Property {0} is read-only", p0);
+            return FormatString("Property {0} is read-only", p0);
         }
 
         /// <summary>
         /// A string like  "Expected event from {0}.{1}, got event from {2}.{3}."
         /// </summary>
         internal static string UnexpectedEvent(object p0, object p1, object p2, object p3) {
-            return string.Format("Expected event from {0}.{1}, got event from {2}.{3}.", p0, p1, p2, p3);
+            return FormatString("Expected event from {0}.{1}, got event from {2}.{3}.", p0, p1, p2, p3);
         }
 
         /// <summary>
         /// A string like  "expected bound event, got {0}."
         /// </summary>
         internal static string ExpectedBoundEvent(object p0) {
-            return string.Format("expected bound event, got {0}.", p0);
+            return FormatString("expected bound event, got {0}.", p0);
         }
 
         /// <summary>
         /// A string like  "Expected type {0}, got {1}."
         /// </summary>
         internal static string UnexpectedType(object p0, object p1) {
-            return string.Format("Expected type {0}, got {1}.", p0, p1);
+            return FormatString("Expected type {0}, got {1}.", p0, p1);
         }
 
         /// <summary>
         /// A string like  "can only write to member {0}."
         /// </summary>
         internal static string MemberWriteOnly(object p0) {
-            return string.Format("can only write to member {0}.", p0);
+            return FormatString("can only write to member {0}.", p0);
         }
 
         /// <summary>
@@ -511,7 +517,7 @@ namespace Microsoft.Scripting {
         /// A string like  "Invalid stream type: {0}."
         /// </summary>
         internal static string InvalidStreamType(object p0) {
-            return string.Format("Invalid stream type: {0}.", p0);
+            return FormatString("Invalid stream type: {0}.", p0);
         }
 
         /// <summary>
@@ -545,21 +551,21 @@ namespace Microsoft.Scripting {
         /// A string like  "can't add another casing for identifier {0}"
         /// </summary>
         internal static string CantAddCasing(object p0) {
-            return string.Format("can't add another casing for identifier {0}", p0);
+            return FormatString("can't add another casing for identifier {0}", p0);
         }
 
         /// <summary>
         /// A string like  "can't add new identifier {0}"
         /// </summary>
         internal static string CantAddIdentifier(object p0) {
-            return string.Format("can't add new identifier {0}", p0);
+            return FormatString("can't add new identifier {0}", p0);
         }
 
         /// <summary>
         /// A string like  "Type '{0}' doesn't provide a suitable public constructor or its implementation is faulty: {1}"
         /// </summary>
         internal static string InvalidCtorImplementation(object p0, object p1) {
-            return string.Format("Type '{0}' doesn't provide a suitable public constructor or its implementation is faulty: {1}", p0, p1);
+            return FormatString("Type '{0}' doesn't provide a suitable public constructor or its implementation is faulty: {1}", p0, p1);
         }
 
         /// <summary>
@@ -584,28 +590,28 @@ namespace Microsoft.Scripting {
         /// A string like  "Cannot emit constant {0} ({1})"
         /// </summary>
         internal static string CanotEmitConstant(object p0, object p1) {
-            return string.Format("Cannot emit constant {0} ({1})", p0, p1);
+            return FormatString("Cannot emit constant {0} ({1})", p0, p1);
         }
 
         /// <summary>
         /// A string like  "No implicit cast from {0} to {1}"
         /// </summary>
         internal static string NoImplicitCast(object p0, object p1) {
-            return string.Format("No implicit cast from {0} to {1}", p0, p1);
+            return FormatString("No implicit cast from {0} to {1}", p0, p1);
         }
 
         /// <summary>
         /// A string like  "No explicit cast from {0} to {1}"
         /// </summary>
         internal static string NoExplicitCast(object p0, object p1) {
-            return string.Format("No explicit cast from {0} to {1}", p0, p1);
+            return FormatString("No explicit cast from {0} to {1}", p0, p1);
         }
 
         /// <summary>
         /// A string like  "name '{0}' not defined"
         /// </summary>
         internal static string NameNotDefined(object p0) {
-            return string.Format("name '{0}' not defined", p0);
+            return FormatString("name '{0}' not defined", p0);
         }
 
         /// <summary>
@@ -648,14 +654,14 @@ namespace Microsoft.Scripting {
         /// A string like  "Cannot create instance of {0} because it contains generic parameters"
         /// </summary>
         internal static string IllegalNew_GenericParams(object p0) {
-            return string.Format("Cannot create instance of {0} because it contains generic parameters", p0);
+            return FormatString("Cannot create instance of {0} because it contains generic parameters", p0);
         }
 
         /// <summary>
         /// A string like  "Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n"
         /// </summary>
         internal static string VerificationException(object p0, object p1, object p2) {
-            return string.Format("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n", p0, p1, p2);
+            return FormatString("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n", p0, p1, p2);
         }
 
     }

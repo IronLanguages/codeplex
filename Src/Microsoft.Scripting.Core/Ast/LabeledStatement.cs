@@ -25,7 +25,7 @@ namespace System.Linq.Expressions {
         private readonly LabelTarget _label;
 
         internal LabeledStatement(Annotations annotations, LabelTarget label, Expression expression)
-            : base(ExpressionType.LabeledStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.LabeledStatement, typeof(void), annotations) {
             _label = label;
             _expression = expression;
         }

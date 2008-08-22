@@ -33,7 +33,7 @@ namespace System.Linq.Expressions {
             string name,
             Annotations annotations,
             ReadOnlyCollection<VariableExpression> variables)
-            : base(ExpressionType.Scope, body.Type, annotations, null) {
+            : base(ExpressionType.Scope, body.Type, annotations) {
 
             _body = body;
             _name = name;

@@ -151,16 +151,6 @@ def append_string_to_file(filename, *lines):
         f.writelines(x + "\n")
     f.close()
 
-def ensure_future_present():
-    import nt 
-    future = compat_test_path + "/__future__.py"
-    try:
-        nt.stat(future)
-    except:
-        append_string_to_file(future, "division = 1")
-    else:
-        pass
-
 def get_class_name(type):
     typename = str(type)
     return typename[typename.rfind('.')+1:-2]

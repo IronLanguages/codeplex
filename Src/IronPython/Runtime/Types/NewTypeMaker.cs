@@ -55,7 +55,6 @@ namespace IronPython.Runtime.Types {
         public const string FieldGetterPrefix = "#field_get#", FieldSetterPrefix = "#field_set#";
 
         private static readonly Publisher<NewTypeInfo, Type> _newTypes = new Publisher<NewTypeInfo, Type>();
-        private static readonly Dictionary<Type, Dictionary<string, List<string>>> _specialNamesForSlottedTypes = new Dictionary<Type, Dictionary<string, List<string>>>();
 
         [MultiRuntimeAware]
         private static int _typeCount;
@@ -68,7 +67,6 @@ namespace IronPython.Runtime.Types {
         protected FieldInfo _weakrefField;
         protected FieldInfo _slotsField;
         private FieldInfo _explicitMO;
-        protected Type _tupleType;
         protected IEnumerable<Type> _interfaceTypes;
         protected PythonTuple _baseClasses;
 
@@ -78,7 +76,7 @@ namespace IronPython.Runtime.Types {
         private static readonly Dictionary<Type, Dictionary<string, List<ExtensionPropertyTracker>>> _overriddenProperties = new Dictionary<Type, Dictionary<string, List<ExtensionPropertyTracker>>>();
         
         public static Type GetNewType(string typeName, PythonTuple bases, IAttributesCollection dict) {
-            if (bases == null) bases = PythonTuple.MakeTuple();
+            if (bases == null) bases = PythonTuple.EMPTY;
             // we're really only interested in the "correct" base type pulled out of bases
             // and any slot information contained in dict
             // other info might be used for future optimizations
@@ -106,17 +104,14 @@ namespace IronPython.Runtime.Types {
                 });
 
             if (typeInfo.Slots != null) {
-                Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray(typeof(object), typeInfo.Slots.Count));
+                int index = 0;
+                foreach (object o in bases) {
+                    PythonType pt = o as PythonType;
+                    if (pt == null) {
+                        continue;
+                    }
 
-                Dictionary<string, List<string>> specialNames = null;
-                lock (_specialNamesForSlottedTypes) {
-                    _specialNamesForSlottedTypes.TryGetValue(ret, out specialNames);
-                }
-
-                ret = ret.MakeGenericType(tupleType);
-
-                if (specialNames != null) {
-                    GetTypeMaker(bases, typeInfo).AddBaseMethods(ret, specialNames);
+                    index += pt.SlotCount;
                 }
 
                 for (int i = 0; i < typeInfo.Slots.Count; i++) {
@@ -141,7 +136,7 @@ namespace IronPython.Runtime.Types {
                         continue;
                     }
 
-                    dict[id] = new ReflectedSlotProperty(name, typeName, ret, i);
+                    dict[id] = new ReflectedSlotProperty(name, typeName, i + index);
                 }
             }
 
@@ -422,13 +417,7 @@ namespace IronPython.Runtime.Types {
 
             Type ret = FinishType();
 
-            if (_slots == null) {
-                AddBaseMethods(ret, specialNames);
-            } else {
-                lock (_specialNamesForSlottedTypes) {
-                    _specialNamesForSlottedTypes[ret] = specialNames;
-                }
-            }
+            AddBaseMethods(ret, specialNames);
 
             return ret;
         }
@@ -767,6 +756,13 @@ namespace IronPython.Runtime.Types {
 
             ILGen il = CreateILGen(cb.GetILGenerator());
 
+            int typeArg;
+            if (pis.Length == 0 || pis[0].ParameterType != typeof(CodeContext)) {
+                typeArg = 1;
+            } else {
+                typeArg = 2;
+            }
+
             // this.__class__ = <arg?>
             //  can occur 2 ways:
             //      1. If we have our own _typeField then we set it
@@ -775,12 +771,7 @@ namespace IronPython.Runtime.Types {
             if (!typeof(IPythonObject).IsAssignableFrom(_baseType)) {
                 il.EmitLoadArg(0);
                 // base class could have CodeContext parameter in which case our type is the 2nd parameter.
-                if (pis.Length == 0 || pis[0].ParameterType != typeof(CodeContext)) {
-                    il.EmitLoadArg(1);
-                } else {
-                    il.EmitLoadArg(2);
-                }
-
+                il.EmitLoadArg(typeArg);
                 il.EmitFieldSet(_typeField);
             }
 
@@ -795,9 +786,10 @@ namespace IronPython.Runtime.Types {
                 MethodInfo init = typeof(PythonOps).GetMethod("InitializeUserTypeSlots");
 
                 il.EmitLoadArg(0);
-                il.EmitType(_tupleType);
+                
+                il.EmitLoadArg(typeArg);
                 il.EmitCall(init);
-                il.EmitUnbox(_tupleType);
+                
                 il.EmitFieldSet(_slotsField);
             }
 
@@ -1258,22 +1250,16 @@ namespace IronPython.Runtime.Types {
 
         private void ImplementSlots() {
             if (_slots != null) {
-                GenericTypeParameterBuilder[] tbp = _tg.DefineGenericParameters("Slots");
-                _slotsField = _tg.DefineField(".SlotValues", tbp[0], FieldAttributes.Public);
-                _tupleType = tbp[0];
+                _slotsField = _tg.DefineField(".SlotValues", typeof(object[]), FieldAttributes.Private);
+                _tg.AddInterfaceImplementation(typeof(IObjectWithSlots));
 
-                PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0], Type.EmptyTypes);
-                MethodBuilder mb = _tg.DefineMethod(
-                    "get_$SlotValues",
-                    MethodAttributes.Public,
-                    tbp[0],
-                    Type.EmptyTypes
-                );
-                ILGen il = CreateILGen(mb.GetILGenerator());
+                MethodInfo decl;
+                MethodBuilder impl;
+                ILGen il = DefineMethodOverride(MethodAttributes.Private, typeof(IObjectWithSlots), "GetSlots", out decl, out impl);
                 il.EmitLoadArg(0);
                 il.EmitFieldGet(_slotsField);
                 il.Emit(OpCodes.Ret);
-                pb.SetGetMethod(mb);
+                _tg.DefineMethodOverride(impl, decl);
             }
         }
 

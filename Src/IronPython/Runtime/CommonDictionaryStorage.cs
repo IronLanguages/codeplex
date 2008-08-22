@@ -16,10 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 using System.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
 
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
@@ -43,7 +44,12 @@ namespace IronPython.Runtime {
     /// the buckets and then calls a static helper function to do the read from the bucket
     /// array to ensure that readers are not seeing multiple bucket arrays.
     /// </summary>
-    internal class CommonDictionaryStorage : DictionaryStorage {
+    [Serializable]
+    internal sealed class CommonDictionaryStorage : DictionaryStorage
+#if !SILVERLIGHT
+        , ISerializable, IDeserializationCallback 
+#endif
+    {
         private Bucket[] _buckets;
         private int _count;
         private const int InitialBucketSize = 7;
@@ -72,6 +78,17 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
+        /// Creates a new dictionary geting values/keys from the
+        /// items arary
+        /// </summary>
+        public CommonDictionaryStorage(object[] items)
+            : this(Math.Max(items.Length / 2, InitialBucketSize)) {
+            for (int i = 0; i < items.Length / 2; i++) {
+                AddNoLock(items[i * 2 + 1], items[i * 2]);
+            }
+        }
+
+        /// <summary>
         /// Creates a new dictionary storage with the given set of buckets
         /// and size.  Used when cloning the dictionary storage.
         /// </summary>
@@ -79,6 +96,16 @@ namespace IronPython.Runtime {
             _buckets = buckets;
             _count = count;
         }
+
+#if !SILVERLIGHT
+        private CommonDictionaryStorage(SerializationInfo info, StreamingContext context) {
+            // remember the serialization info, we'll deserialize when we get the callback.  This
+            // enables special types like DBNull.Value to successfully be deserialized inside of us.  We
+            // store the serialization info in a special bucket so we don't have an extra field just for
+            // serialization
+            _buckets = new Bucket[] { new DeserializationBucket(info) };
+        }
+#endif
 
         /// <summary>
         /// Adds a new item to the dictionary, replacing an existing one if it already exists.
@@ -291,7 +318,26 @@ namespace IronPython.Runtime {
                 }
                 return res;
             }
-        }        
+        }
+
+        public override bool HasNonStringAttributes() {
+            lock (this) {
+                if (_buckets != null) {
+                    for (int i = 0; i < _buckets.Length; i++) {
+                        Bucket curBucket = _buckets[i];
+                        while (curBucket != null) {
+                            if (!(curBucket.Key is string)) {
+                                return true;
+                            }
+                            
+                            curBucket = curBucket.Next;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Clones the storage returning a new DictionaryStorage object.
@@ -330,7 +376,7 @@ namespace IronPython.Runtime {
 
         private void CommonCopyTo(CommonDictionaryStorage into) {
             if (into._buckets == null) {
-                into._buckets = new Bucket[Math.Max(_count, InitialBucketSize)];
+                into._buckets = new Bucket[_buckets.Length];
             } else {
                 int curSize = into._buckets.Length;
                 while (curSize < _count + into._count) {
@@ -374,6 +420,13 @@ namespace IronPython.Runtime {
             return HashSite._HashSite.Target(HashSite._HashSite, key) & 0x7fffffff;
         }
 
+        /// <summary>
+        /// Used to store a single hashed key/value and a linked list of
+        /// collisions.
+        /// 
+        /// Bucket is not serializable because it stores the computed hash
+        /// code which could change between serialization and deserialization.
+        /// </summary>
         private class Bucket {
             public object Key;          // the key to be hashed
             public object Value;        // the value associated with the key
@@ -399,6 +452,63 @@ namespace IronPython.Runtime {
                 return Next.Clone();
             }
         }
+
+#if !SILVERLIGHT
+
+        /// <summary>
+        /// Special marker bucket used during deserialization to not add
+        /// an extra field to the dictionary storage type.
+        /// </summary>
+        private class DeserializationBucket : Bucket {            
+            public readonly SerializationInfo/*!*/ SerializationInfo;
+
+            public DeserializationBucket(SerializationInfo info) {
+                SerializationInfo = info;
+            }
+        }
+
+        private DeserializationBucket GetDeserializationBucket() {
+            if (_buckets == null) {
+                return null;
+            }
+
+            if (_buckets.Length != 1) {
+                return null;
+            }
+
+            return _buckets[0] as DeserializationBucket;
+        }
+
+        #region ISerializable Members
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context) {
+            info.AddValue("buckets", GetItems());            
+        }
+
+        #endregion
+
+        #region IDeserializationCallback Members
+
+        void IDeserializationCallback.OnDeserialization(object sender) {
+            DeserializationBucket bucket = GetDeserializationBucket();
+            if (bucket == null) {
+                // we've received multiple OnDeserialization callbacks, only 
+                // deserialize after the 1st one
+                return;
+            }
+
+            SerializationInfo info = bucket.SerializationInfo;
+            _buckets = null;
+
+            var buckets = (List<KeyValuePair<object, object>>)info.GetValue("buckets", typeof(List<KeyValuePair<object, object>>));
+
+            foreach (KeyValuePair<object, object> kvp in buckets) {
+                Add(kvp.Key, kvp.Value);
+            }
+        }
+
+        #endregion
+#endif
     }
 
 }

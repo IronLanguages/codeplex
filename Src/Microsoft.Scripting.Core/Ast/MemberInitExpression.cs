@@ -25,7 +25,7 @@ namespace System.Linq.Expressions {
         NewExpression _newExpression;
         ReadOnlyCollection<MemberBinding> _bindings;
         internal MemberInitExpression(NewExpression newExpression, ReadOnlyCollection<MemberBinding> bindings)
-            : base(ExpressionType.MemberInit, newExpression.Type, null, null) {
+            : base(ExpressionType.MemberInit, newExpression.Type, null) {
             _newExpression = newExpression;
             _bindings = bindings;
         }

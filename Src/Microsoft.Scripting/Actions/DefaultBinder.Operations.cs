@@ -491,7 +491,7 @@ namespace Microsoft.Scripting.Actions {
 
                 if (oper == StandardOperators.GetItem) {
                     return new MetaObject(
-                        Ast.ArrayIndex(
+                        Ast.ArrayAccess(
                             args[0].Expression,
                             ConvertIfNeeded(args[1].Expression, typeof(int))
                         ),

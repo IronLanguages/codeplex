@@ -17,6 +17,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 namespace System.Runtime.CompilerServices {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
     public delegate bool GeneratorNext(Generator generator, out object next);
 
     // TODO: should implement IEnumerable too, see C# generators
@@ -24,7 +25,12 @@ namespace System.Runtime.CompilerServices {
         private object _current;
         private readonly GeneratorNext _next;
 
-        public int location = Int32.MaxValue;
+        private int _location = Int32.MaxValue;
+
+        public int Location {
+            get { return _location; }
+            set { _location = value; }
+        }
 
         public Generator(GeneratorNext next) {
             _next = next;
@@ -44,7 +50,7 @@ namespace System.Runtime.CompilerServices {
 
         #region IDisposable Members
 
-        void IDisposable.Dispose() {
+        public void Dispose() {
             // nothing needed to dispose
             GC.SuppressFinalize(this);
         }

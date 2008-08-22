@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _false;
 
         internal ConditionalExpression(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse, Type type)
-            : base(ExpressionType.Conditional, type, annotations, null) {
+            : base(ExpressionType.Conditional, type, annotations) {
             _test = test;
             _true = ifTrue;
             _false = ifFalse;

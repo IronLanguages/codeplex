@@ -232,7 +232,7 @@ namespace IronPython.Runtime.Binding {
             } else if (init is BuiltinFunction) {
                 return new BuiltinInitAdapter(ai, (BuiltinFunction)init, state, codeContext);
             } else {
-                return new InitAdapter(ai, state, codeContext);
+                return new SlotInitAdapter(init, ai, state, codeContext);
             }
         }
 
@@ -468,21 +468,12 @@ namespace IronPython.Runtime.Binding {
 
         #region __init__ adapters
 
-        private class InitAdapter : CallAdapter {
-            public InitAdapter(ArgumentValues/*!*/ ai, BinderState/*!*/ state, Expression/*!*/ codeContext)
+        private abstract class InitAdapter : CallAdapter {
+            protected InitAdapter(ArgumentValues/*!*/ ai, BinderState/*!*/ state, Expression/*!*/ codeContext)
                 : base(ai, state, codeContext) {
             }
 
-            public virtual MetaObject/*!*/ MakeInitCall(DefaultBinder/*!*/ binder, MetaObject/*!*/ createExpr) {
-                Expression init = Ast.Call(
-                    typeof(PythonOps).GetMethod("GetInitMember"),
-                    CodeContext,
-                    Ast.Convert(Arguments.Self.Expression, typeof(PythonType)),
-                    Ast.ConvertHelper(createExpr.Expression, typeof(object))
-                );
-
-                return MakeDefaultInit(binder, createExpr, init);
-            }
+            public abstract MetaObject/*!*/ MakeInitCall(DefaultBinder/*!*/ binder, MetaObject/*!*/ createExpr);
 
             protected MetaObject/*!*/ MakeDefaultInit(DefaultBinder/*!*/ binder, MetaObject/*!*/ createExpr, Expression/*!*/ init) {
                 List<Expression> args = new List<Expression>();
@@ -503,6 +494,27 @@ namespace IronPython.Runtime.Binding {
                     ),
                     Arguments.Self.Restrictions.Merge(createExpr.Restrictions)
                 );
+            }
+        }
+
+        private class SlotInitAdapter : InitAdapter {
+            private readonly PythonTypeSlot/*!*/ _slot;
+            
+            public SlotInitAdapter(PythonTypeSlot/*!*/ slot, ArgumentValues/*!*/ ai, BinderState/*!*/ state, Expression/*!*/ codeContext)
+                : base(ai, state, codeContext) {
+                _slot = slot;
+            }
+
+            public override MetaObject/*!*/ MakeInitCall(DefaultBinder/*!*/ binder, MetaObject/*!*/ createExpr) {
+                Expression init = Ast.Call(
+                    typeof(PythonOps).GetMethod("GetInitSlotMember"),
+                    CodeContext,
+                    Ast.Convert(Arguments.Self.Expression, typeof(PythonType)),
+                    Ast.Convert(AstUtils.WeakConstant(_slot), typeof(PythonTypeSlot)),
+                    Ast.ConvertHelper(createExpr.Expression, typeof(object))
+                );
+
+                return MakeDefaultInit(binder, createExpr, init);
             }
         }
 

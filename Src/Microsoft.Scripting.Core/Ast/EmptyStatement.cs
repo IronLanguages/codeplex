@@ -17,7 +17,7 @@ namespace System.Linq.Expressions {
     public sealed class EmptyStatement : Expression {
 
         internal EmptyStatement(Annotations annotations)
-            : base(ExpressionType.EmptyStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.EmptyStatement, typeof(void), annotations) {
         }
     }
 

@@ -70,8 +70,6 @@ namespace Microsoft.Scripting.Actions {
                     return new DoOperationBinderHelper<T>(callerContext, (OldDoOperationAction)action, extracted).MakeRule();
                 case DynamicActionKind.DeleteMember:
                     return new DeleteMemberBinderHelper<T>(callerContext, (OldDeleteMemberAction)action, extracted).MakeRule();
-                case DynamicActionKind.InvokeMember:
-                    return new InvokeMemberBinderHelper<T>(callerContext, (OldInvokeMemberAction)action, extracted).MakeRule();
                 case DynamicActionKind.ConvertTo:
                     return new ConvertToBinderHelper<T>(callerContext, (OldConvertToAction)action, extracted).MakeRule();
                 default:

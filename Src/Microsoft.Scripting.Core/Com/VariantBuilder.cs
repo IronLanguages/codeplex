@@ -91,13 +91,13 @@ namespace System.Scripting.Com {
                     return exprs;
 
                 case VarEnum.VT_NULL:
-                    // paramVariants._elementN.SetAsNULL();
+                    // paramVariants._elementN.SetAsNull();
 
                     expr = Ast.Call(
                         Ast.Field(
                             paramVariants,
                             variantArrayField),
-                        typeof(Variant).GetMethod("SetAsNULL")
+                        typeof(Variant).GetMethod("SetAsNull")
                     );
                     exprs.Add(expr);
                     return exprs;

@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 
+using System;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
 using IronPython.Runtime.Operations;
@@ -173,7 +174,8 @@ namespace IronPython.Runtime.Binding {
             // look for __call__, if it's present dispatch to it.  Otherwise fall back to the
             // default binder
             PythonTypeSlot callSlot;
-            if (pt.TryResolveSlot(state.Context, Symbols.Call, out callSlot)) {
+            if (!typeof(Delegate).IsAssignableFrom(args[0].LimitType) &&
+                pt.TryResolveSlot(state.Context, Symbols.Call, out callSlot)) {
                 Expression[] callArgs = ArrayUtils.Insert(
                     BinderState.GetCodeContext(call),
                     callSlot.MakeGetExpression(

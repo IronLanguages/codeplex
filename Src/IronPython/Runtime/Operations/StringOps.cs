@@ -1215,8 +1215,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName, ImplicitConversionMethod]
-        public static IEnumerator ConvertToIEnumerator(string s) {
-            return StringOps.GetEnumerator(s);
+        public static IEnumerable ConvertToIEnumerable(string s) {
+            return StringOps.GetEnumerable(s);
         }
 
         [return: MaybeNotImplemented]
@@ -1257,9 +1257,9 @@ namespace IronPython.Runtime.Operations {
 
         #region Internal implementation details
 
-        internal static IEnumerator GetEnumerator(string s) {
+        internal static IEnumerable GetEnumerable(string s) {
             // make an enumerator that produces strings instead of chars
-            return new PythonStringEnumerator(s);
+            return new PythonStringEnumerable(s);
         }
 
         internal static string Quote(string s) {
@@ -1520,6 +1520,11 @@ namespace IronPython.Runtime.Operations {
                     case "xmlcharrefreplace":
                     case "strict": e.DecoderFallback = DecoderFallback.ExceptionFallback; break;
                     case "replace": e.DecoderFallback = DecoderFallback.ReplacementFallback; break;
+                    case "ignore":
+                        e.DecoderFallback = new PythonDecoderFallback(encoding,
+                            s,
+                            null);
+                        break;
                     default:
                         e.DecoderFallback = new PythonDecoderFallback(encoding,
                             s,
@@ -1594,6 +1599,11 @@ namespace IronPython.Runtime.Operations {
                     case "replace": e.EncoderFallback = EncoderFallback.ReplacementFallback; break;
                     case "backslashreplace": e.EncoderFallback = new BackslashEncoderReplaceFallback(); break;
                     case "xmlcharrefreplace": e.EncoderFallback = new XmlCharRefEncoderReplaceFallback(); break;
+                    case "ignore":
+                        e.EncoderFallback = new PythonEncoderFallback(encoding,
+                            s,
+                            null);
+                        break;
                     default:
                         e.EncoderFallback = new PythonEncoderFallback(encoding,
                             s,
@@ -2016,33 +2026,28 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private class PythonStringEnumerator : IEnumerator {
-            private string _s;
-            private int _i;
+        private class PythonStringEnumerable : IEnumerable {
+            private readonly string/*!*/ _s;
 
-            public PythonStringEnumerator(string s) {
-                this._s = s;
-                this.Reset();
-            }
-            #region IEnumerator Members
+            public PythonStringEnumerable(string s) {
+                Assert.NotNull(s);
 
-            public void Reset() {
-                _i = -1;
+                _s = s;
             }
 
-            public object Current {
-                get {
-                    return RuntimeHelpers.CharToString(_s[_i]);
-                }
-            }
+            #region IEnumerable Members
 
-            public bool MoveNext() {
-                _i++;
-                return _i < _s.Length;
+            public IEnumerator GetEnumerator() {
+                return StringEnumerator(_s);
             }
 
             #endregion
+        }
 
+        internal static IEnumerator<string> StringEnumerator(string str) {
+            for (int i = 0; i < str.Length; i++) {
+                yield return RuntimeHelpers.CharToString(str[i]);
+            }
         }
 
         #endregion
@@ -2115,20 +2120,24 @@ namespace IronPython.Runtime.Operations {
             }
 
             private bool DoPythonFallback(int index, int length) {
-                // create the exception object to hand to the user-function...
-                PythonExceptions._UnicodeEncodeError exObj = new PythonExceptions._UnicodeEncodeError();
+                if (_function != null) {
+                    // create the exception object to hand to the user-function...
+                    PythonExceptions._UnicodeEncodeError exObj = new PythonExceptions._UnicodeEncodeError();
 
-                exObj.__init__(_encoding, _strData, index, index + length, "unexpected code byte");
+                    exObj.__init__(_encoding, _strData, index, index + length, "unexpected code byte");
 
-                // call the user function...
-                object res = PythonCalls.Call(_function, exObj);
+                    // call the user function...
+                    object res = PythonCalls.Call(_function, exObj);
 
-                string replacement = PythonDecoderFallbackBuffer.CheckReplacementTuple(res, "encoding");
+                    string replacement = PythonDecoderFallbackBuffer.CheckReplacementTuple(res, "encoding");
 
-                // finally process the user's request.
-                _buffer = replacement;
-                _bufferIndex = 0;
-                return true;
+                    // finally process the user's request.
+                    _buffer = replacement;
+                    _bufferIndex = 0;
+                    return true;
+                }
+
+                return false;                
             }
 
         }
@@ -2171,7 +2180,7 @@ namespace IronPython.Runtime.Operations {
                     return _buffer.Length - _bufferIndex;
                 }
             }
-
+            
             public override char GetNextChar() {
                 if (_buffer == null || _bufferIndex >= _buffer.Length) return Char.MinValue;
 
@@ -2193,20 +2202,24 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override bool Fallback(byte[] bytesUnknown, int index) {
-                // create the exception object to hand to the user-function...
-                PythonExceptions._UnicodeDecodeError exObj = new PythonExceptions._UnicodeDecodeError();
+                if (_function != null) {
+                    // create the exception object to hand to the user-function...
+                    PythonExceptions._UnicodeDecodeError exObj = new PythonExceptions._UnicodeDecodeError();
 
-                exObj.__init__(_encoding, _strData, index, index + bytesUnknown.Length, "unexpected code byte");
+                    exObj.__init__(_encoding, _strData, index, index + bytesUnknown.Length, "unexpected code byte");
 
-                // call the user function...
-                object res = PythonCalls.Call(_function, exObj);
+                    // call the user function...
+                    object res = PythonCalls.Call(_function, exObj);
 
-                string replacement = CheckReplacementTuple(res, "decoding");
+                    string replacement = CheckReplacementTuple(res, "decoding");
 
-                // finally process the user's request.
-                _buffer = replacement;
-                _bufferIndex = 0;
-                return true;
+                    // finally process the user's request.
+                    _buffer = replacement;
+                    _bufferIndex = 0;
+                    return true;
+                }
+
+                return false;
             }
 
             internal static string CheckReplacementTuple(object res, string encodeOrDecode) {
@@ -2248,7 +2261,6 @@ namespace IronPython.Runtime.Operations {
             public override int MaxCharCount {
                 get { throw new NotImplementedException(); }
             }
-
         }
         
         class BackslashEncoderReplaceFallback : EncoderFallback {

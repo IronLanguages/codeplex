@@ -463,4 +463,9 @@ def test_makefile_refcount():
     Assert(str==test_msg)
 
 
+def test_fileobject_close():
+    """verify we can construct fileobjects w/ the close kw arg"""
+    fd = socket._fileobject(None, close=True)
+    AreEqual(fd.mode, 'rb')
+
 run_test(__name__)

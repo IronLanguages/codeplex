@@ -17,6 +17,7 @@
 
 using System.Linq.Expressions;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
     internal class DispCallableMetaObject : MetaObject {
@@ -41,6 +42,7 @@ namespace System.Scripting.Com {
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             switch (action.Operation) {
                 case "CallSignatures":
                 case "Documentation":

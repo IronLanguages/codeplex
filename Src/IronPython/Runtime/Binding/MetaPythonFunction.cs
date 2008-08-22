@@ -227,7 +227,7 @@ namespace IronPython.Runtime.Binding {
 
                     switch (Signature.GetArgumentKind(i)) {
                         case ArgumentKind.Dictionary:
-                            MakeDictionaryCopy(_args[parameterIndex].Expression);
+                            _args[parameterIndex] = MakeDictionaryCopy(_args[parameterIndex]);
                             continue;
 
                         case ArgumentKind.List:
@@ -637,22 +637,44 @@ namespace IronPython.Runtime.Binding {
             /// Called when the user is expanding a dictionary - we copy the user
             /// dictionary and verify that it contains only valid string names.
             /// </summary>
-            private void MakeDictionaryCopy(Expression/*!*/ userDict) {
+            private MetaObject/*!*/ MakeDictionaryCopy(MetaObject/*!*/ userDict) {
                 Debug.Assert(_dict == null);
 
-                _temps.Add(_dict = Ast.Variable(typeof(PythonDictionary), "$dict"));
+                userDict = userDict.Restrict(userDict.LimitType);
+                _temps.Add(_dict = Ast.Variable(typeof(PythonDictionary), "$dict"));                
 
                 EnsureInit();
-                _init.Add(
-                    Ast.Assign(
-                        _dict,
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("CopyAndVerifyDictionary"),
-                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                            Ast.ConvertHelper(userDict, typeof(IDictionary))
+
+                if (typeof(PythonDictionary).IsAssignableFrom(userDict.LimitType) || 
+                    typeof(IDictionary).IsAssignableFrom(userDict.LimitType)) {
+
+                    string methodName;
+                    if (typeof(PythonDictionary).IsAssignableFrom(userDict.LimitType)) {
+                        methodName = "CopyAndVerifyPythonDictionary";
+                    } else {
+                        methodName = "CopyAndVerifyDictionary";
+                    }
+                    _init.Add(
+                        Ast.Assign(
+                            _dict,
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod(methodName),
+                                GetFunctionParam(),
+                                Ast.ConvertHelper(userDict.Expression, userDict.LimitType)
+                            )
                         )
-                    )
-                );
+                    );
+                } else {
+                    _init.Add(
+                        Ast.Throw(
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("TypeErrorForBadDictionaryArgument"),
+                                GetFunctionParam()
+                            )
+                        )
+                    );
+                }
+                return userDict;
             }
 
             /// <summary>
@@ -702,7 +724,7 @@ namespace IronPython.Runtime.Binding {
 
                 Expression[] dictCreator = new Expression[count];
                 VariableExpression dictRef = _dict;
-
+                
                 count = 0;
                 dictCreator[count++] = Ast.Assign(
                     _dict,

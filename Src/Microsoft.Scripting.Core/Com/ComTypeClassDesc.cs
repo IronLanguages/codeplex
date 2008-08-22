@@ -74,7 +74,7 @@ namespace System.Scripting.Com {
 
         #region IDynamicObject Members
 
-        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
+        public MetaObject GetMetaObject(Expression parameter) {
             return new ComClassMetaObject(parameter, this);
         }
 

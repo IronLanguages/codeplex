@@ -825,4 +825,53 @@ def test_bound_builtin_functions():
     ev.CallOtherInstance('def', args)
     AreEqual(d, {'abc': args})
 
+def test_delegate___call__():
+    import System
+    global received
+    def f(*args):
+        global received
+        received = args
+    
+    x = System.EventHandler(f)
+    
+    x.__call__('abc', None)
+    AreEqual(received, ('abc', None))
+    x.__call__(sender = 42, e = None)
+    AreEqual(received, (42, None))
+    Assert('__call__' in dir(x))
+    
+def test_combine():
+    """in-place addition on delegates maps to Delegate.Combine"""
+    global log
+    def f(sender, args):
+        global log
+        log += 'f'
+        
+    def g(sender, args):
+        global log
+        log += 'g'
+            
+    fe = System.EventHandler(f)
+    ge = System.EventHandler(g)
+    
+    fege = fe
+    fege += ge
+    
+    log = ''
+    fege(None, None)
+    AreEqual(log, 'fg')
+    
+    log = ''
+    fe(None, None)
+    AreEqual(log, 'f')
+    
+    log = ''
+    ge(None, None)
+    AreEqual(log, 'g')
+    
+    fege -= ge
+    log = ''
+    fege(None, None)
+    AreEqual(log, 'f')
+    
 run_test(__name__)

@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public bool TryGetLanguageByFileExtension(string extension, out LanguageContext language) {
-            ContractUtils.RequiresNotNull(extension, "extension");
+            ContractUtils.RequiresNotEmpty(extension, "extension");
             return _configuration.TryLoadLanguage(this, DlrConfiguration.NormalizeExtension(extension), true, out language);
         }
 

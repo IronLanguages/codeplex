@@ -315,6 +315,14 @@ def test_eval():
     AssertError(NameError, eval, "x + y", d1)
     AssertError(NameError, eval, "x + y", d1, None)
 
+    try:
+        eval('1+')
+        AssertUnreachable()
+    except Exception, exp:
+        pass
+    else:
+        AssertUnreachable()
+
 def test_len():
     # old-style classes throw AttributeError, new-style classes throw
     # TypeError

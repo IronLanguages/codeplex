@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting.Utils;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace System.Scripting.Actions {
     /// <summary>
@@ -26,16 +27,10 @@ namespace System.Scripting.Actions {
     /// by executing individual rules against the site whose fallback
     /// code delegates here.
     /// </summary>
-    public partial class Matchmaker {
-        public bool Match = true;
-
+    internal static partial class Matchmaker {
         private static Dictionary<Type, WeakReference> _Matchmakers;
 
-        internal void Reset() {
-            Match = true;
-        }
-
-        internal T CreateMatchMakingDelegate<T>() where T : class {
+        internal static T CreateMatchMakingDelegate<T>(StrongBox<bool> box) where T : class {
             Type target = typeof(T);
             Type[] args;
 
@@ -44,21 +39,21 @@ namespace System.Scripting.Actions {
             if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
                 MethodInfo method;
                 if (invoke.ReturnType == typeof(void)) {
-                    method = typeof(Matchmaker).GetMethod("MismatchVoid" + args.Length);
+                    method = typeof(Matchmaker).GetMethod("MismatchVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
                 } else {
-                    method = typeof(Matchmaker).GetMethod("Mismatch" + (args.Length - 1));
+                    method = typeof(Matchmaker).GetMethod("Mismatch" + (args.Length - 1), BindingFlags.Static | BindingFlags.NonPublic);
                 }
 
                 if (method != null) {
                     method = method.MakeGenericMethod(args);
-                    return (T)(object)Delegate.CreateDelegate(target, this, method);
+                    return (T)(object)Delegate.CreateDelegate(target, box, method);
                 }
             }
 
-            return GetOrCreateCustomMatchmakerDelegate<T>(invoke);
+            return GetOrCreateCustomMatchmakerDelegate<T>(invoke, box);
         }
 
-        private T GetOrCreateCustomMatchmakerDelegate<T>(MethodInfo invoke) where T : class {
+        private static T GetOrCreateCustomMatchmakerDelegate<T>(MethodInfo invoke, StrongBox<bool> box) where T : class {
             if (_Matchmakers == null) {
                 Interlocked.CompareExchange<Dictionary<Type, WeakReference>>(ref _Matchmakers, new Dictionary<Type, WeakReference>(), null);
             }
@@ -87,14 +82,14 @@ namespace System.Scripting.Actions {
                 }
             }
 
-            return target.CreateDelegate<T>(this);
+            return target.CreateDelegate<T>(box);
         }
 
         private static MethodInfo CreateCustomMatchmakerDelegate<T>(MethodInfo invoke) where T : class {
             ParameterInfo[] parameters = invoke.GetParameters();
             Type[] signature = new Type[parameters.Length + 1];
 
-            signature[0] = typeof(Matchmaker);
+            signature[0] = typeof(StrongBox<bool>);
             for (int arg = 0; arg < parameters.Length; arg++) {
                 signature[arg + 1] = parameters[arg].ParameterType;
             }
@@ -103,7 +98,7 @@ namespace System.Scripting.Actions {
 
             il.EmitLoadArg(0);
             il.EmitBoolean(false);
-            il.EmitFieldSet(typeof(Matchmaker).GetField("Match", BindingFlags.Instance | BindingFlags.Public));
+            il.EmitFieldSet(typeof(StrongBox<bool>).GetField("Value", BindingFlags.Instance | BindingFlags.Public));
 
             if (invoke.ReturnType != typeof(void)) {
                 if (invoke.ReturnType.IsValueType) {

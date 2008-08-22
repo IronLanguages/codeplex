@@ -125,8 +125,8 @@ namespace System.Scripting.Actions {
         }
 
         private bool IsDeferExpression(Expression e) {
-            if (e.BindingInfo == this) {
-                return true;
+            if (e.NodeType == ExpressionType.Dynamic) {
+                return ((DynamicExpression)e).Binder == this;
             }
 
             if (e.NodeType == ExpressionType.Convert) {
@@ -167,11 +167,14 @@ namespace System.Scripting.Actions {
         public abstract MetaObject Bind(MetaObject[] args);
 
         public MetaObject Defer(MetaObject[] args) {
+            var exprs = MetaObject.GetExpressions(args);
+
+            // TODO: we should really be using the same delegate as the CallSite
             return new MetaObject(
-                Expression.ActionExpression(
+                Expression.Dynamic(
                     this,
                     typeof(object),   // !! what's the correct return type?
-                    MetaObject.GetExpressions(args)
+                    exprs
                 ),
                 Restrictions.Combine(args)
             );
@@ -193,8 +196,7 @@ namespace System.Scripting.Actions {
             return all;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public static Expression GetSelfExpression() {
+        public static Expression SelfExpression() {
             return new ActionSelfExpression();
         }
     }

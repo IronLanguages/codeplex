@@ -34,7 +34,7 @@ namespace System.Linq.Expressions {
         private readonly Expression _fault;
 
         internal TryStatement(Annotations annotations, Expression body, ReadOnlyCollection<CatchBlock> handlers, Expression @finally, Expression fault)
-            : base(ExpressionType.TryStatement, typeof(void), annotations, null) {
+            : base(ExpressionType.TryStatement, typeof(void), annotations) {
             _body = body;
             _handlers = handlers;
             _finally = @finally;

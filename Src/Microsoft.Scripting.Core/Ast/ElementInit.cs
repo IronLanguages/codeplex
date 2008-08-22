@@ -69,7 +69,7 @@ namespace System.Linq.Expressions {
             RequiresCanRead(arguments, "arguments");
             ValidateElementInitAddMethodInfo(addMethod);
             ReadOnlyCollection<Expression> argumentsRO = arguments.ToReadOnly();
-            ValidateArgumentTypes(addMethod, ref argumentsRO);
+            ValidateArgumentTypes(addMethod, ExpressionType.Call, ref argumentsRO);
             return new ElementInit(addMethod, argumentsRO);
         }
 

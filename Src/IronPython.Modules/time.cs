@@ -19,6 +19,7 @@ using TimeZoneInfo = systemcore::System.TimeZoneInfo;
 #endif
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -184,7 +185,8 @@ namespace IronPython.Modules {
 
         public static object strptime(CodeContext/*!*/ context, string @string, string format) {
             bool postProc;
-            List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, true, out postProc);
+            FoundDateComponents foundDateComp;
+            List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, true, out postProc, out foundDateComp);
 
             DateTime res;
             if (postProc) {
@@ -236,12 +238,17 @@ namespace IronPython.Modules {
                 }
             }
 
+            if ((foundDateComp & FoundDateComponents.Year) == 0) {
+                res = new DateTime(1900, res.Month, res.Day, res.Hour, res.Minute, res.Second, res.Millisecond, res.Kind);
+            }
+
             return GetDateTimeTuple(res);
         }
 
         internal static string strftime(CodeContext/*!*/ context, string format, DateTime dt) {
             bool postProc;
-            List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, false, out postProc);
+            FoundDateComponents found;
+            List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, false, out postProc, out found);
             StringBuilder res = new StringBuilder();
 
             for (int i = 0; i < formatInfo.Count; i++) {
@@ -329,9 +336,23 @@ namespace IronPython.Modules {
             newFormat.Add(new FormatInfo("yy"));
         }
 
-        private static List<FormatInfo> PythonFormatToCLIFormat(string format, bool forParse, out bool postProcess) {
+        /// <summary>
+        /// Represents the date components that we found while parsing the date.  Used for zeroing out values
+        /// which have different defaults from CPython.  Currently we only know that we need to do this for
+        /// the year.
+        /// </summary>
+        [Flags]       
+        enum FoundDateComponents {
+            None,
+            Year = 0x01,
+            Date = (Year),
+        }
+
+        private static List<FormatInfo> PythonFormatToCLIFormat(string format, bool forParse, out bool postProcess, out FoundDateComponents found) {
             postProcess = false;
+            found = FoundDateComponents.None;
             List<FormatInfo> newFormat = new List<FormatInfo>();
+            
 
             for (int i = 0; i < format.Length; i++) {
                 if (format[i] == '%') {
@@ -340,9 +361,14 @@ namespace IronPython.Modules {
                     switch (format[++i]) {
                         case 'a': newFormat.Add(new FormatInfo("ddd")); break;
                         case 'A': newFormat.Add(new FormatInfo("dddd")); break;
-                        case 'b': newFormat.Add(new FormatInfo("MMM")); break;
-                        case 'B': newFormat.Add(new FormatInfo("MMMM")); break;
+                        case 'b': 
+                            newFormat.Add(new FormatInfo("MMM")); 
+                            break;
+                        case 'B':
+                            newFormat.Add(new FormatInfo("MMMM")); 
+                            break;
                         case 'c':
+                            found |= FoundDateComponents.Date;
                             AddDate(newFormat);
                             newFormat.Add(new FormatInfo(FormatInfoType.UserText, " "));
                             AddTime(newFormat);
@@ -365,17 +391,27 @@ namespace IronPython.Modules {
                             break;
                         case 'S': newFormat.Add(new FormatInfo("ss")); break;
                         case 'x':
+                            found |= FoundDateComponents.Date;
                             AddDate(newFormat); break;
                         case 'X':
                             AddTime(newFormat);
                             break;
-                        case 'y': newFormat.Add(new FormatInfo("yy")); break;
-                        case 'Y': newFormat.Add(new FormatInfo("yyyy")); break;
+                        case 'y':
+                            found |= FoundDateComponents.Year;
+                            newFormat.Add(new FormatInfo("yy")); 
+                            break;
+                        case 'Y':
+                            found |= FoundDateComponents.Year;
+                            newFormat.Add(new FormatInfo("yyyy")); 
+                            break;
                         case '%': newFormat.Add(new FormatInfo("\\%")); break;
 
                         // format conversions not defined by the CLR.  We leave
                         // them as \\% and then replace them by hand later
-                        case 'j': newFormat.Add(new FormatInfo("\\%j")); postProcess = true; break; // day of year
+                        case 'j': // day of year
+                            newFormat.Add(new FormatInfo("\\%j")); 
+                            postProcess = true; 
+                            break; 
                         case 'W': newFormat.Add(new FormatInfo("\\%W")); postProcess = true; break;
                         case 'U': newFormat.Add(new FormatInfo("\\%U")); postProcess = true; break; // week number
                         case 'w': newFormat.Add(new FormatInfo("\\%w")); postProcess = true; break; // weekday number
@@ -557,6 +593,10 @@ namespace IronPython.Modules {
                     }
                     return st;
                 }
+            }
+
+            public static struct_time __new__(CodeContext context, PythonType cls, [NotNull]IEnumerable sequence) {
+                return __new__(context, cls, PythonTuple.Make(sequence));
             }
 
             public PythonTuple __reduce__() {

@@ -288,12 +288,6 @@ namespace System.Linq.Expressions.Compiler {
 
         #region Simple helpers
 
-        [Conditional("DEBUG")]
-        internal void EmitDebugWriteLine(string message) {
-            EmitString(message);
-            EmitCall(typeof(Debug), "WriteLine", new Type[] { typeof(string) });
-        }
-
         internal void Emit(OpCode opcode, MethodBase methodBase) {
             Debug.Assert(methodBase is MethodInfo || methodBase is ConstructorInfo);
 
@@ -526,46 +520,6 @@ namespace System.Linq.Expressions.Compiler {
 
         #region Fields, properties and methods
 
-        internal void EmitPropertyGet(Type type, string name) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.RequiresNotNull(name, "name");
-
-            PropertyInfo pi = type.GetProperty(name);
-            ContractUtils.Requires(pi != null, "name", Strings.PropertyDoesNotExist);
-
-            EmitPropertyGet(pi);
-        }
-
-        internal void EmitPropertyGet(PropertyInfo pi) {
-            ContractUtils.RequiresNotNull(pi, "pi");
-
-            if (!pi.CanRead) {
-                throw Error.CantReadProperty();
-            }
-
-            EmitCall(pi.GetGetMethod());
-        }
-
-        internal void EmitPropertySet(Type type, string name) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.RequiresNotNull(name, "name");
-
-            PropertyInfo pi = type.GetProperty(name);
-            ContractUtils.Requires(pi != null, "name", Strings.PropertyDoesNotExist);
-
-            EmitPropertySet(pi);
-        }
-
-        internal void EmitPropertySet(PropertyInfo pi) {
-            ContractUtils.RequiresNotNull(pi, "pi");
-
-            if (!pi.CanWrite) {
-                throw Error.CantWriteProperty();
-            }
-
-            EmitCall(pi.GetSetMethod());
-        }
-
         internal void EmitFieldAddress(FieldInfo fi) {
             ContractUtils.RequiresNotNull(fi, "fi");
 
@@ -574,24 +528,6 @@ namespace System.Linq.Expressions.Compiler {
             } else {
                 Emit(OpCodes.Ldflda, fi);
             }
-        }
-
-        internal void EmitFieldGet(Type type, String name) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.RequiresNotNull(name, "name");
-
-            FieldInfo fi = type.GetField(name);
-            ContractUtils.Requires(fi != null, "name", Strings.FieldDoesNotExist);
-            EmitFieldGet(fi);
-        }
-
-        internal void EmitFieldSet(Type type, String name) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.RequiresNotNull(name, "name");
-
-            FieldInfo fi = type.GetField(name);
-            ContractUtils.Requires(fi != null, "name", Strings.FieldDoesNotExist);
-            EmitFieldSet(fi);
         }
 
         internal void EmitFieldGet(FieldInfo fi) {
@@ -619,7 +555,7 @@ namespace System.Linq.Expressions.Compiler {
             ContractUtils.RequiresNotNull(ci, "ci");
 
             if (ci.DeclaringType.ContainsGenericParameters) {
-                throw Error.IllegalNew_GenericParams(ci.DeclaringType);
+                throw Error.IllegalNewGenericParams(ci.DeclaringType);
             }
 
             Emit(OpCodes.Newobj, ci);

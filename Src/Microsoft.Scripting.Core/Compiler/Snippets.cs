@@ -19,6 +19,7 @@ using System.Reflection.Emit;
 using System.Scripting.Utils;
 using System.Threading;
 using System.Scripting;
+using System.Globalization;
 
 namespace System.Linq.Expressions.Compiler {
 
@@ -49,20 +50,6 @@ namespace System.Linq.Expressions.Compiler {
         /// </summary>
         internal string SnippetsDirectory {
             get { return _snippetsDirectory; }
-        }
-
-        /// <summary>
-        /// Name of the snippet assembly (w/o extension).
-        /// </summary>
-        internal string SnippetsFileName {
-            get { return _snippetsFileName; }
-        }
-
-        /// <summary>
-        /// Save snippets to an assembly (see also SnippetsDirectory, SnippetsFileName).
-        /// </summary>
-        internal bool SaveSnippets {
-            get { return _saveSnippets; }
         }
 
         private AssemblyGen GetAssembly(bool emitSymbols, bool isUnsafe) {
@@ -116,7 +103,12 @@ namespace System.Linq.Expressions.Compiler {
                 fullName = fullName.Substring(0, 100);
             }
 
-            string filename = String.Format("{0}_{1}.il", Helpers.ToValidFileName(fullName), Interlocked.Increment(ref _methodNameIndex));
+            string filename = String.Format(
+                CultureInfo.CurrentCulture, 
+                "{0}_{1}.il", 
+                Helpers.ToValidFileName(fullName), 
+                Interlocked.Increment(ref _methodNameIndex)
+            );
 
             string dir = _snippetsDirectory ?? Path.Combine(Path.GetTempPath(), "__DLRIL");
             Directory.CreateDirectory(dir);

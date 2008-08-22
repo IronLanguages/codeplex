@@ -23,7 +23,7 @@ namespace System.Linq.Expressions {
         private readonly object _value;
 
         internal ConstantExpression(Annotations annotations, object value, Type type)
-            : base(ExpressionType.Constant, type, annotations, null) {
+            : base(ExpressionType.Constant, type, annotations) {
             _value = value;
         }
 

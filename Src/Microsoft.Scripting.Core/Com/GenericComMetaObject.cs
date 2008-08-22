@@ -17,6 +17,7 @@
 
 using System.Linq.Expressions;
 using System.Scripting.Actions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Com {
     internal class GenericComMetaObject : MetaObject {
@@ -27,6 +28,7 @@ namespace System.Scripting.Com {
         #region MetaObject
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             if (action.ToType.IsInterface) {
                 // Converting a COM object to any interface is always considered possible - it will result in 
                 // a QueryInterface at runtime

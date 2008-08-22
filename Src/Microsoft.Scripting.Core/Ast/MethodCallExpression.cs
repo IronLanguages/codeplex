@@ -32,16 +32,10 @@ namespace System.Linq.Expressions {
         internal MethodCallExpression(
             Annotations annotations,
             Type returnType,
-            CallSiteBinder bindingInfo,
             MethodInfo method,
             Expression instance,
             ReadOnlyCollection<Expression> arguments)
-            : base(ExpressionType.Call, returnType, annotations, bindingInfo) {
-
-            if (IsBound) {
-                RequiresBound(instance, "instance");
-                RequiresBoundItems(arguments, "arguments");
-            }
+            : base(ExpressionType.Call, returnType, annotations) {
 
             _method = method;
             _instance = instance;
@@ -141,7 +135,7 @@ namespace System.Linq.Expressions {
         public static MethodCallExpression Call(Expression instance, MethodInfo method, Annotations annotations, IEnumerable<Expression> arguments) {
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateCallArgs(instance, method, ref argList);
-            return new MethodCallExpression(annotations, method.ReturnType, null, method, instance, argList);
+            return new MethodCallExpression(annotations, method.ReturnType, method, instance, argList);
         }
 
         //CONFORMING
@@ -156,7 +150,7 @@ namespace System.Linq.Expressions {
                 RequiresCanRead(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }
-            ValidateArgumentTypes(method, ref arguments);
+            ValidateArgumentTypes(method, ExpressionType.Call, ref arguments);
         }
 
         //CONFORMING
@@ -167,45 +161,69 @@ namespace System.Linq.Expressions {
         }
 
         //CONFORMING
-        private static void ValidateArgumentTypes(MethodInfo method, ref ReadOnlyCollection<Expression> arguments) {
+        private static void ValidateArgumentTypes(MethodBase method, ExpressionType nodeKind, ref ReadOnlyCollection<Expression> arguments) {
+            Debug.Assert(nodeKind == ExpressionType.Invoke || nodeKind == ExpressionType.Call || nodeKind == ExpressionType.Dynamic || nodeKind == ExpressionType.New);
+
+            bool invoke = nodeKind == ExpressionType.Invoke;
             ParameterInfo[] pis = method.GetParameters();
-            if (pis.Length > 0) {
-                if (pis.Length != arguments.Count) {
-                    throw Error.IncorrectNumberOfMethodCallArguments(method);
+            if (nodeKind == ExpressionType.Dynamic) {
+                pis = pis.RemoveFirst(); // ignore CallSite argument
+            }
+
+            if (pis.Length != arguments.Count) {
+                // TODO: this is for LinqV1 compat, can we just have one exception?
+                switch (nodeKind) {
+                    case ExpressionType.New:
+                        throw Error.IncorrectNumberOfConstructorArguments();
+                    case ExpressionType.Invoke:
+                        throw Error.IncorrectNumberOfLambdaArguments();
+                    case ExpressionType.Dynamic:
+                    case ExpressionType.Call:
+                        throw Error.IncorrectNumberOfMethodCallArguments(method);                    
+                    default:
+                        throw Assert.Unreachable;
                 }
-                Expression[] newArgs = null;
-                for (int i = 0, n = pis.Length; i < n; i++) {
-                    Expression arg = arguments[i];
-                    ParameterInfo pi = pis[i];
-                    RequiresCanRead(arg, "arguments");
-                    Type pType = pi.ParameterType;
-                    if (pType.IsByRef) {
-                        pType = pType.GetElementType();
-                    }
-                    TypeUtils.ValidateType(pType);
-                    if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {
-                        if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType())) {
-                            arg = Expression.Quote(arg);
-                        } else {
-                            throw Error.ExpressionTypeDoesNotMatchMethodParameter(arg.Type, pType, method);
+            }
+            Expression[] newArgs = null;
+            for (int i = 0, n = pis.Length; i < n; i++) {
+                Expression arg = arguments[i];
+                ParameterInfo pi = pis[i];
+                RequiresCanRead(arg, "arguments");
+                Type pType = pi.ParameterType;
+                if (pType.IsByRef) {
+                    pType = pType.GetElementType();
+                }
+                TypeUtils.ValidateType(pType);
+                if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {
+                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType())) {
+                        arg = Expression.Quote(arg);
+                    } else {
+                        // TODO: this is for LinqV1 compat, can we just have one exception?
+                        switch (nodeKind) {
+                            case ExpressionType.New:
+                                throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arg.Type, pType);
+                            case ExpressionType.Invoke:
+                                throw Error.ExpressionTypeDoesNotMatchParameter(arg.Type, pType);
+                            case ExpressionType.Dynamic:
+                            case ExpressionType.Call:
+                                throw Error.ExpressionTypeDoesNotMatchMethodParameter(arg.Type, pType, method);
+                            default:
+                                throw Assert.Unreachable;
                         }
                     }
-                    if (newArgs == null && arg != arguments[i]) {
-                        newArgs = new Expression[arguments.Count];
-                        for (int j = 0; j < i; j++) {
-                            newArgs[j] = arguments[j];
-                        }
-                    }
-                    if (newArgs != null) {
-                        newArgs[i] = arg;
+                }
+                if (newArgs == null && arg != arguments[i]) {
+                    newArgs = new Expression[arguments.Count];
+                    for (int j = 0; j < i; j++) {
+                        newArgs[j] = arguments[j];
                     }
                 }
                 if (newArgs != null) {
-                    arguments = new ReadOnlyCollection<Expression>(newArgs);
+                    newArgs[i] = arg;
                 }
-
-            } else if (arguments.Count > 0) {
-                throw Error.IncorrectNumberOfMethodCallArguments(method);
+            }
+            if (newArgs != null) {
+                arguments = new ReadOnlyCollection<Expression>(newArgs);
             }
         }
 
@@ -283,46 +301,6 @@ namespace System.Linq.Expressions {
 
 
         #endregion
-
-        /// <summary>
-        /// A dynamic or unbound method call
-        /// </summary>
-        /// <param name="returnType">the type that the method returns, or null for an unbound node</param>
-        /// <param name="instance">the instance to call; must be non-null</param>
-        /// <param name="bindingInfo">call binding information (method name, named arguments, etc)</param>
-        /// <param name="arguments">the arguments to the call</param>
-        /// <returns></returns>
-        public static MethodCallExpression Call(Type returnType, Expression instance, CallAction bindingInfo, params Expression[] arguments) {
-            return Call(returnType, instance, bindingInfo, Annotations.Empty, arguments);
-        }
-
-        /// <summary>
-        /// A dynamic or unbound method call
-        /// </summary>
-        /// <param name="returnType">the type that the method returns, or null for an unbound node</param>
-        /// <param name="instance">the instance to call; must be non-null</param>
-        /// <param name="bindingInfo">call binding information (method name, named arguments, etc)</param>
-        /// <param name="annotations">annotations for the node</param>
-        /// <param name="arguments">the arguments to the call</param>
-        /// <returns></returns>
-        public static MethodCallExpression Call(Type returnType, Expression instance, CallAction bindingInfo, Annotations annotations, IEnumerable<Expression> arguments) {
-            RequiresCanRead(instance, "instance");
-            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
-
-            RequiresCanRead(arguments, "arguments");
-            var args = arguments.ToReadOnly();
-
-            // Validate ArgumentInfos. For now, includes the instance.
-            // This needs to be reconciled with InvocationExpression
-            if (bindingInfo.Arguments.Count > 0 && bindingInfo.Arguments.Count != args.Count + 1) {
-                throw Error.ArgumentCountMustMatchBinding(
-                    args.Count + 1,
-                    bindingInfo.Arguments.Count
-                );
-            }
-
-            return new MethodCallExpression(annotations, returnType, bindingInfo, null, instance, args);
-        }
 
         /// <summary>
         /// The helper to create the AST method call node. Will add conversions (Expression.Convert())
@@ -499,20 +477,21 @@ namespace System.Linq.Expressions {
                 return Constant(parameter.DefaultValue, parameter.ParameterType);
             } else {
                 // TODO: Handle via compiler constant.
-                throw new NotSupportedException("missing parameter value not yet supported");
+                throw Error.MissingValueNotSupported();
             }
         }
 
 
         #region ArrayIndex
 
-
         //CONFORMING
+        [Obsolete("use Expression.ArrayAccess instead")]
         public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) {
             return ArrayIndex(array, (IEnumerable<Expression>)indexes);
         }
 
         //CONFORMING
+        [Obsolete("use Expression.ArrayAccess instead")]
         public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) {
             RequiresCanRead(array, "array");
             ContractUtils.RequiresNotNull(indexes, "indexes");

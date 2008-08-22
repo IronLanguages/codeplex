@@ -13,16 +13,23 @@
 #
 #####################################################################################
 
-"""fake runpy.py which emulates the previous behavior IronPython had implemented"""
+import System
 
-import sys, nt
-
-def run_module(modToRun, init_globals=None, run_name = '__main__', alter_sys = True):
-    if alter_sys:
-        for o in sys.path:
-            libpath = o + '\\' + modToRun + '.py'
-            if nt.access(libpath, nt.F_OK):
-                sys.argv[0] = libpath
-                break
+def send(to, subject, body, urgent=False, attachments=None):
+    "send(to, subject, body, urgent=False)"
+    mm = System.Net.Mail.MailMessage(System.Environment.UserName + "@microsoft.com", to)
+    mm.Subject = subject
+    mm.IsBodyHtml = True
+    mm.Body = body
+    if urgent:
+        mm.Priority = System.Net.Mail.MailPriority.High
+    if attachments != None:
+        if(hasattr(attachments, '__len__')):
+            for x in attachments:
+                mm.Attachments.Add(x)
+        else:
+            mm.Attachments.Add(attachments)
     
-    __import__(modToRun)
+    sc = System.Net.Mail.SmtpClient("smtphost")
+    sc.UseDefaultCredentials = True
+    sc.Send(mm)

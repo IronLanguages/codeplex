@@ -18,6 +18,7 @@
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Scripting.Actions;
+using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace System.Scripting.Com {
@@ -27,7 +28,7 @@ namespace System.Scripting.Com {
         readonly object[] _memberValues;
 
         public override string ToString() {
-            return String.Format("<enum '{0}'>", TypeName);
+            return String.Format(CultureInfo.CurrentCulture, "<enum '{0}'>", TypeName);
         }
 
         internal ComTypeEnumDesc(ComTypes.ITypeInfo typeInfo, ComTypeLibDesc typeLibDesc) :

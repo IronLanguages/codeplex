@@ -48,4 +48,8 @@ namespace IronPython.Runtime.Types {
 
         void SetPythonType(PythonType newType);  
     }
+
+    public interface IObjectWithSlots {
+        object[] GetSlots();
+    }
 }

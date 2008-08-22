@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -76,6 +77,10 @@ namespace System.Linq.Expressions.Compiler {
 
                 case ExpressionType.Call:
                     AddressOf((MethodCallExpression)node, type);
+                    break;
+
+                case ExpressionType.Index:
+                    AddressOf((IndexExpression)node, type);
                     break;
             }
         }
@@ -233,6 +238,22 @@ namespace System.Linq.Expressions.Compiler {
             }
         }
 
+        private void AddressOf(IndexExpression node, Type type) {
+            if (type != node.Type || node.Indexer != null) {
+                EmitExpressionAddress(node, type);
+                return;
+            }
+
+            if (node.Arguments.Count == 1) {
+                EmitExpression(node.Object);
+                EmitExpression(node.Arguments[0]);
+                _ilg.Emit(OpCodes.Ldelema, node.Type);
+            } else {
+                var address = node.Object.Type.GetMethod("Address", BindingFlags.Public | BindingFlags.Instance);
+                EmitMethodCall(node.Object, address, node.Arguments);
+            }
+        }
+
         private void AddressOf(UnaryExpression node, Type type) {
             Debug.Assert(node.NodeType == ExpressionType.Unbox);
             Debug.Assert(type.IsValueType && !TypeUtils.IsNullableType(type));
@@ -250,6 +271,124 @@ namespace System.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Stloc, tmp);
             _ilg.Emit(OpCodes.Ldloca, tmp);
             _ilg.FreeLocal(tmp);
+        }
+
+
+        // Emits the address of the expression, returning the write back if necessary
+        //
+        // For properties, we want to write back into the property if it's
+        // passed byref.
+        // 
+        // Note: ExpressionCompiler thinks it needs to writeback
+        // fields, but as far as I can tell, that code path is
+        // unreachable because fields can always emit their address
+        private WriteBack EmitAddressWriteBack(Expression node, Type type) {
+            WriteBack result = null;
+            if (type == node.Type) {
+                switch (node.NodeType) {
+                    case ExpressionType.MemberAccess:
+                        result = AddressOfWriteBack((MemberExpression)node);
+                        break;
+                    case ExpressionType.Index:
+                        result = AddressOfWriteBack((IndexExpression)node);
+                        break;
+                }
+            }
+            if (result == null) {
+                EmitAddress(node, type);
+            }
+            return result;
+        }
+
+        private WriteBack AddressOfWriteBack(MemberExpression node) {
+            if (!node.CanWrite || node.Member.MemberType != MemberTypes.Property) {
+                return null;
+            }
+
+            // emit instance, if any
+            LocalBuilder instanceLocal = null;
+            Type instanceType = null;
+            if (node.Expression != null) {
+                EmitInstance(node.Expression, instanceType = node.Expression.Type);
+                // store in local
+                _ilg.Emit(OpCodes.Dup);
+                _ilg.Emit(OpCodes.Stloc, instanceLocal = _ilg.GetLocal(instanceType));
+            }
+
+            PropertyInfo pi = (PropertyInfo)node.Member;
+
+            // emit the get
+            EmitCall(instanceType, pi.GetGetMethod(true));
+
+            // emit the address of the value
+            var valueLocal = _ilg.GetLocal(node.Type);
+            _ilg.Emit(OpCodes.Stloc, valueLocal);
+            _ilg.Emit(OpCodes.Ldloca, valueLocal);
+
+            // Set the property after the method call
+            // don't re-evaluate anything
+            return delegate() {
+                if (instanceLocal != null) {
+                    _ilg.Emit(OpCodes.Ldloc, instanceLocal);
+                    _ilg.FreeLocal(instanceLocal);
+                }
+                _ilg.Emit(OpCodes.Ldloc, valueLocal);
+                _ilg.FreeLocal(valueLocal);
+                EmitCall(instanceType, pi.GetSetMethod(true));
+            };
+        }
+
+        private WriteBack AddressOfWriteBack(IndexExpression node) {
+            if (!node.CanWrite || node.Indexer == null) {
+                return null;
+            }
+
+            // emit instance, if any
+            LocalBuilder instanceLocal = null;
+            Type instanceType = null;
+            if (node.Object != null) {
+                EmitInstance(node.Object, instanceType = node.Object.Type);
+                
+                _ilg.Emit(OpCodes.Dup);
+                _ilg.Emit(OpCodes.Stloc, instanceLocal = _ilg.GetLocal(instanceType));
+            }
+
+            // Emit indexes. We don't allow byref args, so no need to worry
+            // about writebacks or EmitAddress
+            List<LocalBuilder> args = new List<LocalBuilder>();
+            foreach (var arg in node.Arguments) {
+                EmitExpression(arg);
+
+                var argLocal = _ilg.GetLocal(arg.Type);
+                _ilg.Emit(OpCodes.Dup);
+                _ilg.Emit(OpCodes.Stloc, argLocal);
+                args.Add(argLocal);
+            }
+
+            // emit the get
+            EmitGetIndexCall(node, instanceType);
+
+            // emit the address of the value
+            var valueLocal = _ilg.GetLocal(node.Type);
+            _ilg.Emit(OpCodes.Stloc, valueLocal);
+            _ilg.Emit(OpCodes.Ldloca, valueLocal);
+
+            // Set the property after the method call
+            // don't re-evaluate anything
+            return delegate() {
+                if (instanceLocal != null) {
+                    _ilg.Emit(OpCodes.Ldloc, instanceLocal);
+                    _ilg.FreeLocal(instanceLocal);
+                }
+                foreach (var arg in args) {
+                    _ilg.Emit(OpCodes.Ldloc, arg);
+                    _ilg.FreeLocal(arg);
+                }
+                _ilg.Emit(OpCodes.Ldloc, valueLocal);
+                _ilg.FreeLocal(valueLocal);
+
+                EmitSetIndexCall(node, instanceType);
+            };
         }
     }
 }

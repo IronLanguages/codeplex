@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Scripting.Actions;
+using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace System.Scripting.Com {
@@ -41,7 +42,7 @@ namespace System.Scripting.Com {
         }
 
         public override string ToString() {
-            return String.Format("<type library {0}>", _typeLibName);
+            return String.Format(CultureInfo.CurrentCulture, "<type library {0}>", _typeLibName);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
@@ -70,7 +71,7 @@ namespace System.Scripting.Com {
         public static ComTypeLibInfo CreateFromGuid(Guid typeLibGuid) {
             // passing majorVersion = -1, minorVersion = -1 will always
             // load the latest typelib
-            ComTypes.ITypeLib typeLib = ComRuntimeHelpers.UnsafeNativeMethods.LoadRegTypeLib(ref typeLibGuid, -1, -1, 0);
+            ComTypes.ITypeLib typeLib = UnsafeNativeMethods.LoadRegTypeLib(ref typeLibGuid, -1, -1, 0);
 
             return new ComTypeLibInfo(GetFromTypeLib(typeLib));
         }

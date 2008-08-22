@@ -145,6 +145,13 @@ def test_tuple_iteration():
 
     for x in T((1,)):
         AreEqual(x, 1)
+        
+def test_mul_subclass():
+    class subclass(tuple):
+        pass
+        
+    u = subclass([0,1])
+    Assert(u is not u*1)
 
 run_test(__name__)
 

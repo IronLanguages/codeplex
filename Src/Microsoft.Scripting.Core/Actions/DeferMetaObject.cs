@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Linq.Expressions;
+using System.Scripting.Utils;
 
 namespace System.Scripting.Actions {
     internal class DeferMetaObject : MetaObject {
@@ -22,30 +23,37 @@ namespace System.Scripting.Actions {
         }
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
         public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
         public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
         public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
         public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
     }

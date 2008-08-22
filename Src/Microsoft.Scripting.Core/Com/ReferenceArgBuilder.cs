@@ -100,15 +100,16 @@ namespace System.Scripting.Com {
         internal override object Build(object[] args) {
             object arg = args[Index];
 
+            ContractUtils.RequiresNotNull(arg, "args");
             if (arg == null) {
-                throw new ArgumentException("expected StrongBox, but found null");
+                Error.FirstArgumentMustBeStrongBox();
             }
             Type argType = arg.GetType();
             if (!argType.IsGenericType || argType.GetGenericTypeDefinition() != typeof(StrongBox<>)) {
-                throw new ArgumentException("expected StrongBox<>");
+                throw Error.UnexpectedType(typeof(StrongBox<>), argType);
             }
             if (argType.GetGenericArguments()[0] != _elementType) {
-                throw new ArgumentException(String.Format("Expected type {0}, got {1}", typeof(StrongBox<>).MakeGenericType(_elementType).FullName, TypeUtils.GetTypeForBinding(arg).FullName));
+                throw Error.UnexpectedType(typeof(StrongBox<>).MakeGenericType(_elementType).FullName, TypeUtils.GetTypeForBinding(arg).FullName);
             }
 
             object value = ((IStrongBox)arg).Value;

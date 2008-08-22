@@ -872,6 +872,33 @@ if not is_silverlight: #cp3194
         nt.unlink(_f_module)
         
         
+@skip("silverlight", "multiple_execute")
+def test_pack_module_relative_collision():
+    """when importing a package item the package should be updated with the child"""
+    try:
+        mod_backup = dict(sys.modules)
+        _f_dir      = path_combine(testpath.public_testdir, 'test_dir')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_foo_dir  = path_combine(_f_dir, 'foo')
+        _f_foo_py   = path_combine(_f_foo_dir, 'foo.py')
+        _f_foo_init = path_combine(_f_foo_dir, '__init__.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+        ensure_directory_present(_f_foo_dir)
+
+        write_to_file(_f_init,    'from foo import bar')
+        write_to_file(_f_foo_py, 'bar = "BAR"')
+        write_to_file(_f_foo_init, 'from foo import bar')
+                
+        import test_dir
+        AreEqual(test_dir.bar, 'BAR')
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_foo_py)
+        nt.unlink(_f_foo_init)
+        nt.unlink(_f_init)
+
 run_test(__name__)
 
 # remove all test files

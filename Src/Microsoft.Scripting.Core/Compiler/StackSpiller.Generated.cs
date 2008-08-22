@@ -33,9 +33,6 @@ namespace System.Linq.Expressions.Compiler {
                 return new Result(RewriteAction.None, null);
             }
 
-            // Dynamic nodes have already been removed
-            Debug.Assert(!node.IsDynamic);
-
             Result result;
             switch (node.NodeType) {
                 #region Generated StackSpiller Switch
@@ -227,10 +224,6 @@ namespace System.Linq.Expressions.Compiler {
                 case ExpressionType.TypeIs:
                     result = RewriteTypeBinaryExpression(self, node, stack);
                     break;
-                // ActionExpression
-                case ExpressionType.ActionExpression:
-                    result = RewriteActionExpression(self, node, stack);
-                    break;
                 // Assign
                 case ExpressionType.Assign:
                     result = RewriteAssignmentExpression(self, node, stack);
@@ -251,13 +244,13 @@ namespace System.Linq.Expressions.Compiler {
                 case ExpressionType.ContinueStatement:
                     result = RewriteContinueStatement(self, node, stack);
                     break;
-                // Delete
-                case ExpressionType.Delete:
-                    result = RewriteDeleteExpression(self, node, stack);
-                    break;
                 // DoStatement
                 case ExpressionType.DoStatement:
                     result = RewriteDoStatement(self, node, stack);
+                    break;
+                // Dynamic
+                case ExpressionType.Dynamic:
+                    result = RewriteDynamicExpression(self, node, stack);
                     break;
                 // EmptyStatement
                 case ExpressionType.EmptyStatement:
@@ -267,9 +260,9 @@ namespace System.Linq.Expressions.Compiler {
                 case ExpressionType.Extension:
                     result = RewriteExtensionExpression(self, node, stack);
                     break;
-                // IndexedProperty
-                case ExpressionType.IndexedProperty:
-                    result = RewriteIndexedPropertyExpression(self, node, stack);
+                // Index
+                case ExpressionType.Index:
+                    result = RewriteIndexExpression(self, node, stack);
                     break;
                 // LabeledStatement
                 case ExpressionType.LabeledStatement:
