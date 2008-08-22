@@ -1590,7 +1590,6 @@ def test_hexoct():
     AssertError(TypeError, hex, bar())
     AssertError(TypeError, oct, bar())
 
-#@disabled("CodePlex Work Item 766")
 @skip("multiple_execute")
 def test_no_clr_attributes():
     """verify types have no CLR attributes"""
