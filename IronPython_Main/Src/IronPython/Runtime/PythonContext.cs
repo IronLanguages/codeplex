@@ -45,6 +45,10 @@ namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
 
     public sealed class PythonContext : LanguageContext {
+        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.0 Beta";
+        internal const string/*!*/ IronPythonNames = "IronPython;Python;py";
+        internal const string/*!*/ IronPythonFileExtensions = ".py";
+
         private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         private static readonly Guid LanguageVendor_Microsoft = new Guid(-1723120188, -6423, 0x11d2, 0x90, 0x3f, 0, 0xc0, 0x4f, 0xa3, 2, 0xa1);
 
@@ -56,15 +60,15 @@ namespace IronPython.Runtime {
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
         private readonly BinderState _defaultBinderState, _defaultClsBinderState;
-        private readonly Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, CodeContext, object>>>/*!*/ _tryGetMemSites
-            = new Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, CodeContext, object>>>();
+        private readonly Dictionary<AttrKey, CallSite<Func<CallSite, object, CodeContext, object>>>/*!*/ _tryGetMemSites
+            = new Dictionary<AttrKey, CallSite<Func<CallSite, object, CodeContext, object>>>();
         private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
 
         // conditional variables for silverlight/desktop CLR features
 #if !SILVERLIGHT
         private static int _hookedAssemblyResolve;
-        private Hosting.PythonService _pythonService;
 #endif
+        private Hosting.PythonService _pythonService;
         private string _initialExecutable, _initialPrefix = GetInitialPrefix();
 
         // other fields which might only be conditionally used
@@ -82,35 +86,35 @@ namespace IronPython.Runtime {
         internal BuiltinFunction PythonReconstructor;
         private Dictionary<Type, object> _genericSiteStorage;
 
-        private CallSite<DynamicSiteTarget<CodeContext, object, object>>[] _newUnarySites;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object, object, object>>[] _newTernarySites;
+        private CallSite<Func<CallSite, CodeContext, object, object>>[] _newUnarySites;
+        private CallSite<Func<CallSite, CodeContext, object, object, object, object>>[] _newTernarySites;
 
-        private CallSite<DynamicSiteTarget<object, object, int>> _compareSite;
-        private Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, object, object>>> _setAttrSites;
-        private Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, object>>> _deleteAttrSites;
-        private CallSite<DynamicSiteTarget<CodeContext, object, string, PythonTuple, IAttributesCollection, object>> _metaClassSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, string, object>> _writeSite;
-        private CallSite<DynamicSiteTarget<object, object, object>> _getIndexSite, _equalSite, _delIndexSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, IList<string>>> _memberNamesSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object>> _finalizerSite;
-        private CallSite<DynamicSiteTarget<CodeContext, PythonFunction, object>> _functionCallSite;
-        private CallSite<DynamicSiteTarget<object, object, bool>> _greaterThanSite, _lessThanSite, _equalRetBoolSite, _greaterThanEqualSite, _lessThanEqualSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object[], object>> _callSplatSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>> _callDictSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>> _importSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>> _oldImportSite;
-        private CallSite<DynamicSiteTarget<object, bool>> _isCallableSite;
-        private CallSite<DynamicSiteTarget<object, object, object>> _addSite, _divModSite, _rdivModSite;
-        private CallSite<DynamicSiteTarget<object, object, object, object>> _setIndexSite, _delSliceSite;
-        private CallSite<DynamicSiteTarget<object, object, object, object, object>> _setSliceSite;
+        private CallSite<Func<CallSite, object, object, int>> _compareSite;
+        private Dictionary<AttrKey, CallSite<Func<CallSite, object, object, object>>> _setAttrSites;
+        private Dictionary<AttrKey, CallSite<Func<CallSite, object, object>>> _deleteAttrSites;
+        private CallSite<Func<CallSite, CodeContext, object, string, PythonTuple, IAttributesCollection, object>> _metaClassSite;
+        private CallSite<Func<CallSite, CodeContext, object, string, object>> _writeSite;
+        private CallSite<Func<CallSite, object, object, object>> _getIndexSite, _equalSite, _delIndexSite;
+        private CallSite<Func<CallSite, CodeContext, object, IList<string>>> _memberNamesSite;
+        private CallSite<Func<CallSite, CodeContext, object, object>> _finalizerSite;
+        private CallSite<Func<CallSite, CodeContext, PythonFunction, object>> _functionCallSite;
+        private CallSite<Func<CallSite, object, object, bool>> _greaterThanSite, _lessThanSite, _equalRetBoolSite, _greaterThanEqualSite, _lessThanEqualSite;
+        private CallSite<Func<CallSite, CodeContext, object, object[], object>> _callSplatSite;
+        private CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>> _callDictSite;
+        private CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>> _importSite;
+        private CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>> _oldImportSite;
+        private CallSite<Func<CallSite, object, bool>> _isCallableSite;
+        private CallSite<Func<CallSite, object, object, object>> _addSite, _divModSite, _rdivModSite;
+        private CallSite<Func<CallSite, object, object, object, object>> _setIndexSite, _delSliceSite;
+        private CallSite<Func<CallSite, object, object, object, object, object>> _setSliceSite;
 
         // conversion sites
-        private CallSite<DynamicSiteTarget<object, int>> _intSite;
-        private CallSite<DynamicSiteTarget<object, string>> _tryStringSite;
-        private CallSite<DynamicSiteTarget<object, object>> _tryIntSite, _hashSite;
-        private CallSite<DynamicSiteTarget<object, IEnumerable>> _tryIEnumerableSite;
-        private Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>> _implicitConvertSites;
-        private Dictionary<string, CallSite<DynamicSiteTarget<object, object, object>>> _binarySites;
+        private CallSite<Func<CallSite, object, int>> _intSite;
+        private CallSite<Func<CallSite, object, string>> _tryStringSite;
+        private CallSite<Func<CallSite, object, object>> _tryIntSite, _hashSite;
+        private CallSite<Func<CallSite, object, IEnumerable>> _tryIEnumerableSite;
+        private Dictionary<Type, CallSite<Func<CallSite, object, object>>> _implicitConvertSites;
+        private Dictionary<string, CallSite<Func<CallSite, object, object, object>>> _binarySites;
 
         private CompiledLoader _compiledLoader;
         internal bool _importWarningThrows;
@@ -159,11 +163,11 @@ namespace IronPython.Runtime {
 #endif
 
             // sys.argv always includes at least one empty string.
-            SetSystemStateValue("argv", (_options.Arguments.Count == 0) ? 
+            SetSystemStateValue("argv", (_options.Arguments.Count == 0) ?
                 new List(new object[] { String.Empty }) :
                 new List(_options.Arguments)
             );
-            
+
             if (_options.WarningFilters.Count > 0) {
                 _systemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(_options.WarningFilters);
             }
@@ -390,12 +394,8 @@ namespace IronPython.Runtime {
 
         public override string DisplayName {
             get {
-                return GetPythonDisplayName();
+                return IronPythonDisplayName;
             }
-        }
-
-        internal static string GetPythonDisplayName() {
-            return "IronPython 2.0 Beta";
         }
 
         public override Version LanguageVersion {
@@ -1010,8 +1010,11 @@ namespace IronPython.Runtime {
         }
 
         internal static string GetSourceLine(SyntaxErrorException e) {
+            if (e.SourceCode == null) {
+                return null;
+            }
             try {
-                using (SourceCodeReader reader = e.SourceUnit.GetReader()) {
+                using (StringReader reader = new StringReader(e.SourceCode)) {
                     char[] buffer = new char[80];
                     int curLine = 1;
                     StringBuilder line = new StringBuilder();
@@ -1196,7 +1199,7 @@ namespace IronPython.Runtime {
 
             PythonContext result;
             if (((result = context.LanguageContext as PythonContext) == null)) {
-                result = context.LanguageContext.DomainManager.GetLanguage<PythonContext>();
+                result = (PythonContext)context.LanguageContext.DomainManager.GetLanguage(typeof(PythonContext));
             }
 
             return result;
@@ -1225,7 +1228,7 @@ namespace IronPython.Runtime {
             return base.GetService<TService>(args);
         }
 
-#if !SILVERLIGHT
+
         /// <summary>
         /// Returns (and creates if necessary) the PythonService that is associated with this PythonContext.
         /// 
@@ -1238,7 +1241,6 @@ namespace IronPython.Runtime {
 
             return _pythonService;
         }
-#endif
 
         internal static PythonEngineOptions GetPythonOptions(CodeContext context) {
             return DefaultContext.DefaultPythonContext._options;
@@ -1569,13 +1571,13 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> GetGenericCallSiteStorage() {
-            return GetGenericSiteStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>>();
+        internal SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> GetGenericCallSiteStorage() {
+            return GetGenericSiteStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>>();
 
         }
 
-        internal SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> GetGenericKeywordCallSiteStorage() {
-            return GetGenericSiteStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>>();
+        internal SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>> GetGenericKeywordCallSiteStorage() {
+            return GetGenericSiteStorage<CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>>();
 
         }
 
@@ -1585,7 +1587,7 @@ namespace IronPython.Runtime {
             if (_newUnarySites == null) {
                 Interlocked.CompareExchange(
                     ref _newUnarySites,
-                    new CallSite<DynamicSiteTarget<CodeContext, object, object>>[(int)UnaryOperators.Maximum],
+                    new CallSite<Func<CallSite, CodeContext, object, object>>[(int)UnaryOperators.Maximum],
                     null
                 );
             }
@@ -1593,7 +1595,7 @@ namespace IronPython.Runtime {
             if (_newUnarySites[(int)oper] == null) {
                 Interlocked.CompareExchange(
                     ref _newUnarySites[(int)oper],
-                    CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(
+                    CallSite<Func<CallSite, CodeContext, object, object>>.Create(
                         new InvokeBinder(
                             DefaultBinderState,
                             new CallSignature(0)
@@ -1602,7 +1604,7 @@ namespace IronPython.Runtime {
                     null
                 );
             }
-            CallSite<DynamicSiteTarget<CodeContext, object, object>> site = _newUnarySites[(int)oper];
+            CallSite<Func<CallSite, CodeContext, object, object>> site = _newUnarySites[(int)oper];
 
             SymbolId symbol = GetUnarySymbol(oper);
             PythonType pt = DynamicHelpers.GetPythonType(target);
@@ -1637,7 +1639,7 @@ namespace IronPython.Runtime {
             if (_newTernarySites == null) {
                 Interlocked.CompareExchange(
                     ref _newTernarySites,
-                    new CallSite<DynamicSiteTarget<CodeContext, object, object, object, object>>[(int)TernaryOperators.Maximum],
+                    new CallSite<Func<CallSite, CodeContext, object, object, object, object>>[(int)TernaryOperators.Maximum],
                     null
                 );
             }
@@ -1645,7 +1647,7 @@ namespace IronPython.Runtime {
             if (_newTernarySites[(int)oper] == null) {
                 Interlocked.CompareExchange(
                     ref _newTernarySites[(int)oper],
-                    CallSite<DynamicSiteTarget<CodeContext, object, object, object, object>>.Create(
+                    CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
                         new InvokeBinder(
                             DefaultBinderState,
                             new CallSignature(2)
@@ -1654,7 +1656,7 @@ namespace IronPython.Runtime {
                     null
                 );
             }
-            CallSite<DynamicSiteTarget<CodeContext, object, object, object, object>> site = _newTernarySites[(int)oper];
+            CallSite<Func<CallSite, CodeContext, object, object, object, object>> site = _newTernarySites[(int)oper];
 
             SymbolId symbol = GetTernarySymbol(oper);
             PythonType pt = DynamicHelpers.GetPythonType(target);
@@ -1704,11 +1706,11 @@ namespace IronPython.Runtime {
             return PythonContext.GetContext(context).InvokeOperatorWorker(context, oper, target, value1, value2, out res);
         }
 
-        internal CallSite<DynamicSiteTarget<object, object, int>> CompareSite {
+        internal CallSite<Func<CallSite, object, object, int>> CompareSite {
             get {
                 if (_compareSite == null) {
                     Interlocked.CompareExchange(ref _compareSite,
-                        CallSite<DynamicSiteTarget<object, object, int>>.Create(
+                        CallSite<Func<CallSite, object, object, int>>.Create(
                             new OperationBinder(
                                 DefaultBinderState,
                                 StandardOperators.Compare
@@ -1723,7 +1725,7 @@ namespace IronPython.Runtime {
         }
 
         internal bool TryGetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name, out object ret) {
-            CallSite<DynamicSiteTarget<object, CodeContext, object>> site = GetTryGetMemberSite(context, o, name);
+            CallSite<Func<CallSite, object, CodeContext, object>> site = GetTryGetMemberSite(context, o, name);
 
             try {
                 ret = site.Target(site, o, context);
@@ -1735,7 +1737,7 @@ namespace IronPython.Runtime {
         }
 
         internal object GetAttr(CodeContext/*!*/ context, object o, SymbolId name) {
-            CallSite<DynamicSiteTarget<object, CodeContext, object>> site = GetTryGetMemberSite(context, o, name);
+            CallSite<Func<CallSite, object, CodeContext, object>> site = GetTryGetMemberSite(context, o, name);
 
             object ret = site.Target(site, o, context);
 
@@ -1750,14 +1752,14 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        private CallSite<DynamicSiteTarget<object, CodeContext, object>> GetTryGetMemberSite(CodeContext context, object o, SymbolId name) {
+        private CallSite<Func<CallSite, object, CodeContext, object>> GetTryGetMemberSite(CodeContext context, object o, SymbolId name) {
             AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name, PythonOps.IsClsVisible(context));
 
-            CallSite<DynamicSiteTarget<object, CodeContext, object>> site;
+            CallSite<Func<CallSite, object, CodeContext, object>> site;
 
             lock (_tryGetMemSites) {
                 if (!_tryGetMemSites.TryGetValue(key, out site)) {
-                    _tryGetMemSites[key] = site = CallSite<DynamicSiteTarget<object, CodeContext, object>>.Create(
+                    _tryGetMemSites[key] = site = CallSite<Func<CallSite, object, CodeContext, object>>.Create(
                         new GetMemberBinder(
                             PythonOps.IsClsVisible(context) ? DefaultClsBinderState : DefaultBinderState,
                             SymbolTable.IdToString(name),
@@ -1770,15 +1772,15 @@ namespace IronPython.Runtime {
         }
 
         internal void SetAttr(CodeContext/*!*/ context, object o, SymbolId name, object value) {
-            CallSite<DynamicSiteTarget<object, object, object>> site;
+            CallSite<Func<CallSite, object, object, object>> site;
             if (_setAttrSites == null) {
-                Interlocked.CompareExchange(ref _setAttrSites, new Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, object, object>>>(), null);
+                Interlocked.CompareExchange(ref _setAttrSites, new Dictionary<AttrKey, CallSite<Func<CallSite, object, object, object>>>(), null);
             }
 
             lock (_setAttrSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
                 if (!_setAttrSites.TryGetValue(key, out site)) {
-                    _setAttrSites[key] = site = CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                    _setAttrSites[key] = site = CallSite<Func<CallSite, object, object, object>>.Create(
                         new SetMemberBinder(
                             DefaultBinderState,
                             SymbolTable.IdToString(name)
@@ -1794,13 +1796,13 @@ namespace IronPython.Runtime {
             AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
 
             if (_deleteAttrSites == null) {
-                Interlocked.CompareExchange(ref _deleteAttrSites, new Dictionary<AttrKey, CallSite<DynamicSiteTarget<object, object>>>(), null);
+                Interlocked.CompareExchange(ref _deleteAttrSites, new Dictionary<AttrKey, CallSite<Func<CallSite, object, object>>>(), null);
             }
 
-            CallSite<DynamicSiteTarget<object, object>> site;
+            CallSite<Func<CallSite, object, object>> site;
             lock (_deleteAttrSites) {
                 if (!_deleteAttrSites.TryGetValue(key, out site)) {
-                    _deleteAttrSites[key] = site = CallSite<DynamicSiteTarget<object, object>>.Create(
+                    _deleteAttrSites[key] = site = CallSite<Func<CallSite, object, object>>.Create(
                         new DeleteMemberBinder(
                             DefaultBinderState,
                             SymbolTable.IdToString(name)
@@ -1812,12 +1814,12 @@ namespace IronPython.Runtime {
             site.Target(site, o);
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, string, PythonTuple, IAttributesCollection, object>> MetaClassCallSite {
+        internal CallSite<Func<CallSite, CodeContext, object, string, PythonTuple, IAttributesCollection, object>> MetaClassCallSite {
             get {
                 if (_metaClassSite == null) {
                     Interlocked.CompareExchange(
                         ref _metaClassSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, string, PythonTuple, IAttributesCollection, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, string, PythonTuple, IAttributesCollection, object>>.Create(
                             new InvokeBinder(
                                 _defaultBinderState,
                                 new CallSignature(3)
@@ -1831,12 +1833,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, string, object>> WriteCallSite {
+        internal CallSite<Func<CallSite, CodeContext, object, string, object>> WriteCallSite {
             get {
                 if (_writeSite == null) {
                     Interlocked.CompareExchange(
                         ref _writeSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, string, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(
                             new InvokeBinder(
                                 _defaultBinderState,
                                 new CallSignature(1)
@@ -1850,12 +1852,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal CallSite<DynamicSiteTarget<object, object, object>> GetIndexSite {
+        internal CallSite<Func<CallSite, object, object, object>> GetIndexSite {
             get {
                 if (_getIndexSite == null) {
                     Interlocked.CompareExchange(
                         ref _getIndexSite,
-                        CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                        CallSite<Func<CallSite, object, object, object>>.Create(
                             new OperationBinder(
                                 _defaultBinderState,
                                 StandardOperators.GetItem
@@ -1873,7 +1875,7 @@ namespace IronPython.Runtime {
             if (_delIndexSite == null) {
                 Interlocked.CompareExchange(
                     ref _delIndexSite,
-                    CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object>>.Create(
                         new OperationBinder(
                             _defaultBinderState,
                             StandardOperators.DeleteItem
@@ -1891,7 +1893,7 @@ namespace IronPython.Runtime {
             if (_delSliceSite == null) {
                 Interlocked.CompareExchange(
                     ref _delSliceSite,
-                    CallSite<DynamicSiteTarget<object, object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object, object>>.Create(
                         new OperationBinder(
                             _defaultBinderState,
                             StandardOperators.DeleteSlice
@@ -1909,7 +1911,7 @@ namespace IronPython.Runtime {
             if (_setIndexSite == null) {
                 Interlocked.CompareExchange(
                     ref _setIndexSite,
-                    CallSite<DynamicSiteTarget<object, object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object, object>>.Create(
                         new OperationBinder(
                             _defaultBinderState,
                             StandardOperators.SetItem
@@ -1926,7 +1928,7 @@ namespace IronPython.Runtime {
             if (_setSliceSite == null) {
                 Interlocked.CompareExchange(
                     ref _setSliceSite,
-                    CallSite<DynamicSiteTarget<object, object, object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object, object, object>>.Create(
                         new OperationBinder(
                             _defaultBinderState,
                             StandardOperators.SetSlice
@@ -1939,12 +1941,12 @@ namespace IronPython.Runtime {
             _setSliceSite.Target(_setSliceSite, a, start, end, value);
         }
 
-        internal CallSite<DynamicSiteTarget<object, object, object>> EqualSite {
+        internal CallSite<Func<CallSite, object, object, object>> EqualSite {
             get {
                 if (_equalSite == null) {
                     Interlocked.CompareExchange(
                         ref _equalSite,
-                        CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                        CallSite<Func<CallSite, object, object, object>>.Create(
                             new OperationBinder(
                                 _defaultBinderState,
                                 StandardOperators.GetItem
@@ -1958,12 +1960,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, IList<string>>> MemberNamesSite {
+        internal CallSite<Func<CallSite, CodeContext, object, IList<string>>> MemberNamesSite {
             get {
                 if (_memberNamesSite == null) {
                     Interlocked.CompareExchange(
                         ref _memberNamesSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, IList<string>>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, IList<string>>>.Create(
                             new OperationBinder(
                                 _defaultBinderState,
                                 StandardOperators.MemberNames
@@ -1977,12 +1979,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, object>> FinalizerSite {
+        internal CallSite<Func<CallSite, CodeContext, object, object>> FinalizerSite {
             get {
                 if (_finalizerSite == null) {
                     Interlocked.CompareExchange(
                         ref _finalizerSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, object>>.Create(
                             new InvokeBinder(
                                 DefaultBinderState,
                                 new CallSignature(0)
@@ -1996,12 +1998,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, PythonFunction, object>> FunctionCallSite {
+        internal CallSite<Func<CallSite, CodeContext, PythonFunction, object>> FunctionCallSite {
             get {
                 if (_functionCallSite == null) {
                     Interlocked.CompareExchange(
                         ref _functionCallSite,
-                        CallSite<DynamicSiteTarget<CodeContext, PythonFunction, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, PythonFunction, object>>.Create(
                             new InvokeBinder(
                                 _defaultBinderState,
                                 new CallSignature(0)
@@ -2093,16 +2095,16 @@ namespace IronPython.Runtime {
             return res != null;
         }
 
-        private CallSite<DynamicSiteTarget<object, T>> MakeExplicitTrySite<T>() where T : class {
+        private CallSite<Func<CallSite, object, T>> MakeExplicitTrySite<T>() where T : class {
             return MakeTrySite<T, T>(ConversionResultKind.ExplicitTry);
         }
 
-        private CallSite<DynamicSiteTarget<object, object>> MakeExplicitStructTrySite<T>() where T : struct {
+        private CallSite<Func<CallSite, object, object>> MakeExplicitStructTrySite<T>() where T : struct {
             return MakeTrySite<T, object>(ConversionResultKind.ExplicitTry);
         }
 
-        private CallSite<DynamicSiteTarget<object, TRet>> MakeTrySite<T, TRet>(ConversionResultKind kind) {
-            return CallSite<DynamicSiteTarget<object, TRet>>.Create(
+        private CallSite<Func<CallSite, object, TRet>> MakeTrySite<T, TRet>(ConversionResultKind kind) {
+            return CallSite<Func<CallSite, object, TRet>>.Create(
                 new ConversionBinder(
                     DefaultBinderState,
                     typeof(T),
@@ -2113,10 +2115,10 @@ namespace IronPython.Runtime {
 
         internal object ImplicitConvertTo<T>(object value) {
             if (_implicitConvertSites == null) {
-                Interlocked.CompareExchange(ref _implicitConvertSites, new Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>>(), null);
+                Interlocked.CompareExchange(ref _implicitConvertSites, new Dictionary<Type, CallSite<Func<CallSite, object, object>>>(), null);
             }
 
-            CallSite<DynamicSiteTarget<object, object>> site;
+            CallSite<Func<CallSite, object, object>> site;
             lock (_implicitConvertSites) {
                 if (!_implicitConvertSites.TryGetValue(typeof(T), out site)) {
                     _implicitConvertSites[typeof(T)] = site = MakeImplicitConvertSite<T>();
@@ -2134,12 +2136,12 @@ namespace IronPython.Runtime {
                 public static Boolean ConvertToBoolean(object value) { return _boolSite.Invoke(DefaultContext.Default, value); }
                 public static Int64 ConvertToInt64(object value) { return _int64Site.Invoke(DefaultContext.Default, value); }
                 */
-        private CallSite<DynamicSiteTarget<object, T>> MakeExplicitConvertSite<T>() {
+        private CallSite<Func<CallSite, object, T>> MakeExplicitConvertSite<T>() {
             return MakeConvertSite<T>(ConversionResultKind.ExplicitCast);
         }
 
-        private CallSite<DynamicSiteTarget<object, object>> MakeImplicitConvertSite<T>() {
-            return CallSite<DynamicSiteTarget<object, object>>.Create(
+        private CallSite<Func<CallSite, object, object>> MakeImplicitConvertSite<T>() {
+            return CallSite<Func<CallSite, object, object>>.Create(
                 new ConversionBinder(
                     _defaultBinderState,
                     typeof(T),
@@ -2148,8 +2150,8 @@ namespace IronPython.Runtime {
             );
         }
 
-        private CallSite<DynamicSiteTarget<object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
-            return CallSite<DynamicSiteTarget<object, T>>.Create(
+        private CallSite<Func<CallSite, object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
+            return CallSite<Func<CallSite, object, T>>.Create(
                 new ConversionBinder(
                     _defaultBinderState,
                     typeof(T),
@@ -2168,15 +2170,15 @@ namespace IronPython.Runtime {
             if (_binarySites == null) {
                 Interlocked.CompareExchange(
                     ref _binarySites,
-                    new Dictionary<string, CallSite<DynamicSiteTarget<object, object, object>>>(),
+                    new Dictionary<string, CallSite<Func<CallSite, object, object, object>>>(),
                     null
                 );
             }
 
-            CallSite<DynamicSiteTarget<object, object, object>> site;
+            CallSite<Func<CallSite, object, object, object>> site;
             lock (_binarySites) {
                 if (!_binarySites.TryGetValue(operation, out site)) {
-                    _binarySites[operation] = site = CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                    _binarySites[operation] = site = CallSite<Func<CallSite, object, object, object>>.Create(
                         new OperationBinder(
                             _defaultBinderState,
                             operation
@@ -2212,7 +2214,7 @@ namespace IronPython.Runtime {
             return !Equal(self, other);
         }
 
-        private bool Comparison(object self, object other, string operation, ref CallSite<DynamicSiteTarget<object, object, bool>> comparisonSite) {
+        private bool Comparison(object self, object other, string operation, ref CallSite<Func<CallSite, object, object, bool>> comparisonSite) {
             if (comparisonSite == null) {
                 Interlocked.CompareExchange(
                     ref comparisonSite,
@@ -2224,8 +2226,8 @@ namespace IronPython.Runtime {
             return comparisonSite.Target(comparisonSite, self, other);
         }
 
-        private CallSite<DynamicSiteTarget<object, object, bool>> CreateComparisonSite(string op) {
-            return CallSite<DynamicSiteTarget<object, object, bool>>.Create(
+        private CallSite<Func<CallSite, object, object, bool>> CreateComparisonSite(string op) {
+            return CallSite<Func<CallSite, object, object, bool>>.Create(
                 Binders.BinaryOperationRetBool(
                     DefaultBinderState,
                     op
@@ -2257,8 +2259,8 @@ namespace IronPython.Runtime {
             return _callSplatSite.Target(_callSplatSite, context, func, args);
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, object[], object>> MakeSplatSite() {
-            return CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>.Create(Binders.InvokeSplat(DefaultBinderState));
+        internal CallSite<Func<CallSite, CodeContext, object, object[], object>> MakeSplatSite() {
+            return CallSite<Func<CallSite, CodeContext, object, object[], object>>.Create(Binders.InvokeSplat(DefaultBinderState));
         }
 
         internal object CallWithKeywords(object func, object[] args, IAttributesCollection dict) {
@@ -2273,16 +2275,16 @@ namespace IronPython.Runtime {
             return _callDictSite.Target(_callDictSite, DefaultBinderState.Context, func, args, dict);
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>> MakeKeywordSplatSite() {
-            return CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>.Create(Binders.InvokeKeywords(DefaultBinderState));
+        internal CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>> MakeKeywordSplatSite() {
+            return CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>.Create(Binders.InvokeKeywords(DefaultBinderState));
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>> ImportSite {
+        internal CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>> ImportSite {
             get {
                 if (_importSite == null) {
                     Interlocked.CompareExchange(
                         ref _importSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>>.Create(
                             new InvokeBinder(
                                 DefaultBinderState,
                                 new CallSignature(5)
@@ -2296,12 +2298,12 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>> OldImportSite {
+        internal CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>> OldImportSite {
             get {
                 if (_oldImportSite == null) {
                     Interlocked.CompareExchange(
                         ref _oldImportSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>>.Create(
                             new InvokeBinder(
                                 DefaultBinderState,
                                 new CallSignature(4)
@@ -2319,7 +2321,7 @@ namespace IronPython.Runtime {
             if (_isCallableSite == null) {
                 Interlocked.CompareExchange(
                     ref _isCallableSite,
-                    CallSite<DynamicSiteTarget<object, bool>>.Create(
+                    CallSite<Func<CallSite, object, bool>>.Create(
                         new OperationBinder(
                             DefaultBinderState,
                             StandardOperators.IsCallable
@@ -2336,7 +2338,7 @@ namespace IronPython.Runtime {
             if (_hashSite == null) {
                 Interlocked.CompareExchange(
                     ref _hashSite,
-                    CallSite<DynamicSiteTarget<object, object>>.Create(
+                    CallSite<Func<CallSite, object, object>>.Create(
                         new OperationBinder(
                             DefaultBinderState,
                             OperatorStrings.Hash
@@ -2361,7 +2363,7 @@ namespace IronPython.Runtime {
             if (_addSite == null) {
                 Interlocked.CompareExchange(
                     ref _addSite,
-                    CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object>>.Create(
                         new OperationBinder(DefaultBinderState, StandardOperators.Add)
                     ),
                     null
@@ -2375,7 +2377,7 @@ namespace IronPython.Runtime {
             if (_divModSite == null) {
                 Interlocked.CompareExchange(
                     ref _divModSite,
-                    CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object>>.Create(
                         new OperationBinder(DefaultBinderState, StandardOperators.DivMod)
                     ),
                     null
@@ -2390,7 +2392,7 @@ namespace IronPython.Runtime {
             if (_rdivModSite == null) {
                 Interlocked.CompareExchange(
                     ref _rdivModSite,
-                    CallSite<DynamicSiteTarget<object, object, object>>.Create(
+                    CallSite<Func<CallSite, object, object, object>>.Create(
                         new OperationBinder(DefaultBinderState, "Reverse" + StandardOperators.DivMod)
                     ),
                     null

@@ -93,7 +93,7 @@ namespace IronPython.Runtime.Binding {
 
             Expression callAsInt = call;
             if (call.Type != typeof(int)) {
-                callAsInt = Ast.ActionExpression(
+                callAsInt = Ast.Dynamic(
                     new ConversionBinder(
                         state,
                         typeof(int),
@@ -188,7 +188,7 @@ namespace IronPython.Runtime.Binding {
                     MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
                 );
 
-                body = Ast.ActionExpression(
+                body = Ast.Dynamic(
                     new InvokeBinder(
                         BinderState.GetBinderState(call),
                         BindingHelpers.GetCallSignature(call)

@@ -389,7 +389,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Constant(metaType),
                             tmp
                         ),
-                        Ast.ActionExpression(
+                        Ast.Dynamic(
                             new InvokeBinder(
                                 BinderState.GetBinderState(member),
                                 new CallSignature(1)

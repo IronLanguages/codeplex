@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30718</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{155CE436-1669-4A48-8095-410F2430237F}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -131,7 +131,7 @@
     </ProjectReference>
     <ProjectReference Include="..\IronPython\IronPython.csproj">
       <Project>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</Project>
-      <Name>IronPython</Name>
+      <Name>IronPython %28Languages\IronPython\IronPython%29</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />

@@ -21,7 +21,7 @@ namespace System.Runtime.CompilerServices {
     public delegate bool GeneratorNext(Generator generator, out object next);
 
     // TODO: should implement IEnumerable too, see C# generators
-    public sealed class Generator : IEnumerator, IEnumerator<object>, IDisposable {
+    public class Generator : IEnumerator, IEnumerator<object>, IDisposable {
         private object _current;
         private readonly GeneratorNext _next;
 
@@ -51,8 +51,14 @@ namespace System.Runtime.CompilerServices {
         #region IDisposable Members
 
         public void Dispose() {
-            // nothing needed to dispose
+            Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing) {
+            if (disposing) {
+                // nothing needed to dispose
+            }
         }
 
         #endregion

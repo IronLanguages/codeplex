@@ -88,7 +88,7 @@ namespace IronPython.Runtime.Binding {
                     call = new MetaObject(
                         Ast.Comma(
                             MakeCheckSelf(signature, args),
-                            Ast.ActionExpression(
+                            Ast.Dynamic(
                                 new InvokeBinder(
                                     BinderState.GetBinderState(callAction),
                                     BindingHelpers.GetCallSignature(callAction)
@@ -129,7 +129,7 @@ namespace IronPython.Runtime.Binding {
 
 
                 call = new MetaObject(
-                    Ast.ActionExpression(
+                    Ast.Dynamic(
                         new InvokeBinder(
                             BinderState.GetBinderState(callAction),
                             newSig

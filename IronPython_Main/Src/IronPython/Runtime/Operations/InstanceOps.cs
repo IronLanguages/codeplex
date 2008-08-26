@@ -122,7 +122,7 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static object OverloadedNewBasic(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, BuiltinFunction overloads\u00F8, PythonType type\u00F8, params object[] args\u00F8) {
+        public static object OverloadedNewBasic(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> storage, BuiltinFunction overloads\u00F8, PythonType type\u00F8, params object[] args\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(type\u00F8)));
             if (args\u00F8 == null) args\u00F8 = new object[1];
             return overloads\u00F8.Call(context, storage, null, args\u00F8);

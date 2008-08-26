@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Scripting;
 
 namespace System.Linq.Expressions.Compiler {
     internal sealed class YieldLabelBuilder : ExpressionTreeVisitor {
@@ -69,6 +70,7 @@ namespace System.Linq.Expressions.Compiler {
         private Dictionary<YieldStatement, YieldTarget> _yieldTargets;
         private readonly Stack<ExceptionBlock> _tryBlocks = new Stack<ExceptionBlock>();
         private readonly List<YieldTarget> _topTargets = new List<YieldTarget>();
+        private List<int> _yieldMarkers;
         
         private YieldLabelBuilder() {
         }
@@ -79,7 +81,7 @@ namespace System.Linq.Expressions.Compiler {
             ylb.VisitNode(gle.Body);
 
             // Populate results into the GeneratorInfo
-            return new GeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets);
+            return new GeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._yieldMarkers);
         }
 
         #region ExpressionVisitor overrides
@@ -147,6 +149,15 @@ namespace System.Linq.Expressions.Compiler {
                 // to return to the given yield target
 
                 label = eb.AddYieldTarget(label, index);
+            }
+
+            // Insert the debugcookie into the map if we find YieldStatementDebugCookie annotation
+            YieldAnnotation debugCookie;
+            if (node.Annotations.TryGet(out debugCookie)) {
+                if (_yieldMarkers == null)
+                    _yieldMarkers = new List<int>();
+
+                _yieldMarkers.Insert(index, debugCookie.YieldMarker);
             }
 
             // Insert the top target to the top yields

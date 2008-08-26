@@ -22,6 +22,7 @@ using System.Runtime.Serialization;
 using System.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using System.Threading;
 
 namespace Microsoft.Scripting.Runtime {
 
@@ -48,8 +49,8 @@ namespace Microsoft.Scripting.Runtime {
         private readonly DynamicRuntimeHostingProvider _hostingProvider;
         private readonly SharedIO _sharedIO;
 
-        // TODO: ReaderWriterLock (Silverlight?)
-        private readonly List<LanguageContext> _registeredContexts = new List<LanguageContext>();
+        // last id assigned to a language context:
+        private int _lastContextId;
 
         private ScopeAttributesWrapper _scopeWrapper;
         private Scope _globals;
@@ -96,58 +97,48 @@ namespace Microsoft.Scripting.Runtime {
 
         #region Language Registration
 
-        internal ContextId AssignContextId(LanguageContext language) {
-            lock (_registeredContexts) {
-                int index = _registeredContexts.Count;
-                _registeredContexts.Add(language);
-
-                return new ContextId(index + 1);
-            }
+        internal ContextId GenerateContextId() {
+            return new ContextId(Interlocked.Increment(ref _lastContextId));
         }
 
         public LanguageContext GetLanguage(Type providerType) {
             ContractUtils.RequiresNotNull(providerType, "providerType");
-            return GetLanguage(new AssemblyQualifiedTypeName(providerType));
+            return GetLanguageByTypeName(providerType.AssemblyQualifiedName);
         }
 
-        public LanguageContext GetLanguage(AssemblyQualifiedTypeName providerName) {
+        public LanguageContext GetLanguageByTypeName(string providerAssemblyQualifiedTypeName) {
+            ContractUtils.RequiresNotNull(providerAssemblyQualifiedTypeName, "providerAssemblyQualifiedTypeName");
+            var aqtn = AssemblyQualifiedTypeName.ParseArgument(providerAssemblyQualifiedTypeName, "providerAssemblyQualifiedTypeName");
+
             LanguageContext language;
-            if (!_configuration.TryLoadLanguage(this, providerName, out language)) {
+            if (!_configuration.TryLoadLanguage(this, aqtn, out language)) {
                 throw Error.UnknownLanguageProviderType();
             }
             return language;
         }
 
-        /// <summary>
-        /// Gets the language context of the specified type.  This can be used by language implementors
-        /// to get their LanguageContext for an already existing ScriptDomainManager.
-        /// </summary>
-        public TContextType GetLanguage<TContextType>() where TContextType : LanguageContext {
-            return (TContextType)GetLanguage(typeof(TContextType));
+        public bool TryGetLanguage(string languageName, out LanguageContext language) {
+            ContractUtils.RequiresNotNull(languageName, "languageName");
+            return _configuration.TryLoadLanguage(this, languageName, false, out language);
         }
 
-        public bool TryGetLanguage(string languageId, out LanguageContext language) {
-            ContractUtils.RequiresNotNull(languageId, "languageId");
-            return _configuration.TryLoadLanguage(this, languageId, false, out language);
-        }
-
-        public LanguageContext GetLanguage(string languageId) {
+        public LanguageContext GetLanguageByName(string languageName) {
             LanguageContext language;
-            if (!TryGetLanguage(languageId, out language)) {
-                throw new ArgumentException(String.Format("Unknown language identifier: {0}", languageId));
+            if (!TryGetLanguage(languageName, out language)) {
+                throw new ArgumentException(String.Format("Unknown language name: '{0}'", languageName));
             }
             return language;
         }
 
-        public bool TryGetLanguageByFileExtension(string extension, out LanguageContext language) {
-            ContractUtils.RequiresNotEmpty(extension, "extension");
-            return _configuration.TryLoadLanguage(this, DlrConfiguration.NormalizeExtension(extension), true, out language);
+        public bool TryGetLanguageByFileExtension(string fileExtension, out LanguageContext language) {
+            ContractUtils.RequiresNotEmpty(fileExtension, "fileExtension");
+            return _configuration.TryLoadLanguage(this, DlrConfiguration.NormalizeExtension(fileExtension), true, out language);
         }
 
-        public LanguageContext GetLanguageByExtension(string extension) {
+        public LanguageContext GetLanguageByExtension(string fileExtension) {
             LanguageContext language;
-            if (!TryGetLanguageByFileExtension(extension, out language)) {
-                throw new ArgumentException("Unknown extension");
+            if (!TryGetLanguageByFileExtension(fileExtension, out language)) {
+                throw new ArgumentException(String.Format("Unknown file extension: '{0}'", fileExtension));
             }
             return language;
         }

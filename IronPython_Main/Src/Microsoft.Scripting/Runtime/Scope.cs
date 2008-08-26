@@ -145,7 +145,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         /// <summary>
-        /// Returns the list of Keys and Items which are available to all langauges.  Keys marked
+        /// Returns the list of Keys and Items which are available to all languages.  Keys marked
         /// with the DontEnumerate flag will not be returned.
         /// </summary>
         public IEnumerable<KeyValuePair<SymbolId, object>> Items {

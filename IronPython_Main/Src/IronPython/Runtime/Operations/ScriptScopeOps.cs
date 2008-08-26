@@ -18,6 +18,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Hosting.Providers;
 
 namespace IronPython.Runtime.Operations {
     public static class ScriptScopeOps {

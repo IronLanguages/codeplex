@@ -197,6 +197,7 @@
     <Compile Include="Ast\TypeUtils.cs" />
     <Compile Include="Ast\UnaryExpression.cs" />
     <Compile Include="Ast\VariableExpression.cs" />
+    <Compile Include="Ast\YieldAnnotation.cs" />
     <Compile Include="Ast\YieldStatement.cs" />
     <Compile Include="Com\ArgBuilder.cs" />
     <Compile Include="Com\BoundDispEvent.cs" />
@@ -289,6 +290,7 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Compiler\Generator.cs" />
+    <Compile Include="Compiler\DebuggableGenerator.cs" />
     <Compile Include="Compiler\LocalVariableAccess.cs" />
     <Compile Include="Utils\Action.cs" />
     <Compile Include="Utils\Assert.cs" />

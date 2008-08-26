@@ -22,6 +22,7 @@ using System.Windows.Browser;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Hosting.Providers;
 
 
 namespace Microsoft.Scripting.Silverlight {
@@ -261,7 +262,7 @@ namespace Microsoft.Scripting.Silverlight {
                 ScriptEngine engine;
                 if (_sourceFileName != null &&
                     DynamicApplication.Current.Environment.TryGetEngineByFileExtension(System.IO.Path.GetExtension(_sourceFileName), out engine)) {
-                    ExceptionService es = engine.GetService<ExceptionService>();
+                    ExceptionOperations es = engine.GetService<ExceptionOperations>();
                     es.GetExceptionMessage(_exception, out _message, out _errorTypeName);
                 } else {
                     _errorTypeName = _exception.GetType().Name;

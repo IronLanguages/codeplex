@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Scripting;
 
 namespace System.Linq.Expressions.Compiler {
     /// <summary>
@@ -37,14 +38,25 @@ namespace System.Linq.Expressions.Compiler {
         /// </summary>
         internal readonly IList<YieldTarget> TopTargets;
 
+        /// <summary>
+        /// Index-to-yieldmarker map.  null indicates that the generator isn't debuggable.
+        /// </summary>
+        private readonly IList<int> _yieldMarkers;
+
+        internal IList<int> YieldMarkers {
+            get { return _yieldMarkers; }
+        } 
+
         internal GeneratorInfo(
             Dictionary<TryStatement, TryStatementInfo> tryInfos,
             Dictionary<YieldStatement, YieldTarget> yieldTargets,
-            List<YieldTarget> topTargets) {
+            List<YieldTarget> topTargets,
+            IList<int> yieldMarkers) {
 
             _tryInfos = tryInfos;
             _yieldTargets = yieldTargets;
             TopTargets = topTargets;
+            _yieldMarkers = yieldMarkers;
         }
 
         internal TryStatementInfo TryGetTsi(TryStatement ts) {

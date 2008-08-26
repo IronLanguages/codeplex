@@ -211,6 +211,10 @@ namespace System.Linq.Expressions {
                     ValidateAccessor(instance, setter, setParameters.RemoveLast(), ref argList);
                 }
             }
+
+            if (getter == null && setter == null) {
+                throw Error.PropertyDoesNotHaveAccessor(property);
+            }
         }
 
         private static void ValidateAccessor(Expression instance, MethodInfo method, ParameterInfo[] indexes, ref ReadOnlyCollection<Expression> arguments) {

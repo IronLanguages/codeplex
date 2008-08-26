@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Gets an engine for the langauge associated with this scope.
+        /// Gets an engine for the language associated with this scope.
         /// Returns invariant engine if the scope is language agnostic.
         /// </summary>
         public ScriptEngine Engine {
@@ -78,7 +78,7 @@ namespace Microsoft.Scripting.Hosting {
         public object Execute(string code) {
             ContractUtils.RequiresNotNull(code, "code");
             if (!CanExecuteCode) throw new NotSupportedException("Cannot execute code on language agnostic scope");
-            return _engine.LanguageContext.CreateSnippet(code).Execute(_scope);
+            return _engine.LanguageContext.CreateSnippet(code, SourceCodeKind.Expression).Execute(_scope);
         }
 
         /// <summary>
@@ -133,6 +133,22 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="ArgumentNullException"><paramref name="name"/> is a <c>null</c> reference.</exception>
         public bool TryGetVariable(string name, out object value) {
             return _scope.TryGetName(_engine.LanguageContext, SymbolTable.StringToId(name), out value);
+        }
+
+        /// <summary>
+        /// Tries to get a value stored in the scope under the given name.
+        /// Converts the result to the specified type using the conversion that the language associated with the scope defines.
+        /// If no language is associated with the scope, the default CLR conversion is attempted.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="name"/> is a <c>null</c> reference.</exception>
+        public bool TryGetVariable<T>(string name, out T value) {
+            object result;
+            if (_scope.TryGetName(_engine.LanguageContext, SymbolTable.StringToId(name), out result)) {
+                value = _engine.Operations.ConvertTo<T>(result);
+                return true;
+            }
+            value = default(T);
+            return false;
         }
 
         /// <summary>
@@ -197,13 +213,6 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="ArgumentNullException"><paramref name="name"/> is a <c>null</c> reference.</exception>
         public bool RemoveVariable(string name) {
             return _scope.TryRemoveName(_engine.LanguageContext, SymbolTable.StringToId(name));
-        }
-
-        /// <summary>
-        /// Removes all values from the scope.
-        /// </summary>
-        public void ClearVariables() {
-            _scope.Clear();
         }
 
         /// <summary>
@@ -284,7 +293,7 @@ namespace Microsoft.Scripting.Hosting {
                         Expression.Condition(
                             Expression.Call(
                                 instance.Expression,
-                                typeof(ScriptScope).GetMethod("TryGetVariable"),
+                                typeof(ScriptScope).GetMethod("TryGetVariable", new[] { typeof(string), typeof(object).MakeByRefType() }),
                                 Expression.Constant(action.Name),
                                 result
                             ),
@@ -382,7 +391,7 @@ namespace Microsoft.Scripting.Hosting {
                         Expression.Condition(
                             Expression.Call(
                                 instance.Expression,
-                                typeof(ScriptScope).GetMethod("TryGetVariable"),
+                                typeof(ScriptScope).GetMethod("TryGetVariable", new[] { typeof(string), typeof(object).MakeByRefType() }),
                                 Expression.Constant(action.Name),
                                 result
                             ),

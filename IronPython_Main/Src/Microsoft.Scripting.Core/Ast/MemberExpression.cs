@@ -166,7 +166,13 @@ namespace System.Linq.Expressions {
         public static MemberExpression Property(Expression expression, PropertyInfo property, Annotations annotations) {
             ContractUtils.RequiresNotNull(property, "property");
 
-            if (property.GetAccessors(true)[0].IsStatic) {
+            MethodInfo mi = property.GetGetMethod(true) ?? property.GetSetMethod(true);
+
+            if (mi == null) {
+                throw Error.PropertyDoesNotHaveAccessor(property);
+            }
+
+            if (mi.IsStatic) {
                 ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticPropertiesHaveNullExpr); 
             } else {
                 RequiresCanRead(expression, "expression");

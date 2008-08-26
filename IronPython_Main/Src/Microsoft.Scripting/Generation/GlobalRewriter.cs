@@ -113,17 +113,19 @@ namespace Microsoft.Scripting.Generation {
             // Rewrite all of the arguments
             var args = VisitNodes(node.Arguments);
 
-            // TODO: this expands the site's expression twice, which is only
-            // correct when it's a constant
-            //
-            // site.Target.Invoke(site, *args)
-            return Expression.Call(
-                Expression.Field(
-                    siteExpr,
-                    siteType.GetField("Target")
+            var siteVar = Expression.Variable(siteExpr.Type, "$site");
+
+            // ($site = siteExpr).Target.Invoke($site, *args)
+            return Expression.Scope(
+                Expression.Call(
+                    Expression.Field(
+                        Expression.Assign(siteVar, siteExpr),
+                        siteType.GetField("Target")
+                    ),
+                    node.DelegateType.GetMethod("Invoke"),
+                    ArrayUtils.Insert(siteVar, args)
                 ),
-                node.DelegateType.GetMethod("Invoke"),
-                ArrayUtils.Insert(siteExpr, args)
+                siteVar
             );
         }
 

@@ -56,7 +56,7 @@ namespace IronPython.Runtime {
         private const int ResizeMultiplier = 3;
 
         class HashSite {
-            internal static CallSite<DynamicSiteTarget<object, int>> _HashSite = CallSite<DynamicSiteTarget<object, int>>.Create(
+            internal static CallSite<Func<CallSite, object, int>> _HashSite = CallSite<Func<CallSite, object, int>>.Create(
                 new OperationBinder(
                     DefaultContext.DefaultPythonContext.DefaultBinderState,
                     OperatorStrings.Hash

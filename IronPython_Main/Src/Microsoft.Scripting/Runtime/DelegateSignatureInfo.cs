@@ -37,6 +37,9 @@ namespace Microsoft.Scripting.Runtime {
         internal static readonly object TargetPlaceHolder = new object();
 
         internal DelegateSignatureInfo(CodeContext context, Type returnType, ParameterInfo[] parameters) {
+            Assert.NotNull(context, returnType);
+            Assert.NotNullItems(parameters);
+
             _context = context;
             _parameters = parameters;
             _returnType = returnType;

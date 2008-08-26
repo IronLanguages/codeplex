@@ -17,6 +17,8 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
+using System.IO;
 
 namespace Microsoft.Scripting.Hosting {
     [Serializable]
@@ -26,7 +28,7 @@ namespace Microsoft.Scripting.Hosting {
         private object[] _hostArguments;
 
         // languages available in the runtime: 
-        private readonly Dictionary<AssemblyQualifiedTypeName, LanguageSetup> _languageSetups;
+        private readonly Dictionary<string, LanguageSetup> _languageSetups;
 
         // DLR options:
         private bool _debugMode;
@@ -35,64 +37,18 @@ namespace Microsoft.Scripting.Hosting {
         // common language options:
         private IDictionary<string, object> _options;
 
-        public ScriptRuntimeSetup() 
-            : this(false) {
-        }
-
-#if SIGNED || SILVERLIGHT
-        private const string IronPythonAssembly = "IronPython, Version=2.0.0.5000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-        private const string JScriptAssembly = "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-        private const string IronRubyAssembly = "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-        private const string VisualBasicAssembly = "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-        private const string ToyScriptAssembly = "ToyScript, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-#else
-        private const string IronPythonAssembly = "IronPython, Version=2.0.0.3000, Culture=neutral, PublicKeyToken=null";
-        private const string JScriptAssembly = "Microsoft.JScript.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
-        private const string IronRubyAssembly = "IronRuby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
-        private const string VisualBasicAssembly = "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
-        private const string ToyScriptAssembly = "ToyScript, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
-#endif
-
-        public ScriptRuntimeSetup(bool addWellKnownLanguages) {
-            _languageSetups = new Dictionary<AssemblyQualifiedTypeName, LanguageSetup>();
-
-            if (addWellKnownLanguages) {
-                AddLanguage("IronPython.Runtime.PythonContext", IronPythonAssembly, 
-                    "IronPython",
-                    new[] { "py", "python", "ironpython" },
-                    new[] { ".py" } 
-                );
-
-                AddLanguage("Microsoft.JScript.Runtime.JSContext", JScriptAssembly,
-                    "Managed JScript",
-                    new[] { "managedjscript", "js", "jscript" },
-                    new[] { ".jsx", ".js" }
-                );
-
-                AddLanguage("IronRuby.Runtime.RubyContext", IronRubyAssembly, 
-                    "IronRuby",
-                    new[] { "rb", "ruby", "ironruby" },
-                    new[] { ".rb" }
-                );
-
-                AddLanguage("Microsoft.VisualBasic.Scripting.Runtime.VisualBasicLanguageContext", VisualBasicAssembly, 
-                    "Visual Basic",
-                    new[] { "vbx" },
-                    new[] { ".vbx" } 
-                );
-
-                AddLanguage("ToyScript.ToyLanguageContext", ToyScriptAssembly, 
-                    "ToyScript",
-                    new[] { "ts", "toyscript" },
-                    new[] { ".ts" } 
-                );
-            }
-
+        public ScriptRuntimeSetup() {
+            _languageSetups = new Dictionary<string, LanguageSetup>();
             _hostType = typeof(ScriptHost);
             _hostArguments = ArrayUtils.EmptyObjects;
         }
 
-        public Dictionary<AssemblyQualifiedTypeName, LanguageSetup> LanguageSetups {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "addWellKnownLanguages")]
+        [Obsolete(@"Use ScriptRuntimeSetup() overload and fill it in manually or ScriptRuntimeSetup.ReadConfiguration() factory load setup from .config files.", true)]
+        public ScriptRuntimeSetup(bool addWellKnownLanguages) {
+        }
+
+        public Dictionary<string, LanguageSetup> LanguageSetups {
             get { return _languageSetups; }
         }
 
@@ -111,6 +67,9 @@ namespace Microsoft.Scripting.Hosting {
             set { _hostType = value; }
         }
 
+        /// <remarks>
+        /// Option names are case-sensitive.
+        /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public IDictionary<string, object> Options {
             get {
@@ -139,58 +98,46 @@ namespace Microsoft.Scripting.Hosting {
                 _hostArguments = value;
             }
         }
-        
-        private void AddLanguage(string typeName, string assemblyName, string displayName, string[] ids, string[] extensions) {
-            _languageSetups.Add(new AssemblyQualifiedTypeName(typeName, assemblyName), new LanguageSetup(displayName, ids, extensions));
-        }
 
-        public LanguageSetup GetLanguageSetup<TLanguage>() {
-            LanguageSetup setup;
-            if (!_languageSetups.TryGetValue(new AssemblyQualifiedTypeName(typeof(TLanguage)), out setup)) {
-                throw new ArgumentException("Language not registered");
-            }
-            return setup;
-        }
-
-        public bool TryGetLanguageProviderByExtension(string extension, out AssemblyQualifiedTypeName provider) {
-            if (!extension.StartsWith(".")) {
-                extension = "." + extension;
+        public bool TryGetLanguageProviderByFileExtension(string fileExtension, out string providerAssemblyQualifiedTypeName) {
+            if (!fileExtension.StartsWith(".")) {
+                fileExtension = "." + fileExtension;
             }
 
             foreach (var entry in _languageSetups) {
-                if (IndexOf(entry.Value.FileExtensions, extension, StringComparer.OrdinalIgnoreCase) != -1) {
-                    provider = entry.Key;
+                if (IndexOf(entry.Value.FileExtensions, fileExtension, DlrConfiguration.FileExtensionComparer) != -1) {
+                    providerAssemblyQualifiedTypeName = entry.Key;
                     return true;
                 }
             }
 
-            provider = default(AssemblyQualifiedTypeName);
+            providerAssemblyQualifiedTypeName = null;
             return false;
         }
 
-        public bool TryGetLanguageProviderById(string id, out AssemblyQualifiedTypeName provider) {
-            foreach (var entry in _languageSetups) {
-                if (IndexOf(entry.Value.Ids, id, StringComparer.OrdinalIgnoreCase) != -1) {
-                    provider = entry.Key;
-                    return true;
-                }
-            }
-            provider = default(AssemblyQualifiedTypeName);
-            return false;
-        }
-
-        public AssemblyQualifiedTypeName GetLanguageProviderById(string id) {
-            AssemblyQualifiedTypeName provider;
-            if (!TryGetLanguageProviderById(id, out provider)) {
-                throw new ArgumentException("Unknown language identifier");
+        public string GetLanguageProviderByFileExtension(string fileExtension) {
+            string provider;
+            if (!TryGetLanguageProviderByFileExtension(fileExtension, out provider)) {
+                throw new ArgumentException(String.Format("Unknown language extension: '{0}'", fileExtension));
             }
             return provider;
         }
 
-        public AssemblyQualifiedTypeName GetLanguageProviderByExtension(string extension) {
-            AssemblyQualifiedTypeName provider;
-            if (!TryGetLanguageProviderByExtension(extension, out provider)) {
-                throw new ArgumentException("Unknown language extension");
+        public bool TryGetLanguageProviderByName(string languageName, out string providerAssemblyQualifiedTypeName) {
+            foreach (var entry in _languageSetups) {
+                if (IndexOf(entry.Value.Names, languageName, DlrConfiguration.LanguageNameComparer) != -1) {
+                    providerAssemblyQualifiedTypeName = entry.Key;
+                    return true;
+                }
+            }
+            providerAssemblyQualifiedTypeName = null;
+            return false;
+        }
+
+        public string GetLanguageProviderByName(string languageName) {
+            string provider;
+            if (!TryGetLanguageProviderByName(languageName, out provider)) {
+                throw new ArgumentException(String.Format("Unknown language name: '{0}'", languageName));
             }
             return provider;
         }
@@ -233,13 +180,75 @@ namespace Microsoft.Scripting.Hosting {
 
                 config.AddLanguage(
                     entry.Key, 
-                    entry.Value.Ids, 
+                    entry.Value.Names, 
                     entry.Value.FileExtensions, 
                     options
                 );
             }
 
             return config;
+        }
+
+        /// <summary>
+        /// Loads setup from .NET configuration (.config files).
+        /// If there is no configuration available returns an empty setup.
+        /// </summary>
+        public static ScriptRuntimeSetup ReadConfiguration() {
+#if SILVERLIGHT
+            return new ScriptRuntimeSetup();
+#else
+            return new ScriptRuntimeSetup().LoadConfiguration();
+#endif
+        }
+
+#if !SILVERLIGHT
+        /// <summary>
+        /// Loads settings from .NET configuration (.config files) and adds them to the setup object.
+        /// </summary>
+        /// <returns>This instance.</returns>
+        public ScriptRuntimeSetup LoadConfiguration() {
+            Configuration.Section.LoadRuntimeSetup(this, null);
+            return this;
+        }
+
+        /// <summary>
+        /// Loads settings from a specified XML stream and adds them to the specified setup object
+        /// Returns <paramref name="baseSetup"/>.
+        /// </summary>
+        /// <returns>This instance.</returns>
+        public ScriptRuntimeSetup LoadConfiguration(Stream configFileStream) {
+            ContractUtils.RequiresNotNull(configFileStream, "configFileStream");
+            Configuration.Section.LoadRuntimeSetup(this, configFileStream);
+            return this;
+        }
+
+        /// <summary>
+        /// Loads settings from a specified XML file and adds them to the specified setup object
+        /// Returns <paramref name="baseSetup"/>.
+        /// </summary>
+        /// <returns>This instance.</returns>
+        public ScriptRuntimeSetup LoadConfiguration(string configFilePath) {
+            ContractUtils.RequiresNotNull(configFilePath, "configFilePath");
+
+            using (var stream = File.OpenRead(configFilePath)) {
+                Configuration.Section.LoadRuntimeSetup(this, stream);
+            }
+
+            return this;
+        }
+#endif
+
+        public ScriptRuntimeSetup LoadFromAssemblies(IEnumerable<Assembly> assemblies) {
+            ContractUtils.RequiresNotNullItems(assemblies, "assemblies");
+
+            foreach (var assembly in assemblies) {
+                foreach (DynamicLanguageProviderAttribute attribute in assembly.GetCustomAttributes(typeof(DynamicLanguageProviderAttribute), false)) {
+                    var languageSetup = new LanguageSetup(attribute.DisplayName, attribute.Names, attribute.FileExtensions);
+                    _languageSetups[attribute.LanguageContextType.AssemblyQualifiedName] = languageSetup;
+                }
+            }
+
+            return this;
         }
     }
 }

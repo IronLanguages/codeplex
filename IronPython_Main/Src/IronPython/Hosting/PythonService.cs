@@ -21,17 +21,21 @@ using IronPython.Runtime;
 using System.Threading;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Hosting.Providers;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
-#if !SILVERLIGHT
     /// <summary>
     /// Helper class for implementing the Python class.
     /// 
     /// This is exposed as a service through PythonEngine and the helper class
     /// uses this service to get the correct remoting semantics.
     /// </summary>
-    internal sealed class PythonService : MarshalByRefObject {
+    internal sealed class PythonService 
+#if !SILVERLIGHT
+        : MarshalByRefObject 
+#endif
+    {
         private readonly ScriptEngine/*!*/ _engine;
         private readonly PythonContext/*!*/ _context;
         private ScriptScope _sys, _builtins, _clr;
@@ -87,10 +91,11 @@ namespace IronPython.Hosting {
             throw PythonOps.ImportError("no module named {0}", name);
         }
 
+#if !SILVERLIGHT
         public override object InitializeLifetimeService() {
             // track the engines lifetime
             return _engine.InitializeLifetimeService();
         }
-    }
 #endif
+    }
 }

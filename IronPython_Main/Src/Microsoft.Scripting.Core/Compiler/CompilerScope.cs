@@ -56,6 +56,11 @@ namespace System.Linq.Expressions.Compiler {
         // Provides storage for variables that are referenced from nested lambdas
         private readonly HoistedLocals _hoistedLocals;
 
+        /// <summary>
+        /// The closed over hoisted locals
+        /// </summary>
+        private readonly HoistedLocals _closureHoistedLocals;
+
         // variables defined in this scope but not hoisted
         private readonly ReadOnlyCollection<Expression> _localVars;
 
@@ -100,8 +105,20 @@ namespace System.Linq.Expressions.Compiler {
             // No two scopes share the same parent
             Debug.Assert(Parent == null || Parent.Expression != Expression);
 
+            // Generators always have non-null temps (but it might be empty)
+            Debug.Assert((generatorTemps != null) == (expression.NodeType == ExpressionType.Generator));
+
+            HoistedLocals locals = null;
+            CompilerScope s = this;
+            while (s.IsClosure && locals == null) {
+                s = s.Parent;
+                Debug.Assert(s != null);
+                locals = s._hoistedLocals;
+            }
+            _closureHoistedLocals = locals;
+
             if (hoistedVars.Count > 0) {
-                _hoistedLocals = new HoistedLocals(ClosureHoistedLocals(), hoistedSelfVar, hoistedVars);
+                _hoistedLocals = new HoistedLocals(_closureHoistedLocals, hoistedSelfVar, hoistedVars);
             }
 
             DumpScope();
@@ -115,6 +132,14 @@ namespace System.Linq.Expressions.Compiler {
         /// </summary>
         internal bool HasHoistedLocals {
             get { return _hoistedLocals != null; }
+        }
+
+        /// <summary>
+        /// This scope's hoisted locals, or the closed over locals, if any
+        /// Equivalent to: _hoistedLocals ?? _closureHoistedLocals
+        /// </summary>
+        internal HoistedLocals NearestHoistedLocals {
+            get { return _hoistedLocals ?? _closureHoistedLocals; }
         }
 
         internal LambdaExpression Lambda {
@@ -138,10 +163,9 @@ namespace System.Linq.Expressions.Compiler {
 
             AllocateLocals(lc);
 
-            HoistedLocals closure = ClosureHoistedLocals();
-            if (closure != null) {
-                AddLocal(lc, closure.SelfVariable);
-                EmitClosureAccess(lc, closure);
+            if (_closureHoistedLocals != null) {
+                AddLocal(lc, _closureHoistedLocals.SelfVariable);
+                EmitClosureAccess(lc, _closureHoistedLocals);
             }
 
             EmitNewHoistedLocals(lc);
@@ -172,10 +196,9 @@ namespace System.Linq.Expressions.Compiler {
             _locals.Clear();
 
             // Initialize hoisted locals in outer generator
-            HoistedLocals closure = ClosureHoistedLocals();
-            if (closure != null) {
-                AddLocal(lc, closure.SelfVariable);
-                EmitClosureToVariable(lc, closure);
+            if (_closureHoistedLocals != null) {
+                AddLocal(lc, _closureHoistedLocals.SelfVariable);
+                EmitClosureToVariable(lc, _closureHoistedLocals);
             }
             if (_hoistedLocals != null) {
                 AddLocal(lc, _hoistedLocals.SelfVariable);
@@ -193,7 +216,7 @@ namespace System.Linq.Expressions.Compiler {
 
             // Allocate IL locals and emit closure access in the inner generator
             AllocateLocals(lc);
-            EmitClosureAccess(lc, NearestHoistedLocals());
+            EmitClosureAccess(lc, NearestHoistedLocals);
 
             // TODO: is this worth it:
             // We'd have to cache all variables every time we enter the generator
@@ -203,8 +226,7 @@ namespace System.Linq.Expressions.Compiler {
         #region LocalScopeExpression support
 
         internal void EmitVariableAccess(LambdaCompiler lc, ReadOnlyCollection<Expression> vars) {
-            HoistedLocals nearestLocals = NearestHoistedLocals();
-            if (nearestLocals != null) {
+            if (NearestHoistedLocals != null) {
                 // Find what array each variable is on & its index
                 List<string> names = new List<string>(vars.Count);
                 List<long> indexes = new List<long>(vars.Count);
@@ -212,7 +234,7 @@ namespace System.Linq.Expressions.Compiler {
                 foreach (Expression variable in vars) {
                     // For each variable, find what array it's defined on
                     ulong parents = 0;
-                    HoistedLocals locals = nearestLocals;
+                    HoistedLocals locals = NearestHoistedLocals;
                     while (!locals.Indexes.ContainsKey(variable)) {
                         parents++;
                         locals = locals.Parent;
@@ -228,7 +250,7 @@ namespace System.Linq.Expressions.Compiler {
                 }
 
                 if (names.Count > 0) {
-                    EmitGet(nearestLocals.SelfVariable);
+                    EmitGet(NearestHoistedLocals.SelfVariable);
                     lc.EmitConstantArray(names.ToArray());
                     lc.EmitConstantArray(indexes.ToArray());
                     lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateVariableAccess"));
@@ -265,11 +287,15 @@ namespace System.Linq.Expressions.Compiler {
             ResolveVariable(variable).EmitAddress();
         }
 
+        private Storage ResolveVariable(Expression variable) {
+            return ResolveVariable(variable, NearestHoistedLocals);
+        }
+
         /// <summary>
         /// Resolve a local variable in this scope or a closed over scope
         /// Throws if the variable is defined
         /// </summary>
-        private Storage ResolveVariable(Expression variable) {           
+        private Storage ResolveVariable(Expression variable, HoistedLocals hoistedLocals) {
             // Search IL locals and arguments, but only in this lambda
             for (CompilerScope s = this; s != null; s = s.Parent) {
                 Storage storage;
@@ -284,9 +310,9 @@ namespace System.Linq.Expressions.Compiler {
             }
 
             // search hoisted locals
-            for (HoistedLocals h = NearestHoistedLocals(); h != null; h = h.Parent) {
+            for (HoistedLocals h = hoistedLocals; h != null; h = h.Parent) {
                 if (h.Indexes.ContainsKey(variable)) {
-                    return new ElementStorage(h, ResolveVariable(h.SelfVariable), variable);
+                    return new ElementStorage(h, ResolveVariable(h.SelfVariable, hoistedLocals), variable);
                 }
             }
 
@@ -314,9 +340,12 @@ namespace System.Linq.Expressions.Compiler {
         #region generator temps
 
         internal VariableExpression GetGeneratorTemp(Type type) {
-            Debug.Assert(_generatorTemps != null && _generatorTemps.GetCount(type) > 0);
-
-            return _generatorTemps.Dequeue(type);
+            CompilerScope cs = this;
+            while (cs.IsScopeExpression) {
+                cs = cs.Parent;
+            }
+            Debug.Assert(cs._generatorTemps != null && cs._generatorTemps.GetCount(type) > 0);
+            return cs._generatorTemps.Dequeue(type);
         }
 
         #endregion
@@ -353,7 +382,7 @@ namespace System.Linq.Expressions.Compiler {
                     lc.IL.Emit(OpCodes.Newobj, boxType.GetConstructor(new Type[] { v.Type }));
                 } else if (v == _hoistedLocals.ParentVariable) {
                     // array[i] = new StrongBox<T>(closure.Locals);
-                    EmitGet(v);
+                    ResolveVariable(v, _closureHoistedLocals).EmitLoad();
                     lc.IL.Emit(OpCodes.Newobj, boxType.GetConstructor(new Type[] { v.Type }));
                 } else {
                     // array[i] = new StrongBox<T>();
@@ -414,23 +443,6 @@ namespace System.Linq.Expressions.Compiler {
             lc.EmitClosureArgument();
             lc.IL.Emit(OpCodes.Ldfld, typeof(Closure).GetField("Locals"));
             EmitSet(locals.SelfVariable);
-        }
-
-        // Gets the current hoisted locals, or the closed over locals
-        internal HoistedLocals NearestHoistedLocals() {
-            return _hoistedLocals ?? ClosureHoistedLocals();
-        }
-
-        // Gets the closed over hoisted locals
-        private HoistedLocals ClosureHoistedLocals() {
-            HoistedLocals locals = null;
-            CompilerScope s = this;
-            while (s.IsClosure && locals == null) {
-                s = s.Parent;
-                Debug.Assert(s != null);
-                locals = s._hoistedLocals;
-            }
-            return locals;
         }
 
         // Allocates slots for IL locals or IL arguments

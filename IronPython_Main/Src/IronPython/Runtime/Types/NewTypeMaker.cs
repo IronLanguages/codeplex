@@ -1884,7 +1884,7 @@ namespace IronPython.Runtime.Types {
             cctor.EmitCall(typeof(PythonOps).GetMethod(list ? "MakeListCallAction" : "MakeSimpleCallAction"));
 
             // Create the dynamic site
-            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(MakeSiteSignature(nargs));
+            Type siteType = CompilerHelpers.MakeCallSiteType(MakeSiteSignature(nargs));
             FieldBuilder site = _tg.DefineField("site$" + _site++, siteType, FieldAttributes.Private | FieldAttributes.Static);
             cctor.EmitCall(siteType.GetMethod("Create"));
             cctor.EmitFieldSet(site);
@@ -1929,9 +1929,10 @@ namespace IronPython.Runtime.Types {
         }
 
         private static Type[] MakeSiteSignature(int nargs) {
-            Type[] sig = new Type[nargs + 3];
-            sig[0] = typeof(CodeContext);
-            for (int i = 1; i < sig.Length; i++) {
+            Type[] sig = new Type[nargs + 4];
+            sig[0] = typeof(CallSite);
+            sig[1] = typeof(CodeContext);
+            for (int i = 2; i < sig.Length; i++) {
                 sig[i] = typeof(object);
             }
             return sig;

@@ -97,6 +97,11 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
+        public object Create(object obj, params object[] parameters) {
+            var site = GetSite<object, object[], object>(OldCreateInstanceAction.Make(Binder, new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+            return site.Target(site, _context, obj, parameters);
+        }
+
         /// <summary>
         /// Gets the member name from the object obj.  Throws an exception if the member does not exist or is write-only.
         /// </summary>

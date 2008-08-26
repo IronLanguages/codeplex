@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public object __call__(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+        public object __call__(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
             return _template.__call__(context, storage, dictArgs, args);
         }
 

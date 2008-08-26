@@ -127,7 +127,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal object Call(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object instance, object[] args) {
+        internal object Call(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> storage, object instance, object[] args) {
             storage = GetInitializedStorage(context, storage);
             
             object callable;
@@ -138,7 +138,7 @@ namespace IronPython.Runtime.Types {
             return storage.Data.Target(storage.Data, context, callable, args);
         }
 
-        private static SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> GetInitializedStorage(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage) {
+        private static SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> GetInitializedStorage(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> storage) {
             if (storage == null) {
                 storage = PythonContext.GetContext(context).GetGenericCallSiteStorage();
             }
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Types {
             return storage;
         }
 
-        internal object Call(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, object instance, object[] args, IAttributesCollection keywordArgs) {
+        internal object Call(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>> storage, object instance, object[] args, IAttributesCollection keywordArgs) {
             if (storage == null) {
                 storage = PythonContext.GetContext(context).GetGenericKeywordCallSiteStorage();
             }
@@ -580,7 +580,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public object __call__(CodeContext/*!*/ context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
+        public object __call__(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>> storage, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
             return Call(context, storage, null, args, dictArgs);
         }
 

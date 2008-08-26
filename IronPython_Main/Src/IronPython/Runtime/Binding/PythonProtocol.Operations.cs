@@ -150,7 +150,7 @@ namespace IronPython.Runtime.Binding {
                                         ),
                         // if(getItemRes == param1) return true
                                         Utils.If(
-                                            Ast.ActionExpression(
+                                            Ast.Dynamic(
                                                 new OperationBinder(
                                                     state,
                                                     StandardOperators.Equal
@@ -182,7 +182,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("ContainsFromEnumerable"),
                                 Ast.Constant(state.Context),
-                                Ast.ActionExpression(
+                                Ast.Dynamic(
                                     new ConversionBinder(
                                         state,
                                         typeof(IEnumerator),
@@ -274,7 +274,7 @@ namespace IronPython.Runtime.Binding {
                     if (notExpr.Type == typeof(int)) {
                         notExpr = Ast.Equal(notExpr, Ast.Zero());
                     } else {
-                        notExpr = Ast.ActionExpression(
+                        notExpr = Ast.Dynamic(
                             new OperationBinder(
                                 BinderState.GetBinderState(operation),
                                 StandardOperators.Compare
@@ -709,7 +709,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.NotEqual(
                         Ast.Assign(
                             tmp,
-                            Ast.ActionExpression(
+                            Ast.Dynamic(
                                 new InvokeBinder(
                                     state,
                                     new CallSignature(args.Length)
@@ -785,7 +785,7 @@ namespace IronPython.Runtime.Binding {
                     ),
                     BindingHelpers.AddRecursionCheck(
                         returnTransform(
-                            Ast.ActionExpression(
+                            Ast.Dynamic(
                                 new OperationBinder(
                                     BinderState.GetBinderState(operation),
                                     DisallowCoerce + op
@@ -1025,7 +1025,7 @@ namespace IronPython.Runtime.Binding {
 
         private static void MakeValueCheck(int val, Expression retValue, ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition) {
             if (retValue.Type != typeof(bool)) {
-                retValue = Ast.ActionExpression(
+                retValue = Ast.Dynamic(
                     new ConversionBinder(
                         BinderState.GetBinderState(bodyBuilder.Action),
                         typeof(bool),
@@ -1402,7 +1402,7 @@ namespace IronPython.Runtime.Binding {
                     exprArgs[i - 1] = args[i].Expression;
                 }
 
-                Expression retVal = Ast.ActionExpression(
+                Expression retVal = Ast.Dynamic(
                     new InvokeBinder(
                         BinderState,
                         new CallSignature(exprArgs.Length)
@@ -1506,7 +1506,7 @@ namespace IronPython.Runtime.Binding {
                                     binder,
                                     typeof(int),
                                     ConversionResultKind.ExplicitCast,
-                                    Ast.ActionExpression(
+                                    Ast.Dynamic(
                                         new InvokeBinder(
                                             binder,
                                             new CallSignature(0)
@@ -1604,7 +1604,7 @@ namespace IronPython.Runtime.Binding {
                     PythonTypeSlot indexSlot;
                     if (args[1].LimitType != typeof(Slice) && GetTypeAt(1).TryResolveSlot(binder.Context, Symbols.Index, out indexSlot)) {
                         args[1] = new MetaObject(
-                            Ast.ActionExpression(
+                            Ast.Dynamic(
                                 new InvokeBinder(
                                     binder,
                                     new CallSignature(0)

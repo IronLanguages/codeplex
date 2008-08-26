@@ -99,8 +99,7 @@ namespace Microsoft.Scripting.Interpretation {
             for (int i = 0; i < lambda.Parameters.Count; i++) {
                 result[i] = lambda.Parameters[i].Type;
             }
-            // TODO: remove reflection
-            result[lambda.Parameters.Count] = lambda.Type.GetMethod("Invoke").ReturnType;
+            result[lambda.Parameters.Count] = lambda.ReturnType;
             return result;
         }
 

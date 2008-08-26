@@ -34,11 +34,10 @@ namespace System.Linq.Expressions.Compiler {
             // Heuristic: only emit the tree rewrite logic if we have hoisted
             // locals. TODO: we could use an even smarter logic here by
             // detecting if any nodes actually need to be rewritten
-            HoistedLocals hoistedLocals = _scope.NearestHoistedLocals();
-            if (hoistedLocals != null) {
+            if (_scope.NearestHoistedLocals != null) {
                 // HoistedLocals is internal so emit as System.Object
-                EmitConstant(hoistedLocals, typeof(object));
-                _scope.EmitGet(hoistedLocals.SelfVariable);
+                EmitConstant(_scope.NearestHoistedLocals, typeof(object));
+                _scope.EmitGet(_scope.NearestHoistedLocals.SelfVariable);
                 _ilg.EmitCall(typeof(RuntimeOps).GetMethod("Quote"));
 
                 if (quote.Type != typeof(Expression)) {

@@ -124,7 +124,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Invoke(Expression codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new InvokeBinder(
                     binder,
                     signature

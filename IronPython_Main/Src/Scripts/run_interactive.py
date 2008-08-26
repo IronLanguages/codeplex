@@ -23,9 +23,11 @@ clr.AddReference("IronPython.dll")
 clr.AddReference("IronPython.Modules.dll")
 
 from Microsoft.Scripting import SourceCodeKind, ErrorSink
-from Microsoft.Scripting.Hosting import ScriptRuntime, HostingHelpers
+from Microsoft.Scripting.Hosting import ScriptRuntime
+from Microsoft.Scripting.Hosting.Providers import HostingHelpers
 from Microsoft.Scripting.Runtime import CompilerContext
 from IronPython import PythonEngineOptions
+from IronPython.Hosting import Python
 from IronPython.Runtime import PythonContext, ModuleOptions, Symbols
 from IronPython.Compiler import Parser, PythonCompilerOptions
 from IronPython.Compiler.Ast import SuiteStatement, FunctionDefinition
@@ -38,7 +40,7 @@ from System.IO import Directory, Path, File
 
 class FileConsole(object):
     def __init__(self, fileName):
-        scriptEnv = ScriptRuntime.Create()
+        scriptEnv = Python.CreateRuntime()
         self.fileName = fileName
         self.engine = scriptEnv.GetEngine("python")        
         self.context = HostingHelpers.GetLanguageContext(self.engine) 

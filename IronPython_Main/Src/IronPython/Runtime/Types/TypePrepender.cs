@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Scripting.Actions;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
@@ -33,11 +34,11 @@ namespace IronPython.Runtime.Types {
             }
 
             public BuiltinFunction Ctor;
-            public CallSite<DynamicSiteTarget<CodeContext, BuiltinFunction, PythonType, object[], object>> Site;
+            public CallSite<Func<CallSite, CodeContext, BuiltinFunction, PythonType, object[], object>> Site;
 
             internal void EnsureSite() {
                 if (Site == null) {
-                    Site = CallSite<DynamicSiteTarget<CodeContext, BuiltinFunction, PythonType, object[], object>>.Create(
+                    Site = CallSite<Func<CallSite, CodeContext, BuiltinFunction, PythonType, object[], object>>.Create(
                         new InvokeBinder(
                             DefaultContext.DefaultPythonContext.DefaultBinderState,
                             new CallSignature(

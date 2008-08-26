@@ -15,6 +15,7 @@
 
 namespace System.Linq.Expressions {
     public sealed class EmptyStatement : Expression {
+        internal static readonly EmptyStatement Instance = new EmptyStatement(Annotations.Empty);
 
         internal EmptyStatement(Annotations annotations)
             : base(ExpressionType.EmptyStatement, typeof(void), annotations) {
@@ -23,7 +24,7 @@ namespace System.Linq.Expressions {
 
     public partial class Expression {
         public static EmptyStatement Empty() {
-            return Empty(Annotations.Empty);
+            return EmptyStatement.Instance;
         }
 
         public static EmptyStatement Empty(Annotations annotations) {

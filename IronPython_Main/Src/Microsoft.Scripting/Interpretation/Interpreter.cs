@@ -192,48 +192,46 @@ namespace Microsoft.Scripting.Interpretation {
                 }
             }
 
-            ParameterInfo[] parameterInfos = node.Method.GetParameters();
+            var parameterInfos = node.Method.GetParameters();
 
             object[] parameters;
             if (!state.TryGetStackState(expr, out parameters)) {
                 parameters = new object[parameterInfos.Length];
             }
 
-            EvaluationAddress[] paramAddrs = new EvaluationAddress[parameterInfos.Length];
-            if (parameterInfos.Length > 0) {
-                int last = parameters.Length;
-                for (int i = 0; i < last; i++) {
-                    ParameterInfo pi = parameterInfos[i];
+            Debug.Assert(parameters.Length == parameterInfos.Length);
 
-                    if (pi.ParameterType.IsByRef) {
-                        paramAddrs[i] = EvaluateAddress(state, node.Arguments[i]);
+            int lastByRefParamIndex = -1;
+            var paramAddrs = new EvaluationAddress[parameterInfos.Length];
+            for (int i = 0; i < parameterInfos.Length; i++) {
+                ParameterInfo info = parameterInfos[i];
 
-                        object value = paramAddrs[i].GetValue(state, !IsInputParameter(parameterInfos[i]));
-                        if (IsInputParameter(parameterInfos[i])) {
-                            if (value != ControlFlow.NextForYield) {
-                                // implict cast?
-                                parameters[i] = Cast.Explicit(
-                                    value,
-                                    parameterInfos[i].ParameterType.GetElementType()
-                                );
+                if (info.ParameterType.IsByRef) {
+                    lastByRefParamIndex = i;
+                    paramAddrs[i] = EvaluateAddress(state, node.Arguments[i]);
+
+                    object value = paramAddrs[i].GetValue(state, !IsInputParameter(info));
+                    if (IsInputParameter(info)) {
+                        if (value != ControlFlow.NextForYield) {
+                            // implict cast?
+                            parameters[i] = Cast.Explicit(value, info.ParameterType.GetElementType());
+                        }
+                    }
+                } else if (IsInputParameter(info)) {
+                    Expression arg = node.Arguments[i];
+                    object argValue = null;
+                    if (arg != null) {
+                        if (InterpretAndCheckFlow(state, arg, out argValue)) {
+                            if (state.CurrentYield != null) {
+                                state.SaveStackState(node, parameters);
                             }
-                        }
-                    } else if (IsInputParameter(parameterInfos[i])) {
-                        Expression arg = node.Arguments[i];
-                        object argValue = null;
-                        if (arg != null) {
-                            if (InterpretAndCheckFlow(state, arg, out argValue)) {
-                                if (state.CurrentYield != null) {
-                                    state.SaveStackState(node, parameters);
-                                }
 
-                                return argValue;
-                            }
+                            return argValue;
                         }
+                    }
 
-                        if (argValue != ControlFlow.NextForYield) {
-                            parameters[i] = argValue;
-                        }
+                    if (argValue != ControlFlow.NextForYield) {
+                        parameters[i] = argValue;
                     }
                 }
             }
@@ -246,17 +244,10 @@ namespace Microsoft.Scripting.Interpretation {
                 object res;
                 try {
                     // Call the method                    
-                    res = InvokeMethod(node.Method, instance, parameters);
-
-                    // Return the singleton True or False object
-                    if (node.Type == typeof(Boolean)) {
-                        res = RuntimeHelpers.BooleanToObject((bool)res);
-                    } else if (node.Type == typeof(int)) {
-                        res = RuntimeHelpers.Int32ToObject((int)res);
-                    }
+                    res = InvokeMethod(node.Method, instance, parameters);                   
                 } finally {
                     // expose by-ref args
-                    for (int i = 0; i < parameterInfos.Length; i++) {
+                    for (int i = 0; i <= lastByRefParamIndex; i++) {
                         if (parameterInfos[i].ParameterType.IsByRef) {
                             paramAddrs[i].AssignValue(state, parameters[i]);
                         }

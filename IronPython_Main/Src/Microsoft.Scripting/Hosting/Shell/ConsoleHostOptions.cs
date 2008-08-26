@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -28,21 +29,17 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         private readonly List<string> _ignoredArgs = new List<string>();
-        private string _runFile;
-        private string[] _sourceUnitSearchPaths = new string[] { "." };
-        private Action _action;
         private readonly List<string> _environmentVars = new List<string>();
-        private AssemblyQualifiedTypeName? _languageProvider;
 
         public List<string> IgnoredArgs { get { return _ignoredArgs; } }
-        public string RunFile { get { return _runFile; } set { _runFile = value; } }
+        public string RunFile { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
-        public string[] SourceUnitSearchPaths { get { return _sourceUnitSearchPaths; } set { _sourceUnitSearchPaths = value; } }
-        public Action RunAction { get { return _action; } set { _action = value; } }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "MTA")]
+        public string[] SourceUnitSearchPaths { get; set; }
+        public Action RunAction { get; set; }
         public List<string> EnvironmentVars { get { return _environmentVars; } }
-        public AssemblyQualifiedTypeName? LanguageProvider { get { return _languageProvider; } set { _languageProvider = value; } } 
-        
+        public string LanguageProvider { get; set; }
+        public bool HasLanguageProvider { get; set; }
+
         public ConsoleHostOptions() {
         }
 
@@ -52,7 +49,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "/help",                     "Displays this help." },
                 { "/lang:<extension>",         "Specify language by the associated extension (py, js, vb, rb). Determined by an extension of the first file. Defaults to IronPython." },
                 { "/paths:<file-path-list>",   "Semicolon separated list of import paths (/run only)." },
-                { "/mta",                      "Starts command line thread in multi-threaded apartment. Not available on Silverlight." },
                 { "/setenv:<var1=value1;...>", "Sets specified environment variables for the console process. Not available on Silverlight." },
             };
         }

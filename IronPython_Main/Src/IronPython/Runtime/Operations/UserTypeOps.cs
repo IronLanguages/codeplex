@@ -1203,7 +1203,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        public static object GetAttribute(CodeContext/*!*/ context, object self, string name, PythonTypeSlot getAttributeSlot, PythonTypeSlot getAttrSlot, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, string, object>>>/*!*/ callSite) {
+        public static object GetAttribute(CodeContext/*!*/ context, object self, string name, PythonTypeSlot getAttributeSlot, PythonTypeSlot getAttrSlot, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, string, object>>>/*!*/ callSite) {
             object value;
             if (callSite.Data == null) {
                 callSite.Data = MakeGetAttrSite(context);
@@ -1228,7 +1228,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.AttributeError(name);
         }
 
-        public static object GetAttributeNoThrow(CodeContext/*!*/ context, object self, string name, PythonTypeSlot getAttributeSlot, PythonTypeSlot getAttrSlot, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, string, object>>>/*!*/ callSite) {
+        public static object GetAttributeNoThrow(CodeContext/*!*/ context, object self, string name, PythonTypeSlot getAttributeSlot, PythonTypeSlot getAttrSlot, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, string, object>>>/*!*/ callSite) {
             object value;
             if (callSite.Data == null) {
                 callSite.Data = MakeGetAttrSite(context);
@@ -1260,8 +1260,8 @@ namespace IronPython.Runtime.Operations {
             return OperationFailed.Value;
         }
 
-        private static CallSite<DynamicSiteTarget<CodeContext, object, string, object>> MakeGetAttrSite(CodeContext context) {
-            return CallSite<DynamicSiteTarget<CodeContext, object, string, object>>.Create(
+        private static CallSite<Func<CallSite, CodeContext, object, string, object>> MakeGetAttrSite(CodeContext context) {
+            return CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(
                 new InvokeBinder(
                     PythonContext.GetContext(context).DefaultBinderState,
                     new CallSignature(1)

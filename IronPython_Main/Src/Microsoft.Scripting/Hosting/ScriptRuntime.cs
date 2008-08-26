@@ -45,8 +45,9 @@ namespace Microsoft.Scripting.Hosting {
         /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
         /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
         /// </summary>
+        [Obsolete(@"Use ScriptRuntime(ScriptRuntimeSetup) overload. Fill ScriptRuntimeSetup in explicitly or use ScriptRuntimeSetup.ReadConfiguration to load it from .config files.", true)]
         public ScriptRuntime()
-            : this(GetSetupInformation()) {
+            : this(new ScriptRuntimeSetup()) {
         }
 
         /// <summary>
@@ -95,32 +96,28 @@ namespace Microsoft.Scripting.Hosting {
             get { return _io; }
         }
 
-        /// <summary>
-        /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
-        /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
-        /// </summary>
-        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method")]
+        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method", true)]
         public static ScriptRuntime Create() {
             return new ScriptRuntime();
         }
 
-        /// <summary>
-        /// Creates ScriptRuntime in the current app-domain and initialized according to the the specified settings.
-        /// Creates an instance of host class specified in the setup and associates it with the created runtime.
-        /// Both Runtime and ScriptHost are collocated in the current app-domain.
-        /// </summary>
-        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method")]
+        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method", true)]
         public static ScriptRuntime Create(ScriptRuntimeSetup setup) {
             return new ScriptRuntime(setup);
+        }
+
+        /// <summary>
+        /// Creates a new runtime with languages set up according to the current application configuration 
+        /// (using System.Configuration).
+        /// </summary>
+        public static ScriptRuntime CreateFromConfiguration() {
+            return new ScriptRuntime(ScriptRuntimeSetup.ReadConfiguration());
         }
 
         #region Remoting
 
 #if !SILVERLIGHT
-        /// <summary>
-        /// Creates ScriptRuntime in the specified app-domain and initialized with default settings.
-        /// Also creates a default ScriptHost instance associated with the runtime, also in the given app-domain.
-        /// </summary>
+        [Obsolete(@"Use CreateRemote(AppDomain, ScriptRuntimeSetup) overload. Fill ScriptRuntimeSetup in explicitly or use ScriptRuntimeSetup.ReadConfiguration to load it from .config files.", true)]
         public static ScriptRuntime CreateRemote(AppDomain domain) {
             ContractUtils.RequiresNotNull(domain, "domain");
 
@@ -155,64 +152,48 @@ namespace Microsoft.Scripting.Hosting {
 #endif
         #endregion
 
-        #region Configuration
-
-        private static ScriptRuntimeSetup GetSetupInformation() {
-#if !SILVERLIGHT
-            // setup provided in a configuration file:
-            // This will load System.Configuration.dll which costs ~350 KB of memory. However, this does not normally 
-            // need to be loaded in simple scenarios (like running the console hosts). Hence, the working set cost
-            // is only paid in hosted scenarios.
-            ScriptConfiguration config = System.Configuration.ConfigurationManager.GetSection(ScriptConfiguration.Section) as ScriptConfiguration;
-            if (config != null) {
-                // TODO:
-                //return config;
-            }
-#endif
-
-            // default setup:
-            return new ScriptRuntimeSetup(true);
-        }
-
-        #endregion
-
         public string[] GetRegisteredFileExtensions() {
             return _manager.Configuration.GetFileExtensions();
         }
 
-        public string[] GetRegisteredLanguageIdentifiers() {
-            return _manager.Configuration.GetLanguageIdentifiers();
+        public string[] GetRegisteredLanguageNames() {
+            return _manager.Configuration.GetLanguageNames();
         }
 
         #region Engines
 
-        public ScriptEngine GetEngine(string languageId) {
-            ContractUtils.RequiresNotNull(languageId, "languageId");
+        public ScriptEngine GetEngine(string languageName) {
+            ContractUtils.RequiresNotNull(languageName, "languageName");
 
             ScriptEngine engine;
-            if (!TryGetEngine(languageId, out engine)) {
-                throw new ArgumentException(String.Format("Unknown language identifier: '{0}'", languageId));
+            if (!TryGetEngine(languageName, out engine)) {
+                throw new ArgumentException(String.Format("Unknown language name: '{0}'", languageName));
             }
 
             return engine;
+        }
+
+        public ScriptEngine GetEngineByTypeName(string assemblyQualifiedTypeName) {
+            ContractUtils.RequiresNotNull(assemblyQualifiedTypeName, "assemblyQualifiedTypeName");
+            return GetEngine(_manager.GetLanguageByTypeName(assemblyQualifiedTypeName));
         }
 
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public ScriptEngine GetEngineByFileExtension(string extension) {
-            ContractUtils.RequiresNotNull(extension, "extension");
+        public ScriptEngine GetEngineByFileExtension(string fileExtension) {
+            ContractUtils.RequiresNotNull(fileExtension, "fileExtension");
 
             ScriptEngine engine;
-            if (!TryGetEngineByFileExtension(extension, out engine)) {
-                throw new ArgumentException(String.Format("Unknown file extension: '{0}'", extension));
+            if (!TryGetEngineByFileExtension(fileExtension, out engine)) {
+                throw new ArgumentException(String.Format("Unknown file extension: '{0}'", fileExtension));
             }
 
             return engine;
         }
 
-        public bool TryGetEngine(string languageId, out ScriptEngine engine) {
+        public bool TryGetEngine(string languageName, out ScriptEngine engine) {
             LanguageContext language;
-            if (!_manager.TryGetLanguage(languageId, out language)) {
+            if (!_manager.TryGetLanguage(languageName, out language)) {
                 engine = null;
                 return false;
             }
@@ -221,19 +202,15 @@ namespace Microsoft.Scripting.Hosting {
             return true;
         }
 
-        public bool TryGetEngineByFileExtension(string extension, out ScriptEngine engine) {
+        public bool TryGetEngineByFileExtension(string fileExtension, out ScriptEngine engine) {
             LanguageContext language;
-            if (!_manager.TryGetLanguageByFileExtension(extension, out language)) {
+            if (!_manager.TryGetLanguageByFileExtension(fileExtension, out language)) {
                 engine = null;
                 return false;
             }
 
             engine = GetEngine(language);
             return true;
-        }
-
-        public ScriptEngine GetEngine(AssemblyQualifiedTypeName languageContextType) {
-            return GetEngine(_manager.GetLanguage(languageContextType));
         }
 
         /// <summary>

@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         protected internal override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
-            // invariant langauge doesn't have a grammar:
+            // invariant language doesn't have a grammar:
             throw new NotSupportedException();
         }
     }

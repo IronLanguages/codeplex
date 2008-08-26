@@ -995,6 +995,13 @@ namespace System.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "The property '{0}' has no 'get' or 'set' accessors"
+        /// </summary>
+        internal static string PropertyDoesNotHaveAccessor(object p0) {
+            return FormatString("The property '{0}' has no 'get' or 'set' accessors", p0);
+        }
+
+        /// <summary>
         /// A string like  "'{0}' is not a member of type '{1}'"
         /// </summary>
         internal static string NotAMemberOfType(object p0, object p1) {
@@ -2122,6 +2129,13 @@ namespace System.Linq.Expressions {
         /// </summary>
         internal static Exception PropertyDoesNotHaveSetter(object p0) {
             return new ArgumentException(Strings.PropertyDoesNotHaveSetter(p0));
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "The property '{0}' has no 'get' or 'set' accessors"
+        /// </summary>
+        internal static Exception PropertyDoesNotHaveAccessor(object p0) {
+            return new ArgumentException(Strings.PropertyDoesNotHaveAccessor(p0));
         }
 
         /// <summary>

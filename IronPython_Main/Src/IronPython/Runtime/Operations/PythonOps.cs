@@ -33,6 +33,7 @@ using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Hosting.Providers;
 
 using IronPython.Compiler;
 using IronPython.Hosting;
@@ -480,7 +481,7 @@ namespace IronPython.Runtime.Operations {
         public static int Compare(CodeContext/*!*/ context, object x, object y) {
             if (x == y) return 0;
 
-            CallSite<DynamicSiteTarget<object, object, int>> compareSite = PythonContext.GetContext(context).CompareSite;
+            CallSite<Func<CallSite, object, object, int>> compareSite = PythonContext.GetContext(context).CompareSite;
             
             return compareSite.Target(compareSite, x, y);
         }
@@ -3120,23 +3121,22 @@ namespace IronPython.Runtime.Operations {
             ContractUtils.RequiresNotNull(precompiled, "precompiled");
             ContractUtils.RequiresNotNull(main, "main");
 
-            ScriptRuntime sr = new ScriptRuntime();
-            ScriptEngine se = sr.GetEngine(new AssemblyQualifiedTypeName(typeof(PythonContext)));
-            PythonContext pc = (PythonContext)HostingHelpers.GetLanguageContext(se);
+            var pythonEngine = Python.CreateEngine();
+            var pythonContext = (PythonContext)HostingHelpers.GetLanguageContext(pythonEngine);
 
-            foreach (ScriptCode sc in ScriptCode.LoadFromAssembly(HostingHelpers.GetDomainManager(sr), precompiled)) {
-                pc.GetCompiledLoader().AddScriptCode(sc);
+            foreach (var scriptCode in ScriptCode.LoadFromAssembly(pythonContext.DomainManager, precompiled)) {
+                pythonContext.GetCompiledLoader().AddScriptCode(scriptCode);
             }
 
             if (references != null) {
                 foreach (string referenceName in references) {
-                    sr.LoadAssembly(Assembly.Load(referenceName));
+                    pythonContext.DomainManager.LoadAssembly(Assembly.Load(referenceName));
                 }
             }
 
             // import __main__
             try {
-                Importer.Import(new CodeContext(new Scope(), pc), main, PythonTuple.EMPTY, 0);
+                Importer.Import(new CodeContext(new Scope(), pythonContext), main, PythonTuple.EMPTY, 0);
             } catch (SystemExitException ex) {
                 object dummy;
                 return ex.GetExitCode(out dummy);

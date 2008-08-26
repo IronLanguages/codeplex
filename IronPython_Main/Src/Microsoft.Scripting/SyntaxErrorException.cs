@@ -25,8 +25,9 @@ namespace Microsoft.Scripting {
     public class SyntaxErrorException : Exception {
         private SourceSpan _span;
 
-        // TODO: either HAPI needs a different exception or this needs to be a string
-        private SourceUnit _sourceUnit;
+        private string _sourceCode;
+        private string _sourceLine;
+        private string _sourcePath;
 
         private Severity _severity;
         private int _errorCode;
@@ -44,14 +45,29 @@ namespace Microsoft.Scripting {
             ContractUtils.RequiresNotNull(message, "message");
 
             _span = span;
-            _sourceUnit = sourceUnit;
             _severity = severity;
             _errorCode = errorCode;
+            if (sourceUnit != null) {
+                _sourcePath = sourceUnit.Path;
+                try {
+                    _sourceCode = sourceUnit.GetCode();
+                    _sourceLine = sourceUnit.GetCodeLine(Line);
+                } catch (System.IO.IOException) {
+                    // could not get source code.
+                }
+            }
         }
 
 #if !SILVERLIGHT
         protected SyntaxErrorException(SerializationInfo info, StreamingContext context)
-            : base(info, context) { }
+            : base(info, context) {
+
+            _span = (SourceSpan)info.GetValue("Span", typeof(SourceSpan));
+            _sourceCode = info.GetString("SourceCode");
+            _sourcePath = info.GetString("SourcePath");
+            _severity = (Severity)info.GetValue("Severity", typeof(Severity));
+            _errorCode = info.GetInt32("ErrorCode");
+        }
 
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
         public override void GetObjectData(SerializationInfo info, StreamingContext context) {
@@ -59,7 +75,8 @@ namespace Microsoft.Scripting {
 
             base.GetObjectData(info, context);
             info.AddValue("Span", _span);
-            info.AddValue("SourceUnit", _sourceUnit);
+            info.AddValue("SourceCode", _sourceCode);
+            info.AddValue("SourcePath", _sourcePath);
             info.AddValue("Severity", _severity);
             info.AddValue("ErrorCode", _errorCode);
         }
@@ -72,8 +89,12 @@ namespace Microsoft.Scripting {
             get { return _span; }
         }
 
-        public SourceUnit SourceUnit {
-            get { return _sourceUnit; }
+        public string SourceCode {
+            get { return _sourceCode; }
+        }
+
+        public string SourcePath {
+            get { return _sourcePath; }
         }
 
         public Severity Severity {
@@ -95,13 +116,13 @@ namespace Microsoft.Scripting {
         // TODO: fix
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetSymbolDocumentName() {
-            return _sourceUnit != null ? _sourceUnit.Path : null;
+            return _sourcePath;
         }
 
         // TODO: fix
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCodeLine() {
-            return (_sourceUnit != null && Line > 0) ? _sourceUnit.GetCodeLine(Line) : null;
+            return _sourceLine;
         }
     }
 }

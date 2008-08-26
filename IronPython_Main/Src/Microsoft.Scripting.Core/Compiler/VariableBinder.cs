@@ -44,7 +44,7 @@ namespace System.Linq.Expressions.Compiler {
         private readonly Stack<Set<Expression>> _hiddenVars = new Stack<Set<Expression>>();
 
         // For each variable in this scope: should it be hoisted to a closure?
-        private readonly Dictionary<Expression, bool> _hoistMyVariables = new Dictionary<Expression, bool>();
+        private readonly Dictionary<Expression, bool> _hoistVariable = new Dictionary<Expression, bool>();
 
         // For each variable referenced from this scope, this stores the
         // reference count. If the variable is referenced "enough", we'll cache
@@ -96,6 +96,10 @@ namespace System.Linq.Expressions.Compiler {
             return new VariableBinder(parent, scope).Bind();
         }
 
+        private bool InTopLambda {
+            get { return _currentLambda == _topLambda; }
+        }
+
         private CompilerScope Bind() {
             // Define variables on this scope
             Expression body = DefineVariables();
@@ -109,10 +113,10 @@ namespace System.Linq.Expressions.Compiler {
             List<Expression> hoisted = new List<Expression>();
             List<Expression> locals = new List<Expression>();
             if (_hasYield) {
-                hoisted = _myVariables;
+                hoisted.AddRange(_myVariables);
             } else {
                 foreach (Expression v in _myVariables) {
-                    (_hoistMyVariables[v] ? hoisted : locals).Add(v);
+                    (_hoistVariable[v] ? hoisted : locals).Add(v);
                 }
             }
 
@@ -121,7 +125,7 @@ namespace System.Linq.Expressions.Compiler {
             if (_temps != null) {
                 temps = new KeyedQueue<Type, VariableExpression>();
                 foreach (VariableExpression v in _temps) {
-                    hoisted.Add(v);
+                    (_hasYield ? hoisted : locals).Add(v);
                     temps.Enqueue(v.Type, v);
                 }
             }
@@ -131,6 +135,8 @@ namespace System.Linq.Expressions.Compiler {
             if (_hasYield && _expression.NodeType == ExpressionType.Scope) {
                 // store on generator's closure
                 hoistedSelfVar = _parentScope.GetGeneratorTemp(typeof(object[]));
+                // we need to access the generator temps
+                _isClosure = true;
             } else {
                 // store as an IL local
                 hoistedSelfVar = Expression.Variable(typeof(object[]), "$hoistedLocals");
@@ -166,13 +172,13 @@ namespace System.Linq.Expressions.Compiler {
                 ScopeExpression scope = (ScopeExpression)_expression;
                 foreach (Expression v in scope.Variables) {
                     _myVariables.Add(v);
-                    _hoistMyVariables.Add(v, false);
+                    _hoistVariable.Add(v, false);
                 }
                 body = scope.Body;
             } else {
                 foreach (Expression v in _topLambda.Parameters) {
                     _myVariables.Add(v);
-                    _hoistMyVariables.Add(v, false);
+                    _hoistVariable.Add(v, false);
                 }
                 body = _topLambda.Body;
             }
@@ -191,7 +197,7 @@ namespace System.Linq.Expressions.Compiler {
                 mergedScopes.Enqueue(scope);
                 foreach (Expression v in scope.Variables) {
                     _myVariables.Add(v);
-                    _hoistMyVariables.Add(v, false);
+                    _hoistVariable.Add(v, false);
                 }
                 body = scope.Body;
             }
@@ -215,10 +221,10 @@ namespace System.Linq.Expressions.Compiler {
             _referenceCount[variable] = refCount + 1;
 
             // If it belongs to this scope, hoist it
-            if (_hoistMyVariables.ContainsKey(variable)) {
+            if (_hoistVariable.ContainsKey(variable)) {
                 if (hoist) {
                     EnsureNotByRef(variable);
-                    _hoistMyVariables[variable] = true;
+                    _hoistVariable[variable] = true;
                 }
                 return;
             }
@@ -235,12 +241,12 @@ namespace System.Linq.Expressions.Compiler {
         #region ExpressionVisitor overrides
 
         protected override Expression Visit(VariableExpression node) {
-            Reference(node, ShouldHoist);
+            Reference(node, !InTopLambda);
             return node;
         }
 
         protected override Expression Visit(ParameterExpression node) {
-            Reference(node, ShouldHoist);
+            Reference(node, !InTopLambda);
             return node;
         }
 
@@ -255,15 +261,17 @@ namespace System.Linq.Expressions.Compiler {
         }
 
         protected override Expression Visit(ScopeExpression node) {
-            if (_currentLambda == _topLambda && _scopes != null) {
+            if (InTopLambda && _scopes != null) {
                 _scopes.Push(node);
             }
             _hiddenVars.Push(new Set<Expression>(node.Variables));
             VisitNode(node.Body);
             _hiddenVars.Pop();
+
             // may have been popped already
-            if (_currentLambda == _topLambda &&
-                _scopes != null && _scopes.Count > 0 && _scopes.Peek() == node) {
+            if (InTopLambda && _scopes != null &&
+                _scopes.Count > 0 && _scopes.Peek() == node) {
+
                 _scopes.Pop();
             }
             return node;
@@ -278,39 +286,35 @@ namespace System.Linq.Expressions.Compiler {
         }
 
         protected override Expression Visit(YieldStatement node) {
-            // If we're directly in the lambda/scope
-            if (_hiddenVars.Count == 0) {
-                _hasYield = true;
-                // If this is a scope, it needs access to its generator temp,
-                // so mark it as a closure
-                if (_expression.NodeType == ExpressionType.Scope) {
-                    _isClosure = true;
-                }
-            }
-
-            // if we're directly inside the lambda we're binding
-            if (_currentLambda == _expression) {
-
-                // Validation: yield cannot appear outside of a generator
+            if (InTopLambda) {
                 if (_expression.NodeType == ExpressionType.Lambda) {
+                    // Validation: yield cannot appear outside of a generator
                     throw Error.YieldOutsideOfGenerator(CompilerScope.GetName(_expression) ?? "<unnamed>");
                 }
 
-                // Create a generator temp for storing each scope's environment
-                // TODO: only scopes that actually have environments need slots
-                for (int i = 0; i < _scopes.Count; i++) {
-                    _temps.Add(Expression.Variable(typeof(object[]), "tempScope$" + _temps.Count));
+                // mark the scope/lambda we're binding as having a yield
+                _hasYield = true;
+
+                if (_expression.NodeType == ExpressionType.Generator) {
+                    // Create a generator temp for storing each scope's environment
+                    // TODO: only scopes that actually have environments need slots
+                    for (int i = 0; i < _scopes.Count; i++) {
+                        _temps.Add(Expression.Variable(typeof(object[]), "tempScope$" + _temps.Count));
+                    }
+                    // empty the stack so we don't create temps for these scopes again
+                    _scopes.Clear();
                 }
-                // empty the stack so we don't create temps for these scopes again
-                _scopes.Clear();
             }
 
             return base.Visit(node);
         }
 
         protected override Expression Visit(TryStatement node) {
-            if (_temps != null && (node.Finally ?? node.Fault) != null) {
-                _temps.Add(Expression.Variable(typeof(Exception), "tempException$" + _temps.Count));
+            if (InTopLambda && _expression.NodeType == ExpressionType.Generator) {
+                if ((node.Finally ?? node.Fault) != null) {
+                    // We need a generator temp to store the exception variable
+                    _temps.Add(Expression.Variable(typeof(Exception), "tempException$" + _temps.Count));
+                }
             }
             return base.Visit(node);
         }
@@ -322,19 +326,20 @@ namespace System.Linq.Expressions.Compiler {
         protected override Expression Visit(ReturnStatement node) {
             // If we're binding the lambda, and we're in it or in ones of its
             // scopes, check return
-            if (_currentLambda == _expression) {
-                Type returnType = _currentLambda.ReturnType;
+            if (InTopLambda && _expression.NodeType != ExpressionType.Scope) {
+                Type returnType = _topLambda.ReturnType;
 
                 if (node.Expression != null) {
                     // BUG: should be TypeUtils.AreReferenceAssignable !!!
-                    if (_currentLambda.NodeType == ExpressionType.Lambda &&
+                    // TODO: error if returning from a generator?
+                    if (_topLambda.NodeType == ExpressionType.Lambda &&
                         !returnType.IsAssignableFrom(node.Expression.Type)) {
 
-                        throw Error.InvalidReturnTypeOfLambda(node.Expression.Type, returnType, _currentLambda.Name);
+                        throw Error.InvalidReturnTypeOfLambda(node.Expression.Type, returnType, _topLambda.Name);
                     }
                 } else if (returnType != typeof(void)) {
                     // return without expression can be only from lambda with void return type
-                    throw Error.MissingReturnForLambda(_currentLambda.Name, returnType);
+                    throw Error.MissingReturnForLambda(_topLambda.Name, returnType);
                 }
             }
 
@@ -342,13 +347,6 @@ namespace System.Linq.Expressions.Compiler {
         }
 
         #endregion
-
-        private bool ShouldHoist {
-            // Hoist variables referenced from an inner lambda, or variables in
-            // a generator (which are effectively referenced from an inner
-            // method thanks to how we compile it)
-            get { return _topLambda != _currentLambda || _topLambda.NodeType == ExpressionType.Generator; }
-        }
 
         // Cannot close over ref parameters
         private void EnsureNotByRef(Expression variable) {

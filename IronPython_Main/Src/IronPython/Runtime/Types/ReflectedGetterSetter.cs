@@ -92,7 +92,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal object CallGetter(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object instance, object[] args) {
+        internal object CallGetter(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> storage, object instance, object[] args) {
             if (NeedToReturnProperty(instance, Getter)) {
                 return this;
             }
@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Types {
             return CallTarget(context, storage, _getter, instance, args);
         }
 
-        internal object CallTarget(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, MethodInfo[] targets, object instance, params object[] args) {
+        internal object CallTarget(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> storage, MethodInfo[] targets, object instance, params object[] args) {
             BuiltinFunction target = PythonTypeOps.GetBuiltinFunction(DeclaringType, __name__, targets);
 
             return target.Call(context, storage, instance, args);
@@ -125,7 +125,7 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        internal bool CallSetter(CodeContext context, SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>> storage, object instance, object[] args, object value) {
+        internal bool CallSetter(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object[], object>>> storage, object instance, object[] args, object value) {
             if (NeedToReturnProperty(instance, Setter)) {
                 return false;
             }

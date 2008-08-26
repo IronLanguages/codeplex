@@ -39,12 +39,21 @@ namespace Microsoft.Scripting.Hosting {
         {
 
         private readonly DynamicOperations _ops;
+        private readonly ScriptEngine _engine;
 
         // friend class: DynamicOperations
-        internal ObjectOperations(DynamicOperations ops) {
+        internal ObjectOperations(DynamicOperations ops, ScriptEngine engine) {
             Assert.NotNull(ops);
+            Assert.NotNull(engine);
             _ops = ops;
+            _engine = engine;
         }
+        
+        public ScriptEngine Engine {
+            get { return _engine; }
+        }
+
+
 
         #region Local Operations
 
@@ -65,6 +74,10 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public object Call(object obj, params object[] parameters) {
             return _ops.Call(obj, parameters);
+        }
+
+        public object Create(object obj, params object[] parameters) {
+            return _ops.Create(obj, parameters);
         }
 
         /// <summary>
@@ -373,6 +386,14 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public ObjectHandle Call(ObjectHandle obj, params object[] parameters) {
             return new ObjectHandle(Call(GetLocalObject(obj), parameters));
+        }
+
+        public ObjectHandle Create(ObjectHandle obj, params ObjectHandle[] parameters) {
+            return new ObjectHandle(Create(GetLocalObject(obj), GetLocalObjects(parameters)));
+        }
+
+        public ObjectHandle Create(ObjectHandle obj, params object[] parameters) {
+            return new ObjectHandle(Create(GetLocalObject(obj), parameters));
         }
 
         /// <summary>

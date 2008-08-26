@@ -26,11 +26,11 @@ import Microsoft.Scripting.Hosting
 from System.Scripting import SourceLocation, SourceSpan
 from Microsoft.Scripting import TokenTriggers, TokenInfo, TokenCategory
 from Microsoft.Scripting.Hosting import ScriptRuntime, TokenCategorizer
+from IronPython.Hosting import Python
 
 #------------------------------------------------------------------------------
 # Globals
-runtime = ScriptRuntime.Create()	
-engine = runtime.GetEngine('py')
+engine = Python.CreateEngine()
 
 #------------------------------------------------------------------------------
 # Utils

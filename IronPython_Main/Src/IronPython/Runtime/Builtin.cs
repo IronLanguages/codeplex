@@ -902,8 +902,8 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static CallSite<DynamicSiteTarget<CodeContext, T, T1, object>> MakeMapSite<T, T1>(CodeContext/*!*/ context) {
-            return CallSite<DynamicSiteTarget<CodeContext, T, T1, object>>.Create(
+        private static CallSite<Func<CallSite, CodeContext, T, T1, object>> MakeMapSite<T, T1>(CodeContext/*!*/ context) {
+            return CallSite<Func<CallSite, CodeContext, T, T1, object>>.Create(
                 new InvokeBinder(
                     PythonContext.GetContext(context).DefaultBinderState,
                     new CallSignature(1)
@@ -917,7 +917,7 @@ namespace IronPython.Runtime {
             }
 
             List ret = new List();            
-            CallSite<DynamicSiteTarget<CodeContext, object, object, object>> mapSite = null;
+            CallSite<Func<CallSite, CodeContext, object, object, object>> mapSite = null;
 
             if (func != null) {
                 mapSite = MakeMapSite<object, object>(context);
@@ -936,7 +936,7 @@ namespace IronPython.Runtime {
 
         public static List map(CodeContext/*!*/ context, object func, [NotNull]string enumerator) {
             List ret = new List();
-            CallSite<DynamicSiteTarget<CodeContext, object, object, object>> mapSite = null;
+            CallSite<Func<CallSite, CodeContext, object, object, object>> mapSite = null;
 
             if (func != null) {
                 mapSite = MakeMapSite<object, object>(context);
@@ -954,7 +954,7 @@ namespace IronPython.Runtime {
         }
 
         public static List map(CodeContext/*!*/ context, [NotNull]PythonType/*!*/ func, [NotNull]IEnumerable enumerator) {
-            CallSite<DynamicSiteTarget<CodeContext, PythonType, object, object>> mapSite = MakeMapSite<PythonType, object>(context);
+            CallSite<Func<CallSite, CodeContext, PythonType, object, object>> mapSite = MakeMapSite<PythonType, object>(context);
 
             List ret = new List();
             foreach (object o in enumerator) {
@@ -964,7 +964,7 @@ namespace IronPython.Runtime {
         }
 
         public static List map(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/ func, [NotNull]IEnumerable enumerator) {
-            CallSite<DynamicSiteTarget<CodeContext, BuiltinFunction, object, object>> mapSite = MakeMapSite<BuiltinFunction, object>(context);
+            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite = MakeMapSite<BuiltinFunction, object>(context);
 
             List ret = new List();
             foreach (object o in enumerator) {
@@ -974,7 +974,7 @@ namespace IronPython.Runtime {
         }
 
         public static List map(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/ func, [NotNull]string enumerator) {
-            CallSite<DynamicSiteTarget<CodeContext, BuiltinFunction, string, object>> mapSite = MakeMapSite<BuiltinFunction, string>(context);
+            CallSite<Func<CallSite, CodeContext, BuiltinFunction, string, object>> mapSite = MakeMapSite<BuiltinFunction, string>(context);
 
             List ret = new List();
             foreach (char o in enumerator) {
@@ -984,7 +984,7 @@ namespace IronPython.Runtime {
         }
 
         public static List map(CodeContext/*!*/ context, [NotNull]PythonType/*!*/ func, [NotNull]string enumerator) {
-            CallSite<DynamicSiteTarget<CodeContext, PythonType, string, object>> mapSite = MakeMapSite<PythonType, string>(context);
+            CallSite<Func<CallSite, CodeContext, PythonType, string, object>> mapSite = MakeMapSite<PythonType, string>(context);
 
             List ret = new List();
             foreach (char o in enumerator) {
