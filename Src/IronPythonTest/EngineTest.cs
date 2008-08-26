@@ -126,7 +126,7 @@ namespace IronPythonTest {
         public EngineTest() {
             // Load a script with all the utility functions that are required
             // pe.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
-            _env = new ScriptRuntime();
+            _env = Python.CreateRuntime();
             _env.LoadAssembly(typeof(string).Assembly);
             _env.LoadAssembly(typeof(Debug).Assembly);
             _pe = _env.GetEngine("py");
@@ -754,8 +754,10 @@ if id(a) == id(b):
             const string lineNumber = "raise.py:line";
 
             // TODO: clone setup?
-            var scope = new ScriptRuntime(new ScriptRuntimeSetup(true)).CreateScope("py");
-            var debugScope = new ScriptRuntime(new ScriptRuntimeSetup(true) { DebugMode = true }).CreateScope("py");
+            var scope = Python.CreateRuntime().CreateScope("py");
+            var debugSetup = Python.CreateRuntimeSetup(null);
+            debugSetup.DebugMode = true;
+            var debugScope = new ScriptRuntime(debugSetup).CreateScope("py");
 
             TestLineInfo(scope, lineNumber);
             TestLineInfo(debugScope, lineNumber);

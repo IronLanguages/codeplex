@@ -57,9 +57,8 @@ namespace System.Linq.Expressions.Compiler {
             } else {
                 _ilg.EmitNull();
             }
-            HoistedLocals locals = _scope.NearestHoistedLocals();
-            if (locals != null) {
-                _scope.EmitGet(locals.SelfVariable);
+            if (_scope.NearestHoistedLocals != null) {
+                _scope.EmitGet(_scope.NearestHoistedLocals.SelfVariable);
             } else {
                 _ilg.EmitNull();
             }
@@ -323,8 +322,28 @@ namespace System.Linq.Expressions.Compiler {
             _scope.EnterGeneratorOuter(this);
             bool needsClosure = _scope.IsClosure || _scope.HasHoistedLocals;
             EmitDelegateConstruction(ncg, typeof(GeneratorNext), needsClosure);
-            _ilg.EmitNew(typeof(Generator), new Type[] { typeof(GeneratorNext) });
+
+            // The presence of yieldmarkers map indicates that the generator needs to be debugabble
+            if (_generatorInfo.YieldMarkers != null) {
+                // Emit the debug-cookie map
+                EmitDebugCookieMap(_generatorInfo.YieldMarkers);
+
+                _ilg.EmitNew(typeof(DebuggableGenerator), new Type[] { typeof(GeneratorNext), typeof(int[]) });
+
+            } else {
+                _ilg.EmitNew(typeof(Generator), new Type[] { typeof(GeneratorNext) });
+            }
             EmitReturn();
+        }
+
+        private void EmitDebugCookieMap(IList<int> yieldMarkers) {
+            if (_boundConstants != null) {
+                // Emit as a constant
+                EmitConstant(yieldMarkers.ToArray(), typeof(int[]));
+            } else {
+                // Emit creation of the array
+                _ilg.EmitArray<int>(yieldMarkers);
+            }
         }
 
         private static string GetGeneratorMethodName(string name) {

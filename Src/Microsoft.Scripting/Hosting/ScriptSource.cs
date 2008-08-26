@@ -160,7 +160,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Exact behavior depends on the language. Some languages have a dedicated "exit" exception that 
         /// carries the exit code, in which case the exception is cought and the exit code is returned.
         /// The default behavior returns the result of program's execution converted to an integer 
-        /// using a langauge specific conversion.
+        /// using a language specific conversion.
         /// </summary>
         /// <exception cref="SyntaxErrorException">Code cannot be compiled.</exception>
         public int ExecuteProgram() {

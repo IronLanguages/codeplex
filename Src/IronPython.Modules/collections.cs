@@ -696,10 +696,10 @@ namespace IronPython.Modules {
         [PythonType]
         public class defaultdict : PythonDictionary {
             private object _factory;
-            private CallSite<DynamicSiteTarget<CodeContext, object, object>> _missingSite;
+            private CallSite<Func<CallSite, CodeContext, object, object>> _missingSite;
 
             public defaultdict(CodeContext/*!*/ context) {
-                _missingSite = CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(
+                _missingSite = CallSite<Func<CallSite, CodeContext, object, object>>.Create(
                     new InvokeBinder(
                         PythonContext.GetContext(context).DefaultBinderState,
                         new CallSignature(0)

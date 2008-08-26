@@ -193,31 +193,29 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 case "-X:AutoIndent": ConsoleOptions.AutoIndent = true; break;
                 //#endif
 
+                case "-X:LightweightScopes":
+                case "-X:PreferComInteropAssembly":
+                    SetDlrOption(arg.Substring(3));
+                    break;
+
+#if DEBUG
                 case "-X:AssembliesDir":
                     SetDlrOption("AssembliesDir", PopNextArg());
                     break;
 
                 case "-X:SaveAssemblies":
-                    SetDlrOption("SaveAssemblies");
-                    break;
-
                 case "-X:Frames":
-                    SetDlrOption(arg.Substring(3)); 
-                    break;
-
-                // TODO: remove
+                case "-X:CachePointersInApartment":
                 case "-X:DumpIL":
                 case "-X:ShowIL":
-                case "-X:ShowRules": 
-                case "-X:DumpTrees": 
-                case "-X:ShowTrees": 
+                case "-X:ShowRules":
+                case "-X:DumpTrees":
+                case "-X:ShowTrees":
                 case "-X:ShowScopes":
-                case "-X:LightweightScopes":
-                case "-X:PreferComInteropAssembly":
-                case "-X:CachePointersInApartment":
-                case "-X:TrackPerformance": 
+                case "-X:TrackPerformance":
                     SetDlrOption(arg.Substring(3));
                     break;
+#endif
 
                 case "-X:Interpret":
                     LanguageSetup.Options["InterpretedMode"] = RuntimeHelpers.True;
@@ -263,30 +261,28 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "-D",                          "Enable application debugging" },
 
                 { "-X:AutoIndent",               "" },
-                { "-X:AssembliesDir",            "Set the directory for saving generated assemblies" },
-#if !SILVERLIGHT                            
-                { "-X:ColorfulConsole",          "Enable ColorfulConsole" },
-#endif
                 { "-X:ExceptionDetail",          "Enable ExceptionDetail mode" },
                 { "-X:Interpret",                "Enable interpreted mode" },
-                { "-X:Frames",                   "Generate custom frames" },
                 { "-X:LightweightScopes",        "Generate optimized scopes that can be garbage collected" },
-                { "-X:ILDebug",                  "Output generated IL code to a text file for debugging" },
                 { "-X:MaxRecursion",             "Set the maximum recursion level" },
                 { "-X:NoTraceback",              "Do not emit traceback code" },
                 { "-X:PassExceptions",           "Do not catch exceptions that are unhandled by script code" },
                 { "-X:PrivateBinding",           "Enable binding to private members" },
-                { "-X:SaveAssemblies",           "Save generated assemblies" },
-                { "-X:ShowTrees",                "Print all ASTs to the console" }, 
-                { "-X:DumpTrees",                "Dump all ASTs generated to a file"},
                 { "-X:ShowClrExceptions",        "Display CLS Exception information" },
-                { "-X:ShowRules",                "Show the AST for rules generated" },
-                { "-X:ShowScopes",               "Print all scopes and closures to the console" }, 
-                { "-X:SlowOps",                  "Enable fast ops" },
+
 #if !SILVERLIGHT
                 { "-X:TabCompletion",            "Enable TabCompletion mode" },
+                { "-X:ColorfulConsole",          "Enable ColorfulConsole" },
 #endif
 #if DEBUG
+                { "-X:Frames",                   "Generate custom frames" },
+                { "-X:AssembliesDir",            "Set the directory for saving generated assemblies" },
+                { "-X:SaveAssemblies",           "Save generated assemblies" },
+                { "-X:DumpIL",                   "Output generated IL code to a text file for debugging" },
+                { "-X:ShowTrees",                "Print all ASTs to the console" }, 
+                { "-X:DumpTrees",                "Dump all ASTs generated to a file"},
+                { "-X:ShowRules",                "Show the AST for rules generated" },
+                { "-X:ShowScopes",               "Print all scopes and closures to the console" }, 
                 { "-X:TrackPerformance",         "Track performance sensitive areas" },
                 { "-X:CachePointersInApartment", "Cache COM pointers per apartment (prototype)" },
 #endif

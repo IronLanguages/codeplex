@@ -194,7 +194,7 @@ namespace IronPython.Runtime {
             if (_code != null) {
                 return _code.Run(scope);
             } else if (_func != null) {
-                CallSite<DynamicSiteTarget<CodeContext, PythonFunction, object>> site = PythonContext.GetContext(_func.Context).FunctionCallSite;
+                CallSite<Func<CallSite, CodeContext, PythonFunction, object>> site = PythonContext.GetContext(_func.Context).FunctionCallSite;
                 return site.Target(site, DefaultContext.Default, _func);
             }
 

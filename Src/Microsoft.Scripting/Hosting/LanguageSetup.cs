@@ -16,13 +16,14 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Hosting {
     [Serializable]
     public sealed class LanguageSetup {
         private string _displayName;
-        private readonly IList<string> _ids;
-        private readonly IList<string> _fileExtensions;
+        private IList<string> _names;
+        private IList<string> _fileExtensions;
         private IDictionary<string, object> _options;
 
         public string DisplayName {
@@ -33,15 +34,43 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public IList<string> Ids {
-            get { return _ids; }
+        /// <remarks>
+        /// Case-insensitive language names.
+        /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public IList<string> Names {
+            get {
+                if (_names == null) {
+                    _names = new List<string>();
+                }
+                return _names;
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _names = value;
+            }
         }
 
-        // optionally start with a dot
+        /// <remarks>
+        /// Case-insensitive file extension, optionally starts with a dot.
+        /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public IList<string> FileExtensions {
-            get { return _fileExtensions; }
+            get {
+                if (_fileExtensions == null) {
+                    _fileExtensions = new List<string>();
+                }
+                return _fileExtensions; 
+            }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                _fileExtensions = value;
+            }
         }
 
+        /// <remarks>
+        /// Option names are case-sensitive.
+        /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public IDictionary<string, object> Options {
             get {
@@ -63,17 +92,15 @@ namespace Microsoft.Scripting.Hosting {
         public LanguageSetup(string displayName) {
             ContractUtils.RequiresNotNull(displayName, "displayName");
             _displayName = displayName;
-            _ids = new List<string>();
-            _fileExtensions = new List<string>();
         }
 
-        public LanguageSetup(string displayName, IList<string> ids, IList<string> fileExtensions) {
+        public LanguageSetup(string displayName, IList<string> names, IList<string> fileExtensions) {
             ContractUtils.RequiresNotNull(displayName, "displayName");
-            ContractUtils.RequiresNotNull(ids, "ids");
+            ContractUtils.RequiresNotNull(names, "names");
             ContractUtils.RequiresNotNull(fileExtensions, "fileExtensions");
 
             _displayName = displayName;
-            _ids = ids;
+            _names = names;
             _fileExtensions = fileExtensions;
         }
     }

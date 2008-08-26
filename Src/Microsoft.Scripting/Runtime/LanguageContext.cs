@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Runtime {
             ContractUtils.RequiresNotNull(domainManager, "domainManager");
 
             _domainManager = domainManager;
-            _id = domainManager.AssignContextId(this);
+            _id = domainManager.GenerateContextId();
         }
 
         public ActionBinder Binder {
@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Runtime {
 
         /// <summary>
         /// Factory for ModuleContext creation. 
-        /// It is guaranteed that this method is called once per each ScriptScope the langauge code is executed within.
+        /// It is guaranteed that this method is called once per each ScriptScope the language code is executed within.
         /// </summary>
         public virtual ScopeExtension CreateScopeExtension(Scope scope) {
             return new ScopeExtension(scope);

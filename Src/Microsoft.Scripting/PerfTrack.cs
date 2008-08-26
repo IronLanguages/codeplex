@@ -16,6 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
+using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -65,6 +68,22 @@ namespace Microsoft.Scripting {
             return result;
         }
 
+        public static void DumpHistogram<TKey>(IDictionary<TKey, int> histogram) {
+            var keys = ArrayUtils.MakeArray(histogram.Keys);
+            var values = ArrayUtils.MakeArray(histogram.Values);
+            Array.Sort(values, keys);
+            for (int i = 0; i < keys.Length; i++) {
+                Console.WriteLine("{0} {1}", keys[i], values[i]);
+            }
+        }
+
+        public static void AddHistograms<TKey>(IDictionary<TKey, int> result, IDictionary<TKey, int> addend) {
+            foreach (var entry in addend) {
+                int value;
+                result[entry.Key] = entry.Value + (result.TryGetValue(entry.Key, out value) ? value : 0);
+            }
+        }
+
         public static void DumpStats() {
             if (totalEvents == 0) return;
 
@@ -79,19 +98,11 @@ namespace Microsoft.Scripting {
             Console.WriteLine();
 
             foreach (KeyValuePair<Categories, Dictionary<string, int>> kvpCategories in _events) {
-                Console.WriteLine("Category : " + kvpCategories.Key);
-                List<KeyValuePair<string, int>> catInfo = new List<KeyValuePair<string, int>>();
-                foreach (KeyValuePair<string, int> kvp in kvpCategories.Value) {
-                    catInfo.Add(kvp);
+                if (kvpCategories.Value.Count > 0) {
+                    Console.WriteLine("Category : " + kvpCategories.Key);
+                    DumpHistogram(kvpCategories.Value);
+                    Console.WriteLine();
                 }
-
-                catInfo.Sort(delegate(KeyValuePair<string, int> x, KeyValuePair<string, int> y) {
-                    return x.Value - y.Value;
-                });
-                foreach (KeyValuePair<string, int> kvp in catInfo) {
-                    Console.WriteLine("{0} {1}", kvp.Key, kvp.Value);
-                }
-                Console.WriteLine();
             }
 
             Console.WriteLine();

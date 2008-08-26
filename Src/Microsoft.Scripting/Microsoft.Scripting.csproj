@@ -149,7 +149,7 @@
     <Compile Include="Actions\NoSideEffectsAttribute.cs" />
     <Compile Include="Actions\OperatorInfo.cs" />
     <Compile Include="Actions\SetMemberBinderHelper.cs" />
-    <Compile Include="Hosting\ExceptionService.cs" />
+    <Compile Include="Hosting\ExceptionOperations.cs" />
     <Compile Include="Ast\AssignmentExpression.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\Block.cs" />
@@ -177,6 +177,7 @@
     <Compile Include="MultiRuntimeAwareAttribute.cs" />
     <Compile Include="PerfTrack.cs" />
     <Compile Include="Runtime\CompilerContext.cs" />
+    <Compile Include="Runtime\DynamicLanguageProviderAttribute.cs" />
     <Compile Include="Runtime\ParserSink.cs" />
     <Compile Include="Runtime\TokenizerBuffer.cs" />
     <Compile Include="Runtime\TokenizerService.cs" />
@@ -220,10 +221,8 @@
     <Compile Include="Hosting\CompiledCode.cs" />
     <Compile Include="Hosting\ErrorListener.cs" />
     <Compile Include="Hosting\ErrorListenerProxy.cs" />
-    <Compile Include="Hosting\HostingHelpers.cs" />
     <Compile Include="Hosting\LanguageSetup.cs" />
     <Compile Include="Hosting\ObjectOperations.cs" />
-    <Compile Include="Hosting\ScriptConfiguratiton.cs" />
     <Compile Include="Hosting\ScriptEngine.cs" />
     <Compile Include="Hosting\ScriptHost.cs" />
     <Compile Include="Hosting\ScriptHostProxy.cs" />
@@ -233,6 +232,13 @@
     <Compile Include="Hosting\ScriptScope.cs" />
     <Compile Include="Hosting\ScriptSource.cs" />
     <Compile Include="Hosting\TokenCategorizer.cs" />
+    <Compile Include="Hosting\Configuration\LanguageElement.cs" />
+    <Compile Include="Hosting\Configuration\LanguageElementCollection.cs" />
+    <Compile Include="Hosting\Configuration\OptionElement.cs" />
+    <Compile Include="Hosting\Configuration\OptionElementCollection.cs" />
+    <Compile Include="Hosting\Configuration\Section.cs" />
+    <Compile Include="Hosting\Providers\HostingHelpers.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Interpretation\CommaAddress.cs" />
     <Compile Include="Interpretation\ControlFlow.cs" />
     <Compile Include="Interpretation\EvaluationAddress.cs" />

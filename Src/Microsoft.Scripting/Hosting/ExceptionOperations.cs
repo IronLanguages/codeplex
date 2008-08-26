@@ -17,16 +17,15 @@ using System;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 
-namespace Microsoft.Scripting.Hosting 
-{
-    public sealed class ExceptionService 
+namespace Microsoft.Scripting.Hosting {
+    public sealed class ExceptionOperations
 #if !SILVERLIGHT
-        : MarshalByRefObject
+ : MarshalByRefObject
 #endif
-    {
+ {
         private readonly LanguageContext _context;
 
-        public ExceptionService(LanguageContext context) {
+        internal ExceptionOperations(LanguageContext context) {
             _context = context;
         }
 

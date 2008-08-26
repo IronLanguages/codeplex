@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Scripting.Actions;
 using System.Threading;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Interpretation {
     public static partial class Interpreter {
@@ -78,11 +79,12 @@ namespace Microsoft.Scripting.Interpretation {
             /// <param name="type">Type of the delegate to call</param>
             /// <returns>A MatchCallerTarget delegate.</returns>
             private static object CreateCaller(Type type) {
+                PerfTrack.NoteEvent(PerfTrack.Categories.Count, "Interpreter.MatchCaller.CreateCaller");
+                
                 MethodInfo invoke = type.GetMethod("Invoke");
                 ParameterInfo[] parameters = invoke.GetParameters();
 
-                DynamicMethod dm = new DynamicMethod("_stub_InterpretedMatchCaller" + Interlocked.Increment(ref _id), typeof(object), _CallerSignature);
-                ILGenerator il = dm.GetILGenerator();
+                var il = Snippets.Shared.CreateDynamicMethod("_istub_" + Interlocked.Increment(ref _id), typeof(object), _CallerSignature, false);
                 Type siteType = typeof(CallSite<>).MakeGenericType(type);
 
                 List<RefFixer> fixers = null;
@@ -146,7 +148,7 @@ namespace Microsoft.Scripting.Interpretation {
                 }
 
                 il.Emit(OpCodes.Ret);
-                return dm.CreateDelegate(typeof(MatchCallerTarget));
+                return il.CreateDelegate<MatchCallerTarget>();
             }
         }
     }

@@ -148,7 +148,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                                 Ast.Assign(
                                     tmp,
-                                    Ast.ActionExpression(
+                                    Ast.Dynamic(
                                         new InvokeBinder(
                                             BinderState.GetBinderState(invoke),
                                             BindingHelpers.GetCallSignature(invoke)

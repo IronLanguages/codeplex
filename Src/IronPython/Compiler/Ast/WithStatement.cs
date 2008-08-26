@@ -199,7 +199,7 @@ namespace IronPython.Compiler.Ast {
                 //      exit(None, None, None)
                     AstUtils.IfThen(
                         exc,
-                        Ast.ActionExpression(
+                        Ast.Dynamic(
                             new InvokeBinder(
                                 ag.BinderState,
                                 new CallSignature(3)        // signature doesn't include function

@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
 using System.Threading;
@@ -37,11 +38,11 @@ namespace IronPython.Modules {
             private object[]/*!*/ _args;                                                    // the initially provided arguments
             private IAttributesCollection _keywordArgs;                                     // the initially provided keyword arguments or null
             private CodeContext/*!*/ _context;                                              // code context from the caller who created us
-            private CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>> _dictSite; // the dictionary call site if ever called w/ keyword args
-            private CallSite<DynamicSiteTarget<CodeContext, object, object[], object>> _splatSite;      // the position only call site
+            private CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>> _dictSite; // the dictionary call site if ever called w/ keyword args
+            private CallSite<Func<CallSite, CodeContext, object, object[], object>> _splatSite;      // the position only call site
             private IAttributesCollection _dict;                                            // dictionary for storing extra attributes
             private WeakRefTracker _tracker;                                                // tracker so users can use Python weak references
-                
+
             #region Constructors
 
             /// <summary>
@@ -130,7 +131,7 @@ namespace IronPython.Modules {
             /// Calls func with the previously provided arguments and more positional arguments.
             /// </summary>
             [SpecialName]
-            public object Call(CodeContext/*!*/ context, params object [] args) {
+            public object Call(CodeContext/*!*/ context, params object[] args) {
                 if (_keywordArgs == null) {
                     EnsureSplatSite();
                     return _splatSite.Target(_splatSite, context, _function, ArrayUtils.AppendRange(_args, args));
@@ -156,11 +157,11 @@ namespace IronPython.Modules {
                 } else {
                     finalDict = dict;
                 }
-                
+
                 EnsureDictSplatSite();
                 return _dictSite.Target(_dictSite, context, _function, ArrayUtils.AppendRange(_args, args), finalDict);
             }
-            
+
             /// <summary>
             /// Operator method to set arbitrary members on the partial object.
             /// </summary>
@@ -207,7 +208,7 @@ namespace IronPython.Modules {
                 if (_splatSite == null) {
                     Interlocked.CompareExchange(
                         ref _splatSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, object[], object>>.Create(
                             Binders.InvokeSplat(PythonContext.GetContext(_context).DefaultBinderState)
                         ),
                         null
@@ -219,7 +220,7 @@ namespace IronPython.Modules {
                 if (_dictSite == null) {
                     Interlocked.CompareExchange(
                         ref _dictSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, object[], IAttributesCollection, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>.Create(
                             Binders.InvokeKeywords(PythonContext.GetContext(_context).DefaultBinderState)
                         ),
                         null

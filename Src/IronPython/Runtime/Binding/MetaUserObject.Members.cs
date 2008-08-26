@@ -353,7 +353,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private Expression/*!*/ MakeGetAttrCall(GetBindingInfo/*!*/ info) {
-            Expression call = Ast.ActionExpression(
+            Expression call = Ast.Dynamic(
                 new InvokeBinder(
                     BinderState.GetBinderState(info.Action),
                     new CallSignature(1)
@@ -436,7 +436,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Constant(info.Action.Name),
                         Ast.Constant(slot, typeof(PythonTypeSlot)),
                         Ast.Constant(getattr, typeof(PythonTypeSlot)),
-                        Ast.Constant(new SiteLocalStorage<CallSite<DynamicSiteTarget<CodeContext, object, string, object>>>())
+                        Ast.Constant(new SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, string, object>>>())
                     ),
                     self.Restrictions
                 ),
@@ -482,7 +482,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.ConvertHelper(Utils.WeakConstant(sdo.PythonType), typeof(PythonType)),
                     tmp
                 ),
-                Ast.ActionExpression(
+                Ast.Dynamic(
                     new InvokeBinder(
                         BinderState.GetBinderState(bindingInfo.Action),
                         new CallSignature(2)
@@ -675,7 +675,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.ConvertHelper(Utils.WeakConstant(self.PythonType), typeof(PythonType)),
                     tmp
                 ),
-                Ast.ActionExpression(
+                Ast.Dynamic(
                     new InvokeBinder(
                         BinderState.GetBinderState(info.Action),
                         new CallSignature(1)

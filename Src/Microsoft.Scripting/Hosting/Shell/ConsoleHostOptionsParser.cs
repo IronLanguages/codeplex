@@ -62,12 +62,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     case "lang":
                         OptionValueRequired(name, value);
 
-                        AssemblyQualifiedTypeName provider;
-                        if (!_runtimeSetup.TryGetLanguageProviderById(value, out provider)) {
+                        string provider;
+                        if (!_runtimeSetup.TryGetLanguageProviderByName(value, out provider)) {
                             throw new InvalidOptionException(String.Format("Unknown language id '{0}'.", value));
                         }
 
                         _options.LanguageProvider = provider;
+                        _options.HasLanguageProvider = true;
                         break;
 
                     case "path":

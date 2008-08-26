@@ -778,7 +778,7 @@ namespace IronPython.Runtime {
 
         private class DefaultPythonComparer : IComparer {
             public static readonly DefaultPythonComparer Instance = new DefaultPythonComparer();
-            private CallSite<DynamicSiteTarget<object, object, int>> site = CallSite<DynamicSiteTarget<object, object, int>>.Create(
+            private CallSite<Func<CallSite, object, object, int>> site = CallSite<Func<CallSite, object, object, int>>.Create(
                 Binders.BinaryOperationRetType(
                     DefaultContext.DefaultPythonContext.DefaultBinderState,
                     StandardOperators.Compare,
@@ -803,7 +803,7 @@ namespace IronPython.Runtime {
             //??? optimized version when we know we have a Function
             private object cmpfunc;
 
-            private CallSite<DynamicSiteTarget<CodeContext, object, object, object, int>> FuncSite = CallSite<DynamicSiteTarget<CodeContext, object, object, object, int>>.Create(
+            private CallSite<Func<CallSite, CodeContext, object, object, object, int>> FuncSite = CallSite<Func<CallSite, CodeContext, object, object, object, int>>.Create(
                 Binders.InvokeAndConvert(
                     DefaultContext.DefaultPythonContext.DefaultBinderState,
                     2,

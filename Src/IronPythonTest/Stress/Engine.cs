@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using IronPython.Hosting;
 
 namespace IronPythonTest.Stress {
 
@@ -31,7 +32,7 @@ namespace IronPythonTest.Stress {
         public Engine() {
             // Load a script with all the utility functions that are required
             // pe.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
-            _env = new ScriptRuntime();
+            _env = Python.CreateRuntime();
             _env.LoadAssembly(typeof(string).Assembly);
             _env.LoadAssembly(typeof(Debug).Assembly);
             _pe = _env.GetEngine("py");

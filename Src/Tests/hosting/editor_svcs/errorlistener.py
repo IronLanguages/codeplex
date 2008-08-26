@@ -25,13 +25,14 @@ import Microsoft.Scripting.Hosting
 from System.Scripting import SourceSpan, SourceLocation
 from Microsoft.Scripting import Severity, SourceCodeKind
 from Microsoft.Scripting.Hosting import ErrorListener, ScriptSource, ScriptRuntime
+from IronPython.Hosting import Python
 
 From, To = SourceLocation, SourceLocation
 Warning, Error, FatalError = Severity.Warning, Severity.Error, Severity.FatalError
 
 #------------------------------------------------------------------------------
 # Globals
-engine = ScriptRuntime.Create().GetEngine('py')
+engine = Python.CreateEngine()
 
 #------------------------------------------------------------------------------
 # Utils

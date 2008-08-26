@@ -94,7 +94,7 @@ namespace IronPython {
             : base(options) {
 
             _arguments = GetStringCollectionOption(options, "Arguments") ?? EmptyStringCollection;
-            _warningFilters = GetStringCollectionOption(options, "WarningFilters") ?? EmptyStringCollection;
+            _warningFilters = GetStringCollectionOption(options, "WarningFilters", ';', ',') ?? EmptyStringCollection;
 
             _optimize = GetOption(options, "Optimize", false);
             _stripDocStrings = GetOption(options, "StripDocStrings", false);

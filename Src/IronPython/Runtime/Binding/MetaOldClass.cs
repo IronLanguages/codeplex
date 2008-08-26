@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Binding {
                                 instTmp,
                                 init
                             ),
-                            Ast.ActionExpression(
+                            Ast.Dynamic(
                                 new InvokeBinder(
                                     BinderState.GetBinderState(call),
                                     signature

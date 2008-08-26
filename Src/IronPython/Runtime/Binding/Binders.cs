@@ -25,7 +25,7 @@ namespace IronPython.Runtime.Binding {
 
     static class Binders {
         public static Expression/*!*/ Invoke(BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new InvokeBinder(
                     binder,
                     signature
@@ -36,7 +36,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Convert(BinderState/*!*/ binder, Type/*!*/ type, ConversionResultKind resultKind, Expression/*!*/ target) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new ConversionBinder(
                     binder,
                     type,
@@ -51,7 +51,7 @@ namespace IronPython.Runtime.Binding {
         /// Backwards compatible Convert for the old sites that need to flow CodeContext
         /// </summary>
         public static Expression/*!*/ Convert(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ type, ConversionResultKind resultKind, Expression/*!*/ target) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new ConversionBinder(
                     binder,
                     type,
@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, params Expression[] args) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new OperationBinder(
                     binder,
                     operation
@@ -74,7 +74,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Set(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target, Expression/*!*/ value) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new SetMemberBinder(
                     binder,
                     name
@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Get(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new GetMemberBinder(
                     binder,
                     name
@@ -102,7 +102,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ TryGet(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new GetMemberBinder(
                     binder,
                     name,
@@ -119,7 +119,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public static Expression/*!*/ Delete(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {        
-            return Ast.ActionExpression(
+            return Ast.Dynamic(
                 new DeleteMemberBinder(
                     binder,
                     name

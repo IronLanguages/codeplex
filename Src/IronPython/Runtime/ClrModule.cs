@@ -223,7 +223,7 @@ the assembly object.")]
                 throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
             }
 
-            var sourceUnit = manager.GetLanguage(language).CreateFileUnit(path);
+            var sourceUnit = manager.GetLanguageByName(language).CreateFileUnit(path);
             return Importer.ExecuteSourceUnit(sourceUnit);
         }
 

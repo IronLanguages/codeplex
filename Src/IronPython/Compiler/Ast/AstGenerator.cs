@@ -214,7 +214,7 @@ namespace IronPython.Compiler.Ast {
                         infos[i] = ParameterMappingInfo.Parameter(i);
                     }
 
-                    expression = Ast.ActionExpression(
+                    expression = Ast.Dynamic(
                         new ComboBinder(
                             new BinderMappingInfo(
                                 (MetaAction)ae.BindingInfo,

@@ -16,13 +16,16 @@
 using System;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Hosting.Providers;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 
+[assembly: DynamicLanguageProvider(typeof(PythonContext), PythonContext.IronPythonDisplayName, PythonContext.IronPythonNames, PythonContext.IronPythonFileExtensions)]
+
 namespace IronPython.Hosting {
-#if !SILVERLIGHT
 
     /// <summary>
     /// Provides helpers for interacting with IronPython.
@@ -47,6 +50,7 @@ namespace IronPython.Hosting {
             return new ScriptRuntime(CreateRuntimeSetup(options));
         }
 
+#if !SILVERLIGHT
         /// <summary>
         /// Creates a new ScriptRuntime with the IronPython scripting engine pre-configured
         /// in the specified AppDomain.  The remote ScriptRuntime may  be manipulated from 
@@ -69,6 +73,8 @@ namespace IronPython.Hosting {
             return ScriptRuntime.CreateRemote(domain, CreateRuntimeSetup(options));
         }
 
+#endif
+
         /// <summary>
         /// Creates a new ScriptRuntime and returns the ScriptEngine for IronPython. If
         /// the ScriptRuntime is requierd it can be acquired from the Runtime property
@@ -86,6 +92,8 @@ namespace IronPython.Hosting {
         public static ScriptEngine/*!*/ CreateEngine(IDictionary<string, object> options) {
             return GetEngine(CreateRuntime(options));
         }
+
+#if !SILVERLIGHT
 
         /// <summary>
         /// Creates a new ScriptRuntime and returns the ScriptEngine for IronPython. If
@@ -111,11 +119,13 @@ namespace IronPython.Hosting {
             return GetEngine(CreateRuntime(domain, options));
         }
 
+#endif
+
         /// <summary>
         /// Given a ScriptRuntime gets the ScriptEngine for IronPython.
         /// </summary>
         public static ScriptEngine/*!*/ GetEngine(ScriptRuntime/*!*/ runtime) {
-            return runtime.GetEngine(new AssemblyQualifiedTypeName(typeof(PythonContext)));
+            return runtime.GetEngineByTypeName(typeof(PythonContext).AssemblyQualifiedName);
         }
 
         /// <summary>
@@ -198,9 +208,9 @@ namespace IronPython.Hosting {
 
         #region Private helpers
 
-        private static ScriptRuntimeSetup/*!*/ CreateRuntimeSetup(IDictionary<string, object> options) {
+        public static ScriptRuntimeSetup/*!*/ CreateRuntimeSetup(IDictionary<string, object> options) {
             ScriptRuntimeSetup setup = new ScriptRuntimeSetup();
-            setup.LanguageSetups[new AssemblyQualifiedTypeName(typeof(PythonContext))] = CreateLangageSetup(options);
+            setup.LanguageSetups[typeof(PythonContext).AssemblyQualifiedName] = CreateLanguageSetup(options);
 
             if (options != null) {
                 object value;
@@ -220,8 +230,12 @@ namespace IronPython.Hosting {
             return setup;
         }
 
-        private static LanguageSetup/*!*/ CreateLangageSetup(IDictionary<string, object> options) {
-            LanguageSetup setup = new LanguageSetup("IronPython", new string[] { "py", "python", "ironpython" }, new string[] { "py" });
+        public static LanguageSetup/*!*/ CreateLanguageSetup(IDictionary<string, object> options) {
+            var setup = new LanguageSetup(
+                PythonContext.IronPythonDisplayName,
+                PythonContext.IronPythonNames.Split(';'),
+                PythonContext.IronPythonFileExtensions.Split(';')
+            );
 
             if (options != null) {
                 setup.Options = options;
@@ -240,5 +254,4 @@ namespace IronPython.Hosting {
 
         #endregion
     }
-#endif
 }

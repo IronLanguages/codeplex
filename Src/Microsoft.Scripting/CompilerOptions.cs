@@ -18,18 +18,18 @@ using System;
 namespace Microsoft.Scripting {
 
     /// <summary>
-    /// TODO - If this class is really this simple, do we need it at all?
+    /// Class that represents compiler options.
+    /// Note that this class is likely to change when hosting API becomes part of .Net
     /// </summary>
     [Serializable]
     public class CompilerOptions
 #if !SILVERLIGHT
-        : ICloneable
+ : ICloneable
 #endif
-    {
+ {
         public CompilerOptions() {
         }
 
-        // TODO - Make this an abstract DeepCopy method and add a DefaultCompilerOptions
         public virtual object Clone() {
             return base.MemberwiseClone();
         }

@@ -23,6 +23,7 @@ using System.Threading;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Hosting.Shell {
 
@@ -35,7 +36,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
         public ScriptRuntimeSetup RuntimeSetup { get { return _optionsParser.RuntimeSetup; } }
-        
+
         public ScriptEngine Engine { get { return _engine; } }
         public ScriptRuntime Runtime { get { return _runtime; } }
 
@@ -47,7 +48,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// Console Host entry-point .exe name.
         /// </summary>
         protected virtual string ExeName {
-            get {                
+            get {
 #if !SILVERLIGHT
                 Assembly entryAssembly = Assembly.GetEntryAssembly();
                 //Can be null if called from unmanaged code (VS integration scenario)
@@ -65,7 +66,17 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected virtual ScriptRuntimeSetup CreateRuntimeSetup() {
-            return new ScriptRuntimeSetup(true);
+            var setup = new ScriptRuntimeSetup();
+            
+            // default settings defined on the provider's assembly:
+            if (Provider != null) {
+                setup.LoadFromAssemblies(new[] { Provider.Assembly });
+            }
+
+#if !SILVERLIGHT
+            setup.LoadConfiguration();
+#endif
+            return setup;
         }
 
         protected virtual PlatformAdaptationLayer PlatformAdaptationLayer {
@@ -76,15 +87,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
             get { return null; }
         }
 
-        private AssemblyQualifiedTypeName GetLanguageProvider(ScriptRuntimeSetup setup) {
-            AssemblyQualifiedTypeName providerName;
+        private string GetLanguageProvider(ScriptRuntimeSetup setup) {
+            string providerName;
 
             var providerType = Provider;
             if (providerType != null) {
-                providerName = new AssemblyQualifiedTypeName(providerType);
-            } else if (Options.LanguageProvider.HasValue) {
-                providerName = Options.LanguageProvider.Value;
-            } else if (Options.RunFile != null && setup.TryGetLanguageProviderByExtension(Path.GetExtension(Options.RunFile), out providerName)) {
+                providerName = providerType.AssemblyQualifiedName;
+            } else if (Options.HasLanguageProvider) {
+                providerName = Options.LanguageProvider;
+            } else if (Options.RunFile != null && setup.TryGetLanguageProviderByFileExtension(Path.GetExtension(Options.RunFile), out providerName)) {
                 // nop
             } else {
                 throw new InvalidOptionException("No language specified.");
@@ -130,7 +141,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             var runtimeSetup = CreateRuntimeSetup();
             var options = new ConsoleHostOptions();
             _optionsParser = new ConsoleHostOptionsParser(options, runtimeSetup);
-            
+
             try {
                 ParseHostOptions(args);
             } catch (InvalidOptionException e) {
@@ -140,16 +151,16 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             SetEnvironment();
 
-            AssemblyQualifiedTypeName provider = GetLanguageProvider(runtimeSetup);
+            string provider = GetLanguageProvider(runtimeSetup);
 
             LanguageSetup languageSetup;
             if (!runtimeSetup.LanguageSetups.TryGetValue(provider, out languageSetup)) {
-                // add the language that the console returned a provider for:
-                runtimeSetup.LanguageSetups.Add(provider, languageSetup = new LanguageSetup(String.Empty));
+                // the language doesn't have a setup -> create a default one:
+                runtimeSetup.LanguageSetups[Provider.AssemblyQualifiedName] = languageSetup = new LanguageSetup(Provider.Name);
             }
 
-            // sets search paths for all languages:
-            runtimeSetup.Options["SearchPaths"] = Options.SourceUnitSearchPaths;
+            // inserts search paths for all languages (/paths option):
+            InsertSearchPaths(runtimeSetup.Options, Options.SourceUnitSearchPaths);
             
             _languageOptionsParser = CreateOptionsParser();
 
@@ -163,7 +174,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _runtime = new ScriptRuntime(runtimeSetup);
 
             try {
-                _engine = _runtime.GetEngine(provider);
+                _engine = _runtime.GetEngineByTypeName(provider);
             } catch (Exception e) {
                 Console.Error.WriteLine(e.Message);
                 return _exitCode = 1;
@@ -171,6 +182,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             Execute();
             return _exitCode;
+        }
+
+        private static void InsertSearchPaths(IDictionary<string, object> options, ICollection<string> paths) {
+            if (options != null && paths != null && paths.Count > 0) {
+                var existingPaths = new List<string>(EngineOptions.GetSearchPathsOption(options) ?? (IEnumerable<string>)ArrayUtils.EmptyStrings);
+                existingPaths.InsertRange(0, paths);
+                options["SearchPaths"] = existingPaths;
+            }
         }
 
         #region Printing help
@@ -312,7 +331,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             CommandLine commandLine = CreateCommandLine();
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
-            
+
             if (consoleOptions.PrintVersionAndExit) {
                 Console.WriteLine("{0} {1} on .NET {2}", Engine.LanguageDisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;
@@ -355,7 +374,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             Console.Error.Write("Unhandled exception");
             Console.Error.WriteLine(':');
 
-            ExceptionService es = engine.GetService<ExceptionService>();
+            ExceptionOperations es = engine.GetService<ExceptionOperations>();
             Console.Error.WriteLine(es.FormatException(e));
         }
 

@@ -45,6 +45,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         /// <returns>The delegate or a <c>null</c> reference if the object is not callable.</returns>
         public static Delegate GetDelegate(CodeContext context, object callableObject, Type delegateType) {
+            ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
             Delegate result = callableObject as Delegate;

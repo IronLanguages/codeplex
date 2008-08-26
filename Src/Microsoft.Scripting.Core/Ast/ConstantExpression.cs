@@ -20,6 +20,11 @@ using System.Scripting;
 namespace System.Linq.Expressions {
     //CONFORMING
     public sealed class ConstantExpression : Expression {
+        internal static readonly ConstantExpression TrueLiteral = new ConstantExpression(Annotations.Empty, true, typeof(bool));
+        internal static readonly ConstantExpression FalseLiteral = new ConstantExpression(Annotations.Empty, false, typeof(bool));
+        internal static readonly ConstantExpression ZeroLiteral = new ConstantExpression(Annotations.Empty, 0, typeof(int));
+        internal static readonly ConstantExpression NullLiteral = new ConstantExpression(Annotations.Empty, null, typeof(object));
+
         private readonly object _value;
 
         internal ConstantExpression(Annotations annotations, object value, Type type)
@@ -53,19 +58,19 @@ namespace System.Linq.Expressions {
 
     public partial class Expression {
         public static ConstantExpression True() {
-            return new ConstantExpression(Annotations.Empty, true, typeof(bool));
+            return ConstantExpression.TrueLiteral;
         }
 
         public static ConstantExpression False() {
-            return new ConstantExpression(Annotations.Empty, false, typeof(bool));
+            return ConstantExpression.FalseLiteral;
         }
 
         public static ConstantExpression Zero() {
-            return new ConstantExpression(Annotations.Empty, 0, typeof(int));
+            return ConstantExpression.ZeroLiteral;
         }
 
         public static ConstantExpression Null() {
-            return new ConstantExpression(Annotations.Empty, null, typeof(object));
+            return ConstantExpression.NullLiteral;
         }
 
         public static ConstantExpression Null(Type type) {

@@ -45,21 +45,21 @@ namespace Microsoft.Scripting.Generation {
         /// Directory where snippet assembly will be saved if SaveSnippets is set.
         /// </summary>
         public string SnippetsDirectory {
-            get { return _snippetsDirectory; }
+            get { return _optionsFrozen ? _snippetsDirectory : DebugOptions.SnippetsDirectory; }
         }
 
         /// <summary>
         /// Name of the snippet assembly (w/o extension).
         /// </summary>
         public string SnippetsFileName {
-            get { return _snippetsFileName; }
+            get { return _optionsFrozen ? _snippetsFileName : DebugOptions.SnippetsFileName; }
         }
 
         /// <summary>
         /// Save snippets to an assembly (see also SnippetsDirectory, SnippetsFileName).
         /// </summary>
         public bool SaveSnippets {
-            get { return _saveSnippets; }
+            get { return _optionsFrozen ? _saveSnippets : DebugOptions.SaveSnippets; }
         }
 
         private AssemblyGen GetAssembly(bool emitSymbols) {

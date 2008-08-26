@@ -334,7 +334,7 @@ namespace IronPython.Runtime.Binding {
                 AppendNewArgs(args);
 
                 return new MetaObject(
-                    Ast.ActionExpression(
+                    Ast.Dynamic(
                         new InvokeBinder(
                             BinderState,
                             GetDynamicNewSignature()
@@ -484,12 +484,13 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return new MetaObject(
-                    Ast.ActionExpression(
+                    Ast.Dynamic(
                         new InvokeBinder(
                             BinderState,
                             Arguments.Signature
                         ),
                         typeof(object),
+                        null,
                         args
                     ),
                     Arguments.Self.Restrictions.Merge(createExpr.Restrictions)

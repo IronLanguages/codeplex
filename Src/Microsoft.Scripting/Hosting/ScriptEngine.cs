@@ -82,7 +82,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns a new ObjectOperations object.  See the Operations property for why you might want to call this.
         /// </summary>
         public ObjectOperations CreateOperations() {
-            return new ObjectOperations(new DynamicOperations(GetCodeContext(null)));
+            return new ObjectOperations(new DynamicOperations(GetCodeContext(null)), this);
         }
 
         /// <summary>
@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Hosting {
         public ObjectOperations CreateOperations(ScriptScope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
 
-            return new ObjectOperations(new DynamicOperations(GetCodeContext(scope)));
+            return new ObjectOperations(new DynamicOperations(GetCodeContext(scope)), this);
         }
 
         #endregion
@@ -566,9 +566,9 @@ namespace Microsoft.Scripting.Hosting {
                 TokenizerService service = _language.GetService<TokenizerService>(ArrayUtils.Insert((object)_language, args));
                 return (service != null) ? (TService)(object)new TokenCategorizer(service) : null;
             }
-            if (typeof(TService) == typeof(ExceptionService)) {
-                ExceptionService service = _language.GetService<ExceptionService>();
-                return (service != null) ? (TService)(object)service :(TService)(object)new ExceptionService(_language);
+            if (typeof(TService) == typeof(ExceptionOperations)) {
+                ExceptionOperations service = _language.GetService<ExceptionOperations>();
+                return (service != null) ? (TService)(object)service : (TService)(object)new ExceptionOperations(_language);
             }
             return _language.GetService<TService>(args);
         }
@@ -611,7 +611,7 @@ namespace Microsoft.Scripting.Hosting {
         /// These methods return unique identifiers for this engine that map to this engine and its language.
         /// </summary>
         public string[] GetRegisteredIdentifiers() {
-            return _runtime.Manager.Configuration.GetLanguageIdentifiers(_language);
+            return _runtime.Manager.Configuration.GetLanguageNames(_language);
         }
 
         /// <summary>

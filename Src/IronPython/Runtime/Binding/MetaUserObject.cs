@@ -142,7 +142,7 @@ namespace IronPython.Runtime.Binding {
 
                 Expression callExpr = Ast.Call(
                     PythonOps.GetConversionHelper(returner, GetResultKind(convertToAction)),
-                    Ast.ActionExpression(
+                    Ast.Dynamic(
                         new InvokeBinder(
                             BinderState.GetBinderState(convertToAction),
                             new CallSignature(0)

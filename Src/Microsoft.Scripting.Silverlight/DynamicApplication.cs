@@ -22,6 +22,7 @@ using System.Windows.Resources;
 using System.Xml;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Silverlight {
 
@@ -145,6 +146,7 @@ namespace Microsoft.Scripting.Silverlight {
         private const string _DefaultEntryPoint = "app";
         private const string _LanguagesConfigFile = "languages.config";
         private ScriptRuntime _env;
+        private ScriptRuntimeSetup _runtimeSetup;
 
         internal static bool InUIThread {
             get { return _UIThreadId == Thread.CurrentThread.ManagedThreadId; }
@@ -210,11 +212,27 @@ namespace Microsoft.Scripting.Silverlight {
             ReportUnhandledErrors = true;
 
             ParseArguments(e.InitParams);
-            ScriptRuntimeSetup setup = ParseConfigurationFile();
+            
+            ScriptRuntimeSetup setup = TryParseConfigurationFile();
+            if (setup == null) {
+                setup = new ScriptRuntimeSetup().LoadFromAssemblies(GetManifestAssemblies());
+            }
 
             InitializeDLR(setup);
 
             StartMainProgram();
+        }
+
+        private IEnumerable<Assembly> GetManifestAssemblies() {
+            var result = new List<Assembly>();
+            foreach (var part in Deployment.Current.Parts) {
+                try {
+                    result.Add(BrowserPAL.PAL.LoadAssembly(Path.GetFileNameWithoutExtension(part.Source)));
+                } catch (Exception) {
+                    // skip
+                }
+            }
+            return result;
         }
 
         private void InitializeDLR(ScriptRuntimeSetup setup) {
@@ -223,6 +241,7 @@ namespace Microsoft.Scripting.Silverlight {
 
             setup.Options["SearchPaths"] = new string[] { String.Empty };
             
+            _runtimeSetup = setup;
             _env = new ScriptRuntime(setup);
 
             _env.LoadAssembly(GetType().Assembly); // to expose our helper APIs
@@ -326,13 +345,13 @@ namespace Microsoft.Scripting.Silverlight {
             }
         }
 
-        private ScriptRuntimeSetup ParseConfigurationFile() {
-            ScriptRuntimeSetup result = new ScriptRuntimeSetup(true);
+        private ScriptRuntimeSetup TryParseConfigurationFile() {
             Stream configFile = Download(_LanguagesConfigFile);
             if (configFile == null) {
-                return result;
+                return null;
             }
 
+            var result = new ScriptRuntimeSetup();
             try {
                 XmlReader reader = XmlReader.Create(configFile);
                 reader.MoveToContent();
@@ -364,7 +383,7 @@ namespace Microsoft.Scripting.Silverlight {
                     }
 
                     string[] extensions = exts.Split(',');
-                    result.LanguageSetups.Add(new AssemblyQualifiedTypeName(context, assembly), new LanguageSetup(String.Empty, extensions, extensions));
+                    result.LanguageSetups.Add(context + ", " + assembly, new LanguageSetup(String.Empty, extensions, extensions));
                 }
             } catch (ConfigFileException cfe) {
                 throw cfe;
@@ -392,6 +411,10 @@ namespace Microsoft.Scripting.Silverlight {
             get {
                 return _env;
             }
+        }
+
+        public ScriptRuntimeSetup RuntimeSetup {
+            get { return _runtimeSetup; }
         }
     }
 }

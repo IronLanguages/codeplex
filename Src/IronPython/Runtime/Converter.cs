@@ -35,28 +35,28 @@ namespace IronPython.Runtime {
     public static partial class Converter {
         #region Conversion Sites
 
-        private static readonly CallSite<DynamicSiteTarget<object, int>> _intSite = MakeExplicitConvertSite<int>();
-        private static readonly CallSite<DynamicSiteTarget<object, double>> _doubleSite = MakeExplicitConvertSite<double>();
-        private static readonly CallSite<DynamicSiteTarget<object, Complex64>> _complexSite = MakeExplicitConvertSite<Complex64>();
-        private static readonly CallSite<DynamicSiteTarget<object, BigInteger>> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
-        private static readonly CallSite<DynamicSiteTarget<object, string>> _stringSite = MakeExplicitConvertSite<string>();
-        private static readonly CallSite<DynamicSiteTarget<object, bool>> _boolSite = MakeExplicitConvertSite<bool>();
-        private static readonly CallSite<DynamicSiteTarget<object, char>> _charSite = MakeImplicitConvertSite<char>();
-        private static readonly CallSite<DynamicSiteTarget<object, char>> _explicitCharSite = MakeExplicitConvertSite<char>();
-        private static readonly CallSite<DynamicSiteTarget<object, IEnumerable>> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
-        private static readonly CallSite<DynamicSiteTarget<object, IEnumerator>> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
-        private static readonly Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>> _siteDict = new Dictionary<Type, CallSite<DynamicSiteTarget<object, object>>>();
-        private static readonly CallSite<DynamicSiteTarget<object, byte>> _byteSite = MakeExplicitConvertSite<byte>();
-        private static readonly CallSite<DynamicSiteTarget<object, sbyte>> _sbyteSite = MakeExplicitConvertSite<sbyte>();
-        private static readonly CallSite<DynamicSiteTarget<object, Int16>> _int16Site = MakeExplicitConvertSite<Int16>();
-        private static readonly CallSite<DynamicSiteTarget<object, UInt16>> _uint16Site = MakeExplicitConvertSite<UInt16>();
-        private static readonly CallSite<DynamicSiteTarget<object, UInt32>> _uint32Site = MakeExplicitConvertSite<UInt32>();
-        private static readonly CallSite<DynamicSiteTarget<object, Int64>> _int64Site = MakeExplicitConvertSite<Int64>();
-        private static readonly CallSite<DynamicSiteTarget<object, UInt64>> _uint64Site = MakeExplicitConvertSite<UInt64>();
-        private static readonly CallSite<DynamicSiteTarget<object, decimal>> _decimalSite = MakeExplicitConvertSite<decimal>();
-        private static readonly CallSite<DynamicSiteTarget<object, float>> _floatSite = MakeExplicitConvertSite<float>();
+        private static readonly CallSite<Func<CallSite, object, int>> _intSite = MakeExplicitConvertSite<int>();
+        private static readonly CallSite<Func<CallSite, object, double>> _doubleSite = MakeExplicitConvertSite<double>();
+        private static readonly CallSite<Func<CallSite, object, Complex64>> _complexSite = MakeExplicitConvertSite<Complex64>();
+        private static readonly CallSite<Func<CallSite, object, BigInteger>> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
+        private static readonly CallSite<Func<CallSite, object, string>> _stringSite = MakeExplicitConvertSite<string>();
+        private static readonly CallSite<Func<CallSite, object, bool>> _boolSite = MakeExplicitConvertSite<bool>();
+        private static readonly CallSite<Func<CallSite, object, char>> _charSite = MakeImplicitConvertSite<char>();
+        private static readonly CallSite<Func<CallSite, object, char>> _explicitCharSite = MakeExplicitConvertSite<char>();
+        private static readonly CallSite<Func<CallSite, object, IEnumerable>> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
+        private static readonly CallSite<Func<CallSite, object, IEnumerator>> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
+        private static readonly Dictionary<Type, CallSite<Func<CallSite, object, object>>> _siteDict = new Dictionary<Type, CallSite<Func<CallSite, object, object>>>();
+        private static readonly CallSite<Func<CallSite, object, byte>> _byteSite = MakeExplicitConvertSite<byte>();
+        private static readonly CallSite<Func<CallSite, object, sbyte>> _sbyteSite = MakeExplicitConvertSite<sbyte>();
+        private static readonly CallSite<Func<CallSite, object, Int16>> _int16Site = MakeExplicitConvertSite<Int16>();
+        private static readonly CallSite<Func<CallSite, object, UInt16>> _uint16Site = MakeExplicitConvertSite<UInt16>();
+        private static readonly CallSite<Func<CallSite, object, UInt32>> _uint32Site = MakeExplicitConvertSite<UInt32>();
+        private static readonly CallSite<Func<CallSite, object, Int64>> _int64Site = MakeExplicitConvertSite<Int64>();
+        private static readonly CallSite<Func<CallSite, object, UInt64>> _uint64Site = MakeExplicitConvertSite<UInt64>();
+        private static readonly CallSite<Func<CallSite, object, decimal>> _decimalSite = MakeExplicitConvertSite<decimal>();
+        private static readonly CallSite<Func<CallSite, object, float>> _floatSite = MakeExplicitConvertSite<float>();
 
-        private static readonly CallSite<DynamicSiteTarget<object, object>> 
+        private static readonly CallSite<Func<CallSite, object, object>> 
             _tryByteSite       = MakeExplicitTrySite<Byte>(),
             _trySByteSite      = MakeExplicitTrySite<SByte>(),
             _tryInt16Site      = MakeExplicitTrySite<Int16>(),
@@ -71,16 +71,16 @@ namespace IronPython.Runtime {
             _tryComplex64Site  = MakeExplicitTrySite<Complex64>(),
             _tryStringSite     = MakeExplicitTrySite<String>();
 
-        private static CallSite<DynamicSiteTarget<object, T>> MakeImplicitConvertSite<T>() {
+        private static CallSite<Func<CallSite, object, T>> MakeImplicitConvertSite<T>() {
             return MakeConvertSite<T>(ConversionResultKind.ImplicitCast);
         }
 
-        private static CallSite<DynamicSiteTarget<object, T>> MakeExplicitConvertSite<T>() {
+        private static CallSite<Func<CallSite, object, T>> MakeExplicitConvertSite<T>() {
             return MakeConvertSite<T>(ConversionResultKind.ExplicitCast);
         }
 
-        private static CallSite<DynamicSiteTarget<object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
-            return CallSite<DynamicSiteTarget<object, T>>.Create(
+        private static CallSite<Func<CallSite, object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
+            return CallSite<Func<CallSite, object, T>>.Create(
                 new ConversionBinder(
                     DefaultContext.DefaultPythonContext.DefaultBinderState,
                     typeof(T),
@@ -89,12 +89,12 @@ namespace IronPython.Runtime {
             );
         }
 
-        private static CallSite<DynamicSiteTarget<object, object>> MakeExplicitTrySite<T>() {
+        private static CallSite<Func<CallSite, object, object>> MakeExplicitTrySite<T>() {
             return MakeTrySite<T>(ConversionResultKind.ExplicitTry);
         }
 
-        private static CallSite<DynamicSiteTarget<object, object>> MakeTrySite<T>(ConversionResultKind kind) {
-            return CallSite<DynamicSiteTarget<object, object>>.Create(
+        private static CallSite<Func<CallSite, object, object>> MakeTrySite<T>(ConversionResultKind kind) {
+            return CallSite<Func<CallSite, object, object>>.Create(
                 new ConversionBinder(
                     DefaultContext.DefaultPythonContext.DefaultBinderState,
                     typeof(T),
@@ -280,10 +280,10 @@ namespace IronPython.Runtime {
         }
 
         internal static object Convert(object value, Type to) {
-            CallSite<DynamicSiteTarget<object, object>> site;
+            CallSite<Func<CallSite, object, object>> site;
             lock (_siteDict) {
                 if (!_siteDict.TryGetValue(to, out site)) {
-                    _siteDict[to] = site = CallSite<DynamicSiteTarget<object, object>>.Create(
+                    _siteDict[to] = site = CallSite<Func<CallSite, object, object>>.Create(
                         new ConversionBinder(
                             DefaultContext.DefaultPythonContext.DefaultBinderState, 
                             to, 

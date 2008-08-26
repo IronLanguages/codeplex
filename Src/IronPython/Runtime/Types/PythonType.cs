@@ -65,10 +65,10 @@ namespace IronPython.Runtime.Types {
         private WeakRefTracker _weakrefTracker;             // storage for Python style weak references
         private OldClass _oldClass;                         // the associated OldClass or null for new-style types  
         private int _originalSlotCount;                     // the number of slots when the type was created
-        private CallSite<DynamicSiteTarget<CodeContext, object, object>> _newDirSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object[], object>> _newCtorSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, string, object>> _newGetattributeSite;
-        private CallSite<DynamicSiteTarget<CodeContext, object, object, string, object, object>> _newSetattrSite;
+        private CallSite<Func<CallSite, CodeContext, object, object>> _newDirSite;
+        private CallSite<Func<CallSite, CodeContext, object, object[], object>> _newCtorSite;
+        private CallSite<Func<CallSite, CodeContext, object, string, object>> _newGetattributeSite;
+        private CallSite<Func<CallSite, CodeContext, object, object, string, object, object>> _newSetattrSite;
 
         [MultiRuntimeAware]
         private static int MasterVersion = 1;
@@ -537,7 +537,7 @@ namespace IronPython.Runtime.Types {
             if (_newCtorSite == null) {
                 Interlocked.CompareExchange(
                     ref _newCtorSite,
-                    CallSite<DynamicSiteTarget<CodeContext, object, object[], object>>.Create(
+                    CallSite<Func<CallSite, CodeContext, object, object[], object>>.Create(
                         new InvokeBinder(
                             PythonContext.GetContext(context).DefaultBinderState,
                             new CallSignature(new ArgumentInfo(ArgumentKind.List))
@@ -1035,7 +1035,7 @@ namespace IronPython.Runtime.Types {
             if (_newGetattributeSite == null) {
                 Interlocked.CompareExchange(
                     ref _newGetattributeSite,
-                    CallSite<DynamicSiteTarget<CodeContext, object, string, object>>.Create(
+                    CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(
                         new InvokeBinder(
                             PythonContext.GetContext(context).DefaultBinderState,
                             new CallSignature(1)
@@ -1121,7 +1121,7 @@ namespace IronPython.Runtime.Types {
                 if (_newSetattrSite == null) {
                     Interlocked.CompareExchange(
                         ref _newSetattrSite,
-                        CallSite<DynamicSiteTarget<CodeContext, object, object, string, object, object>>.Create(
+                        CallSite<Func<CallSite, CodeContext, object, object, string, object, object>>.Create(
                             new InvokeBinder(
                                 PythonContext.GetContext(context).DefaultBinderState,
                                 new CallSignature(4)
@@ -1268,7 +1268,7 @@ namespace IronPython.Runtime.Types {
             if (_newDirSite == null) {
                 Interlocked.CompareExchange(
                     ref _newDirSite,
-                    CallSite<DynamicSiteTarget<CodeContext, object, object>>.Create(
+                    CallSite<Func<CallSite, CodeContext, object, object>>.Create(
                         new InvokeBinder(
                             PythonContext.GetContext(context).DefaultBinderState,
                             new CallSignature(0)
