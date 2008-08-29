@@ -16,21 +16,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
-    class SiteLocalStorageBuilder : ArgBuilder {
-        private Type _type;
+    public sealed class SiteLocalStorageBuilder : ArgBuilder {
+        private readonly Type _type;
 
+        public override int Priority {
+            get { return -1; }
+        }
+                
         public SiteLocalStorageBuilder(Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
             _type = type;
         }
 
         internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
             return Expression.Constant(Activator.CreateInstance(_type));
-        }
-
-        public override int Priority {
-            get { return -1; }
         }
     }
 }

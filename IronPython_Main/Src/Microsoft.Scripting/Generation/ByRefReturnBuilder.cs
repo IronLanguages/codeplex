@@ -23,12 +23,10 @@ namespace Microsoft.Scripting.Generation {
 
     class ByRefReturnBuilder : ReturnBuilder {
         private IList<int> _returnArgs;
-        private ActionBinder _binder;
 
-        public ByRefReturnBuilder(ActionBinder binder, IList<int> returnArgs)
+        public ByRefReturnBuilder(IList<int> returnArgs)
             : base(typeof(object)) {
             _returnArgs = returnArgs;
-            _binder = binder;
         }
 
         internal override Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
@@ -56,31 +54,7 @@ namespace Microsoft.Scripting.Generation {
                 retArray = Ast.Comma(ret, retArray);
             }
 
-            // TODO: BAD !!!
-            return Ast.Call(
-                Ast.Property(
-                    Ast.Property(
-                        context.ContextExpression,
-                        typeof(CodeContext).GetProperty("LanguageContext")
-                    ),
-                    typeof(LanguageContext).GetProperty("Binder")
-                ),
-                typeof(ActionBinder).GetMethod("GetByRefArray"),
-                retArray
-            );
-        }
-
-        public override object Build(CodeContext context, object[] args, object[] parameters, object ret) {
-            if (_returnArgs.Count == 1) {
-                return GetValue(args, ret, _returnArgs[0]);
-            } else {
-                object[] retValues = new object[_returnArgs.Count];
-                int rIndex = 0;
-                foreach (int index in _returnArgs) {
-                    retValues[rIndex++] = GetValue(args, ret, index);
-                }
-                return _binder.GetByRefArray(retValues);
-            }
+            return context.Binder.GetByRefArrayExpression(retArray);
         }
 
         private static object GetValue(object[] args, object ret, int index) {

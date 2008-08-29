@@ -65,12 +65,6 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal bool CanConvert(Type fromType, Type toType, NarrowingLevel level) {
-            Assert.NotNull(fromType, toType);
-
-            return _actionBinder.CanConvertFrom(fromType, toType, level);
-        }
-
         internal List<VariableExpression> Temps {
             get {
                 return _temps;

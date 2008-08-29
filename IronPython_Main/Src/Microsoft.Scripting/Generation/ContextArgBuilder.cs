@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// ArgBuilder which provides the CodeContext parameter to a method.
     /// </summary>
-    class ContextArgBuilder : ArgBuilder {
+    public sealed class ContextArgBuilder : ArgBuilder {
         public ContextArgBuilder() { }
 
         public override int Priority {

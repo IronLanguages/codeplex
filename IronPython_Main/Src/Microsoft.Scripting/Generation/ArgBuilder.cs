@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
-    abstract class ArgBuilder {
+    public abstract class ArgBuilder {
         public abstract int Priority {
             get;
         }
@@ -38,6 +38,7 @@ namespace Microsoft.Scripting.Generation {
         /// Returns the type required for the argument or null if the ArgBuilder
         /// does not consume a type.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")]
         public virtual Type Type {
             get {
                 return null;

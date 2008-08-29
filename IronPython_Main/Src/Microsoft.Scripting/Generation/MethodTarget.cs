@@ -312,8 +312,8 @@ namespace Microsoft.Scripting.Generation {
                         // consume all the kw arguments
                         kwIndex = newArgBuilders.Count;
                     } else {
-                        // consume the next argument
-                        newArgBuilders.Add(new SimpleArgBuilder(curArg++, sab.Type));
+                        // consume the argument, adjust its position:
+                        newArgBuilders.Add(sab.Copy(curArg++));
                     }
                 } else {
                     // CodeContext, null, default, etc...  we don't consume an 

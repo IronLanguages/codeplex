@@ -21,6 +21,7 @@ using System.Scripting;
 using System.Security.Permissions;
 using System.Text;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -113,7 +114,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Execute the ScriptScope.
+        /// Executes the code in the specified scope.
         /// Returns an object that is the resulting value of running the code.  
         /// 
         /// When the ScriptSource is a file or statement, the engine decides what is 
@@ -128,27 +129,44 @@ namespace Microsoft.Scripting.Hosting {
             return _unit.Execute(scope.Scope, ErrorSink.Default);
         }
 
-        /// <remarks>
-        /// Converts the result of execution to specified type using language specific conversions.
-        /// </remarks>
+        /// <summary>
+        /// Executes the code in an empty scope.
+        /// </summary>
+        public object Execute() {
+            return _unit.Execute(new Scope(), ErrorSink.Default);
+        }
+
+        /// <summary>
+        /// Executes the code in a specified scope and converts the result to the specified type.
+        /// The conversion is language specific.
+        /// </summary>
         public T Execute<T>(ScriptScope scope) {
             return _engine.Operations.ConvertTo<T>(Execute(scope));
         }
 
+        /// <summary>
+        /// Executes the code in an empty scope and converts the result to the specified type.
+        /// The conversion is language specific.
+        /// </summary>
+        public T Execute<T>() {
+            return _engine.Operations.ConvertTo<T>(Execute());
+        }
+
 #if !SILVERLIGHT
         /// <summary>
-        /// Execute the code in the specified ScriptScope and return a result.
-        /// 
-        /// ExecuteAndWrap returns an ObjectHandle wrapping the resulting value 
-        /// of running the code.  
-        /// 
-        /// When the ScriptSource is a file or statement, the engine decides what is 
-        /// an appropriate value to return.  Some languages return the value produced 
-        /// by the last expression or statement, but languages that are not expression 
-        /// based may return null.
+        /// Executes the code in the specified scope and return a result.
+        /// Returns an ObjectHandle wrapping the resulting value of running the code.  
         /// </summary>
         public ObjectHandle ExecuteAndWrap(ScriptScope scope) {
             return new ObjectHandle(Execute(scope));
+        }
+
+        /// <summary>
+        /// Executes the code in an empty scope.
+        /// Returns an ObjectHandle wrapping the resulting value of running the code.  
+        /// </summary>
+        public ObjectHandle ExecuteAndWrap() {
+            return new ObjectHandle(Execute());
         }
 #endif
 

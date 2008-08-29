@@ -28,11 +28,7 @@ namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Provides language specific facilities which are typicalled called by the runtime.
     /// </summary>
-    public abstract class LanguageContext
-#if !SILVERLIGHT
-     : ICloneable
-#endif
- {
+    public abstract class LanguageContext {
         private readonly ScriptDomainManager _domainManager;
         private static readonly ModuleGlobalCache _noCache = new ModuleGlobalCache(ModuleGlobalCache.NotCaching);
         private ActionBinder _binder;
@@ -239,14 +235,6 @@ namespace Microsoft.Scripting.Runtime {
             return _noCache;
         }
 
-        #region ICloneable Members
-
-        public virtual object Clone() {
-            return MemberwiseClone();
-        }
-
-        #endregion
-
         /// <summary>
         /// Calls the function with given arguments
         /// </summary>
@@ -327,12 +315,6 @@ namespace Microsoft.Scripting.Runtime {
 
         #region ScriptEngine API
 
-        public virtual string DisplayName {
-            get {
-                return "unknown";
-            }
-        }
-
         public virtual Version LanguageVersion {
             get {
                 return new Version(0, 0);
@@ -379,9 +361,9 @@ namespace Microsoft.Scripting.Runtime {
             return exception.ToString();
         }
 
-        public virtual Microsoft.Scripting.EngineOptions Options {
+        public virtual Microsoft.Scripting.LanguageOptions Options {
             get {
-                return new Microsoft.Scripting.EngineOptions();
+                return new Microsoft.Scripting.LanguageOptions();
             }
         }
 

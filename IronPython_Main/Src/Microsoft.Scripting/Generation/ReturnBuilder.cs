@@ -34,18 +34,6 @@ namespace Microsoft.Scripting.Generation {
             this._returnType = returnType;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="args">The physical arguments being passed to the function</param>
-        /// <param name="parameters">The arguments the user provided to call the function</param>
-        /// <param name="ret">The return value of the function</param>
-        /// <returns></returns>
-        public virtual object Build(CodeContext context, object[] args, object[] parameters, object ret) {
-            return ConvertToObject(ret);
-        }
-
         internal virtual Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             return ret;
         }

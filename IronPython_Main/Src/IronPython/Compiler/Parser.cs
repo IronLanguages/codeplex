@@ -74,11 +74,11 @@ namespace IronPython.Compiler {
             Reset(tokenizer.SourceUnit, languageFeatures);
         }
 
-        public static Parser CreateParser(CompilerContext context, PythonEngineOptions options) {
+        public static Parser CreateParser(CompilerContext context, PythonOptions options) {
             return CreateParser(context, options, false);
         }
 
-        public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
+        public static Parser CreateParser(CompilerContext context, PythonOptions options, bool verbatim) {
             ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.RequiresNotNull(options, "options");
 

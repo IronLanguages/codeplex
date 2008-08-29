@@ -25,6 +25,12 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
+    public enum Candidate {
+        None = 0,
+        One = +1,
+        Two = -1,
+    }
+        
     /// <summary>
     /// Provides binding semantics for a language.  This include conversions as well as support
     /// for producing rules for actions.  These optimized rules are used for calling methods, 
@@ -89,13 +95,17 @@ namespace Microsoft.Scripting.Actions {
 
         /// <summary>
         /// Determines if a conversion exists from fromType to toType at the specified narrowing level.
+        /// toNotNullable is true if the target variable doesn't allow null values.
         /// </summary>
-        public abstract bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel level);
+        public abstract bool CanConvertFrom(Type fromType, Type toType, bool toNotNullable, NarrowingLevel level);
 
         /// <summary>
         /// Selects the best (of two) candidates for conversion from actualType
+        /// +1 ... candidateOne
+        /// -1 ... candidateTwo
+        /// null ... fallback
         /// </summary>
-        public virtual Type SelectBestConversionFor(Type actualType, Type candidateOne, Type candidateTwo, NarrowingLevel level) {
+        public virtual Candidate? SelectBestConversionFor(Type actualType, Type candidateOne, bool oneNotNull, Type candidateTwo, bool twoNotNull, NarrowingLevel level) {
             return null;
         }
 
@@ -150,6 +160,13 @@ namespace Microsoft.Scripting.Actions {
         /// value if the method does not return void.</param>
         public virtual object GetByRefArray(object[] args) {
             return args;
+        }
+
+        /// <summary>
+        /// Gets an expression that evaluates to the result of GetByRefArray operation.
+        /// </summary>
+        public virtual Expression GetByRefArrayExpression(Expression argumentArrayExpression) {
+            return argumentArrayExpression;
         }
 
         /// <summary>
@@ -458,7 +475,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
-        /// Builds an expressoin for a call to the provided method using the given expressions.  If the
+        /// Builds an expression for a call to the provided method using the given expressions.  If the
         /// method is not static the first parameter is used for the instance.
         /// 
         /// Parameters are converted using the binder's conversion rules.

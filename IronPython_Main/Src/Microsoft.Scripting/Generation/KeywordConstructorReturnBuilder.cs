@@ -44,22 +44,6 @@ namespace Microsoft.Scripting.Generation {
             _privateBinding = privateBinding;
         }
 
-        public override object Build(CodeContext context, object[] args, object[] parameters, object ret) {
-            for (int i = 0; i < _indexesUsed.Length; i++) {
-                object value = parameters[parameters.Length - _kwArgCount + _indexesUsed[i]];
-                switch(_membersSet[i].MemberType) {
-                    case MemberTypes.Field:
-                        ((FieldInfo)_membersSet[i]).SetValue(ret, value);
-                        break;
-                    case MemberTypes.Property:
-                        ((PropertyInfo)_membersSet[i]).SetValue(ret, value, ArrayUtils.EmptyObjects);
-                        break;
-                }
-            }
-
-            return _builder.Build(context, args, parameters, ret);
-        }
-
         internal override Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             List<Expression> sets = new List<Expression>();
 

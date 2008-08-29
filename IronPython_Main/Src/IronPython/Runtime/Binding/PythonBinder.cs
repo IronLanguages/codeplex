@@ -212,7 +212,7 @@ namespace IronPython.Runtime.Binding {
             return Converter.Convert(obj, toType);
         }
 
-        public override bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel level) {
+        public override bool CanConvertFrom(Type fromType, Type toType, bool toNotNullable, NarrowingLevel level) {
             return Converter.CanConvertFrom(fromType, toType, level);
         }
 
@@ -222,6 +222,10 @@ namespace IronPython.Runtime.Binding {
 
         public override object GetByRefArray(object[] args) {
             return PythonTuple.MakeTuple(args);
+        }
+
+        public override Expression GetByRefArrayExpression(Expression argumentArrayExpression) {
+            return Ast.Call(typeof(PythonOps).GetMethod("MakeTuple"), argumentArrayExpression);
         }
 
         public override ErrorInfo MakeConversionError(Type toType, Expression value) {

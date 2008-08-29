@@ -343,7 +343,7 @@ namespace Microsoft.Scripting.Actions {
 
         private bool MakeDefaultMemberRule(Operators oper) {
             if (_types[0].IsArray) {
-                if (Binder.CanConvertFrom(_types[1], typeof(int), NarrowingLevel.All)) {
+                if (Binder.CanConvertFrom(_types[1], typeof(int), false, NarrowingLevel.All)) {
                     if(oper == Operators.GetItem) {
                         _rule.Target = _rule.MakeReturn(Binder,
                             Ast.ArrayAccess(

@@ -21,10 +21,19 @@ using System.Reflection;
 namespace Microsoft.Scripting.Hosting {
     [Serializable]
     public sealed class LanguageSetup {
+        private string _typeName;
         private string _displayName;
-        private IList<string> _names;
-        private IList<string> _fileExtensions;
-        private IDictionary<string, object> _options;
+        private readonly List<string> _names;
+        private readonly List<string> _fileExtensions;
+        private readonly Dictionary<string, object> _options;
+
+        public string TypeName {
+            get { return _typeName; }
+            set {
+                ContractUtils.RequiresNotEmpty(value, "value");
+                _typeName = value;
+            }
+        }
 
         public string DisplayName {
             get { return _displayName; }
@@ -37,71 +46,39 @@ namespace Microsoft.Scripting.Hosting {
         /// <remarks>
         /// Case-insensitive language names.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IList<string> Names {
-            get {
-                if (_names == null) {
-                    _names = new List<string>();
-                }
-                return _names;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _names = value;
-            }
+        public List<string> Names {
+            get { return _names; }
         }
 
         /// <remarks>
         /// Case-insensitive file extension, optionally starts with a dot.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IList<string> FileExtensions {
-            get {
-                if (_fileExtensions == null) {
-                    _fileExtensions = new List<string>();
-                }
-                return _fileExtensions; 
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _fileExtensions = value;
-            }
+        public List<string> FileExtensions {
+            get { return _fileExtensions; }
         }
 
         /// <remarks>
         /// Option names are case-sensitive.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IDictionary<string, object> Options {
-            get {
-                if (_options == null) {
-                    _options = new Dictionary<string, object>();
-                }
-                return _options;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _options = value;
-            }
+        public Dictionary<string, object> Options {
+            get { return _options; }
         }
 
-        public bool HasOptions {
-            get { return _options != null; }
+        public LanguageSetup(string typeName, string displayName)
+            : this(typeName, displayName, ArrayUtils.EmptyStrings, ArrayUtils.EmptyStrings) {
         }
 
-        public LanguageSetup(string displayName) {
-            ContractUtils.RequiresNotNull(displayName, "displayName");
-            _displayName = displayName;
-        }
-
-        public LanguageSetup(string displayName, IList<string> names, IList<string> fileExtensions) {
+        public LanguageSetup(string typeName, string displayName, IEnumerable<string> names, IEnumerable<string> fileExtensions) {
+            ContractUtils.RequiresNotEmpty(typeName, "typeName");
             ContractUtils.RequiresNotNull(displayName, "displayName");
             ContractUtils.RequiresNotNull(names, "names");
             ContractUtils.RequiresNotNull(fileExtensions, "fileExtensions");
 
+            _typeName = typeName;
             _displayName = displayName;
-            _names = names;
-            _fileExtensions = fileExtensions;
+            _names = new List<string>(names);
+            _fileExtensions = new List<string>(fileExtensions);
+            _options = new Dictionary<string, object>();
         }
     }
 }

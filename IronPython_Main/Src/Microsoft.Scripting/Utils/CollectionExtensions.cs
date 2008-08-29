@@ -143,15 +143,20 @@ namespace Microsoft.Scripting.Utils {
             return true;
         }
 
-#if !SILVERLIGHT // ICloneable
-        internal static T Copy<T>(this T obj) where T : ICloneable {
-            return (T)obj.Clone();
+        internal static TSource Aggregate<TSource>(this IEnumerable<TSource> source, Func<TSource, TSource, TSource> func) {
+            using (IEnumerator<TSource> e = source.GetEnumerator()) {
+                if (!e.MoveNext()) throw new ArgumentException("Collection is empty", "source");
+                TSource result = e.Current;
+                while (e.MoveNext()) result = func(result, e.Current);
+                return result;
+            }
         }
-#else
-        internal static T[] Copy<T>(this T[] obj) {
-            return (T[])obj.Clone();
+
+        internal static TAccumulate Aggregate<TSource, TAccumulate>(this IEnumerable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> func) {
+            TAccumulate result = seed;
+            foreach (TSource element in source) result = func(result, element);
+            return result;
         }
-#endif
 
         internal static T[] RemoveFirst<T>(this T[] array) {
             T[] result = new T[array.Length - 1];

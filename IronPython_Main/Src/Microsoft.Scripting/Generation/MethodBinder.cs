@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Generation {
     /// allows consumers to get the flattened list of required parameters for the call.  MethodCandidates
     /// are not exposed and are an internal implementation detail of the MethodBinder.
     /// </summary>
-    public class MethodBinder {
+    public sealed class MethodBinder {
         private readonly string _name;                           // the name of the method (possibly language specific name which isn't the same as the method base)
         private readonly Dictionary<int, TargetSet> _targetSets; // the methods as they map from # of arguments -> the possible TargetSet's.
         private readonly SymbolId[] _kwArgs;                     // the names of the keyword arguments being provided
@@ -75,6 +75,8 @@ namespace Microsoft.Scripting.Generation {
         #region Constructors
 
         private MethodBinder(ActionBinder binder, string name, IList<MethodBase> methods, SymbolId[] kwArgs, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNullItems(methods, "methods");
             ContractUtils.RequiresNotNull(kwArgs, "kwArgs");
 
@@ -438,21 +440,10 @@ namespace Microsoft.Scripting.Generation {
             // shift any arguments forward that need to be...
             int curArg = CompilerHelpers.IsStatic(method) ? 0 : 1;
             for (int i = 0; i < defaultArgBuilders.Count; i++) {
-                if (defaultArgBuilders[i] is DefaultArgBuilder ||
-                    defaultArgBuilders[i] is ContextArgBuilder ||
-                    defaultArgBuilders[i] is KeywordArgBuilder) {
-                    continue;
+                SimpleArgBuilder sab = defaultArgBuilders[i] as SimpleArgBuilder;
+                if (sab != null) {
+                    defaultArgBuilders[i] = sab.Copy(curArg++);
                 }
-
-                ReferenceArgBuilder rab = defaultArgBuilders[i] as ReferenceArgBuilder;
-                if (rab != null) {
-                    defaultArgBuilders[i] = new ReferenceArgBuilder(curArg++, rab.Type);
-                    continue;
-                }
-
-                SimpleArgBuilder sab = (SimpleArgBuilder)defaultArgBuilders[i];
-                Debug.Assert(sab.GetType() == typeof(SimpleArgBuilder));
-                defaultArgBuilders[i] = new SimpleArgBuilder(curArg++, sab.Type, sab.IsParamsArray, sab.IsParamsDict);
             }
 
             return MakeMethodCandidate(method, necessaryParams, instanceBuilder, defaultArgBuilders, returnBuilder);
@@ -525,7 +516,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             ReturnBuilder returnBuilder = MakeKeywordReturnBuilder(
-                new ByRefReturnBuilder(_binder, returnArgs),
+                new ByRefReturnBuilder(returnArgs),
                 method.GetParameters(),
                 parameters,
                 _binder.AllowKeywordArgumentSetting(method));

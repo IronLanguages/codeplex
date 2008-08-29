@@ -429,10 +429,7 @@ namespace System.Scripting.Com {
                         continue;
                     }
 
-                    // TODO: prefixing events is a temporary workaround to allow dsitinguising 
-                    // between methods and events in IntelliSense.
-                    // Ideally, we should solve this problem by passing out flags.
-                    string name = ComRuntimeHelpers.GetNameOfMethod(sourceTypeInfo, funcDesc.memid, "Event_");
+                    string name = ComRuntimeHelpers.GetNameOfMethod(sourceTypeInfo, funcDesc.memid);
 
                     // Sometimes coclass has multiple source interfaces. Usually this is caused by
                     // adding new events and putting them on new interfaces while keeping the

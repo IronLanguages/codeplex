@@ -23,7 +23,9 @@ using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 
+#if SILVERLIGHT
 [assembly: DynamicLanguageProvider(typeof(PythonContext), PythonContext.IronPythonDisplayName, PythonContext.IronPythonNames, PythonContext.IronPythonFileExtensions)]
+#endif
 
 namespace IronPython.Hosting {
 
@@ -210,7 +212,7 @@ namespace IronPython.Hosting {
 
         public static ScriptRuntimeSetup/*!*/ CreateRuntimeSetup(IDictionary<string, object> options) {
             ScriptRuntimeSetup setup = new ScriptRuntimeSetup();
-            setup.LanguageSetups[typeof(PythonContext).AssemblyQualifiedName] = CreateLanguageSetup(options);
+            setup.LanguageSetups.Add(CreateLanguageSetup(options));
 
             if (options != null) {
                 object value;
@@ -232,13 +234,16 @@ namespace IronPython.Hosting {
 
         public static LanguageSetup/*!*/ CreateLanguageSetup(IDictionary<string, object> options) {
             var setup = new LanguageSetup(
+                typeof(PythonContext).AssemblyQualifiedName,
                 PythonContext.IronPythonDisplayName,
                 PythonContext.IronPythonNames.Split(';'),
                 PythonContext.IronPythonFileExtensions.Split(';')
             );
 
             if (options != null) {
-                setup.Options = options;
+                foreach (var entry in options) {
+                    setup.Options.Add(entry.Key, entry.Value);
+                }
             }
 
             return setup;

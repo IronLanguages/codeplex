@@ -28,27 +28,23 @@ namespace Microsoft.Scripting.Hosting {
         private object[] _hostArguments;
 
         // languages available in the runtime: 
-        private readonly Dictionary<string, LanguageSetup> _languageSetups;
+        private readonly List<LanguageSetup> _languageSetups;
 
         // DLR options:
         private bool _debugMode;
         private bool _privateBinding;
 
         // common language options:
-        private IDictionary<string, object> _options;
+        private Dictionary<string, object> _options;
 
         public ScriptRuntimeSetup() {
-            _languageSetups = new Dictionary<string, LanguageSetup>();
+            _languageSetups = new List<LanguageSetup>();
+            _options = new Dictionary<string, object>();
             _hostType = typeof(ScriptHost);
             _hostArguments = ArrayUtils.EmptyObjects;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "addWellKnownLanguages")]
-        [Obsolete(@"Use ScriptRuntimeSetup() overload and fill it in manually or ScriptRuntimeSetup.ReadConfiguration() factory load setup from .config files.", true)]
-        public ScriptRuntimeSetup(bool addWellKnownLanguages) {
-        }
-
-        public Dictionary<string, LanguageSetup> LanguageSetups {
+        public IList<LanguageSetup> LanguageSetups {
             get { return _languageSetups; }
         }
 
@@ -70,22 +66,8 @@ namespace Microsoft.Scripting.Hosting {
         /// <remarks>
         /// Option names are case-sensitive.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IDictionary<string, object> Options {
-            get {
-                if (_options == null) {
-                    _options = new Dictionary<string, object>();
-                }
-                return _options;
-            }
-            set {
-                ContractUtils.RequiresNotNull(value, "value");
-                _options = value;
-            }
-        }
-
-        public bool HasOptions {
-            get { return _options != null; }
+        public Dictionary<string, object> Options {
+            get { return _options; }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
@@ -99,90 +81,16 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public bool TryGetLanguageProviderByFileExtension(string fileExtension, out string providerAssemblyQualifiedTypeName) {
-            if (!fileExtension.StartsWith(".")) {
-                fileExtension = "." + fileExtension;
-            }
-
-            foreach (var entry in _languageSetups) {
-                if (IndexOf(entry.Value.FileExtensions, fileExtension, DlrConfiguration.FileExtensionComparer) != -1) {
-                    providerAssemblyQualifiedTypeName = entry.Key;
-                    return true;
-                }
-            }
-
-            providerAssemblyQualifiedTypeName = null;
-            return false;
-        }
-
-        public string GetLanguageProviderByFileExtension(string fileExtension) {
-            string provider;
-            if (!TryGetLanguageProviderByFileExtension(fileExtension, out provider)) {
-                throw new ArgumentException(String.Format("Unknown language extension: '{0}'", fileExtension));
-            }
-            return provider;
-        }
-
-        public bool TryGetLanguageProviderByName(string languageName, out string providerAssemblyQualifiedTypeName) {
-            foreach (var entry in _languageSetups) {
-                if (IndexOf(entry.Value.Names, languageName, DlrConfiguration.LanguageNameComparer) != -1) {
-                    providerAssemblyQualifiedTypeName = entry.Key;
-                    return true;
-                }
-            }
-            providerAssemblyQualifiedTypeName = null;
-            return false;
-        }
-
-        public string GetLanguageProviderByName(string languageName) {
-            string provider;
-            if (!TryGetLanguageProviderByName(languageName, out provider)) {
-                throw new ArgumentException(String.Format("Unknown language name: '{0}'", languageName));
-            }
-            return provider;
-        }
-
-        private static int IndexOf(IList<string> list, string value, StringComparer comparer) {
-            for (int i = 0; i < list.Count; i++) {
-                if (comparer.Compare(list[i], value) == 0) {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
         internal DlrConfiguration ToConfiguration() {
-            var config = new DlrConfiguration(
-                _debugMode,
-                _privateBinding
-            );
+            var config = new DlrConfiguration(_debugMode, _privateBinding, _options);
 
-            foreach (var entry in _languageSetups) {
-
-                Dictionary<string, object> options;
-                if (HasOptions || entry.Value.HasOptions) {
-                    // add global language options first, they can be rewritten by language specific ones:
-                    if (HasOptions) {
-                        options = new Dictionary<string, object>(_options);
-                    } else {
-                        options = new Dictionary<string, object>();
-                    }
-
-                    // add only those global options that are not yet set in language options:
-                    if (entry.Value.HasOptions) {
-                        foreach (var option in entry.Value.Options) {
-                            options[option.Key] = option.Value;
-                        }
-                    }
-                } else {
-                    options = null;
-                }
-
+            foreach (var language in _languageSetups) {
                 config.AddLanguage(
-                    entry.Key, 
-                    entry.Value.Names, 
-                    entry.Value.FileExtensions, 
-                    options
+                    language.TypeName,
+                    language.DisplayName,
+                    language.Names,
+                    language.FileExtensions,
+                    language.Options
                 );
             }
 
@@ -190,65 +98,40 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Loads setup from .NET configuration (.config files).
+        /// Reads setup from .NET configuration system (.config files).
         /// If there is no configuration available returns an empty setup.
         /// </summary>
         public static ScriptRuntimeSetup ReadConfiguration() {
 #if SILVERLIGHT
             return new ScriptRuntimeSetup();
 #else
-            return new ScriptRuntimeSetup().LoadConfiguration();
+            var setup = new ScriptRuntimeSetup();
+            Configuration.Section.LoadRuntimeSetup(setup, null);
+            return setup;
 #endif
         }
 
 #if !SILVERLIGHT
         /// <summary>
-        /// Loads settings from .NET configuration (.config files) and adds them to the setup object.
+        /// Reads setup from a specified XML stream.
         /// </summary>
-        /// <returns>This instance.</returns>
-        public ScriptRuntimeSetup LoadConfiguration() {
-            Configuration.Section.LoadRuntimeSetup(this, null);
-            return this;
-        }
-
-        /// <summary>
-        /// Loads settings from a specified XML stream and adds them to the specified setup object
-        /// Returns <paramref name="baseSetup"/>.
-        /// </summary>
-        /// <returns>This instance.</returns>
-        public ScriptRuntimeSetup LoadConfiguration(Stream configFileStream) {
+        public static ScriptRuntimeSetup ReadConfiguration(Stream configFileStream) {
             ContractUtils.RequiresNotNull(configFileStream, "configFileStream");
-            Configuration.Section.LoadRuntimeSetup(this, configFileStream);
-            return this;
+            var setup = new ScriptRuntimeSetup();
+            Configuration.Section.LoadRuntimeSetup(setup, configFileStream);
+            return setup;
         }
 
         /// <summary>
-        /// Loads settings from a specified XML file and adds them to the specified setup object
-        /// Returns <paramref name="baseSetup"/>.
+        /// Reads setup from a specified XML file.
         /// </summary>
-        /// <returns>This instance.</returns>
-        public ScriptRuntimeSetup LoadConfiguration(string configFilePath) {
+        public static ScriptRuntimeSetup ReadConfiguration(string configFilePath) {
             ContractUtils.RequiresNotNull(configFilePath, "configFilePath");
 
             using (var stream = File.OpenRead(configFilePath)) {
-                Configuration.Section.LoadRuntimeSetup(this, stream);
+                return ReadConfiguration(stream);
             }
-
-            return this;
         }
 #endif
-
-        public ScriptRuntimeSetup LoadFromAssemblies(IEnumerable<Assembly> assemblies) {
-            ContractUtils.RequiresNotNullItems(assemblies, "assemblies");
-
-            foreach (var assembly in assemblies) {
-                foreach (DynamicLanguageProviderAttribute attribute in assembly.GetCustomAttributes(typeof(DynamicLanguageProviderAttribute), false)) {
-                    var languageSetup = new LanguageSetup(attribute.DisplayName, attribute.Names, attribute.FileExtensions);
-                    _languageSetups[attribute.LanguageContextType.AssemblyQualifiedName] = languageSetup;
-                }
-            }
-
-            return this;
-        }
     }
 }

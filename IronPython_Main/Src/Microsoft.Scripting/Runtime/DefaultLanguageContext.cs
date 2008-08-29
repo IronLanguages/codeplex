@@ -38,7 +38,8 @@ namespace Microsoft.Scripting.Runtime {
             throw new NotImplementedException();
         }
 
-        public override bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel level) {
+        public override bool CanConvertFrom(Type fromType, Type toType, bool toNotNullable, NarrowingLevel level) {
+            // TODO: None -> nullable reference types?
             return toType.IsAssignableFrom(fromType);
         }
 

@@ -26,7 +26,7 @@ from Microsoft.Scripting import SourceCodeKind, ErrorSink
 from Microsoft.Scripting.Hosting import ScriptRuntime
 from Microsoft.Scripting.Hosting.Providers import HostingHelpers
 from Microsoft.Scripting.Runtime import CompilerContext
-from IronPython import PythonEngineOptions
+from IronPython import PythonOptions
 from IronPython.Hosting import Python
 from IronPython.Runtime import PythonContext, ModuleOptions, Symbols
 from IronPython.Compiler import Parser, PythonCompilerOptions
@@ -83,7 +83,7 @@ class FileConsole(object):
         completeCode = self.engine.CreateScriptSourceFromFile(fileName)
         sourceUnit = HostingHelpers.GetSourceUnit(completeCode)
         cc = CompilerContext(sourceUnit, PythonCompilerOptions(), ErrorSink.Default)
-        parser = Parser.CreateParser(cc, PythonEngineOptions())
+        parser = Parser.CreateParser(cc, PythonOptions())
         return parser.ParseFile(False), sourceUnit.GetCode()
         
     def GetCodeForStatement(self, codeText, statement):

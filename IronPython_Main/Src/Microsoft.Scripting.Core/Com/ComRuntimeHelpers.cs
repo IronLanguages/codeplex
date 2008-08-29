@@ -105,10 +105,6 @@ namespace System.Scripting.Com {
             return rgNames[0];
         }
 
-        internal static string GetNameOfMethod(ComTypes.ITypeInfo typeInfo, int memid, string prefix) {
-            return prefix + GetNameOfMethod(typeInfo, memid);
-        }
-
         internal static string GetNameOfLib(ComTypes.ITypeLib typeLib) {
             string name;
             string strDocString;

@@ -18,7 +18,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Scripting.Utils;
-using System.Reflection;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -26,6 +25,7 @@ namespace Microsoft.Scripting.Runtime {
     /// </summary>
     internal sealed class LanguageConfiguration {
         private readonly AssemblyQualifiedTypeName _providerName;
+        private readonly string _displayName;
         private readonly IDictionary<string, object> _options;
         private LanguageContext _context;
         
@@ -37,8 +37,13 @@ namespace Microsoft.Scripting.Runtime {
             get { return _providerName; }
         }
 
-        public LanguageConfiguration(AssemblyQualifiedTypeName providerName, IDictionary<string, object> options) {
+        public string DisplayName {
+            get { return _displayName; }
+        }
+        
+        public LanguageConfiguration(AssemblyQualifiedTypeName providerName, string displayName, IDictionary<string, object> options) {
             _providerName = providerName;
+            _displayName = displayName;
             _options = options;
         }
 
@@ -72,6 +77,7 @@ namespace Microsoft.Scripting.Runtime {
 
         private readonly bool _debugMode;
         private readonly bool _privateBinding;
+        private readonly IDictionary<string, object> _options;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly StringComparer FileExtensionComparer = StringComparer.OrdinalIgnoreCase;
@@ -85,9 +91,10 @@ namespace Microsoft.Scripting.Runtime {
         private readonly Dictionary<AssemblyQualifiedTypeName, LanguageConfiguration> _languageConfigurations;
         private readonly Dictionary<Type, LanguageConfiguration> _loadedProviderTypes;
 
-        public DlrConfiguration(bool debugMode, bool privateBinding) {
+        public DlrConfiguration(bool debugMode, bool privateBinding, IDictionary<string, object> options) {
             _debugMode = debugMode;
             _privateBinding = privateBinding;
+            _options = options;
 
             _languageNames = new Dictionary<string, LanguageConfiguration>(LanguageNameComparer);
             _languageExtensions = new Dictionary<string, LanguageConfiguration>(FileExtensionComparer);
@@ -115,18 +122,35 @@ namespace Microsoft.Scripting.Runtime {
             get { return _privateBinding; }
         }
 
-        public void AddLanguage(string providerAssemblyQualifiedName, IList<string> names, IList<string> fileExtensions, 
+        internal IDictionary<string, object> Options {
+            get { return _options; }
+        }
+
+        internal IDictionary<AssemblyQualifiedTypeName, LanguageConfiguration> Languages {
+            get { return _languageConfigurations; }
+        }
+
+        public void AddLanguage(string languageTypeName, string displayName, IList<string> names, IList<string> fileExtensions, 
             IDictionary<string, object> options) {
             ContractUtils.Requires(!_frozen, "Configuration cannot be modified once the runtime is initialized");
             ContractUtils.Requires(CollectionUtils.TrueForAll(names, (id) => !String.IsNullOrEmpty(id) && !_languageNames.ContainsKey(id)), "names", "Language name null, empty or already defined");
             ContractUtils.Requires(CollectionUtils.TrueForAll(fileExtensions, (ext) => !String.IsNullOrEmpty(ext) && !_languageExtensions.ContainsKey(ext)), "fileExtensions", "Extension null, empty or already defined");
+            ContractUtils.RequiresNotEmpty(displayName, "displayName");
 
-            var aqtn = AssemblyQualifiedTypeName.ParseArgument(providerAssemblyQualifiedName, "providerAssemblyQualifiedName");
+            var aqtn = AssemblyQualifiedTypeName.ParseArgument(languageTypeName, "languageTypeName");
             if (_languageConfigurations.ContainsKey(aqtn)) {
-                throw new ArgumentException(String.Format("Language '{0}' already added", aqtn), "providerAssemblyQualifiedName");
+                throw new ArgumentException(string.Format("Duplicate language with type name '{0}'", aqtn), "languageTypeName");
             }
 
-            var config = new LanguageConfiguration(aqtn, options);
+            // Add global language options first, they can be rewritten by language specific ones:
+            var mergedOptions = new Dictionary<string, object>(_options);
+
+            // Replace global options with language-specific options
+            foreach (var option in options) {
+                mergedOptions[option.Key] = option.Value;
+            }
+
+            var config = new LanguageConfiguration(aqtn, displayName, mergedOptions);
 
             _languageConfigurations.Add(aqtn, config);
 
@@ -213,16 +237,37 @@ namespace Microsoft.Scripting.Runtime {
             return result.ToArray();
         }
 
+        internal string[] GetLanguageNames(LanguageConfiguration config) {
+            List<string> result = new List<string>();
+
+            foreach (var entry in _languageNames) {
+                if (entry.Value == config) {
+                    result.Add(entry.Key);
+                }
+            }
+
+            return result.ToArray();
+        }
+
         public string[] GetLanguageNames() {
             return ArrayUtils.MakeArray<string>(_languageNames.Keys);
         }
 
         public string[] GetFileExtensions(LanguageContext context) {
-            ContractUtils.RequiresNotNull(context, "context");
-
-            List<string> result = new List<string>();
+            var result = new List<string>();
             foreach (var entry in _languageExtensions) {
                 if (entry.Value.LanguageContext == context) {
+                    result.Add(entry.Key);
+                }
+            }
+
+            return result.ToArray();
+        }
+
+        internal string[] GetFileExtensions(LanguageConfiguration config) {
+            var result = new List<string>();
+            foreach (var entry in _languageExtensions) {
+                if (entry.Value == config) {
                     result.Add(entry.Key);
                 }
             }
