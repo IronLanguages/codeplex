@@ -56,7 +56,7 @@ namespace IronPython.Runtime {
         private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
         private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
         private readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
-        private readonly PythonEngineOptions/*!*/ _options;
+        private readonly PythonOptions/*!*/ _options;
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
         private readonly BinderState _defaultBinderState, _defaultClsBinderState;
@@ -127,7 +127,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public PythonContext(ScriptDomainManager/*!*/ manager, IDictionary<string, object> options)
             : base(manager) {
-            _options = new PythonEngineOptions(options);
+            _options = new PythonOptions(options);
             _builtinsDict = CreateBuiltinTable();
 
             DefaultContext.CreateContexts(manager, this);
@@ -188,7 +188,7 @@ namespace IronPython.Runtime {
 #endif
         }
 
-        public override EngineOptions/*!*/ Options {
+        public override LanguageOptions/*!*/ Options {
             get { return PythonOptions; }
         }
 
@@ -280,7 +280,7 @@ namespace IronPython.Runtime {
             );
         }
 
-        internal PythonEngineOptions/*!*/ PythonOptions {
+        internal PythonOptions/*!*/ PythonOptions {
             get {
                 return _options;
             }
@@ -390,12 +390,6 @@ namespace IronPython.Runtime {
                 }
             }
             return null;
-        }
-
-        public override string DisplayName {
-            get {
-                return IronPythonDisplayName;
-            }
         }
 
         public override Version LanguageVersion {
@@ -1242,7 +1236,7 @@ namespace IronPython.Runtime {
             return _pythonService;
         }
 
-        internal static PythonEngineOptions GetPythonOptions(CodeContext context) {
+        internal static PythonOptions GetPythonOptions(CodeContext context) {
             return DefaultContext.DefaultPythonContext._options;
         }
 

@@ -37,16 +37,10 @@ def selection_change_eventhandler(range):
     #print "selected range - " + range.Address[0]
         
 def add_worksheet_event(ws):
-    if preferComDispatch:
-        ws.Event_SelectionChange += selection_change_eventhandler
-    else:
-        ws.SelectionChange += selection_change_eventhandler
+    ws.SelectionChange += selection_change_eventhandler
 
 def remove_worksheet_event(ws):
-    if preferComDispatch:
-        ws.Event_SelectionChange -= selection_change_eventhandler
-    else:
-        ws.SelectionChange -= selection_change_eventhandler
+    ws.SelectionChange -= selection_change_eventhandler
 
 #-----------------------------------------------------------------------------
 #--TESTS

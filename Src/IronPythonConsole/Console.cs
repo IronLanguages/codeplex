@@ -36,6 +36,10 @@ internal sealed class PythonConsoleHost : ConsoleHost {
         return new PythonOptionsParser();
     }
 
+    protected override LanguageSetup/*!*/ CreateLanguageSetup() {
+        return Python.CreateLanguageSetup(null);
+    }
+
     protected override string/*!*/ GetHelp() {
         StringBuilder sb = new StringBuilder();
 

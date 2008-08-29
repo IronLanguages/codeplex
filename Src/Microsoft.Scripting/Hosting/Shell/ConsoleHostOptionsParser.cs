@@ -62,8 +62,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     case "lang":
                         OptionValueRequired(name, value);
 
-                        string provider;
-                        if (!_runtimeSetup.TryGetLanguageProviderByName(value, out provider)) {
+                        string provider = null;
+                        foreach (var language in _runtimeSetup.LanguageSetups) {
+                            if (language.Names.Any(n => DlrConfiguration.LanguageNameComparer.Equals(n, value))) {
+                                provider = language.TypeName;
+                                break;
+                            }
+                        }
+                        if (provider == null) {
                             throw new InvalidOptionException(String.Format("Unknown language id '{0}'.", value));
                         }
 

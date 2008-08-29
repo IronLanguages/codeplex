@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.30718</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -110,6 +110,8 @@
     <Compile Include="Ast\SymbolConstantExpression.cs" />
     <Compile Include="Generation\DelegateHelpers.cs" />
     <Compile Include="Generation\DelegateHelpers.Generated.cs" />
+    <Compile Include="Hosting\LanguageConfig.cs" />
+    <Compile Include="Hosting\ScriptRuntimeConfig.cs" />
     <Compile Include="InvalidImplementationException.cs" />
     <Compile Include="Generation\AssemblyGen.cs" />
     <Compile Include="Generation\ConstantCheck.cs" />
@@ -118,6 +120,7 @@
     <Compile Include="Generation\KeyedQueue.cs" />
     <Compile Include="Generation\Snippets.cs" />
     <Compile Include="Generation\TypeGen.cs" />
+    <Compile Include="LanguageOptions.cs" />
     <Compile Include="Math\MathResources.Designer.cs">
       <DependentUpon>MathResources.resx</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -283,6 +286,7 @@
     <Compile Include="Utils\ListEqualityComparer.cs" />
     <Compile Include="Utils\MathUtils.cs" />
     <Compile Include="Utils\Publisher.cs" />
+    <Compile Include="Utils\ReadOnlyDictionary.cs" />
     <Compile Include="Utils\ReferenceEqualityComparer.cs" />
     <Compile Include="Utils\ReflectedCaller.Generated.cs" />
     <Compile Include="Utils\ReflectedCaller.cs" />
@@ -345,7 +349,6 @@
     <Compile Include="Generation\NarrowingLevel.cs" />
     <Compile Include="Generation\ParameterInfoWrapper.cs" />
     <Compile Include="Generation\ToDiskRewriter.cs" />
-    <Compile Include="Hosting\EngineOptions.cs" />
     <Compile Include="Runtime\AssemblyTypeNames.cs" />
     <Compile Include="Runtime\BaseSymbolDictionary.cs" />
     <Compile Include="Runtime\BinderType.cs" />

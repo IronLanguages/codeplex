@@ -105,10 +105,7 @@ def test_one_handler():
     expected_count = 0
     expected_val = None
     
-    if not preferComDispatch: #Merlin 384358
-        com_event = com_obj.eInUshort
-    else:
-        com_event = com_obj.Event_eInUshort
+    com_event = com_obj.eInUshort
     
     #Preliminary checks
     AreEqual(expected_count, ONE_HANDLER_COUNT)
@@ -179,10 +176,7 @@ def test_two_ident_handlers():
     expected_count = 0
     expected_val = None
     
-    if not preferComDispatch: #Merlin 384358
-        com_event = com_obj.eInUshort
-    else:
-        com_event = com_obj.Event_eInUshort
+    com_event = com_obj.eInUshort
     
     #Preliminary checks
     AreEqual(expected_count, TWO_IDENT_HANDLERS_COUNT)
@@ -287,10 +281,7 @@ def test_two_unique_handlers():
     expected_val_a = None
     expected_val_b = None
     
-    if not preferComDispatch: #Merlin 384358
-        com_event = com_obj.eInUshort
-    else:
-        com_event = com_obj.Event_eInUshort
+    com_event = com_obj.eInUshort
     
     #Preliminary checks
     AreEqual(expected_count, TWO_UNIQUE_HANDLERS_COUNT)
@@ -437,10 +428,7 @@ def test_two_unique_handlers():
 def test_eNull():
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerNull
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
     
     #--typical handler implementations
     def f1():
@@ -474,10 +462,7 @@ def test_eInOutretBool():
     
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerInOutretBool
-    if not preferComDispatch:
-        com_event = com_obj.eInOutretBool
-    else:
-        com_event = com_obj.Event_eInOutretBool
+    com_event = com_obj.eInOutretBool
     
     #--typical handler implementations
     def f1(a):
@@ -532,10 +517,7 @@ def test_eInOutBstr():
     
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerInOutBstr
-    if not preferComDispatch:
-        com_event = com_obj.eInOutBstr
-    else:
-        com_event = com_obj.Event_eInOutBstr
+    com_event = com_obj.eInOutBstr
     
     #--typical handler implementations
     def f1(a):
@@ -586,10 +568,7 @@ def test_eInOutBstr():
 def test_eInUshort():
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerUShort
-    if not preferComDispatch:
-        com_event = com_obj.eInUshort
-    else:
-        com_event = com_obj.Event_eInUshort
+    com_event = com_obj.eInUshort
     
     def f1(a):
         global HANDLER_CALL_COUNT
@@ -635,10 +614,7 @@ def test_eInUshort():
 def test_eNullShort():
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerNullShort
-    if not preferComDispatch:
-        com_event = com_obj.eNullShort
-    else:
-        com_event = com_obj.Event_eNullShort
+    com_event = com_obj.eNullShort
     
     #--typical handler implementations
     def f1():
@@ -673,10 +649,7 @@ def test_eNullShort():
 def test_eNull_neg_handler_signatures():
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerNull
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
     
     #--bad handler implementations
     def f1(a):
@@ -720,10 +693,7 @@ def test_eNull_neg_handler_signatures():
 
 def test_eInOutretBool_neg_handler_signatures():
     e_trigger = com_obj.triggerInOutretBool
-    if not preferComDispatch:
-        com_event = com_obj.eInOutretBool
-    else:
-        com_event = com_obj.Event_eInOutretBool
+    com_event = com_obj.eInOutretBool
         
         
     #--bad handler implementations
@@ -767,10 +737,7 @@ def test_eInOutretBool_neg_handler_signatures():
   
 def test_eInOutBstr_neg_handler_signatures():
     e_trigger = com_obj.triggerInOutBstr
-    if not preferComDispatch:
-        com_event = com_obj.eInOutBstr
-    else:
-        com_event = com_obj.Event_eInOutBstr
+    com_event = com_obj.eInOutBstr
         
     #--bad handler implementations
     def f1():
@@ -814,11 +781,7 @@ def test_eInOutBstr_neg_handler_signatures():
 
 def test_eInUshort_neg_handler_signatures():
     e_trigger = com_obj.triggerUShort
-    if not preferComDispatch:
-        com_event = com_obj.eInUshort
-    else:
-        com_event = com_obj.Event_eInUshort
-        
+    com_event = com_obj.eInUshort
         
     #--bad handler implementations
     def f1():
@@ -862,10 +825,7 @@ def test_eInUshort_neg_handler_signatures():
 def test_eNullShort_neg_handler_signatures():
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerNullShort
-    if not preferComDispatch:
-        com_event = com_obj.eNullShort
-    else:
-        com_event = com_obj.Event_eNullShort
+    com_event = com_obj.eNullShort
     
     #--bad handler implementations
     def f1(a):
@@ -916,11 +876,7 @@ def test_eNull_neg_handler_return_values():
     HANDLER_CALL_COUNT = 0
     expected_call_count = 0
     e_trigger = com_obj.triggerNull
-    
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
 
     for retVal in [1, "", "abc", False, []]:
         def bad_handler():
@@ -949,11 +905,7 @@ def test_eInOutretBool_neg_handler_return_values():
     HANDLER_CALL_COUNT = 0
     expected_call_count = 0
     e_trigger = com_obj.triggerInOutretBool
-    
-    if not preferComDispatch:
-        com_event = com_obj.eInOutretBool
-    else:
-        com_event = com_obj.Event_eInOutretBool
+    com_event = com_obj.eInOutretBool
             
     for retVal in [3.14, "", "abc", []]:
         
@@ -985,11 +937,7 @@ def test_eInOutBstr_neg_handler_return_values():
     HANDLER_CALL_COUNT = 0
     expected_call_count = 0
     e_trigger = com_obj.triggerInOutBstr
-    
-    if not preferComDispatch:
-        com_event = com_obj.eInOutBstr
-    else:
-        com_event = com_obj.Event_eInOutBstr
+    com_event = com_obj.eInOutBstr
             
     for retVal in [3.14, True, 42L, []]:
         
@@ -1026,11 +974,7 @@ def test_eInUshort_neg_handler_return_values():
     HANDLER_CALL_COUNT = 0
     expected_call_count = 0
     e_trigger = com_obj.triggerUShort
-    
-    if not preferComDispatch:
-        com_event = com_obj.eInUshort
-    else:
-        com_event = com_obj.Event_eInUshort
+    com_event = com_obj.eInUshort
 
     for retVal in [3.14, "", "abc", False, []]:
         def bad_handler(a):
@@ -1059,11 +1003,7 @@ def test_eNullShort_neg_handler_return_values():
     HANDLER_CALL_COUNT = 0
     expected_call_count = 0
     e_trigger = com_obj.triggerNullShort
-    
-    if not preferComDispatch:
-        com_event = com_obj.eNullShort
-    else:
-        com_event = com_obj.Event_eNullShort
+    com_event = com_obj.eNullShort
 
     for retVal in [None, "", "abc", []]:
         def bad_handler():
@@ -1097,11 +1037,7 @@ def test_slow_handler_sta():
     global HANDLER_CALL_COUNT
  
     e_trigger = com_obj.triggerNull
-    
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
     
     def slow_handler():
         global HANDLER_CALL_COUNT
@@ -1138,11 +1074,7 @@ def test_handler_spawns_thread():
     global HANDLER_CALL_COUNT
  
     e_trigger = com_obj.triggerNull
-    
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
     
     def thread_handler():
         #Start a thread which increments the HANDLER_CALL_COUNT
@@ -1184,11 +1116,7 @@ def test_handler_calls_caller():
     global HANDLER_CALL_COUNT
  
     e_trigger = com_obj.triggerNull
-    
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
     
     def call_caller_handler():
         global HANDLER_CALL_COUNT
@@ -1221,11 +1149,7 @@ def test_handler_raises():
     global HANDLER_CALL_COUNT
  
     e_trigger = com_obj.triggerNull
-    
-    if not preferComDispatch:
-        com_event = com_obj.eNull
-    else:
-        com_event = com_obj.Event_eNull
+    com_event = com_obj.eNull
     
     def except_handler():
         global HANDLER_CALL_COUNT

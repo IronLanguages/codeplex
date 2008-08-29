@@ -486,7 +486,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MetaObject MakeArrayIndexRule(string oper, MetaObject[] args) {
-            if (CanConvertFrom(GetArgType(args, 1), typeof(int), NarrowingLevel.All)) {
+            if (CanConvertFrom(GetArgType(args, 1), typeof(int), false, NarrowingLevel.All)) {
                 Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
 
                 if (oper == StandardOperators.GetItem) {

@@ -38,6 +38,7 @@ namespace Microsoft.Scripting.Hosting {
  {
         private readonly LanguageContext _language;
         private readonly ScriptRuntime _runtime;
+        private LanguageConfig _config;
         private ObjectOperations _operations;
         private Scope _dummyScope;
 
@@ -578,12 +579,13 @@ namespace Microsoft.Scripting.Hosting {
         #region Misc. engine information
 
         /// <summary>
-        /// This property returns the EngineOptions this engine is using.  
-        /// 
-        /// EngineOptions lets you control behaviors such as whether debugging is enabled, 
-        /// whether code should be interpreted or compiled, etc.
+        /// This property returns readon-only LanguageOptions this engine is using.
         /// </summary>
-        public EngineOptions Options {
+        /// <remarks>
+        /// The values are determined during runtime initialization and read-only afterwards. 
+        /// You can change the settings via a configuration file or explicitly using ScriptRuntimeSetup class.
+        /// </remarks>
+        public LanguageOptions Options {
             get {
                 return _language.Options;
             }
@@ -599,26 +601,18 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// This property returns a display name for the engine or language that is suitable for UI.
+        /// Returns an object that has configuration information of the
+        /// language
         /// </summary>
-        public string LanguageDisplayName {
+        public LanguageConfig Configuration {
             get {
-                return _language.DisplayName;
+                if (_config == null) {
+                    // Safe to execute this multiple times under different threads
+                    // (it's a lookup on a stateless object)
+                    _config = _runtime.Configuration.GetLanguageConfig(_language);
+                }
+                return _config;
             }
-        }
-
-        /// <summary>
-        /// These methods return unique identifiers for this engine that map to this engine and its language.
-        /// </summary>
-        public string[] GetRegisteredIdentifiers() {
-            return _runtime.Manager.Configuration.GetLanguageNames(_language);
-        }
-
-        /// <summary>
-        /// These methods return file extensions for this engine that map to this engine and its language.
-        /// </summary>
-        public string[] GetRegisteredExtensions() {
-            return _runtime.Manager.Configuration.GetFileExtensions(_language);
         }
 
         /// <summary>
@@ -697,7 +691,7 @@ namespace Microsoft.Scripting.Hosting {
             return _language.GetCompilerErrorSink();
         }
 
-        internal object Call<T, TRet>(Func<LanguageContext, T, TRet> f, T arg) {
+        internal TRet Call<T, TRet>(Func<LanguageContext, T, TRet> f, T arg) {
             return f(_language, arg);
         }
 

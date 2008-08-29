@@ -12,17 +12,16 @@
  *
  *
  * ***************************************************************************/
+
 #if !SILVERLIGHT
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Configuration;
-using System.Reflection;
-using System.Diagnostics;
-using System.Xml;
-using Microsoft.Scripting.Utils;
 using System.IO;
+using System.Xml;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Configuration {
 
@@ -136,13 +135,20 @@ namespace Microsoft.Scripting.Hosting.Configuration {
 
                 // Honor the latest-wins behavior of the <languages> tag for options that were already included in the setup object;
                 // Keep the options though.
-                LanguageSetup languageSetup;
-                if (setup.LanguageSetups.TryGetValue(provider, out languageSetup)) {
-                    languageSetup.Names = names;
-                    languageSetup.FileExtensions = extensions;
-                    languageSetup.DisplayName = displayName;
-                } else {
-                    setup.LanguageSetups[provider] = new LanguageSetup(displayName, names, extensions);
+                bool found = false;
+                foreach (var language in setup.LanguageSetups) {
+                    if (language.TypeName == provider) {
+                        language.Names.Clear();
+                        language.Names.AddRange(names);
+                        language.FileExtensions.Clear();
+                        language.FileExtensions.AddRange(extensions);
+                        language.DisplayName = displayName;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    setup.LanguageSetups.Add(new LanguageSetup(provider, displayName, names, extensions));
                 }
             }
 
@@ -152,11 +158,16 @@ namespace Microsoft.Scripting.Hosting.Configuration {
                     setup.Options[option.Name] = option.Value;
                 } else {
                     // language specific option:
-                    try {
-                        setup.LanguageSetups[setup.GetLanguageProviderByName(option.Language)].Options[option.Name] = option.Value;
-                    } catch (Exception e) {
-                        // language name not registered:
-                        throw new ConfigurationErrorsException(e.Message, e);
+                    bool found = false;
+                    foreach (var language in setup.LanguageSetups) {
+                        if (language.Names.Any(s => DlrConfiguration.LanguageNameComparer.Equals(s, option.Language))) {
+                            language.Options[option.Name] = option.Value;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        throw new ConfigurationErrorsException(string.Format("Unknown language name: '{0}'", option.Language));
                     }
                 }
             }

@@ -24,8 +24,8 @@ namespace Microsoft.Scripting.Generation {
     /// Builds a parameter for a reference argument when a StrongBox has not been provided.  The
     /// updated return value is returned as one of the resulting return values.
     /// </summary>
-    class ReturnReferenceArgBuilder : SimpleArgBuilder {
-        VariableExpression _tmp;
+    internal sealed class ReturnReferenceArgBuilder : SimpleArgBuilder {
+        private VariableExpression _tmp;
 
         public ReturnReferenceArgBuilder(int index, Type type)
             : base(index, type) {
@@ -37,6 +37,10 @@ namespace Microsoft.Scripting.Generation {
             }
 
             return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(context, parameters, hasBeenUsed)), _tmp);
+        }
+
+        public override SimpleArgBuilder Copy(int newIndex) {
+            return new ReturnReferenceArgBuilder(newIndex, Type);
         }
 
         internal override Expression ToReturnExpression(MethodBinderContext context) {

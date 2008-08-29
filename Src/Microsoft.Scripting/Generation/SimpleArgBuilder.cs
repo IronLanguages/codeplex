@@ -27,17 +27,23 @@ namespace Microsoft.Scripting.Generation {
     /// also tracks information about the original parameter and is used to create extended
     /// methods for params arrays and param dictionary functions.
     /// </summary>
-    class SimpleArgBuilder : ArgBuilder {
+    public class SimpleArgBuilder : ArgBuilder {
         private int _index;
-        private Type _parameterType;
-        private bool _isParams, _isParamsDict;
+        private readonly Type _parameterType;
+        private readonly bool _isParams, _isParamsDict;
 
         public SimpleArgBuilder(int index, Type parameterType) {
+            ContractUtils.Requires(index >= 0);
+            ContractUtils.RequiresNotNull(parameterType, "parameterType");
+
             _index = index;
             _parameterType = parameterType;
         }
 
         public SimpleArgBuilder(int index, Type parameterType, bool isParams, bool isParamsDict) {
+            ContractUtils.Requires(index >= 0);
+            ContractUtils.RequiresNotNull(parameterType, "parameterType");
+
             _index = index;
             _parameterType = parameterType;
             _isParams = isParams;
@@ -45,13 +51,18 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public SimpleArgBuilder(int index, Type parameterType, ParameterInfo paramInfo) {
-            if (index < 0) throw new ArgumentOutOfRangeException("index");
+            ContractUtils.Requires(index >= 0);
             ContractUtils.RequiresNotNull(parameterType, "parameterType");
+            ContractUtils.RequiresNotNull(paramInfo, "paramInfo");
 
             _index = index;
             _parameterType = parameterType;
             _isParams = CompilerHelpers.IsParamArray(paramInfo);
             _isParamsDict = BinderHelpers.IsParamDictionary(paramInfo);
+        }
+
+        public virtual SimpleArgBuilder Copy(int newIndex) {
+            return new SimpleArgBuilder(newIndex, _parameterType, _isParams, _isParamsDict);
         }
 
         public override int Priority {

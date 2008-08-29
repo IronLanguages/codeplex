@@ -201,7 +201,7 @@ namespace Microsoft.Scripting {
 
         [Confined]
         public override string ToString() {
-            return String.Format("ScriptCode '{0}' from {1}", SourceUnit.Path, LanguageContext.DisplayName);
+            return String.Format("ScriptCode '{0}' from {1}", SourceUnit.Path, LanguageContext.GetType().Name);
         }
     }
 }

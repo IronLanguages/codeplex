@@ -30,11 +30,11 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Contrast this with ArgBuilder which represents the real physical argument passed to the method.
     /// </summary>
-    class ParameterWrapper {
-        private Type _type;
-        private bool _prohibitNull, _isParams, _isParamsDict;
-        private ActionBinder _binder;
-        private SymbolId _name;
+    public class ParameterWrapper {
+        private readonly Type _type;
+        private readonly bool _prohibitNull, _isParams, _isParamsDict;
+        private readonly ActionBinder _binder;
+        private readonly SymbolId _name;
 
         public ParameterWrapper(ActionBinder binder, Type type) {
             _type = type;
@@ -130,37 +130,44 @@ namespace Microsoft.Scripting.Generation {
             return ret;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")]
         public Type Type {
             get { return _type; }
         }
 
-        public bool HasConversionFrom(Type ty, NarrowingLevel allowNarrowing) {
-            if (ty == Type || ty == typeof(Dynamic)) return true;
+        public bool HasConversionFrom(Type fromType, NarrowingLevel allowNarrowing) {
+            if (fromType == Type || fromType == typeof(Dynamic)) return true;
 
-            if (ty == None.Type) {
+            if (fromType == None.Type) {
                 if (_prohibitNull) return false;
 
                 if (Type.IsGenericType && Type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                     return true;
                 }
-                return !Type.IsValueType || _binder.CanConvertFrom(ty, Type, allowNarrowing);
+                return !Type.IsValueType || _binder.CanConvertFrom(fromType, Type, _prohibitNull, allowNarrowing);
             } else {
-                return _binder.CanConvertFrom(ty, Type, allowNarrowing);
+                return _binder.CanConvertFrom(fromType, Type, _prohibitNull, allowNarrowing);
             }
         }
 
         public int? CompareTo(ParameterWrapper other) {
             Type t1 = Type;
             Type t2 = other.Type;
-            if (t1 == t2) return 0;
-            if (_binder.CanConvertFrom(t2, t1, NarrowingLevel.None)) {
-                if (_binder.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
+            bool n1 = _prohibitNull;
+            bool n2 = other._prohibitNull;
+
+            if (t1 == t2 && n1 == n2) {
+                return 0;
+            }
+
+            if (_binder.CanConvertFrom(t2, t1, n1, NarrowingLevel.None)) {
+                if (_binder.CanConvertFrom(t1, t2, n2, NarrowingLevel.None)) {
                     return null;
                 } else {
                     return -1;
                 }
             }
-            if (_binder.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
+            if (_binder.CanConvertFrom(t1, t2, n2, NarrowingLevel.None)) {
                 return +1;
             }
 
@@ -171,28 +178,12 @@ namespace Microsoft.Scripting.Generation {
             return null;
         }
 
-        private int? SelectBestConversionFor(Type actualType, Type candidateOne, Type candidateTwo, NarrowingLevel level) {
-            Type ret = _binder.SelectBestConversionFor(actualType, candidateOne, candidateTwo, level);
-            if (ret != null) {
-                if (ret == candidateOne) {
-                    return +1;
-                } else if (ret == candidateTwo) {
-                    return -1;
-                }
-            }
-            return null;
+        private int? SelectBestConversionFor(Type actualType, Type candidateOne, bool oneNotNull, Type candidateTwo, bool twoNotNull, NarrowingLevel level) {
+            return (int?)_binder.SelectBestConversionFor(actualType, candidateOne, oneNotNull, candidateTwo, twoNotNull, level);
         }
 
-        private int? SelectBestConversionFor(MetaObject actualType, Type candidateOne, Type candidateTwo, NarrowingLevel level) {
-            Type ret = _binder.SelectBestConversionFor(actualType.LimitType, candidateOne, candidateTwo, level);
-            if (ret != null) {
-                if (ret == candidateOne) {
-                    return +1;
-                } else if (ret == candidateTwo) {
-                    return -1;
-                }
-            }
-            return null;
+        private int? SelectBestConversionFor(MetaObject actualType, Type candidateOne, bool oneNotNull, Type candidateTwo, bool twoNotNull, NarrowingLevel level) {
+            return (int?)_binder.SelectBestConversionFor(actualType.LimitType, candidateOne, oneNotNull, candidateTwo, twoNotNull, level);
         }
 
         public int? CompareTo(ParameterWrapper other, Type actualType) {
@@ -200,11 +191,13 @@ namespace Microsoft.Scripting.Generation {
 
             Type t1 = Type;
             Type t2 = other.Type;
-            if (t1 == t2) return 0;
+            bool n1 = _prohibitNull;
+            bool n2 = other._prohibitNull;
+            if (t1 == t2 && n1 == n2) return 0;
             int? ret = null;
 
             for (NarrowingLevel curLevel = NarrowingLevel.None; curLevel <= NarrowingLevel.All; curLevel++) {
-                ret = SelectBestConversionFor(actualType, t1, t2, curLevel);
+                ret = SelectBestConversionFor(actualType, t1, n1, t2, n2, curLevel);
                 if (ret != null) {
                     return ret;
                 }
@@ -218,11 +211,13 @@ namespace Microsoft.Scripting.Generation {
 
             Type t1 = Type;
             Type t2 = other.Type;
-            if (t1 == t2) return 0;
+            bool n1 = _prohibitNull;
+            bool n2 = other._prohibitNull;
+            if (t1 == t2 && n1 == n2) return 0;
             int? ret = null;
 
             for (NarrowingLevel curLevel = NarrowingLevel.None; curLevel <= NarrowingLevel.All; curLevel++) {
-                ret = SelectBestConversionFor(actualType, t1, t2, curLevel);
+                ret = SelectBestConversionFor(actualType, t1, n1, t2, n2, curLevel);
                 if (ret != null) {
                     return ret;
                 }

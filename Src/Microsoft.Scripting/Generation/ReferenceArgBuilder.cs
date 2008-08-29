@@ -26,14 +26,18 @@ namespace Microsoft.Scripting.Generation {
     /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
     /// The user passes a StrongBox[T] object whose value will get updated when the call returns.
     /// </summary>
-    class ReferenceArgBuilder : SimpleArgBuilder {
-        private Type _elementType;
+    internal sealed class ReferenceArgBuilder : SimpleArgBuilder {
+        private readonly Type _elementType;
         private VariableExpression _tmp;
 
         public ReferenceArgBuilder(int index, Type parameterType)
             : base(index, parameterType) {
             Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(CompilerServices.StrongBox<>));
             _elementType = parameterType.GetGenericArguments()[0];
+        }
+
+        public override SimpleArgBuilder Copy(int newIndex) {
+            return new ReferenceArgBuilder(newIndex, Type);
         }
 
         public override int Priority {
@@ -52,7 +56,7 @@ namespace Microsoft.Scripting.Generation {
             hasBeenUsed[Index] = true;
             Type boxType = typeof(CompilerServices.StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
-                Expression.TypeIs(parameters[Index], BoxType),
+                Expression.TypeIs(parameters[Index], Type),
                 Expression.Comma(
                     Expression.Assign(
                         _tmp,
@@ -70,27 +74,11 @@ namespace Microsoft.Scripting.Generation {
             );
         }
 
-        protected Type BoxType {
-            get {
-                return this.Type;
-            }
-        }
-
-        internal Type ElementType {
-            get {
-                return _elementType;
-            }
-        }
-
-        protected virtual Expression UpdatedValue() {
-            return _tmp;
-        }
-
         internal override Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
             return Expression.AssignField(
-                Expression.Convert(parameters[Index], BoxType),
-                BoxType.GetField("Value"),
-                UpdatedValue()
+                Expression.Convert(parameters[Index], Type),
+                Type.GetField("Value"),
+                _tmp
             );
         }
     }

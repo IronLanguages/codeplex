@@ -223,7 +223,7 @@ namespace IronPythonTest {
             AreEqual((int)scriptEngine.CreateScriptSourceFromString("42").Execute(scriptEngine.CreateScope()), 42);
 
             if(options != null) {
-                PythonEngineOptions po = (PythonEngineOptions)scriptEngine.Options;
+                PythonOptions po = (PythonOptions)scriptEngine.Options;
 
                 AreEqual(po.StripDocStrings, true);
                 AreEqual(po.Optimize, true);
@@ -249,8 +249,8 @@ namespace IronPythonTest {
             Assert(runtime.GetEngine("py") != null);
 
             if (options != null) {
-                AreEqual(runtime.DebugMode, true);
-                AreEqual(runtime.PrivateBinding, true);
+                AreEqual(runtime.Configuration.DebugMode, true);
+                AreEqual(runtime.Configuration.PrivateBinding, true);
             }
 
             AreEqual(Python.GetSysModule(runtime).GetVariable<string>("platform"), "cli");
@@ -777,7 +777,7 @@ if id(a) == id(b):
                 scope.IncludeFile(Common.InputTestDirectory + "\\raise.py");
                 throw new Exception("We should not get here");
             } catch (StringException e2) {
-                if (scope.Engine.Runtime.DebugMode != e2.StackTrace.Contains(lineNumber))
+                if (scope.Engine.Runtime.Configuration.DebugMode != e2.StackTrace.Contains(lineNumber))
                     throw new Exception("Debugging is enabled even though Options.DebugMode is not specified");
             }
         }

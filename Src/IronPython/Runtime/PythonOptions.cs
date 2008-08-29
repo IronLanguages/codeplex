@@ -30,10 +30,8 @@ namespace IronPython {
         WarnAll
     }
 
-    // TODO: rename to PythonOptions
-    [CLSCompliant(true)]
-    [Serializable]
-    public sealed class PythonEngineOptions : EngineOptions {
+    [Serializable, CLSCompliant(true)]
+    public sealed class PythonOptions : LanguageOptions {
 
         private readonly ReadOnlyCollection<string>/*!*/ _arguments;
         private readonly ReadOnlyCollection<string>/*!*/ _warningFilters;
@@ -86,11 +84,11 @@ namespace IronPython {
             get { return _division; }
         }
 
-        public PythonEngineOptions() 
+        public PythonOptions() 
             : this(null) {
         }
     
-        public PythonEngineOptions(IDictionary<string, object> options) 
+        public PythonOptions(IDictionary<string, object> options) 
             : base(options) {
 
             _arguments = GetStringCollectionOption(options, "Arguments") ?? EmptyStringCollection;

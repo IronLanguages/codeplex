@@ -23,7 +23,7 @@ using System.Threading;
 namespace Microsoft.Scripting {
 
     [Serializable]
-    public class EngineOptions {
+    public class LanguageOptions {
         private bool _exceptionDetail;
         private bool _showClrExceptions;
         private bool _interpretedMode;
@@ -65,11 +65,11 @@ namespace Microsoft.Scripting {
             get { return _searchPaths; }
         }
 
-        public EngineOptions() 
+        public LanguageOptions() 
             : this(null) {
         }
 
-        public EngineOptions(IDictionary<string, object> options) {
+        public LanguageOptions(IDictionary<string, object> options) {
             _interpretedMode = GetOption(options, "InterpretedMode", false);
             _exceptionDetail = GetOption(options, "ExceptionDetail", false);
             _showClrExceptions = GetOption(options, "ShowClrExceptions", false);

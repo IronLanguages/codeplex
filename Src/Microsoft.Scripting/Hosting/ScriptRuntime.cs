@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Security.Permissions;
+using System.Text;
 using System.Threading;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -38,17 +39,9 @@ namespace Microsoft.Scripting.Hosting {
         private readonly InvariantContext _invariantContext;
         private readonly ScriptIO _io;
         private readonly ScriptHost _host;
+        private ScriptRuntimeConfig _config;
         private ScriptScope _globals;
         private ScriptEngine _invariantEngine;
-
-        /// <summary>
-        /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
-        /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
-        /// </summary>
-        [Obsolete(@"Use ScriptRuntime(ScriptRuntimeSetup) overload. Fill ScriptRuntimeSetup in explicitly or use ScriptRuntimeSetup.ReadConfiguration to load it from .config files.", true)]
-        public ScriptRuntime()
-            : this(new ScriptRuntimeSetup()) {
-        }
 
         /// <summary>
         /// Creates ScriptRuntime in the current app-domain and initialized according to the the specified settings.
@@ -84,28 +77,10 @@ namespace Microsoft.Scripting.Hosting {
             get { return _host; }
         }
 
-        public bool DebugMode {
-            get { return _manager.Configuration.DebugMode; }
-        }
-
-        public bool PrivateBinding {
-            get { return _manager.Configuration.PrivateBinding; }
-        }
-
         public ScriptIO IO {
             get { return _io; }
         }
-
-        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method", true)]
-        public static ScriptRuntime Create() {
-            return new ScriptRuntime();
-        }
-
-        [Obsolete("Directly use the ScriptRuntime constructor instead of the Create factory method", true)]
-        public static ScriptRuntime Create(ScriptRuntimeSetup setup) {
-            return new ScriptRuntime(setup);
-        }
-
+        
         /// <summary>
         /// Creates a new runtime with languages set up according to the current application configuration 
         /// (using System.Configuration).
@@ -117,12 +92,6 @@ namespace Microsoft.Scripting.Hosting {
         #region Remoting
 
 #if !SILVERLIGHT
-        [Obsolete(@"Use CreateRemote(AppDomain, ScriptRuntimeSetup) overload. Fill ScriptRuntimeSetup in explicitly or use ScriptRuntimeSetup.ReadConfiguration to load it from .config files.", true)]
-        public static ScriptRuntime CreateRemote(AppDomain domain) {
-            ContractUtils.RequiresNotNull(domain, "domain");
-
-            return (ScriptRuntime)domain.CreateInstanceAndUnwrap(typeof(ScriptRuntime).Assembly.FullName, typeof(ScriptRuntime).FullName);
-        }
 
         /// <summary>
         /// Creates ScriptRuntime in the current app-domain and initialized according to the the specified settings.
@@ -152,12 +121,14 @@ namespace Microsoft.Scripting.Hosting {
 #endif
         #endregion
 
-        public string[] GetRegisteredFileExtensions() {
-            return _manager.Configuration.GetFileExtensions();
-        }
-
-        public string[] GetRegisteredLanguageNames() {
-            return _manager.Configuration.GetLanguageNames();
+        public ScriptRuntimeConfig Configuration {
+            get {
+                if (_config == null) {
+                    // safe to create ScriptRuntimeConfig twice (it's stateless)
+                    Interlocked.CompareExchange(ref _config, new ScriptRuntimeConfig(_manager.Configuration), null);
+                }
+                return _config;
+            }
         }
 
         #region Engines
@@ -288,6 +259,46 @@ namespace Microsoft.Scripting.Hosting {
             source.Execute(scope);
 
             return scope;
+        }
+
+        /// <exception cref="ArgumentNullException">path is null</exception>
+        /// <exception cref="ArgumentException">file extension does not map to language engine</exception>
+        /// <exception cref="InvalidOperationException">language does not have any search paths</exception>
+        /// <exception cref="FileNotFoundException">file does exist in language's search path</exception>
+        public ScriptScope UseFile(string path) {
+            ContractUtils.RequiresNotEmpty(path, "path");
+            string extension = Path.GetExtension(path);
+
+            ScriptEngine engine;
+            if (!TryGetEngineByFileExtension(extension, out engine)) {
+                throw new ArgumentException(string.Format("File extension '{0}' is not associated with any language.", extension));
+            }
+
+            var searchPaths = engine.GetSearchPaths();
+            if (searchPaths.Count == 0) {
+                throw new InvalidOperationException(string.Format("No search paths defined for language '{0}'", engine.Configuration.DisplayName));
+            }
+
+            // See if the file is already loaded, if so return the scope
+            foreach (string searchPath in searchPaths) {
+                string filePath = Path.Combine(searchPath, path);
+                ScriptScope scope = engine.GetScope(filePath);
+                if (scope != null) {
+                    return scope;
+                }
+            }
+
+            // Find the file on disk, then load it
+            foreach (string searchPath in searchPaths) {
+                string filePath = Path.Combine(searchPath, path);
+                if (_manager.Platform.FileExists(filePath)) {
+                    return ExecuteFile(filePath);
+                }
+            }
+
+            // Didn't find the file, throw
+            string allPaths = searchPaths.Aggregate((x, y) => x + ", " + y);
+            throw new FileNotFoundException(string.Format("File '{0}' not found in language's search path: {1}", path, allPaths));
         }
 
         /// <summary>

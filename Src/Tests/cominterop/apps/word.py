@@ -57,16 +57,10 @@ def wd_selection_change_eventhandler(range):
     #print "selected range - ", range.Start, range.End
 
 def add_wordapp_event(wdapp):
-    if isPiaInstalled and not preferComDispatch: 
-        wdapp.WindowSelectionChange += wd_selection_change_eventhandler
-    else: 
-        wdapp.Event_WindowSelectionChange += wd_selection_change_eventhandler
+    wdapp.WindowSelectionChange += wd_selection_change_eventhandler
 
 def remove_wordapp_event(wdapp):
-    if isPiaInstalled  and not preferComDispatch: 
-        wdapp.WindowSelectionChange -= wd_selection_change_eventhandler
-    else: 
-        wdapp.Event_WindowSelectionChange -= wd_selection_change_eventhandler
+    wdapp.WindowSelectionChange -= wd_selection_change_eventhandler
     
 def get_range(doc, start, end):
     return doc.Range(start, end)

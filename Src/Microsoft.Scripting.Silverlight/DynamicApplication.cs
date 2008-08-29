@@ -16,13 +16,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Windows;
 using System.Windows.Resources;
 using System.Xml;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using System.Reflection;
 
 namespace Microsoft.Scripting.Silverlight {
 
@@ -145,7 +146,7 @@ namespace Microsoft.Scripting.Silverlight {
 
         private const string _DefaultEntryPoint = "app";
         private const string _LanguagesConfigFile = "languages.config";
-        private ScriptRuntime _env;
+        private ScriptRuntime _runtime;
         private ScriptRuntimeSetup _runtimeSetup;
 
         internal static bool InUIThread {
@@ -215,12 +216,27 @@ namespace Microsoft.Scripting.Silverlight {
             
             ScriptRuntimeSetup setup = TryParseConfigurationFile();
             if (setup == null) {
-                setup = new ScriptRuntimeSetup().LoadFromAssemblies(GetManifestAssemblies());
+                setup = LoadConfigFromAssemblies(GetManifestAssemblies());
             }
 
             InitializeDLR(setup);
 
             StartMainProgram();
+        }
+
+        private static ScriptRuntimeSetup LoadConfigFromAssemblies(IEnumerable<Assembly> assemblies) {
+            var setup = new ScriptRuntimeSetup();
+            foreach (var assembly in assemblies) {
+                foreach (DynamicLanguageProviderAttribute attribute in assembly.GetCustomAttributes(typeof(DynamicLanguageProviderAttribute), false)) {
+                    setup.LanguageSetups.Add(new LanguageSetup(
+                        attribute.LanguageContextType.AssemblyQualifiedName,
+                        attribute.DisplayName,
+                        attribute.Names,
+                        attribute.FileExtensions
+                    ));
+                }
+            }
+            return setup;
         }
 
         private IEnumerable<Assembly> GetManifestAssemblies() {
@@ -242,21 +258,21 @@ namespace Microsoft.Scripting.Silverlight {
             setup.Options["SearchPaths"] = new string[] { String.Empty };
             
             _runtimeSetup = setup;
-            _env = new ScriptRuntime(setup);
+            _runtime = new ScriptRuntime(setup);
 
-            _env.LoadAssembly(GetType().Assembly); // to expose our helper APIs
+            _runtime.LoadAssembly(GetType().Assembly); // to expose our helper APIs
 
             // Add default references to Silverlight platform DLLs
             // (Currently we auto reference CoreCLR, UI controls, browser interop, and networking stack.)
             foreach (string name in new string[] { "mscorlib", "System", "System.Windows", "System.Windows.Browser", "System.Net" }) {
-                _env.LoadAssembly(BrowserPAL.PAL.LoadAssembly(name));
+                _runtime.LoadAssembly(BrowserPAL.PAL.LoadAssembly(name));
             }
         }
 
         private void StartMainProgram() {
             string code = DownloadEntryPoint();
 
-            ScriptEngine engine = _env.GetEngineByFileExtension(Path.GetExtension(_entryPoint));
+            ScriptEngine engine = _runtime.GetEngineByFileExtension(Path.GetExtension(_entryPoint));
 
             ScriptSource sourceCode = engine.CreateScriptSourceFromString(code, _entryPoint, SourceCodeKind.File);
 
@@ -271,16 +287,18 @@ namespace Microsoft.Scripting.Silverlight {
 
             if (_entryPoint == null) {
                 // try default entry point name w/ all extensions
-                
-                foreach (string ext in _env.GetRegisteredFileExtensions()) {
-                    string file = _DefaultEntryPoint + ext;
-                    string contents = DownloadContents(file);
-                    if (contents != null) {
-                        if (_entryPoint != null) {
-                            throw new ApplicationException(string.Format("Application can only have one entry point, but found two: {0}, {1}", _entryPoint, file));
+
+                foreach (var language in _runtime.Configuration.Languages) {
+                    foreach (var ext in language.FileExtensions) {
+                        string file = _DefaultEntryPoint + ext;
+                        string contents = DownloadContents(file);
+                        if (contents != null) {
+                            if (_entryPoint != null) {
+                                throw new ApplicationException(string.Format("Application can only have one entry point, but found two: {0}, {1}", _entryPoint, file));
+                            }
+                            _entryPoint = file;
+                            code = contents;
                         }
-                        _entryPoint = file;
-                        code = contents;
                     }
                 }
 
@@ -383,7 +401,7 @@ namespace Microsoft.Scripting.Silverlight {
                     }
 
                     string[] extensions = exts.Split(',');
-                    result.LanguageSetups.Add(context + ", " + assembly, new LanguageSetup(String.Empty, extensions, extensions));
+                    result.LanguageSetups.Add(new LanguageSetup(context + ", " + assembly, String.Empty, extensions, extensions));
                 }
             } catch (ConfigFileException cfe) {
                 throw cfe;
@@ -409,7 +427,7 @@ namespace Microsoft.Scripting.Silverlight {
 
         public ScriptRuntime Environment {
             get {
-                return _env;
+                return _runtime;
             }
         }
 

@@ -66,17 +66,22 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected virtual ScriptRuntimeSetup CreateRuntimeSetup() {
-            var setup = new ScriptRuntimeSetup();
-            
-            // default settings defined on the provider's assembly:
-            if (Provider != null) {
-                setup.LoadFromAssemblies(new[] { Provider.Assembly });
+            var setup = ScriptRuntimeSetup.ReadConfiguration();
+
+            string provider = Provider.AssemblyQualifiedName;
+
+            if (!setup.LanguageSetups.Any(s => s.TypeName == provider)) {
+                var languageSetup = CreateLanguageSetup();
+                if (languageSetup != null) {
+                    setup.LanguageSetups.Add(languageSetup);
+                }
             }
 
-#if !SILVERLIGHT
-            setup.LoadConfiguration();
-#endif
             return setup;
+        }
+
+        protected virtual LanguageSetup CreateLanguageSetup() {
+            return null;
         }
 
         protected virtual PlatformAdaptationLayer PlatformAdaptationLayer {
@@ -88,20 +93,25 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         private string GetLanguageProvider(ScriptRuntimeSetup setup) {
-            string providerName;
-
             var providerType = Provider;
             if (providerType != null) {
-                providerName = providerType.AssemblyQualifiedName;
-            } else if (Options.HasLanguageProvider) {
-                providerName = Options.LanguageProvider;
-            } else if (Options.RunFile != null && setup.TryGetLanguageProviderByFileExtension(Path.GetExtension(Options.RunFile), out providerName)) {
-                // nop
-            } else {
-                throw new InvalidOptionException("No language specified.");
+                return providerType.AssemblyQualifiedName;
+            }
+            
+            if (Options.HasLanguageProvider) {
+                return Options.LanguageProvider;
             }
 
-            return providerName;
+            if (Options.RunFile != null) {
+                string ext = Path.GetExtension(Options.RunFile);
+                foreach (var lang in setup.LanguageSetups) {
+                    if (lang.FileExtensions.Any(e => DlrConfiguration.FileExtensionComparer.Equals(e, ext))) {
+                        return lang.TypeName;
+                    }
+                }
+            }
+
+            throw new InvalidOptionException("No language specified.");
         }
 
         protected virtual CommandLine CreateCommandLine() {
@@ -153,10 +163,16 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             string provider = GetLanguageProvider(runtimeSetup);
 
-            LanguageSetup languageSetup;
-            if (!runtimeSetup.LanguageSetups.TryGetValue(provider, out languageSetup)) {
+            LanguageSetup languageSetup = null;
+            foreach (var language in runtimeSetup.LanguageSetups) {
+                if (language.TypeName == provider) {
+                    languageSetup = language;
+                }
+            }
+            if (languageSetup == null) {
                 // the language doesn't have a setup -> create a default one:
-                runtimeSetup.LanguageSetups[Provider.AssemblyQualifiedName] = languageSetup = new LanguageSetup(Provider.Name);
+                languageSetup = new LanguageSetup(Provider.AssemblyQualifiedName, Provider.Name);
+                runtimeSetup.LanguageSetups.Add(languageSetup);
             }
 
             // inserts search paths for all languages (/paths option):
@@ -186,7 +202,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         private static void InsertSearchPaths(IDictionary<string, object> options, ICollection<string> paths) {
             if (options != null && paths != null && paths.Count > 0) {
-                var existingPaths = new List<string>(EngineOptions.GetSearchPathsOption(options) ?? (IEnumerable<string>)ArrayUtils.EmptyStrings);
+                var existingPaths = new List<string>(LanguageOptions.GetSearchPathsOption(options) ?? (IEnumerable<string>)ArrayUtils.EmptyStrings);
                 existingPaths.InsertRange(0, paths);
                 options["SearchPaths"] = existingPaths;
             }
@@ -333,7 +349,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
 
             if (consoleOptions.PrintVersionAndExit) {
-                Console.WriteLine("{0} {1} on .NET {2}", Engine.LanguageDisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
+                Console.WriteLine("{0} {1} on .NET {2}", Engine.Configuration.DisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;
             }
 
