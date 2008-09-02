@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using Microsoft.Scripting.Utils;
 
@@ -54,12 +55,25 @@ namespace Microsoft.Scripting.Runtime {
         /// <exception cref="Microsoft.Scripting.InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
         internal LanguageContext LoadLanguageContext(ScriptDomainManager domainManager, out bool alreadyLoaded) {
             if (_context == null) {
-                Type type;
 
-                try {
-                    type = domainManager.Platform.LoadAssembly(_providerName.AssemblyName.FullName).GetType(_providerName.TypeName, true);
-                } catch (Exception e) {
-                    throw new MissingTypeException(_providerName.ToString(), e);
+                // Let assembly load errors bubble out
+                var assembly = domainManager.Platform.LoadAssembly(_providerName.AssemblyName.FullName);
+
+                Type type = assembly.GetType(_providerName.TypeName);
+                if (type == null) {
+                    throw new InvalidOperationException(
+                        string.Format(
+                            "Failed to load language '{0}': assembly '{1}' does not contain type '{2}'",
+                            _displayName, assembly.Location, _providerName.TypeName
+                    ));
+                }
+
+                if (!type.IsSubclassOf(typeof(LanguageContext))) {
+                    throw new InvalidOperationException(
+                        string.Format(
+                            "Failed to load language '{0}': type '{1}' is not a valid language provider because it does not inherit from LanguageContext",
+                            _displayName, type
+                    )); 
                 }
 
                 var context = ReflectionUtils.CreateInstance<LanguageContext>(type, domainManager, _options);
@@ -92,6 +106,7 @@ namespace Microsoft.Scripting.Runtime {
         private readonly Dictionary<Type, LanguageConfiguration> _loadedProviderTypes;
 
         public DlrConfiguration(bool debugMode, bool privateBinding, IDictionary<string, object> options) {
+            ContractUtils.RequiresNotNull(options, "options");
             _debugMode = debugMode;
             _privateBinding = privateBinding;
             _options = options;
@@ -130,14 +145,32 @@ namespace Microsoft.Scripting.Runtime {
             get { return _languageConfigurations; }
         }
 
-        public void AddLanguage(string languageTypeName, string displayName, IList<string> names, IList<string> fileExtensions, 
+        public void AddLanguage(string languageTypeName, string displayName, IList<string> names, IList<string> fileExtensions,
             IDictionary<string, object> options) {
-            ContractUtils.Requires(!_frozen, "Configuration cannot be modified once the runtime is initialized");
-            ContractUtils.Requires(CollectionUtils.TrueForAll(names, (id) => !String.IsNullOrEmpty(id) && !_languageNames.ContainsKey(id)), "names", "Language name null, empty or already defined");
-            ContractUtils.Requires(CollectionUtils.TrueForAll(fileExtensions, (ext) => !String.IsNullOrEmpty(ext) && !_languageExtensions.ContainsKey(ext)), "fileExtensions", "Extension null, empty or already defined");
-            ContractUtils.RequiresNotEmpty(displayName, "displayName");
+            AddLanguage(languageTypeName, displayName, names, fileExtensions, options, null);
+        }
 
-            var aqtn = AssemblyQualifiedTypeName.ParseArgument(languageTypeName, "languageTypeName");
+        internal void AddLanguage(string languageTypeName, string displayName, IList<string> names, IList<string> fileExtensions, 
+            IDictionary<string, object> options, string paramName) {
+            ContractUtils.Requires(!_frozen, "Configuration cannot be modified once the runtime is initialized");
+            ContractUtils.Requires(
+                CollectionUtils.TrueForAll(names, (id) => !String.IsNullOrEmpty(id) && !_languageNames.ContainsKey(id)),
+                paramName ?? "names",
+                "Language name should not be null, empty or duplicated between languages"
+            );
+            ContractUtils.Requires(
+                CollectionUtils.TrueForAll(fileExtensions, (ext) => !String.IsNullOrEmpty(ext) && !_languageExtensions.ContainsKey(ext)),
+                paramName ?? "fileExtensions",
+                "File extension should not be null, empty or duplicated between languages"
+            );
+            ContractUtils.RequiresNotNull(displayName, paramName ?? "displayName");
+
+            if (string.IsNullOrEmpty(displayName)) {
+                ContractUtils.Requires(names.Count > 0, paramName ?? "displayName", "Must have a non-empty display name or a a non-empty list of language names");
+                displayName = names[0];
+            }
+
+            var aqtn = AssemblyQualifiedTypeName.ParseArgument(languageTypeName, paramName ?? "languageTypeName");
             if (_languageConfigurations.ContainsKey(aqtn)) {
                 throw new ArgumentException(string.Format("Duplicate language with type name '{0}'", aqtn), "languageTypeName");
             }
@@ -277,6 +310,15 @@ namespace Microsoft.Scripting.Runtime {
 
         public string[] GetFileExtensions() {
             return ArrayUtils.MakeArray<string>(_languageExtensions.Keys);
+        }
+
+        internal LanguageConfiguration GetLanguageConfig(LanguageContext context) {
+            foreach (var config in _languageConfigurations.Values) {
+                if (config.LanguageContext == context) {
+                    return config;
+                }
+            }
+            return null;
         }
     }
 }

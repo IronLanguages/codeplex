@@ -20,6 +20,9 @@ using Microsoft.Scripting.Utils;
 using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Configuration information for a language
+    /// </summary>
     [Serializable]
     public sealed class LanguageConfig {
         private readonly string _typeName;

@@ -20,7 +20,7 @@
     .active { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold; background-color:#FE8402;}
     .resolved { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold; background-color: #41924B;}
     .last { text-align:right; font-size: 120%%; color:#F9F9F9; font-weight:bold; background-color: #6BCAE2;}   
-    .weekbugs { text-align:center; }
+    .weekbugs { text-align:center; color:#4C88BE; font-weight: bold;}
     .neg { background-color: #F9F9F9; text-align:right; font-size: 130%%; font-weight:bold;color: #28AF63; }
     .pos { background-color: #F9F9F9; text-align:right; font-size: 130%%; font-weight:bold;color: Red; }
     .zero { background-color: #F9F9F9; text-align:right; font-size: 130%%; font-weight:bold;color: Blue; }
@@ -29,6 +29,10 @@
 
 <body>
 <h2 class="title">IronPython Weekly Bug Report, <span class="timestamp">%s</span></h2>
+<p class="header">
+    <img src="__graph.gif" alt="Bugs trend"/>
+</p>
+<p class="weekbugs">Current bug status:</p>
 <p class="header">
 <table border="0" cellpadding="10">
     <tr>

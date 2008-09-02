@@ -36,9 +36,9 @@ namespace Microsoft.Scripting.Hosting.Configuration {
     //   </languages>
     //
     //   <options>    <!-- AddRemoveClearMap with key (option, [language]?): inherits language nodes, overwrites previous nodes (last wins) -->
-    //     <set option="{string}" value="{string}" [language="{langauge-name}"]? />
+    //     <set option="{string}" value="{string}" [language="{language-name}"]? />
     //     <clear />
-    //     <remove option="{string}" [language="{langauge-name}"]? />
+    //     <remove option="{string}" [language="{language-name}"]? />
     //   </options>
     //
     // </microsoft.scripting>

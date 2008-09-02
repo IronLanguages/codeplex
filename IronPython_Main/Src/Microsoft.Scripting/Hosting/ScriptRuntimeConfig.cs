@@ -21,6 +21,9 @@ using Microsoft.Scripting.Utils;
 using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Configuration for the ScriptRuntime
+    /// </summary>
     [Serializable]
     public sealed class ScriptRuntimeConfig {
         private readonly ReadOnlyCollection<LanguageConfig> _languages;
@@ -46,35 +49,39 @@ namespace Microsoft.Scripting.Hosting {
             _options = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>(config.Options));
         }
 
+        /// <summary>
+        /// The list of languages configured in this runtime
+        /// (note: they are not necessarily loaded)
+        /// </summary>
         public IList<LanguageConfig> Languages {
             get { return _languages; }
         }
 
+        /// <summary>
+        /// Indicates that the script runtime is in debug mode.
+        /// This means:
+        /// 
+        /// 1) Symbols are emitted for debuggable methods (methods associated with SourceUnit).
+        /// 2) Debuggable methods are emitted to non-collectable types (this is due to CLR limitations on dynamic method debugging).
+        /// 3) JIT optimization is disabled for all methods
+        /// 4) Languages may disable optimizations based on this value.
+        /// </summary>
         public bool DebugMode {
             get { return _debugMode; }
         }
 
+        /// <summary>
+        /// Ignore CLR visibility checks
+        /// </summary>
         public bool PrivateBinding {
             get { return _privateBinding; }
         }
 
+        /// <summary>
+        /// Global options that were set for all languages
+        /// </summary>
         public IDictionary<string, object> Options {
             get { return _options; }
-        }
-
-        internal LanguageConfig GetLanguageConfig(LanguageContext context) {
-            if (context is InvariantContext) {
-                return null;
-            }
-
-            var aqtn = new AssemblyQualifiedTypeName(context.GetType());
-            foreach (var language in _languages) {
-                if (aqtn == new AssemblyQualifiedTypeName(language.TypeName)) {
-                    return language;
-                }
-            }
-
-            throw Assert.Unreachable;
         }
     }
 }

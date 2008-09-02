@@ -65,7 +65,15 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns invariant engine if the scope is language agnostic.
         /// </summary>
         public ScriptEngine Engine {
-            get { return _engine; }
+            get {
+                // InvariantContext should not have an engine
+                // TODO: If _engine itself could be set to null, we wouldn't
+                // need this check
+                if (_engine.LanguageContext is InvariantContext) {
+                    return null;
+                }
+                return _engine;
+            }
         }
 
         #region Code Execution (for convenience)

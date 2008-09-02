@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public DynamicLanguageProviderAttribute(Type languageContextType, string displayName, string[] names, string[] fileExtensions) {
-            ContractUtils.RequiresNotNull(languageContextType, "langaugeContextType");
+            ContractUtils.RequiresNotNull(languageContextType, "languageContextType");
             ContractUtils.RequiresNotNull(displayName, "displayName");
             ContractUtils.RequiresNotNull(names, "names");
             ContractUtils.RequiresNotNull(fileExtensions, "fileExtensions");

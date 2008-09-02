@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Hosting {
     /// Represents a language in Hosting API. 
     /// Hosting API counterpart for <see cref="LanguageContext"/>.
     /// </summary>
-    [DebuggerDisplay("{_language.DisplayName}")]
+    [DebuggerDisplay("{Configuration.DisplayName}")]
     public sealed class ScriptEngine
 #if !SILVERLIGHT
  : MarshalByRefObject
@@ -607,9 +607,18 @@ namespace Microsoft.Scripting.Hosting {
         public LanguageConfig Configuration {
             get {
                 if (_config == null) {
-                    // Safe to execute this multiple times under different threads
-                    // (it's a lookup on a stateless object)
-                    _config = _runtime.Configuration.GetLanguageConfig(_language);
+                    // The user shouldn't be able to get a hold of the invariant engine
+                    Debug.Assert(!(_language is InvariantContext));
+
+                    // Find the matching language configuration
+                    LanguageConfiguration config = _runtime.Manager.Configuration.GetLanguageConfig(_language);
+                    Debug.Assert(config != null);
+
+                    foreach (var language in _runtime.Configuration.Languages) {
+                        if (config.ProviderName == new AssemblyQualifiedTypeName(language.TypeName)) {
+                            return _config = language;
+                        }
+                    }
                 }
                 return _config;
             }
@@ -684,11 +693,6 @@ namespace Microsoft.Scripting.Hosting {
             get {
                 return _language;
             }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public ErrorSink GetCompilerErrorSink() {
-            return _language.GetCompilerErrorSink();
         }
 
         internal TRet Call<T, TRet>(Func<LanguageContext, T, TRet> f, T arg) {
