@@ -50,12 +50,14 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public ScriptRuntime(ScriptRuntimeSetup setup) {
             ContractUtils.RequiresNotNull(setup, "setup");
+            // Do this first, so we detect configuration errors immediately
+            DlrConfiguration config = setup.ToConfiguration("setup");
 
             _host = ReflectionUtils.CreateInstance<ScriptHost>(setup.HostType, setup.HostArguments);
 
             ScriptHostProxy hostProxy = new ScriptHostProxy(_host);
 
-            _manager = new ScriptDomainManager(hostProxy, setup.ToConfiguration());
+            _manager = new ScriptDomainManager(hostProxy, config);
             _invariantContext = new InvariantContext(_manager);
 
             _io = new ScriptIO(_manager.SharedIO);

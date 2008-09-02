@@ -26,6 +26,7 @@ sys.path.append(nt.environ['MERLIN_ROOT'] + '\\Test\\Scripts\\Util')
 import teamfoundation as tfs
 import Microsoft.TeamFoundation.WorkItemTracking.Client
 from Microsoft.TeamFoundation.WorkItemTracking.Client import CoreField
+import buggraph
 
 class Bug(object):
     def __init__(self, bug):
@@ -72,7 +73,7 @@ class TFSBug(Bug):
     def get_created_by(self):
         return self.bug['Created By']
 
-def parse_bugs(bugs, at):   
+def parse_bugs(bugs, at=None):   
     p1 = p2 = active = resolved = 0
     lastweek_bugs = []
     for bug in bugs:
@@ -85,7 +86,7 @@ def parse_bugs(bugs, at):
             active += 1
         elif bug.is_resolved():
             resolved += 1
-        if  bug.get_created_date()>= at.AddDays(-7):
+        if  at != None and bug.get_created_date()>= at.AddDays(-7):
             lastweek_bugs.append(bug)
     return p1, p2, active, resolved, lastweek_bugs
 
@@ -144,8 +145,8 @@ ORDER BY [System.Id]
 #EMAIL_TO = "olegtk@microsoft.com"
 EMAIL_TO = "ipyteam@microsoft.com"
 
-week_ago = (date.today() - timedelta(days=7)).strftime('%m/%d/%Y')
 tfs_store = tfs.workitem_store(TFS_URL)
+week_ago = (date.today() - timedelta(days=7)).strftime('%m/%d/%Y')
 tfs_bugs = list(tfs_store.Query(TFS_QUERY % (TFS_PROJECT, TFS_AREA_PATH)))
 tfs_bugs = map(TFSBug, tfs_bugs)
 tfs_bugs_week_ago = list(tfs_store.Query((TFS_QUERY + " asof '%s'") % \
@@ -180,6 +181,19 @@ p1bugs, p2bugs, active, resolved, lastweek = parse_bugs(tfs_bugs + codeplex_bugs
 p1bugs_before, p2bugs_before, active_before, resolved_before, lastweek_before = \
     parse_bugs(tfs_bugs_week_ago + codeplex_bugs_week_ago, DateTime.Now.AddDays(-7))
 
+bugdata = []
+for i in xrange(0,10):
+    asof = (date.today() - timedelta(days=7*i)).strftime('%m/%d/%Y')
+    tfsweekbugs = list(tfs_store.Query((TFS_QUERY + " asof '%s'") % \
+    (TFS_PROJECT, TFS_AREA_PATH, asof)))
+    tfsweekbugs = map(TFSBug, tfsweekbugs)
+    codeplexweekbugs = list(codeplex_store.Query((CODEPLEX_QUERY + " asof '%s'") % \
+    (CODEPLEX_PROJECT, asof)))
+    codeplexweekbugs = map(CodeplexBug, codeplexweekbugs)
+    bugdata.append((parse_bugs(tfsweekbugs + codeplexweekbugs), asof))
+
+buggraph.buildgraph(bugdata)
+
 f = open('bugtracker.html')
 email = ''.join(f.readlines())
 cdate = date.today().strftime('%m/%d/%Y')
@@ -200,6 +214,7 @@ t = (
 )
 email = email % t
 try:    
-    smtpmailer.send(EMAIL_TO, "IronPython Bugs - %s" % cdate, email)
+    img = System.Net.Mail.Attachment(r"c:\temp\__graph.gif")
+    smtpmailer.send(EMAIL_TO, "IronPython Bug Report - %s" % cdate, email, False, img)
 except System.Exception, e:
     print 'Failed sending email: ', e

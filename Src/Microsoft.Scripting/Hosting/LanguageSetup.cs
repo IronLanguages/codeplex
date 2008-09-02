@@ -19,6 +19,9 @@ using Microsoft.Scripting.Utils;
 using System.Reflection;
 
 namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Stores information needed to setup a language
+    /// </summary>
     [Serializable]
     public sealed class LanguageSetup {
         private string _typeName;
@@ -27,6 +30,9 @@ namespace Microsoft.Scripting.Hosting {
         private readonly List<string> _fileExtensions;
         private readonly Dictionary<string, object> _options;
 
+        /// <summary>
+        /// The assembly qualified type name of the language provider
+        /// </summary>
         public string TypeName {
             get { return _typeName; }
             set {
@@ -35,6 +41,10 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
+        /// <summary>
+        /// Display name of the language. If empty, it will be set to the first
+        /// name in the Names list.
+        /// </summary>
         public string DisplayName {
             get { return _displayName; }
             set {
@@ -64,10 +74,26 @@ namespace Microsoft.Scripting.Hosting {
             get { return _options; }
         }
 
+        /// <summary>
+        /// Creates a new LanguageSetup
+        /// </summary>
+        /// <param name="typeName">assembly qualified type name of the language
+        /// provider</param>
+        public LanguageSetup(string typeName)
+            : this(typeName, "", ArrayUtils.EmptyStrings, ArrayUtils.EmptyStrings) {
+        }
+
+        /// <summary>
+        /// Creates a new LanguageSetup with the provided options
+        /// TODO: remove this overload?
+        /// </summary>
         public LanguageSetup(string typeName, string displayName)
             : this(typeName, displayName, ArrayUtils.EmptyStrings, ArrayUtils.EmptyStrings) {
         }
 
+        /// <summary>
+        /// Creates a new LanguageSetup with the provided options
+        /// </summary>
         public LanguageSetup(string typeName, string displayName, IEnumerable<string> names, IEnumerable<string> fileExtensions) {
             ContractUtils.RequiresNotEmpty(typeName, "typeName");
             ContractUtils.RequiresNotNull(displayName, "displayName");

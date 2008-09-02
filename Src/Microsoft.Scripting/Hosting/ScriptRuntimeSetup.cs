@@ -21,6 +21,9 @@ using System.Reflection;
 using System.IO;
 
 namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Stores information needed to setup a ScriptRuntime
+    /// </summary>
     [Serializable]
     public sealed class ScriptRuntimeSetup {
         // host specification:
@@ -44,23 +47,47 @@ namespace Microsoft.Scripting.Hosting {
             _hostArguments = ArrayUtils.EmptyObjects;
         }
 
+        /// <summary>
+        /// The list of language setup information for languages to load into
+        /// the runtime
+        /// </summary>
         public IList<LanguageSetup> LanguageSetups {
             get { return _languageSetups; }
         }
 
+        /// <summary>
+        /// Indicates that the script runtime is in debug mode.
+        /// This means:
+        /// 
+        /// 1) Symbols are emitted for debuggable methods (methods associated with SourceUnit).
+        /// 2) Debuggable methods are emitted to non-collectable types (this is due to CLR limitations on dynamic method debugging).
+        /// 3) JIT optimization is disabled for all methods
+        /// 4) Languages may disable optimizations based on this value.
+        /// </summary>
         public bool DebugMode {
             get { return _debugMode; }
             set { _debugMode = value; }
         }
 
+        /// <summary>
+        /// Ignore CLR visibility checks
+        /// </summary>
         public bool PrivateBinding {
             get { return _privateBinding; }
             set { _privateBinding = value; }
         }
 
+        /// <summary>
+        /// Can be any derived class of ScriptHost. When set, it allows the
+        /// host to override certain methods to control behavior of the runtime
+        /// </summary>
         public Type HostType {
             get { return _hostType; }
-            set { _hostType = value; }
+            set {
+                ContractUtils.RequiresNotNull(value, "value");
+                ContractUtils.Requires(typeof(ScriptHost).IsAssignableFrom(value), "value", "Must be ScriptHost or a derived type of ScriptHost");
+                _hostType = value;
+            }
         }
 
         /// <remarks>
@@ -70,6 +97,9 @@ namespace Microsoft.Scripting.Hosting {
             get { return _options; }
         }
 
+        /// <summary>
+        /// Arguments passed to the host type when it is constructed
+        /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public object[] HostArguments {
             get {
@@ -81,7 +111,9 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        internal DlrConfiguration ToConfiguration() {
+        internal DlrConfiguration ToConfiguration(string paramName) {
+            ContractUtils.Requires(_languageSetups.Count > 0, paramName, "ScriptRuntimeSetup must have at least one LanguageSetup");
+
             var config = new DlrConfiguration(_debugMode, _privateBinding, _options);
 
             foreach (var language in _languageSetups) {

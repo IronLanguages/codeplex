@@ -465,6 +465,44 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
+        /// Converts the remote object into the specified type returning a handle to
+        /// the new remote object.
+        /// </summary>
+        public ObjectHandle ConvertTo(ObjectHandle obj, Type type) {
+            return new ObjectHandle(ConvertTo(GetLocalObject(obj), type));
+        }
+
+        /// <summary>
+        /// Converts the remote object into the specified type returning a handle to
+        /// the new remote object. Returns true if the value can be converted,
+        /// false if it cannot.
+        /// </summary>
+        public bool TryConvertTo<T>(ObjectHandle obj, out ObjectHandle result) {
+            T resultObj;
+            if (TryConvertTo<T>(GetLocalObject(obj), out resultObj)) {
+                result = new ObjectHandle(resultObj);
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Converts the remote object into the specified type returning a handle to
+        /// the new remote object. Returns true if the value can be converted,
+        /// false if it cannot.
+        /// </summary>
+        public bool TryConvertTo(ObjectHandle obj, Type type, out ObjectHandle result) {
+            object resultObj;
+            if (TryConvertTo(GetLocalObject(obj), type, out resultObj)) {
+                result = new ObjectHandle(resultObj);
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        /// <summary>
         /// Unwraps the remote object and converts it into the specified type before
         /// returning it.
         /// </summary>
