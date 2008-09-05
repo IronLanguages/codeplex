@@ -468,4 +468,167 @@ def test_fileobject_close():
     fd = socket._fileobject(None, close=True)
     AreEqual(fd.mode, 'rb')
 
+@disabled("TODO: fails consistently on certain machines")
+def test_cp5814():
+    global HAS_EXITED
+    global EXIT_CODE
+    HAS_EXITED = False
+    
+    import nt
+    import thread
+    import time
+    
+    #Server code
+    server = """
+from time import sleep
+import socket
+
+HOST = 'localhost'
+PORT = 50007
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+
+try:
+    s.listen(1)
+    conn, addr = s.accept()
+    
+    #Whatever we get from the client, send it back.
+    data = conn.recv(1024)
+    conn.send(data)
+    
+    #Verifications
+    if not addr[0] in [HOST, '127.0.0.1']:
+        raise Exception('The address, %s, was unexpected' % str(addr))
+    if data!='stuff':
+        raise Exception('%s!=stuff' % str(data))
+    sleep(10)
+    
+finally:
+    conn.close()
+"""
+    #Spawn off a thread to startup the server
+    def server_thread():
+        global EXIT_CODE
+        global HAS_EXITED
+        import nt
+        serverFile = path_combine(testpath.temporary_dir, "cp5814server.py")
+        write_to_file(serverFile, server)
+        EXIT_CODE = nt.system("%s %s" %
+                    (sys.executable, serverFile))
+        HAS_EXITED = True
+        try:
+            nt.remove(serverFile)
+        except:
+            pass
+    
+    thread.start_new_thread(server_thread, ())
+    #Give the server a chance to startup
+    time.sleep(5)
+    
+    
+    #Client
+    HOST = 'localhost'
+    PORT = 50007
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((HOST, PORT))
+    s.send("stuff")
+    data, addr = s.recvfrom(1024)
+    s.close()
+    
+    #Ensure the server didn't die
+    for i in xrange(100):
+        if not HAS_EXITED:
+            print "*",
+            time.sleep(1)
+        else:
+            AreEqual(EXIT_CODE, 0)
+            break
+    Assert(HAS_EXITED)
+
+    #Verification
+    AreEqual(data, "stuff")
+    if sys.platform=="win32":
+        AreEqual(addr[0], 0)
+
+@disabled("TODO: fails consistently on certain machines")
+def test_cp7451():
+    global HAS_EXITED
+    global EXIT_CODE
+    HAS_EXITED = False
+    
+    import nt
+    import thread
+    import time
+    
+    #Server code
+    server = """
+from time import sleep
+import socket
+
+HOST = 'localhost'
+PORT = 50007
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+
+try:
+    s.listen(1)
+    conn, addr = s.accept()
+    
+    #Whatever we get from the client, send it back.
+    data = conn.recv(1024)
+    conn.send(data)
+    
+    #Verifications
+    if not addr[0] in [HOST, '127.0.0.1']:
+        raise Exception('The address, %s, was unexpected' % str(addr))
+    if data!='stuff2':
+        raise Exception('%s!=stuff2' % str(data))
+    sleep(10)
+    
+finally:
+    conn.close()
+"""
+    #Spawn off a thread to startup the server
+    def server_thread():
+        global EXIT_CODE
+        global HAS_EXITED
+        import nt
+        serverFile = path_combine(testpath.temporary_dir, "cp7451server.py")
+        write_to_file(serverFile, server)
+        EXIT_CODE = nt.system("%s %s" %
+                    (sys.executable, serverFile))
+        HAS_EXITED = True
+        try:
+            nt.remove(serverFile)
+        except:
+            pass
+    
+    thread.start_new_thread(server_thread, ())
+    #Give the server a chance to startup
+    time.sleep(5)
+    
+    
+    #Client
+    HOST = 'localhost'
+    PORT = 50007
+    s = socket.socket()
+    s.connect((HOST, PORT))
+    s.send("stuff2")
+    f = s.makefile()
+    s.close()
+    
+    #Ensure the server didn't die
+    for i in xrange(100):
+        if not HAS_EXITED:
+            print "*",
+            time.sleep(1)
+        else:
+            AreEqual(EXIT_CODE, 0)
+            break
+    Assert(HAS_EXITED)
+
+    #Verification
+    AreEqual(f.read(6), "stuff2")
+    
+#------------------------------------------------------------------------------
 run_test(__name__)

@@ -134,6 +134,15 @@ if is_cli or is_silverlight:
     threes.append(System.Int64.Parse("3"))
     zeroes.append(System.Int64.Parse("0"))
 
+if is_cli:    
+    #Verify true division of a overloaded / operator in a C# class
+    add_clr_assemblies("operators")
+    from Merlin.Testing.Call import *
+    x = AllOpsClass(5)
+    y = AllOpsClass(4)    
+    z = x/y
+    AreEqual(z.Value , 1) #normal division happens since __truediv__ is not found __div__ is called.
+
 for i in threes:
     for j in zeroes:
         try:

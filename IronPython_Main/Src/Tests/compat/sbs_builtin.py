@@ -193,9 +193,7 @@ class test_builtin(object):
                         printwith('same', pow(a, x, y))
        
     def test_file_mode(self):
-        #Dev10 438773
-        disabled_modes = ["rUt+", "rU+", "rU+t", "Ur+", "Urt+", "Ur+", "Ur+t",
-                          "U+", "Ut+", "U+", "U+t"]
+        disabled_modes = []
                           
         arw = ['', 'a', 'r', 'w', 'U', 'rU', 'Ur', 'wU', 'Uw', 'Ua', 'aU']
         bt = ['', 'b', 't']
@@ -210,7 +208,6 @@ class test_builtin(object):
                 for z in bt:
                     modes.append(x + y + z)
         
-        #Dev10 438773
         modes = [x for x in modes if x not in disabled_modes]
         
         filename = 'tempfile.txt'

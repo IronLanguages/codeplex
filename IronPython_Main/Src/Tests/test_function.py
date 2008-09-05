@@ -1104,5 +1104,16 @@ def test_function_type():
     
     for x in [ f2, f3, f4, f5]:
         AreEqual(type(f1), type(x))
-        
+
+def test_name_mangled_params():
+    def f1(__a): pass
+    def f2(__a): return __a
+    def f3(a, __a): return __a
+    def f4(_a, __a): return _a + __a
+    
+    f1("12")
+    AreEqual(f2("hello"), "hello")
+    AreEqual(f3("a","b"), "b")
+    AreEqual(f4("a","b"), "ab")
+              
 run_test(__name__)

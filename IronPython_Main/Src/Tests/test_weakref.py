@@ -36,10 +36,6 @@ def test_proxy_dir():
             b = _weakref.proxy(a)
             
             AreEqual(dir(a), dir(b))
-            
-            #Merlin 366014
-            keep_alive(a)
-            
             del(a)
             
             return b

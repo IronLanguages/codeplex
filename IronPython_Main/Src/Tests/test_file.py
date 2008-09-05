@@ -680,5 +680,53 @@ def test_modes():
     # extra info can be passed and is retained
     x = file('test_file', 'rFOOBAR')
     AreEqual(x.mode, 'rFOOBAR')
+
+@skip("win32")  #This test is unstable under RunAgainstCpy.py
+def test_cp16623():
+    '''
+    If this test ever fails randomly, there is a problem around file thread
+    safety.  Do not wrap this test case with retry_on_failure!
+    '''
+    global FINISHED_COUNTER
+    FINISHED_COUNTER = 0
     
+    import thread
+    import time
+    
+    expected_lines = ["a", "bbb" * 100, "cc"]
+    total_threads = 50
+    file_name = path_combine(testpath.temporary_dir, "cp16623.txt")
+    f = open(file_name, "w")
+    
+    def write_stuff():
+        global FINISHED_COUNTER
+        for j in xrange(100):
+            for i in xrange(50):
+                print >> f, "a"
+            print >> f, "bbb" * 1000
+            for i in xrange(10):
+                print >> f, "cc"
+        FINISHED_COUNTER += 1
+
+    for i in xrange(total_threads):
+        thread.start_new_thread(write_stuff, ())
+
+    #Give all threads some time to finish
+    for i in xrange(total_threads):
+        if FINISHED_COUNTER!=total_threads:
+            print "*",
+            time.sleep(1)
+        else:
+            break
+    AreEqual(FINISHED_COUNTER, total_threads)    
+    f.close()
+    
+    #Verifications - since print isn't threadsafe the following
+    #is pointless...  Just make sure IP doesn't throw.
+    #f = open(file_name, "r")
+    #lines = f.readlines()
+    #for line in lines:
+    #    Assert(line in expected_lines, line)
+
+#------------------------------------------------------------------------------    
 run_test(__name__)

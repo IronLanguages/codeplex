@@ -26,7 +26,9 @@ def test_basic():
             try: self.b = 2
             except AttributeError: pass
             else: Fail("should have thrown")
-            
+    
+    AreEqual(str(C.a), "<member 'a' of 'C' objects>")
+             
     x = C()
     Assert(not hasattr(x, "__dict__"))
     Assert(not hasattr(x, "__weakref__"))

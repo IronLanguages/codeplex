@@ -416,4 +416,10 @@ def test_csharp_enumeration():
             sum = sum + i
         AreEqual(sum, 6)
 
+@skip('win32')
+def test_error():
+    l = []
+    AssertErrorWithPartialMessage(TypeError, "append is not a generic method and is unsubscriptable", lambda: l.append[float](1.0))
+    AssertErrorWithPartialMessage(TypeError, "'int' object is unsubscriptable", lambda: 1[2])
+    
 run_test(__name__)

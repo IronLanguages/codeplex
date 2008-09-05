@@ -328,5 +328,34 @@ def test_metaclass():
     
     # clean up __metaclass__ for other tests
     del(__metaclass__)
+
+def test_arguments():
+    class MetaType(type):
+        def __init__(cls, name, bases, dict):
+            super(MetaType, cls).__init__(name, bases, dict)
+
+    class Base(object):
+        __metaclass__ = MetaType
+    
+      
+    class A(Base):
+        def __init__(self, a, b='b', c='12', d='', e=''):
+            self.val = a + b + c + d + e
+
+    a = A('hello')
+    AreEqual(a.val, 'hellob12')
+
+    b = ('there',)
+    a = A('hello', *b)
+    AreEqual(a.val, 'hellothere12')
+    
+    c = ['42','23']
+    a = A('hello', *c)
+    AreEqual(a.val, 'hello4223')
+    
+    x = ()
+    y = {'d': 'boom'}
+    a = A('hello', *x, **y)
+    AreEqual(a.val, 'hellob12boom')
     
 run_test(__name__)

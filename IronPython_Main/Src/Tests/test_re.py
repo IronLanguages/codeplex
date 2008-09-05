@@ -298,7 +298,12 @@ def test_optional_paren():
 def test_back_match():
     p = re.compile('(?P<grp>.+?)(?P=grp)')
     AreEqual(p.match('abcabc').groupdict(), {'grp':'abc'})
-
+    p = re.compile(r'(?P<delim>[%$])(?P<escaped>(?P=delim))')
+    AreEqual(p.match('$$').groupdict(), {'escaped': '$', 'delim': '$'})
+    AreEqual(p.match('$%'), None)
+    p = re.compile(r'(?P<grp>ab)(a(?P=grp)b)')
+    AreEqual(p.match('abaabb').groups(), ('ab', 'aabb'))
+    
 def test_expand():
     AreEqual(re.match("(a)(b)", "ab").expand("blah\g<1>\g<2>"), "blahab")
     AreEqual(re.match("(a)()", "ab").expand("blah\g<1>\g<2>\n\r\t\\\\"),'blaha\n\r\t\\')
@@ -746,5 +751,28 @@ def test_cp17111():
         Assert(regex.search(r"\\%s" % x)!=None)
         Assert(regex.search(r"")==None)
         
+def test_cp1089():
+    test_cases = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#%&_+-=]{};':,.//<>" + '"'
+    for x in test_cases:
+        #Just make sure they don't throw
+        temp = re.compile('\\\\' + x)
+
+def test_cp16657():
+    Assert(re.compile(r'^bar', re.M).search('foo\nbar') != None)
+    Assert(re.compile(r'^bar(?m)').search('foo\nbar') != None)
+    Assert(re.compile(r'^bar', re.M).search('foo\nbaar') == None)
+    Assert(re.compile(r'^bar(?m)').search('foo\nbaar') == None)
+    
+    Assert(re.compile(r'^bar', re.U).search('bar') != None)
+    Assert(re.compile(r'^bar(?u)').search('bar') != None)
+    Assert(re.compile(r'^bar', re.U).search('baar') == None)
+    Assert(re.compile(r'^bar(?u)').search('baar') == None)
+    
+    Assert(re.compile(r'     b ar   ', re.X).search('bar') != None)
+    Assert(re.compile(r'b ar(?x)').search('bar') != None)
+    Assert(re.compile(r'     b ar   ', re.X).search('baar') == None)
+    Assert(re.compile(r'b ar(?x)').search('baar') == None)
+    Assert(re.compile(r'b ar').search('bar') == None)    
+
         
 run_test(__name__)

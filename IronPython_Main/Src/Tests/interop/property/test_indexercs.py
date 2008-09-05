@@ -38,6 +38,9 @@ def test_params():
     x = ClassWithParamsIndexer()
     x.Init()
 
+    for y, z in [(y,z) for y,z in zip(x, range(100)) if z != 0]:
+	    AreEqual(y,z)
+    
     x[1] = 2
     AreEqual(2, x[1])
         
@@ -47,12 +50,14 @@ def test_params():
     AreEqual(x[()], -100)
     x[()] = 9
     AreEqual(x[()], 9)
-
-
+    
 def test_overload1():
     x = ClassWithIndexerOverloads1()
     x.Init()
     
+    for y, z in [(y,z) for y,z in zip(x, range(100)) if z != 0]:
+	    AreEqual(y,z)
+	    
     AreEqual(x[()], -200)
     x[1, -1, 1, -1] = 3
     AreEqual(x[()], 3)
@@ -73,6 +78,9 @@ def test_overload1():
 def test_overload2():
     x = ClassWithIndexerOverloads2()
 
+    for y, z in zip(x, range(10)):
+	    AreEqual(y,z)
+	
     x[1] = 2
     x['1'] = '3'
     AreEqual('3', x['1'])
@@ -86,6 +94,11 @@ def test_basic():
         x = t()
         x.Init()
         
+        #Codeplex bug 18314 - http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18314
+        if t is not StructWithIndexer:
+            for y, z in zip(x, range(10)):
+	            AreEqual(y,z)
+	    
         a, b, c = 2, SimpleStruct(3), SimpleClass(4)
         
         x[1] = a
@@ -136,6 +149,10 @@ def test_writeonly():
 def test_access_from_derived_class():
     x = DerivedClassWithoutIndexer()
     x.Init()
+    
+    for y, z in zip(x, range(10)):
+	    AreEqual(y,z)
+    
     x[2] = 4
     AreEqual(4, x[2])
     
@@ -147,11 +164,15 @@ def test_access_from_derived_class():
 
 def test_new_indexer():
     x = DerivedClassWithNewIndexer()
+    
+    for y, z in zip(x, range(0, -10, -1)):
+	    AreEqual(y,z)
+	    
     x[2] = 9
     AreEqual(-18, x[2])
     
     x = DerivedClassWithNewWriteOnlyIndexer()
     x[3] = 10
     #AssertError(TypeError, lambda: x[3])  # bug 362877
-
+    
 run_test(__name__)
