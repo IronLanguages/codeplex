@@ -61,6 +61,16 @@ def test__rdivmod__():
     AreEqual(divmod(False, True), (0, 0))
     AssertError(ZeroDivisionError, divmod, True,  False)
     AssertError(ZeroDivisionError, divmod, False, False)
-    
 
+@skip("win32")    
+def test_decimal():
+    import System
+    if not System.Decimal:
+        Fail("should be true: %r", System.Decimal)
+        
+    AreEqual(bool(System.Decimal(0)), False)
+    AreEqual(bool(System.Decimal(1)), True)
+    AreEqual(System.Decimal(True), System.Decimal(1))
+    AreEqual(System.Decimal(False), System.Decimal(0))
+    
 run_test(__name__)

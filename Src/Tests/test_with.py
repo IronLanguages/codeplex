@@ -290,7 +290,18 @@ def test_with_enter_and_exit():
         
     AreEqual(globals()["gblvar"],116)
 
+#--------------------------------------------------------------------------------
 
-
+def test_void_return_value():
+    class A:
+        def __enter__(self): pass
+        def __exit__(self, a,b,c): pass
+        
+    try:    
+        with A() as a:
+            raise Exception
+    except Exception: pass
+    else: Fail("Should have raised exception")
+    
 #--Main------------------------------------------------------------------------
 run_test(__name__)

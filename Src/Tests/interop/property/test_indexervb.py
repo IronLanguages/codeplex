@@ -32,7 +32,10 @@ def test_basic():
              ]:
         x = t()
         x.Init()
-
+        
+        for y,z in zip(x.PropertyName, range(10)):
+		    AreEqual(y,z)
+		    
         AssertError(TypeError, lambda: x[2])
         
         x.PropertyName[2] = 9
@@ -48,6 +51,10 @@ def test_basic():
     
 def test_signature():
     x = ClassWithSignature()
+    
+    for y,z in zip(x.PropertyName, range(2, 12)):
+		AreEqual(y,z)
+		    
     i = x.PropertyName
     i[3] = 10
     AreEqual(10, i[3])
@@ -55,12 +62,19 @@ def test_signature():
     
 def test_only_optional():
     x = ClassWithOnlyOptional()
+    
+    for y,z in zip(x.PropertyName, range(10)):
+		AreEqual(y,z)
+    
     i = x.PropertyName
     #i[()]  # bug 363440
     
 def test_only_paramarray():
     x = ClassWithOnlyParamArray()
     i = x.PropertyName
+    
+    for y,z in zip(x.PropertyName, range(10)):
+		AreEqual(y,z)
     
     AreEqual(i[()], -99)
     i[()] = 10

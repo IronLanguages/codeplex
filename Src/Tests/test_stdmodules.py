@@ -167,7 +167,57 @@ def test_cp17040():
     ec = nt.system("%s -tt -c \"import os\"" %
                    (sys.executable))
     AreEqual(ec, 0)
-    
 
+@skip("win32")
+def test_cp13401():
+    import copy
+    
+    #A few special cases
+    AreEqual(System.Char.MinValue, copy.copy(System.Char.MinValue))
+    Assert(System.Char.MinValue != copy.copy(System.Char.MaxValue))
+    AreEqual(System.StringSplitOptions.None, copy.copy(System.StringSplitOptions.None))
+    AreEqual(System.StringSplitOptions.RemoveEmptyEntries, copy.copy(System.StringSplitOptions.RemoveEmptyEntries))
+    Assert(System.StringSplitOptions.None != copy.copy(System.StringSplitOptions.RemoveEmptyEntries))
+    
+    #Normal cases
+    test_dict = {   System.Byte : [System.Byte.MinValue, System.Byte.MinValue+1, System.Byte.MaxValue, System.Byte.MaxValue-1],
+                    System.Char : [],
+                    System.Boolean : [True, False],
+                    System.SByte   : [System.SByte.MinValue, System.SByte.MinValue+1, System.SByte.MaxValue, System.SByte.MaxValue-1],
+                    System.UInt32  : [System.UInt32.MinValue, System.UInt32.MinValue+1, System.UInt32.MaxValue, System.UInt32.MaxValue-1],
+                    System.Int64   : [System.Int64.MinValue, System.Int64.MinValue+1, System.Int64.MaxValue, System.Int64.MaxValue-1],
+                    System.Double  : [0.00, 3.14],
+                    }
+    
+    for key in test_dict.keys():
+        temp_type = key
+        Assert(hasattr(temp_type, "__reduce_ex__"), 
+               "%s has no attribute '%s'" % (str(temp_type), "__reduce_ex__"))
+    
+        for temp_value in test_dict[key]:
+            x = temp_type(temp_value)
+            x_copy = copy.copy(x)
+            AreEqual(x, x_copy)
+            AreEqual(x, temp_value)
+
+def test_cp7008():
+    import os
+    import sys
+    
+    Assert(os.path.isfile(sys.executable))
+    Assert(not os.path.isfile('"' + sys.executable + '"'))
+    
+@skip('win32')
+def test_get_set_locale():
+    import locale
+    locale.setlocale(locale.LC_ALL, 'en-US')
+    loc = locale.getlocale(locale.LC_ALL)
+    AreEqual(loc, ('en_US','ISO8859-1'))
+    
+    locale.setlocale(locale.LC_ALL, 'C')
+    loc = locale.getlocale(locale.LC_ALL)
+    AreEqual(loc, (None,None))
+
+    
 ##MAIN#########################################################################
 run_test(__name__)

@@ -128,29 +128,32 @@ def test_formatexception_showclrexceptions():
     finally:
         pe.Options.ShowClrExceptions = False
 
-
-@disabled("CodePlex 6710")
+@skip("silverlight")
 def test_formatexception_exceptiondetail():
-    '''
-    Expected return values need to be updated before this test can be re-enabled.
-    '''
     try:
         import Microsoft.Scripting
-        se = Microsoft.Scripting.Hosting.ScriptRuntime.Create()
-        pe = se.GetEngine('py')
+        from IronPython.Hosting import Python
+                
+        pe = Python.CreateEngine()
 
-        IronPythonTest.TestHelpers.GetContext().Options.ExceptionDetail = True
+        pe.Options.ExceptionDetail = True
     
-        #CodePlex Work Item 6710
-        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first", System.Exception("second", System.Exception())))
-        AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
+        try:
+            x = System.Collections.Generic.Dictionary[object, object]()
+            x[None] = 42
+        except System.Exception, e:
+            pass
+        import re
+        
+        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first", e))
+        Assert(exc_string.startswith("first"))
+        Assert(re.match("first\r\n   at .*ThrowArgumentNullException.*\n   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
         exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
-        AreEqual(exc_string.count(" File "), 6)
-        AreEqual(exc_string.count(" line "), 4)
-        Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
+        AreEqual(exc_string.count("at "), 6)
+        Assert(exc_string.endswith("Exception: first"))
     
     finally:
-        IronPythonTest.TestHelpers.GetContext().Options.ExceptionDetail = False
+        pe.Options.ExceptionDetail = False
     
 
 run_test(__name__)

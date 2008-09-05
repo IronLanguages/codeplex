@@ -44,8 +44,7 @@ def test_Common():
 if not privateBinding:
     def test_NormalBinding():
         try:
-            # no public types in namespace, shouldn't be able to get namespace
-            from IronPython.Compiler import Generation
+            from IronPythonTest.BinderTest import PrivateClass
         except ImportError:
             pass
 
@@ -56,9 +55,7 @@ if not privateBinding:
 else:
     def test_PrivateBinding():
         # entirely internal namespace
-        ### need new entirely internal namespace !!!
-        #from IronPython.Compiler import Generation
-        #x = Generation.Namespace(None)
+        from IronPythonTest.BinderTest import PrivateClass
         
         # mixed namespace
         import Microsoft.Scripting

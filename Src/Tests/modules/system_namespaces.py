@@ -223,10 +223,15 @@ def deep_dive(in_name, in_type):
             if member_fullname in broken_types:
                 print "SKIPPING", member_fullname
                 continue
+                        
+            net_type = Type.GetType(member_fullname)
+            #We can only import * from static classes.
+            if not net_type or not (net_type.IsAbstract and net_type.IsSealed):
+                continue
+                
+            print member_fullname
+            exec "from " + member_fullname + " import *"
             
-            #CodePlex 17236
-            #exec "from " + member_fullname + " import *"
-            #print member_fullname
             
             deep_dive(member_fullname, member_type)
 

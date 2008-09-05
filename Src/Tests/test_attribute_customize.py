@@ -209,7 +209,7 @@ def test_getattr_and_getattribute_together():
     AreEqual(c.x, 30)
 
     C.__getattribute__ = throw_attribute_error
-    #AreEqual(c.x, 20)  # bug 364348
+    AreEqual(c.x, 20)
 
     C.__getattribute__ = throw_assertion_error
     AssertError(AssertionError, lambda: c.x)
@@ -253,7 +253,7 @@ def test_subclassing():
     class D(C1): pass
     d = D()
     d.x = 20
-    #AreEqual([d.x, d.y], [30, 100])  # bug 365270
+    AreEqual([d.x, d.y], [30, 100])
     
     C1.__getattribute__ = lambda *args: 200  # __getattribute__ not honored
     class D(C1): pass

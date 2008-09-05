@@ -1042,6 +1042,12 @@ def test_interface_isinstance():
 
 @skip("silverlight") # no serialization support in Silverlight
 def test_serialization():
+    """
+    TODO:
+    - this should become a test module in and of itself
+    - way more to test here..
+    """
+    
     import cPickle
     import clr
     
@@ -1050,7 +1056,9 @@ def test_serialization():
             System.UInt32(1), System.Int16(1), System.UInt16(1), 
             System.Byte(1), System.SByte(1), System.Decimal(1),
             System.Char.MaxValue, System.DBNull.Value, System.Single(1.0),
-            System.DateTime.Now, None, {}, (), [], {'a': 2}, (42, ), [42, ]]
+            System.DateTime.Now, None, {}, (), [], {'a': 2}, (42, ), [42, ],
+            System.StringSplitOptions.RemoveEmptyEntries,
+            ]
     
     data.append(list(data))     # list of all the data..
     data.append(tuple(data))    # tuple of all the data...
@@ -1131,6 +1139,37 @@ def test_serialization():
             AreEqual(value.Count, newX.Count)
             for key in value.Keys:
                 AreEqual(value[key], newX[key])
+                
+    # interesting cases
+    for tempX in [System.Exception("some message")]:
+        for newX in (cPickle.loads(cPickle.dumps(tempX)), clr.Deserialize(*clr.Serialize(tempX))):
+            AreEqual(newX.Message, tempX.Message)
+
+    try:
+        exec " print 1"
+    except Exception, tempX:
+        pass
+    newX = cPickle.loads(cPickle.dumps(tempX))
+    for attr in ['args', 'filename', 'text', 'lineno', 'msg', 'offset', 'print_file_and_line',
+                 #CodePlex 8098: 'message', 
+                 ]:
+        AreEqual(eval("newX.%s" % attr), 
+                 eval("tempX.%s" % attr))
+    
+
+    class K(System.Exception):
+        other = "something else"
+    tempX = K()
+    #CodePlex 16415
+    #for newX in (cPickle.loads(cPickle.dumps(tempX)), clr.Deserialize(*clr.Serialize(tempX))):
+    #    AreEqual(newX.Message, tempX.Message)
+    #    AreEqual(newX.other, tempX.other)
+    
+    #CodePlex 16415
+    tempX = System.Exception
+    #for newX in (cPickle.loads(cPickle.dumps(System.Exception)), clr.Deserialize(*clr.Serialize(System.Exception))):
+    #    temp_except = newX("another message")
+    #    AreEqual(temp_except.Message, "another message")
 
 def test_generic_method_error():
     import clr

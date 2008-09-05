@@ -1034,6 +1034,10 @@ def test_get_frozen_object():
     # frozen objects not supported, this always fails
     AssertError(ImportError, imp.get_frozen_object, 'foo')
 
+
+def test_cp17459():
+    AreEqual(imp.IMP_HOOK, 9)
+        
 #------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:

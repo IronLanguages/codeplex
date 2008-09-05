@@ -951,4 +951,14 @@ def test_module_exceptions():
                 val.x = 2
                 AreEqual(val.x, 2)
 
+def test_raise_inside_str():
+    #raising an error inside the __str__ used to cause an unhandled exception.
+    class error(Exception):
+	    def __str__(self):
+		    raise TypeError, "inside __str__"
+
+    def f():
+	    raise error
+    AssertError(error, f)
+
 run_test(__name__)
