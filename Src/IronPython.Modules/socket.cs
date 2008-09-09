@@ -114,7 +114,7 @@ namespace IronPython.Modules {
             private WeakRefTracker _weakRefTracker = null;
             private int _referenceCount = 1;
             public const string __module__ = "socket";
-            private readonly CodeContext/*!*/ _context;
+            private CodeContext/*!*/ _context;
 
             #endregion
 
@@ -144,7 +144,6 @@ namespace IronPython.Modules {
                     throw MakeException(context, e);
                 }
                 Initialize(context, newSocket);
-                _context = context;
             }
 
             ~socket() {
@@ -678,8 +677,9 @@ namespace IronPython.Modules {
             /// <summary>
             /// Perform initialization common to all constructors
             /// </summary>
-            private void Initialize(CodeContext/*!*/ context, Socket socket) {
-                this._socket = socket;
+            private void Initialize(CodeContext context, Socket socket) {
+                _socket = socket;
+                _context = context;
                 int? defaultTimeout = GetDefaultTimeout(context);
                 if (defaultTimeout == null) {
                     settimeout(null);

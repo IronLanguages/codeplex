@@ -99,6 +99,19 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M202() takes at least 1 argument (2 given)", lambda: f(1, arg = 2))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(**{'arg': 3}))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'other'", lambda: f(**{'other': 4}))
+    
+    f = o.M203
+    f()
+    AssertErrorWithMessage(TypeError, "M203() takes at least 1 argument (1 given)", lambda: f(1)) #CP 18379
+    AssertErrorWithMessage(TypeError, "M203() takes at least 1 argument (1 given)", lambda: f({'a':1})) #CP 18379
+    f(a=1)
+    f(a=1, b=2)
+    f(**{})
+    f(**{'a':2, 'b':3})
+    f(a=1, **{'b':2, 'c':5})
+    AssertErrorWithMessage(TypeError, "M203() got multiple values for keyword argument 'a'", lambda: f(a=1, **{'a':2, 'c':5}))
+    AssertErrorWithMessage(TypeError, "M203() takes at least 1 argument (3 given)", lambda: f(*(1,2,3)))
+    
 
 def test_optional():
     #public void M231([Optional] int arg) { Flag.Set(arg); }  // not reset any
@@ -215,7 +228,29 @@ def test_two_args():
     
     # TODO: mixed 
     f(x = 1)  # check the value
-
+    
+    #public void M351(int x, [ParamDictionary] IAttributesCollection arg) { Flag<object>.Set(arg); }
+    f = o.M351
+    AssertErrorWithMessage(TypeError, "M351() takes at least 2 arguments (0 given)", lambda: f())
+    f(1); AreEqual(Flag[object].Value1, {})
+    f(1, a=3); AreEqual(Flag[object].Value1, {'a':3})
+    f(1, a=3,b=4); AreEqual(Flag[object].Value1, {'a':3, 'b':4})
+    f(1, a=3, **{'b':4, 'd':5}); AreEqual(Flag[object].Value1, {'a':3, 'b':4, 'd':5})
+    f(x=1); AreEqual(Flag[object].Value1, {})
+    f(**{'x' : 1}); AreEqual(Flag[object].Value1, {})
+    
+    #public void M352([ParamDictionary] IAttributesCollection arg, params int[] x) { Flag<object>.Set(arg); }
+    
+    f=o.M352
+    f(); AreEqual(Flag[object].Value1, {})
+    f(1); AreEqual(Flag[object].Value1, {})
+    f(1,2,3); AreEqual(Flag[object].Value1, {})    
+    f(a=1,b=2); AreEqual(Flag[object].Value1, {'a':1, 'b':2})
+    f(1,2,3, a=1); AreEqual(Flag[object].Value1, {'a':1})
+    f(a=1, *(1,2,3)); AreEqual(Flag[object].Value1, {'a':1})
+    f(*(1,2,3), **{'a':1, 'b':2}); AreEqual(Flag[object].Value1, {'a':1, 'b':2})
+    f(*(), **{}); AreEqual(Flag[object].Value1, {})    
+    
 def test_default_values_2():
     # public void M310(int x, [DefaultParameterValue(30)]int y) { Flag.Reset(); Flag.Set(x + y); }
     f = o.M310

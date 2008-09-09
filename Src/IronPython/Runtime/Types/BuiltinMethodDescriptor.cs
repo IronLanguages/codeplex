@@ -30,7 +30,7 @@ using Ast = System.Linq.Expressions.Expression;
 namespace IronPython.Runtime.Types {
 
     [PythonType("method_descriptor")]
-    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IOldDynamicObject, IDynamicObject, ICodeFormattable {
+    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IDynamicObject, ICodeFormattable {
         internal readonly BuiltinFunction/*!*/ _template;
 
         internal BuiltinMethodDescriptor(BuiltinFunction/*!*/ function) {
@@ -113,48 +113,7 @@ namespace IronPython.Runtime.Types {
         }
 
         #endregion
-
-        #region IOldDynamicObject Members
         
-        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
-            if (action.Kind == DynamicActionKind.Call) {
-                return MakeCallRule<T>((OldCallAction)action, context, args);
-            } else if (action.Kind == DynamicActionKind.DoOperation) {
-                return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
-            }
-            return null;
-        }
-
-        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
-            switch (doOperationAction.Operation) {
-                case Operators.IsCallable:
-                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
-                case Operators.CallSignatures:
-                    return IronPython.Runtime.Binding.PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Template.Targets, DynamicHelpers.GetPythonType(args[0]));
-            }
-            return null;
-        }
-
-        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(context, action, args, Template.Targets, Template.Level, Template.IsReversedOperator);
-            RuleBuilder<T> rule = helper.MakeRule();
-            if (Template.IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 built-in method descriptor + 2 args
-                // BinaryOperators return NotImplemented on failure.
-                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Property(null, typeof(PythonOps), "NotImplemented"));
-            }
-            rule.AddTest(
-                Template.MakeFunctionTest(
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("GetBuiltinMethodDescriptorTemplate"),
-                        Ast.Convert(rule.Parameters[0], typeof(BuiltinMethodDescriptor))
-                    )
-                )
-            );
-            return rule;
-        }
-
-        #endregion
-
         #region Public Python API
 
         public string __name__ {

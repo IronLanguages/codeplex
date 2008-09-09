@@ -29,14 +29,18 @@ namespace Microsoft.Scripting.Actions {
     using Ast = System.Linq.Expressions.Expression;
 
     public partial class DefaultBinder : ActionBinder {
-
         public MetaObject DoOperation(string operation, params MetaObject[] args) {
+            return DoOperation(operation, Ast.Null(typeof(CodeContext)), args);
+        }
+
+        public MetaObject DoOperation(string operation, Expression codeContext, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(operation, "operation");
+            ContractUtils.RequiresNotNull(codeContext, "codeContext");
             ContractUtils.RequiresNotNullItems(args, "args");
 
             return
                 MakeDefaultMemberRule(operation, args) ??   // see if we have a default member and we're doing indexing
-                MakeGeneralOperatorRule(operation, args);   // Then try comparison / other operators
+                MakeGeneralOperatorRule(operation, codeContext, args);   // Then try comparison / other operators
         }
 
         /// <summary>
@@ -60,14 +64,14 @@ namespace Microsoft.Scripting.Actions {
         /// operators.  If the operation cannot be completed a MetaObject which indicates an
         /// error will be returned.
         /// </summary>
-        private MetaObject MakeGeneralOperatorRule(string operation, MetaObject[] args) {
+        private MetaObject MakeGeneralOperatorRule(string operation, Expression codeContext, MetaObject[] args) {
             OperatorInfo info = OperatorInfo.GetOperatorInfo(operation);
             MetaObject res;
 
             if (CompilerHelpers.IsComparisonOperator(operation)) {
                 res = MakeComparisonRule(info, args);
             } else {
-                res = MakeOperatorRule(info, args);
+                res = MakeOperatorRule(info, codeContext, args);
             }
 
             return res;
@@ -225,18 +229,18 @@ namespace Microsoft.Scripting.Actions {
         #region Operator Rule
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")] // TODO: fix
-        private MetaObject MakeOperatorRule(OperatorInfo info, MetaObject[] args) {
+        private MetaObject MakeOperatorRule(OperatorInfo info, Expression codeContext, MetaObject[] args) {
             return
                 TryForwardOperator(info, args) ??
                 TryReverseOperator(info, args) ??
-                TryInplaceOperator(info, args) ??
+                TryInplaceOperator(info, codeContext, args) ??
                 TryPrimitiveOperator(info, args) ??
-                TryMakeDefaultUnaryRule(info, args) ??
+                TryMakeDefaultUnaryRule(info, codeContext, args) ??
                 MakeOperatorError(info, args);
         }
 
         private static MetaObject TryPrimitiveOperator(OperatorInfo info, MetaObject[] args) {
-            if (args.Length == 1 &&
+            if (args.Length == 2 &&
                 TypeUtils.GetNonNullableType(args[0].LimitType) == TypeUtils.GetNonNullableType(args[1].LimitType) &&
                 TypeUtils.IsArithmetic(args[0].LimitType)) {
                 // TODO: Nullable<PrimitveType> Support
@@ -292,18 +296,18 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryInplaceOperator(OperatorInfo info, MetaObject[] args) {
+        private MetaObject TryInplaceOperator(OperatorInfo info, Expression codeContext, MetaObject[] args) {
             Operators op = CompilerHelpers.InPlaceOperatorToOperator(info.Operator);
 
             if (op != Operators.None) {
                 // recurse to try and get the non-inplace action...
-                return MakeOperatorRule(OperatorInfo.GetOperatorInfo(op), args);
+                return MakeOperatorRule(OperatorInfo.GetOperatorInfo(op), codeContext, args);
             }
 
             return null;
         }
 
-        private static MetaObject TryMakeDefaultUnaryRule(OperatorInfo info, MetaObject[] args) {
+        private static MetaObject TryMakeDefaultUnaryRule(OperatorInfo info, Expression codeContext, MetaObject[] args) {
             if (args.Length == 1) {
                 Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
                 switch (info.Operator) {
@@ -342,7 +346,7 @@ namespace Microsoft.Scripting.Actions {
                         );
                     case Operators.MemberNames:
                         if (typeof(IMembersList).IsAssignableFrom(args[0].LimitType)) {
-                            return MakeIMembersListRule(args[0]);
+                            return MakeIMembersListRule(codeContext, args[0]);
                         }
 
                         MemberInfo[] members = args[0].LimitType.GetMembers();
@@ -381,14 +385,14 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private static MetaObject MakeIMembersListRule(MetaObject target) {
+        private static MetaObject MakeIMembersListRule(Expression codeContext, MetaObject target) {
             return new MetaObject(
                 Ast.Call(
                     typeof(BinderOps).GetMethod("GetStringMembers"),
                     Ast.Call(
                         Ast.ConvertHelper(target.Expression, typeof(IMembersList)),
                         typeof(IMembersList).GetMethod("GetMemberNames"),
-                        Ast.Null(typeof(CodeContext))
+                        codeContext
                     )
                 ),
                 Restrictions.TypeRestriction(target.Expression, target.LimitType).Merge(target.Restrictions)

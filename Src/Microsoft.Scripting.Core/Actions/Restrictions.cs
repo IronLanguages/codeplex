@@ -153,7 +153,7 @@ namespace System.Scripting.Actions {
 
         public static Restrictions InstanceRestriction(Expression expression, object instance) {
             ContractUtils.RequiresNotNull(expression, "expression");
-            ContractUtils.RequiresNotNull(instance, "instance");
+
             return new Restrictions(new Restriction(expression, instance));
         }
 
@@ -240,6 +240,13 @@ namespace System.Scripting.Actions {
         }
 
         private static Expression CreateInstanceRestriction(Expression expression, object value) {
+            if (value == null) {
+                return Expression.Equal(
+                    expression,
+                    Expression.Null(expression.Type)
+                );
+            }
+
             return Expression.Equal(
                 expression, 
                 Expression.Property(

@@ -291,6 +291,10 @@ class TestBank:
             0:'F1e-014\n.',
             1:'G=\x06\x84\x9b\x86\xa1+\x9b.',
             }),
+        (0.33333333333333331, {
+            0:'F0.33333333333333331\n.',
+            1:'G?\xd5UUUUUU.',
+            }),
         (u'hey\x00hey', {
             0:'Vhey\x00hey\np<0>\n.',
             1:'X\x07\x00\x00\x00hey\x00heyq<\x00>.',
@@ -901,7 +905,7 @@ def test_cp945():
     if not is_silverlight:
         for e in [  exceptions.UnicodeEncodeError("1", u"2", 3, 4, "5"),
                     exceptions.UnicodeDecodeError("1", "2", 3, 4, "5"),
-                    #CodePlex 15345 #exceptions.UnicodeTranslateError(u"1", 2, 3, "4")
+                    exceptions.UnicodeTranslateError(u"1", 2, 3, "4")
                     ]:
             x_pickled = cPickle.dumps(e)
             x_unpickled = cPickle.loads(x_pickled)

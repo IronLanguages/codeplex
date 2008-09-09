@@ -14,15 +14,15 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting.Actions;
-using System.Collections.Generic;
+using System.Text;
 
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -469,5 +469,183 @@ namespace Microsoft.Scripting.Runtime {
             object exitCode = site.Target(site, context, returnValue);
             return (exitCode != null) ? (int)exitCode : 0;
         }
+
+        #region Object Operations Support
+
+        internal static MetaObject ErrorMetaObject(MetaObject[] args, MetaObject onBindingError) {
+            return onBindingError ?? new MetaObject(
+                Expression.Throw(
+                  Expression.New(typeof(NotImplementedException).GetConstructor(new Type[0]))
+                ),
+                Restrictions.Combine(args)
+            );
+        }
+
+        private class DefaultOperationAction : OperationAction {
+            internal DefaultOperationAction(string operation)
+                : base(operation) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual OperationAction CreateOperationBinder(string operation) {
+            return new DefaultOperationAction(operation);
+        }
+
+        private class DefaultConvertAction : ConvertAction {
+            internal DefaultConvertAction(Type type, bool @explicit)
+                : base(type, @explicit) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                if (ToType.IsAssignableFrom(args[0].LimitType)) {
+                    return new MetaObject(
+                        args[0].Expression,
+                        Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType)
+                    );
+                }
+
+                return onBindingError ?? new MetaObject(
+                    Expression.Throw(
+                        Expression.New(
+                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            Expression.Constant(
+                                String.Format("Expected {0}, got {1}", ToType.FullName, args[0].LimitType.FullName)
+                            )                        
+                        )
+                    ),
+                    Restrictions.Combine(args)
+                );
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual ConvertAction CreateConvertBinder(Type toType, bool explicitCast) {
+            return new DefaultConvertAction(toType, explicitCast);
+        }
+
+        private class DefaultGetMemberAction : GetMemberAction {
+            internal DefaultGetMemberAction(string name, bool ignoreCase)
+                : base(name, ignoreCase) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual GetMemberAction CreateGetMemberBinder(string name, bool ignoreCase) {
+            return new DefaultGetMemberAction(name, ignoreCase);
+        }
+
+        private class DefaultSetMemberAction : SetMemberAction {
+            internal DefaultSetMemberAction(string name, bool ignoreCase)
+                : base(name, ignoreCase) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual SetMemberAction CreateSetMemberBinder(string name, bool ignoreCase) {
+            return new DefaultSetMemberAction(name, ignoreCase);
+        }
+
+        private class DefaultDeleteMemberAction : DeleteMemberAction {
+            internal DefaultDeleteMemberAction(string name, bool ignoreCase)
+                : base(name, ignoreCase) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual DeleteMemberAction CreateDeleteMemberBinder(string name, bool ignoreCase) {
+            return new DefaultDeleteMemberAction(name, ignoreCase);
+        }
+
+        private class DefaultCallAction : CallAction {
+            internal DefaultCallAction(string name, bool ignoreCase, params Argument[] arguments)
+                : base(name, ignoreCase, arguments) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override MetaObject FallbackInvoke(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual CallAction CreateCallBinder(string name, bool ignoreCase, params Argument[] arguments) {
+            return new DefaultCallAction(name, ignoreCase, arguments);
+        }
+
+        private class DefaultInvokeAction: InvokeAction {
+            internal DefaultInvokeAction(params Argument[] arguments)
+                : base(arguments) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual InvokeAction CreateInvokeBinder(params Argument[] arguments) {
+            return new DefaultInvokeAction(arguments);
+        }
+
+        private class DefaultCreateAction : CreateAction {
+            internal DefaultCreateAction(params Argument[] arguments)
+                : base(arguments) {
+            }
+
+            public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(args, onBindingError);
+            }
+
+            public override object HashCookie {
+                get { return this; }
+            }
+        }
+
+        public virtual CreateAction CreateCreateBinder(params Argument[] arguments) {
+            return new DefaultCreateAction(arguments);
+        }
+
+        #endregion
     }
 }

@@ -13,13 +13,18 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Linq.Expressions;
 using System.Scripting.Actions;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 using Ast = System.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
@@ -49,6 +54,15 @@ namespace IronPython.Runtime.Binding {
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
+        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            switch (action.Operation) {
+                case StandardOperators.CallSignatures:
+                    return PythonProtocol.MakeCallSignatureOperation(args[0], Value.Template.Targets);
+            }
+
+            return base.Operation(action, args);
+        }
+
         #endregion
 
         #region Invoke Implementation
@@ -61,7 +75,7 @@ namespace IronPython.Runtime.Binding {
 
             selfRestrict = selfRestrict.Merge(
                 Restrictions.ExpressionRestriction(
-                    Value.Template.MakeFunctionTest(
+                    MakeFunctionTest(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("GetBuiltinMethodDescriptorTemplate"),
                             Ast.Convert(Expression, typeof(BuiltinMethodDescriptor))
@@ -119,6 +133,13 @@ namespace IronPython.Runtime.Binding {
             }
 
             return res;
+        }
+
+        internal Expression MakeFunctionTest(Expression functionTarget) {
+            return Ast.Equal(
+                functionTarget,
+                Ast.Constant(Value.Template)
+            );
         }
 
         #endregion

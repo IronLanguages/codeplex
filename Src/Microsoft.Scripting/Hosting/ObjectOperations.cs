@@ -63,7 +63,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Even if an object is callable Call may still fail if an incorrect number of arguments or type of arguments are provided.
         /// </summary>
         public bool IsCallable(object obj) {
-            return _ops.DoOperation<object, bool>(Operators.IsCallable, obj);
+            return _ops.DoOperation<object, bool>(StandardOperators.IsCallable, obj);
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace Microsoft.Scripting.Hosting {
         /// using the ConvertTo methods and then invoking that delegate.
         /// </summary>
         public object Call(object obj, params object[] parameters) {
-            return _ops.Call(obj, parameters);
+            return _ops.Invoke(obj, parameters);
         }
 
         public object Create(object obj, params object[] parameters) {
@@ -144,6 +144,8 @@ namespace Microsoft.Scripting.Hosting {
         /// Converts the object obj to the type type.
         /// </summary>
         public object ConvertTo(object obj, Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+
             return _ops.ConvertTo(obj, type);
         }
 
@@ -162,17 +164,51 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
+        /// Converts the object obj to the type T including explicit conversions which may lose information.
+        /// </summary>
+        public T ExplicitConvertTo<T>(object obj) {
+            return _ops.ExplicitConvertTo<T>(obj);
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type type including explicit conversions which may lose information.
+        /// </summary>
+        public object ExplicitConvertTo(object obj, Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+
+            return _ops.ExplicitConvertTo(obj, type);
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type T including explicit conversions which may lose information.
+        /// 
+        /// Returns true if the value can be converted, false if it cannot.
+        /// </summary>
+        public bool TryExplicitConvertTo<T>(object obj, out T result) {
+            return _ops.TryExplicitConvertTo<T>(obj, out result);
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type type including explicit conversions which may lose information.  
+        /// 
+        /// Returns true if the value can be converted, false if it cannot.
+        /// </summary>
+        public bool TryExplicitConvertTo(object obj, Type type, out object result) {
+            return _ops.TryExplicitConvertTo(obj, type, out result);
+        }
+
+        /// <summary>
         /// Performs a generic unary operation on the specified target and returns the result.
         /// </summary>
         public object DoOperation(Operators op, object target) {
-            return _ops.DoOperation(op, target);
+            return _ops.DoOperation(StandardOperators.FromOperator(op), target);
         }
 
         /// <summary>
         /// Performs a generic unary operation on the strongly typed target and returns the value as the specified type
         /// </summary>
         public TResult DoOperation<TTarget, TResult>(Operators op, TTarget target) {
-            return _ops.DoOperation<TTarget, TResult>(op, target);
+            return _ops.DoOperation<TTarget, TResult>(StandardOperators.FromOperator(op), target);
         }
 
         /// <summary>
@@ -187,7 +223,7 @@ namespace Microsoft.Scripting.Hosting {
         /// the strongly typed result.
         /// </summary>
         public TResult DoOperation<TTarget, TOther, TResult>(Operators op, TTarget target, TOther other) {
-            return _ops.DoOperation<TTarget, TOther, TResult>(op, target, other);
+            return _ops.DoOperation<TTarget, TOther, TResult>(StandardOperators.FromOperator(op), target, other);
         }
 
         /// <summary>
@@ -283,7 +319,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Throws an exception if hte comparison cannot be performed.
         /// </summary>
         public bool LessThan(object self, object other) {
-            return _ops.DoOperation<object, object, bool>(Operators.LessThan, self, other);
+            return _ops.DoOperation<object, object, bool>(StandardOperators.LessThan, self, other);
         }
 
         /// <summary>
@@ -291,7 +327,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Throws an exception if hte comparison cannot be performed.
         /// </summary>
         public bool GreaterThan(object self, object other) {
-            return _ops.DoOperation<object, object, bool>(Operators.GreaterThan, self, other);
+            return _ops.DoOperation<object, object, bool>(StandardOperators.GreaterThan, self, other);
         }
 
         /// <summary>
@@ -299,7 +335,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Throws an exception if hte comparison cannot be performed.
         /// </summary>
         public bool LessThanOrEqual(object self, object other) {
-            return _ops.DoOperation<object, object, bool>(Operators.LessThanOrEqual, self, other);
+            return _ops.DoOperation<object, object, bool>(StandardOperators.LessThanOrEqual, self, other);
         }
 
         /// <summary>
@@ -307,15 +343,15 @@ namespace Microsoft.Scripting.Hosting {
         /// Throws an exception if hte comparison cannot be performed.
         /// </summary>
         public bool GreaterThanOrEqual(object self, object other) {
-            return _ops.DoOperation<object, object, bool>(Operators.GreaterThanOrEqual, self, other);
+            return _ops.DoOperation<object, object, bool>(StandardOperators.GreaterThanOrEqual, self, other);
         }
 
         /// <summary>
         /// Compares the two objects and returns true if the left object is equal to the right object.
-        /// Throws an exception if hte comparison cannot be performed.
+        /// Throws an exception if the comparison cannot be performed.
         /// </summary>
         public bool Equal(object self, object other) {
-            return _ops.DoOperation<object, object, bool>(Operators.Equals, self, other);
+            return _ops.DoOperation<object, object, bool>(StandardOperators.Equal, self, other);
         }
 
         /// <summary>
@@ -323,35 +359,36 @@ namespace Microsoft.Scripting.Hosting {
         /// Throws an exception if hte comparison cannot be performed.
         /// </summary>
         public bool NotEqual(object self, object other) {
-            return _ops.DoOperation<object, object, bool>(Operators.NotEquals, self, other);
+            return _ops.DoOperation<object, object, bool>(StandardOperators.NotEqual, self, other);
         }
 
         /// <summary>
         /// Returns a string which describes the object as it appears in source code
         /// </summary>
         public string GetCodeRepresentation(object obj) {
-            return _ops.DoOperation<object, string>(Operators.CodeRepresentation, obj);
+            return obj.ToString();
+            //return _ops.DoOperation<object, string>(StandardOperators.CodeRepresentation, obj);
         }
 
         /// <summary>
         /// Returns a list of strings which contain the known members of the object.
         /// </summary>
         public IList<string> GetMemberNames(object obj) {
-            return _ops.DoOperation<object, IList<string>>(Operators.MemberNames, obj);
+            return _ops.DoOperation<object, IList<string>>(StandardOperators.MemberNames, obj);
         }
 
         /// <summary>
         /// Returns a string providing documentation for the specified object.
         /// </summary>
         public string GetDocumentation(object obj) {
-            return _ops.DoOperation<object, string>(Operators.Documentation, obj);
+            return _ops.DoOperation<object, string>(StandardOperators.Documentation, obj);
         }
 
         /// <summary>
         /// Returns a list of signatures applicable for calling the specified object in a form displayable to the user.
         /// </summary>
         public IList<string> GetCallSignatures(object obj) {
-            return _ops.DoOperation<object, IList<string>>(Operators.CallSignatures, obj);
+            return _ops.DoOperation<object, IList<string>>(StandardOperators.CallSignatures, obj);
         }
 
         #endregion
@@ -500,6 +537,54 @@ namespace Microsoft.Scripting.Hosting {
             }
             result = null;
             return false;
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type T including explicit conversions which may lose information.
+        /// </summary>
+        public ObjectHandle ExplicitConvertTo<T>(ObjectHandle obj) {
+            return new ObjectHandle(_ops.ExplicitConvertTo<T>(GetLocalObject(obj)));
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type type including explicit conversions which may lose information.
+        /// </summary>
+        public ObjectHandle ExplicitConvertTo(ObjectHandle obj, Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+
+            return new ObjectHandle(_ops.ExplicitConvertTo(GetLocalObject(obj), type));
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type T including explicit conversions which may lose information.
+        /// 
+        /// Returns true if the value can be converted, false if it cannot.
+        /// </summary>
+        public bool TryExplicitConvertTo<T>(ObjectHandle obj, out ObjectHandle result) {
+            T outp;
+            bool res = _ops.TryExplicitConvertTo<T>(GetLocalObject(obj), out outp);
+            if (res) {
+                result = new ObjectHandle(obj);
+            } else {
+                result = null;
+            }
+            return res;
+        }
+
+        /// <summary>
+        /// Converts the object obj to the type type including explicit conversions which may lose information.  
+        /// 
+        /// Returns true if the value can be converted, false if it cannot.
+        /// </summary>
+        public bool TryExplicitConvertTo(ObjectHandle obj, Type type, out ObjectHandle result) {
+            object outp;
+            bool res = _ops.TryExplicitConvertTo(GetLocalObject(obj), type, out outp);
+            if (res) {
+                result = new ObjectHandle(obj);
+            } else {
+                result = null;
+            }
+            return res;
         }
 
         /// <summary>

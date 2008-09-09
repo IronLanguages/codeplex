@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Hosting {
  {
         private readonly LanguageContext _language;
         private readonly ScriptRuntime _runtime;
-        private LanguageConfig _config;
+        private LanguageSetup _config;
         private ObjectOperations _operations;
         private Scope _dummyScope;
 
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns a new ObjectOperations object.  See the Operations property for why you might want to call this.
         /// </summary>
         public ObjectOperations CreateOperations() {
-            return new ObjectOperations(new DynamicOperations(GetCodeContext(null)), this);
+            return new ObjectOperations(new DynamicOperations(_language), this);
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace Microsoft.Scripting.Hosting {
         public ObjectOperations CreateOperations(ScriptScope scope) {
             ContractUtils.RequiresNotNull(scope, "scope");
 
-            return new ObjectOperations(new DynamicOperations(GetCodeContext(scope)), this);
+            return new ObjectOperations(new DynamicOperations(_language), this);
         }
 
         #endregion
@@ -585,26 +585,7 @@ namespace Microsoft.Scripting.Hosting {
         /// The values are determined during runtime initialization and read-only afterwards. 
         /// You can change the settings via a configuration file or explicitly using ScriptRuntimeSetup class.
         /// </remarks>
-        public LanguageOptions Options {
-            get {
-                return _language.Options;
-            }
-        }
-
-        /// <summary>
-        /// This property returns the ScriptRuntime for the context in which this engine executes.
-        /// </summary>
-        public ScriptRuntime Runtime {
-            get {
-                return _runtime;
-            }
-        }
-
-        /// <summary>
-        /// Returns an object that has configuration information of the
-        /// language
-        /// </summary>
-        public LanguageConfig Configuration {
+        public LanguageSetup Setup {
             get {
                 if (_config == null) {
                     // The user shouldn't be able to get a hold of the invariant engine
@@ -614,13 +595,22 @@ namespace Microsoft.Scripting.Hosting {
                     LanguageConfiguration config = _runtime.Manager.Configuration.GetLanguageConfig(_language);
                     Debug.Assert(config != null);
 
-                    foreach (var language in _runtime.Configuration.Languages) {
+                    foreach (var language in _runtime.Setup.LanguageSetups) {
                         if (config.ProviderName == new AssemblyQualifiedTypeName(language.TypeName)) {
                             return _config = language;
                         }
                     }
                 }
                 return _config;
+            }
+        }
+
+        /// <summary>
+        /// This property returns the ScriptRuntime for the context in which this engine executes.
+        /// </summary>
+        public ScriptRuntime Runtime {
+            get {
+                return _runtime;
             }
         }
 

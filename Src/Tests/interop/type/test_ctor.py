@@ -46,7 +46,7 @@ def test_ctor_1_arg():
     Ctor103()
     Ctor103(1)
     Ctor103(1, 2, 3)
-    
+    Ctor105(a=1,b=2,c=3)
     #public class Ctor110 {
     #   public Ctor110(ref int arg) { arg = 10; }
     #}

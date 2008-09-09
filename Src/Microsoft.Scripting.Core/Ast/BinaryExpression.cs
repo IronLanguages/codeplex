@@ -1027,7 +1027,6 @@ namespace System.Linq.Expressions {
         /// <summary>
         /// Creates a binary expression representing array indexing: array[index]
         /// </summary>
-        [Obsolete("use Expression.ArrayAccess instead")]
         public static BinaryExpression ArrayIndex(Expression array, Expression index) {
             RequiresCanRead(array, "array");
             RequiresCanRead(index, "index");

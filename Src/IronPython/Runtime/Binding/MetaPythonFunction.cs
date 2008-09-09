@@ -20,15 +20,18 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Scripting.Actions;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = System.Linq.Expressions.Expression;
-
+    
     class MetaPythonFunction : MetaPythonObject, IPythonInvokable {
         public MetaPythonFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonFunction/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
@@ -58,6 +61,17 @@ namespace IronPython.Runtime.Binding {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(PythonFunction)));
             }
             return conversion.Fallback(args);
+        }
+
+        public override MetaObject/*!*/ Operation(OperationAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+            switch (action.Operation) {
+                case StandardOperators.CallSignatures:
+                    return MakeCallSignatureRule(args[0]);
+                case StandardOperators.IsCallable:
+                    return MakeIsCallableRule(args[0]);
+            }
+
+            return base.Operation(action, args);
         }
 
         #endregion
@@ -888,6 +902,30 @@ namespace IronPython.Runtime.Binding {
             private void EnsureInit() {
                 if (_init == null) _init = new List<Expression>();
             }
+        }
+
+        #endregion
+
+        #region Operations
+
+        private MetaObject/*!*/ MakeCallSignatureRule(MetaObject self) {
+            return new MetaObject(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("GetFunctionSignature"),
+                    Ast.ConvertHelper(
+                        self.Expression,
+                        typeof(PythonFunction)
+                    )
+                ),
+                Restrictions.TypeRestriction(self.Expression, typeof(PythonFunction))
+            );
+        }
+
+        private MetaObject MakeIsCallableRule(MetaObject/*!*/ self) {
+            return new MetaObject(
+                Ast.True(),
+                Restrictions.TypeRestriction(self.Expression, typeof(PythonFunction))
+            );
         }
 
         #endregion

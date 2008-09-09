@@ -95,6 +95,10 @@ namespace Microsoft.Scripting.Hosting {
 
 
 #if !SILVERLIGHT
+        public ObjectHandle ExecuteAndWrap() {
+            return new ObjectHandle(Execute());
+        }
+
         public ObjectHandle ExecuteAndWrap(ScriptScope scope) {
             return new ObjectHandle(Execute(scope));
         }

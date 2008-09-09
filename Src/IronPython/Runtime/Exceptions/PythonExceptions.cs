@@ -21,13 +21,14 @@ using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
 using System.Text;
 using System.Threading;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("exceptions", typeof(IronPython.Runtime.Exceptions.PythonExceptions))]
 namespace IronPython.Runtime.Exceptions {
@@ -87,7 +88,7 @@ namespace IronPython.Runtime.Exceptions {
         /// from this and have their own .NET class.
         /// </summary>
         [PythonType("BaseException"), DynamicBaseTypeAttribute, Serializable]
-        public class BaseException : ICodeFormattable, IPythonObject, IOldDynamicObject, IDynamicObject {
+        public class BaseException : ICodeFormattable, IPythonObject, IDynamicObject {
             private PythonType/*!*/ _type;          // the actual Python type of the Exception object
             private object _message = String.Empty; // the message object, cached at __init__ time, not updated on args assignment
             private PythonTuple _args;              // the tuple of args provided at creation time
@@ -372,14 +373,6 @@ namespace IronPython.Runtime.Exceptions {
 
             #endregion            
         
-            #region IOldDynamicObject Members
-
-            RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
-                return UserTypeOps.GetRuleHelper<T>(action, context, args);
-            }
-
-            #endregion
-
             #region IDynamicObject Members
 
             MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {

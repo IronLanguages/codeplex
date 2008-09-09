@@ -1017,49 +1017,6 @@ namespace IronPython.Runtime.Types {
             il.Emit(OpCodes.Ret);
 
             _tg.DefineMethodOverride(impl, decl);
-
-            ImplementOldDynamicObject();
-        }
-
-        private void ImplementOldDynamicObject() {
-            ImplementInterface(typeof(IOldDynamicObject));
-            MethodInfo decl;
-            MethodBuilder impl;
-            ILGen il;
-
-            il = DefineMethodOverride(MethodAttributes.Private, typeof(IOldDynamicObject), "GetRule", out decl, out impl);
-            MethodInfo mi = typeof(UserTypeOps).GetMethod("GetRuleHelper");
-            GenericTypeParameterBuilder[] types = impl.DefineGenericParameters("T");
-            types[0].SetGenericParameterAttributes(GenericParameterAttributes.ReferenceTypeConstraint);
-
-            for (int i = 1; i < 4; i++) {
-                il.EmitLoadArg(i);
-            }
-
-            il.EmitCall(mi.MakeGenericMethod(types));
-            if (typeof(IOldDynamicObject).IsAssignableFrom(_baseType)) {
-                InterfaceMapping imap = _baseType.GetInterfaceMap(typeof(IOldDynamicObject));
-                foreach (MethodInfo baseMethod in imap.TargetMethods) {
-                    if (baseMethod.Name == "GetRule") {
-                        il.Emit(OpCodes.Dup);
-                        Label nonnullRule = il.DefineLabel();
-                        il.Emit(OpCodes.Brtrue, nonnullRule);
-                        il.Emit(OpCodes.Pop);
-
-                        // call the base class
-                        for (int i = 0; i < 4; i++) {
-                            il.EmitLoadArg(i);
-                        }
-                        il.EmitCall(baseMethod.MakeGenericMethod(types));
-
-                        il.MarkLabel(nonnullRule);
-                        break;
-                    }
-                }
-            }
-
-            il.Emit(OpCodes.Ret);
-            _tg.DefineMethodOverride(impl, decl);
         }
 
         private void ImplementIPythonObject() {
@@ -1266,7 +1223,7 @@ namespace IronPython.Runtime.Types {
         private void ImplementProtectedFieldAccessors(Dictionary<string, List<string>> specialNames) {
             // For protected fields to be accessible from the derived type in Silverlight,
             // we need to create public helper methods that expose them. These methods are
-            // used by the IOldDynamicObject implementation (in UserTypeOps.GetRuleHelper)
+            // used by the IDynamicObject implementation (in MetaUserObject)
 
             FieldInfo[] fields = _baseType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
             foreach (FieldInfo fi in fields) {

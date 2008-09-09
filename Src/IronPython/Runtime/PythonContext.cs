@@ -172,7 +172,27 @@ namespace IronPython.Runtime {
                 _systemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(_options.WarningFilters);
             }
 
-            _systemState.Dict[SymbolTable.StringToId("path")] = new List(_options.SearchPaths);
+            List path = new List(_options.SearchPaths);
+#if !SILVERLIGHT
+            try {
+                Assembly entryAssembly = Assembly.GetEntryAssembly();
+                // Can be null if called from unmanaged code (VS integration scenario)
+                if (entryAssembly != null) {
+                    string entry = Path.GetDirectoryName(entryAssembly.Location);
+                    string lib = Path.Combine(entry, "Lib");
+                    path.append(lib);
+
+                    // add DLLs directory if it exists
+                    string dlls = Path.Combine(entry, "DLLs");
+                    if (Directory.Exists(dlls)) {
+                        path.append(dlls);
+                    }
+                }
+            } catch (SecurityException) {
+            }
+#endif
+
+            _systemState.Dict[SymbolTable.StringToId("path")] = path;
 
             PythonFunction.SetRecursionLimit(_options.RecursionLimit);
 
@@ -946,6 +966,21 @@ namespace IronPython.Runtime {
 #endif
         #endregion
 
+        public override ICollection<string> GetSearchPaths() {
+            List<string> result = new List<string>();
+            List paths;
+            if (TryGetSystemPath(out paths)) {
+                IEnumerator ie = PythonOps.GetEnumerator(paths);
+                while (ie.MoveNext()) {
+                    string str;
+                    if (TryConvertToString(ie.Current, out str)) {
+                        result.Add(str);
+                    }
+                }
+            }
+            return result;
+        }
+
         public override void SetSearchPaths(ICollection<string> paths) {
             SetSystemStateValue("path", new List(paths));
         }
@@ -1238,6 +1273,13 @@ namespace IronPython.Runtime {
 
         internal static PythonOptions GetPythonOptions(CodeContext context) {
             return DefaultContext.DefaultPythonContext._options;
+        }
+
+        internal void InsertIntoPath(int index, string directory) {
+            List path;
+            if (TryGetSystemPath(out path)) {
+                path.insert(index, directory);
+            }
         }
 
         internal void AddToPath(string directory) {
@@ -1574,6 +1616,41 @@ namespace IronPython.Runtime {
             return GetGenericSiteStorage<CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>>();
 
         }
+
+        #region Object Operations
+
+        public override ConvertAction/*!*/ CreateConvertBinder(Type/*!*/ toType, bool explicitCast) {
+            return new ConversionBinder(DefaultBinderState, toType, explicitCast ? ConversionResultKind.ExplicitCast : ConversionResultKind.ImplicitCast);
+        }
+
+        public override DeleteMemberAction/*!*/ CreateDeleteMemberBinder(string/*!*/ name, bool ignoreCase) {
+            return new DeleteMemberBinder(DefaultBinderState, name);
+        }
+
+        public override GetMemberAction/*!*/ CreateGetMemberBinder(string/*!*/ name, bool ignoreCase) {
+            return new CompatibilityGetMember(DefaultBinderState, name);
+        }
+
+        public override InvokeAction/*!*/ CreateInvokeBinder(params Argument/*!*/[]/*!*/ arguments) {
+            return new CompatibilityInvokeBinder(DefaultBinderState, arguments);
+        }
+
+        public override OperationAction/*!*/ CreateOperationBinder(string/*!*/ operation) {
+            return new OperationBinder(DefaultBinderState, operation);
+        }
+
+        public override SetMemberAction/*!*/ CreateSetMemberBinder(string/*!*/ name, bool ignoreCase) {
+            return new SetMemberBinder(DefaultBinderState, name);
+        }
+
+        public override CreateAction/*!*/ CreateCreateBinder(params Argument/*!*/[]/*!*/ arguments) {
+            return new CreateFallback(
+                new CompatibilityInvokeBinder(DefaultBinderState, arguments),
+                arguments
+            );
+        }
+
+        #endregion
 
         #region Per-Runtime Call Sites
 

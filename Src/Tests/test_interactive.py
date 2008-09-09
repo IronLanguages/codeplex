@@ -781,5 +781,10 @@ def test_excepthook():
     response = ipi.ExecuteLine("raise Exception", True)
     Assert(response.startswith("foo (<type 'exceptions.Exception', Exception(), <traceback object at"))
 
+def test_sta_sleep_Warning():
+    ipi = IronPythonInstance(executable, exec_prefix, '-c "from System.Threading import Thread;Thread.Sleep(100)"')    
+    retval, stdouttext, stderrtext, exitcode = ipi.StartAndRunToCompletion()
+    AreEqual(stderrtext, "warning: RuntimeWarning: Calling Thread.Sleep on an STA thread doesn't pump messages.  Use Thread.CurrentThread.Join instead.\r\n")
+    
 #------------------------------------------------------------------------------
 run_test(__name__)

@@ -22,6 +22,7 @@ using System.Text;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using System.Scripting.Actions;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -57,7 +58,7 @@ namespace Microsoft.Scripting.Runtime {
                 return result;
             }
 
-            IOldDynamicObject dynamicObject = callableObject as IOldDynamicObject;
+            IDynamicObject dynamicObject = callableObject as IDynamicObject;
             if (dynamicObject != null) {
 
                 MethodInfo invoke;

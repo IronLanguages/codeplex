@@ -121,6 +121,14 @@ namespace System.Scripting.Actions {
                 return this;
             }
 
+            if (type == typeof(None)) {
+                return new RestrictedMetaObject(
+                    Expression.Null(),
+                    Restrictions.Merge(Restrictions.InstanceRestriction(Expression, null)),
+                    Value
+                );
+            }
+
             if (type == RuntimeType) {
                 if (HasValue) {
                     return new RestrictedMetaObject(

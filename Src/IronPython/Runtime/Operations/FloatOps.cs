@@ -326,7 +326,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static string __repr__(CodeContext/*!*/ context, double self) {
-            return DoubleOps.__str__(context, self);
+            StringFormatter sf = new StringFormatter(context, "%.17g", self);
+            sf._TrailingZeroAfterWholeFloat = true;
+            return sf.Format();
         }
 
         public static BigInteger/*!*/ __long__(double self) {

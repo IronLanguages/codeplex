@@ -399,7 +399,7 @@ namespace IronPython.Modules {
                 get { return _dateTime.Day; }
             }
 
-            protected DateTime InternalDateTime {
+            internal DateTime InternalDateTime {
                 get { return _dateTime; }
                 set { _dateTime = value; }
             }
@@ -568,7 +568,7 @@ namespace IronPython.Modules {
             /// Used to check the type to see if we can do a comparison.  Returns true if we can
             /// or false if we should return NotImplemented.  May throw if the type's really wrong.
             /// </summary>
-            protected bool CheckType(object other) {
+            internal bool CheckType(object other) {
                 if (other == null)
                     throw PythonOps.TypeError("can't compare datetime.date to NoneType");
 

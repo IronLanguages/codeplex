@@ -81,7 +81,7 @@ namespace IronPython.Runtime.Operations {
             // In 1.x, we could check for certain interfaces like ICallable*, but those interfaces were deprecated
             // in favor of dynamic sites. 
             // This is difficult to infer because we'd need to simulate the entire callbinder, which can include
-            // looking for [SpecialName] call methods and checking for a rule from IOldDynamicObject. But even that wouldn't
+            // looking for [SpecialName] call methods and checking for a rule from IDynamicObject. But even that wouldn't
             // be complete since sites require the argument list of the call, and we only have the instance here. 
             // Thus check a dedicated IsCallable operator. This lets each object describe if it's callable.
 
@@ -463,6 +463,7 @@ namespace IronPython.Runtime.Operations {
         public static bool EqualRetBool(object x, object y) {
             //TODO just can't seem to shake these fast paths
             if (x is int && y is int) { return ((int)x) == ((int)y); }
+            if (x is string && y is string) { return ((string)x).Equals((string)y); }
 
             return DefaultContext.DefaultPythonContext.Equal(x, y);
         }
@@ -470,6 +471,7 @@ namespace IronPython.Runtime.Operations {
         public static bool EqualRetBool(CodeContext/*!*/ context, object x, object y) {
             //TODO just can't seem to shake these fast paths
             if (x is int && y is int) { return ((int)x) == ((int)y); }
+            if (x is string && y is string) { return ((string)x).Equals((string)y); }
 
             return PythonContext.GetContext(context).Equal(x, y);
         }
@@ -947,7 +949,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             List res;
-            if (o is IOldDynamicObject) {
+            if (o is IDynamicObject) {
                 res = new List();
 
                 PythonContext pc = PythonContext.GetContext(context);
@@ -2754,14 +2756,21 @@ namespace IronPython.Runtime.Operations {
             return NotImplementedType.Value;
         }
 
-        public static OldCallAction MakeListCallAction(int count) {
+        public static MetaAction MakeListCallAction(int count) {
             ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count);
             infos[count - 1] = new ArgumentInfo(ArgumentKind.List);
-            return OldCallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(infos));
+
+            return new InvokeBinder(
+                DefaultContext.DefaultPythonContext.DefaultBinderState,
+                new CallSignature(infos)
+            );
         }
 
-        public static OldCallAction MakeSimpleCallAction(int count) {
-            return OldCallAction.Make(DefaultContext.DefaultPythonBinder, count);
+        public static MetaAction MakeSimpleCallAction(int count) {
+            return new InvokeBinder(
+                DefaultContext.DefaultPythonContext.DefaultBinderState,
+                new CallSignature(CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count))
+            );
         }
 
         public static PythonTuple ValidateCoerceResult(object coerceResult) {

@@ -57,10 +57,6 @@ namespace IronPythonTest {
         public static LanguageContext GetContext(CodeContext context) {
             return context.LanguageContext;
         }
-
-        public static DlrConfiguration GetGlobalOptions(CodeContext context) {
-            return context.LanguageContext.DomainManager.Configuration;
-        }
     }
 
     public delegate int IntIntDelegate(int arg);
@@ -223,7 +219,11 @@ namespace IronPythonTest {
             AreEqual((int)scriptEngine.CreateScriptSourceFromString("42").Execute(scriptEngine.CreateScope()), 42);
 
             if(options != null) {
-                PythonOptions po = (PythonOptions)scriptEngine.Options;
+                PythonOptions po = (PythonOptions)Microsoft.Scripting.Hosting.Providers.HostingHelpers.CallEngine<object, LanguageOptions>(
+                    scriptEngine, 
+                    (lc, obj) => lc.Options,
+                    null
+                );
 
                 AreEqual(po.StripDocStrings, true);
                 AreEqual(po.Optimize, true);
@@ -249,8 +249,8 @@ namespace IronPythonTest {
             Assert(runtime.GetEngine("py") != null);
 
             if (options != null) {
-                AreEqual(runtime.Configuration.DebugMode, true);
-                AreEqual(runtime.Configuration.PrivateBinding, true);
+                AreEqual(runtime.Setup.DebugMode, true);
+                AreEqual(runtime.Setup.PrivateBinding, true);
             }
 
             AreEqual(Python.GetSysModule(runtime).GetVariable<string>("platform"), "cli");
@@ -777,7 +777,7 @@ if id(a) == id(b):
                 scope.IncludeFile(Common.InputTestDirectory + "\\raise.py");
                 throw new Exception("We should not get here");
             } catch (StringException e2) {
-                if (scope.Engine.Runtime.Configuration.DebugMode != e2.StackTrace.Contains(lineNumber))
+                if (scope.Engine.Runtime.Setup.DebugMode != e2.StackTrace.Contains(lineNumber))
                     throw new Exception("Debugging is enabled even though Options.DebugMode is not specified");
             }
         }

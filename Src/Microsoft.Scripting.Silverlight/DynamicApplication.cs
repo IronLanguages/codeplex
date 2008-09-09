@@ -288,7 +288,7 @@ namespace Microsoft.Scripting.Silverlight {
             if (_entryPoint == null) {
                 // try default entry point name w/ all extensions
 
-                foreach (var language in _runtime.Configuration.Languages) {
+                foreach (var language in _runtime.Setup.LanguageSetups) {
                     foreach (var ext in language.FileExtensions) {
                         string file = _DefaultEntryPoint + ext;
                         string contents = DownloadContents(file);

@@ -149,6 +149,7 @@ namespace IronPython.Hosting {
             Console.ErrorOutput = new OutputWriter(PythonContext, true);
             
             // TODO: must precede path initialization! (??? - test test_importpkg.py)
+            int pathIndex = PythonContext.PythonOptions.SearchPaths.Count;
             
             if (Options.Command == null && Options.FileName != null) {
                 if (Options.FileName == "-") {
@@ -166,14 +167,14 @@ namespace IronPython.Hosting {
                     }
 #endif
                     string fullPath = Language.DomainManager.Platform.GetFullPath(Options.FileName);
-                    PythonContext.AddToPath(Path.GetDirectoryName(fullPath));
+                    PythonContext.InsertIntoPath(pathIndex++, Path.GetDirectoryName(fullPath));
                 }
             }
 
             Language.DomainManager.LoadAssembly(typeof(string).Assembly);
             Language.DomainManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
 
-            InitializePath();
+            InitializePath(ref pathIndex);
             InitializeModules();
             InitializeExtensionDLLs();
             ImportSite();
@@ -188,8 +189,9 @@ namespace IronPython.Hosting {
             return module.Scope;
         }
         
-        private void InitializePath() {
-            PythonContext.AddToPath(PythonContext.DomainManager.Platform.CurrentDirectory);
+        private void InitializePath(ref int pathIndex) {
+
+            PythonContext.InsertIntoPath(pathIndex++, PythonContext.DomainManager.Platform.CurrentDirectory);
 
 #if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
@@ -197,23 +199,8 @@ namespace IronPython.Hosting {
                 if (path != null && path.Length > 0) {
                     string[] paths = path.Split(Path.PathSeparator);
                     foreach (string p in paths) {
-                        PythonContext.AddToPath(p);
+                        PythonContext.InsertIntoPath(pathIndex++, p);
                     }
-                }
-            }
-
-            Assembly entryAssembly = Assembly.GetEntryAssembly();
-            //Can be null if called from unmanaged code (VS integration scenario)
-            if (entryAssembly != null) {
-                string entry = Path.GetDirectoryName(entryAssembly.Location);
-                string site = Path.Combine(entry, "Lib");
-                PythonContext.AddToPath(site);
-
-
-                // add DLLs directory if it exists            
-                string dlls = Path.Combine(entry, "DLLs");
-                if (Directory.Exists(dlls)) {
-                    PythonContext.AddToPath(dlls);
                 }
             }
 #endif

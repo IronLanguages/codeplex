@@ -60,7 +60,7 @@ namespace IronPython.Runtime.Binding {
                 case StandardOperators.MemberNames:
                     return MakeMemberNamesOperation(operation, args);
                 case StandardOperators.CallSignatures:
-                    return MakeCallSignatureOperation(args[0]);
+                    return MakeCallSignatureOperation(args[0], CompilerHelpers.GetMethodTargets(args[0].Value));
                 case StandardOperators.IsCallable:
                     return MakeIscallableOperation(operation, args);
 
@@ -324,7 +324,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             if (typeof(IMembersList).IsAssignableFrom(self.LimitType)) {
-                return BinderState.GetBinderState(operation).Binder.DoOperation(operation.Operation, args);
+                return BinderState.GetBinderState(operation).Binder.DoOperation(operation.Operation, BinderState.GetCodeContext(operation), args);
             }
 
             PythonType pt = DynamicHelpers.GetPythonType(self.Value);
@@ -343,9 +343,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        internal static MetaObject/*!*/ MakeCallSignatureOperation(MetaObject/*!*/ self) {
-            IList<MethodBase/*!*/>/*!*/ targets = CompilerHelpers.GetMethodTargets(self.Value);
-
+        internal static MetaObject/*!*/ MakeCallSignatureOperation(MetaObject/*!*/ self, IList<MethodBase/*!*/>/*!*/ targets) {
             List<string> arrres = new List<string>();
             foreach (MethodBase mb in targets) {
                 StringBuilder res = new StringBuilder();

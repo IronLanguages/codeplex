@@ -349,7 +349,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
 
             if (consoleOptions.PrintVersionAndExit) {
-                Console.WriteLine("{0} {1} on .NET {2}", Engine.Configuration.DisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
+                Console.WriteLine("{0} {1} on .NET {2}", Engine.Setup.DisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;
             }
 

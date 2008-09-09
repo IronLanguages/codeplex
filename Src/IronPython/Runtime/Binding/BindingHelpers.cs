@@ -58,7 +58,7 @@ namespace IronPython.Runtime.Binding {
                 return gmb.IsNoThrow;
             }
 
-            return true;
+            return false;
         }
 
         internal static Expression GetSiteCodeContext() {

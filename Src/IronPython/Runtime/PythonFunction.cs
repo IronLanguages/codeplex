@@ -38,10 +38,10 @@ namespace IronPython.Runtime {
     /// Created for a user-defined function.  
     /// </summary>
     [PythonType("function")]
-    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {
+    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicObject, ICodeFormattable, IOldDynamicObject {
         private readonly CodeContext/*!*/ _context;     // the creating code context of the function
         [PythonHidden]
-        public readonly Delegate Target;              // the target delegate to be invoked when called (should come from function code)
+        public readonly Delegate Target;                // the target delegate to be invoked when called (should come from function code)
         private readonly FunctionAttributes _flags;     // * args, ** args, generator, and other attributes... 
         private readonly int _nparams;                  // number of arguments minus arg list / arg dict parameters
         private readonly string/*!*/[]/*!*/ _argNames;  // the names of each of the arguments on the method
@@ -535,38 +535,10 @@ namespace IronPython.Runtime {
             switch (action.Kind) {
                 case DynamicActionKind.Call:
                     return new FunctionBinderHelper<T>(context, (OldCallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
-                case DynamicActionKind.DoOperation:
-                    return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
             }
             return null;
         }
         
-        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
-            switch (doOperationAction.Operation) {
-                case Operators.IsCallable:
-                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
-                case Operators.CallSignatures:
-                    return MakeCallSignatureRule<T>(context);
-            }
-            return null;
-        }
-
-        private RuleBuilder<T> MakeCallSignatureRule<T>(CodeContext context) where T : class {
-            RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.MakeTest(typeof(PythonFunction));
-            rule.Target = rule.MakeReturn(
-                context.LanguageContext.Binder,
-                Ast.Call(
-                    typeof(PythonOps).GetMethod("GetFunctionSignature"),
-                    Ast.ConvertHelper(
-                        rule.Parameters[0],
-                        typeof(PythonFunction)
-                    )
-                )
-            );
-            return rule;
-        }
-
         /// <summary>
         /// Performs the actual work of binding to the function.
         /// 
@@ -617,7 +589,7 @@ namespace IronPython.Runtime {
                 Expression[] invokeArgs = GetArgumentsForRule(args);
 
                 if (invokeArgs != null) {
-                    return PythonBinderHelper.AddRecursionCheck(AddInitialization(MakeFunctionInvoke(invokeArgs)));
+                    return AddInitialization(MakeFunctionInvoke(invokeArgs));
                 }
 
                 return MakeBadArgumentRule();
