@@ -107,53 +107,41 @@ def test_formatexception():
 #Rowan Work Item 31290
 @skip("silverlight")
 def test_formatexception_showclrexceptions():
-    try:
-        import Microsoft.Scripting
-        from IronPython.Hosting import Python
-        pe = Python.CreateEngine()
+    import Microsoft.Scripting
+    from IronPython.Hosting import Python
+    pe = Python.CreateEngine({'ShowClrExceptions': True})
 
-        pe.Options.ShowClrExceptions = True
-    
-        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first",
-                                                        System.Exception("second",
-                                                                         System.Exception())))
-        AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
-        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
+    exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first",
+                                                    System.Exception("second",
+                                                                     System.Exception())))
+    AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
+    exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
 
-        # Uncomment when bug #371095 is fixed: Helper stubs shown in Python stack traces
-        #AreEqual(exc_string.count(" File "), 4)
-        #AreEqual(exc_string.count(" line "), 4)
-        Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
-    
-    finally:
-        pe.Options.ShowClrExceptions = False
+    # Uncomment when bug #371095 is fixed: Helper stubs shown in Python stack traces
+    #AreEqual(exc_string.count(" File "), 4)
+    #AreEqual(exc_string.count(" line "), 4)
+    Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
 
 @skip("silverlight")
 def test_formatexception_exceptiondetail():
-    try:
-        import Microsoft.Scripting
-        from IronPython.Hosting import Python
-                
-        pe = Python.CreateEngine()
+    import Microsoft.Scripting
+    from IronPython.Hosting import Python
+            
+    pe = Python.CreateEngine({'ExceptionDetail': True})
 
-        pe.Options.ExceptionDetail = True
+    try:
+        x = System.Collections.Generic.Dictionary[object, object]()
+        x[None] = 42
+    except System.Exception, e:
+        pass
+    import re
     
-        try:
-            x = System.Collections.Generic.Dictionary[object, object]()
-            x[None] = 42
-        except System.Exception, e:
-            pass
-        import re
-        
-        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first", e))
-        Assert(exc_string.startswith("first"))
-        Assert(re.match("first\r\n   at .*ThrowArgumentNullException.*\n   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
-        exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
-        AreEqual(exc_string.count("at "), 6)
-        Assert(exc_string.endswith("Exception: first"))
-    
-    finally:
-        pe.Options.ExceptionDetail = False
+    exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first", e))
+    Assert(exc_string.startswith("first"))
+    Assert(re.match("first\r\n   at .*ThrowArgumentNullException.*\n   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
+    exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
+    AreEqual(exc_string.count("at "), 6)
+    Assert(exc_string.endswith("Exception: first"))
     
 
 run_test(__name__)

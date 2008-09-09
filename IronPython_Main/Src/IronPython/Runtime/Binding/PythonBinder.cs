@@ -64,68 +64,6 @@ namespace IronPython.Runtime.Binding {
             _context = pythonContext;
         }
 
-        private RuleBuilder<T> MakeRuleWorker<T>(CodeContext/*!*/ context, OldDynamicAction/*!*/ action, object[]/*!*/ args) where T : class {
-            switch (action.Kind) {
-                case DynamicActionKind.DoOperation:
-                    return new PythonDoOperationBinderHelper<T>(context, (OldDoOperationAction)action).MakeRule(args);
-                case DynamicActionKind.GetMember:
-                    return new PythonGetMemberBinderHelper<T>(context, (OldGetMemberAction)action, args).MakeRule();
-                case DynamicActionKind.SetMember:
-                    return new SetMemberBinderHelper<T>(context, (OldSetMemberAction)action, args).MakeNewRule();
-                case DynamicActionKind.Call:
-                    // if call fails Python will try and create an instance as it treats these two operations as the same.
-                    RuleBuilder<T> rule = new PythonCallBinderHelper<T>(context, (OldCallAction)action, args).MakeRule();
-                    if (rule == null) {
-                        object[] packed = ArrayUtils.Insert<object>(context, args);
-                        rule = base.MakeRule<T>(action, packed);
-
-                        if (rule.IsError) {
-                            // try CreateInstance...
-                            OldCreateInstanceAction createAct = PythonCallBinderHelper<T>.MakeCreateInstanceAction((OldCallAction)action);
-                            RuleBuilder<T> newRule = MakeRule<T>(createAct, packed);
-                            if (!newRule.IsError) {
-                                return newRule;
-                            }
-                        }
-                    }
-                    return rule;
-                case DynamicActionKind.ConvertTo:
-                    return new PythonConvertToBinderHelper<T>(context, (OldConvertToAction)action, args).MakeRule();
-                default:
-                    return null;
-            }
-        }
-
-        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction/*!*/ action, object[]/*!*/ args) {
-            object[] extracted;
-            CodeContext context = ExtractCodeContext(args, out extracted);
-
-            RuleBuilder<T> rule = null;
-            //
-            // Try IDynamicObject
-            //
-            IOldDynamicObject ido = extracted[0] as IOldDynamicObject;
-            if (ido != null) {
-                rule = ido.GetRule<T>(action, context, extracted);
-                if (rule != null) {
-                    return rule;
-                }
-            }
-
-            //
-            // Try the Python rules
-            //
-            rule = MakeRuleWorker<T>(context, action, extracted);
-            if (rule != null) {
-                return rule;
-            }
-
-            //
-            // Fall back on DLR rules
-            //
-            return base.MakeRule<T>(action, args);
-        }
-
         public override Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType, ConversionResultKind kind, Expression context) {
             ContractUtils.RequiresNotNull(expr, "expr");
             ContractUtils.RequiresNotNull(toType, "toType");
@@ -354,34 +292,6 @@ namespace IronPython.Runtime.Binding {
                         String.Format("attribute '{0}' of '{1}' object is read-only",
                             name,
                             NameConverter.GetTypeName(type)
-                        )
-                    )
-                )
-            );
-        }
-
-        public override Expression MakeReadOnlyMemberError<T>(RuleBuilder<T> rule, Type type, string name) {
-            return rule.MakeError(
-                Ast.New(
-                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                    Ast.Constant(
-                        String.Format("attribute '{0}' of '{1}' object is read-only",
-                            name,
-                            DynamicHelpers.GetPythonTypeFromType(type).Name
-                        )
-                    )
-                )
-            );
-        }
-
-        public override Expression MakeUndeletableMemberError<T>(RuleBuilder<T> rule, Type type, string name) {
-            return rule.MakeError(
-                Ast.New(
-                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                    Ast.Constant(
-                        String.Format("cannot delete attribute '{0}' of builtin type '{1}'",
-                            name,
-                            DynamicHelpers.GetPythonTypeFromType(type).Name
                         )
                     )
                 )

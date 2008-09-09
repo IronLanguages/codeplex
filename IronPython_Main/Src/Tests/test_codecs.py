@@ -410,5 +410,14 @@ def test_file_encodings_negative():
     finally:
         #cleanup
         sys.path.remove(nt.getcwd() + "\\tmp_encodings")
+
+@disabled
+def test_cp1214():
+    """
+    TODO: extend this a great deal
+    """
+    AreEqual('7FF80000000000007FF0000000000000'.decode('hex'),
+             '\x7f\xf8\x00\x00\x00\x00\x00\x00\x7f\xf0\x00\x00\x00\x00\x00\x00')
+
     
 run_test(__name__)

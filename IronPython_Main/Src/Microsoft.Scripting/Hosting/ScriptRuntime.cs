@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Hosting {
         private readonly InvariantContext _invariantContext;
         private readonly ScriptIO _io;
         private readonly ScriptHost _host;
-        private ScriptRuntimeConfig _config;
+        private readonly ScriptRuntimeSetup _setup;
         private ScriptScope _globals;
         private ScriptEngine _invariantEngine;
 
@@ -50,10 +50,12 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public ScriptRuntime(ScriptRuntimeSetup setup) {
             ContractUtils.RequiresNotNull(setup, "setup");
-            // Do this first, so we detect configuration errors immediately
-            DlrConfiguration config = setup.ToConfiguration("setup");
 
-            _host = ReflectionUtils.CreateInstance<ScriptHost>(setup.HostType, setup.HostArguments);
+            // Do this first, so we detect configuration errors immediately
+            DlrConfiguration config = setup.ToConfiguration();
+            _setup = setup;
+
+            _host = ReflectionUtils.CreateInstance<ScriptHost>(setup.HostType, setup.HostArguments.ToArray<object>());
 
             ScriptHostProxy hostProxy = new ScriptHostProxy(_host);
 
@@ -123,13 +125,9 @@ namespace Microsoft.Scripting.Hosting {
 #endif
         #endregion
 
-        public ScriptRuntimeConfig Configuration {
+        public ScriptRuntimeSetup Setup {
             get {
-                if (_config == null) {
-                    // safe to create ScriptRuntimeConfig twice (it's stateless)
-                    Interlocked.CompareExchange(ref _config, new ScriptRuntimeConfig(_manager.Configuration), null);
-                }
-                return _config;
+                return _setup;
             }
         }
 
@@ -278,7 +276,7 @@ namespace Microsoft.Scripting.Hosting {
 
             var searchPaths = engine.GetSearchPaths();
             if (searchPaths.Count == 0) {
-                throw new InvalidOperationException(string.Format("No search paths defined for language '{0}'", engine.Configuration.DisplayName));
+                throw new InvalidOperationException(string.Format("No search paths defined for language '{0}'", engine.Setup.DisplayName));
             }
 
             // See if the file is already loaded, if so return the scope
@@ -341,6 +339,17 @@ namespace Microsoft.Scripting.Hosting {
 
         public ObjectOperations CreateOperations() {
             return InvariantEngine.CreateOperations();
+        }
+
+        public void Shutdown() {
+            List<LanguageContext> lcs;
+            lock (_engines) {
+                lcs = new List<LanguageContext>(_engines.Keys);
+            }
+
+            foreach (var language in lcs) {
+                language.Shutdown();
+            }
         }
 
         internal ScriptEngine InvariantEngine {

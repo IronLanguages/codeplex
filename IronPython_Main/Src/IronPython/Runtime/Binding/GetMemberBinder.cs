@@ -48,8 +48,12 @@ namespace IronPython.Runtime.Binding {
             // Python always provides an extra arg to GetMember to flow the context.
             Debug.Assert(args.Length == 2 && args[1].Expression.Type == typeof(CodeContext));
 
+            return FallbackWorker(args, args[1].Expression, Name, _isNoThrow, this);
+        }
+
+        internal static MetaObject FallbackWorker(MetaObject/*!*/[] args, Expression/*!*/ codeContext, string name, bool isNoThrow, MetaAction action) {
             if (args[0].NeedsDeferral) {
-                return Defer(args);
+                return action.Defer(args);
             }
 
             Type limitType = args[0].LimitType;
@@ -60,23 +64,22 @@ namespace IronPython.Runtime.Binding {
                 PythonType argType = DynamicHelpers.GetPythonTypeFromType(limitType);
 
                 // if the name is defined in the CLS context but not the normal context then
-                // we will hide it.
-                string name = Name;
+                // we will hide it.                
                 if (argType.IsHiddenMember(name)) {
-                    MetaObject baseRes = Binder.Binder.GetMember(
-                        Name, 
+                    MetaObject baseRes = BinderState.GetBinderState(action).Binder.GetMember(
+                        name,
                         args[0],
                         args[1].Expression,
-                        _isNoThrow
+                        isNoThrow
                     );
-                    Expression failure = GetFailureExpression(limitType);
+                    Expression failure = GetFailureExpression(limitType, name, isNoThrow, action);
 
-                    return BindingHelpers.FilterShowCls(args[1].Expression, this, baseRes, failure);
+                    return BindingHelpers.FilterShowCls(codeContext, action, baseRes, failure);
                 }
             }
 
             if (args[0].LimitType == typeof(OldInstance)) {
-                if (_isNoThrow) {
+                if (isNoThrow) {
                     return new MetaObject(
                         Ast.Field(
                             null,
@@ -93,7 +96,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.NewArrayInit(
                                     typeof(object),
                                     Ast.Constant(((OldInstance)args[0].Value)._class._name),
-                                    Ast.Constant(Name)
+                                    Ast.Constant(name)
                                 )
                             )
                         ),
@@ -102,16 +105,16 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            return Binder.Binder.GetMember(Name, args[0], args[1].Expression, _isNoThrow);
+            return BinderState.GetBinderState(action).Binder.GetMember(name, args[0], codeContext, isNoThrow);
         }
 
-        private Expression/*!*/ GetFailureExpression(Type/*!*/ limitType) {
-            return _isNoThrow ?
+        private static Expression/*!*/ GetFailureExpression(Type/*!*/ limitType, string name, bool isNoThrow, MetaAction action) {
+            return isNoThrow ?
                 Ast.Field(null, typeof(OperationFailed).GetField("Value")) :
                 DefaultBinder.MakeError(
-                    Binder.Binder.MakeMissingMemberError(
+                    BinderState.GetBinderState(action).Binder.MakeMissingMemberError(
                         limitType,
-                        Name
+                        name
                     )                    
                 );
         }
@@ -163,5 +166,45 @@ namespace IronPython.Runtime.Binding {
         }
 
         #endregion
+    }
+
+    class CompatibilityGetMember : GetMemberAction, IPythonSite {
+        private readonly BinderState/*!*/ _state;
+
+        public CompatibilityGetMember(BinderState/*!*/ binder, string/*!*/ name)
+            : base(name, false) {
+            _state = binder;
+        }
+
+        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+            return GetMemberBinder.FallbackWorker(args, BinderState.GetCodeContext(this), Name, false, this);
+        }
+
+        #region IPythonSite Members
+
+        public BinderState Binder {
+            get { return _state; }
+        }
+        
+        #endregion
+
+        public override int GetHashCode() {
+            return base.GetHashCode() ^ _state.Binder.GetHashCode();
+        }
+
+        public override bool Equals(object obj) {
+            CompatibilityGetMember ob = obj as CompatibilityGetMember;
+            if (ob == null) {
+                return false;
+            }
+
+            return ob._state.Binder == _state.Binder &&
+                base.Equals(obj);
+        }
+
+        public override object HashCookie {
+            get { return this; }
+        }
+
     }
 }

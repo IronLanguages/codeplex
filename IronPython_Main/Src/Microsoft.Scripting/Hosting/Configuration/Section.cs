@@ -139,9 +139,13 @@ namespace Microsoft.Scripting.Hosting.Configuration {
                 foreach (var language in setup.LanguageSetups) {
                     if (language.TypeName == provider) {
                         language.Names.Clear();
-                        language.Names.AddRange(names);
+                        foreach (string name in names) {
+                            language.Names.Add(name);
+                        }
                         language.FileExtensions.Clear();
-                        language.FileExtensions.AddRange(extensions);
+                        foreach (string extension in extensions) {
+                            language.FileExtensions.Add(extension);
+                        }
                         language.DisplayName = displayName;
                         found = true;
                         break;

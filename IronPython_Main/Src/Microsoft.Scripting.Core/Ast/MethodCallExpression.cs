@@ -485,13 +485,11 @@ namespace System.Linq.Expressions {
         #region ArrayIndex
 
         //CONFORMING
-        [Obsolete("use Expression.ArrayAccess instead")]
         public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) {
             return ArrayIndex(array, (IEnumerable<Expression>)indexes);
         }
 
         //CONFORMING
-        [Obsolete("use Expression.ArrayAccess instead")]
         public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) {
             RequiresCanRead(array, "array");
             ContractUtils.RequiresNotNull(indexes, "indexes");

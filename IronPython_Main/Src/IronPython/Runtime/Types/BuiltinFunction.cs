@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
     /// TODO: Back BuiltinFunction's by MethodGroup's.
     /// </summary>    
     [PythonType("builtin_function_or_method")]
-    public class BuiltinFunction : PythonTypeSlot, IOldDynamicObject, ICodeFormattable, IDynamicObject, IDelegateConvertible {
+    public class BuiltinFunction : PythonTypeSlot, ICodeFormattable, IDynamicObject, IDelegateConvertible {
         private readonly BuiltinFunctionData/*!*/ _data;            // information describing the BuiltinFunction
         private readonly object _instance;                          // the bound instance or null if unbound
         private static readonly object _noInstance = new object();  
@@ -279,6 +279,20 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        /// <summary>
+        /// Makes a test for the built-in function against the private _data 
+        /// which is unique per built-in function.
+        /// </summary>
+        internal Expression/*!*/ MakeBoundFunctionTest(Expression/*!*/ functionTarget) {
+            Debug.Assert(functionTarget.Type == typeof(BuiltinFunction));
+
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("TestBoundBuiltinFunction"),
+                functionTarget,
+                Ast.Constant(_data, typeof(object))
+            );
+        }
+        
         #endregion
 
         #region PythonTypeSlot Overrides
@@ -322,167 +336,7 @@ namespace IronPython.Runtime.Types {
         }
 
         #endregion
-
-        #region IOldDynamicObject Members
-
-        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
-            switch (action.Kind) {
-                case DynamicActionKind.Call: return MakeCallRule<T>((OldCallAction)action, context, args);
-                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
-            }
-
-            return null;
-        }
-
-        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
-            switch(doOperationAction.Operation) {
-                case Operators.CallSignatures:
-                    return PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Targets, DynamicHelpers.GetPythonType(args[0]));
-                case Operators.IsCallable:
-                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
-            }
-            return null;
-        }
-
-        internal NarrowingLevel Level {
-            get {
-                return IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All;
-            }
-        }
-
-        private RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            BuiltinFunction func = args[0] as BuiltinFunction;
-            if (func.IsUnbound) {
-                return MakeUnboundRule<T>(action, context, args);
-            } else {
-                return MakeBoundRule<T>(action, context, args);
-            }
-        }
-        
-        private RuleBuilder<T> MakeUnboundRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(context, action, args, Targets, Level, IsReversedOperator);
-
-            RuleBuilder<T> rule = helper.MakeRule();
-            if (IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 function + 2 args
-                // BinaryOperators return NotImplemented on failure.
-                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Field(null, typeof(PythonOps), "NotImplemented"));
-            }
-            rule.AddTest(MakeFunctionTest(rule.Parameters[0]));
-            return rule;
-        }
-
-        private RuleBuilder<T> MakeBoundRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            CallBinderHelper<T, OldCallAction> helper = new CallBinderHelper<T, OldCallAction>(
-                context,
-                action,
-                args,
-                Targets,
-                Level,
-                IsReversedOperator);
-            RuleBuilder<T> rule = helper.Rule;
-            Expression instance = Ast.Property(
-                Ast.Convert(
-                    rule.Parameters[0],
-                    typeof(BuiltinFunction)
-                ),
-                typeof(BuiltinFunction).GetProperty("__self__")
-            );
-
-            Expression instanceVal = instance;
-            Type testType = CompilerHelpers.GetType(__self__);
-
-            // cast the instance to the correct type
-            if (CompilerHelpers.IsStrongBox(__self__)) {
-                instance = ReadStrongBoxValue(instance);
-            } else if (!testType.IsEnum) {
-                // We need to deal w/ wierd types like MarshalByRefObject.  
-                // We could have an MBRO whos DeclaringType is completely different.  
-                // Therefore we special case it here and cast to the declaring type
-                Type selfType = CompilerHelpers.GetType(__self__);
-                if (!selfType.IsVisible && PythonContext.GetContext(context).DomainManager.Configuration.PrivateBinding) {
-                    helper.InstanceType = selfType;
-                } else {
-                    selfType = CompilerHelpers.GetVisibleType(selfType);
-
-                    if (selfType == typeof(object) && DeclaringType.IsInterface) {
-                        selfType = DeclaringType;
-                    }
-
-                    if (DeclaringType.IsInterface && selfType.IsValueType) {
-                        // explitit interface implementation dispatch on a value type, don't
-                        // unbox the value type before the dispatch.
-                        instance = Ast.Convert(instance, DeclaringType);
-                    } else if (selfType.IsValueType) {
-                        // We might be calling a a mutating method (like
-                        // Rectangle.Intersect). If so, we want it to mutate
-                        // the boxed value directly
-                        instance = Ast.Unbox(instance, selfType);
-                    } else {
-#if SILVERLIGHT
-                    instance = Ast.Convert(instance, selfType);
-#else
-                        Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(DeclaringType) : selfType;
-
-                        instance = Ast.Convert(instance, convType);
-#endif
-                    }
-                }
-            } else {
-                // we don't want to cast the enum to it's real type, it will unbox it 
-                // and turn it into it's underlying type.  We presumably want to call 
-                // a method on the Enum class though - so we cast to Enum instead.
-                instance = Ast.Convert(instance, typeof(Enum));
-            }
-
-            helper.Instance = instance;
-
-            RuleBuilder<T> newRule = helper.MakeRule();
-            if (newRule == rule) {
-                // work around ActionOnCall, we should flow the rule in eventually.
-                // For the time being it contains sufficient tests so we don't need
-                // to add more.
-                rule.AddTest(
-                    MakeBoundFunctionTest(
-                        Ast.Convert(rule.Parameters[0], typeof(BuiltinFunction))
-                    )
-                );
-                rule.AddTest(rule.MakeTypeTest(testType, instanceVal));
-            }
-
-            if (newRule.IsError && IsBinaryOperator && args.Length == 2) { // 1 bound function + 1 args
-                // BinaryOperators return NotImplemented on failure.
-                newRule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.Property(null, typeof(PythonOps), "NotImplemented"));
-            }
-
-            return newRule;
-        }
-
-        private MemberExpression/*!*/ ReadStrongBoxValue(Expression instance) {
-            return Ast.Field(
-                Ast.Convert(instance, __self__.GetType()),
-                __self__.GetType().GetField("Value")
-            );
-        }
-
-        internal Expression MakeFunctionTest(Expression functionTarget) {
-            return Ast.Equal(
-                functionTarget,
-                Ast.Constant(this)
-            );
-        }
-
-        internal Expression/*!*/ MakeBoundFunctionTest(Expression/*!*/ functionTarget) {
-            Debug.Assert(functionTarget.Type == typeof(BuiltinFunction));
-
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("TestBoundBuiltinFunction"),
-                functionTarget,
-                Ast.Constant(_data, typeof(object))
-            );            
-        }
-        
-        #endregion
-
+                        
         #region Public Python APIs
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls")]

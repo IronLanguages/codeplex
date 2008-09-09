@@ -778,11 +778,10 @@ def test_sanity():
         AreEqual(decode_except.message, "")
         
         translate_except = exceptions.UnicodeTranslateError(u"1", 2, 3, "4")
-        if not is_cli: #CodePlex 15345
-            AreEqual(translate_except.object, u"1")
-            AreEqual(translate_except.start, 2)
-            AreEqual(translate_except.end, 3)
-            AreEqual(translate_except.reason, "4")
+        AreEqual(translate_except.object, u"1")
+        AreEqual(translate_except.start, 2)
+        AreEqual(translate_except.end, 3)
+        AreEqual(translate_except.reason, "4")
         AreEqual(translate_except.message, "")
         AreEqual(translate_except.encoding, None)
 

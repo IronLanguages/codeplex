@@ -19,6 +19,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using System.Reflection;
 using System.IO;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -28,17 +29,21 @@ namespace Microsoft.Scripting.Hosting {
     public sealed class ScriptRuntimeSetup {
         // host specification:
         private Type _hostType;
-        private object[] _hostArguments;
+        private IList<object> _hostArguments;
 
         // languages available in the runtime: 
-        private readonly List<LanguageSetup> _languageSetups;
+        private IList<LanguageSetup> _languageSetups;
 
         // DLR options:
         private bool _debugMode;
         private bool _privateBinding;
 
         // common language options:
-        private Dictionary<string, object> _options;
+        private IDictionary<string, object> _options;
+        
+        // true if the ScriptRuntimeSetup is no longer mutable because it's been
+        // used to start a ScriptRuntime
+        private bool _frozen;
 
         public ScriptRuntimeSetup() {
             _languageSetups = new List<LanguageSetup>();
@@ -66,7 +71,10 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public bool DebugMode {
             get { return _debugMode; }
-            set { _debugMode = value; }
+            set {
+                CheckFrozen();
+                _debugMode = value; 
+            }
         }
 
         /// <summary>
@@ -74,7 +82,10 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public bool PrivateBinding {
             get { return _privateBinding; }
-            set { _privateBinding = value; }
+            set {
+                CheckFrozen();
+                _privateBinding = value; 
+            }
         }
 
         /// <summary>
@@ -86,6 +97,7 @@ namespace Microsoft.Scripting.Hosting {
             set {
                 ContractUtils.RequiresNotNull(value, "value");
                 ContractUtils.Requires(typeof(ScriptHost).IsAssignableFrom(value), "value", "Must be ScriptHost or a derived type of ScriptHost");
+                CheckFrozen();
                 _hostType = value;
             }
         }
@@ -93,30 +105,36 @@ namespace Microsoft.Scripting.Hosting {
         /// <remarks>
         /// Option names are case-sensitive.
         /// </remarks>
-        public Dictionary<string, object> Options {
+        public IDictionary<string, object> Options {
             get { return _options; }
         }
 
         /// <summary>
         /// Arguments passed to the host type when it is constructed
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public object[] HostArguments {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public IList<object> HostArguments {
             get {
                 return _hostArguments;
             }
             set {
                 ContractUtils.RequiresNotNull(value, "value");
+                CheckFrozen();
                 _hostArguments = value;
             }
         }
 
-        internal DlrConfiguration ToConfiguration(string paramName) {
-            ContractUtils.Requires(_languageSetups.Count > 0, paramName, "ScriptRuntimeSetup must have at least one LanguageSetup");
+        internal DlrConfiguration ToConfiguration() {
+            ContractUtils.Requires(_languageSetups.Count > 0, "ScriptRuntimeSetup must have at least one LanguageSetup");
 
-            var config = new DlrConfiguration(_debugMode, _privateBinding, _options);
+            // prepare
+            ReadOnlyCollection<LanguageSetup> setups = new ReadOnlyCollection<LanguageSetup>(ArrayUtils.MakeArray(_languageSetups));
+            var hostArguments = new ReadOnlyCollection<object>(ArrayUtils.MakeArray(_hostArguments));
+            var options = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>(_options));            
+            var config = new DlrConfiguration(_debugMode, _privateBinding, options);
 
-            foreach (var language in _languageSetups) {
+            // validate
+            foreach (var language in setups) {
                 config.AddLanguage(
                     language.TypeName,
                     language.DisplayName,
@@ -126,9 +144,30 @@ namespace Microsoft.Scripting.Hosting {
                 );
             }
 
+            // commit
+            _languageSetups = setups;
+            _options = options;
+            _hostArguments = hostArguments;
+
+            Freeze(setups);
+
             return config;
         }
 
+        private void Freeze(ReadOnlyCollection<LanguageSetup> setups) {
+            foreach (var language in setups) {
+                language.Freeze();
+            }
+
+            _frozen = true;
+        }
+
+        private void CheckFrozen() {
+            if (_frozen) {
+                throw new InvalidOperationException("Cannot modify ScriptRuntimeSetup after it has been used to create a ScriptRuntime");
+            }            
+        }
+        
         /// <summary>
         /// Reads setup from .NET configuration system (.config files).
         /// If there is no configuration available returns an empty setup.
@@ -164,6 +203,6 @@ namespace Microsoft.Scripting.Hosting {
                 return ReadConfiguration(stream);
             }
         }
-#endif
+#endif        
     }
 }

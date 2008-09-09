@@ -24,13 +24,14 @@ using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using System.Linq.Expressions;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Used as the key for the RuntimeHelpers.GetDelegate method caching system
     /// </summary>
     internal sealed class DelegateSignatureInfo {
-        private readonly CodeContext _context;
+        private readonly LanguageContext _context;
         private readonly Type _returnType;
         private readonly ParameterInfo[] _parameters;
 
@@ -40,7 +41,7 @@ namespace Microsoft.Scripting.Runtime {
             Assert.NotNull(context, returnType);
             Assert.NotNullItems(parameters);
 
-            _context = context;
+            _context = context.LanguageContext;
             _parameters = parameters;
             _returnType = returnType;
         }
@@ -48,15 +49,11 @@ namespace Microsoft.Scripting.Runtime {
         [Confined]
         public override bool Equals(object obj) {
             DelegateSignatureInfo dsi = obj as DelegateSignatureInfo;
-            if (dsi == null) {
-                return false;
-            }
 
-            if (dsi._parameters.Length != _parameters.Length) {
-                return false;
-            }
-
-            if (_returnType != dsi._returnType) {
+            if (dsi == null || 
+                dsi._context != _context ||
+                dsi._parameters.Length != _parameters.Length ||
+                dsi._returnType != _returnType) {
                 return false;
             }
 
@@ -76,7 +73,7 @@ namespace Microsoft.Scripting.Runtime {
             for (int i = 0; i < _parameters.Length; i++) {
                 hashCode ^= _parameters[i].GetHashCode();
             }
-            hashCode ^= _returnType.GetHashCode();
+            hashCode ^= _returnType.GetHashCode() ^ _context.GetHashCode();
             return hashCode;
         }
 
@@ -117,22 +114,49 @@ namespace Microsoft.Scripting.Runtime {
         private object[] EmitClrCallStub(ILGen cg) {
 
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
-            DelegateCallBinder action = new DelegateCallBinder(_parameters.Length);
+            Argument[] args = new Argument[_parameters.Length];
+            for (int i = 0; i < args.Length; i++) {
+                args[i] = Expression.PositionalArg(i);
+            }
+            ConvertAction convert = _context.CreateConvertBinder(_returnType, true);
+            InvokeAction action = _context.CreateInvokeBinder(args);
+
 
             // Create strongly typed return type from the site.
             // This will, among other things, generate tighter code.
-            Type[] siteTypes = MakeSiteSignature(_parameters.Length + 2);
-            if (_returnType != typeof(void)) {
-                siteTypes[siteTypes.Length - 1] = _returnType;
-            }
-
-            Type siteType = DynamicSiteHelpers.MakeCallSiteType(siteTypes);
+            Type[] siteTypes = MakeSiteSignature();
+            
+            Type siteType = DynamicSiteHelpers.MakeCallSiteType(siteTypes);            
             CallSite callSite = DynamicSiteHelpers.MakeSite(action, siteType);
 
-            // build up constants array
-            object[] constants = new object[] { TargetPlaceHolder, callSite, _context };
-            int TargetIndex = 0, CallSiteIndex = 1, ContextIndex = 2;
+            Type convertSiteType = null;
+            CallSite convertSite = null;
 
+            if (_returnType != typeof(void)) {
+                convertSiteType = DynamicSiteHelpers.MakeCallSiteType(typeof(object), _returnType);
+                convertSite = DynamicSiteHelpers.MakeSite(convert, convertSiteType);
+            }
+
+            // build up constants array
+            object[] constants = new object[] { TargetPlaceHolder, callSite, convertSite };
+            const int TargetIndex = 0, CallSiteIndex = 1, ConvertSiteIndex = 2;
+
+            LocalBuilder convertSiteLocal = null;
+            FieldInfo convertTarget = null;
+            if (_returnType != typeof(void)) {
+                // load up the conversesion logic on the stack
+                convertSiteLocal = cg.DeclareLocal(convertSiteType);
+                EmitConstantGet(cg, ConvertSiteIndex, convertSiteType);
+
+                cg.Emit(OpCodes.Dup);
+                cg.Emit(OpCodes.Stloc, convertSiteLocal);
+
+                convertTarget = convertSiteType.GetField("Target");
+                cg.EmitFieldGet(convertTarget);
+                cg.Emit(OpCodes.Ldloc, convertSiteLocal);
+            }
+
+            // load up the invoke logic on the stack
             LocalBuilder site = cg.DeclareLocal(siteType);
             EmitConstantGet(cg, CallSiteIndex, siteType);
             cg.Emit(OpCodes.Dup);
@@ -142,25 +166,33 @@ namespace Microsoft.Scripting.Runtime {
             cg.EmitFieldGet(target);
             cg.Emit(OpCodes.Ldloc, site);
 
-            EmitConstantGet(cg, ContextIndex, typeof(CodeContext));
             EmitConstantGet(cg, TargetIndex, typeof(object));
 
             for (int i = 0; i < _parameters.Length; i++) {
-                ReturnFixer rf = ReturnFixer.EmitArgument(cg, i + 1, _parameters[i].ParameterType);
-                if (rf != null) fixers.Add(rf);
+                if (_parameters[i].ParameterType.IsByRef) {
+                    ReturnFixer rf = ReturnFixer.EmitArgument(cg, i + 1, _parameters[i].ParameterType);
+                    if (rf != null) fixers.Add(rf);
+                } else {
+                    cg.EmitLoadArg(i + 1);
+                }
             }
 
+            // emit the invoke for the call
             cg.EmitCall(target.FieldType, "Invoke");
 
+            // emit the invoke for the convert
+            if (_returnType == typeof(void)) {
+                cg.Emit(OpCodes.Pop);
+            } else {
+                cg.EmitCall(convertTarget.FieldType, "Invoke");
+            }
+
+            // fixup any references
             foreach (ReturnFixer rf in fixers) {
                 rf.FixReturn(cg);
             }
 
-            if (_returnType == typeof(void)) {
-                cg.Emit(OpCodes.Pop);
-            }
             cg.Emit(OpCodes.Ret);
-
             return constants;
         }
 
@@ -173,12 +205,24 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        private static Type[] MakeSiteSignature(int nargs) {
-            Type[] sig = new Type[nargs + 1];
-            sig[0] = typeof(CodeContext);
-            for (int i = 1; i < sig.Length; i++) {
-                sig[i] = typeof(object);
+        private Type[] MakeSiteSignature() {
+            Type[] sig = new Type[_parameters.Length + 2];
+            
+            // target object
+            sig[0] = typeof(object);     
+
+            // arguments
+            for (int i = 0; i < _parameters.Length; i++) {
+                if (_parameters[i].IsByRefParameter()) {
+                    sig[i + 1] = typeof(object);
+                } else {
+                    sig[i + 1] = _parameters[i].ParameterType;
+                }
             }
+
+            // return type
+            sig[sig.Length - 1] = typeof(object);
+
             return sig;
         }
     }

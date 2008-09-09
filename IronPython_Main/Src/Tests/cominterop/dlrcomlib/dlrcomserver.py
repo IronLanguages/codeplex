@@ -70,10 +70,7 @@ def test_documentation():
     import IronPython
     ops = IronPython.Hosting.Python.CreateRuntime().GetEngine('py').Operations
     if preferComDispatch:
-        #AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
-        # ObjectOperations needs to be updated to use IDO
-        # Dev10 bug 475427
-        Assert("" == ops.GetDocumentation(com_obj.IntArguments)) 
+        AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
     else:
         AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
     

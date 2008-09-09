@@ -14,25 +14,21 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Scripting.Actions;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime {
 
     [PythonType("instancemethod")]
-    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IOldDynamicObject, IDynamicObject, ICodeFormattable {
+    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicObject, ICodeFormattable {
         private readonly object _func;
         private readonly object _inst;
         private readonly object _declaringClass;
@@ -225,140 +221,6 @@ namespace IronPython.Runtime {
             get {
                 return true;
             }
-        }
-
-        #endregion
-
-        #region IOldDynamicObject Members
-
-        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
-            Assert.NotNull(action, context, args);
-
-            if (action.Kind == DynamicActionKind.Call) {
-                return GetCallRule<T>((OldCallAction)action, context);
-            }
-            if (action.Kind == DynamicActionKind.DoOperation) {
-                return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
-            }
-
-            // get default rule:
-            return null;
-        }
-        
-        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
-            switch (doOperationAction.Operation) {
-                case Operators.IsCallable:
-                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
-            }
-            return null;
-        }
-
-        private RuleBuilder<T> GetCallRule<T>(OldCallAction action, CodeContext context) where T : class {
-            RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.MakeTest(typeof(Method));
-            
-            Expression[] notNullArgs = GetNotNullInstanceArguments(rule);
-            Expression nullSelf;
-            if (rule.Parameters.Count != 1) {
-                Expression[] nullArgs = GetNullInstanceArguments(rule, action);
-                nullSelf = AstUtils.Call(action, typeof(object), ArrayUtils.Insert<Expression>(rule.Context, nullArgs));
-            } else {
-                // no instance, CheckSelf on null throws.                
-                nullSelf = CheckSelf(rule, Ast.Null());
-            }
-
-            rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
-                Ast.Condition(
-                    Ast.NotEqual(
-                        Ast.Property(
-                            Ast.Convert(rule.Parameters[0], typeof(Method)),
-                            typeof(Method).GetProperty("im_self")
-                        ),
-                        Ast.Null()
-                    ),
-                    AstUtils.Call(GetNotNullCallAction(context, action), typeof(object), ArrayUtils.Insert<Expression>(rule.Context, notNullArgs)),
-                    nullSelf
-                )
-            );
-            return rule;
-        }
-
-        private static Expression[] GetNullInstanceArguments<T>(RuleBuilder<T> rule, OldCallAction action) where T : class {
-            Debug.Assert(rule.Parameters.Count > 1);
-
-            Expression[] args = ArrayUtils.MakeArray(rule.Parameters);
-            args[0] = Ast.Property(
-                Ast.Convert(rule.Parameters[0], typeof(Method)),
-                typeof(Method).GetProperty("im_func")
-            );
-            Expression self;
-
-            ArgumentKind firstArgKind = action.Signature.GetArgumentKind(0);
-
-            if (firstArgKind == ArgumentKind.Simple || firstArgKind == ArgumentKind.Instance) {
-                self = rule.Parameters[1];
-            } else if (firstArgKind != ArgumentKind.List) {
-                self = Ast.Constant(null);
-            } else {                
-                // list, check arg[0] and then return original list.  If not a list,
-                // or we have no items, then check against null & throw.
-                args[1] =
-                    Ast.Comma(
-                        CheckSelf<T>(
-                            rule,
-                            Ast.Condition(
-                                Ast.AndAlso(
-                                    Ast.TypeIs(rule.Parameters[1], typeof(IList<object>)),
-                                    Ast.NotEqual(
-                                        Ast.Property(
-                                            Ast.Convert(rule.Parameters[1], typeof(ICollection)),
-                                            typeof(ICollection).GetProperty("Count")
-                                        ),
-                                        Ast.Constant(0)
-                                    )
-                                ),
-                                Ast.Call(
-                                    Ast.Convert(rule.Parameters[1], typeof(IList<object>)),
-                                    typeof(IList<object>).GetMethod("get_Item"),
-                                    Ast.Constant(0)
-                                ),
-                                Ast.Null()
-                            )
-                        ),
-                        rule.Parameters[1]
-                    );
-                return args;
-            }
-            
-            args[1] = CheckSelf<T>(rule, self);
-            return args;
-        }
-
-        private static Expression CheckSelf<T>(RuleBuilder<T> rule, Expression self) where T : class {
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("MethodCheckSelf"),
-                Ast.Convert(rule.Parameters[0], typeof(Method)),
-                Ast.ConvertHelper(self, typeof(object))
-            );
-        }
-
-        private static Expression[] GetNotNullInstanceArguments<T>(RuleBuilder<T> rule) where T : class {
-            Expression[] args = ArrayUtils.Insert(
-                (Expression)Ast.Property(
-                    Ast.Convert(rule.Parameters[0], typeof(Method)),
-                    typeof(Method).GetProperty("im_func")
-                ),
-                rule.Parameters);
-
-            args[1] = Ast.Property(
-                Ast.Convert(rule.Parameters[0], typeof(Method)),
-                typeof(Method).GetProperty("im_self")
-            );
-            return args;
-        }
-
-        private static OldCallAction GetNotNullCallAction(CodeContext context, OldCallAction action) {
-            return OldCallAction.Make(PythonContext.GetContext(context).Binder, action.Signature.InsertArgument(new ArgumentInfo(ArgumentKind.Simple)));
         }
 
         #endregion

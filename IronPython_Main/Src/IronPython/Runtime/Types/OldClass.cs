@@ -18,16 +18,15 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Runtime.Serialization;
-using System.Scripting;
 using System.Scripting.Actions;
 using System.Threading;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+
+using IronPython.Runtime.Operations;
+
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
@@ -56,8 +55,7 @@ namespace IronPython.Runtime.Types {
 #endif
  ICodeFormattable,
         IMembersList,
-        IDynamicObject,
-        IOldDynamicObject {
+        IDynamicObject {
 
         [NonSerialized]
         private List<OldClass> _bases;
@@ -298,8 +296,8 @@ namespace IronPython.Runtime.Types {
         // Calling an OldClass instance means instantiating that class and invoking the __init__() member if 
         // it's defined.
 
-        // OldClass impls IOldDynamicObject. But May wind up here still if IDynamicObj doesn't provide a rule (such as for list sigs).
-        // If our IOldDynamicObject implementation is complete, we can then remove these Call methods.
+        // OldClass impls IDynamicObject. But May wind up here still if IDynamicObj doesn't provide a rule (such as for list sigs).
+        // If our IDynamicObject implementation is complete, we can then remove these Call methods.
         [SpecialName]
         public object Call(CodeContext context, [NotNull]params object[] args\u00F8) {
             OldInstance inst = new OldInstance(context, this);
@@ -500,88 +498,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IOldDynamicObject Members
-
-        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
-            switch (action.Kind) {
-                case DynamicActionKind.GetMember:
-                    return MakeGetMemberRule<T>((OldGetMemberAction)action, context, args);
-                case DynamicActionKind.SetMember:
-                    return MakeSetMemberRule<T>((OldSetMemberAction)action, context, args);
-                case DynamicActionKind.DeleteMember:
-                    return MakeDelMemberRule<T>((OldDeleteMemberAction)action, context, args);
-                case DynamicActionKind.CreateInstance:
-                case DynamicActionKind.Call:
-                    return MakeCallRule<T>((OldCallAction)action, context, args);
-                case DynamicActionKind.DoOperation:
-                    return MakeDoOperationRule<T>((OldDoOperationAction)action, context, args);
-                default: return null;
-            }
-        }
-        
-        private RuleBuilder<T> MakeDoOperationRule<T>(OldDoOperationAction doOperationAction, CodeContext context, object[] args) where T : class {
-            switch (doOperationAction.Operation) {
-                case Operators.IsCallable:
-                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
-            }
-            return null;
-        }
-
-        private static RuleBuilder<T> MakeCallRule<T>(OldCallAction action, CodeContext context, object[] args) where T : class {
-            // This rule only handles simple signatures. Fallback on MethodBinder to handle complex signatures 
-            // such as keyword args.
-            if (!action.Signature.IsSimple) return null; 
-
-            RuleBuilder<T> rule = new RuleBuilder<T>();
-
-            Expression[] exprArgs = new Expression[args.Length - 1];
-            for (int i = 0; i < args.Length - 1; i++) {
-                exprArgs[i] = rule.Parameters[i + 1];
-            }
-
-            // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
-            VariableExpression tmp = rule.GetTemporary(typeof(object), "init");
-            VariableExpression instTmp = rule.GetTemporary(typeof(object), "inst");
-            rule.Test = rule.MakeTypeTest(typeof(OldClass), 0);
-            rule.Target =
-                rule.MakeReturn(context.LanguageContext.Binder,
-                    Ast.Comma(
-                        Ast.Assign(
-                            instTmp,
-                            Ast.New(
-                                typeof(OldInstance).GetConstructor(new Type[] { typeof(CodeContext), typeof(OldClass) }),
-                                rule.Context,
-                                Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass))
-                            )
-                        ),
-                        Ast.Condition(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
-                                Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                                instTmp,
-                                tmp
-                            ),
-                            AstUtils.Call(
-                                action,
-                                typeof(object),
-                                ArrayUtils.Insert<Expression>(rule.Context, tmp, ArrayUtils.RemoveFirst(rule.Parameters))
-                            ),
-                            // Checking the Parameter array directly here only works for simple signatures.
-                            // It would get confused by cases like C(*()), C(**{}), or C(*E(), **{}), which could all
-                            // bind against C(). 
-                            rule.Parameters.Count != 1 ?
-                                (Expression)Ast.Call(
-                                    typeof(PythonOps).GetMethod("OldClassMakeCallError"),
-                                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass))
-                                    ) :
-                                Ast.Null()
-                        ),
-                        instTmp
-                    )
-                );
-
-            return rule;
-        }
+        #region Internal Member Accessors
 
         internal bool TryLookupInit(object inst, out object ret) {
             if (TryLookupSlot(Symbols.Init, out ret)) {
@@ -598,42 +515,6 @@ namespace IronPython.Runtime.Types {
             // Beware that calls like F(*(), **{}) have 2 arguments but they're empty and so it should still
             // match against def F(). 
             throw PythonOps.TypeError("this constructor takes no arguments");
-        }
-
-        private static RuleBuilder<T> MakeSetMemberRule<T>(OldSetMemberAction action, CodeContext context, object[] args) where T : class {
-            RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.MakeTest(typeof(OldClass));
-            Expression call;
-
-            if (action.Name == Symbols.Bases) {
-                call = Ast.Call(
-                    typeof(PythonOps).GetMethod("OldClassSetBases"),
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
-                );
-            } else if (action.Name == Symbols.Name) {
-                call = Ast.Call(
-                    typeof(OldClass).GetMethod("OldClassSetName"),
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
-                );
-            } else if (action.Name == Symbols.Dict) {
-                call = Ast.Call(
-                    typeof(OldClass).GetMethod("OldClassSetDictionary"),
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
-                );
-            } else {
-                call = Ast.Call(
-                    typeof(OldClass).GetMethod("OldClassSetNameHelper"),
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    AstUtils.Constant(action.Name),
-                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
-                );
-            }
-
-            rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
-            return rule;
         }
 
         internal void SetBases(object value) {
@@ -662,80 +543,6 @@ namespace IronPython.Runtime.Types {
             } else if (name == Symbols.DelAttr) {
                 HasDelAttr = true;
             }
-        }
-
-        private static RuleBuilder<T> MakeDelMemberRule<T>(OldDeleteMemberAction action, CodeContext context, object[] args) where T : class {
-            RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.MakeTest(typeof(OldClass));
-            rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
-                Ast.Call(
-                    typeof(PythonOps).GetMethod("OldClassDeleteMember"),
-                    rule.Context,
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
-                    AstUtils.Constant(action.Name)
-                )
-            );
-            return rule;
-        }
-
-        private static RuleBuilder<T> MakeGetMemberRule<T>(OldGetMemberAction action, CodeContext context, object[] args) where T : class {
-            RuleBuilder<T> rule = new RuleBuilder<T>();
-
-            rule.MakeTest(typeof(OldClass));
-            Expression target;
-
-            if (action.Name == Symbols.Dict) {
-                target = Ast.Comma(
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("OldClassDictionaryIsPublic"),
-                        Ast.Convert(rule.Parameters[0], typeof(OldClass))
-                    ),
-                    Ast.Field(
-                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                        typeof(OldClass).GetField("__dict__")
-                    )
-                );
-            } else if (action.Name == Symbols.Bases) {
-                target = Ast.Call(
-                    typeof(PythonOps).GetMethod("OldClassGetBaseClasses"),
-                    Ast.Convert(rule.Parameters[0], typeof(OldClass))
-                );
-            } else if (action.Name == Symbols.Name) {
-                target = Ast.Property(
-                    Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                    typeof(OldClass).GetProperty("__name__")
-                );
-            } else {
-                if (action.IsNoThrow) {
-                    VariableExpression tmp = rule.GetTemporary(typeof(object), "lookupVal");
-                    target =
-                        Ast.Condition(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
-                                rule.Context,
-                                Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                                AstUtils.Constant(action.Name),
-                                tmp
-                            ),
-                            tmp,
-                            Ast.Convert(
-                                Ast.Field(null, typeof(OperationFailed).GetField("Value")),
-                                typeof(object)
-                            )
-                        );
-                } else {
-                    target = Ast.Call(
-                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                        typeof(OldClass).GetMethod("LookupValue"),
-                        rule.Context,
-                        AstUtils.Constant(action.Name)
-                    );
-                }
-            }
-
-            rule.Target = rule.MakeReturn(context.LanguageContext.Binder, target);
-
-            return rule;
         }
 
         internal object LookupValue(CodeContext context, SymbolId name) {

@@ -82,12 +82,12 @@ class Operator(Symbol):
         return 'Operator(%s,%s,%s)' % (self.symbol, self.name, self.rname)
 
     def genOperatorTable_Mapping(self, cw):
-        cw.writeline("pyOp[Symbols.Operator%s] = new OperatorMapping(Operators.%s, false, true, false, true);" % (self.title_name(), self.title_name()))        
+        cw.writeline("pyOp[\"__%s__\"] = Operators.%s;" % (self.name, self.title_name()))        
         
         if self.isCompare(): return
 
-        cw.writeline("pyOp[Symbols.OperatorReverse%s] = new OperatorMapping(Operators.Reverse%s, false, true, false, true);" % (self.title_name(), self.title_name()))        
-        cw.writeline("pyOp[Symbols.OperatorInPlace%s] = new OperatorMapping(Operators.InPlace%s, false, true, false);" % (self.title_name(), self.title_name()))
+        cw.writeline("pyOp[\"__r%s__\"] = Operators.Reverse%s;" % (self.name, self.title_name()))        
+        cw.writeline("pyOp[\"__i%s__\"] = Operators.InPlace%s;" % (self.name, self.title_name()))
 
     def genOperatorReversal_Forward(self, cw):
         if self.isCompare(): return

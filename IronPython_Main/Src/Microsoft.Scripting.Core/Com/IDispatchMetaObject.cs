@@ -179,7 +179,7 @@ namespace System.Scripting.Com {
                 case "GetItem":
                     return IndexOperation(action, args, "TryGetGetItem");
                 case "SetItem":
-                    return IndexOperation(action, args, "TrySetGetItem");
+                    return IndexOperation(action, args, "TryGetSetItem");
                 case "Documentation":
                     return DocumentationOperation(args);
                 case "Equals":

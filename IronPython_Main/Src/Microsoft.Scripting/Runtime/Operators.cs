@@ -231,7 +231,7 @@ namespace Microsoft.Scripting.Runtime {
         /// 
         /// Return value is IList&lt;SymbolId&gt;.
         /// </summary>
-        public const string MemberNames = "MemberNames";             
+        public const string MemberNames = "GetMemberNames";             
         /// <summary>
         /// Unary operator.
         /// 

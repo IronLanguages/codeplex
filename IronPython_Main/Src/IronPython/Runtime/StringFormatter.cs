@@ -442,6 +442,15 @@ namespace IronPython.Runtime {
                 else if (absV < 1e-1) numberDecimalDigits += 1;
 
                 string fixedPointForm = absV.ToString("F" + numberDecimalDigits, CultureInfo.InvariantCulture).TrimEnd(zero);
+                bool convertType = true;
+                if (numberDecimalDigits > 15) {
+                    // System.Double(0.33333333333333331).ToString("F17") == "0.33333333333333300"
+                    string fixedPointFormG = absV.ToString("G" + numberDecimalDigits, CultureInfo.InvariantCulture).TrimEnd(zero);
+                    if (fixedPointFormG.Length > fixedPointForm.Length) {
+                        fixedPointForm = fixedPointFormG;
+                        convertType = false;
+                    }
+                }
                 string fraction = fixedPointForm.Substring(fixedPointForm.IndexOf('.') + 1);
                 if (absV < 1.0) {
                     _opts.Precision = fraction.Length;
@@ -450,7 +459,9 @@ namespace IronPython.Runtime {
                     _opts.Precision = Math.Min(_opts.Precision - digitsBeforeDecimalPoint, fraction.Length);
                 }
 
-                type = (type == 'G') ? 'F' : 'f';
+                if (convertType) {
+                    type = (type == 'G') ? 'F' : 'f';
+                }
             }
 
             return type;

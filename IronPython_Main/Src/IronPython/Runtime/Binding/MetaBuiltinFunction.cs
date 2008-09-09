@@ -21,6 +21,7 @@ using System.Scripting.Actions;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -48,6 +49,15 @@ namespace IronPython.Runtime.Binding {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(BuiltinFunction)));
             }
             return conversion.Fallback(args);
+        }
+
+        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            switch(action.Operation) {
+                case StandardOperators.CallSignatures:
+                    return PythonProtocol.MakeCallSignatureOperation(args[0], Value.Targets);
+            }
+
+            return base.Operation(action, args);
         }
 
         #endregion

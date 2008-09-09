@@ -131,7 +131,7 @@ namespace Microsoft.Scripting.Generation {
             MethodBase mb = Method;
             MethodInfo mi = mb as MethodInfo;
             Expression ret, call;
-            if (!mb.IsPublic || !mb.DeclaringType.IsVisible) {
+            if (!mb.IsPublic || (mb.DeclaringType != null && !mb.DeclaringType.IsVisible)) {
                 if (mi != null) {
                     mi = CompilerHelpers.GetCallableMethod(mi, _binder._binder.PrivateBinding);
                     if (mi != null) mb = mi;
@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Generation {
 
             ConstructorInfo ci = mb as ConstructorInfo; // to stop fxcop from complaining about multiple casts
             Debug.Assert(mi != null || ci != null);
-            if (mb.IsPublic && mb.DeclaringType.IsVisible) {
+            if (mb.IsPublic && (mb.DeclaringType == null || mb.DeclaringType.IsVisible)) {
                 // public method
                 if (mi != null) {
                     Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters, usageMarkers);

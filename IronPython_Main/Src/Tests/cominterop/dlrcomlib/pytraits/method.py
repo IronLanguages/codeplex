@@ -85,7 +85,6 @@ def test_sanity():
             if is_pywin32: raise e
             
             if not preferComDispatch:
-                if std_attr == "__call__" and isinstance(com_obj, DlrUniversalObj) and is_cli: continue #Non-COM bug: Merlin 378012
                 if std_attr not in BROKEN_STD_METHOD_ATTRIBUTES: raise e
             else:
                 if std_attr not in BROKEN_ID_STD_METHOD_ATTRIBUTES: raise e
