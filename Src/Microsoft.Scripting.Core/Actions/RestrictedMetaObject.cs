@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// A meta object who's exact type is known and additional calls to Restrict
     /// do nothing.

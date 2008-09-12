@@ -13,18 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
+using Microsoft.Scripting;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
     using System.Reflection.Emit;
 
     public static class CompilerHelpers {
@@ -545,7 +548,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static bool IsStrongBox(Type t) {
-            return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(System.Runtime.CompilerServices.StrongBox<>);
+            return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StrongBox<>);
         }
 
         /// <summary>
@@ -639,7 +642,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static Type MakeCallSiteType(params Type[] types) {
-            return typeof(System.Scripting.Actions.CallSite<>).MakeGenericType(DelegateHelpers.MakeDelegate(types));
+            return typeof(Microsoft.Scripting.Actions.CallSite<>).MakeGenericType(DelegateHelpers.MakeDelegate(types));
         }
 
         public static Type MakeCallSiteDelegateType(Type[] types) {

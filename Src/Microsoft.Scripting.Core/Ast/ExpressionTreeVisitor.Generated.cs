@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 
-using System.Scripting.Utils;
-
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     public partial class ExpressionTreeVisitor {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]

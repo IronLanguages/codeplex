@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 

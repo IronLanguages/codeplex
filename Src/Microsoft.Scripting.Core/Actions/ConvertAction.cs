@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting.Utils;
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public abstract class ConvertAction : StandardAction {
         private readonly Type _type;
         private readonly bool _explicit;

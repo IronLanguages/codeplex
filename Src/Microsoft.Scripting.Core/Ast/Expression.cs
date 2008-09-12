@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using System.Text;
 using System.Globalization;
 using System.Diagnostics;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Expression is the base type for all nodes in Expression Trees
     /// </summary>

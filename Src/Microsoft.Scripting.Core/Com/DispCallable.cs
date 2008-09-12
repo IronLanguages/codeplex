@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Contracts;
 using System.Globalization;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// This represents a bound dispmethod on a IDispatch object.
     /// </summary>

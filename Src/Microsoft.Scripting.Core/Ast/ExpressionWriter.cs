@@ -12,17 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using System.Globalization;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     // TODO: debug builds only!
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     internal sealed class ExpressionWriter : ExpressionTreeVisitor {

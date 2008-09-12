@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public sealed class Restrictions {
         private class Restriction {
             internal enum RestrictionKind {

@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-using Microsoft.Scripting.Generation;
+using System; using Microsoft;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -24,6 +24,7 @@ namespace IronPython.Runtime {
         /// No narrowing conversions are performed
         /// </summary>
         public const NarrowingLevel None = NarrowingLevel.None;
+
         /// <summary>
         /// Double/Single to Decimal
         /// PythonTuple to Array
@@ -31,6 +32,7 @@ namespace IronPython.Runtime {
         /// BigInteger to Int64
         /// </summary>
         public const NarrowingLevel BinaryOperator = NarrowingLevel.Two;
+
         /// <summary>
         /// Numeric conversions excluding from floating point values
         /// Boolean conversions
@@ -38,6 +40,7 @@ namespace IronPython.Runtime {
         /// Enumeration conversions
         /// </summary>
         public const NarrowingLevel IndexOperator = NarrowingLevel.Three;
+
         /// <summary>
         /// Enables Python protocol conversions (__int__, etc...)
         /// </summary>

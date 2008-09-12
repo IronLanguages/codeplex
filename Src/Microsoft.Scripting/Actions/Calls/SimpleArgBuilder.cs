@@ -13,15 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// SimpleArgBuilder produces the value produced by the user as the argument value.  It
     /// also tracks information about the original parameter and is used to create extended
@@ -32,15 +33,22 @@ namespace Microsoft.Scripting.Generation {
         private readonly Type _parameterType;
         private readonly bool _isParams, _isParamsDict;
 
-        public SimpleArgBuilder(int index, Type parameterType) {
-            ContractUtils.Requires(index >= 0);
-            ContractUtils.RequiresNotNull(parameterType, "parameterType");
-
-            _index = index;
-            _parameterType = parameterType;
+        /// <summary>
+        /// Parameter info is not available for this argument.
+        /// </summary>
+        public SimpleArgBuilder(Type parameterType, int index, bool isParams, bool isParamsDict) 
+            : this(null, parameterType, index, isParams, isParamsDict) {
         }
-
-        public SimpleArgBuilder(int index, Type parameterType, bool isParams, bool isParamsDict) {
+    
+        /// <summary>
+        /// Type and whether the parameter is a params-array or params-dictionary is derived from info.
+        /// </summary>
+        public SimpleArgBuilder(ParameterInfo info, int index)
+            : this(info, info.ParameterType, index, CompilerHelpers.IsParamArray(info), BinderHelpers.IsParamDictionary(info)) {
+        }
+        
+        protected SimpleArgBuilder(ParameterInfo info, Type parameterType, int index, bool isParams, bool isParamsDict)
+            : base(info) {
             ContractUtils.Requires(index >= 0);
             ContractUtils.RequiresNotNull(parameterType, "parameterType");
 
@@ -50,19 +58,15 @@ namespace Microsoft.Scripting.Generation {
             _isParamsDict = isParamsDict;
         }
 
-        public SimpleArgBuilder(int index, Type parameterType, ParameterInfo paramInfo) {
-            ContractUtils.Requires(index >= 0);
-            ContractUtils.RequiresNotNull(parameterType, "parameterType");
-            ContractUtils.RequiresNotNull(paramInfo, "paramInfo");
-
-            _index = index;
-            _parameterType = parameterType;
-            _isParams = CompilerHelpers.IsParamArray(paramInfo);
-            _isParamsDict = BinderHelpers.IsParamDictionary(paramInfo);
+        internal SimpleArgBuilder MakeCopy(int newIndex) {
+            var result = Copy(newIndex);
+            // Copy() must be overriden in derived classes and return an instance of the derived class:
+            Debug.Assert(result.GetType() == GetType());
+            return result;
         }
 
-        public virtual SimpleArgBuilder Copy(int newIndex) {
-            return new SimpleArgBuilder(newIndex, _parameterType, _isParams, _isParamsDict);
+        protected virtual SimpleArgBuilder Copy(int newIndex) {
+            return new SimpleArgBuilder(ParameterInfo, _parameterType, newIndex, _isParams, _isParamsDict);
         }
 
         public override int Priority {
@@ -81,12 +85,12 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             Debug.Assert(_index < parameters.Count);
             Debug.Assert(_index < hasBeenUsed.Length);
             Debug.Assert(parameters[_index] != null);
             hasBeenUsed[_index] = true;
-            return context.ConvertExpression(parameters[_index], _parameterType);
+            return parameterBinder.ConvertExpression(parameters[_index], ParameterInfo, _parameterType);
         }
 
         public int Index {

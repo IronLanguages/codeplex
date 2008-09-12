@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
 
     internal static class TypeUtils {
         private const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;

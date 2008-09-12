@@ -12,17 +12,18 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     // TODO: change to extension methods for ILGenerator
     internal class ILGen {
@@ -1596,7 +1597,7 @@ namespace System.Linq.Expressions.Compiler {
     }
 }
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
 
     public static partial class RuntimeOps {
         private const int MIN_CACHE = -100;

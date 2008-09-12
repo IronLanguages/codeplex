@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 
 namespace Merlin.Testing.TypeSample {
     public enum EnumByte : byte {

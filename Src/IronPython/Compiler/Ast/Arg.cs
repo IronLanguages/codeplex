@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using IronPython.Runtime;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     public class Arg : Node {

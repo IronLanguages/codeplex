@@ -13,11 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Runtime {
     // TODO: invariant context
@@ -43,7 +44,7 @@ namespace Microsoft.Scripting.Runtime {
             return toType.IsAssignableFrom(fromType);
         }
 
-        public override bool PreferConvert(Type t1, Type t2) {
+        public override Candidate PreferConvert(Type t1, Type t2) {
             throw new NotImplementedException();
         }
 

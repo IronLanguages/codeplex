@@ -12,13 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// An expression that provides runtime read/write access to variables.
     /// Needed to implement "eval" in dynamic languages.
@@ -74,7 +75,7 @@ namespace System.Linq.Expressions {
             for (int i = 0; i < vars.Count; i++) {
                 Expression v = vars[i];
                 if (v == null) {
-                    throw new ArgumentNullException(string.Format(Globalization.CultureInfo.CurrentUICulture, "variables[{0}]", i));
+                    throw new ArgumentNullException(string.Format(System.Globalization.CultureInfo.CurrentUICulture, "variables[{0}]", i));
                 }
                 ExpressionType kind = vars[i].NodeType;
                 if (kind != ExpressionType.Variable && kind != ExpressionType.Parameter) {

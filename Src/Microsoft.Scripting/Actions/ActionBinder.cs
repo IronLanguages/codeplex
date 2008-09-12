@@ -13,24 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Actions {
-    public enum Candidate {
-        None = 0,
-        One = +1,
-        Two = -1,
-    }
-        
     /// <summary>
     /// Provides binding semantics for a language.  This include conversions as well as support
     /// for producing rules for actions.  These optimized rules are used for calling methods, 
@@ -99,23 +95,51 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public abstract bool CanConvertFrom(Type fromType, Type toType, bool toNotNullable, NarrowingLevel level);
 
+        #region TODO: move to ParameterBinder
+
+        public virtual bool ParametersEquivalent(ParameterWrapper parameter1, ParameterWrapper parameter2) {
+            return parameter1.Type == parameter2.Type && parameter1.ProhibitNull == parameter2.ProhibitNull;
+        }
+
+        public virtual bool CanConvertFrom(Type fromType, ParameterWrapper toParameter, NarrowingLevel level) {
+            Assert.NotNull(fromType, toParameter);
+
+            Type toType = toParameter.Type;
+
+            if (fromType == None.Type) {
+                if (toParameter.ProhibitNull) {
+                    return false;
+                }
+
+                if (toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                    return true;
+                }
+
+                if (!toType.IsValueType) {
+                    return true;
+                }
+            }
+
+            if (fromType == toType) {
+                return true;
+            }
+
+            return CanConvertFrom(fromType, toType, toParameter.ProhibitNull, level);
+        }
+
         /// <summary>
         /// Selects the best (of two) candidates for conversion from actualType
-        /// +1 ... candidateOne
-        /// -1 ... candidateTwo
-        /// null ... fallback
         /// </summary>
-        public virtual Candidate? SelectBestConversionFor(Type actualType, Type candidateOne, bool oneNotNull, Type candidateTwo, bool twoNotNull, NarrowingLevel level) {
-            return null;
+        public virtual Candidate SelectBestConversionFor(Type actualType, ParameterWrapper candidateOne, ParameterWrapper candidateTwo, NarrowingLevel level) {
+            return Candidate.Equivalent;
         }
 
         /// <summary>
         /// Provides ordering for two parameter types if there is no conversion between the two parameter types.
-        /// 
-        /// Returns true to select t1, false to select t2.
         /// </summary>
-        public abstract bool PreferConvert(Type t1, Type t2);
+        public abstract Candidate PreferConvert(Type t1, Type t2);
 
+        #endregion
 
         /// <summary>
         /// Converts the provided expression to the given type.  The expression is safe to evaluate multiple times.
@@ -151,22 +175,6 @@ namespace Microsoft.Scripting.Actions {
                 visType,
                 args
             );
-        }
-
-        /// <summary>
-        /// Gets the return value when an object contains out / by-ref parameters.  
-        /// </summary>
-        /// <param name="args">The values of by-ref and out parameters that the called method produced.  This includes the normal return
-        /// value if the method does not return void.</param>
-        public virtual object GetByRefArray(object[] args) {
-            return args;
-        }
-
-        /// <summary>
-        /// Gets an expression that evaluates to the result of GetByRefArray operation.
-        /// </summary>
-        public virtual Expression GetByRefArrayExpression(Expression argumentArrayExpression) {
-            return argumentArrayExpression;
         }
 
         /// <summary>
@@ -522,6 +530,47 @@ namespace Microsoft.Scripting.Actions {
         public Expression MakeCallExpression(Expression context, MethodInfo method, params Expression[] parameters) {
             return MakeCallExpression(context, method, (IList<Expression>)parameters);
         }
+
+        #region TODO: move to ParameterBinder
+
+        /// <summary>
+        /// Gets an expression that evaluates to the result of GetByRefArray operation.
+        /// </summary>
+        public virtual Expression GetByRefArrayExpression(Expression argumentArrayExpression) {
+            return argumentArrayExpression;
+        }
+
+        /// <summary>
+        /// Handles binding of special parameters.
+        /// </summary>
+        /// <returns>True if the argument is handled by this method.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "3#")]
+        internal protected virtual bool BindSpecialParameter(ParameterInfo parameterInfo, List<ArgBuilder> arguments, 
+            List<ParameterWrapper> parameters, ref int index) {
+
+            // CodeContext is implicitly provided at runtime, the user cannot provide it.
+            if (parameterInfo.ParameterType == typeof(CodeContext) && arguments.Count == 0) {
+                arguments.Add(new ContextArgBuilder(parameterInfo));
+                return true;
+            } else if (parameterInfo.ParameterType.IsGenericType && parameterInfo.ParameterType.GetGenericTypeDefinition() == typeof(SiteLocalStorage<>)) {
+                arguments.Add(new SiteLocalStorageBuilder(parameterInfo));
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Called before arguments binding.
+        /// </summary>
+        /// <returns>The number of parameter infos to skip.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "3#")]
+        internal protected virtual int PrepareParametersBinding(ParameterInfo[] parameterInfos, List<ArgBuilder> arguments,
+            List<ParameterWrapper> parameters, ref int index) {
+            return 0;
+        }
+
+        #endregion
     }
 }
 

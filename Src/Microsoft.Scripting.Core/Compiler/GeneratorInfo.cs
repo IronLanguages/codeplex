@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Scripting;
+using Microsoft.Scripting;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     /// <summary>
     /// GeneratorInfo is a data structure in which Compiler keeps information related co compiling
     /// GeneartorLambdaExpression. It's created by YieldLabelBuilder which is invoked by VariableBinder

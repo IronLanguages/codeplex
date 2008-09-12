@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -114,7 +114,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void Dump() {
-            if (!_saveSnippets) {
+            if (!SaveSnippets) {
                 return;
             }
 
@@ -130,8 +130,8 @@ namespace Microsoft.Scripting.Generation {
             // Invoke the core Snippets.Dump via reflection
             // Do this before verifying because our assemblies will depend on
             // the core ones
-            Assembly core = typeof(System.Linq.Expressions.Expression).Assembly;
-            Type snippets = core.GetType("System.Linq.Expressions.Compiler.Snippets");
+            Assembly core = typeof(Microsoft.Linq.Expressions.Expression).Assembly;
+            Type snippets = core.GetType("Microsoft.Linq.Expressions.Compiler.Snippets");
             MethodInfo dump = snippets.GetMethod("Dump", BindingFlags.NonPublic | BindingFlags.Static);
             dump.Invoke(null, null);
 

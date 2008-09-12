@@ -13,23 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Collections.Generic;
-using System.Linq.Expressions;
+using System; using Microsoft;
 
-namespace Microsoft.Scripting.Generation {
+namespace System.Runtime.CompilerServices {
 
-    /// <summary>
-    /// ArgBuilder which provides the CodeContext parameter to a method.
-    /// </summary>
-    public sealed class ContextArgBuilder : ArgBuilder {
-        public ContextArgBuilder() { }
-
-        public override int Priority {
-            get { return -1; }
-        }
-
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
-            return context.ContextExpression;
-        }
-    }
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Assembly)]
+    sealed class ExtensionAttribute : Attribute { }
 }

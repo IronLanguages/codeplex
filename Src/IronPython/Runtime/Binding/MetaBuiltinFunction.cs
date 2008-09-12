@@ -13,13 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting.Actions;
-
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
+
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -27,7 +28,7 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-using Ast = System.Linq.Expressions.Expression;
+using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
 
@@ -103,8 +104,9 @@ namespace IronPython.Runtime.Binding {
             }
 
             BindingTarget target;
-            MetaObject res = BinderState.GetBinderState(call).Binder.CallMethod(
-                codeContext,
+            var binder = BinderState.GetBinderState(call).Binder;
+            MetaObject res = binder.CallMethod(
+                new ParameterBinderWithCodeContext(binder, codeContext),
                 Value.Targets,
                 args,
                 BindingHelpers.GetCallSignature(call),
@@ -164,9 +166,10 @@ namespace IronPython.Runtime.Binding {
             MetaObject res;
             BinderState state = BinderState.GetBinderState(call);
             BindingTarget target;
+            var mc = new ParameterBinderWithCodeContext(state.Binder, codeContext);
             if (Value.IsReversedOperator) {
                 res = state.Binder.CallMethod(
-                    codeContext,
+                    mc,
                     Value.Targets,
                     ArrayUtils.Append(args, self),
                     GetReversedSignature(signature),
@@ -180,7 +183,7 @@ namespace IronPython.Runtime.Binding {
                 );
             } else {
                 res = state.Binder.CallInstanceMethod(
-                    codeContext,
+                    mc,
                     Value.Targets,
                     self,
                     args,

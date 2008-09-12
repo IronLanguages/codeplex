@@ -15,12 +15,12 @@
 
 #if !SILVERLIGHT // ICustomTypeDescriptor
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.ComponentModel;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>

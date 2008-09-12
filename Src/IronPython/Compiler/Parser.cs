@@ -13,16 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Scripting;
+using Microsoft.Scripting;
 using IronPython.Compiler.Ast;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 

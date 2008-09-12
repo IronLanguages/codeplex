@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Linq.Expressions {
+using System; using Microsoft;
+namespace Microsoft.Linq.Expressions {
     public sealed class ReturnStatement : Expression {
         private readonly Expression _expr;
 

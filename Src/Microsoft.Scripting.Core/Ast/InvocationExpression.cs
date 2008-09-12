@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class InvocationExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _arguments;

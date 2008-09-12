@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
     internal static class CollectionExtensions {
         /// <summary>
         /// Wraps the provided enumerable into a ReadOnlyCollection{T}

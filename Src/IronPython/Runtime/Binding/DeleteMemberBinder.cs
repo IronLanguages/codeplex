@@ -13,10 +13,10 @@
 *
 * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using Microsoft.Scripting;
-using System.Scripting.Actions;
-using System.Linq.Expressions;
+using Microsoft.Scripting.Actions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
@@ -24,7 +24,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     class DeleteMemberBinder : DeleteMemberAction, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;

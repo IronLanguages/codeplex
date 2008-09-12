@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     internal class TypeEnumMetaObject : MetaObject {
         private readonly ComTypeEnumDesc _desc;
 

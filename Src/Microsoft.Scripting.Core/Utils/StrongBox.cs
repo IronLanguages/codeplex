@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Runtime.CompilerServices {
+using System; using Microsoft;
+namespace Microsoft.Runtime.CompilerServices {
 
     public sealed class StrongBox<T> : IStrongBox {
         /// <summary>

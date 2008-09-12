@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class PrintStatement : Statement {

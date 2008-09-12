@@ -12,11 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.CodeDom.Compiler;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// This class is used to look for matching rules in the caches
     /// by executing individual rules against the site whose fallback

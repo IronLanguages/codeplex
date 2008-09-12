@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.ObjectModel;
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
 
     /// <summary>
     /// Provides read/write access to variables in a scope.

@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]

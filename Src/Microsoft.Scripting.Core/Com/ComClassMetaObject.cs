@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     internal class ComClassMetaObject : MetaObject {
         internal ComClassMetaObject(Expression expression, ComTypeClassDesc cls)
             : base(expression, Restrictions.Empty, cls) {

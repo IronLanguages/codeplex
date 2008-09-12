@@ -11,7 +11,7 @@
     <RootNamespace>IronPython</RootNamespace>
     <AssemblyName>IronPython</AssemblyName>
     <OldToolsVersion>2.0</OldToolsVersion>
-    <WarningsNotAsErrors>618</WarningsNotAsErrors>
+    <WarningsNotAsErrors>618,1685</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -52,7 +52,7 @@
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -63,7 +63,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.6</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <BaseAddress>1933574144</BaseAddress>
@@ -155,6 +155,7 @@
     <Compile Include="Compiler\Ast\WhileStatement.cs" />
     <Compile Include="Compiler\Ast\WithStatement.cs" />
     <Compile Include="Compiler\Ast\YieldExpression.cs" />
+    <Compile Include="Extension.cs" />
     <Compile Include="Hosting\PythonService.cs" />
     <Compile Include="MaybeNotImplementedAttribute.cs" />
     <Compile Include="Runtime\BindingWarnings.cs" />

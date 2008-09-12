@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Scripting;
-using System.Scripting.Utils;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using System.Collections.ObjectModel;
 
 namespace IronPython {

@@ -12,12 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     internal sealed partial class CompilerScope {
 

@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.Remoting;
-using System.Scripting;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
 using System.Threading;

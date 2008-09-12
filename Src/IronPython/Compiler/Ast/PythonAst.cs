@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using IronPython.Runtime;
@@ -21,10 +21,10 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class PythonAst : ScopeStatement {
         private readonly Statement _body;

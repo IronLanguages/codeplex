@@ -12,13 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     // TODO: should this be an IDO?
     public sealed class BoundDispEvent {
         private object _rcw;

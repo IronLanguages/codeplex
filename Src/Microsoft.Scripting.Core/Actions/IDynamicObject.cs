@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 
-using System.Linq.Expressions;
-
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public interface IDynamicObject {
         MetaObject GetMetaObject(Expression parameter);
     }

@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
 
     /// <summary>
     /// Stitcher, a.k.a Rule inliner. Takes list of rules and produces LambdaExpression with the
@@ -56,7 +56,7 @@ namespace System.Scripting.Actions {
             if (length == 1) {
                 // only one rule, use its parameters and don't stitch..
                 Rule<T> rule = rules[0];
-                lp = rule.Parameters.ToArray();
+                lp = rule.Parameters.AddFirst(Expression.Parameter(typeof(CallSite), "site"));
                 body[0] = rule.Binding;
             } else {
                 // Many rules, stitch them together on a new set of parameters
@@ -92,8 +92,8 @@ namespace System.Scripting.Actions {
         private Expression StitchRule(ReadOnlyCollection<ParameterExpression> parameters, Expression expression) {
             _map.Clear();
             for (int i = 0; i < parameters.Count; i++) {
-                Debug.Assert(parameters[i].Type == _lp[i].Type);
-                _map[parameters[i]] = _lp[i];
+                Debug.Assert(parameters[i].Type == _lp[i + 1].Type);
+                _map[parameters[i]] = _lp[i + 1];
             }
             return VisitNode(expression);
         }

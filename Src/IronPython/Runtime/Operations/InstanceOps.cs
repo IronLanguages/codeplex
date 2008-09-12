@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;

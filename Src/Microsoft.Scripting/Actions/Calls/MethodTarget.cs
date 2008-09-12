@@ -13,19 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// MethodTarget represents how a method is bound to the arguments of the call-site
@@ -49,6 +50,10 @@ namespace Microsoft.Scripting.Generation {
             this._returnBuilder = returnBuilder;
 
             //argBuilders.TrimExcess();
+        }
+
+        public MethodBinder Binder {
+            get { return _binder; }
         }
 
         public MethodBase Method {
@@ -100,34 +105,10 @@ namespace Microsoft.Scripting.Generation {
             return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
         }
 
-        internal Expression MakeExpression(Expression contextExpression, IList<Expression> parameters) {
-            Assert.NotNullItems(parameters);
-            Debug.Assert(contextExpression != null);
-
-            return MakeExpression(
-                new MethodBinderContext(_binder._binder, contextExpression),
-                parameters
-            );
-        }
-
-        internal Expression MakeExpression(MethodBinderContext context, IList<Expression> parameters) {
-            int minPriority = Int32.MaxValue;
-            int maxPriority = Int32.MinValue;
-            foreach (ArgBuilder ab in _argBuilders) {
-                minPriority = System.Math.Min(minPriority, ab.Priority);
-                maxPriority = System.Math.Max(maxPriority, ab.Priority);
-            }
-
-            Expression[] args = new Expression[_argBuilders.Count];
-            bool[] usageMarkers = new bool[parameters.Count];
-            for (int priority = minPriority; priority <= maxPriority; priority++) {
-                for (int i = 0; i < _argBuilders.Count; i++) {
-                    if (_argBuilders[i].Priority == priority) {
-                        args[i] = _argBuilders[i].ToExpression(context, parameters, usageMarkers);
-                    }
-                }
-            }
-
+        internal Expression MakeExpression(ParameterBinder parameterBinder, IList<Expression> parameters) {
+            bool[] usageMarkers;
+            Expression[] args = GetArgumentExpressions(parameterBinder, parameters, out usageMarkers);
+            
             MethodBase mb = Method;
             MethodInfo mi = mb as MethodInfo;
             Expression ret, call;
@@ -138,12 +119,12 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            ConstructorInfo ci = mb as ConstructorInfo; // to stop fxcop from complaining about multiple casts
+            ConstructorInfo ci = mb as ConstructorInfo;
             Debug.Assert(mi != null || ci != null);
             if (mb.IsPublic && (mb.DeclaringType == null || mb.DeclaringType.IsVisible)) {
                 // public method
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters, usageMarkers);
+                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
                     call = Ast.SimpleCallHelper(instance, mi, args);
                 } else {
                     call = Ast.SimpleNewHelper(ci, args);
@@ -151,7 +132,9 @@ namespace Microsoft.Scripting.Generation {
             } else {
                 // Private binding, invoke via reflection
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? Ast.Null() : _instanceBuilder.ToExpression(context, parameters, usageMarkers);
+                    Expression instance = mi.IsStatic ? Ast.Null() : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
+                    Debug.Assert(instance != null, "Can't skip instance expression");
+
                     call = Ast.Call(
                         typeof(BinderOps).GetMethod("InvokeMethod"),
                         Ast.Constant(mi),
@@ -167,11 +150,11 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            ret = _returnBuilder.ToExpression(context, _argBuilders, parameters, call);
+            ret = _returnBuilder.ToExpression(parameterBinder, _argBuilders, parameters, call);
 
             List<Expression> updates = null;
             for (int i = 0; i < _argBuilders.Count; i++) {
-                Expression next = _argBuilders[i].UpdateFromReturn(context, parameters);
+                Expression next = _argBuilders[i].UpdateFromReturn(parameterBinder, parameters);
                 if (next != null) {
                     if (updates == null) {
                         updates = new List<Expression>();
@@ -195,11 +178,49 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            if (context.Temps != null) {
-                ret = Ast.Scope(ret, context.Temps);
+            if (parameterBinder.Temps != null) {
+                ret = Ast.Scope(ret, parameterBinder.Temps);
             }
 
             return ret;
+        }
+
+        private Expression[] GetArgumentExpressions(ParameterBinder parameterBinder, IList<Expression> parameters, out bool[] usageMarkers) {
+            int minPriority = Int32.MaxValue;
+            int maxPriority = Int32.MinValue;
+            foreach (ArgBuilder ab in _argBuilders) {
+                minPriority = System.Math.Min(minPriority, ab.Priority);
+                maxPriority = System.Math.Max(maxPriority, ab.Priority);
+            }
+
+            var args = new Expression[_argBuilders.Count];
+            usageMarkers = new bool[parameters.Count];
+            for (int priority = minPriority; priority <= maxPriority; priority++) {
+                for (int i = 0; i < _argBuilders.Count; i++) {
+                    if (_argBuilders[i].Priority == priority) {
+                        args[i] = _argBuilders[i].ToExpression(parameterBinder, parameters, usageMarkers);
+                    }
+                }
+            }
+
+            return RemoveNulls(args);
+        }
+
+        private static Expression[] RemoveNulls(Expression[] args) {
+            int newLength = args.Length;
+            for (int i = 0; i < args.Length; i++) {
+                if (args[i] == null) {
+                    newLength--;
+                }
+            }
+            
+            var result = new Expression[newLength];
+            for (int i = 0, j = 0; i < args.Length; i++) {
+                if (args[i] != null) {
+                    result[j++] = args[i];
+                }
+            }
+            return result;
         }
 
         /// <summary>
@@ -208,11 +229,11 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// TODO: Remove RuleBuilder and knownTypes once we're fully meta
         /// </summary>
-        /// <param name="contextExpression">CodeContext expression</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="parameters">The explicit arguments</param>
         /// <param name="knownTypes">If non-null, the type for each element in parameters</param>
         /// <returns></returns>
-        internal Expression MakeExpression(Expression contextExpression, IList<Expression> parameters, IList<Type> knownTypes) {
+        internal Expression MakeExpression(ParameterBinder parameterBinder, IList<Expression> parameters, IList<Type> knownTypes) {
             Debug.Assert(knownTypes == null || parameters.Count == knownTypes.Count);
 
             IList<Expression> args = parameters;
@@ -226,7 +247,7 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            return MakeExpression(contextExpression, args);
+            return MakeExpression(parameterBinder, args);
         }
 
         private static int FindMaxPriority(IList<ArgBuilder> abs, int ceiling) {
@@ -239,41 +260,41 @@ namespace Microsoft.Scripting.Generation {
             return max;
         }
 
-        internal int CompareEqualParameters(MethodTarget other) {
+        internal static Candidate CompareEquivalentParameters(MethodTarget one, MethodTarget two) {
             // Prefer normal methods over explicit interface implementations
-            if (other.Method.IsPrivate && !this.Method.IsPrivate) return +1;
-            if (this.Method.IsPrivate && !other.Method.IsPrivate) return -1;
+            if (two.Method.IsPrivate && !one.Method.IsPrivate) return Candidate.One;
+            if (one.Method.IsPrivate && !two.Method.IsPrivate) return Candidate.Two;
 
             // Prefer non-generic methods over generic methods
-            if (Method.IsGenericMethod) {
-                if (!other.Method.IsGenericMethod) {
-                    return -1;
+            if (one.Method.IsGenericMethod) {
+                if (!two.Method.IsGenericMethod) {
+                    return Candidate.Two;
                 } else {
                     //!!! Need to support selecting least generic method here
-                    return 0;
+                    return Candidate.Equivalent;
                 }
-            } else if (other.Method.IsGenericMethod) {
-                return +1;
+            } else if (two.Method.IsGenericMethod) {
+                return Candidate.One;
             }
 
             //prefer methods without out params over those with them
-            switch (Compare(_returnBuilder.CountOutParams, other._returnBuilder.CountOutParams)) {
-                case 1: return -1;
-                case -1: return 1;
+            switch (Compare(one._returnBuilder.CountOutParams, two._returnBuilder.CountOutParams)) {
+                case 1: return Candidate.Two;
+                case -1: return Candidate.One;
             }
 
             //prefer methods using earlier conversions rules to later ones            
             for (int i = Int32.MaxValue; i >= 0; ) {
-                int maxPriorityThis = FindMaxPriority(this._argBuilders, i);
-                int maxPriorityOther = FindMaxPriority(other._argBuilders, i);
+                int maxPriorityThis = FindMaxPriority(one._argBuilders, i);
+                int maxPriorityOther = FindMaxPriority(two._argBuilders, i);
 
-                if (maxPriorityThis < maxPriorityOther) return +1;
-                if (maxPriorityOther < maxPriorityThis) return -1;
+                if (maxPriorityThis < maxPriorityOther) return Candidate.One;
+                if (maxPriorityOther < maxPriorityThis) return Candidate.Two;
 
                 i = maxPriorityThis - 1;
             }
 
-            return 0;
+            return Candidate.Equivalent;
         }
 
         private static int Compare(int x, int y) {
@@ -290,6 +311,7 @@ namespace Microsoft.Scripting.Generation {
             // current argument that we consume, initially skip this if we have it.
             int curArg = CompilerHelpers.IsStatic(_method) ? 0 : 1;
             int kwIndex = -1;
+            ArgBuilder paramsDictBuilder = null;
 
             foreach (ArgBuilder ab in _argBuilders) {
                 SimpleArgBuilder sab = ab as SimpleArgBuilder;
@@ -303,17 +325,20 @@ namespace Microsoft.Scripting.Generation {
                             (CompilerHelpers.IsStatic(_method) ? 1 : 0);
 
                         newArgBuilders.Add(new ParamsArgBuilder(
+                            sab.ParameterInfo,
+                            sab.Type.GetElementType(),
                             curArg,
-                            paramsUsed,
-                            sab.Type.GetElementType()));
+                            paramsUsed
+                        ));
 
                         curArg += paramsUsed;
                     } else if (sab.IsParamsDict) {
                         // consume all the kw arguments
                         kwIndex = newArgBuilders.Count;
+                        paramsDictBuilder = sab;
                     } else {
                         // consume the argument, adjust its position:
-                        newArgBuilders.Add(sab.Copy(curArg++));
+                        newArgBuilders.Add(sab.MakeCopy(curArg++));
                     }
                 } else {
                     // CodeContext, null, default, etc...  we don't consume an 
@@ -323,7 +348,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             if (kwIndex != -1) {
-                newArgBuilders.Insert(kwIndex, new ParamsDictArgBuilder(curArg, names, nameIndexes));
+                newArgBuilders.Insert(kwIndex, new ParamsDictArgBuilder(paramsDictBuilder.ParameterInfo, curArg, names, nameIndexes));
             }
 
             return new MethodTarget(_binder, Method, argCount, _instanceBuilder, newArgBuilders, _returnBuilder);

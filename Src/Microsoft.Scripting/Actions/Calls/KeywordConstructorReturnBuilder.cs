@@ -13,16 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Updates fields/properties of the returned value with unused keyword parameters.
@@ -44,10 +44,10 @@ namespace Microsoft.Scripting.Generation {
             _privateBinding = privateBinding;
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
+        internal override Expression ToExpression(ParameterBinder parameterBinder, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             List<Expression> sets = new List<Expression>();
 
-            VariableExpression tmp = context.GetTemporary(ret.Type, "val");
+            VariableExpression tmp = parameterBinder.GetTemporary(ret.Type, "val");
             sets.Add(
                 Ast.Assign(tmp, ret)
             );
@@ -62,7 +62,7 @@ namespace Microsoft.Scripting.Generation {
                                 Ast.AssignField(
                                     tmp,
                                     fi,
-                                    ConvertToHelper(context, value, fi.FieldType)
+                                    ConvertToHelper(parameterBinder, value, fi.FieldType)
                                 )
                             );
                         } else {
@@ -87,7 +87,7 @@ namespace Microsoft.Scripting.Generation {
                                 Ast.AssignProperty(
                                     tmp,
                                     pi,
-                                    ConvertToHelper(context, value, pi.PropertyType)
+                                    ConvertToHelper(parameterBinder, value, pi.PropertyType)
                                 )
                             );
                         } else {
@@ -115,10 +115,10 @@ namespace Microsoft.Scripting.Generation {
                 sets.ToArray()
             );
 
-            return _builder.ToExpression(context, args, parameters, newCall);
+            return _builder.ToExpression(parameterBinder, args, parameters, newCall);
         }
 
-        private static Expression ConvertToHelper(MethodBinderContext context, Expression value, Type type) {
+        private static Expression ConvertToHelper(ParameterBinder parameterBinder, Expression value, Type type) {
             if (type == value.Type) {
                 return value;
             }
@@ -127,7 +127,7 @@ namespace Microsoft.Scripting.Generation {
                 return Ast.ConvertHelper(value, type);
             }
 
-            return Expression.Dynamic(OldConvertToAction.Make(context.Binder, type), type, context.ContextExpression, value);
+            return parameterBinder.GetDynamicConversion(value, type);
         }
     }
 }

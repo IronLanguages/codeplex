@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// Represents the reason why a call to a specific method could not be performed by the MethodBinder.
     /// 

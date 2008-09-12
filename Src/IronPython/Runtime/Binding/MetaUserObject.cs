@@ -13,21 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     partial class MetaUserObject : MetaPythonObject, IPythonInvokable {
         private readonly MetaObject _baseMetaObject;            // if we're a subtype of MetaObject this is the base class MO

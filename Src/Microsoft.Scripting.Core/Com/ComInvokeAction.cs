@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     class ComInvokeAction : InvokeAction {
         public override object HashCookie {
             get { return this; }

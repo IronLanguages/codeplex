@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Scripting.Actions {
+using System; using Microsoft;
+namespace Microsoft.Scripting.Actions {
     // TODO: Rename
     public abstract class StandardAction : MetaAction {
         private readonly StandardActionKind _kind;

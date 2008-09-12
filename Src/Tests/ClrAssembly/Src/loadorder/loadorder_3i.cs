@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
- 
+using System; using Microsoft; 
 // generic type, which has same namespace, different name from First.Generic1
 namespace First {
     public class Generic2<T> {

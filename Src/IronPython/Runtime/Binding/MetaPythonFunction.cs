@@ -13,16 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -30,7 +29,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
     
     class MetaPythonFunction : MetaPythonObject, IPythonInvokable {
         public MetaPythonFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonFunction/*!*/ value)

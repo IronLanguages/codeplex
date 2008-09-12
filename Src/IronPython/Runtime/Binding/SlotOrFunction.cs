@@ -13,20 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Provides an abstraction for calling something which might be a builtin function or
@@ -222,6 +222,8 @@ namespace IronPython.Runtime.Binding {
                 xBf = null;
             }
 
+            var mc = new ParameterBinderWithCodeContext(state.Binder, Ast.Constant(state.Context));
+
             if (xBf == null) {
                 if (yBf == null) {
                     binder = null;
@@ -229,7 +231,7 @@ namespace IronPython.Runtime.Binding {
                 } else {
                     declaringType = DynamicHelpers.GetPythonTypeFromType(yBf.DeclaringType);
                     binder = state.Binder.CallMethod(
-                        Ast.Constant(state.Context),
+                        mc,
                         yBf.Targets,
                         types,
                         new CallSignature(types.Length),
@@ -243,7 +245,7 @@ namespace IronPython.Runtime.Binding {
                 if (yBf == null) {
                     declaringType = DynamicHelpers.GetPythonTypeFromType(xBf.DeclaringType);
                     binder = state.Binder.CallMethod(
-                        Ast.Constant(state.Context),
+                        mc,
                         xBf.Targets,
                         types,
                         new CallSignature(types.Length),
@@ -260,7 +262,7 @@ namespace IronPython.Runtime.Binding {
                     }
 
                     binder = state.Binder.CallMethod(
-                        Ast.Constant(state.Context),
+                        mc,
                         targets.ToArray(),
                         types,
                         new CallSignature(types.Length),

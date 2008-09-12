@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Threading;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     internal static partial class DelegateHelpers {
 
         private static Dictionary<ICollection<Type>, Type> _DelegateTypes;

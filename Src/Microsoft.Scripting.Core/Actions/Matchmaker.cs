@@ -12,16 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Threading;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// This class is used to look for matching rules in the caches
     /// by executing individual rules against the site whose fallback

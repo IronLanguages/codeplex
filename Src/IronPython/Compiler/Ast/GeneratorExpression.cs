@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using Microsoft.Scripting.Actions;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
 

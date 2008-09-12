@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection.Emit;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         private static void EmitBlock(LambdaCompiler lc, Expression expr) {
             lc.Emit((Block)expr, EmitAs.Default);

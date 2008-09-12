@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
@@ -21,7 +21,7 @@ using System.Text;
 using System.Globalization;
 using Marshal = System.Runtime.InteropServices.Marshal;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     // TODO: Can it be made internal?
     public class ComMethodDesc {

@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class ExecStatement : Statement {
         private readonly Expression _code, _locals, _globals;

@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>

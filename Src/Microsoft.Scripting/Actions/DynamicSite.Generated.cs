@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.CodeDom.Compiler;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using System.Threading;
 using Microsoft.Scripting.Runtime;
 

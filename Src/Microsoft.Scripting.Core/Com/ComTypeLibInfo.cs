@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     // TODO: Can it be made internal?
     public sealed class ComTypeLibInfo : IDynamicObject  {
         private readonly ComTypeLibDesc _typeLibDesc;

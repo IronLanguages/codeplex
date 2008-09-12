@@ -12,9 +12,9 @@
  *
  *
  * ***************************************************************************/
-
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;

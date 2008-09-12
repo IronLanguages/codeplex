@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting.Utils;
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     public enum ArgumentType {
         Positional,
         Named

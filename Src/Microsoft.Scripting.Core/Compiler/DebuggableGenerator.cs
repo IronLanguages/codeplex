@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
 
     public interface IDebuggableGenerator {
         int YieldMarkerLocation { get; set; }

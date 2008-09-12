@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Globalization;
 using System.Security;
 
-namespace System.Scripting {
+namespace Microsoft.Scripting {
 
     /// <summary>
     /// This class holds onto internal debugging options of the compiler and

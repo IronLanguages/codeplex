@@ -13,20 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 
 using AstUtils = Microsoft.Scripting.Ast.Utils;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace IronPython.Runtime.Binding {
     /// <summary>
@@ -55,9 +55,10 @@ namespace IronPython.Runtime.Binding {
         }
 
         internal MetaObject/*!*/ InvokeFallback(MetaObject/*!*/[]/*!*/ args, CallSignature sig) {
+            var parameterBinder = new ParameterBinderWithCodeContext(Binder.Binder, Expression.Constant(_state.Context));
             return PythonProtocol.Call(this, args) ??
-               Binder.Binder.Create(sig, Expression.Constant(_state.Context), args) ??
-               Binder.Binder.Call(sig, Expression.Constant(_state.Context), args);
+               Binder.Binder.Create(sig, parameterBinder, args) ??
+               Binder.Binder.Call(sig, parameterBinder, args);
         }
 
         public override int GetHashCode() {

@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Text;
-using System.Scripting.Actions;
-using System.Linq.Expressions;
+using Microsoft.Scripting.Actions;
+using Microsoft.Linq.Expressions;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Builds up a series of conditionals when the False clause isn't yet known.  We can

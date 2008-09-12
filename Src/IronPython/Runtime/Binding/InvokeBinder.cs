@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -84,8 +84,8 @@ namespace IronPython.Runtime.Binding {
             }
 
             return PythonProtocol.Call(this, args) ??
-                Binder.Binder.Create(Signature, codeContext, args) ??
-                Binder.Binder.Call(Signature, codeContext, args);
+                Binder.Binder.Create(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), args) ??
+                Binder.Binder.Call(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), args);
         }
 
         public override object/*!*/ HashCookie {

@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.CodeDom.Compiler;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     #region Generated Dynamic Site Targets
 
     // *** BEGIN GENERATED CODE ***

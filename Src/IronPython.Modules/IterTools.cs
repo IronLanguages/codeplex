@@ -13,14 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
-using System.Scripting.Actions;
-using System.Linq.Expressions;
+using Microsoft.Scripting.Actions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
 
-using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;

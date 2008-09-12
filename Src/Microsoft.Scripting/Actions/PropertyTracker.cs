@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;

@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 namespace IronPython.Runtime {
     /// <summary>
     /// Represents a sequence which may have been provided as a set of parameters to an indexer.

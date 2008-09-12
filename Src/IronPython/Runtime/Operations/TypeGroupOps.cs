@@ -13,8 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Text;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;

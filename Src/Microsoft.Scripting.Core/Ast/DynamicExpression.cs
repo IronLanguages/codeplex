@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq.Expressions.Compiler;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions.Compiler;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// A late-bound operation. The precise semantics is determined by the
     /// Binder. If the Binder is one of the standard dynamic operations

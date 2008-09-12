@@ -12,10 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.ObjectModel;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Interpretation {
 

@@ -13,19 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
-using Ast = System.Linq.Expressions.Expression;
+using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
 

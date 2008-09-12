@@ -13,16 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using System.Text;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// MethodCandidate represents the different possible ways of calling a method or a set of method overloads.
     /// A single method can result in multiple MethodCandidates. Some reasons include:
@@ -101,36 +101,44 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal int CompareTo(MethodCandidate other, CallTypes callType, Type[] actualTypes) {
-            int? cmpParams = CompareParameters(other, actualTypes);
-            if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
-
-            int ret = Target.CompareEqualParameters(other.Target);
-            if (ret != 0) return ret;
-
-            if (CompilerHelpers.IsStatic(Target.Method) && !CompilerHelpers.IsStatic(other.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? -1 : +1;
-            } else if (!CompilerHelpers.IsStatic(Target.Method) && CompilerHelpers.IsStatic(other.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? +1 : -1;
+        internal static Candidate GetPreferredCandidate(MethodCandidate one, MethodCandidate two, CallTypes callType, Type[] actualTypes) {
+            Candidate cmpParams = ParameterWrapper.GetPreferredParameters(one.Parameters, two.Parameters, actualTypes);
+            if (cmpParams.Chosen()) {
+                return cmpParams;
             }
 
-            return 0;
+            Candidate ret = MethodTarget.CompareEquivalentParameters(one.Target, two.Target);
+            if (ret.Chosen()) {
+                return ret;
+            }
+
+            if (CompilerHelpers.IsStatic(one.Target.Method) && !CompilerHelpers.IsStatic(two.Target.Method)) {
+                return callType == CallTypes.ImplicitInstance ? Candidate.Two : Candidate.One;
+            } else if (!CompilerHelpers.IsStatic(one.Target.Method) && CompilerHelpers.IsStatic(two.Target.Method)) {
+                return callType == CallTypes.ImplicitInstance ? Candidate.One : Candidate.Two;
+            }
+
+            return Candidate.Equivalent;
         }
 
-        internal int CompareTo(MethodCandidate other, CallTypes callType, MetaObject[] actualTypes) {
-            int? cmpParams = CompareParameters(other, actualTypes);
-            if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
-
-            int ret = Target.CompareEqualParameters(other.Target);
-            if (ret != 0) return ret;
-
-            if (CompilerHelpers.IsStatic(Target.Method) && !CompilerHelpers.IsStatic(other.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? -1 : +1;
-            } else if (!CompilerHelpers.IsStatic(Target.Method) && CompilerHelpers.IsStatic(other.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? +1 : -1;
+        internal static Candidate GetPreferredCandidate(MethodCandidate one, MethodCandidate two, CallTypes callType, MetaObject[] actualTypes) {
+            Candidate cmpParams = ParameterWrapper.GetPreferredParameters(one.Parameters, two.Parameters, actualTypes);
+            if (cmpParams.Chosen()) {
+                return cmpParams;
             }
 
-            return 0;
+            Candidate ret = MethodTarget.CompareEquivalentParameters(one.Target, two.Target);
+            if (ret.Chosen()) {
+                return ret;
+            }
+
+            if (CompilerHelpers.IsStatic(one.Target.Method) && !CompilerHelpers.IsStatic(two.Target.Method)) {
+                return callType == CallTypes.ImplicitInstance ? Candidate.Two : Candidate.One;
+            } else if (!CompilerHelpers.IsStatic(one.Target.Method) && CompilerHelpers.IsStatic(two.Target.Method)) {
+                return callType == CallTypes.ImplicitInstance ? Candidate.One : Candidate.Two;
+            }
+
+            return Candidate.Equivalent;
         }
 
 
@@ -178,15 +186,14 @@ namespace Microsoft.Scripting.Generation {
 
             if (index != -1) {
                 while (newParameters.Count < (count - unusedNames.Count)) {
-                    ParameterWrapper param = new ParameterWrapper(binder, elementType);
+                    ParameterWrapper param = new ParameterWrapper(binder, elementType, SymbolId.Empty, false);
                     newParameters.Insert(System.Math.Min(index, newParameters.Count), param);
                 }
             }
 
             if (kwIndex != -1) {
                 foreach (SymbolId si in unusedNames) {
-                    ParameterWrapper pw = new ParameterWrapper(binder, typeof(object), si);
-                    newParameters.Add(pw);
+                    newParameters.Add(new ParameterWrapper(binder, typeof(object), si, false));
                 }
             } else if (unusedNames.Count != 0) {
                 // unbound kw args and no where to put them, can't call...
@@ -221,14 +228,6 @@ namespace Microsoft.Scripting.Generation {
             get {
                 return _parameters;
             }
-        }
-
-        private int? CompareParameters(MethodCandidate other, Type[] actualTypes) {
-            return ParameterWrapper.CompareParameters(this._parameters, other._parameters, actualTypes);
-        }
-
-        private int? CompareParameters(MethodCandidate other, MetaObject[] actualTypes) {
-            return ParameterWrapper.CompareParameters(this._parameters, other._parameters, actualTypes);
         }
 
         internal bool HasParamsDictionary() {

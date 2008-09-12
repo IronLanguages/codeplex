@@ -13,36 +13,38 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Builds the argument for an out argument when not passed a StrongBox.  The out parameter
     /// is returned as an additional return value.
     /// </summary>
-    class OutArgBuilder : ArgBuilder {
-        private Type _parameterType;
-        private bool _isRef;
+    internal sealed class OutArgBuilder : ArgBuilder {
+        private readonly Type _parameterType;
+        private readonly bool _isRef;
         private VariableExpression _tmp;
 
-        public OutArgBuilder(ParameterInfo parameter) {
-            _parameterType = parameter.ParameterType.IsByRef ? parameter.ParameterType.GetElementType() : parameter.ParameterType;
-            _isRef = parameter.ParameterType.IsByRef;
+        public OutArgBuilder(ParameterInfo info) 
+            : base(info) {
+
+            _parameterType = info.ParameterType.IsByRef ? info.ParameterType.GetElementType() : info.ParameterType;
+            _isRef = info.ParameterType.IsByRef;
         }
 
         public override int Priority {
             get { return 5; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             if (_isRef) {
                 if (_tmp == null) {
-                    _tmp = context.GetTemporary(_parameterType, "outParam");
+                    _tmp = parameterBinder.GetTemporary(_parameterType, "outParam");
                 }
                 return _tmp;
             }
@@ -50,7 +52,7 @@ namespace Microsoft.Scripting.Generation {
             return GetDefaultValue();
         }
 
-        internal override Expression ToReturnExpression(MethodBinderContext context) {
+        internal override Expression ToReturnExpression(ParameterBinder parameterBinder) {
             if (_isRef) {
                 return _tmp;
             }

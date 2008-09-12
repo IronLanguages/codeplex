@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Utils {

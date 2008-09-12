@@ -13,19 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
-
+    using Ast = Microsoft.Linq.Expressions.Expression;
+    
     /// <summary>
     /// Provides binding semantics for a language.  This include conversions as well as support
     /// for producing rules for actions.  These optimized rules are used for calling methods, 

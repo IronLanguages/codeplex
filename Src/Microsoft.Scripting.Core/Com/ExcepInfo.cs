@@ -12,16 +12,16 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// This is similar to ComTypes.EXCEPINFO, but lets us do our own custom marshaling
     /// </summary>

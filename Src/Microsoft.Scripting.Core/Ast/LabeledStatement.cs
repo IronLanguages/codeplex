@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 
-using System.Scripting.Utils;
-
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents a labeled statement
     /// break and continue statements will jump to the end of body

@@ -13,8 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 namespace IronPython.Runtime.Operations {
     public static class EnumOps {        

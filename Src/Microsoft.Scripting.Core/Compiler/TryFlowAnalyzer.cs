@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     /// <summary>
     /// The structure to capture the result of the control flow for the

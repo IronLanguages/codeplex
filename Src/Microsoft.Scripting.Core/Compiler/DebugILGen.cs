@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 using System.Globalization;
@@ -20,10 +20,10 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     internal class DebugILGen : ILGen {
         private readonly TextWriter _txt;
         

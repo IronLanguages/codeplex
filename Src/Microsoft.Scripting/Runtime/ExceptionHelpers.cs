@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Threading;
 
 namespace Microsoft.Scripting.Runtime {
@@ -223,7 +223,7 @@ namespace Microsoft.Scripting.Runtime {
                 Type parentType = method.DeclaringType;
                 if (parentType != null) {
                     string typeName = parentType.FullName;
-                    if (typeName == "System.Linq.Expressions.LambdaExpression" && method.Name == "DoExecute") {
+                    if (typeName == "Microsoft.Linq.Expressions.LambdaExpression" && method.Name == "DoExecute") {
                         // Evaluated frame -- Replace with dynamic frame
                         Debug.Assert(dynamicFrames.Count > 0);
                         //if (dynamicFrames.Count == 0) continue;
@@ -235,7 +235,7 @@ namespace Microsoft.Scripting.Runtime {
                     if (typeName.StartsWith("System.Reflection.") ||
                         typeName.StartsWith("System.Runtime") ||
                         typeName.StartsWith("Microsoft.Scripting") ||       // TODO: This shouldn't be here!!
-                        typeName.StartsWith("System.Scripting")) {
+                        typeName.StartsWith("Microsoft.Scripting")) {
                         continue;
                     }
                 }

@@ -12,18 +12,18 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections;
-using System.Scripting;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class ForStatement : Statement {
         private SourceLocation _header;

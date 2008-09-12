@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;

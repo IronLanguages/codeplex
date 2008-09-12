@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     public sealed class Block : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
 

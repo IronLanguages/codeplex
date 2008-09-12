@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using Microsoft.Contracts;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public abstract class GetMemberAction : StandardAction {
         private readonly string _name;
         private readonly bool _ignoreCase;

@@ -12,17 +12,18 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class MethodCallExpression : Expression {
         private readonly MethodInfo _method;

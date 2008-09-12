@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     public sealed class DispMethod : DispCallable {
         internal DispMethod(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {

@@ -13,26 +13,31 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using Microsoft.Scripting.Utils;
+using System.Text;
 
-namespace Microsoft.Scripting.Generation {
-    public sealed class SiteLocalStorageBuilder : ArgBuilder {
-        private readonly Type _type;
+namespace Microsoft.Scripting.Actions.Calls {
+    public enum Candidate {
+        Equivalent = 0,
+        One = +1,
+        Two = -1,
+        Ambiguous = 2
+    }
 
-        public override int Priority {
-            get { return -1; }
+    internal static class CandidateExtension {
+        public static bool Chosen(this Candidate candidate) {
+            return candidate == Candidate.One || candidate == Candidate.Two;
         }
-                
-        public SiteLocalStorageBuilder(Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-            _type = type;
-        }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
-            return Expression.Constant(Activator.CreateInstance(_type));
+        public static Candidate TheOther(this Candidate candidate) {
+            if (candidate == Candidate.One) {
+                return Candidate.Two;
+            }
+            if (candidate == Candidate.Two) {
+                return Candidate.One;
+            }
+            return candidate;
         }
     }
 }

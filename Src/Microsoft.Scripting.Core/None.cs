@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Scripting {
+using System; using Microsoft;
+namespace Microsoft.Scripting {
     // 
     /// <summary>
     /// Gives us a concrete Type object to represent null's to allow for more uniform

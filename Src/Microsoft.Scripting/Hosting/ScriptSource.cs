@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.Remoting;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Security.Permissions;
 using System.Text;
 using Microsoft.Scripting.Utils;

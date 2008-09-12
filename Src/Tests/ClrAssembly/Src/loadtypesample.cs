@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
- 
+using System; using Microsoft; 
 
 public class PublicRefTypeWithoutNS {
     public class Nested { public static int A = 10;    }

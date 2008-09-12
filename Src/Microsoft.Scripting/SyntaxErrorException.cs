@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.Serialization;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Security.Permissions;
 using Microsoft.Scripting.Utils;
 

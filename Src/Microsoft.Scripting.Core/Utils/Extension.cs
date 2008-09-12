@@ -13,10 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 
 namespace System.Runtime.CompilerServices {
 
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Assembly)]
-    public sealed class ExtensionAttribute : Attribute { }
+#if !MICROSOFT_SCRIPTING_CORE
+    public
+#endif
+    sealed class ExtensionAttribute : Attribute { }
 }

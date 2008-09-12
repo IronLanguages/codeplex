@@ -12,20 +12,20 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Resources;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Security;
 using System.Text;
 using System.Threading;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     internal sealed class AssemblyGen {
         private readonly AssemblyBuilder _myAssembly;
         private readonly ModuleBuilder _myModule;

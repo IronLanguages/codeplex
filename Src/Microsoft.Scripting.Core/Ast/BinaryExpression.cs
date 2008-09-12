@@ -13,17 +13,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
 // TODO: Remove dependencies:
-using System.Linq.Expressions.Compiler;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions.Compiler;
+using Microsoft.Scripting.Actions;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class BinaryExpression : Expression {
         private readonly Expression _left;

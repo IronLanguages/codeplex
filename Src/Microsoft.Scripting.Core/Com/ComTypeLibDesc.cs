@@ -12,17 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     // TODO: Can it be made internal?
     public sealed class ComTypeLibDesc : IDynamicObject {
 

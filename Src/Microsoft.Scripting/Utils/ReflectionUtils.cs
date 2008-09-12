@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
-using System.Scripting;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Utils {
     public static class ReflectionUtils {

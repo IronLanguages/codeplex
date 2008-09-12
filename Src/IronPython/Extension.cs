@@ -13,24 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Collections.Generic;
-using System.Linq.Expressions;
+using System; using Microsoft;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace System.Runtime.CompilerServices {
 
-    /// <summary>
-    /// ArgBuilder which always produces null.  
-    /// </summary>
-    class NullArgBuilder : ArgBuilder {
-        public NullArgBuilder() { }
-
-        public override int Priority {
-            get { return 0; }
-        }
-
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
-            return Ast.Null();
-        }
-    }
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Assembly)]
+    sealed class ExtensionAttribute : Attribute { }
 }

@@ -11,7 +11,7 @@
     <AssemblyName>ipy</AssemblyName>
     <ApplicationIcon>ipy.ico</ApplicationIcon>
     <OldToolsVersion>2.0</OldToolsVersion>
-    <WarningsNotAsErrors>618</WarningsNotAsErrors>
+    <WarningsNotAsErrors>618,1685</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

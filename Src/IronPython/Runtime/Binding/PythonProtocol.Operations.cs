@@ -13,20 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Text;
-using IronPython.Compiler;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using System.Text;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
@@ -34,7 +32,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     static partial class PythonProtocol {
         private const string DisallowCoerce = "DisallowCoerce";
@@ -1344,7 +1342,7 @@ namespace IronPython.Runtime.Binding {
                 BindingTarget target;
                 
                 MetaObject res = Binder.CallInstanceMethod(
-                    Ast.Constant(BinderState.Context),
+                    new ParameterBinderWithCodeContext(Binder, Ast.Constant(BinderState.Context)),
                     _bf.Targets,
                     args[0],
                     ArrayUtils.RemoveFirst(args),

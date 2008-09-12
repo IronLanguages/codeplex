@@ -14,10 +14,10 @@
  * ***************************************************************************/
 //#define DUMP_TOKENS
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
 using System.IO;
-using System.Scripting;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {

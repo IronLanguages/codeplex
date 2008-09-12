@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Collections.Generic;
@@ -20,7 +20,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// The object used to cache information about an IDispatch RCW object. This will be associated with
     /// every IDispatch RCW that is handled by the DLR.

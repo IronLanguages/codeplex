@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System {
+using System; using Microsoft;
+namespace Microsoft {
     public delegate TResult Func<TResult>();
     public delegate TResult Func<T, TResult>(T arg);
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]

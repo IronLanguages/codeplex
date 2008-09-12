@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Reflection;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public enum MemberBindingType {
         Assignment,

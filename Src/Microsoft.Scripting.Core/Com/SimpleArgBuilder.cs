@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Globalization;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// SimpleArgBuilder produces the value produced by the user as the argument value.  It
     /// also tracks information about the original parameter and is used to create extended

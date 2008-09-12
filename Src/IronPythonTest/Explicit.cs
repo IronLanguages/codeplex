@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 namespace IronPythonTest {
 
     public interface IExplicitTest1 {

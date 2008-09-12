@@ -14,15 +14,14 @@
  * ***************************************************************************/
 //#define DUMP_TOKENS
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
 using System.IO;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Text;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 

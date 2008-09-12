@@ -16,7 +16,7 @@
 #if !SILVERLIGHT
 
 using System.Configuration;
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Scripting.Runtime;
 

@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Scripting.Actions {
+using System; using Microsoft;
+namespace Microsoft.Scripting.Actions {
     internal static partial class MatchCaller {
         #region Generated Matchcaller Targets
 

@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Contracts;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
 
     /// <summary>
     /// A stack implemented as a list. Allows both Push/Pop access and indexing into any member of the list.

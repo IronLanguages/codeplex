@@ -12,17 +12,30 @@
  *
  *
  * ***************************************************************************/
-
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Text;
+using Microsoft.Linq.Expressions;
+using System.Diagnostics;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
+
+    // TODO: Move to Pyhton
+
     /// <summary>
-    /// Serves as a marker type used to indicate when a type is not known.
+    /// ArgBuilder which provides the CodeContext parameter to a method.
     /// </summary>
-    class Dynamic {
-        private Dynamic() {
+    public sealed class ContextArgBuilder : ArgBuilder {
+        public ContextArgBuilder(ParameterInfo info) 
+            : base(info){
+        }
+
+        public override int Priority {
+            get { return -1; }
+        }
+
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
+            return ((ParameterBinderWithCodeContext)parameterBinder).ContextExpression;
         }
     }
 }

@@ -13,17 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class MemberBinderHelper<T, TActionKind> : BinderHelper<T, TActionKind>
         where T : class

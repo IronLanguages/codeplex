@@ -13,19 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Threading;
-
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using System.Threading;
+
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;

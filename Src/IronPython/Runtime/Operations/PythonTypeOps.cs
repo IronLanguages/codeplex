@@ -13,14 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting;
+using Microsoft.Scripting;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
@@ -177,7 +176,7 @@ namespace IronPython.Runtime.Operations {
         internal static bool IsRuntimeAssembly(Assembly assembly) {
             if (assembly == typeof(PythonOps).Assembly || // IronPython.dll
                 assembly == typeof(Microsoft.Scripting.Math.BigInteger).Assembly || // Microsoft.Scripting.dll
-                assembly == typeof(System.Linq.Expressions.Expression).Assembly) {  // Microsoft.Scripting.Core.dll
+                assembly == typeof(Microsoft.Linq.Expressions.Expression).Assembly) {  // Microsoft.Scripting.Core.dll
                 return true;
             }
 

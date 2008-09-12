@@ -12,16 +12,16 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
-    class ByRefReturnBuilder : ReturnBuilder {
+    internal sealed class ByRefReturnBuilder : ReturnBuilder {
         private IList<int> _returnArgs;
 
         public ByRefReturnBuilder(IList<int> returnArgs)
@@ -29,12 +29,12 @@ namespace Microsoft.Scripting.Generation {
             _returnArgs = returnArgs;
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
+        internal override Expression ToExpression(ParameterBinder parameterBinder, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             if (_returnArgs.Count == 1) {
                 if (_returnArgs[0] == -1) {
                     return ret;
                 }
-                return Ast.Comma(ret, args[_returnArgs[0]].ToReturnExpression(context));
+                return Ast.Comma(ret, args[_returnArgs[0]].ToReturnExpression(parameterBinder));
             }
 
             Expression[] retValues = new Expression[_returnArgs.Count];
@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Generation {
                     usesRet = true;
                     retValues[rIndex++] = ret;
                 } else {
-                    retValues[rIndex++] = args[index].ToReturnExpression(context);
+                    retValues[rIndex++] = args[index].ToReturnExpression(parameterBinder);
                 }
             }
 
@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
                 retArray = Ast.Comma(ret, retArray);
             }
 
-            return context.Binder.GetByRefArrayExpression(retArray);
+            return parameterBinder.Binder.GetByRefArrayExpression(retArray);
         }
 
         private static object GetValue(object[] args, object ret, int index) {

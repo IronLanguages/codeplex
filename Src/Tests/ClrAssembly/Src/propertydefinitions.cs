@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 
-using System;
+using System; using Microsoft;
 using Merlin.Testing.TypeSample;
 
 

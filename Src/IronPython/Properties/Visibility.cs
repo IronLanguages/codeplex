@@ -14,9 +14,10 @@
  * ***************************************************************************/
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
-using System;
+using System; using Microsoft;
 
 #if SILVERLIGHT
 // InternalsVisibleTo requires the full public key--it won't work with the public key token.

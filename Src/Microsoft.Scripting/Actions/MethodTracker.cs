@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class MethodTracker : MemberTracker {
         private readonly MethodInfo _method;
@@ -85,7 +85,7 @@ namespace Microsoft.Scripting.Actions {
             return binder.ReturnMemberTracker(type, BindToInstance(instance));
         }
 
-        internal override System.Linq.Expressions.Expression Call(Expression context, ActionBinder binder, params Expression[] arguments) {
+        internal override Microsoft.Linq.Expressions.Expression Call(Expression context, ActionBinder binder, params Expression[] arguments) {
             if (Method.IsPublic && Method.DeclaringType.IsVisible) {
                 // TODO: Need to use MethodBinder in here to make this right.
                 return binder.MakeCallExpression(context, Method, arguments);

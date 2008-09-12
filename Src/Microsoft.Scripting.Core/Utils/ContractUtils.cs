@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
 
     // TODO: Update with the newest version of the managed contracts stuff
     internal static class ContractUtils {
@@ -142,7 +142,7 @@ namespace System.Scripting.Utils {
 
             for (int i = 0; i < array.Count; i++) {
                 if (array[i] == null) {
-                    throw new ArgumentNullException(string.Format(Globalization.CultureInfo.CurrentCulture, "{0}[{1}]", arrayName, i));
+                    throw new ArgumentNullException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0}[{1}]", arrayName, i));
                 }
             }
         }

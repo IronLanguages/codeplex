@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     /// <summary>
     /// Determines if variables are closed over in nested lambdas and need to
     /// be hoisted.

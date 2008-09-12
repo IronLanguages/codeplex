@@ -12,9 +12,9 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 using Operators = Microsoft.Scripting.Runtime.Operators;
 
 namespace IronPython.Compiler.Ast {

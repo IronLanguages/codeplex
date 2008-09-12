@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 namespace Microsoft.Scripting.Hosting.Shell {
     public enum Style {
         Prompt, Out, Error, Warning

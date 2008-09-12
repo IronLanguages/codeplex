@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting;
+using System; using Microsoft;
+using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Ast {
     public abstract class Node {

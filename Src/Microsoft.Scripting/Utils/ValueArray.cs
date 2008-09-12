@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {

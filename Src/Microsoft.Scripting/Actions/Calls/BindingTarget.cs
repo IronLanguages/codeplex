@@ -13,16 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// Encapsulates the result of an attempt to bind to one or methods using the MethodBinder.
     /// 
@@ -115,7 +114,12 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public Expression MakeExpression(RuleBuilder rule, IList<Expression> parameters) {
             ContractUtils.RequiresNotNull(rule, "rule");
-            return MakeExpression(rule.Context, parameters);
+
+            if (_target == null) {
+                throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
+            } 
+            
+            return MakeExpression(new ParameterBinderWithCodeContext(_target.Binder._binder, rule.Context), parameters);
         }
 
         /// <summary>
@@ -125,26 +129,28 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// OBSOLETE
         /// </summary>
-        public Expression MakeExpression(Expression contextExpression, IList<Expression> parameters) {
-            ContractUtils.RequiresNotNull(contextExpression, "contextExpression");
+        public Expression MakeExpression(ParameterBinder parameterBinder, IList<Expression> parameters) {
+            ContractUtils.RequiresNotNull(parameterBinder, "parameterBinder");
             ContractUtils.RequiresNotNull(parameters, "parameters");
 
             if (_target == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
             }
 
-            return _target.MakeExpression(contextExpression, parameters, ArgumentTests);
+            return _target.MakeExpression(parameterBinder, parameters, ArgumentTests);
         }
 
         /// <summary>
         /// Gets an Expression which calls the binding target if the method binding succeeded.
         /// 
         /// Throws InvalidOperationException if the binding failed.
-        /// 
-        /// CodeContext is not available and will be null.
         /// </summary>
         public Expression MakeExpression() {
-            return MakeExpression(Expression.Null(typeof(CodeContext)));
+            if (_target == null) {
+                throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
+            }
+
+            return MakeExpression(new ParameterBinder(_target.Binder._binder));
         }
 
         /// <summary>
@@ -152,9 +158,8 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// Throws InvalidOperationException if the binding failed.
         /// </summary>
-        public Expression MakeExpression(Expression codeContext) {
-            ContractUtils.RequiresNotNull(codeContext, "codeContext");
-            ContractUtils.Requires(codeContext.Type == typeof(CodeContext), "codeContext expression must be of type CodeContext");
+        public Expression MakeExpression(ParameterBinder parameterBinder) {
+            ContractUtils.RequiresNotNull(parameterBinder, "parameterBinder");
 
             if (_target == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
@@ -167,7 +172,7 @@ namespace Microsoft.Scripting.Generation {
                 exprs[i] = _restrictedArgs[i].Expression;
             }
 
-            return _target.MakeExpression(codeContext, exprs);
+            return _target.MakeExpression(parameterBinder, exprs);
         }
 
         /// <summary>

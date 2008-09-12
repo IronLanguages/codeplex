@@ -12,17 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Marshal = System.Runtime.InteropServices.Marshal;
 using VarEnum = System.Runtime.InteropServices.VarEnum;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     // TODO: Can it be made internal?
     /// <summary>

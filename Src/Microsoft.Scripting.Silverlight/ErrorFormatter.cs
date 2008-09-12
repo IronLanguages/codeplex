@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.IO;
 using System.Collections.Generic;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Text;
 using System.Windows.Browser;
 using Microsoft.Scripting.Hosting;

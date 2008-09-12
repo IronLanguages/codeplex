@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting;
-using System.Scripting.Utils;
+using System; using Microsoft;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class TypeBinaryExpression : Expression {
         private readonly Expression _expression;

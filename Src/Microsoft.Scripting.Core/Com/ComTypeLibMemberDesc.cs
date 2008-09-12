@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     // TODO: Can it be made internal?
     public class ComTypeLibMemberDesc {
         readonly ComType _kind;

@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Reflection;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class UnaryExpression : Expression {
         private readonly Expression _operand;

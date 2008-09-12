@@ -13,10 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Generation {
     sealed class ReturnFixer {

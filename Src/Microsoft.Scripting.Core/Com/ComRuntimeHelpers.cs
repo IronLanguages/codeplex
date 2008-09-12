@@ -12,19 +12,19 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     public static class ComRuntimeHelpers {
 

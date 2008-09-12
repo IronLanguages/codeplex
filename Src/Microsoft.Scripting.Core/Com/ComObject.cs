@@ -12,16 +12,16 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// This is a helper class for runtime-callable-wrappers of COM instances. We create one instance of this type
     /// for every generic RCW instance.

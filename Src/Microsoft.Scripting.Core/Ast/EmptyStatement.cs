@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Linq.Expressions {
+using System; using Microsoft;
+namespace Microsoft.Linq.Expressions {
     public sealed class EmptyStatement : Expression {
         internal static readonly EmptyStatement Instance = new EmptyStatement(Annotations.Empty);
 

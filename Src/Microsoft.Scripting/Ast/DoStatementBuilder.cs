@@ -12,9 +12,9 @@
  *
  *
  * ***************************************************************************/
-
-using System.Linq.Expressions;
-using System.Scripting;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {

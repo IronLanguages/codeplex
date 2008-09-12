@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
     // Compares two ICollection<T>'s using element equality
     internal sealed class ListEqualityComparer<T> : EqualityComparer<ICollection<T>> {
         internal static readonly ListEqualityComparer<T> Instance = new ListEqualityComparer<T>();

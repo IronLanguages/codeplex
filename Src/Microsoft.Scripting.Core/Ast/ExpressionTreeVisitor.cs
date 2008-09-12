@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Base class for visiting and rewriting trees. Subclasses can override
     /// individual Visit methods from which they can return rewritten nodes.

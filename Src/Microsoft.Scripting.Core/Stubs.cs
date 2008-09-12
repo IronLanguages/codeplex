@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 #if SILVERLIGHT // Stubs
 

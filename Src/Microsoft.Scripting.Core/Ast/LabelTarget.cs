@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 
-using System.Scripting.Utils;
-
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Used by BreakStatement and ContinueStatement to specify the target of
     /// the break/continue. The label object is shared with the enclosing

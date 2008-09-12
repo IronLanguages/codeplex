@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Actions {
     public class BoundMemberTracker : MemberTracker {

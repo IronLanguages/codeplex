@@ -12,25 +12,28 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using System.Collections.Generic;
+using Microsoft.Linq.Expressions;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Generation {
-    public enum CallFailureReason {
-        /// <summary>
-        /// Default value, their was no CallFailure.
-        /// </summary>
-        None,
-        /// <summary>
-        /// One of more parameters failed to be converted
-        /// </summary>
-        ConversionFailure,
-        /// <summary>
-        /// One or more keyword arguments could not be successfully assigned to a positional argument
-        /// </summary>
-        UnassignableKeyword,
-        /// <summary>
-        /// One or more keyword arguments were duplicated or would have taken the spot of a 
-        /// provided positional argument.
-        /// </summary>
-        DuplicateKeyword
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
+
+    /// <summary>
+    /// ArgBuilder which always produces null.  
+    /// </summary>
+    internal class NullArgBuilder : ArgBuilder {
+        public NullArgBuilder() 
+            : base(null) {
+        }
+
+        public override int Priority {
+            get { return 0; }
+        }
+
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
+            return Ast.Null();
+        }
     }
 }

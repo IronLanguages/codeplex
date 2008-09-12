@@ -13,15 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Scripting;
+using Microsoft.Scripting;
 using IronPython.Runtime.Operations;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     // New in Pep342 for Python 2.5. Yield is an expression with a return value.
     //    x = yield z

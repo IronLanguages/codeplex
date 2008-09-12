@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Scripting.Actions;
+using System; using Microsoft;
+using Microsoft.Scripting.Actions;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {

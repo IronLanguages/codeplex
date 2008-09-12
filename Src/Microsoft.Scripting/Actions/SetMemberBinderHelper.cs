@@ -13,15 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
     
     public sealed class SetMemberBinderHelper<T> : MemberBinderHelper<T, OldSetMemberAction> where T : class {
