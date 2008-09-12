@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Linq.Expressions {
+using System; using Microsoft;
+namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Stores information needed to emit debugging symbol information for a
     /// source file, in particular the file name and unique language identifier

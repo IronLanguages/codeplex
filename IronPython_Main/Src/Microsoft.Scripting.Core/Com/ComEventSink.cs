@@ -12,20 +12,20 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// This class implements an event sink for a particular RCW.
     /// Unlike the implementation of events in TlbImp'd assemblies,

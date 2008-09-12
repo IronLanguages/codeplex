@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// This is a cache of all generated rules (per dynamic site class)
     /// </summary>

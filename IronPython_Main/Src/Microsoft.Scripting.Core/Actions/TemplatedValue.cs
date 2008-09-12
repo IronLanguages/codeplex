@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Scripting.Actions {
+using System; using Microsoft;
+namespace Microsoft.Scripting.Actions {
     interface ITemplatedValue {
         int Index { get; }
         object CopyWithNewValue(object value);

@@ -12,10 +12,9 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting;
-using IronPython.Runtime.Operations;
+using System; using Microsoft;
 using Microsoft.Scripting;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     internal class ThrowingErrorSink : ErrorSink {

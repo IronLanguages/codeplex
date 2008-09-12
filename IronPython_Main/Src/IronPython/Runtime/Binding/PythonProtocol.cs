@@ -14,18 +14,17 @@
  * ***************************************************************************/
 
 
-using System;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Provides binding logic which is implemented to follow various Python protocols.  This includes

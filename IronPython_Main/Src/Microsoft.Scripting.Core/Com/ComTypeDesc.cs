@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices.ComTypes;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     // TODO: Can it be made internal?
     public class ComTypeDesc : ComTypeLibMemberDesc {
         private string _typeName;

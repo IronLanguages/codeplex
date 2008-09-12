@@ -12,16 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     internal delegate object MatchCallerTarget<T>(T target, CallSite site, object[] args);
 
     /// <summary>
@@ -203,7 +204,7 @@ namespace System.Scripting.Actions {
     }
 }
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
         /// <summary>
         /// Called by generated code.
@@ -221,7 +222,7 @@ namespace System.Runtime.CompilerServices {
                 return mm.Value;
             }
 
-            throw System.Linq.Expressions.Error.BadDelegateData();
+            throw Microsoft.Linq.Expressions.Error.BadDelegateData();
         }
     }
 }

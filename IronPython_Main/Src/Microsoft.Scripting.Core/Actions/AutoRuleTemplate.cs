@@ -12,15 +12,16 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Handles auto-templating of rules.  There are three important actions this performs:
     ///     1. Detects if templating is possible between two rules

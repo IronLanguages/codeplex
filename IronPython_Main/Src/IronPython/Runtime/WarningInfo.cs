@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting.Utils;
 

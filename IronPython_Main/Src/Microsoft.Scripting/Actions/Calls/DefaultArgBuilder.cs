@@ -13,38 +13,36 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
-
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
+    
     /// <summary>
     /// ArgBuilder which provides a default parameter value for a method call.
     /// </summary>
-    class DefaultArgBuilder : ArgBuilder {
-        private Type _argumentType;
-        private object _defaultValue;
-
-        public DefaultArgBuilder(Type argumentType, object defaultValue) {
-            this._argumentType = argumentType;
-            this._defaultValue = defaultValue;
+    internal sealed class DefaultArgBuilder : ArgBuilder {
+        public DefaultArgBuilder(ParameterInfo info) 
+            : base(info) {
         }
 
         public override int Priority {
             get { return 2; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
-            object val = _defaultValue;
-            if(val is Missing) {
-                val = CompilerHelpers.GetMissingValue(_argumentType);
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
+            object val = ParameterInfo.DefaultValue;
+            if (val is Missing) {
+                val = CompilerHelpers.GetMissingValue(ParameterInfo.ParameterType);
             }
 
-            if (_argumentType.IsByRef) {
-                VariableExpression tmp = context.GetTemporary(_argumentType.GetElementType(), "optRef");
+            if (ParameterInfo.ParameterType.IsByRef) {
+                VariableExpression tmp = parameterBinder.GetTemporary(ParameterInfo.ParameterType.GetElementType(), "optRef");
                 return Ast.Comma(
                     Ast.Assign(
                         tmp,
@@ -54,7 +52,7 @@ namespace Microsoft.Scripting.Generation {
                 );
             }
 
-            return context.ConvertExpression(Ast.Constant(val), _argumentType);            
+            return parameterBinder.ConvertExpression(Ast.Constant(val), ParameterInfo, ParameterInfo.ParameterType);            
         }
     }
 }

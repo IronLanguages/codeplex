@@ -13,33 +13,35 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public partial class DefaultBinder : ActionBinder {
-        public MetaObject Create(CallSignature signature, Expression codeContext, MetaObject[] args) {
+        public MetaObject Create(CallSignature signature, ParameterBinderWithCodeContext parameterBinder, MetaObject[] args) {
             Type t = GetTargetType(args[0].Value);
 
             if (t != null) {
+
                 if (typeof(Delegate).IsAssignableFrom(t) && args.Length == 2) {
                     MethodInfo dc = GetDelegateCtor(t);
 
                     // BinderOps.CreateDelegate<T>(CodeContext context, object callable);
                     return new MetaObject(
-                        Ast.Call(null, dc, codeContext, args[1].Expression),
+                        Ast.Call(null, dc, parameterBinder.ContextExpression, args[1].Expression),
                         args[0].Restrictions.Merge(Restrictions.InstanceRestriction(args[0].Expression, args[0].Value))
                     );
                 }
 
-                return CallMethod(codeContext, CompilerHelpers.GetConstructors(t, PrivateBinding), ArrayUtils.RemoveFirst(args), signature);
+                return CallMethod(parameterBinder, CompilerHelpers.GetConstructors(t, PrivateBinding), ArrayUtils.RemoveFirst(args), signature);
             }
 
             return null;

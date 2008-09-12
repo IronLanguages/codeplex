@@ -13,9 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.CompilerServices;
-using System.Scripting;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;

@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;

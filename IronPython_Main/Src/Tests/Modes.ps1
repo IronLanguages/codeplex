@@ -20,6 +20,9 @@
 # * nonsense modes
 # * negative modes
 
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "stop"
+
 #Emit the line needed to rerun this test
 echo "To re-run this test execute the following line from a PowerShell prompt:"
 echo     $MyInvocation.Line
@@ -262,7 +265,13 @@ function test-pymodes($pyexe)
 	}
 
 	echo "CodePlex Work Item 10819"
+	if($pyexe.Endswith("python.exe")) {
+		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
+	}
 	$stuff = pyexe -v -c "print 'HelloWorld'" 2>&1
+	if($pyexe.Endswith("python.exe")) {
+		$ErrorActionPreference = "stop"
+	}
 	#Just ensure there's more output than "HelloWorld"
 	if ($false) #$stuff.Length -le "HelloWorld".Length) 
 	{
@@ -311,7 +320,9 @@ function test-pymodes($pyexe)
 	
 	foreach($key in $test_hash.Keys)
 	{
+		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 		$stuff = pyexe $key.Split(" ") 2> $null 
+		$ErrorActionPreference = "stop"
 		if ($stuff -ne $test_hash[$key]) {show-failure "Failed: $stuff"; }
 	}
 	
@@ -339,7 +350,11 @@ function test-pymodes($pyexe)
 function assembliesdir-helper
 {
 	$dlrexe = $args[0]
-	
+	if (! $global:IS_DEBUG) {
+		$host.ui.write("-X:AssembliesDir unsupported with non-debug builds")
+		return
+	}
+		
 	if (test-path $env:TMP\assemblies_dir) { rm -recurse -force $env:TMP\assemblies_dir }
 	mkdir $env:TMP\assemblies_dir > $null
 	hello-helper $dlrexe "-X:AssembliesDir" $env:TMP\assemblies_dir $args[1..$args.Length] 
@@ -351,6 +366,10 @@ function assembliesdir-helper
 function saveassemblies-helper
 {
 	set-alias dlrexe $args[0]
+	if (! $global:IS_DEBUG) {
+		$host.ui.write("-X:SaveAssemblies unsupported with non-debug builds")
+		return
+	}
 	
 	mkdir $global:TEST_DIR\SaveAssembliesTemp > $null
 	pushd $global:TEST_DIR\SaveAssembliesTemp 
@@ -424,14 +443,17 @@ function exceptiondetail-helper
 	$dlrexe = $args[0]
 
 	hello-helper $dlrexe "-X:ExceptionDetail"
-	
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;hwExcept()" 2>&1
+	$ErrorActionPreference = "stop"
 	if (! "$stuff".Contains("Hello World Exception")) {show-failure "Failed: $stuff"; }
 	if (! "$stuff".Contains("at Microsoft.Scripting.")) {show-failure "Failed: $stuff"; }
 	#Merlin 395056
 	#if (! "$stuff".Contains(":line ")) {show-failure "Failed: $stuff"; }
 	
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
+	$ErrorActionPreference = "stop"
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
 	{
 		show-failure "Failed: $stuff"; 
@@ -477,7 +499,9 @@ function maxrecursion-helper
 	{
 		$x_param = $i + 2
 		$script_param = $i + 3
+		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 		$stuff = dlrexe "-X:MaxRecursion" $x_param $args[1..$args.Length] $global:RECURSION $script_param 2>&1
+		$ErrorActionPreference = "stop"
 		$stuff = "$stuff.ErrorDetails"
 		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
 	}
@@ -485,7 +509,9 @@ function maxrecursion-helper
 	echo "CodePlex Work Item 10816"
 	foreach ($i in @()) #1..-2)
 	{
+		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 		$stuff = dlrexe "-X:MaxRecursion" $i $args[1..$args.Length] $global:RECURSION 3 2>&1
+		$ErrorActionPreference = "stop"
 		$stuff = "$stuff.ErrorDetails"
 		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
 	}
@@ -498,12 +524,16 @@ function showclrexceptions-helper
 
 	hello-helper $dlrexe "-X:ShowClrExceptions"
 	
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *; hwExcept()" 2>&1
+	$ErrorActionPreference = "stop"
 	if(! "$stuff".Contains("Hello World Exception")) {show-failure "Failed: $stuff"; }
 	if(! "$stuff".Contains("CLR Exception:")) {show-failure "Failed: $stuff"; }
 	if(! "$stuff".Contains("StringException")) {show-failure "Failed: $stuff"; }
 	
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
+	$ErrorActionPreference = "stop"
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
 	{
 		show-failure "Failed: $stuff"; 
@@ -662,7 +692,6 @@ function test-relatedpy($pyexe)
 	echo "Testing -X:ExceptionDetail, -X:ShowClrExceptions ..."
 	hello-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
 	exceptiondetail-helper $pyexe "-X:ShowClrExceptions"
-	notraceback-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
 	showclrexceptions-helper $pyexe "-X:ExceptionDetail"
 	
 	#-X:Interpret, -O, -OO
@@ -671,7 +700,12 @@ function test-relatedpy($pyexe)
 	hello-helper $pyexe "-X:Interpret" -O -OO
 	
 	echo "Testing compatible IronPython modes together ..."
-	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:LightweightScopes" "-X:DumpIL" "-X:MaxRecursion" 5 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
+	if (! $global:IS_DEBUG) {
+		$host.ui.write("-X:AssembliesDir unsupported with non-debug builds")
+	}
+	else {
+		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:LightweightScopes" "-X:DumpIL" "-X:MaxRecursion" 5 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
+	}
 }
 	
 ###############################################################################
@@ -725,7 +759,7 @@ foreach ($exe_test in $tests)
 echo "---------------------------------------------------------------------"
 test-pymodes $env:MERLIN_ROOT\..\External\Languages\CPython\25\python.exe
 
-
+$ErrorActionPreference = $old_ErrorActionPreference
 if ($global:ERRORS -gt 0)
 {
 	$host.ui.writeerrorline("$global:ERRORS test(s) failed!")
@@ -733,3 +767,4 @@ if ($global:ERRORS -gt 0)
 }
 
 echo "All tests passed."
+

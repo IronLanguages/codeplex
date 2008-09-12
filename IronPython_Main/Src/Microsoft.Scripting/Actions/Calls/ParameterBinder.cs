@@ -13,44 +13,33 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// Helper class for emitting calls via the MethodBinder.
     /// </summary>
-    class MethodBinderContext {
+    public class ParameterBinder {
         private readonly ActionBinder _actionBinder;
-        private readonly Expression _context;
         private List<VariableExpression> _temps;
 
-        internal MethodBinderContext(ActionBinder actionBinder, Expression codeContext) {
-            Assert.NotNull(actionBinder, codeContext);
+        public ParameterBinder(ActionBinder actionBinder) {
+            Assert.NotNull(actionBinder);
 
             _actionBinder = actionBinder;
-            _context = codeContext;
         }
 
-        internal ActionBinder Binder {
-            get {
-                return _actionBinder;
-            }
+        public ActionBinder Binder {
+            get { return _actionBinder; }
         }
 
-        internal Expression ContextExpression {
-            get {
-                return _context;
-            }
-        }
-
-        internal Expression ConvertExpression(Expression expr, Type type) {
-            Assert.NotNull(expr, type);
-
-            return _actionBinder.ConvertExpression(expr, type, ConversionResultKind.ExplicitCast, ContextExpression);
+        internal List<VariableExpression> Temps {
+            get { return _temps; }
         }
 
         internal VariableExpression GetTemporary(Type type, string name) {
@@ -65,10 +54,15 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal List<VariableExpression> Temps {
-            get {
-                return _temps;
-            }
+        public virtual Expression ConvertExpression(Expression expr, ParameterInfo info, Type toType) {
+            Assert.NotNull(expr, toType);
+
+            return _actionBinder.ConvertExpression(expr, toType, ConversionResultKind.ExplicitCast, null);
+        }
+
+        public virtual Expression GetDynamicConversion(Expression value, Type type) {
+            return Expression.Dynamic(OldConvertToAction.Make(_actionBinder, type), type, value);
         }
     }
+
 }

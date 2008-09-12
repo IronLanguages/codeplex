@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Op")]
     public class OpAssignmentExpression : Expression {
         private readonly Expression _left;

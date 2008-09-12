@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime.Operations {

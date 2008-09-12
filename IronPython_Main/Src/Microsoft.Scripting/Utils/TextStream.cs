@@ -15,7 +15,7 @@
 
 #if SILVERLIGHT // only needed in SL, see SharedIO
 
-using System;
+using System; using Microsoft;
 using System.IO;
 using System.Text;
 

@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     internal static class ComDispIds {
         internal const int DISPID_VALUE = 0;
         internal const int DISPID_PROPERTYPUT = -3;

@@ -13,19 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -697,10 +695,10 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static bool PreferConvert(Type t1, Type t2) {
-            if (t1 == typeof(bool) && t2 == typeof(int)) return true;
-            if (t1 == typeof(Decimal) && t2 == typeof(BigInteger)) return true;
-            //if (t1 == typeof(int) && t2 == typeof(BigInteger)) return true;
+        public static Candidate PreferConvert(Type t1, Type t2) {
+            if (t1 == typeof(bool) && t2 == typeof(int)) return Candidate.Two;
+            if (t1 == typeof(Decimal) && t2 == typeof(BigInteger)) return Candidate.Two;
+            //if (t1 == typeof(int) && t2 == typeof(BigInteger)) return Candidate.Two;
 
             switch (Type.GetTypeCode(t1)) {
                 case TypeCode.SByte:
@@ -709,36 +707,36 @@ namespace IronPython.Runtime {
                         case TypeCode.UInt16:
                         case TypeCode.UInt32:
                         case TypeCode.UInt64:
-                            return true;
+                            return Candidate.Two;
                         default:
-                            return false;
+                            return Candidate.Equivalent;
                     }
                 case TypeCode.Int16:
                     switch (Type.GetTypeCode(t2)) {
                         case TypeCode.UInt16:
                         case TypeCode.UInt32:
                         case TypeCode.UInt64:
-                            return true;
+                            return Candidate.Two;
                         default:
-                            return false;
+                            return Candidate.Equivalent;
                     }
                 case TypeCode.Int32:
                     switch (Type.GetTypeCode(t2)) {
                         case TypeCode.UInt32:
                         case TypeCode.UInt64:
-                            return true;
+                            return Candidate.Two;
                         default:
-                            return false;
+                            return Candidate.Equivalent;
                     }
                 case TypeCode.Int64:
                     switch (Type.GetTypeCode(t2)) {
                         case TypeCode.UInt64:
-                            return true;
+                            return Candidate.Two;
                         default:
-                            return false;
+                            return Candidate.Equivalent;
                     }
             }
-            return false;
+            return Candidate.Equivalent;
         }
 
         private static bool HasNarrowingConversion(Type fromType, Type toType, NarrowingLevel allowNarrowing) {

@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using Microsoft.Contracts;

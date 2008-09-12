@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 
-using System.Scripting.Utils;
-
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public abstract class DeleteMemberAction : StandardAction {
         private readonly string _name;
         private readonly bool _ignoreCase;

@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     internal abstract class DynamicILGen : ILGen {
         internal DynamicILGen(ILGenerator il)

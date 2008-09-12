@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
- 
+using System; using Microsoft; 
 
 namespace NSwForwardee1 {
     public class Foo {

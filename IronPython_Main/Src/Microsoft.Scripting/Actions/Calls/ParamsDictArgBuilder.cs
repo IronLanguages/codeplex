@@ -13,26 +13,31 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Scripting;
-using System.Linq.Expressions;
+using Microsoft.Scripting;
+using Microsoft.Linq.Expressions;
+using System.Reflection;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Microsoft.Scripting.Utils;
 
     /// <summary>
     /// Builds the parameter for a params dictionary argument - this collects all the extra name/value
     /// pairs provided to the function into a SymbolDictionary which is passed to the function.
     /// </summary>
-    class ParamsDictArgBuilder : ArgBuilder {
-        private SymbolId[] _names;
-        private int[] _nameIndexes;
-        private int _argIndex;
+    internal sealed class ParamsDictArgBuilder : ArgBuilder {
+        private readonly SymbolId[] _names;
+        private readonly int[] _nameIndexes;
+        private readonly int _argIndex;
 
-        public ParamsDictArgBuilder(int argIndex, SymbolId[] names, int[] nameIndexes) {
+        public ParamsDictArgBuilder(ParameterInfo info, int argIndex, SymbolId[] names, int[] nameIndexes) 
+            : base(info) {
+            Assert.NotNull(names, nameIndexes);
+
             _argIndex = argIndex;
             _names = names;
             _nameIndexes = nameIndexes;
@@ -42,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 3; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             Expression res = Ast.Call(
                 typeof(BinderOps).GetMethod("MakeSymbolDictionary"),
                 Ast.NewArrayInit(typeof(SymbolId), ConstantNames()),

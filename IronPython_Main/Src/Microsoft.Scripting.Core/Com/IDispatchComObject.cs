@@ -12,19 +12,19 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.InteropServices;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     /// <summary>
     /// An object that implements IDispatch

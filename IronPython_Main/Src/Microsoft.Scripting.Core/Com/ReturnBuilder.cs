@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     internal sealed class ReturnBuilder {
         private readonly Type _returnType;

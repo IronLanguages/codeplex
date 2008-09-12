@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Text;
 using System.Windows.Forms;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
 internal sealed class PythonWindowsConsoleHost : ConsoleHost {
 

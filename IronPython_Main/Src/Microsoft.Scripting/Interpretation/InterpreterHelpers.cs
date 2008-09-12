@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using System.Reflection;
-using System.Linq.Expressions;
-using System;
+using Microsoft.Linq.Expressions;
+using System; using Microsoft;
 
 namespace Microsoft.Scripting.Interpretation {
     public static class InterpreterHelpers {

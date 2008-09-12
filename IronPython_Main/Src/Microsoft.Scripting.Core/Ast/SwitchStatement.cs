@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Runtime.InteropServices;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     public sealed class SwitchStatement : Expression {
         private readonly Expression _testValue;
         private readonly ReadOnlyCollection<SwitchCase> _cases;

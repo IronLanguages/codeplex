@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
     public delegate bool GeneratorNext(Generator generator, out object next);
 

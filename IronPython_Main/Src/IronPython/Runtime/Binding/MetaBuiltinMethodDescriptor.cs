@@ -13,19 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
-
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-using Ast = System.Linq.Expressions.Expression;
+using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
 
@@ -97,7 +96,7 @@ namespace IronPython.Runtime.Binding {
             BinderState state = BinderState.GetBinderState(call);
 
             MetaObject res = state.Binder.CallMethod(
-                codeContext,
+                new ParameterBinderWithCodeContext(state.Binder, codeContext),
                 Value.Template.Targets,
                 args,
                 signature,

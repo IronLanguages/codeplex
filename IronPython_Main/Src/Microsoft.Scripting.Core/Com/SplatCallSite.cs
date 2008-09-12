@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     // First attempt at simple splatting call site helper
     // TODO: move to COM, that's the only place it's used
     public sealed partial class SplatCallSite {

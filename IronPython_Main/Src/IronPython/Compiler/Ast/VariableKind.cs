@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 namespace IronPython.Compiler.Ast {
 
     internal enum VariableKind {

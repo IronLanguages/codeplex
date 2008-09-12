@@ -13,12 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Text;
 
 using Microsoft.Scripting;
@@ -31,9 +32,9 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 #if !SILVERLIGHT
-using ComTypeLibInfo = System.Scripting.Com.ComTypeLibInfo;
-using ComTypeLibDesc = System.Scripting.Com.ComTypeLibDesc;
-using ComObjectWithTypeInfo = System.Scripting.Com.ComObjectWithTypeInfo;
+using ComTypeLibInfo = Microsoft.Scripting.Com.ComTypeLibInfo;
+using ComTypeLibDesc = Microsoft.Scripting.Com.ComTypeLibDesc;
+using ComObjectWithTypeInfo = Microsoft.Scripting.Com.ComObjectWithTypeInfo;
 using System.Runtime.Serialization.Formatters.Binary;
 #endif
 

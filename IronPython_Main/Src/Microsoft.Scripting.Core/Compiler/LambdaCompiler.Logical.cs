@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     partial class LambdaCompiler {
 

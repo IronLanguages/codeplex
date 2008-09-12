@@ -12,9 +12,9 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Scripting;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {

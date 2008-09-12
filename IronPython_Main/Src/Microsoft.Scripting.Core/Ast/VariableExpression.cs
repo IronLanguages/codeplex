@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
 
     /// <summary>
     /// VariableExpression represents actual memory/dictionary location in the generated code.

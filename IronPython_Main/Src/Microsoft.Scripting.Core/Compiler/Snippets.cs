@@ -12,16 +12,16 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Threading;
-using System.Scripting;
+using Microsoft.Scripting;
 using System.Globalization;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     // TODO: This should be a static class
     // TODO: simplify initialization logic & state

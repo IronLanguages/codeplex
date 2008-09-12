@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]

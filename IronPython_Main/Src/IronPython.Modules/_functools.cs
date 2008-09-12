@@ -13,9 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.CompilerServices;
-using System.Scripting.Actions;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Actions;
 using System.Threading;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;

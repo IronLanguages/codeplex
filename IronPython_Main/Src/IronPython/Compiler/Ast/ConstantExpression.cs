@@ -13,16 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Scripting;
+using System; using Microsoft;
+using Microsoft.Scripting;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class ConstantExpression : Expression {
         private readonly object _value;

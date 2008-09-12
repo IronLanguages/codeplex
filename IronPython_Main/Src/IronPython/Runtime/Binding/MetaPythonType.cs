@@ -13,14 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     partial class MetaPythonType : MetaPythonObject {
         public MetaPythonType(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonType/*!*/ value)

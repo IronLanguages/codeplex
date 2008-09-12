@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.IO;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using Microsoft.Scripting.Utils;

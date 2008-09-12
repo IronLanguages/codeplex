@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 using System.Globalization;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public class Rule<T> where T : class {
         /// <summary>
         /// The rule set that includes only this rule.
@@ -134,13 +134,13 @@ namespace System.Scripting.Actions {
             ContractUtils.Requires(typeof(Delegate).IsAssignableFrom(target), "target");
             MethodInfo invoke = target.GetMethod("Invoke");
             ParameterInfo[] pinfos = invoke.GetParameters();
-            ContractUtils.Requires(pinfos.Length > 0 && pinfos[0].ParameterType == typeof(CallSite), "target");
-            ContractUtils.Requires(pinfos.Length == parameters.Count);
+            int count = pinfos.Length - 1;
+            ContractUtils.Requires(parameters.Count == count, "parameters");
 
-            for (int i = 0; i < pinfos.Length; i++) {
+            for (int i = 0; i < count; i++) {
                 ParameterExpression parameter = parameters[i];
                 ContractUtils.RequiresNotNull(parameter, "parameters");
-                Type type = pinfos[i].ParameterType;
+                Type type = pinfos[i + 1].ParameterType;
                 if (parameter.IsByRef) {
                     type = type.GetElementType();
                 }

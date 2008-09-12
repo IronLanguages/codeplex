@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // System.NET
 
-using System;
+using System; using Microsoft;
 using System.IO;
 using System.Net.Sockets;
 using System.Net.Security;
@@ -28,6 +28,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 /* [assembly: PythonModule("_ssl", typeof(IronPython.Modules.PythonSsl))] */
 namespace IronPython.Modules {

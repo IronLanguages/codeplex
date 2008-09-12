@@ -13,21 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Linq.Expressions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
 
-using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     class GetMemberBinder : GetMemberAction, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;

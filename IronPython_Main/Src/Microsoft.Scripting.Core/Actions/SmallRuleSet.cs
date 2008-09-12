@@ -12,15 +12,16 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
 
     /// <summary>
     /// This holds a set of rules for a particular DynamicSite.  Any given

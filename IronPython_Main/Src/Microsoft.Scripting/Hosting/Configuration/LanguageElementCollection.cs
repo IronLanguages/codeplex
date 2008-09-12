@@ -16,7 +16,7 @@
 #if !SILVERLIGHT
 
 using System.Configuration;
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Hosting.Configuration {

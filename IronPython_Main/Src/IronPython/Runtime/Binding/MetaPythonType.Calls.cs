@@ -13,21 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     partial class MetaPythonType : MetaPythonObject, IPythonInvokable {
 
@@ -80,7 +80,7 @@ namespace IronPython.Runtime.Binding {
 
             if (ctors.Length > 0) {
                 return state.Binder.CallMethod(
-                    codeContext,
+                    new ParameterBinderWithCodeContext(state.Binder, codeContext),
                     ctors,
                     args,
                     signature,
@@ -370,9 +370,11 @@ namespace IronPython.Runtime.Binding {
             }
 
             public override MetaObject/*!*/ GetExpression(DefaultBinder/*!*/ binder) {
+                var mc = new ParameterBinderWithCodeContext(binder, CodeContext);
+                
                 if (_creating.IsSystemType) {
                     return binder.CallMethod(
-                        CodeContext,
+                        mc,
                         _creating.UnderlyingSystemType.GetConstructors(),
                         new MetaObject[0],
                         new CallSignature(0),
@@ -382,7 +384,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return binder.CallMethod(
-                    CodeContext,
+                    mc,
                     _creating.UnderlyingSystemType.GetConstructors(),
                     new MetaObject[] { Arguments.Self },
                     new CallSignature(1),
@@ -401,9 +403,11 @@ namespace IronPython.Runtime.Binding {
             }
 
             public override MetaObject/*!*/ GetExpression(DefaultBinder/*!*/ binder) {
+                var mc = new ParameterBinderWithCodeContext(binder, CodeContext);
+
                 if (_creating.IsSystemType) {
                     return binder.CallMethod(
-                        CodeContext,
+                        mc,
                         _creating.UnderlyingSystemType.GetConstructors(),
                         Arguments.Arguments,
                         Arguments.Signature,
@@ -413,7 +417,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return binder.CallMethod(
-                    CodeContext,
+                    mc,
                     _creating.UnderlyingSystemType.GetConstructors(),
                     ArrayUtils.Insert(Arguments.Self, Arguments.Arguments),
                     GetDynamicNewSignature(),
@@ -434,9 +438,11 @@ namespace IronPython.Runtime.Binding {
             }
 
             public override MetaObject/*!*/ GetExpression(DefaultBinder/*!*/ binder) {
+                var mc = new ParameterBinderWithCodeContext(binder, CodeContext);
+
                 CallSignature sig = Arguments.Signature.InsertArgument(new ArgumentInfo(ArgumentKind.Simple));
                 return binder.CallMethod(
-                    CodeContext,
+                    mc,
                     _ctor.Targets,
                     ArrayUtils.Insert(Arguments.Self, Arguments.Arguments),
                     sig,
@@ -545,7 +551,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return binder.CallInstanceMethod(
-                    CodeContext,
+                    new ParameterBinderWithCodeContext(binder, CodeContext),
                     _method.Targets,
                     createExpr,
                     Arguments.Arguments,

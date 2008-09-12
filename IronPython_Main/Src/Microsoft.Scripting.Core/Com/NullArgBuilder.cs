@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     /// <summary>
     /// ArgBuilder which always produces null.  

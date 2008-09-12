@@ -13,20 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Rule Builder
@@ -40,8 +40,6 @@ namespace Microsoft.Scripting.Actions {
         internal Expression _target;                // the target that executes if the rule is true
         internal Expression _context;               // CodeContext, if any.
         internal Expression[] _parameters;          // the parameters which the rule is processing
-        internal Expression[] _parametersMinusSite; // the parameters which the rule is processing minus the CallSite parameter
-        internal Expression[] _allParameters;       // The parameters, including CodeContext, if any.
         private bool _error;                        // true if the rule represents an error
         internal List<VariableExpression> _temps;    // temporaries allocated by the rule
 
@@ -81,13 +79,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public IList<Expression> Parameters {
             get {
-                return _parametersMinusSite;
-            }
-        }
-
-        public IList<Expression> AllParameters {
-            get {
-                return _allParameters;
+                return _parameters;
             }
         }
 
@@ -221,7 +213,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public int ParameterCount {
             get {
-                return _parameters.Length - 1;
+                return _parameters.Length;
             }
         }
 
@@ -263,28 +255,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeParameters(ParameterInfo[] pis) {
-            // First argument is the dynamic site
-            const int FirstParameterIndex = 1;
+            int count = pis.Length - 1;
+            ParameterExpression[] vars = new ParameterExpression[count];
 
-            Expression[] all = new Expression[pis.Length];
-            ParameterExpression[] vars = new ParameterExpression[pis.Length];
-
-            vars[0] = Ast.Parameter(typeof(CallSite), "callSite");
-            for (int i = FirstParameterIndex; i < pis.Length; i++) {
-                all[i] = vars[i] = Ast.Parameter(pis[i].ParameterType, "$arg" + i);
+            for (int i = 0; i < count; i++) {
+                // First argument is the dynamic site
+                vars[i] = Ast.Parameter(pis[i + 1].ParameterType, "$arg" + i);
             }
 
             _paramVariables = vars;
-            _allParameters = all;
 
-            if (all.Length > 1 && typeof(CodeContext).IsAssignableFrom(all[1].Type)) {
-                _context = all[1];
-                _parameters = ArrayUtils.RemoveAt(all, 1);
+            if (vars.Length > 0 && typeof(CodeContext).IsAssignableFrom(vars[0].Type)) {
+                _context = vars[0];
+                _parameters = ArrayUtils.RemoveAt(vars, 0);
             } else {
-                _parameters = all;
+                _parameters = vars;
             }
-
-            _parametersMinusSite = ArrayUtils.RemoveFirst(_parameters);
         }
 
         [Confined]

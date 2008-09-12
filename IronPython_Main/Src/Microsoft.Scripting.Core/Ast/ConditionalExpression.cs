@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting.Utils;
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class ConditionalExpression : Expression {
         private readonly Expression _test;

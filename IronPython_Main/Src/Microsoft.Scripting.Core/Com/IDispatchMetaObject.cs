@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     internal sealed class IDispatchMetaObject : MetaObject {
         private readonly ComTypeDesc _wrapperType;

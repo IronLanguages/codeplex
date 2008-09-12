@@ -13,18 +13,17 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using System.Text;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>

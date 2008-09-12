@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 
-using System.Scripting.Utils;
-
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {
         [Obsolete("use CompilerHelpers.MakeCallSiteType instead")]
         public static Type MakeDynamicSiteType(params Type[] types) {

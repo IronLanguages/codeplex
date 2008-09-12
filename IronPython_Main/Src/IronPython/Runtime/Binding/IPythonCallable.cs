@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Scripting.Actions;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Scripting.Actions;
+using Microsoft.Linq.Expressions;
 
 namespace IronPython.Runtime.Binding {
     /// <summary>

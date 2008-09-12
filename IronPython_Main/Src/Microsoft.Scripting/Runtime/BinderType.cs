@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 namespace Microsoft.Scripting.Runtime {
     public enum BinderType {
         /// <summary>

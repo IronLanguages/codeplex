@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 #define DEBUG
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
 
     // TODO: do we really need this class?
     internal static class Assert {

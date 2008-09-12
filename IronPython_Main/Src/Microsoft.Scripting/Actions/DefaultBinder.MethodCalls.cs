@@ -13,20 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
-
+    using Ast = Microsoft.Linq.Expressions.Expression;
+    
     public partial class DefaultBinder : ActionBinder {
 
         #region Public APIs
@@ -35,13 +36,13 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments.  All arguments 
         /// are treated as positional arguments.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args) {
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args) {
             return CallMethod(
-                context,
+                parameterBinder,
                 targets,
                 args,
                 new CallSignature(args.Count),
@@ -53,15 +54,15 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments.  All arguments 
         /// are treated as positional arguments.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="maxLevel">The maximum narrowing level for arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>
         /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 args,
                 new CallSignature(args.Count),
@@ -77,42 +78,42 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments.  The arguments are
         /// consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature) {
-            return CallMethod(context, targets, args, signature, Restrictions.Empty);
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature) {
+            return CallMethod(parameterBinder, targets, args, signature, Restrictions.Empty);
         }
 
         /// <summary>
         /// Performs binding against a set of overloaded methods using the specified arguments.  The arguments are
         /// consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, string name) {
-            return CallMethod(context, targets, args, signature, Restrictions.Empty, name);
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, string name) {
+            return CallMethod(parameterBinder, targets, args, signature, Restrictions.Empty, name);
         }
 
         /// <summary>
         /// Performs binding against a set of overloaded methods using the specified arguments.  The arguments are
         /// consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions) {
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 args,
                 signature,
@@ -128,16 +129,16 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments.  The arguments are
         /// consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, string name) {
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, string name) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 args,
                 signature,
@@ -153,19 +154,19 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments and the specified
         /// instance argument.  The arguments are consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="instance">The instance which will be provided for dispatching to an instance method.</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
         /// <param name="restrictions">Additional restrictions which should be applied to the resulting MetaObject.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallInstanceMethod(Expression context, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions) {
+        public MetaObject CallInstanceMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions) {
             ContractUtils.RequiresNotNull(instance, "instance");
-            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(parameterBinder, "parameterBinder");
 
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 ArrayUtils.Insert(instance, args),
                 signature,
@@ -181,7 +182,7 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments.  The arguments are
         /// consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
@@ -190,9 +191,9 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 args,
                 signature,
@@ -209,7 +210,7 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments.  The arguments are
         /// consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
@@ -219,9 +220,9 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallMethod(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+        public MetaObject CallMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 args,
                 signature,
@@ -238,7 +239,7 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments and the specified
         /// instance argument.  The arguments are consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
@@ -248,9 +249,9 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="minLevel">The minimum narrowing level for the arguments.  The current narrowing level is flowed thorugh to the DefaultBinder.</param>        
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallInstanceMethod(Expression context, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
+        public MetaObject CallInstanceMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, out BindingTarget target) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 ArrayUtils.Insert(instance, args),
                 signature,
@@ -267,7 +268,7 @@ namespace Microsoft.Scripting.Actions {
         /// Performs binding against a set of overloaded methods using the specified arguments and the specified
         /// instance argument.  The arguments are consumed as specified by the CallSignature object.
         /// </summary>
-        /// <param name="context">The expression to be used for CodeContext if the methods receive it</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <param name="targets">The methods to be called</param>
         /// <param name="args">The arguments for the call</param>
         /// <param name="signature">The call signature which specified how the arguments will be consumed</param>
@@ -278,9 +279,9 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="target">The resulting binding target which can be used for producing error information.</param>
         /// <param name="name">The name of the method or null to use the name from targets.</param>
         /// <returns>A meta object which results from the call.</returns>
-        public MetaObject CallInstanceMethod(Expression context, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+        public MetaObject CallInstanceMethod(ParameterBinder parameterBinder, IList<MethodBase> targets, MetaObject instance, IList<MetaObject> args, CallSignature signature, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
             return CallWorker(
-                context,
+                parameterBinder,
                 targets,
                 ArrayUtils.Insert(instance, args),
                 signature,
@@ -293,16 +294,16 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private MetaObject CallWorker(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, CallTypes callType, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name) {
+        private MetaObject CallWorker(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, CallTypes callType, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name) {
             BindingTarget dummy;
-            return CallWorker(context, targets, args, signature, callType, restrictions, minLevel, maxLevel, name, out dummy);
+            return CallWorker(parameterBinder, targets, args, signature, callType, restrictions, minLevel, maxLevel, name, out dummy);
         }
 
-        private MetaObject CallWorker(Expression context, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, CallTypes callType, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+        private MetaObject CallWorker(ParameterBinder parameterBinder, IList<MethodBase> targets, IList<MetaObject> args, CallSignature signature, CallTypes callType, Restrictions restrictions, NarrowingLevel minLevel, NarrowingLevel maxLevel, string name, out BindingTarget target) {
+            ContractUtils.RequiresNotNull(parameterBinder, "parameterBinder");
             ContractUtils.RequiresNotNullItems(args, "args");
             ContractUtils.RequiresNotNullItems(targets, "targets");
             ContractUtils.RequiresNotNull(restrictions, "restrictions");
-            ContractUtils.Requires(context.Type == typeof(CodeContext), "context must be of type CodeContext.  Pass Expression.Null(typeof(CodeContext)) if one isn't available.");
 
             MetaObject[] finalArgs;
             SymbolId[] argNames;
@@ -327,7 +328,7 @@ namespace Microsoft.Scripting.Actions {
             if (target.Success) {
                 // if we succeed make the target for the rule
                 return new MetaObject(
-                    target.MakeExpression(context),
+                    target.MakeExpression(parameterBinder),
                     restrictions.Merge(MakeSplatTests(callType, signature, args).Merge(Restrictions.Combine(target.RestrictedArguments)))
                 );
             }

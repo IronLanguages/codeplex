@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting.Utils;
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public abstract class OperationAction : StandardAction {
         private string _operation;
 

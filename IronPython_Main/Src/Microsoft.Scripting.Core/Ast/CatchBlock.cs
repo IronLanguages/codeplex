@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 
-using System.Scripting.Utils;
-
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
 
     public sealed class CatchBlock {
         private readonly Annotations _annotations;

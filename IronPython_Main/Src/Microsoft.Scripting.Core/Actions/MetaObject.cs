@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
-using System.Linq.Expressions;
-using System.Scripting.Utils;
-
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public class MetaObject {
         private readonly Expression _expression;
         private readonly Restrictions _restrictions;

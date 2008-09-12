@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting.Utils;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
 using System.Globalization;
 
-namespace System.Scripting {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Stores the location of a span of text in a source file.
-    /// TODO: move to System.Linq.Expressions
+    /// TODO: move to Microsoft.Linq.Expressions
     /// TODO: review public APIs !!!
     ///       Lots of stuff on here that is not used by the compiler
     /// </summary>

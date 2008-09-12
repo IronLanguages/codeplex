@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     internal sealed class TypeLibInfoMetaObject : MetaObject {
         private readonly ComTypeLibInfo _info;
 

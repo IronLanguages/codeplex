@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Scripting.Actions;
 
-using System.Scripting.Actions;
-
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     public sealed partial class SplatCallSite {
         // TODO: is it worth having the generated helpers?

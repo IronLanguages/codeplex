@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
 
     // Like ReadOnlyCollection<T>: wraps an IDictionary<K, V> in a read-only wrapper
     internal sealed class ReadOnlyDictionary<K, V> : IDictionary<K, V> {

@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Globalization;
@@ -21,10 +21,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.Remoting.Proxies;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// ComEventSinkProxy class is responsible for handling QIs for sourceIid 
     /// on instances of ComEventSink.

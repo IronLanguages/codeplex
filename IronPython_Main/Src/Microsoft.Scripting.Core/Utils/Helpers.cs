@@ -14,14 +14,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using System.IO;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
     // Miscellaneous helpers that don't belong anywhere else
     internal static class Helpers {
 

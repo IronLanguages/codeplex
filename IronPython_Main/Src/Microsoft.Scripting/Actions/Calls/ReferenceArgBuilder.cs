@@ -13,14 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using Microsoft.Scripting.Runtime;
-using CompilerServices = System.Runtime.CompilerServices;
+using Microsoft.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
 
     /// <summary>
     /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
@@ -30,23 +32,23 @@ namespace Microsoft.Scripting.Generation {
         private readonly Type _elementType;
         private VariableExpression _tmp;
 
-        public ReferenceArgBuilder(int index, Type parameterType)
-            : base(index, parameterType) {
-            Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(CompilerServices.StrongBox<>));
+        public ReferenceArgBuilder(ParameterInfo info, Type parameterType, int index)
+            : base(info, parameterType, index, false, false) {
+            Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(StrongBox<>));
             _elementType = parameterType.GetGenericArguments()[0];
         }
 
-        public override SimpleArgBuilder Copy(int newIndex) {
-            return new ReferenceArgBuilder(newIndex, Type);
+        protected override SimpleArgBuilder Copy(int newIndex) {
+            return new ReferenceArgBuilder(ParameterInfo, Type, newIndex);
         }
 
         public override int Priority {
             get { return 5; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             if (_tmp == null) {
-                _tmp = context.GetTemporary(_elementType, "outParam");
+                _tmp = parameterBinder.GetTemporary(_elementType, "outParam");
             }
 
             // Ideally we'd pass in Expression.Field(parameters[Index], "Value") but due to
@@ -54,7 +56,7 @@ namespace Microsoft.Scripting.Generation {
 
             // arg is boxType ? &_tmp : throw new ArgumentTypeException()
             hasBeenUsed[Index] = true;
-            Type boxType = typeof(CompilerServices.StrongBox<>).MakeGenericType(_elementType);
+            Type boxType = typeof(StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
                 Expression.TypeIs(parameters[Index], Type),
                 Expression.Comma(
@@ -74,7 +76,7 @@ namespace Microsoft.Scripting.Generation {
             );
         }
 
-        internal override Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
+        internal override Expression UpdateFromReturn(ParameterBinder parameterBinder, IList<Expression> parameters) {
             return Expression.AssignField(
                 Expression.Convert(parameters[Index], Type),
                 Type.GetField("Value"),

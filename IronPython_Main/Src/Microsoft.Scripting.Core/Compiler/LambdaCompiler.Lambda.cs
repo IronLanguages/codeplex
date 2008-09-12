@@ -12,17 +12,18 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using System.Threading;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     /// <summary>
     /// Dynamic Language Runtime Compiler.

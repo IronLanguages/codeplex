@@ -13,16 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Scripting;
-using IronPython.Runtime.Binding;
+using System; using Microsoft;
 using Microsoft.Scripting;
+using IronPython.Runtime.Binding;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class NameExpression : Expression {
         private readonly SymbolId _name;

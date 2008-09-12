@@ -12,16 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Scripting;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     /// <summary>
     /// CompilerScope is the data structure which the Compiler keeps information

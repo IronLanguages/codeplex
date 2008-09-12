@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting.Utils;
+using System; using Microsoft;
+using Microsoft.Scripting.Utils;
 using System.Text;
-using System.Scripting;
+using Microsoft.Scripting;
 
-namespace System.Linq.Expressions {
+namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class ConstantExpression : Expression {
         internal static readonly ConstantExpression TrueLiteral = new ConstantExpression(Annotations.Empty, true, typeof(bool));

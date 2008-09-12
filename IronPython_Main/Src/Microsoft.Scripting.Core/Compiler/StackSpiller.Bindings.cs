@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.ObjectModel;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     internal partial class StackSpiller {
 
@@ -84,7 +84,7 @@ namespace System.Linq.Expressions.Compiler {
             }
 
             internal override Expression AsExpression(Expression target) {
-                if (target.Type.IsValueType && _binding.Member is Reflection.PropertyInfo) {
+                if (target.Type.IsValueType && _binding.Member is System.Reflection.PropertyInfo) {
                     throw Error.CannotAutoInitializeValueTypeMemberThroughProperty(_binding.Member);
                 }
 
@@ -147,7 +147,7 @@ namespace System.Linq.Expressions.Compiler {
             }
 
             internal override Expression AsExpression(Expression target) {
-                if (target.Type.IsValueType && _binding.Member is Reflection.PropertyInfo) {
+                if (target.Type.IsValueType && _binding.Member is System.Reflection.PropertyInfo) {
                     throw Error.CannotAutoInitializeValueTypeElementThroughProperty(_binding.Member);
                 }
 

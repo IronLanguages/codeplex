@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// The way in which a module has changed : Set or Delete

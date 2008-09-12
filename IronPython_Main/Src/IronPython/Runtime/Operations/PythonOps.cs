@@ -13,20 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using System.Text;
 using System.Threading;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
@@ -961,7 +959,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    foreach (string name in System.Scripting.Com.ComObject.ObjectToComObject(o).MemberNames) {
+                    foreach (string name in Microsoft.Scripting.Com.ComObject.ObjectToComObject(o).MemberNames) {
                         res.AddNoLock(name);
                     }
                 }
@@ -3108,10 +3106,6 @@ namespace IronPython.Runtime.Operations {
 
         public static MetaAction MakeOperationAction(CodeContext/*!*/ context, string operationName) {
             return new OperationBinder(GetBinderState(context), operationName);
-        }
-
-        public static CodeContext GetContextFromPythonSite(object/*!*/ action) {
-            return ((IPythonSite)action).Binder.Context;
         }
 
         /// <summary>

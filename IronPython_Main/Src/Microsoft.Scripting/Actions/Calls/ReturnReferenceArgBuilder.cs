@@ -13,12 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// Builds a parameter for a reference argument when a StrongBox has not been provided.  The
@@ -27,23 +28,23 @@ namespace Microsoft.Scripting.Generation {
     internal sealed class ReturnReferenceArgBuilder : SimpleArgBuilder {
         private VariableExpression _tmp;
 
-        public ReturnReferenceArgBuilder(int index, Type type)
-            : base(index, type) {
+        public ReturnReferenceArgBuilder(ParameterInfo info, int index)
+            : base(info, info.ParameterType.GetElementType(), index, false, false) {
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             if (_tmp == null) {
-                _tmp = context.GetTemporary(Type, "outParam");
+                _tmp = parameterBinder.GetTemporary(Type, "outParam");
             }
 
-            return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(context, parameters, hasBeenUsed)), _tmp);
+            return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(parameterBinder, parameters, hasBeenUsed)), _tmp);
         }
 
-        public override SimpleArgBuilder Copy(int newIndex) {
-            return new ReturnReferenceArgBuilder(newIndex, Type);
+        protected override SimpleArgBuilder Copy(int newIndex) {
+            return new ReturnReferenceArgBuilder(ParameterInfo, newIndex);
         }
 
-        internal override Expression ToReturnExpression(MethodBinderContext context) {
+        internal override Expression ToReturnExpression(ParameterBinder parameterBinder) {
             return _tmp;
         }
 

@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Scripting;
+using System; using Microsoft;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
-using MSAst = System.Linq.Expressions;
+using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class TupleExpression : SequenceExpression {
         private bool _expandable;

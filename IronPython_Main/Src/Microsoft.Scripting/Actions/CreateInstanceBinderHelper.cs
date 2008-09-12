@@ -13,15 +13,15 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class CreateInstanceBinderHelper<T> : CallBinderHelper<T, OldCreateInstanceAction> where T : class {
         public CreateInstanceBinderHelper(CodeContext context, OldCreateInstanceAction action, object[] args)

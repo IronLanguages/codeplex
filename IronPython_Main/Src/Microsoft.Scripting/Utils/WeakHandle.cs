@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.Utils {

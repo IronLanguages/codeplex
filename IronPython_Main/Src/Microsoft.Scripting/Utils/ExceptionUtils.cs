@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 
 namespace Microsoft.Scripting.Utils {
     public static class ExceptionUtils {

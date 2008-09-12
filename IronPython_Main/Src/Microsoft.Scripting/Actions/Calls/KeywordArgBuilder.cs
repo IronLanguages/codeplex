@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// ArgBuilder which provides a value for a keyword argument.  
     /// 
@@ -33,11 +33,13 @@ namespace Microsoft.Scripting.Generation {
     /// but not the user arguments. While the number of user arguments could be determined
     /// upfront, the current MethodBinder does not have this design.
     /// </summary>
-    class KeywordArgBuilder : ArgBuilder {
-        private int _kwArgCount, _kwArgIndex;
-        private ArgBuilder _builder;
+    internal sealed class KeywordArgBuilder : ArgBuilder {
+        private readonly int _kwArgCount, _kwArgIndex;
+        private readonly ArgBuilder _builder;
 
-        public KeywordArgBuilder(ArgBuilder builder, int kwArgCount, int kwArgIndex) {
+        public KeywordArgBuilder(ArgBuilder builder, int kwArgCount, int kwArgIndex) 
+            : base(builder.ParameterInfo) {
+
             Debug.Assert(BuilderExpectsSingleParameter(builder));
             _builder = builder;
 
@@ -59,11 +61,11 @@ namespace Microsoft.Scripting.Generation {
             return (((SimpleArgBuilder)builder).Index == 0);
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             Debug.Assert(BuilderExpectsSingleParameter(_builder));
             int index = GetKeywordIndex(parameters.Count);
             hasBeenUsed[index] = true;
-            return _builder.ToExpression(context, new Expression[] { parameters[index] }, new bool[1]);
+            return _builder.ToExpression(parameterBinder, new Expression[] { parameters[index] }, new bool[1]);
         }
 
         public override Type Type {
@@ -72,12 +74,12 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal override Expression ToReturnExpression(MethodBinderContext context) {
-            return _builder.ToReturnExpression(context);
+        internal override Expression ToReturnExpression(ParameterBinder parameterBinder) {
+            return _builder.ToReturnExpression(parameterBinder);
         }
 
-        internal override Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
-            return _builder.UpdateFromReturn(context, new Expression[] { parameters[GetKeywordIndex(parameters.Count)] });
+        internal override Expression UpdateFromReturn(ParameterBinder parameterBinder, IList<Expression> parameters) {
+            return _builder.UpdateFromReturn(parameterBinder, new Expression[] { parameters[GetKeywordIndex(parameters.Count)] });
         }
 
         private int GetKeywordIndex(int paramCount) {

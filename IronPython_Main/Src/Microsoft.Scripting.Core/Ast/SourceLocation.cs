@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-using System.Linq.Expressions;
+using System; using Microsoft;using Microsoft.Linq.Expressions;
 using System.Globalization;
 
-namespace System.Scripting {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Represents a location in source code.
-    /// TODO: move to System.Linq.Expressions
+    /// TODO: move to Microsoft.Linq.Expressions
     /// TODO: review public APIs !!!
     ///       Lots of stuff on here that is not used by the compiler
     /// </summary>

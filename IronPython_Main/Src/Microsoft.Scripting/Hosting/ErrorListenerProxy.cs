@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-using System.Scripting;
+using System; using Microsoft;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Hosting {
 

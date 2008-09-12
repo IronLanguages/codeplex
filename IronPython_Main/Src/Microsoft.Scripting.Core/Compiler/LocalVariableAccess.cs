@@ -12,14 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.CompilerServices;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
 
     /// <summary>
     /// Provides a list of local variables, supporing read/write of elements
@@ -80,7 +81,7 @@ namespace System.Linq.Expressions.Compiler {
     }
 }
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
         // creates access for local variables in scope
         [Obsolete("used by generated code", true)]

@@ -12,18 +12,18 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT
-using ComMetaObject = System.Scripting.Com.ComMetaObject;
+using ComMetaObject = Microsoft.Scripting.Com.ComMetaObject;
 #endif
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     // TODO: Rename!!!
     public abstract class MetaAction : CallSiteBinder {
         public sealed override Rule<T> Bind<T>(object[] args) {
@@ -38,7 +38,6 @@ namespace System.Scripting.Actions {
             }
 
             ParameterExpression[] pes;
-            ParameterExpression siteExpr = Expression.Parameter(typeof(CallSite), "callSite");
             Expression[] expressions = MakeParameters(pis, out pes);
 
             MetaObject[] mos = new MetaObject[args.Length];
@@ -63,10 +62,10 @@ namespace System.Scripting.Actions {
 
             return new Rule<T>(
                 Expression.Scope(
-                    GetMetaObjectRule(binding, GetReturnType(typeof(T)), siteExpr),
+                    GetMetaObjectRule(binding, GetReturnType(typeof(T))),
                     "<rule>"
                 ),
-                new ReadOnlyCollection<ParameterExpression>(pes.AddFirst(siteExpr))
+                new ReadOnlyCollection<ParameterExpression>(pes)
             );
         }
 
@@ -140,17 +139,10 @@ namespace System.Scripting.Actions {
             return dlgType.GetMethod("Invoke").ReturnType;
         }
 
-        private Expression GetMetaObjectRule(MetaObject binding, Type retType, Expression siteExpr) {
+        private Expression GetMetaObjectRule(MetaObject binding, Type retType) {
             Debug.Assert(binding != null);
 
-            ActionSelfRewriter rewriter = new ActionSelfRewriter(
-                Expression.Property(
-                    siteExpr,
-                    typeof(CallSite).GetProperty("Binder")
-                )
-            );
-
-            Expression body = rewriter.VisitNode(AddReturn(binding.Expression, retType));
+            Expression body = AddReturn(binding.Expression, retType);
 
             if (binding.Restrictions != Restrictions.Empty) {
                 // add the test only if we have one
@@ -194,10 +186,6 @@ namespace System.Scripting.Actions {
 
             parameters = vars;
             return all;
-        }
-
-        public static Expression SelfExpression() {
-            return new ActionSelfExpression();
         }
     }
 }

@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Reflection;
-using System.Scripting;
-using System.Linq.Expressions;
+using Microsoft.Scripting;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {

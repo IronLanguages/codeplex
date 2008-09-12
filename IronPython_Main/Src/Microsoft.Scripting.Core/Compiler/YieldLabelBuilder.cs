@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Scripting;
+using Microsoft.Scripting;
 
-namespace System.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions.Compiler {
     internal sealed class YieldLabelBuilder : ExpressionTreeVisitor {
         sealed class ExceptionBlock {
             public enum TryStatementState {

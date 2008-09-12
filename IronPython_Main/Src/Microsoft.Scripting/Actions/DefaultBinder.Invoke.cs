@@ -13,20 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = System.Linq.Expressions.Expression;
-
+    using Ast = Microsoft.Linq.Expressions.Expression;
+    
     public partial class DefaultBinder : ActionBinder {
 
         /// <summary>
@@ -40,7 +41,7 @@ namespace Microsoft.Scripting.Actions {
         /// </param>
         /// <returns>A MetaObject representing the call or the error.</returns>
         public MetaObject Call(CallSignature signature, params MetaObject[] args) {
-            return Call(signature, Ast.Null(typeof(CodeContext)), args);
+            return Call(signature, new ParameterBinder(this), args);
         }
 
         /// <summary>
@@ -52,18 +53,17 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// Additional meta objects are the parameters for the call as specified by the CallSignature in the CallAction.
         /// </param>
-        /// <param name="codeContext">Provides an expression which will be provided as the CodeContext if the target object
-        /// receives CodeContext as a parameter.</param>
+        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <returns>A MetaObject representing the call or the error.</returns>
-        public MetaObject Call(CallSignature signature, Expression codeContext, params MetaObject[] args) {
+        public MetaObject Call(CallSignature signature, ParameterBinder parameterBinder, params MetaObject[] args) {
             ContractUtils.RequiresNotNullItems(args, "args");
-            ContractUtils.RequiresNotNull(codeContext, "codeContext");
+            ContractUtils.RequiresNotNull(parameterBinder, "parameterBinder");
 
             TargetInfo targetInfo = GetTargetInfo(signature, args);
 
             if (targetInfo != null) {
                 // we're calling a well-known MethodBase
-                return MakeMetaMethodCall(signature, codeContext, targetInfo);
+                return MakeMetaMethodCall(signature, parameterBinder, targetInfo);
             } else {
                 // we can't call this object
                 return MakeCannotCallRule(args[0], args[0].LimitType);
@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Method Call Rule
 
-        private MetaObject MakeMetaMethodCall(CallSignature signature, Expression codeContext, TargetInfo targetInfo) {
+        private MetaObject MakeMetaMethodCall(CallSignature signature, ParameterBinder parameterBinder, TargetInfo targetInfo) {
             Restrictions restrictions = Restrictions.Combine(targetInfo.Arguments).Merge(targetInfo.Restrictions);
             if (targetInfo.Instance != null) {
                 restrictions = targetInfo.Instance.Restrictions.Merge(restrictions);
@@ -80,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
 
             if (targetInfo.Instance != null) {
                 return CallInstanceMethod(
-                    codeContext,
+                    parameterBinder,
                     targetInfo.Targets,
                     targetInfo.Instance,
                     targetInfo.Arguments,
@@ -90,7 +90,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return CallMethod(
-                codeContext,
+                parameterBinder,
                 targetInfo.Targets,
                 targetInfo.Arguments,
                 signature,

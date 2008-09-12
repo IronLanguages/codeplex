@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 
-using System.Linq.Expressions;
-
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
 
     /// <summary>
     /// A RuleSet is a collection of rules to apply to the objects at a DynamicSite.  Each Rule also

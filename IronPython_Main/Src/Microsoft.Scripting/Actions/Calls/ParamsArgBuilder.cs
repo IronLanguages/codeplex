@@ -13,37 +13,41 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Generation {
-    using Ast = System.Linq.Expressions.Expression;
+namespace Microsoft.Scripting.Actions.Calls {
+    using Ast = Microsoft.Linq.Expressions.Expression;
 
-    class ParamsArgBuilder : ArgBuilder {
-        private int _start;
-        private int _count;
-        private Type _elementType;
-        public ParamsArgBuilder(int start, int count, Type elementType) {
+    internal sealed class ParamsArgBuilder : ArgBuilder {
+        private readonly int _start;
+        private readonly int _count;
+        private readonly Type _elementType;
+
+        public ParamsArgBuilder(ParameterInfo info, Type elementType, int start, int count) 
+            : base(info) {
+
             ContractUtils.RequiresNotNull(elementType, "elementType");
-            if (start < 0) throw new ArgumentOutOfRangeException("start");
-            if (count < 0) throw new ArgumentOutOfRangeException("count");
+            ContractUtils.Requires(start >= 0, "start");
+            ContractUtils.Requires(count >= 0, "count");
 
-            this._start = start;
-            this._count = count;
-            this._elementType = elementType;
+            _start = start;
+            _count = count;
+            _elementType = elementType;
         }
 
         public override int Priority {
             get { return 4; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed) {
+        internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             List<Expression> elems = new List<Expression>(_count);
             for (int i = _start; i < _start + _count; i++) {
                 if (!hasBeenUsed[i]) {
-                    elems.Add(context.ConvertExpression(parameters[i], _elementType));
+                    elems.Add(parameterBinder.ConvertExpression(parameters[i], ParameterInfo, _elementType));
                     hasBeenUsed[i] = true;
                 }
             }

@@ -12,16 +12,17 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Scripting.Utils;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
 
     /// <summary>
     /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
@@ -127,7 +128,7 @@ namespace System.Scripting.Com {
     }
 }
 
-namespace System.Runtime.CompilerServices {
+namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
         // TODO: just emit this in the generated code?
         // Having a helper for this one error is overkill

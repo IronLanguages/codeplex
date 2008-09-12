@@ -13,21 +13,21 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Scripting;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Binding;
 
-using Ast = System.Linq.Expressions.Expression;
+using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Types {
     [PythonType("field#")]

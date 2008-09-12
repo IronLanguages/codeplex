@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Linq.Expressions;
-using System.Scripting.Actions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     internal class GenericComMetaObject : MetaObject {
         internal GenericComMetaObject(Expression expression, Restrictions restrictions, object arg)
             : base(expression, restrictions, arg) {

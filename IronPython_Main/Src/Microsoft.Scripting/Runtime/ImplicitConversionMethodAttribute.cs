@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 
 namespace Microsoft.Scripting.Runtime {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]

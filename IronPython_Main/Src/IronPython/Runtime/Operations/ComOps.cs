@@ -15,13 +15,13 @@
 
 #if !SILVERLIGHT
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using ComObject = System.Scripting.Com.ComObject;
+using ComObject = Microsoft.Scripting.Com.ComObject;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {

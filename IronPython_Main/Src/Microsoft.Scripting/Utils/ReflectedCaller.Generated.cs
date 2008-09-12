@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection;
-using System.Scripting;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Utils {
     #region Generated Reflected Caller

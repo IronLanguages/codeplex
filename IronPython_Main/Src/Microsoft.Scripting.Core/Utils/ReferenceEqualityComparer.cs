@@ -12,11 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
-namespace System.Scripting.Utils {
+namespace Microsoft.Scripting.Utils {
     internal sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T> {
         internal static readonly ReferenceEqualityComparer<T> Instance = new ReferenceEqualityComparer<T>();
 

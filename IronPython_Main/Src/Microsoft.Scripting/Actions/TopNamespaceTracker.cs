@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
@@ -91,7 +91,7 @@ namespace Microsoft.Scripting.Actions {
                 _packageAssemblies.Add(assem);
                 UpdateId();
 #if !SILVERLIGHT // ComObject
-                System.Scripting.Com.ComObjectWithTypeInfo.PublishComTypes(assem);
+                Microsoft.Scripting.Com.ComObjectWithTypeInfo.PublishComTypes(assem);
 #endif
             }
 

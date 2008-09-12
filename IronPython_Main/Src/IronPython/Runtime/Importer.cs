@@ -13,20 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Scripting;
-using System.Scripting.Actions;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;

@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     internal class ComEventDesc {
         internal Guid sourceIID;
         internal int dispid;

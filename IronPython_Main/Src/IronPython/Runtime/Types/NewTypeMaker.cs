@@ -13,27 +13,25 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting;
-using System.Scripting.Actions;
-using System.Text;
-
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using System.Text;
+
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
-
-using CompilerServices = System.Runtime.CompilerServices;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -1906,7 +1904,7 @@ namespace IronPython.Runtime.Types {
         private readonly int _index;
 
         private ReturnFixer(LocalBuilder reference, ParameterInfo parameter, int index) {
-            Debug.Assert(reference.LocalType.IsGenericType && reference.LocalType.GetGenericTypeDefinition() == typeof(CompilerServices.StrongBox<>));
+            Debug.Assert(reference.LocalType.IsGenericType && reference.LocalType.GetGenericTypeDefinition() == typeof(StrongBox<>));
             Debug.Assert(parameter.ParameterType.IsByRef);
 
             _parameter = parameter;
@@ -1925,7 +1923,7 @@ namespace IronPython.Runtime.Types {
             il.EmitLoadArg(index);
             if (parameter.ParameterType.IsByRef) {
                 Type elementType = parameter.ParameterType.GetElementType();
-                Type concreteType = typeof(CompilerServices.StrongBox<>).MakeGenericType(elementType);
+                Type concreteType = typeof(StrongBox<>).MakeGenericType(elementType);
                 LocalBuilder refSlot = il.DeclareLocal(concreteType);
                 il.EmitLoadValueIndirect(elementType);
                 il.EmitNew(concreteType, new Type[] { elementType });

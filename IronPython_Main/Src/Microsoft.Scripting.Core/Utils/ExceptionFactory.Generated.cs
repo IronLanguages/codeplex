@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-namespace System.Linq.Expressions {
+using System; using Microsoft;
+namespace Microsoft.Linq.Expressions {
 
     internal static partial class Strings {
         private static string FormatString(string format, params object[] args) {

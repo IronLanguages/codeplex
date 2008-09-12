@@ -12,15 +12,15 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions.Compiler;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Scripting.Utils;
+using Microsoft.Scripting.Utils;
 using System.Threading;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     internal static partial class UpdateDelegates {
 
         private static Dictionary<Type, WeakReference> _Updaters;

@@ -12,8 +12,8 @@
  *
  *
  * ***************************************************************************/
-
-using System.Linq.Expressions;
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {

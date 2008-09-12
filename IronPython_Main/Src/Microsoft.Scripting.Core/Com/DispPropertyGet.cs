@@ -12,12 +12,12 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Diagnostics;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     public sealed class DispPropertyGet : DispCallable {
         internal DispPropertyGet(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {

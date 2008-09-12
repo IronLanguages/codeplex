@@ -13,13 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Globalization;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 

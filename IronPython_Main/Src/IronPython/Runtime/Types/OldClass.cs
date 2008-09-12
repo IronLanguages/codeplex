@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Runtime.Serialization;
-using System.Scripting.Actions;
+using Microsoft.Scripting.Actions;
 using System.Threading;
 
 using Microsoft.Scripting;

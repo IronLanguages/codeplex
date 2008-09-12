@@ -12,17 +12,19 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
-namespace System.Scripting.Com {
+namespace Microsoft.Scripting.Com {
     /// <summary>
     /// If a managed user type (as opposed to a primitive type or a COM object) is passed as an argument to a COM call, we need
     /// to determine the VarEnum type we will marshal it as. We have the following options:
@@ -415,7 +417,7 @@ namespace System.Scripting.Com {
                 return VarEnum.VT_NULL;
             }
 
-            if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(System.Runtime.CompilerServices.StrongBox<>)) {
+            if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
                 Type elementType = argumentType.GetGenericArguments()[0];
                 VarEnum elementVarEnum = GetComType(elementType);
                 if (elementType == typeof(string)) {

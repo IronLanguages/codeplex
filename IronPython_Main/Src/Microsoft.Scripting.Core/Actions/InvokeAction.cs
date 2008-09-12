@@ -12,14 +12,14 @@
  *
  *
  * ***************************************************************************/
-
+using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq.Expressions;
-using System.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace System.Scripting.Actions {
+namespace Microsoft.Scripting.Actions {
     public abstract class InvokeAction : StandardAction {
         private readonly ReadOnlyCollection<Argument> _arguments;
 

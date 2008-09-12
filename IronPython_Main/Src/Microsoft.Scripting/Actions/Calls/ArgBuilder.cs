@@ -13,11 +13,14 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Microsoft.Linq.Expressions;
+using System.Diagnostics;
+using Microsoft.Scripting.Utils;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Generation {
+namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
     /// ArgBuilder provides an argument value used by the MethodBinder.  One ArgBuilder exists for each
     /// physical parameter defined on a method.  
@@ -25,14 +28,26 @@ namespace Microsoft.Scripting.Generation {
     /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
     public abstract class ArgBuilder {
+        // can be null, e.g. for ctor return value builder or custom arg builders
+        private readonly ParameterInfo _info;
+
+        protected ArgBuilder(ParameterInfo info) {
+            _info = info;
+        }
+
         public abstract int Priority {
             get;
         }
 
+        public ParameterInfo ParameterInfo {
+            get { return _info; }
+        }
+
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
+        /// If <c>null</c> is returned the argument is skipped (not passed to the callee).
         /// </summary>
-        internal abstract Expression ToExpression(MethodBinderContext context, IList<Expression> parameters, bool[] hasBeenUsed);
+        internal protected abstract Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed);
 
         /// <summary>
         /// Returns the type required for the argument or null if the ArgBuilder
@@ -49,7 +64,7 @@ namespace Microsoft.Scripting.Generation {
         /// Provides an Expression which will update the provided value after a call to the method.  May
         /// return null if no update is required.
         /// </summary>
-        internal virtual Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
+        internal virtual Expression UpdateFromReturn(ParameterBinder parameterBinder, IList<Expression> parameters) {
             return null;
         }
 
@@ -57,7 +72,7 @@ namespace Microsoft.Scripting.Generation {
         /// If the argument produces a return value (e.g. a ref or out value) this provides
         /// the additional value to be returned.
         /// </summary>
-        internal virtual Expression ToReturnExpression(MethodBinderContext context) {
+        internal virtual Expression ToReturnExpression(ParameterBinder parameterBinder) {
             throw new InvalidOperationException();
         }
     }

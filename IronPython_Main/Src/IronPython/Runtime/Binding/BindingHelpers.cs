@@ -13,17 +13,16 @@
  *
  * ***************************************************************************/
 
-using System;
+using System; using Microsoft;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
-using Ast = System.Linq.Expressions.Expression;
+using Ast = Microsoft.Linq.Expressions.Expression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
@@ -59,13 +58,6 @@ namespace IronPython.Runtime.Binding {
             }
 
             return false;
-        }
-
-        internal static Expression GetSiteCodeContext() {
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("GetContextFromPythonSite"),
-                MetaAction.SelfExpression()
-            );
         }
 
         internal static MetaObject/*!*/ FilterShowCls(Expression/*!*/ codeContext, MetaAction/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
