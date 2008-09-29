@@ -77,7 +77,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "must be >= 0"
+        /// A string like  "must be &gt;= 0"
         /// </summary>
         internal static string MustBePositive {
             get {
@@ -1739,6 +1739,15 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Iterator return type must be IEnumerator or IEnumerator&lt;object&gt;."
+        /// </summary>
+        internal static string WrongIteratorReturnType {
+            get {
+                return "Iterator return type must be IEnumerator or IEnumerator<object>.";
+            }
+        }
+
+        /// <summary>
         /// A string like  "Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'"
         /// </summary>
         internal static string InvalidReturnTypeOfLambda(object p0, object p1, object p2) {
@@ -1780,6 +1789,29 @@ namespace Microsoft.Linq.Expressions {
             get {
                 return "missing parameter value not yet supported";
             }
+        }
+
+        /// <summary>
+        /// A string like  "Rethrow statement is valid only inside a Catch block."
+        /// </summary>
+        internal static string RethrowRequiresCatch {
+            get {
+                return "Rethrow statement is valid only inside a Catch block.";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "When called from '{0}', rewriting a node of type '{1}' should return a non-null value of the same type. Alternatively, override '{2}' and change it to not visit children of this type."
+        /// </summary>
+        internal static string MustRewriteToSameType(object p0, object p1, object p2) {
+            return FormatString("When called from '{0}', rewriting a node of type '{1}' should return a non-null value of the same type. Alternatively, override '{2}' and change it to not visit children of this type.", p0, p1, p2);
+        }
+
+        /// <summary>
+        /// A string like  "A Quote expression cannot be used on RuntimeVariables expression '{0}' because at least one variable is declared outside the Quote"
+        /// </summary>
+        internal static string RuntimeVariablesNotSupportedInQuote(object p0) {
+            return FormatString("A Quote expression cannot be used on RuntimeVariables expression '{0}' because at least one variable is declared outside the Quote", p0);
         }
 
     }
@@ -2799,6 +2831,13 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// ArgumentException with message like "Iterator return type must be IEnumerator or IEnumerator&lt;object&gt;."
+        /// </summary>
+        internal static Exception WrongIteratorReturnType() {
+            return new ArgumentException(Strings.WrongIteratorReturnType);
+        }
+
+        /// <summary>
         /// InvalidOperationException with message like "Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'"
         /// </summary>
         internal static Exception InvalidReturnTypeOfLambda(object p0, object p1, object p2) {
@@ -2838,6 +2877,27 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception MissingValueNotSupported() {
             return new NotSupportedException(Strings.MissingValueNotSupported);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Rethrow statement is valid only inside a Catch block."
+        /// </summary>
+        internal static Exception RethrowRequiresCatch() {
+            return new InvalidOperationException(Strings.RethrowRequiresCatch);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "When called from '{0}', rewriting a node of type '{1}' should return a non-null value of the same type. Alternatively, override '{2}' and change it to not visit children of this type."
+        /// </summary>
+        internal static Exception MustRewriteToSameType(object p0, object p1, object p2) {
+            return new InvalidOperationException(Strings.MustRewriteToSameType(p0, p1, p2));
+        }
+
+        /// <summary>
+        /// NotSupportedException with message like "A Quote expression cannot be used on RuntimeVariables expression '{0}' because at least one variable is declared outside the Quote"
+        /// </summary>
+        internal static Exception RuntimeVariablesNotSupportedInQuote(object p0) {
+            return new NotSupportedException(Strings.RuntimeVariablesNotSupportedInQuote(p0));
         }
 
     }

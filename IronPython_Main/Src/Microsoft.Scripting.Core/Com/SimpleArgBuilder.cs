@@ -27,22 +27,19 @@ namespace Microsoft.Scripting.Com {
     /// methods for params arrays and param dictionary functions.
     /// </summary>
     internal class SimpleArgBuilder : ArgBuilder {
-        private int _index;
         private Type _parameterType;
 
-        internal SimpleArgBuilder(int index, Type parameterType) {
-            _index = index;
+        internal SimpleArgBuilder(Type parameterType) {
             _parameterType = parameterType;
         }
 
-        internal override object Build(object[] args) {
-            return Convert(args[_index], _parameterType);
+        internal override object Build(object arg) {
+            return Convert(arg, _parameterType);
         }
 
-        internal override Expression ToExpression(IList<Expression> parameters) {
-            Debug.Assert(_index < parameters.Count);
-            Debug.Assert(parameters[_index] != null);
-            return ConvertExpression(parameters[_index], _parameterType);
+        internal override Expression Build(Expression parameter) {
+            Debug.Assert(parameter != null);
+            return ConvertExpression(parameter, _parameterType);
         }
 
         internal static Expression ConvertExpression(Expression expr, Type toType) {
@@ -52,13 +49,7 @@ namespace Microsoft.Scripting.Com {
             return Expression.Convert(expr, toType);
         }
 
-        internal int Index {
-            get {
-                return _index;
-            }
-        }
-
-        protected override Type Type {
+        protected Type ParameterType {
             get {
                 return _parameterType;
             }

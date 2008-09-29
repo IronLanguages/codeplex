@@ -19,6 +19,9 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
+    // Only used by LambdaBuilder, which is going away
+    // TODO: this doesn't handle parameter shadowing correctly, but since it's
+    // going away it doesn't seem sensible to fix it.
     internal class LambdaParameterRewriter : ExpressionTreeVisitor {
         private Dictionary<ParameterExpression, Expression> _paramMapping;
 
@@ -26,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
             _paramMapping = paramMapping;
         }
 
-        protected override Expression Visit(ParameterExpression node) {
+        protected override Expression VisitParameter(ParameterExpression node) {
             if (_paramMapping.ContainsKey(node)) {
                 //parameter may be mapped to itself or to a variable.
                 Debug.Assert(_paramMapping[node].NodeType == ExpressionType.Variable ||
@@ -40,22 +43,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected override Expression VisitExtension(Expression node) {
-            if (node.IsReducible) {
-                return VisitNode(node.ReduceToKnown());
-            } else {
-                CodeContextScopeExpression ccse = node as CodeContextScopeExpression;
-                if (ccse != null) {
-                    return VisitCodeContextScope(ccse);
-                }
-                // we will ignore other extension nodes that are not redicible
-                // non-reducible extension nodes normally do not have subexpressions
-                return node;
+            CodeContextScopeExpression ccse = node as CodeContextScopeExpression;
+            if (ccse != null) {
+                return VisitCodeContextScope(ccse);
             }
+            if (node.CanReduce) {
+                return base.VisitExtension(node);
+            }
+            // we will ignore other extension nodes that are not redicible
+            // non-reducible extension nodes normally do not have subexpressions
+            return node;
         }
 
         private Expression VisitCodeContextScope(CodeContextScopeExpression node) {
-            Expression newcontext = VisitNode(node.NewContext);
-            Expression body = VisitNode(node.Body);
+            Expression newcontext = Visit(node.NewContext);
+            Expression body = Visit(node.Body);
 
             if (newcontext != node.NewContext || body != node.Body) {
                 node = Utils.CodeContextScope(

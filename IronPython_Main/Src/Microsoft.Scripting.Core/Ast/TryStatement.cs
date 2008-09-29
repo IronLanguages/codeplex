@@ -56,6 +56,10 @@ namespace Microsoft.Linq.Expressions {
         public Expression Fault {
             get { return _fault; }
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitTry(this);
+        }
     }
 
     // TODO: CatchBlock handlers come last because they're params--is this

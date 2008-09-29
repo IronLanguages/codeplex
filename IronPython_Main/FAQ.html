@@ -2,12 +2,12 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
-<title>IronPython 2.0B5 FAQ</title>
+<title>IronPython 2.x FAQ</title>
 </head>
 
 <body>
 
-<h2>IronPython 2.0B5 Frequently Asked Questions</h2>
+<h2>IronPython 2.x Frequently Asked Questions</h2>
 <h4>Q: Is this license OSI compliant?</h4>
 <p>A: Absolutely. The Microsoft Public License has been approved by OSI.</p>
 <h4>Q: What copyright rights does the license grant me?</h4>
@@ -44,7 +44,7 @@ designer, etc.?</h3>
 <p>A good explanation of the Visual Studio IronPython integration sample is in
 <a href="http://blogs.msdn.com/aaronmar/archive/2006/02/16/533273.aspx">this 
 blog post</a>.</p>
-<h3>Q: Why do you require .NET 2.0 to run IronPython 2.0B5?</h3>
+<h3>Q: Why do you require .NET 2.0 to run IronPython 2.x?</h3>
 A: There are a lot of features in .NET 2.0 that we wanted to use in IronPython. 
 These include generics, DynamicMethods, new kinds of delegates, and more. We could 
 have supported these new features using #ifdefs to keep a version of the code base 
@@ -60,7 +60,7 @@ the main public API exposed by IronPython.&nbsp; However, there are other public
 types that are marked public either because the generated IL code needs them or 
 because of historical reasons.&nbsp; While we would like to fix all FxCop issues 
 for all public types, those remaining do not affect users of IronPython.&nbsp; 
-We want to release IronPython 2.0B5 under the principles of &nbsp;"release early, 
+We want to release IronPython 2.x under the principles of &nbsp;"release early, 
 release often".&nbsp; We thought that it was unnecessary to delay the release to 
 take the time to do this work first.&nbsp; These kinds of issues will be 
 resolved as we work on future releases.<h3>Q: Why am I getting errors when trying to use WinForms?</h3>
@@ -121,7 +121,7 @@ only relevant on SGI or the Mac).&nbsp; Some modules aren't present only because
 we didn't have time to implement them yet.&nbsp;&nbsp; See the
 <a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details. </p>
 <h3>Q: What CPython version are you compatible with?</h3>
-<p>A: IronPython 2.0B5 targeted CPython 2.4.3 for compatibility.&nbsp; See the
+<p>A: IronPython 2.x targeted CPython 2.4.3 for compatibility.&nbsp; See the
 <a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details.</p>
 <h3>Q: Do you have any 2.5 features working?</h3>
 <p>A: Yes, IronPython implements several 2.5 features: all(), any(), max() with 
@@ -129,7 +129,7 @@ a key argument, min() with a key argument, partition() and rpartition() on
 strings, the with statement, empty parenthetic expression for the bases classes 
 in a class statement, try-except-finally, and ternary expressions</p>
 <h3>Q: Do we work with the .NET Compact Framework?</h3>
-<p>A: No, IronPython 2.0B5 targets only the .NET 2.0 Common Language Runtime.&nbsp; 
+<p>A: No, IronPython 2.x targets only the .NET 2.0 Common Language Runtime.&nbsp; 
 The .NET Compact Framework lacks Reflection.Emit and lightweight code generation 
 (dynamic methods), both of which IronPython requires.</p>
 <h3>Q: How do I compile .py files to a DLL for linking into my C# or VB program?</h3>

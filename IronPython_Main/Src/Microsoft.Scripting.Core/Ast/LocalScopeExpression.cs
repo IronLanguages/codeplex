@@ -25,7 +25,7 @@ namespace Microsoft.Linq.Expressions {
     /// Needed to implement "eval" in dynamic languages.
     /// Evaluates to an instance of ILocalVariables at run time.
     /// 
-    /// TODO: rename !!!
+    /// TODO: rename to RuntimeVariablesExpression
     /// </summary>
     public sealed class LocalScopeExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _variables;
@@ -46,18 +46,15 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<Expression> Variables {
             get { return _variables; }
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitRuntimeVariables(this);
+        }
     }
 
     public partial class Expression {
 
-        // TODO: rename !!!
-        //
-        //   LocalScope
-        //   ScopeAccess
-        //   EvaluateVariables
-        //   AccessVariables
-        //   HoistVariables
-        //   ...
+        // TODO: rename to RuntimeVariables
 
         public static LocalScopeExpression AllVariables(params Expression[] variables) {
             return AllVariables(Annotations.Empty, (IEnumerable<Expression>)variables);

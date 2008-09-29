@@ -18,9 +18,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Diagnostics;
 
-using Microsoft.Scripting.Utils;
-
-namespace IronPython.Runtime {
+namespace Microsoft.Scripting.Utils {
     /// <summary>
     /// Provides fast strongly typed thread local storage.  This is significantly faster than
     /// Thread.GetData/SetData.
@@ -47,7 +45,7 @@ namespace IronPython.Runtime {
         /// Gets the current value if its not == null or calls the provided function
         /// to create a new value.
         /// </summary>
-        public T GetOrCreate(Func<T>/*!*/ func) {
+        public T GetOrCreate(Func<T> func) {
             Assert.NotNull(func);
 
             StorageInfo si = GetStorageInfo();
@@ -63,7 +61,7 @@ namespace IronPython.Runtime {
         /// Calls the provided update function with the current value and
         /// replaces the current value with the result of the function.
         /// </summary>
-        public T Update(Func<T, T>/*!*/ updater) {
+        public T Update(Func<T, T> updater) {
             Assert.NotNull(updater);
 
             StorageInfo si = GetStorageInfo();
@@ -77,11 +75,11 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets the StorageInfo for the current thread.
         /// </summary>
-        private StorageInfo/*!*/ GetStorageInfo() {
+        private StorageInfo GetStorageInfo() {
             return GetStorageInfo(_stores);
         }
 
-        private StorageInfo/*!*/ GetStorageInfo(StorageInfo[] curStorage) {
+        private StorageInfo GetStorageInfo(StorageInfo[] curStorage) {
             int threadId = Thread.CurrentThread.ManagedThreadId;
 
             // fast path if we already have a value in the array
@@ -98,10 +96,10 @@ namespace IronPython.Runtime {
 
         /// <summary>
         /// Called when the fast path storage lookup fails. if we encountered the Empty storage 
-        /// during the initial fast check then spin until we hit non-empty storage & try the fast 
+        /// during the initial fast check then spin until we hit non-empty storage and try the fast 
         /// path again.
         /// </summary>
-        private StorageInfo/*!*/ RetryOrCreateStorageInfo(StorageInfo[] curStorage) {
+        private StorageInfo RetryOrCreateStorageInfo(StorageInfo[] curStorage) {
             if (curStorage == Updating) {
                 // we need to retry
                 while ((curStorage = _stores) == Updating) {
@@ -119,7 +117,7 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Creates the StorageInfo for the thread when one isn't already present.
         /// </summary>
-        private StorageInfo/*!*/ CreateStorageInfo() {
+        private StorageInfo CreateStorageInfo() {
             // we do our own locking, tell hosts this is a bad time to interrupt us.
 #if !SILVERLIGHT
             Thread.BeginCriticalRegion();
@@ -171,10 +169,10 @@ namespace IronPython.Runtime {
         /// has been re-used so we also store the thread which owns the value.
         /// </summary>
         private class StorageInfo {
-            public readonly Thread/*!*/ Thread;                 // the thread that owns the StorageInfo
-            public T Value;                                     // the current value for the owning thread
+            public readonly Thread Thread;                 // the thread that owns the StorageInfo
+            public T Value;                                // the current value for the owning thread
 
-            public StorageInfo(Thread/*!*/ curThread) {
+            public StorageInfo(Thread curThread) {
                 Assert.NotNull(curThread);
 
                 Thread = curThread;

@@ -89,7 +89,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
 
                 MemberExpression member = Expression.MakeMemberAccess(target, _binding.Member);
-                VariableExpression memberTemp = _spiller.Temp(member.Type);
+                VariableExpression memberTemp = _spiller.MakeTemp(member.Type);
 
                 int copyback = memberTemp.Type.IsValueType ? 1 : 0;
                 Expression[] block = new Expression[_bindings.Count + 1 + copyback];
@@ -152,7 +152,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
 
                 MemberExpression member = Expression.MakeMemberAccess(target, _binding.Member);
-                VariableExpression memberTemp = _spiller.Temp(member.Type);
+                VariableExpression memberTemp = _spiller.MakeTemp(member.Type);
 
                 int copyback = memberTemp.Type.IsValueType ? 1 : 0;
                 Expression[] block = new Expression[_inits.Count + 1 + copyback];
@@ -176,7 +176,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             internal MemberAssignmentRewriter(MemberAssignment binding, StackSpiller spiller, Stack stack) :
                 base(binding, spiller) {
 
-                Result result = RewriteExpression(spiller, binding.Expression, stack);
+                Result result = spiller.RewriteExpression(binding.Expression, stack);
                 _action = result.Action;
                 _rhs = result.Node;
             }
@@ -195,7 +195,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 Expression[] block = new Expression[2];
 
                 MemberExpression member = Expression.MakeMemberAccess(target, _binding.Member);
-                VariableExpression memberTemp = _spiller.Temp(member.Type);
+                VariableExpression memberTemp = _spiller.MakeTemp(member.Type);
 
                 block[0] = Expression.Assign(memberTemp, _rhs);
                 block[1] = Expression.Assign(member, memberTemp);

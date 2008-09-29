@@ -40,8 +40,16 @@ namespace IronPython.Runtime {
             while (i < l) {
                 char ch = text[i++];
                 if (ch == '\\') {
-                    if (!complete && i >= text.Length) break;
-                    if (i >= l) throw PythonOps.ValueError("Trailing \\ in string");
+                    if (i >= l) {
+                        if (!complete) {
+                            break;
+                        } else if (isRaw) {
+                            buf.Append('\\');
+                            break;
+                        } else {
+                            throw PythonOps.ValueError("Trailing \\ in string");
+                        }
+                    }
                     ch = text[i++];
 
                     if (ch == 'u' || ch == 'U') {

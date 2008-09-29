@@ -145,7 +145,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return;
                 }
 
-                Result exp = RewriteExpression(_self, node, _stack);
+                Result exp = _self.RewriteExpression(node, _stack);
                 _action |= exp.Action;
                 _stack = Stack.NonEmpty;
 
@@ -233,7 +233,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
 
-        private VariableExpression Temp(Type type) {
+        private VariableExpression MakeTemp(Type type) {
             return _tm.Temp(type);
         }
 
@@ -257,7 +257,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         ///     return value: temp
         /// </summary>
         private VariableExpression ToTemp(Expression expression, out Expression save) {
-            VariableExpression temp = Temp(expression.Type);
+            VariableExpression temp = MakeTemp(expression.Type);
             save = Expression.Assign(temp, expression);
             return temp;
         }

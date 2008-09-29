@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Actions {
         protected override Expression VisitExtension(Expression node) {
             CodeContextScopeExpression contextScope = node as CodeContextScopeExpression;
             if (contextScope != null) {
-                Expression body = VisitNode(contextScope.Body);
+                Expression body = Visit(contextScope.Body);
 
                 if (body != contextScope.Body) {
                     node = AstUtils.CodeContextScope(body, contextScope.NewContext);
@@ -80,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected override Expression Visit(DynamicExpression node) {
+        protected override Expression VisitDynamic(DynamicExpression node) {
             MetaAction metaBinder = node.Binder as MetaAction;
 
             if (metaBinder == null) {
@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Actions {
 
                 if (!foundSideEffectingArgs) {
                     // attempt to combine the arguments...
-                    Expression rewritten = VisitNode(e);
+                    Expression rewritten = Visit(e);
 
                     ComboDynamicSiteExpression combo = rewritten as ComboDynamicSiteExpression;
                     ConstantExpression ce;

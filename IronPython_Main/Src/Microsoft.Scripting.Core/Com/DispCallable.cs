@@ -47,13 +47,18 @@ namespace Microsoft.Scripting.Com {
             get { return _methodDesc; }
         }
 
-        #region IDynamicObject Members
-
         public MetaObject GetMetaObject(Expression parameter) {
             return new DispCallableMetaObject(parameter, this);
         }
 
-        #endregion
+        public override bool Equals(object obj) {
+            var other = obj as DispCallable;
+            return other != null && other._dispatch == _dispatch && other._methodDesc == _methodDesc;
+        }
+
+        public override int GetHashCode() {
+            return _dispatch.GetHashCode() ^ _methodDesc.GetHashCode();
+        }
     }
 }
 

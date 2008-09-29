@@ -22,6 +22,7 @@ using Microsoft.Scripting.Actions;
 using System.Text;
 
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Interpretation;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -646,5 +647,25 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         #endregion
+
+        /// <summary>
+        /// Called by an interpreter when an exception is about to be thrown by an interpreted <see cref="ThrowStatement"/> or
+        /// when a CLR method is called that threw an exception.
+        /// </summary>
+        /// <param name="state">
+        /// The current interpreted frame state. The frame is either throwing the exception (via <see cref="ThrowStatement"/>) or 
+        /// is the interpreted frame that is calling a CLR method that threw or propagated the exception. 
+        /// </param>
+        /// <param name="exception">The exception to be (re)thrown.</param>
+        /// <param name="isInterpretedThrow">Whether the exception is thrown by an interpreted code (<see cref="ThrowStatement"/>).</param>
+        /// <remarks>
+        /// The method can be called multiple times for a single exception if the interpreted code calls some CLR code that
+        /// calls an interpreted code that throws an exception. The method is called at each interpeted/non-interpreted frame boundary
+        /// and in the frame that raised the exception by <see cref="ThrowStatement"/>.
+        /// </remarks>
+        internal protected virtual void InterpretExceptionThrow(InterpreterState state, Exception exception, bool isInterpretedThrow) {
+            Assert.NotNull(state, exception);
+            // nop
+        }
     }
 }

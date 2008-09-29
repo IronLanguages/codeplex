@@ -26,10 +26,6 @@ namespace Microsoft.Scripting.Com {
     /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
     internal abstract class ArgBuilder {
-        /// <summary>
-        /// Provides the Expression which provides the value to be passed to the argument.
-        /// </summary>
-        internal abstract Expression ToExpression(IList<Expression> parameters);
 
         internal virtual VariableExpression[] TemporaryVariables {
             get {
@@ -38,25 +34,22 @@ namespace Microsoft.Scripting.Com {
         }
 
         /// <summary>
-        /// Returns the type required for the argument or null if the ArgBuilder
-        /// does not consume a type.
+        /// Provides the Expression which provides the value to be passed to the argument.
         /// </summary>
-        protected virtual Type Type {
-            get { return null; }
-        }
+        internal abstract Expression Build(Expression parameter);
+
+        /// <summary>
+        /// Builds the value of the argument to be passed for a call via reflection.
+        /// </summary>
+        internal abstract object Build(object arg);
 
         /// <summary>
         /// Provides an Expression which will update the provided value after a call to the method.  May
         /// return null if no update is required.
         /// </summary>
-        internal virtual Expression UpdateFromReturn(IList<Expression> parameters) {
+        internal virtual Expression UpdateFromReturn(Expression parameter) {
             return null;
         }
-
-        /// <summary>
-        /// Builds the value of the argument to be passed for a call via reflection.
-        /// </summary>
-        internal abstract object Build(object[] args);
 
         /// <summary>
         /// If the argument produces a return value (e.g. a ref or out value) this
@@ -64,10 +57,7 @@ namespace Microsoft.Scripting.Com {
         /// This will not be called if the method call throws an exception, and so it should not
         /// be used for cleanup that is required to be done.
         /// </summary>
-        /// <param name="callArg">The (potentially updated) value of the byref argument</param>
-        /// <param name="args">The original argument list. One element of the list may get updated if it is
-        /// being passed as a byref parameter that needs to follow copy-in copy-out semantics</param>
-        internal virtual void UpdateFromReturn(object callArg, object[] args) { }
+        internal virtual void UpdateFromReturn(object originalArg, object updatedArg) { }
     }
 }
 

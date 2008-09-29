@@ -14,24 +14,17 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Linq.Expressions;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Runtime {
     /// <summary>
-    /// A meta object who's exact type is known and additional calls to Restrict
-    /// do nothing.
+    /// Indicates that a MetaObject is already representing a restricted type.  Useful
+    /// when we're already restricted to a known type but this isn't captured in
+    /// the type info (e.g. the type is not sealed).
     /// </summary>
-    public class RestrictedMetaObject : MetaObject {
-        public RestrictedMetaObject(Expression expr, Restrictions rest)
-            : base(expr, rest) {
-        }
-
-        public RestrictedMetaObject(Expression expr, Restrictions rest, object value)
-            : base(expr, rest, value) {
-        }
-
-        public override MetaObject Restrict(Type type) {
-            return this;
-        }
+    public interface IRestrictedMetaObject {
+        MetaObject Restrict(Type type);
     }
 }

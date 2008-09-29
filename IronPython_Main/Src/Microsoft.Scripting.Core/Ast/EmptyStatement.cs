@@ -14,11 +14,17 @@
  * ***************************************************************************/
 using System; using Microsoft;
 namespace Microsoft.Linq.Expressions {
+    // TODO: It seems overkill to have a full expression just for this.
+    // Can we just reuse ConstantExpression?
     public sealed class EmptyStatement : Expression {
         internal static readonly EmptyStatement Instance = new EmptyStatement(Annotations.Empty);
 
         internal EmptyStatement(Annotations annotations)
             : base(ExpressionType.EmptyStatement, typeof(void), annotations) {
+        }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitEmpty(this);
         }
     }
 

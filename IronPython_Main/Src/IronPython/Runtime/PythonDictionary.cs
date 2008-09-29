@@ -499,6 +499,36 @@ namespace IronPython.Runtime {
             }
         }
 
+        public int __cmp__(CodeContext/*!*/ context, [NotNull]PythonDictionary/*!*/ other) {
+            CompareUtil.Push(this, other);
+            try {
+                return DictionaryOps.CompareTo(context, this, other);
+            } finally {
+                CompareUtil.Pop(this, other);
+            }
+        }
+
+        // these are present in CPython but always return NotImplemented.
+        [return: MaybeNotImplemented]
+        public static NotImplementedType operator > (PythonDictionary self, PythonDictionary other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        public static NotImplementedType operator <(PythonDictionary self, PythonDictionary other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        public static NotImplementedType operator >=(PythonDictionary self, PythonDictionary other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        public static NotImplementedType operator <=(PythonDictionary self, PythonDictionary other) {
+            return PythonOps.NotImplemented;
+        }
+
         #endregion
 
         #region IValueEquality Members
@@ -913,7 +943,7 @@ namespace IronPython.Runtime {
     [PythonType("dictionary-itemiterator")]
     public sealed class DictionaryItemEnumerator : IEnumerator, IEnumerator<object> {
         private readonly int _size;
-        DictionaryStorage _dict;
+        private readonly DictionaryStorage _dict;
         private readonly object[] _keys;
         private readonly object[] _values;
         private int _pos;

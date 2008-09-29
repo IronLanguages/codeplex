@@ -136,7 +136,7 @@ console for testing purposes, and direct input to and from the instance.
         self.writer.Write(line+"\n")
         i = 0
         while i < 40 and not self.proc.HasExited:
-            Thread.Sleep(100)
+            Thread.CurrentThread.Join(100)
             i += 1
         return self.proc.ExitCode
 

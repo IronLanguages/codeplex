@@ -104,7 +104,7 @@ else:
 
         # get some directories and files
         ip_root             = path_combine(rowan_root, basePyDir)
-        external_dir        = path_combine(rowan_root, r'..\External\Languages\IronPython20')
+        external_dir        = path_combine(rowan_root, r'..\External\Languages\ironpython21')
         clean_external_dir  = path_combine(rowan_root, r'..\External\Languages\CPython\25')
         public_testdir      = path_combine(ip_root, r'Tests')
         compat_testdir      = path_combine(ip_root, r'Tests\compat')
@@ -533,9 +533,13 @@ else:
     import os
     newline = os.linesep
 
+is_debug = False
+if is_cli:
+    is_debug = sys.exec_prefix.lower().endswith("debug")
+
 is_peverify_run = False
 if is_cli:    
-    is_peverify_run = sys.exec_prefix.endswith("Debug") and "-X:SaveAssemblies" in System.Environment.CommandLine    
+    is_peverify_run = is_debug and "-X:SaveAssemblies" in System.Environment.CommandLine    
 
 is_snap = False
 #If the 'THISISSNAP' env variable is set we're running tests under the SNAP harness.

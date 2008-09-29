@@ -243,10 +243,14 @@ def test_X_Interpret():
 
 # Test -X:TrackPerformance
 def test_X_TrackPerformance():
+    if not is_debug: return #Mode not supported in Release
+    
     TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "")
 
 # Test -X:Frames
 def test_X_Frames():
+    if not is_debug: return #Mode not supported in Release
+    
     TestCommandLine(("-X:Frames", "-c", "2+2"), "")
 
 # Test -u (Unbuffered stdout & stderr): only test this can be passed in
@@ -261,6 +265,8 @@ def test_X_MaxRecursion():
 
 # Test -X:DumpIL
 def test_DumpIL():
+    if not is_debug: return #Mode not supported in Release
+    
     ildir = IO.Path.Combine(IO.Path.GetTempPath(), "__DLRIL")
     print "IL directory is " + ildir
     

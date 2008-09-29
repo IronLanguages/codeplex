@@ -106,6 +106,7 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, object, object, object>> _addSite, _divModSite, _rdivModSite;
         private CallSite<Func<CallSite, object, object, object, object>> _setIndexSite, _delSliceSite;
         private CallSite<Func<CallSite, object, object, object, object, object>> _setSliceSite;
+        private CallSite<Func<CallSite, object, string>> _docSite;
 
         // conversion sites
         private CallSite<Func<CallSite, object, int>> _intSite;
@@ -461,7 +462,7 @@ namespace IronPython.Runtime {
             SysModule.PerformModuleReload(this, _systemState.Dict);
         }
 
-        internal LambdaExpression ParseSourceCode(SourceUnit/*!*/ sourceUnit, PythonCompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
+        internal LambdaExpression ParseSourceCode(SourceUnit/*!*/ sourceUnit, PythonCompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink, out bool disableInterpreter) {
             Assert.NotNull(sourceUnit, options, errorSink);
 
             PyAst.PythonAst ast;
@@ -505,6 +506,7 @@ namespace IronPython.Runtime {
             context.SourceUnit.CodeProperties = properties;
 
             if (errorCode != 0 || properties == ScriptCodeParseResult.Empty) {
+                disableInterpreter = false;
                 return null;
             }
 
@@ -527,7 +529,24 @@ namespace IronPython.Runtime {
 
             PyAst.PythonNameBinder.BindAst(ast, context);
 
-            return ast.TransformToAst(context);
+            LambdaExpression res = ast.TransformToAst(context);
+            disableInterpreter = ast.DisableInterpreter;
+#if DEBUG && !SILVERLIGHT
+            if (disableInterpreter) {
+                try {
+                    // we don't force compilation in SaveAssemblies mode as it slows us down too much...
+                    // we also don't force compliation on large source files - this is for test_compile
+                    // where the compiler stack overflows when interpreting.  DLR will switch to a non-recurisve
+                    // strategy for walking the trees in the future and this 2nd check should go away then.
+                    if (Environment.GetEnvironmentVariable("DLR_SaveAssemblies") != null ||  
+                        sourceUnit.GetCode().Length > 50000) {
+                        disableInterpreter = false;
+                    }
+                } catch (SecurityException) {
+                }
+            }
+#endif
+            return res;
         }
 
         internal ScriptCode CompileSourceCode(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink, bool interpret) {
@@ -537,13 +556,14 @@ namespace IronPython.Runtime {
                 pythonOptions.Module |= ModuleOptions.Initialize;
             }
 
-            var lambda = ParseSourceCode(sourceUnit, pythonOptions, errorSink);
+            bool disableInterpreter;
+            var lambda = ParseSourceCode(sourceUnit, pythonOptions, errorSink, out disableInterpreter);
 
             if (lambda == null) {
                 return null;
             }
 
-            if (interpret) { // TODO: enable -X:Interpret flag: || _options.InterpretedMode
+            if (interpret && !disableInterpreter) { // TODO: enable -X:Interpret flag: || _options.InterpretedMode
                 // TODO: fix generated DLR ASTs
                 lambda = new GlobalLookupRewriter().RewriteLambda(lambda);
                 return new InterpretedScriptCode(lambda, sourceUnit);
@@ -554,7 +574,7 @@ namespace IronPython.Runtime {
                 lambda = new GlobalLookupRewriter().RewriteLambda(lambda);
                 return new ScriptCode(lambda, sourceUnit);
             }
-        }
+        }        
 
         protected override ScriptCode CompileSourceCode(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
             return CompileSourceCode(sourceUnit, options, errorSink, false);
@@ -1396,7 +1416,7 @@ namespace IronPython.Runtime {
             return builtinTable;
         }
 
-        private void LoadBuiltins(Dictionary<string, Type> builtinTable, Assembly assem) {
+        internal void LoadBuiltins(Dictionary<string, Type> builtinTable, Assembly assem) {
             object[] attrs = assem.GetCustomAttributes(typeof(PythonModuleAttribute), false);
             if (attrs.Length > 0) {
                 foreach (PythonModuleAttribute pma in attrs) {
@@ -1623,11 +1643,11 @@ namespace IronPython.Runtime {
         }
 
         public override DeleteMemberAction/*!*/ CreateDeleteMemberBinder(string/*!*/ name, bool ignoreCase) {
-            return new DeleteMemberBinder(DefaultBinderState, name);
+            return new DeleteMemberBinder(DefaultBinderState, name, ignoreCase);
         }
 
         public override GetMemberAction/*!*/ CreateGetMemberBinder(string/*!*/ name, bool ignoreCase) {
-            return new CompatibilityGetMember(DefaultBinderState, name);
+            return new CompatibilityGetMember(DefaultBinderState, name, ignoreCase);
         }
 
         public override InvokeAction/*!*/ CreateInvokeBinder(params Argument/*!*/[]/*!*/ arguments) {
@@ -1639,7 +1659,7 @@ namespace IronPython.Runtime {
         }
 
         public override SetMemberAction/*!*/ CreateSetMemberBinder(string/*!*/ name, bool ignoreCase) {
-            return new SetMemberBinder(DefaultBinderState, name);
+            return new SetMemberBinder(DefaultBinderState, name, ignoreCase);
         }
 
         public override CreateAction/*!*/ CreateCreateBinder(params Argument/*!*/[]/*!*/ arguments) {
@@ -2121,6 +2141,18 @@ namespace IronPython.Runtime {
             }
         }
 
+        public string GetDocumentation(object o) {
+            if (_docSite == null) {
+                _docSite = CallSite<Func<CallSite, object, string>>.Create(
+                    new OperationBinder(
+                        DefaultBinderState,
+                        "Documentation"
+                    )
+                );
+            }
+            return _docSite.Target(_docSite, o);
+        }
+
         #endregion
 
         #region Conversions
@@ -2493,7 +2525,7 @@ namespace IronPython.Runtime {
                         SystemState.Dict[meta_path] = lstPath = new List();
                     }
 
-                    lstPath.append(GetCompiledLoader());
+                    lstPath.append(_compiledLoader);
                 }
             }
 

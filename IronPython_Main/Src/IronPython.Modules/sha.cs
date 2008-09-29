@@ -14,9 +14,11 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Runtime;
 using System.Security.Cryptography;
 using System.Text;
+
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
@@ -25,12 +27,11 @@ using IronPython.Runtime.Operations;
 //!!! Also, we could probably make a generic version of this that could then be specialized
 //!!! for both md5 and sha.
 
-#if !SILVERLIGHT    // System.Cryptography.SHA1CryptoServiceProvider
 [assembly: PythonModule("_sha", typeof(IronPython.Modules.PythonSha))]
 namespace IronPython.Modules {
     [Documentation("SHA1 hash algorithm")]
     public static class PythonSha {
-        private static readonly SHA1CryptoServiceProvider hasher = new SHA1CryptoServiceProvider();        
+        private static readonly SHA1Managed hasher = new SHA1Managed();
         private static readonly int digestSize = hasher.HashSize / 8;
         private const int blockSize = 1;
 
@@ -60,7 +61,11 @@ namespace IronPython.Modules {
         }
 
         [Documentation("new([data]) -> object (object used to calculate hash)")]
-        public class sha : ICloneable {
+        public class sha 
+#if !SILVERLIGHT
+            : ICloneable 
+#endif
+        {
             byte[] _bytes;
             byte[] _hash;
 
@@ -108,10 +113,11 @@ namespace IronPython.Modules {
                 return new sha(_bytes);
             }
 
+#if !SILVERLIGHT
             object ICloneable.Clone() {
                 return copy();
             }
+#endif
         }
     }
 }
-#endif

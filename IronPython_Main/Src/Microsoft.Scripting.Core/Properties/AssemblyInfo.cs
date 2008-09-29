@@ -55,7 +55,7 @@ using System.Security;
 
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
-[assembly: InternalsVisibleTo("TestInternalDLR")]
+
 #if !SILVERLIGHT
 [assembly: AssemblyVersion("1.0.0.5000")]
 [assembly: AssemblyFileVersion("1.0.0.00")]

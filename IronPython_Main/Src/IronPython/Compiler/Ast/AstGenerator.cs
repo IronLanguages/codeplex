@@ -44,7 +44,8 @@ namespace IronPython.Compiler.Ast {
         private MSAst.ParameterExpression _generatorParameter;          // the extra parameter receiving the instance of PythonGenerator
         private readonly BinderState/*!*/ _binderState;                 // the state stored for the binder
         private bool _inFinally;                                        // true if we are currently in a finally (coordinated with our loop state)
-
+        private bool _disableInterpreter;                               // true if we generated loops, functions, etc... that shouldn't be interpreted
+         
         private AstGenerator(MSAst.Annotations annotations, string name, bool generator, bool print) {
             _loopStack = new Stack<MSAst.LabelTarget>();
             _print = print;
@@ -82,6 +83,15 @@ namespace IronPython.Compiler.Ast {
         public PythonDivisionOptions DivisionOptions {
             get {
                 return PythonContext.PythonOptions.DivisionOptions;
+            }
+        }
+
+        internal bool DisableInterpreter {
+            get {
+                return _disableInterpreter;
+            }
+            set {
+                _disableInterpreter = value;
             }
         }
 

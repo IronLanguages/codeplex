@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
             TypeGen = typeGen;
         }
 
-        protected override Expression Visit(LambdaExpression node) {
+        protected override Expression VisitLambda(LambdaExpression node) {
             // only run this for top lambda
             if (_contextField == null) {
                 // Optimization: use the static field codecontext rather than
@@ -60,7 +60,7 @@ namespace Microsoft.Scripting.Generation {
                 );
                 Context = Expression.Field(null, _contextField);
             }
-            return base.Visit(node);
+            return base.VisitLambda(node);
         }
 
         protected override Expression MakeWrapper(GlobalVariableExpression variable) {
@@ -79,7 +79,7 @@ namespace Microsoft.Scripting.Generation {
 
         #region runtime constant support
 
-        protected override Expression Visit(ConstantExpression node) {
+        protected override Expression VisitConstant(ConstantExpression node) {
             object data = node.Value;
             Type type = node.Type;
 

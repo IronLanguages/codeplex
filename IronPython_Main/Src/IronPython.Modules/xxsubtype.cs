@@ -12,13 +12,15 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-using System.Diagnostics;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("xxsubtype", typeof(IronPython.Modules.xxsubtype))]
 namespace IronPython.Modules {
@@ -74,18 +76,14 @@ namespace IronPython.Modules {
                 state = value;
             }
         }
-#if !SILVERLIGHT
         public static double bench(CodeContext context, object x, string name) {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
+            double start = PythonTime.clock();
 
             for (int i = 0; i < 1001; i++) {
                 PythonOps.GetBoundAttr(context, x, SymbolTable.StringToId(name));
             }
 
-            sw.Stop();
-            return ((double)sw.ElapsedMilliseconds)/1000.0;
+            return PythonTime.clock() - start;
         }
-#endif
     }
 }

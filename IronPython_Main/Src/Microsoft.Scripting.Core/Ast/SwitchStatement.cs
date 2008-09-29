@@ -46,6 +46,10 @@ namespace Microsoft.Linq.Expressions {
         new public LabelTarget Label {
             get { return _label; }
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitSwitch(this);
+        }
     }
 
     /// <summary>

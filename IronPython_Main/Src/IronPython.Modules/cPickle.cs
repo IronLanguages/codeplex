@@ -1545,11 +1545,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadBinUnicode(CodeContext/*!*/ context) {
-#if !SILVERLIGHT    // Encoding
                 _stack.append(StringOps.decode(context, Read(context, ReadInt32(context)), "utf-8", "strict"));
-#else
-                throw new NotImplementedException("SILVERLIGHT - not supported - encoding");
-#endif
             }
 
             private void LoadBuild(CodeContext/*!*/ context) {
@@ -1841,11 +1837,7 @@ namespace IronPython.Modules {
                 ) {
                     throw PythonOps.ValueError("while executing STRING, expected string that starts and ends with quotes");
                 }
-#if !SILVERLIGHT // Encoding
                 _stack.append(StringOps.decode(context, repr.Substring(1, repr.Length - 2), "string-escape", "strict"));
-#else
-                throw new NotImplementedException("SILVERLIGHT - not supported - encoding");
-#endif
             }
 
             private void LoadTuple(CodeContext/*!*/ context) {
@@ -1874,11 +1866,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadUnicode(CodeContext/*!*/ context) {
-#if !SILVERLIGHT    // Encoding
                 _stack.append(StringOps.decode(context, ReadLineNoNewline(context), "raw-unicode-escape", "strict"));
-#else
-                throw new NotImplementedException("SILVERLIGHT - not supported - encoding");
-#endif
             }
         }
 

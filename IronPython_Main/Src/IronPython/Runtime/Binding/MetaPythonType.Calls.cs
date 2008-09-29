@@ -23,6 +23,7 @@ using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
@@ -55,7 +56,7 @@ namespace IronPython.Runtime.Binding {
 
         private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, MetaObject/*!*/[]/*!*/ args, Expression/*!*/ codeContext) {
             for (int i = 0; i < args.Length; i++) {
-                if (args[i].NeedsDeferral) {
+                if (args[i].NeedsDeferral()) {
                     return call.Defer(args);
                 }
             }

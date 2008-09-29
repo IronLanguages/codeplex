@@ -79,7 +79,7 @@ namespace IronPython.Runtime.Binding {
         /// as being invokable.
         /// </summary>
         internal MetaObject/*!*/ Fallback(Expression codeContext, MetaObject/*!*/[]/*!*/ args) {
-            if (args[0].NeedsDeferral) {
+            if (args[0].NeedsDeferral()) {
                 return Defer(args);
             }
 

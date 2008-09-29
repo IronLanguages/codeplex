@@ -55,7 +55,7 @@ namespace IronPython.Runtime.Binding {
         public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {            
             MetaObject arg = args[0];
 
-            if (arg.NeedsDeferral) {
+            if (arg.NeedsDeferral()) {
                 return Defer(args);
             }
 
@@ -261,7 +261,7 @@ namespace IronPython.Runtime.Binding {
             MetaObject self = args[0];
 
             MetaObject res = null;
-            if (self.NeedsDeferral) {
+            if (self.NeedsDeferral()) {
                 res = Defer(args);
             } else {
                 if (self.HasValue) {

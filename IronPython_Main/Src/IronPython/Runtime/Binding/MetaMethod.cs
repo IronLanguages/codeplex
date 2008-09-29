@@ -12,13 +12,17 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+
 using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
@@ -45,6 +49,14 @@ namespace IronPython.Runtime.Binding {
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ callAction, params MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(callAction, args);
+        }
+
+        public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+            if (action.ToType.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(action, action.ToType, Restrict(typeof(Method)));
+            }
+
+            return base.Convert(action, args);
         }
 
         #endregion

@@ -262,9 +262,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Stloc, GotoRouter);
         }
 
-        private void EmitSetGeneratorReturnValue(Expression expr) {
+        private void EmitSetGeneratorReturnValue(Expression node) {
             EmitLambdaArgument(1);
-            EmitExpressionAsObjectOrNull(expr);
+            if (node == null) {
+                _ilg.Emit(OpCodes.Ldnull);
+            } else {
+                EmitExpressionAsObject(node);
+            }
             _ilg.Emit(OpCodes.Stind_Ref);
         }
 

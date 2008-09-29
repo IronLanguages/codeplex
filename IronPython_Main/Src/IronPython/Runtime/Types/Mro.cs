@@ -131,9 +131,9 @@ namespace IronPython.Runtime.Types {
 
                     if (!removed) {
                         // we've iterated through the list once w/o removing anything
-                        throw PythonOps.TypeError("invalid order for base classes: {0} {1}",
-                            mroList[0][0],
-                            mroList[1][0]);
+                        throw PythonOps.TypeError("invalid order for base classes: {0}, {1}",
+                            mroList[0][0].Name,
+                            mroList[1][0].Name);
                     }
                 }
             }

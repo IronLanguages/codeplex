@@ -33,275 +33,271 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // Add
                 case ExpressionType.Add:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // AddChecked
                 case ExpressionType.AddChecked:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // And
                 case ExpressionType.And:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // AndAlso
                 case ExpressionType.AndAlso:
-                    EmitAndAlsoBinaryExpression(this, node);
+                    EmitAndAlsoBinaryExpression(node);
                     break;
                 // ArrayLength
                 case ExpressionType.ArrayLength:
-                    EmitUnaryExpression(this, node);
+                    EmitUnaryExpression(node);
                     break;
                 // ArrayIndex
                 case ExpressionType.ArrayIndex:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Call
                 case ExpressionType.Call:
-                    EmitMethodCallExpression(this, node);
+                    EmitMethodCallExpression(node);
                     break;
                 // Coalesce
                 case ExpressionType.Coalesce:
-                    EmitCoalesceBinaryExpression(this, node);
+                    EmitCoalesceBinaryExpression(node);
                     break;
                 // Conditional
                 case ExpressionType.Conditional:
-                    EmitConditionalExpression(this, node);
+                    EmitConditionalExpression(node);
                     break;
                 // Constant
                 case ExpressionType.Constant:
-                    EmitConstantExpression(this, node);
+                    EmitConstantExpression(node);
                     break;
                 // Convert
                 case ExpressionType.Convert:
-                    EmitConvertUnaryExpression(this, node);
+                    EmitConvertUnaryExpression(node);
                     break;
                 // ConvertChecked
                 case ExpressionType.ConvertChecked:
-                    EmitConvertUnaryExpression(this, node);
+                    EmitConvertUnaryExpression(node);
                     break;
                 // Divide
                 case ExpressionType.Divide:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Equal
                 case ExpressionType.Equal:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // ExclusiveOr
                 case ExpressionType.ExclusiveOr:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // GreaterThan
                 case ExpressionType.GreaterThan:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // GreaterThanOrEqual
                 case ExpressionType.GreaterThanOrEqual:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Invoke
                 case ExpressionType.Invoke:
-                    EmitInvocationExpression(this, node);
+                    EmitInvocationExpression(node);
                     break;
                 // Lambda
                 case ExpressionType.Lambda:
-                    EmitLambdaExpression(this, node);
+                    EmitLambdaExpression(node);
                     break;
                 // LeftShift
                 case ExpressionType.LeftShift:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // LessThan
                 case ExpressionType.LessThan:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // LessThanOrEqual
                 case ExpressionType.LessThanOrEqual:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // ListInit
                 case ExpressionType.ListInit:
-                    EmitListInitExpression(this, node);
+                    EmitListInitExpression(node);
                     break;
                 // MemberAccess
                 case ExpressionType.MemberAccess:
-                    EmitMemberExpression(this, node);
+                    EmitMemberExpression(node);
                     break;
                 // MemberInit
                 case ExpressionType.MemberInit:
-                    EmitMemberInitExpression(this, node);
+                    EmitMemberInitExpression(node);
                     break;
                 // Modulo
                 case ExpressionType.Modulo:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Multiply
                 case ExpressionType.Multiply:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // MultiplyChecked
                 case ExpressionType.MultiplyChecked:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Negate
                 case ExpressionType.Negate:
-                    EmitUnaryExpression(this, node);
+                    EmitUnaryExpression(node);
                     break;
                 // UnaryPlus
                 case ExpressionType.UnaryPlus:
-                    EmitUnaryExpression(this, node);
+                    EmitUnaryExpression(node);
                     break;
                 // NegateChecked
                 case ExpressionType.NegateChecked:
-                    EmitUnaryExpression(this, node);
+                    EmitUnaryExpression(node);
                     break;
                 // New
                 case ExpressionType.New:
-                    EmitNewExpression(this, node);
+                    EmitNewExpression(node);
                     break;
                 // NewArrayInit
                 case ExpressionType.NewArrayInit:
-                    EmitNewArrayExpression(this, node);
+                    EmitNewArrayExpression(node);
                     break;
                 // NewArrayBounds
                 case ExpressionType.NewArrayBounds:
-                    EmitNewArrayExpression(this, node);
+                    EmitNewArrayExpression(node);
                     break;
                 // Not
                 case ExpressionType.Not:
-                    EmitUnaryExpression(this, node);
+                    EmitUnaryExpression(node);
                     break;
                 // NotEqual
                 case ExpressionType.NotEqual:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Or
                 case ExpressionType.Or:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // OrElse
                 case ExpressionType.OrElse:
-                    EmitOrElseBinaryExpression(this, node);
+                    EmitOrElseBinaryExpression(node);
                     break;
                 // Parameter
                 case ExpressionType.Parameter:
-                    EmitParameterExpression(this, node);
+                    EmitParameterExpression(node);
                     break;
                 // Power
                 case ExpressionType.Power:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Quote
                 case ExpressionType.Quote:
-                    EmitQuoteUnaryExpression(this, node);
+                    EmitQuoteUnaryExpression(node);
                     break;
                 // RightShift
                 case ExpressionType.RightShift:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // Subtract
                 case ExpressionType.Subtract:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // SubtractChecked
                 case ExpressionType.SubtractChecked:
-                    EmitBinaryExpression(this, node);
+                    EmitBinaryExpression(node);
                     break;
                 // TypeAs
                 case ExpressionType.TypeAs:
-                    EmitUnaryExpression(this, node);
+                    EmitUnaryExpression(node);
                     break;
                 // TypeIs
                 case ExpressionType.TypeIs:
-                    EmitTypeBinaryExpression(this, node);
+                    EmitTypeBinaryExpression(node);
                     break;
                 // Assign
                 case ExpressionType.Assign:
-                    EmitAssignmentExpression(this, node);
+                    EmitAssignmentExpression(node);
                     break;
                 // Block
                 case ExpressionType.Block:
-                    EmitBlock(this, node);
+                    EmitBlock(node);
                     break;
                 // BreakStatement
                 case ExpressionType.BreakStatement:
-                    EmitBreakStatement(this, node);
+                    EmitBreakStatement(node);
                     break;
                 // Generator
                 case ExpressionType.Generator:
-                    EmitLambdaExpression(this, node);
+                    EmitLambdaExpression(node);
                     break;
                 // ContinueStatement
                 case ExpressionType.ContinueStatement:
-                    EmitContinueStatement(this, node);
+                    EmitContinueStatement(node);
                     break;
                 // DoStatement
                 case ExpressionType.DoStatement:
-                    EmitDoStatement(this, node);
+                    EmitDoStatement(node);
                     break;
                 // Dynamic
                 case ExpressionType.Dynamic:
-                    EmitDynamicExpression(this, node);
+                    EmitDynamicExpression(node);
                     break;
                 // EmptyStatement
                 case ExpressionType.EmptyStatement:
-                    EmitEmptyStatement(this, node);
+                    EmitEmptyStatement(node);
                     break;
                 // Extension
                 case ExpressionType.Extension:
-                    EmitExtensionExpression(this, node);
+                    EmitExtensionExpression(node);
                     break;
                 // Index
                 case ExpressionType.Index:
-                    EmitIndexExpression(this, node);
+                    EmitIndexExpression(node);
                     break;
                 // LabeledStatement
                 case ExpressionType.LabeledStatement:
-                    EmitLabeledStatement(this, node);
+                    EmitLabeledStatement(node);
                     break;
                 // LocalScope
                 case ExpressionType.LocalScope:
-                    EmitLocalScopeExpression(this, node);
+                    EmitLocalScopeExpression(node);
                     break;
                 // LoopStatement
                 case ExpressionType.LoopStatement:
-                    EmitLoopStatement(this, node);
-                    break;
-                // OnesComplement
-                case ExpressionType.OnesComplement:
-                    EmitUnaryExpression(this, node);
+                    EmitLoopStatement(node);
                     break;
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
-                    EmitReturnStatement(this, node);
+                    EmitReturnStatement(node);
                     break;
                 // Scope
                 case ExpressionType.Scope:
-                    EmitScopeExpression(this, node);
+                    EmitScopeExpression(node);
                     break;
                 // SwitchStatement
                 case ExpressionType.SwitchStatement:
-                    EmitSwitchStatement(this, node);
+                    EmitSwitchStatement(node);
                     break;
                 // ThrowStatement
                 case ExpressionType.ThrowStatement:
-                    EmitThrowStatement(this, node);
+                    EmitThrowStatement(node);
                     break;
                 // TryStatement
                 case ExpressionType.TryStatement:
-                    EmitTryStatement(this, node);
+                    EmitTryStatement(node);
                     break;
                 // Unbox
                 case ExpressionType.Unbox:
-                    EmitUnboxUnaryExpression(this, node);
+                    EmitUnboxUnaryExpression(node);
                     break;
                 // Variable
                 case ExpressionType.Variable:
-                    EmitVariableExpression(this, node);
+                    EmitVariableExpression(node);
                     break;
                 // YieldStatement
                 case ExpressionType.YieldStatement:
-                    EmitYieldStatement(this, node);
+                    EmitYieldStatement(node);
                     break;
 
                 // *** END GENERATED CODE ***

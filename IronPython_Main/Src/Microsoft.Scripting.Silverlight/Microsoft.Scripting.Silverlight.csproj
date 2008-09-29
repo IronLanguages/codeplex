@@ -1,5 +1,21 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
   <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\silverlight.settings.targets" />
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>true</NoStdLib>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>true</DelaySign>
+  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -84,9 +100,11 @@
     </Compile>
     <Compile Include="BrowserPAL.cs" />
     <Compile Include="BrowserScriptHost.cs" />
+    <Compile Include="Configuration.cs" />
     <Compile Include="DynamicApplication.cs" />
     <Compile Include="ErrorFormatter.cs" />
     <Compile Include="ExtensionTypes.cs" />
+    <Compile Include="Package.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />

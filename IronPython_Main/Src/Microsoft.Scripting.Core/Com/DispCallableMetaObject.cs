@@ -29,13 +29,16 @@ namespace Microsoft.Scripting.Com {
         }
 
         public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
-            Expression callable = args[0].Expression;
-            Expression dispCall = Expression.Convert(callable, typeof(DispCallable));
+            var callable = args[0].Expression;
+            var dispCall = Expression.Convert(callable, typeof(DispCallable));
+            var methodDesc = Expression.Property(dispCall, typeof(DispCallable).GetProperty("ComMethodDesc"));
+            var methodRestriction = Expression.Equal(methodDesc, Expression.Constant(_callable.ComMethodDesc));
+
             return new InvokeBinder(
                 action.Arguments,
                 args,
-                Restrictions.TypeRestriction(callable, Value.GetType()),
-                Expression.Property(dispCall, typeof(DispCallable).GetProperty("ComMethodDesc")),
+                Restrictions.TypeRestriction(callable, Value.GetType()).Merge(Restrictions.ExpressionRestriction(methodRestriction)),
+                methodDesc,
                 Expression.Property(dispCall, typeof(DispCallable).GetProperty("DispatchObject")),
                 _callable.ComMethodDesc
             ).Invoke();

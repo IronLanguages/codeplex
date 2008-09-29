@@ -250,9 +250,9 @@ namespace Microsoft.Scripting.Com {
 
         private MetaObject GetMemberNames(MetaObject[] args) {
             Expression result =
-                Expression.Call(
+                Expression.Property(
                     Expression.ConvertHelper(args[0].Expression, typeof(ComObject)),
-                    typeof(ComObject).GetMethod("GetMemberNames")
+                    typeof(ComObject).GetProperty("MemberNames")
                 );
 
             return new MetaObject(
@@ -298,11 +298,10 @@ namespace Microsoft.Scripting.Com {
             ComEventDesc @event;
             if (_self.TryGetEventHandler(action.Name, out @event) && args[1].LimitType == typeof(BoundDispEvent)) {
                 // Drop the event property set.
-                MetaObject bound = args[1].Restrict(typeof(BoundDispEvent));
 
                 return new MetaObject(
                     Expression.Null(),
-                    Restrictions.Combine(args).Merge(IDispatchRestriction()).Merge(bound.Restrictions)
+                    Restrictions.Combine(args).Merge(IDispatchRestriction()).Merge(Restrictions.TypeRestriction(args[1].Expression, typeof(BoundDispEvent)))
                 );
             }
 

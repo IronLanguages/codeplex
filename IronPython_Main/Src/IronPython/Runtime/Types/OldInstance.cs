@@ -70,7 +70,7 @@ namespace IronPython.Runtime.Types {
 
         public OldInstance(CodeContext/*!*/ context, OldClass @class, PythonDictionary dict) {
             _class = @class;
-            _dict = dict;
+            _dict = dict ?? PythonDictionary.MakeSymbolDictionary();
             if (_class.HasFinalizer) {
                 // class defines finalizer, we get it automatically.
                 AddFinalizer(context);

@@ -277,7 +277,7 @@ namespace Microsoft.Scripting.Generation {
                 FileInfo toInfo = new FileInfo(toFile);
 
                 if (fi.Extension.ToLowerInvariant() == ".dll" || fi.Extension.ToLowerInvariant() == ".exe") {
-                    if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
+                    if (!File.Exists(toFile) || toInfo.CreationTime != fi.CreationTime) {
                         try {
                             File.Copy(filename, toFile, true);
                         } catch (Exception e) {

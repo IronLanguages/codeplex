@@ -80,6 +80,10 @@ namespace Microsoft.Linq.Expressions {
             }
             builder.Append(")");
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitMethodCall(this);
+        }
     }
 
     /// <summary>
@@ -491,6 +495,8 @@ namespace Microsoft.Linq.Expressions {
         }
 
         //CONFORMING
+        // Note: it's okay to not include Annotations here. This node is
+        // deprecated in favor of ArrayAccess
         public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) {
             RequiresCanRead(array, "array");
             ContractUtils.RequiresNotNull(indexes, "indexes");

@@ -223,11 +223,7 @@ def repeat_on_class(C):
     if not newStyle:
         Assert(x.find("{...}") != -1)
     else:    
-        #Codeplex bug 18312 http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18312
-        if is_cli or is_silverlight:
-            Assert(x.find("{...}") != -1)
-        else:
-            Assert(x.find("'abc': <dictproxy object at") != -1)
+        Assert(x.find("'abc': <dictproxy object at") != -1)
     del C.abc
 
     keys, values = d.keys(), d.values()
@@ -1051,4 +1047,13 @@ def test_cp15882():
             AreEqual(x, {})
             AssertError(KeyError, x.__delitem__, stuff)
             
+
+def test_comparison_operators():
+    x = {2:3}
+    y = {2:4}
+    for oper in ('__lt__', '__gt__', '__le__', '__ge__'):
+        for data in (y, None, 1, 1.0, 1L, (), [], 1j, "abc"):
+            AreEqual(getattr(x, oper)(data), NotImplemented)
+    
+
 run_test(__name__)

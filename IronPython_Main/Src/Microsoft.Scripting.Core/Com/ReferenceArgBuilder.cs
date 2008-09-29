@@ -32,30 +32,27 @@ namespace Microsoft.Scripting.Com {
         private Type _elementType;
         private VariableExpression _tmp;
 
-        internal ReferenceArgBuilder(int index, Type parameterType)
-            : base(index, parameterType) {
+        internal ReferenceArgBuilder(Type parameterType)
+            : base(parameterType) {
             Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(StrongBox<>));
             _elementType = parameterType.GetGenericArguments()[0];
         }
 
-        internal override Expression ToExpression(IList<Expression> parameters) {
+        internal override Expression Build(Expression parameter) {
             if (_tmp == null) {
                 _tmp = Expression.Variable(_elementType, "outParam");
             }
-
-            // Ideally we'd pass in Expression.ReadField(parameters[Index], "Value") but due to
-            // a bug in partial trust we can't access the generic field.
 
             // arg is boxType ? &_tmp : throw new ArgumentTypeException()
             //   IncorrectBoxType throws the exception to avoid stack imbalance issues.
             Type boxType = typeof(StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
-                Expression.TypeIs(parameters[Index], BoxType),
+                Expression.TypeIs(parameter, ParameterType),
                 Expression.Comma(
                     Expression.Assign(
                         _tmp,
                         Expression.Field(
-                            Expression.ConvertHelper(parameters[Index], boxType),
+                            Expression.ConvertHelper(parameter, boxType),
                             boxType.GetField("Value")
                         )
                     ),
@@ -63,21 +60,9 @@ namespace Microsoft.Scripting.Com {
                 ),
                 Expression.Call(
                     typeof(RuntimeOps).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
-                    Expression.ConvertHelper(parameters[Index], typeof(object))
+                    Expression.ConvertHelper(parameter, typeof(object))
                 )
             );
-        }
-
-        protected Type BoxType {
-            get {
-                return this.Type;
-            }
-        }
-
-        internal Type ElementType {
-            get {
-                return _elementType;
-            }
         }
 
         internal override VariableExpression[] TemporaryVariables {
@@ -86,21 +71,23 @@ namespace Microsoft.Scripting.Com {
             }
         }
 
+        protected Type ElementType {
+            get { return _elementType; }
+        }
+
         protected virtual Expression UpdatedValue() {
             return _tmp;
         }
 
-        internal override Expression UpdateFromReturn(IList<Expression> parameters) {
+        internal override Expression UpdateFromReturn(Expression parameter) {
             return Expression.AssignField(
-                Expression.Convert(parameters[Index], BoxType),
-                BoxType.GetField("Value"),
+                Expression.Convert(parameter, ParameterType),
+                ParameterType.GetField("Value"),
                 UpdatedValue()
             );
         }
 
-        internal override object Build(object[] args) {
-            object arg = args[Index];
-
+        internal override object Build(object arg) {
             ContractUtils.RequiresNotNull(arg, "args");
             if (arg == null) {
                 Error.FirstArgumentMustBeStrongBox();
@@ -122,8 +109,8 @@ namespace Microsoft.Scripting.Com {
             return Convert(value, _elementType);
         }
 
-        internal override void UpdateFromReturn(object callArg, object[] args) {
-            ((IStrongBox)args[Index]).Value = callArg;
+        internal override void UpdateFromReturn(object originalArg, object updatedArg) {
+            ((IStrongBox)originalArg).Value = updatedArg;
         }
     }
 }

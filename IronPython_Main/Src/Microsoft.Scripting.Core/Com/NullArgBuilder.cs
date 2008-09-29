@@ -26,11 +26,11 @@ namespace Microsoft.Scripting.Com {
     internal sealed class NullArgBuilder : ArgBuilder {
         internal NullArgBuilder() { }
 
-        internal override object Build(object[] args) {
+        internal override object Build(object arg) {
             return null;
         }
 
-        internal override Expression ToExpression(IList<Expression> parameters) {
+        internal override Expression Build(Expression parameter) {
             return Expression.Null();
         }
     }

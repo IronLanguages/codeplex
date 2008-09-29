@@ -203,6 +203,8 @@ namespace IronPython.Runtime.Binding {
                 return false;
             }
 
+            xBf = CheckAlwaysNotImplemented(xBf);
+
             BindingTarget bt;
             MetaObject binder;
             MetaObject yType = null;
@@ -214,6 +216,8 @@ namespace IronPython.Runtime.Binding {
                     res = SlotOrFunction.Empty;
                     return false;
                 }
+
+                yBf = CheckAlwaysNotImplemented(yBf);
             }
 
             if (yBf == xBf) {
@@ -293,6 +297,23 @@ namespace IronPython.Runtime.Binding {
 
             Debug.Assert(res != null);
             return true;
+        }
+
+        private static BuiltinFunction CheckAlwaysNotImplemented(BuiltinFunction xBf) {
+            if (xBf != null) {
+                bool returnsValue = false;
+                foreach (MethodBase mb in xBf.Targets) {
+                    if (CompilerHelpers.GetReturnType(mb) != typeof(NotImplementedType)) {
+                        returnsValue = true;
+                        break;
+                    }
+                }
+
+                if (!returnsValue) {
+                    xBf = null;
+                }
+            }
+            return xBf;
         }
 
         private static bool ContainsMethodSignature(IList<MethodBase/*!*/>/*!*/ existing, MethodBase/*!*/ check) {

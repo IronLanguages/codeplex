@@ -95,7 +95,7 @@ namespace Microsoft.Scripting.Actions {
                 Debug.Assert(parameters[i].Type == _lp[i + 1].Type);
                 _map[parameters[i]] = _lp[i + 1];
             }
-            return VisitNode(expression);
+            return Visit(expression);
         }
 
         private static ParameterExpression[] MakeParameters(ParameterInfo[] pis) {
@@ -108,7 +108,7 @@ namespace Microsoft.Scripting.Actions {
             return vars;
         }
 
-        protected override Expression Visit(ParameterExpression node) {
+        protected internal override Expression VisitParameter(ParameterExpression node) {
             return _map[node];
         }
     }

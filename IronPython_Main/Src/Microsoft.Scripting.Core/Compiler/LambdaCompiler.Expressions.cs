@@ -103,7 +103,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region InvocationExpression
 
         //CONFORMING
-        private static void EmitInvocationExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitInvocationExpression(Expression expr) {
             InvocationExpression node = (InvocationExpression)expr;
 
             // Note: If node.Expression is a lambda, ExpressionCompiler inlines
@@ -123,29 +123,29 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
             expr = Expression.Call(expr, expr.Type.GetMethod("Invoke"), node.Arguments);
 
-            lc.EmitExpression(expr);
+            EmitExpression(expr);
         }
 
         #endregion
 
         #region IndexExpression
 
-        private static void EmitIndexExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitIndexExpression(Expression expr) {
             var node = (IndexExpression)expr;
 
             // Emit instance, if calling an instance method
             Type objectType = null;
             if (node.Object != null) {
-                lc.EmitInstance(node.Object, objectType = node.Object.Type);
+                EmitInstance(node.Object, objectType = node.Object.Type);
             }
 
             // Emit indexes. We don't allow byref args, so no need to worry
             // about writebacks or EmitAddress
             foreach (var arg in node.Arguments) {
-                lc.EmitExpression(arg);
+                EmitExpression(arg);
             }
 
-            lc.EmitGetIndexCall(node, objectType);
+            EmitGetIndexCall(node, objectType);
         }
 
         private void EmitIndexAssignment(AssignmentExpression node, EmitAs emitAs) {
@@ -215,10 +215,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region MethodCallExpression
 
         //CONFORMING
-        private static void EmitMethodCallExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitMethodCallExpression(Expression expr) {
             MethodCallExpression node = (MethodCallExpression)expr;
 
-            lc.EmitMethodCall(node.Object, node.Method, node.Arguments);
+            EmitMethodCall(node.Object, node.Method, node.Arguments);
         }
 
         //CONFORMING
@@ -337,10 +337,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #endregion
 
         //CONFORMING
-        private static void EmitConstantExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitConstantExpression(Expression expr) {
             ConstantExpression node = (ConstantExpression)expr;
 
-            lc.EmitConstant(node.Value, node.Type);
+            EmitConstant(node.Value, node.Type);
         }
 
         //CONFORMING
@@ -376,7 +376,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private static void EmitDynamicExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitDynamicExpression(Expression expr) {
             var node = (DynamicExpression)expr;
 
             Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
@@ -386,69 +386,69 @@ namespace Microsoft.Linq.Expressions.Compiler {
             var invoke = node.DelegateType.GetMethod("Invoke");
 
             var siteVar = Expression.Variable(siteType, null);
-            lc._scope.AddLocal(lc, siteVar);
+            _scope.AddLocal(this, siteVar);
 
             // site.Target.Invoke(site, args)
-            lc.EmitConstant(site, siteType);
-            lc._ilg.Emit(OpCodes.Dup);
-            lc._scope.EmitSet(siteVar);
-            lc._ilg.Emit(OpCodes.Ldfld, siteType.GetField("Target"));
+            EmitConstant(site, siteType);
+            _ilg.Emit(OpCodes.Dup);
+            _scope.EmitSet(siteVar);
+            _ilg.Emit(OpCodes.Ldfld, siteType.GetField("Target"));
 
-            List<WriteBack> wb = lc.EmitArguments(invoke, node.Arguments.AddFirst(siteVar));
-            lc._ilg.EmitCall(invoke);
+            List<WriteBack> wb = EmitArguments(invoke, node.Arguments.AddFirst(siteVar));
+            _ilg.EmitCall(invoke);
             EmitWriteBack(wb);
         }
 
         //CONFORMING
-        private static void EmitNewExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitNewExpression(Expression expr) {
             NewExpression node = (NewExpression)expr;
 
             if (node.Constructor != null) {
-                List<WriteBack> wb = lc.EmitArguments(node.Constructor, node.Arguments);
-                lc._ilg.Emit(OpCodes.Newobj, node.Constructor);
+                List<WriteBack> wb = EmitArguments(node.Constructor, node.Arguments);
+                _ilg.Emit(OpCodes.Newobj, node.Constructor);
                 EmitWriteBack(wb);
             } else {
                 Debug.Assert(node.Arguments.Count == 0, "Node with arguments must have a constructor.");
                 Debug.Assert(node.Type.IsValueType, "Only value type may have constructor not set.");
-                LocalBuilder temp = lc._ilg.GetLocal(node.Type);
-                lc._ilg.Emit(OpCodes.Ldloca, temp);
-                lc._ilg.Emit(OpCodes.Initobj, node.Type);
-                lc._ilg.Emit(OpCodes.Ldloc, temp);
-                lc._ilg.FreeLocal(temp);
+                LocalBuilder temp = _ilg.GetLocal(node.Type);
+                _ilg.Emit(OpCodes.Ldloca, temp);
+                _ilg.Emit(OpCodes.Initobj, node.Type);
+                _ilg.Emit(OpCodes.Ldloc, temp);
+                _ilg.FreeLocal(temp);
             }
         }
 
         //CONFORMING
-        // TODO: There's plenty of room to optimize here, if we can determine
-        // the answer statically. Be careful to use CLR semantics and not C#
-        // semantics, however. The result must be identical to emitting isinst
-        private static void EmitTypeBinaryExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitTypeBinaryExpression(Expression expr) {
             TypeBinaryExpression node = (TypeBinaryExpression)expr;
 
-            lc.EmitExpression(node.Expression);
-
-            // Oddly enough, it is legal for an "is" expression to have a void-returning
-            // method call on its left hand side.  In that case, always return false
-            Type type = node.Expression.Type;
-            if (type == typeof(void)) {
-                lc._ilg.Emit(OpCodes.Ldc_I4_0);
+            // Try to determine the result statically
+            bool? result = ConstantCheck.IsInstanceOf(node);
+            if (result.HasValue) {
+                // Emit the expression for its side effects
+                EmitExpressionAsVoid(node.Expression);
+                _ilg.EmitBoolean(result.Value);
                 return;
             }
 
+            Type type = node.Expression.Type;
+            EmitExpression(node.Expression);
             if (type.IsValueType) {
-                lc._ilg.Emit(OpCodes.Box, type);
+                _ilg.Emit(OpCodes.Box, type);
             }
-            lc._ilg.Emit(OpCodes.Isinst, node.TypeOperand);
-            lc._ilg.Emit(OpCodes.Ldnull);
-            lc._ilg.Emit(OpCodes.Cgt_Un);
+            _ilg.Emit(OpCodes.Isinst, node.TypeOperand);
+            _ilg.Emit(OpCodes.Ldnull);
+            _ilg.Emit(OpCodes.Cgt_Un);
         }
 
         private void EmitVariableAssignment(AssignmentExpression node, EmitAs emitAs) {
             Expression variable = node.Expression;
 
             if (TypeUtils.IsNullableType(node.Type)) {
+                // TODO: this code is wrong, the types should have to match
+
                 // Nullable<T> being assigned...
-                if (ConstantCheck.IsConstant(node.Value, null)) {
+                if (ConstantCheck.IsNull(node.Value)) {
                     _scope.EmitAddressOf(variable);
                     _ilg.Emit(OpCodes.Initobj, node.Type);
                     if (emitAs != EmitAs.Void) {
@@ -467,8 +467,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _scope.EmitSet(variable);
         }
 
-        private static void EmitAssignmentExpression(LambdaCompiler lc, Expression expr) {
-            lc.Emit((AssignmentExpression)expr, EmitAs.Default);
+        private void EmitAssignmentExpression(Expression expr) {
+            Emit((AssignmentExpression)expr, EmitAs.Default);
         }
 
         private void Emit(AssignmentExpression node, EmitAs emitAs) {
@@ -488,26 +488,26 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private static void EmitVariableExpression(LambdaCompiler lc, Expression expr) {
-            lc._scope.EmitGet(expr);
+        private void EmitVariableExpression(Expression expr) {
+            _scope.EmitGet(expr);
         }
 
-        private static void EmitParameterExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitParameterExpression(Expression expr) {
             ParameterExpression node = (ParameterExpression)expr;
-            lc._scope.EmitGet(node);
+            _scope.EmitGet(node);
             if (node.IsByRef) {
-                lc._ilg.EmitLoadValueIndirect(node.Type);
+                _ilg.EmitLoadValueIndirect(node.Type);
             }
         }
 
-        private static void EmitLambdaExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitLambdaExpression(Expression expr) {
             LambdaExpression node = (LambdaExpression)expr;
-            lc.EmitDelegateConstruction(node, node.Type);
+            EmitDelegateConstruction(node, node.Type);
         }
 
-        private static void EmitLocalScopeExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitLocalScopeExpression(Expression expr) {
             LocalScopeExpression node = (LocalScopeExpression)expr;
-            lc._scope.EmitVariableAccess(lc, node.Variables);
+            _scope.EmitVariableAccess(this, node.Variables);
         }
 
         private void EmitMemberAssignment(AssignmentExpression node, EmitAs emitAs) {
@@ -548,16 +548,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         //CONFORMING
-        private static void EmitMemberExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitMemberExpression(Expression expr) {
             MemberExpression node = (MemberExpression)expr;
 
             // emit "this", if any
             Type instanceType = null;
             if (node.Expression != null) {
-                lc.EmitInstance(node.Expression, instanceType = node.Expression.Type);
+                EmitInstance(node.Expression, instanceType = node.Expression.Type);
             }
 
-            lc.EmitMemberGet(node.Member, instanceType);
+            EmitMemberGet(node.Member, instanceType);
         }
 
         // assumes instance is already on the stack
@@ -591,65 +591,64 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         //CONFORMING
-        private static void EmitNewArrayExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitNewArrayExpression(Expression expr) {
             NewArrayExpression node = (NewArrayExpression)expr;
 
             if (node.NodeType == ExpressionType.NewArrayInit) {
-                lc._ilg.EmitArray(
+                _ilg.EmitArray(
                     node.Type.GetElementType(),
                     node.Expressions.Count,
                     delegate(int index) {
-                        lc.EmitExpression(node.Expressions[index]);
+                        EmitExpression(node.Expressions[index]);
                     }
                 );
             } else {
                 ReadOnlyCollection<Expression> bounds = node.Expressions;
                 for (int i = 0; i < bounds.Count; i++) {
                     Expression x = bounds[i];
-                    lc.EmitExpression(x);
-                    lc._ilg.EmitConvertToType(x.Type, typeof(int), true);
+                    EmitExpression(x);
+                    _ilg.EmitConvertToType(x.Type, typeof(int), true);
                 }
-                lc._ilg.EmitArray(node.Type);
+                _ilg.EmitArray(node.Type);
             }
         }
 
-        private static void EmitScopeExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitScopeExpression(Expression expr) {
             ScopeExpression node = (ScopeExpression)expr;
 
             // If we merged the scope, just emit the body
-            if (lc._scope.MergedScopes.Count > 0) {
-                expr = lc._scope.MergedScopes.Dequeue();
+            if (_scope.MergedScopes.Count > 0) {
+                expr = _scope.MergedScopes.Dequeue();
                 Debug.Assert(node == expr);
 
-                lc.EmitExpression(node.Body);
+                EmitExpression(node.Body);
                 return;
             }
 
             // bind & push scope
-            lc._scope = VariableBinder.Bind(lc._scope, expr);
-            lc._scope.EnterScope(lc);
+            _scope = VariableBinder.Bind(_scope, expr);
+            _scope.EnterScope(this);
 
             // emit body
-            lc.EmitExpression(node.Body);
+            EmitExpression(node.Body);
 
             // pop scope
-            lc._scope = lc._scope.Parent;
+            _scope = _scope.Parent;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static void EmitExtensionExpression(LambdaCompiler lc, Expression expr) {
+        private static void EmitExtensionExpression(Expression expr) {
             throw Error.ExtensionNotReduced();
         }
 
         #region ListInit, MemberInit
 
-        private static void EmitListInitExpression(LambdaCompiler lc, Expression expr) {
-            lc.EmitListInit((ListInitExpression)expr);
+        private void EmitListInitExpression(Expression expr) {
+            EmitListInit((ListInitExpression)expr);
         }
 
-        private static void EmitMemberInitExpression(LambdaCompiler lc, Expression expr) {
-            lc.EmitMemberInit((MemberInitExpression)expr);
+        private void EmitMemberInitExpression(Expression expr) {
+            EmitMemberInit((MemberInitExpression)expr);
         }
 
         private void EmitBinding(MemberBinding binding, Type objectType) {
@@ -776,15 +775,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #region Expression helpers
 
-        private void EmitExpressionAsObjectOrNull(Expression node) {
-            if (node == null) {
-                _ilg.Emit(OpCodes.Ldnull);
-            } else {
-                EmitExpressionAsObject(node);
-            }
-        }
-
-
         //CONFORMING
         internal static void ValidateLift(IList<VariableExpression> variables, IList<Expression> arguments) {
             System.Diagnostics.Debug.Assert(variables != null);
@@ -843,7 +833,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                             _ilg.Emit(OpCodes.Ldloc, anyNull);
                             _ilg.Emit(OpCodes.Brtrue, exitNull);
                         }
-                        EmitMethodCallExpression(this, mc);
+                        EmitMethodCallExpression( mc);
                         if (TypeUtils.IsNullableType(resultType) && resultType != mc.Type) {
                             ConstructorInfo ci = resultType.GetConstructor(new Type[] { mc.Type });
                             _ilg.Emit(OpCodes.Newobj, ci);
@@ -934,7 +924,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         _ilg.Emit(OpCodes.Ldloc, anyNull);
                         _ilg.Emit(OpCodes.Brtrue, exitAnyNull);
 
-                        EmitMethodCallExpression(this, mc);
+                        EmitMethodCallExpression(mc);
                         if (TypeUtils.IsNullableType(resultType) && resultType != mc.Type) {
                             ConstructorInfo ci = resultType.GetConstructor(new Type[] { mc.Type });
                             _ilg.Emit(OpCodes.Newobj, ci);

@@ -19,6 +19,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+    // TODO: rename to BlockExpression !!!
     public sealed class Block : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
 
@@ -29,6 +30,10 @@ namespace Microsoft.Linq.Expressions {
         internal Block(Annotations annotations, ReadOnlyCollection<Expression> expressions, Type type)
             : base(ExpressionType.Block, type, annotations) {
             _expressions = expressions;
+        }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitBlock(this);
         }
     }
 

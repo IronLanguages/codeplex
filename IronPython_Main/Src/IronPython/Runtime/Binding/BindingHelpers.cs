@@ -21,6 +21,7 @@ using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Ast = Microsoft.Linq.Expressions.Expression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -132,7 +133,7 @@ namespace IronPython.Runtime.Binding {
         /// can go away as soon as all of the classes implement the full fidelity of the protocol
         /// </summary>
         internal static MetaObject/*!*/ GenericCall(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            if (args[0].NeedsDeferral) {
+            if (args[0].NeedsDeferral()) {
                 return action.Defer(args);
             }
 

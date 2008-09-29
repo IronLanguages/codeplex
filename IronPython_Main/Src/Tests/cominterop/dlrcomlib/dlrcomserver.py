@@ -73,7 +73,18 @@ def test_documentation():
         AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
     else:
         AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
-    
+
+def test_methodEquality():
+    AreEqual(com_obj.SumArgs, com_obj.SumArgs)
+    Assert(com_obj.SumArgs != com_obj.IntArguments)
+    com_obj2 = getRCWFromProgID(com_type_name)
+    Assert(com_obj.SumArgs != com_obj2.SumArgs)
+    d = {}
+    d[com_obj.SumArgs] = "SumArgs"
+    d[com_obj.IntArguments] = "IntArguments"
+    d[com_obj.SumArgs] = "SumArgs2"
+    d[com_obj2.SumArgs] = "obj2_SumArgs"
+    AreEqual(d, {com_obj.SumArgs:"SumArgs2", com_obj.IntArguments:"IntArguments", com_obj2.SumArgs:"obj2_SumArgs"})
 
 def test_namedArgs():
     # Named arguments

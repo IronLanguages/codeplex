@@ -115,8 +115,10 @@ namespace Microsoft.Scripting.Com {
         }
 
         internal MetaObject Invoke() {
-            Type[] explicitArgTypes; // will not include implicit instance argument (if any)            
-            GetArgumentNamesAndTypes(out _keywordArgNames, out explicitArgTypes);
+            _keywordArgNames = GetArgumentNames();
+            // will not include implicit instance argument (if any)
+            Type[] explicitArgTypes = _args.RemoveFirst().Map(a => a.LimitType);
+            Expression[] explicitArgExprs = _args.RemoveFirst().Map(a => a.Expression);
             _totalExplicitArgs = explicitArgTypes.Length;
 
             bool hasAmbiguousMatch = false;
@@ -126,9 +128,10 @@ namespace Microsoft.Scripting.Com {
                 hasAmbiguousMatch = true;
             }
 
-            // Add a dummy instance argument - it will not really be used
-            Type[] testTypes = explicitArgTypes.AddFirst(typeof(DispCallable));
-            FinishTestForCandidate(testTypes, explicitArgTypes);
+            // We already tested the instance, so no need to test it again
+            for (int i = 0; i < explicitArgTypes.Length; i++) {
+                _restrictions = _restrictions.Merge(Restrictions.TypeRestriction(explicitArgExprs[i], explicitArgTypes[i]));
+            }
 
             if (explicitArgTypes.Length > VariantArray.NumberOfElements ||
                 hasAmbiguousMatch ||
@@ -221,7 +224,7 @@ namespace Microsoft.Scripting.Com {
                 List<Expression> marshalStatements = variantBuilder.WriteArgumentVariant(
                     ParamVariantsVariable,
                     variantIndex,
-                    parameters);
+                    parameters[i + 1]);
                 tryStatements.AddRange(marshalStatements);
             }
 
@@ -271,8 +274,8 @@ namespace Microsoft.Scripting.Com {
             expr = Expression.Assign(ReturnValueVariable, returnValues);
             tryStatements.Add(expr);
 
-            foreach (ArgBuilder argBuilder in argBuilders) {
-                Expression updateFromReturn = argBuilder.UpdateFromReturn(parametersForUpdates);
+            for (int i = 0, n = argBuilders.Length; i < n; i++) {
+                Expression updateFromReturn = argBuilders[i].UpdateFromReturn(parametersForUpdates[i + 1]);
                 if (updateFromReturn != null) {
                     tryStatements.Add(updateFromReturn);
                 }
@@ -458,31 +461,6 @@ namespace Microsoft.Scripting.Com {
             );
         }
 
-        private Expression[] FinishTestForCandidate(IList<Type> testTypes, Type[] explicitArgTypes) {
-            Expression[] exprArgs = MakeArgumentExpressions();
-            Debug.Assert(exprArgs.Length == (explicitArgTypes.Length + ((_instance == null) ? 0 : 1)));
-            Debug.Assert(testTypes == null || exprArgs.Length == testTypes.Count);
-
-            if (explicitArgTypes.Length > 0 && testTypes != null) {
-                // We've already tested the instance, no need to test it again. So remove it before adding 
-                // rules for the arguments
-                Expression[] exprArgsWithoutInstance = exprArgs;
-                List<Type> testTypesWithoutInstance = new List<Type>(testTypes);
-                for (int i = 0; i < exprArgs.Length; i++) {
-                    if (exprArgs[i] == _instance) {
-                        // We found the instance, so remove it
-                        exprArgsWithoutInstance = exprArgs.RemoveAt(i);
-                        testTypesWithoutInstance.RemoveAt(i);
-                        break;
-                    }
-                }
-
-                _restrictions = _restrictions.Merge(MakeNecessaryRestrictions(testTypesWithoutInstance.ToArray(), exprArgsWithoutInstance));
-            }
-
-            return exprArgs;
-        }
-
         /// <summary>
         /// Gets expressions to access all the arguments. This includes the instance argument. Splat arguments are
         /// unpacked in the output. The resulting array is similar to Rule.Parameters (but also different in some ways)
@@ -499,50 +477,21 @@ namespace Microsoft.Scripting.Com {
         }
 
         /// <summary>
-        /// Gets all of the argument names and types. The instance argument is not included
+        /// Gets all of the argument names. The instance argument is not included
         /// </summary>
-        /// <param name="argNames">The names correspond to the end of argTypes.
-        /// ArgumentKind.Dictionary is unpacked in the return value.
-        /// This is set to an array of size 0 if there are no keyword arguments</param>
-        /// <param name="argTypes">Non named arguments are returned at the beginning.
-        /// ArgumentKind.List is unpacked in the return value. </param>
-        private void GetArgumentNamesAndTypes(out string[] argNames, out Type[] argTypes) {
+        private string[] GetArgumentNames() {
             // Get names of named arguments
             if (_arguments.Count == 0) {
-                argNames = new string[0];
+                return new string[0];
             } else {
-                List<string> result = new List<string>();
+                var result = new List<string>();
                 foreach (Argument arg in _arguments) {
                     if (arg.ArgumentType == ArgumentType.Named) {
                         result.Add(((NamedArgument)arg).Name);
                     }
                 }
-                argNames = result.ToArray();
+                return result.ToArray();
             }
-            argTypes = GetArgumentTypes();
-        }
-
-        private Type[] GetArgumentTypes() {
-            Type[] res = new Type[_args.Length - 1];
-            for (int i = 0; i < res.Length; i++) {
-                res[i] = _args[i + 1].LimitType;
-            }
-            return res;
-        }
-
-        private static Restrictions MakeNecessaryRestrictions(Type[] testTypes, IList<Expression> arguments) {
-            Restrictions restrictions = Restrictions.Empty;
-
-            if (testTypes != null) {
-                for (int i = 0; i < testTypes.Length; i++) {
-                    if (testTypes[i] != null) {
-                        Debug.Assert(i < arguments.Count);
-                        restrictions = restrictions.Merge(Restrictions.TypeRestriction(arguments[i], testTypes[i]));
-                    }
-                }
-            }
-
-            return restrictions;
         }
     }
 }

@@ -74,16 +74,34 @@ STDMETHODIMP CProperties::get_RefProperty(IDispatch** pVal)
 	if(pVal == NULL)
 		return E_POINTER;
 	*pVal = m_dispVal;
+    if (m_dispVal != NULL) 
+    {
+        m_dispVal->AddRef();
+    }
 	return S_OK;
 }
 
 STDMETHODIMP CProperties::putref_RefProperty(IDispatch* newVal)
-{
-	m_dispVal = *&newVal;
-	if (newVal !=NULL) 
-	{
-		newVal->AddRef();
-	}
+{    
+    // if we're setting to the same value avoid Release/AddRef which
+    // could drop to zero and then come back to life.
+    if (m_dispVal != newVal) {
+        if (newVal == this) {
+            // avoid the circular reference...
+            m_dispVal = this;
+        } else {
+            // release if we already have a value
+            if (m_dispVal != NULL && m_dispVal != this) {
+                m_dispVal->Release();
+            }
+            // install the new value
+            m_dispVal = *&newVal;
+            if (newVal !=NULL) 
+            {
+                newVal->AddRef();
+            }
+        }
+    }
 	return S_OK;
 }
 

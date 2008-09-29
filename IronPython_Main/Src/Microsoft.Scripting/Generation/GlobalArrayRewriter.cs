@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        protected override Expression Visit(LambdaExpression node) {
+        protected override Expression VisitLambda(LambdaExpression node) {
             // Only run this for the top-level lambda
             if (_array == null) {
                 _array = Expression.Variable(typeof(ModuleGlobalWrapper[]), "$globals");
@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Generation {
                 );
             }
 
-            return base.Visit(node);
+            return base.VisitLambda(node);
         }
 
         protected override Expression MakeWrapper(GlobalVariableExpression variable) {

@@ -159,13 +159,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// parent locals
         /// </summary>
         internal void EnterLambda(LambdaCompiler lc) {
-            // generators need to call the two lambda overload
+            // generators need to call the EnterGenerator methods
             Debug.Assert(Expression.NodeType == ExpressionType.Lambda);
 
             AllocateLocals(lc);
 
             if (_closureHoistedLocals != null) {
-                AddLocal(lc, _closureHoistedLocals.SelfVariable);
                 EmitClosureAccess(lc, _closureHoistedLocals);
             }
 
@@ -198,7 +197,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             // Initialize hoisted locals in outer generator
             if (_closureHoistedLocals != null) {
-                AddLocal(lc, _closureHoistedLocals.SelfVariable);
                 EmitClosureToVariable(lc, _closureHoistedLocals);
             }
             if (_hoistedLocals != null) {
@@ -272,8 +270,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// Adds a new virtual variable corresponding to an IL local
         /// </summary>
         internal void AddLocal(LambdaCompiler gen, VariableExpression variable) {
-            Debug.Assert(!_locals.ContainsKey(variable));
-            _locals.Add(variable, new LocalStorage(gen, variable));
+            if (!_locals.ContainsKey(variable)) {
+                _locals.Add(variable, new LocalStorage(gen, variable));
+            }
         }
 
         internal void EmitGet(Expression variable) {
@@ -443,6 +442,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitClosureToVariable(LambdaCompiler lc, HoistedLocals locals) {
             lc.EmitClosureArgument();
             lc.IL.Emit(OpCodes.Ldfld, typeof(Closure).GetField("Locals"));
+            AddLocal(lc, locals.SelfVariable);
             EmitSet(locals.SelfVariable);
         }
 

@@ -67,6 +67,10 @@ namespace Microsoft.Linq.Expressions {
             }
             builder.Append(")");
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitNew(this);
+        }
     }
 
     /// <summary>
@@ -85,22 +89,30 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments) {
+            return New(constructor, null, arguments);
+        }
+
+        public static NewExpression New(ConstructorInfo constructor, Annotations annotations, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ContractUtils.RequiresNotNull(constructor.DeclaringType, "constructor.DeclaringType");
             TypeUtils.ValidateType(constructor.DeclaringType);
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateArgumentTypes(constructor, ExpressionType.New, ref argList);
 
-            return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, null);
+            return new NewExpression(annotations, constructor.DeclaringType, constructor, argList, null);
         }
 
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, IEnumerable<MemberInfo> members) {
+            return New(constructor, arguments, null, members);
+        }
+
+        public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, Annotations annotations, IEnumerable<MemberInfo> members) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ReadOnlyCollection<MemberInfo> memberList = members.ToReadOnly();
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor, ref argList, ref memberList);
-            return new NewExpression(Annotations.Empty, constructor.DeclaringType, constructor, argList, memberList);
+            return new NewExpression(annotations, constructor.DeclaringType, constructor, argList, memberList);
         }
 
         //CONFORMING

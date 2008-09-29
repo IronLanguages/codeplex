@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.Com {
             _variantBuilders = new VariantBuilder[explicitArgTypes.Length];
 
             for (int i = 0; i < explicitArgTypes.Length; i++) {
-                _variantBuilders[i] = GetVariantBuilder(i, explicitArgTypes[i]);
+                _variantBuilders[i] = GetVariantBuilder(explicitArgTypes[i]);
             }
 
             _returnBuilder = new ReturnBuilder(returnType);
@@ -136,7 +136,7 @@ namespace Microsoft.Scripting.Com {
         /// <summary>
         /// Gets the arguments ready for marshaling to COM
         /// </summary>
-        internal object[] BuildArguments(object[] args, out ParameterModifier parameterModifiers) {
+        internal object[] BuildArguments(object[] explicitArgs, out ParameterModifier parameterModifiers) {
             object[] convertedArguments = new object[_variantBuilders.Length];
             if (_variantBuilders.Length != 0) {
                 parameterModifiers = new ParameterModifier(_variantBuilders.Length);
@@ -145,7 +145,7 @@ namespace Microsoft.Scripting.Com {
             }
 
             for (int i = 0; i < _variantBuilders.Length; i++) {
-                convertedArguments[i] = _variantBuilders[i].Build(args);
+                convertedArguments[i] = _variantBuilders[i].Build(explicitArgs[i]);
                 parameterModifiers[i] = _variantBuilders[i].IsByRef;
             }
 
@@ -406,41 +406,32 @@ namespace Microsoft.Scripting.Com {
         /// <summary>
         /// Get the COM Variant type that argument should be marshaled as for a call to COM
         /// </summary>
-        private VarEnum GetComType(int argIndex, Type argumentType, out ArgBuilder argBuilder) {
+        private VariantBuilder GetVariantBuilder(Type argumentType) {
             if (argumentType == None.Type) {
-                argBuilder = new NullArgBuilder();
-                return VarEnum.VT_EMPTY;
+                return new VariantBuilder(VarEnum.VT_EMPTY, new NullArgBuilder());
             }
 
             if (argumentType == typeof(DBNull)) {
-                argBuilder = new NullArgBuilder();
-                return VarEnum.VT_NULL;
+                return new VariantBuilder(VarEnum.VT_NULL, new NullArgBuilder());
             }
 
             if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
                 Type elementType = argumentType.GetGenericArguments()[0];
                 VarEnum elementVarEnum = GetComType(elementType);
+                ArgBuilder argBuilder;
                 if (elementType == typeof(string)) {
-                    argBuilder = new ComReferenceArgBuilder(argIndex, argumentType);
+                    argBuilder = new StringReferenceArgBuilder(argumentType);
                 } else {
                     if (!Variant.HasCommonLayout(elementVarEnum)) {
                         _isSupportedByFastPath = false;
                     }
-                    argBuilder = new ReferenceArgBuilder(argIndex, argumentType);
+                    argBuilder = new ReferenceArgBuilder(argumentType);
                 }
-                return (elementVarEnum | VarEnum.VT_BYREF);
+                return new VariantBuilder(elementVarEnum | VarEnum.VT_BYREF, argBuilder);
             }
 
             VarEnum varEnum = GetComType(argumentType);
-            argBuilder = new SimpleArgBuilder(argIndex, GetManagedMarshalType(varEnum));
-            return varEnum;
-        }
-
-        private VariantBuilder GetVariantBuilder(int explicitArgIndex, Type argumentType) {
-            ArgBuilder argBuilder;
-            VarEnum varEnum = GetComType(explicitArgIndex + 1, argumentType, out argBuilder); // + 1 for the IDispatch instance argument
-            VariantBuilder variantBuilder = new VariantBuilder(varEnum, argBuilder);
-            return variantBuilder;
+            return new VariantBuilder(varEnum, new SimpleArgBuilder(GetManagedMarshalType(varEnum)));
         }
     }
 }

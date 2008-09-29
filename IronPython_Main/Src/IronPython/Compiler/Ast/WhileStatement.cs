@@ -58,6 +58,7 @@ namespace IronPython.Compiler.Ast {
             // The "else" clause is outside
             MSAst.Expression body;
             bool inFinally;
+            ag.DisableInterpreter = true;
             MSAst.LabelTarget label = ag.EnterLoop(out inFinally);
             try {
                 body = ag.Transform(_body);

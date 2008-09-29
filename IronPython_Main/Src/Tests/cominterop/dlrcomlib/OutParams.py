@@ -18,7 +18,7 @@ from lib.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
 from lib.cominterop_util import *
 from System import *
-from System.Runtime.InteropServices import COMException, DispatchWrapper, UnknownWrapper
+from System.Runtime.InteropServices import COMException, DispatchWrapper, UnknownWrapper, CurrencyWrapper
 from clr import StrongBox
 
 com_type_name = "DlrComLibrary.OutParams"
@@ -100,8 +100,10 @@ def test_sanity():
     AreEqual(strongVar.Value, com_obj)    
     
     #Complex Types
-    if not preferComDispatch: #Merlin 386401
-	    AreEqual(callMethodWithStrongBox(com_obj.mCy, Decimal(0), Decimal), 0)    
+    strongVar = StrongBox[object](CurrencyWrapper(444))
+    com_obj.mCy(CurrencyWrapper(123), strongVar)
+    AreEqual(strongVar.Value, 123)    
+    
     now = DateTime.Now
     AreEqual(str(callMethodWithStrongBox(com_obj.mDate, now, DateTime)), str(now))        
         

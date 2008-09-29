@@ -110,6 +110,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+        // TODO: remove !!!
         private void AddressOf(AssignmentExpression node) {
             ContractUtils.Requires(node.Expression is VariableExpression || node.Expression is ParameterExpression, "node");
 
@@ -138,6 +139,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+        // TODO: remove !!!
         private void AddressOf(ConditionalExpression node, Type type) {
             Label eoi = _ilg.DefineLabel();
             Label next = _ilg.DefineLabel();
@@ -150,6 +152,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.MarkLabel(eoi);
         }
 
+        // TODO: remove !!!
         private void AddressOf(Block node, Type type) {
             ReadOnlyCollection<Expression> expressions = node.Expressions;
 

@@ -3448,8 +3448,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception TypeErrorForUnIndexableObject(object o) {
+            IPythonObject ipo;
             if (o == null) {
                 return PythonOps.TypeError("'NoneType' object cannot be interpreted as an index");
+            } else if ((ipo = o as IPythonObject) != null) {
+                return TypeError("'{0}' object cannot be interpreted as an index", ipo.PythonType.Name);
             }
 
             return TypeError("object cannot be interpreted as an index");
