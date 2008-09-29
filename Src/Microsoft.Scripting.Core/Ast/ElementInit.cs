@@ -66,6 +66,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(addMethod, "addMethod");
+            ContractUtils.RequiresNotNull(arguments, "arguments");
             RequiresCanRead(arguments, "arguments");
             ValidateElementInitAddMethodInfo(addMethod);
             ReadOnlyCollection<Expression> argumentsRO = arguments.ToReadOnly();

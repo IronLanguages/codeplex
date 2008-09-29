@@ -20,8 +20,8 @@ using System.Reflection.Emit;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
-        private static void EmitBlock(LambdaCompiler lc, Expression expr) {
-            lc.Emit((Block)expr, EmitAs.Default);
+        private void EmitBlock(Expression expr) {
+            Emit((Block)expr, EmitAs.Default);
         }
 
         private void Emit(Block node, EmitAs emitAs) {
@@ -40,121 +40,117 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private static void EmitBreakStatement(LambdaCompiler lc, Expression expr) {
-            lc.CheckAndPushTargets(((BreakStatement)expr).Target);
-            lc.EmitBreak();
-            lc.PopTargets();
+        private void EmitBreakStatement(Expression expr) {
+            CheckAndPushTargets(((BreakStatement)expr).Target);
+            EmitBreak();
+            PopTargets();
         }
 
-        private static void EmitContinueStatement(LambdaCompiler lc, Expression expr) {
-            lc.CheckAndPushTargets(((ContinueStatement)expr).Target);
-            lc.EmitContinue();
-            lc.PopTargets();
+        private void EmitContinueStatement(Expression expr) {
+            CheckAndPushTargets(((ContinueStatement)expr).Target);
+            EmitContinue();
+            PopTargets();
         }
 
-        private static void EmitDoStatement(LambdaCompiler lc, Expression expr) {
+        private void EmitDoStatement(Expression expr) {
             DoStatement node = (DoStatement)expr;
 
-            Label startTarget = lc._ilg.DefineLabel();
-            Label breakTarget = lc._ilg.DefineLabel();
-            Label continueTarget = lc._ilg.DefineLabel();
+            Label startTarget = _ilg.DefineLabel();
+            Label breakTarget = _ilg.DefineLabel();
+            Label continueTarget = _ilg.DefineLabel();
 
-            lc._ilg.MarkLabel(startTarget);
+            _ilg.MarkLabel(startTarget);
             if (node.Label != null) {
-                lc.PushTargets(breakTarget, continueTarget, node.Label);
+                PushTargets(breakTarget, continueTarget, node.Label);
             }
 
-            lc.EmitExpressionAsVoid(node.Body);
+            EmitExpressionAsVoid(node.Body);
 
-            lc._ilg.MarkLabel(continueTarget);
+            _ilg.MarkLabel(continueTarget);
 
-            lc.EmitExpression(node.Test);
-
-            lc._ilg.Emit(OpCodes.Brtrue, startTarget);
+            EmitExpressionAndBranch(true, node.Test, startTarget);
 
             if (node.Label != null) {
-                lc.PopTargets();
+                PopTargets();
             }
-            lc._ilg.MarkLabel(breakTarget);
+            _ilg.MarkLabel(breakTarget);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lc")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static void EmitEmptyStatement(LambdaCompiler lc, Expression expr) {
+        private static void EmitEmptyStatement(Expression expr) {
         }
 
-        private static void EmitLabeledStatement(LambdaCompiler lc, Expression expr) {
+        private void EmitLabeledStatement(Expression expr) {
             LabeledStatement node = (LabeledStatement)expr;
             Debug.Assert(node.Statement != null && node.Label != null);
 
-            Label label = lc._ilg.DefineLabel();
-            lc.PushTargets(label, label, node.Label);
+            Label label = _ilg.DefineLabel();
+            PushTargets(label, label, node.Label);
 
-            lc.EmitExpressionAsVoid(node.Statement);
+            EmitExpressionAsVoid(node.Statement);
 
-            lc._ilg.MarkLabel(label);
-            lc.PopTargets();
+            _ilg.MarkLabel(label);
+            PopTargets();
         }
 
-        private static void EmitLoopStatement (LambdaCompiler lc, Expression expr) {
+        private void EmitLoopStatement (Expression expr) {
             LoopStatement node = (LoopStatement)expr;
             Label? firstTime = null;
-            Label eol = lc._ilg.DefineLabel();
-            Label breakTarget = lc._ilg.DefineLabel();
-            Label continueTarget = lc._ilg.DefineLabel();
+            Label eol = _ilg.DefineLabel();
+            Label breakTarget = _ilg.DefineLabel();
+            Label continueTarget = _ilg.DefineLabel();
 
             if (node.Increment != null) {
-                firstTime = lc._ilg.DefineLabel();
-                lc._ilg.Emit(OpCodes.Br, firstTime.Value);
+                firstTime = _ilg.DefineLabel();
+                _ilg.Emit(OpCodes.Br, firstTime.Value);
             }
 
-            lc._ilg.MarkLabel(continueTarget);
+            _ilg.MarkLabel(continueTarget);
 
             if (node.Increment != null) {
-                lc.EmitExpressionAsVoid(node.Increment);
-                lc._ilg.MarkLabel(firstTime.Value);
+                EmitExpressionAsVoid(node.Increment);
+                _ilg.MarkLabel(firstTime.Value);
             }
 
             if (node.Test != null) {
-                lc.EmitExpression(node.Test);
-                lc._ilg.Emit(OpCodes.Brfalse, eol);
+                EmitExpressionAndBranch(false, node.Test, eol);
             }
 
             if (node.Label != null) {
-                lc.PushTargets(breakTarget, continueTarget, node.Label);
+                PushTargets(breakTarget, continueTarget, node.Label);
             }
 
-            lc.EmitExpressionAsVoid(node.Body);
+            EmitExpressionAsVoid(node.Body);
 
-            lc._ilg.Emit(OpCodes.Br, continueTarget);
+            _ilg.Emit(OpCodes.Br, continueTarget);
 
             if (node.Label != null) {
-                lc.PopTargets();
+                PopTargets();
             }
 
-            lc._ilg.MarkLabel(eol);
+            _ilg.MarkLabel(eol);
             if (node.ElseStatement != null) {
-                lc.EmitExpressionAsVoid(node.ElseStatement);
+                EmitExpressionAsVoid(node.ElseStatement);
             }
-            lc._ilg.MarkLabel(breakTarget);
+            _ilg.MarkLabel(breakTarget);
         }
 
-        private static void EmitReturnStatement(LambdaCompiler lc, Expression expr) {
-            lc.EmitReturn(((ReturnStatement)expr).Expression);
+        private void EmitReturnStatement(Expression expr) {
+            EmitReturn(((ReturnStatement)expr).Expression);
         }
 
         #region SwitchStatement
 
-        private static void EmitSwitchStatement(LambdaCompiler lc, Expression expr) {
+        private void EmitSwitchStatement(Expression expr) {
             SwitchStatement node = (SwitchStatement)expr;
 
-            Label breakTarget = lc._ilg.DefineLabel();
+            Label breakTarget = _ilg.DefineLabel();
             Label defaultTarget = breakTarget;
             Label[] labels = new Label[node.Cases.Count];
 
             // Create all labels
             for (int i = 0; i < node.Cases.Count; i++) {
-                labels[i] = lc._ilg.DefineLabel();
+                labels[i] = _ilg.DefineLabel();
 
                 // Default case.
                 if (node.Cases[i].IsDefault) {
@@ -164,35 +160,35 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // Emit the test value
-            lc.EmitExpression(node.TestValue);
+            EmitExpression(node.TestValue);
 
             // Check if jmp table can be emitted
-            if (!lc.TryEmitJumpTable(node, labels, defaultTarget)) {
+            if (!TryEmitJumpTable(node, labels, defaultTarget)) {
                 // There might be scenario(s) where the jmp table is not emitted
                 // Emit the switch as conditional branches then
-                lc.EmitConditionalBranches(node, labels);
+                EmitConditionalBranches(node, labels);
             }
 
             // If "default" present, execute default code, else exit the switch            
-            lc._ilg.Emit(OpCodes.Br, defaultTarget);
+            _ilg.Emit(OpCodes.Br, defaultTarget);
 
             if (node.Label != null) {
-                lc.PushTargets(breakTarget, lc.BlockContinueLabel, node.Label);
+                PushTargets(breakTarget, BlockContinueLabel, node.Label);
             }
 
             // Emit the bodies
             for (int i = 0; i < node.Cases.Count; i++) {
                 // First put the corresponding labels
-                lc._ilg.MarkLabel(labels[i]);
+                _ilg.MarkLabel(labels[i]);
                 // And then emit the Body!!
-                lc.EmitExpressionAsVoid(node.Cases[i].Body);
+                EmitExpressionAsVoid(node.Cases[i].Body);
             }
 
             if (node.Label != null) {
-                lc.PopTargets();
+                PopTargets();
             }
 
-            lc._ilg.MarkLabel(breakTarget);
+            _ilg.MarkLabel(breakTarget);
         }
 
         private const int MaxJumpTableSize = 65536;
@@ -272,19 +268,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #endregion
 
-        private static void EmitThrowStatement(LambdaCompiler lc, Expression expr) {
+        private void EmitThrowStatement(Expression expr) {
             ThrowStatement node = (ThrowStatement)expr;
             if (node.Value == null) {
-                lc._ilg.Emit(OpCodes.Rethrow);
+                _ilg.Emit(OpCodes.Rethrow);
             } else {
-                lc.EmitExpression(node.Value);
-                lc._ilg.Emit(OpCodes.Throw);
+                EmitExpression(node.Value);
+                _ilg.Emit(OpCodes.Throw);
             }
         }
 
         #region TryStatement
 
-        private static void EmitTryStatement(LambdaCompiler lc, Expression expr) {
+        private void EmitTryStatement(Expression expr) {
             TryStatement node = (TryStatement)expr;
 
             // Codegen is affected by presence/absence of loop control statements
@@ -293,13 +289,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             // This will return null if we are not in a generator
             // or if the try statement is unaffected by yields
-            TryStatementInfo tsi = lc.GetTsi(node);
+            TryStatementInfo tsi = GetTsi(node);
 
             // If there's a yield anywhere, go for a complex codegen
             if (tsi != null && (YieldInBlock(tsi.TryYields) || tsi.YieldInCatch || YieldInBlock(tsi.FinallyYields))) {
-                lc.EmitGeneratorTry(tsi, node, flow);
+                EmitGeneratorTry(tsi, node, flow);
             } else {
-                lc.EmitSimpleTry(node, flow);
+                EmitSimpleTry(node, flow);
             }
         }
 
@@ -796,8 +792,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                     // filters aren't supported in dynamic methods so instead
                     // emit the filter as if check, if (!expr) rethrow
-                    EmitExpression(cb.Filter);
-                    _ilg.Emit(OpCodes.Brtrue, catchBlock);
+                    EmitExpressionAndBranch(true, cb.Filter, catchBlock);
 
                     _ilg.Emit(OpCodes.Rethrow);
                     _ilg.MarkLabel(catchBlock);
@@ -809,9 +804,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #endregion
 
-        private static void EmitYieldStatement(LambdaCompiler lc, Expression expr) {
+        private void EmitYieldStatement(Expression expr) {
             YieldStatement node = (YieldStatement)expr;
-            lc.EmitYield(node.Expression, lc.GetYieldTarget(node));
+            EmitYield(node.Expression, GetYieldTarget(node));
         }
     }
 }

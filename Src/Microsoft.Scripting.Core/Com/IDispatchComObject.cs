@@ -280,7 +280,7 @@ namespace Microsoft.Scripting.Com {
 
         [Obsolete("Call from generated code only", true)]
         public void SetAttr(string name, object value) {
-            typeof(IDispatchForReflection).InvokeMember(
+            Obj.GetType().InvokeMember(
                 name,
                 System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance,
                 Type.DefaultBinder,

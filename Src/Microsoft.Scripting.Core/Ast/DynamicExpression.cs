@@ -69,6 +69,10 @@ namespace Microsoft.Linq.Expressions {
         public StandardAction StandardAction {
             get { return _binder as StandardAction; }
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitDynamic(this);
+        }
     }
 
     public partial class Expression {

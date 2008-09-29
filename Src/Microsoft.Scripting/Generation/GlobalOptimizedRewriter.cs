@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Generation {
             return Expression.ConvertHelper(
                 Expression.Assign(
                     MapToExpression(lvalue),
-                    Expression.ConvertHelper(VisitNode(node.Value), typeof(object)),
+                    Expression.ConvertHelper(Visit(node.Value), typeof(object)),
                     node.Annotations
                 ),
                 node.Type

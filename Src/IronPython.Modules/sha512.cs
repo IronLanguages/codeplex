@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Runtime;
 using System.Security.Cryptography;
-using System.Text;
+
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime;
-using IronPython.Runtime.Operations;
 
 //!!! This is pretty inefficient. We should probably use hasher.TransformBlock instead of
 //!!! hanging onto all of the bytes.
@@ -113,45 +113,6 @@ namespace IronPython.Modules {
             public const int digestsize = 64;
             public const string name = "SHA512";
         }        
-    }
-
-    public class HashBase {
-        internal HashAlgorithm _hasher;
-        internal byte[] _bytes;
-        private byte[] _hash;
-
-        internal HashBase(HashAlgorithm hasher) {
-            _hasher = hasher;
-        }
-
-        internal void update(byte[] newBytes) {
-            byte[] updatedBytes = new byte[_bytes.Length + newBytes.Length];
-            Array.Copy(_bytes, updatedBytes, _bytes.Length);
-            Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
-            _bytes = updatedBytes;
-            _hash = _hasher.ComputeHash(_bytes);
-        }
-
-        [Documentation("update(string) -> None (update digest with string data)")]
-        public void update(object newData) {
-            update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
-        }
-
-
-        [Documentation("digest() -> int (current digest value)")]
-        public string digest() {
-            return StringOps.FromByteArray(_hash);
-        }
-
-        [Documentation("hexdigest() -> string (current digest as hex digits)")]
-        public string hexdigest() {
-            StringBuilder result = new StringBuilder(2 * _hash.Length);
-            for (int i = 0; i < _hash.Length; i++) {
-                result.Append(_hash[i].ToString("x2"));
-            }
-            return result.ToString();
-        }
-    }
-
+    }   
 }
 #endif

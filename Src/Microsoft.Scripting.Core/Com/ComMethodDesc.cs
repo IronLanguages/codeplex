@@ -25,8 +25,6 @@ namespace Microsoft.Scripting.Com {
 
     // TODO: Can it be made internal?
     public class ComMethodDesc {
-    
-        # region private fields
 
         private readonly bool _hasTypeInfo;
         private readonly int _memid;  // this is the member id extracted from FUNCDESC.memid
@@ -34,10 +32,6 @@ namespace Microsoft.Scripting.Com {
         internal readonly INVOKEKIND InvokeKind;
         private readonly ComParamDesc _returnValue;
         private readonly ComParamDesc[] _parameters;
-
-        # endregion
-
-        # region ctor
 
         private ComMethodDesc(int dispId) {
             _memid = dispId;
@@ -86,10 +80,6 @@ namespace Microsoft.Scripting.Com {
                 offset += Marshal.SizeOf(typeof(ELEMDESC));
             }
         }
-
-        # endregion
-
-        # region properties
 
         internal bool HasTypeInfo {
             get {
@@ -184,15 +174,9 @@ namespace Microsoft.Scripting.Com {
             }
         }
 
-        # endregion
-
-        #region Public methods
-
         public override string ToString() {
             return Signature;
         }
-
-        #endregion
     }
 }
 

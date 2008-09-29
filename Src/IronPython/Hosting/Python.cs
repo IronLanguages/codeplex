@@ -172,7 +172,7 @@ namespace IronPython.Hosting {
         public static ScriptScope/*!*/ GetClrModule(this ScriptRuntime/*!*/ runtime) {
             ContractUtils.RequiresNotNull(runtime, "runtime");
 
-            return GetBuiltinModule(GetEngine(runtime));
+            return GetClrModule(GetEngine(runtime));
         }
 
         /// <summary>

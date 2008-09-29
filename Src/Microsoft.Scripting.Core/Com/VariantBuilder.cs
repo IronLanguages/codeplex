@@ -22,8 +22,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.Com {
-    
-    using Ast = Microsoft.Linq.Expressions.Expression;
 
     /// <summary>
     /// VariantBuilder handles packaging of arguments into a Variant for a call to IDispatch.Invoke
@@ -50,18 +48,19 @@ namespace Microsoft.Scripting.Com {
         internal List<Expression> WriteArgumentVariant(
             VariableExpression paramVariants, 
             int variantIndex,
-            IList<Expression> parameters) {
+            Expression parameter)
+        {
             List<Expression> exprs = new List<Expression>();
             Expression expr;
 
             _variantIndex = variantIndex;
             FieldInfo variantArrayField = VariantArray.GetField(variantIndex);
 
-            Expression argument = _builder.ToExpression(parameters);
+            Expression argument = _builder.Build(parameter);
             if (IsByRef) {
                 // paramVariants._elementN.SetAsByrefT(ref argument)
-                expr = Ast.Call(
-                    Ast.Field(
+                expr = Expression.Call(
+                    Expression.Field(
                         paramVariants,
                         variantArrayField),
                     Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
@@ -75,8 +74,8 @@ namespace Microsoft.Scripting.Com {
                 (_targetComType == VarEnum.VT_UNKNOWN) ||
                 (_targetComType == VarEnum.VT_DISPATCH)) {
                 // paramVariants._elementN.AsT = (cast)argN
-                expr = Ast.AssignProperty(
-                    Ast.Field(
+                expr = Expression.AssignProperty(
+                    Expression.Field(
                         paramVariants,
                         variantArrayField),
                     Variant.GetAccessor(_targetComType),
@@ -93,8 +92,8 @@ namespace Microsoft.Scripting.Com {
                 case VarEnum.VT_NULL:
                     // paramVariants._elementN.SetAsNull();
 
-                    expr = Ast.Call(
-                        Ast.Field(
+                    expr = Expression.Call(
+                        Expression.Field(
                             paramVariants,
                             variantArrayField),
                         typeof(Variant).GetMethod("SetAsNull")
@@ -113,7 +112,7 @@ namespace Microsoft.Scripting.Com {
             Expression expr;
 
             if (IsByRef) {
-                ComReferenceArgBuilder comReferenceArgBuilder = _builder as ComReferenceArgBuilder;
+                StringReferenceArgBuilder comReferenceArgBuilder = _builder as StringReferenceArgBuilder;
                 if (comReferenceArgBuilder != null) {
                     return comReferenceArgBuilder.Clear();
                 }
@@ -131,8 +130,8 @@ namespace Microsoft.Scripting.Com {
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
                     // paramVariants._elementN.Clear()
-                    expr = Ast.Call(
-                        Ast.Field(
+                    expr = Expression.Call(
+                        Expression.Field(
                             paramVariants,
                             variantArrayField),
                         typeof(Variant).GetMethod("Clear")
@@ -149,8 +148,8 @@ namespace Microsoft.Scripting.Com {
             }
         }
 
-        internal object Build(object[] args) {
-            object result = _builder.Build(args);
+        internal object Build(object arg) {
+            object result = _builder.Build(arg);
             if (_targetComType == VarEnum.VT_DISPATCH) {
                 // Ensure that the object supports IDispatch to match how WriteArgumentVariant would work
                 // (it would call the Variant.AsDispatch setter). Otherwise, Type.InvokeMember might decide

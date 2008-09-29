@@ -232,18 +232,16 @@ namespace Microsoft.Scripting.Com {
 
         private static void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
             VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
-            object[] allArgs = explicitArgs.AddFirst(null);
             for (int i = 0; i < variantBuilders.Length; i++) {
-                variantBuilders[i].ArgBuilder.UpdateFromReturn(argsForCall[i], allArgs);
+                variantBuilders[i].ArgBuilder.UpdateFromReturn(explicitArgs[i], argsForCall[i]);
             }
         }
 
         public static object UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs) {
             try {
                 VarEnumSelector varEnumSelector = new VarEnumSelector(typeof(object), explicitArgs);
-                object[] allArgs = explicitArgs.AddFirst(null);
                 ParameterModifier parameterModifiers;
-                object[] argsForCall = varEnumSelector.BuildArguments(allArgs, out parameterModifiers);
+                object[] argsForCall = varEnumSelector.BuildArguments(explicitArgs, out parameterModifiers);
 
                 BindingFlags bindingFlags = BindingFlags.Instance;
                 if (method.IsPropertyGet) {

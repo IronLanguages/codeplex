@@ -80,8 +80,7 @@ def test_python_keyword_syntax():
     AreEqual(strongObject.Value, "a")
     #test types with the keyword syntax
     
-    #disabled due to bug no. 370996
-    #AreEqual(com_obj.mOptionalStringParam(a="a"), "a")
+    AreEqual(com_obj.mOptionalStringParam(a="a"), "a")
     AreEqual(com_obj.mOptionalIntParam(a=3), 3)
     
 def test_optional_kwargs():

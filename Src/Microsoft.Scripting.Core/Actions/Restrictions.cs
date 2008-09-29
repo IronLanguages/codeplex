@@ -175,7 +175,7 @@ namespace Microsoft.Scripting.Actions {
             return res;
         }
 
-        internal Expression CreateTest() {
+        public Expression CreateTest() {
             // TODO: Currently totally unoptimized and unordered
             Expression test = null;
             foreach (Restriction r in _restrictions) {

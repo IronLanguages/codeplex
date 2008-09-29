@@ -58,6 +58,9 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitNewArray(this);
+        }
     }
 
     /// <summary>

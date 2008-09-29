@@ -1,5 +1,36 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
   <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\..\..\..\Merlin\Main\silverlight.settings.targets" />
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>
+    <DocumentationFile>..\..\Bin\DelaySigned Release\Microsoft.Scripting.Core.xml</DocumentationFile>
+    <DefineConstants>TRACE;SIGNED;MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+    <BaseAddress>1929379840</BaseAddress>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">
+    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DocumentationFile>..\..\Bin\DelaySigned Silverlight Release\Microsoft.Scripting.Core.xml</DocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>1591,618</NoWarn>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>true</DelaySign>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
+  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -109,6 +140,9 @@
     <Compile Include="Actions\CallSite.cs" />
     <Compile Include="Actions\CallSiteBinder.cs" />
     <Compile Include="Actions\ConvertAction.cs" />
+    <Compile Include="Actions\Dynamic.cs" />
+    <Compile Include="Actions\ExpandoObject.cs" />
+    <Compile Include="Actions\ExpandoClass.cs" />
     <Compile Include="Actions\MatchCaller.Generated.cs" />
     <Compile Include="Actions\CreateAction.cs" />
     <Compile Include="Actions\DeferMetaObject.cs" />
@@ -127,7 +161,6 @@
     <Compile Include="Actions\MetaObject.cs" />
     <Compile Include="Actions\OperationAction.cs" />
     <Compile Include="Actions\ParameterMetaObject.cs" />
-    <Compile Include="Actions\RestrictedMetaObject.cs" />
     <Compile Include="Actions\Restrictions.cs" />
     <Compile Include="Actions\Rule.cs" />
     <Compile Include="Actions\RuleCache.cs" />
@@ -214,7 +247,7 @@
     <Compile Include="Com\ComObject.cs" />
     <Compile Include="Com\ComObjectWithTypeInfo.cs" />
     <Compile Include="Com\ComParamDesc.cs" />
-    <Compile Include="Com\ComReferenceArgBuilder.cs" />
+    <Compile Include="Com\StringReferenceArgBuilder.cs" />
     <Compile Include="Com\ComRuntimeHelpers.cs" />
     <Compile Include="Com\ComType.cs" />
     <Compile Include="Com\ComTypeClassDesc.cs" />
@@ -235,7 +268,6 @@
     <Compile Include="Com\IDispatchMetaObject.cs" />
     <Compile Include="Com\IDispatchObject.cs" />
     <Compile Include="Com\InvokeBinder.cs" />
-    <Compile Include="Com\MetaUnwrappedComObject.cs" />
     <Compile Include="Com\NullArgBuilder.cs" />
     <Compile Include="Com\ReferenceArgBuilder.cs" />
     <Compile Include="Com\ReturnBuilder.cs" />
@@ -254,7 +286,6 @@
     <Compile Include="Compiler\CompilerScope.cs" />
     <Compile Include="Compiler\ConstantCheck.cs" />
     <Compile Include="Compiler\ExpressionQuoter.cs" />
-    <Compile Include="Ast\ExpressionTreeVisitor.Generated.cs" />
     <Compile Include="Ast\ExpressionTreeVisitor.cs" />
     <Compile Include="Ast\ExpressionWriter.cs" />
     <Compile Include="Compiler\GeneratorInfo.cs" />

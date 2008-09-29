@@ -239,7 +239,15 @@ def test_unicode_internal_encode():
     # takes one or two parameters, not zero or three
     AssertError(TypeError, codecs.unicode_internal_encode)
     AssertError(TypeError, codecs.unicode_internal_encode, 'abc', 'def', 'qrt')
-    AreEqual(codecs.unicode_internal_encode('abc'), ('abc', 3))
+    AreEqual(codecs.unicode_internal_encode(u'abc'), ('a\x00b\x00c\x00', 6))
+
+def test_unicode_internal_decode():
+    '''
+    '''
+    # takes one or two parameters, not zero or three
+    AssertError(TypeError, codecs.unicode_internal_decode)
+    AssertError(TypeError, codecs.unicode_internal_decode, 'abc', 'def', 'qrt')
+    AreEqual(codecs.unicode_internal_decode('ab'), (u'\u6261', 2))
 
 @skip('silverlight')
 def test_utf_16_be_decode():

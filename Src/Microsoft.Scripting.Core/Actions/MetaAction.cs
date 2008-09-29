@@ -42,17 +42,7 @@ namespace Microsoft.Scripting.Actions {
 
             MetaObject[] mos = new MetaObject[args.Length];
             for (int i = 0; i < mos.Length; i++) {
-                object arg = args[i];
-                IDynamicObject ido = arg as IDynamicObject;
-                if (ido != null) {
-                    mos[i] = ido.GetMetaObject(expressions[i]);
-#if !SILVERLIGHT
-                } else if (ComMetaObject.IsComObject(arg)) {
-                    mos[i] = ComMetaObject.GetComMetaObject(expressions[i], arg);
-#endif
-                } else {
-                    mos[i] = new ParameterMetaObject(expressions[i], arg);
-                }
+                mos[i] = MetaObject.ObjectToMetaObject(args[i], expressions[i]);
             }
 
             MetaObject binding = Bind(mos);

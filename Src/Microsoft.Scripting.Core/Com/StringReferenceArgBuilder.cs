@@ -18,38 +18,40 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Utils;
-using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace Microsoft.Scripting.Com {
     /// <summary>
-    /// This allows passing a COM type by reference, given a StrongBox of the managed type.
-    /// ReferenceArgBuilder can be used when COM and the CLR agree on the data layout of the data type,
-    /// like for integral types. However, strings for eg are represented as BSTR and System.String respectively
-    /// in the two worlds. ReferenceArgBuilder cannot be used as is in such cases
+    /// This allows passing a string as a BSTR, given a StrongBox{string}
+    /// ReferenceArgBuilder can be used when COM and the CLR agree on the data
+    /// layout of the data type, like for integral types. However, strings for
+    /// are represented as BSTR and System.String respectively in the two
+    /// worlds. ReferenceArgBuilder cannot be used as is in such cases
     /// </summary>
-    internal sealed class ComReferenceArgBuilder : ReferenceArgBuilder {
+    internal sealed class StringReferenceArgBuilder : ReferenceArgBuilder {
         private VariableExpression _unmanagedTemp;
 
-        internal ComReferenceArgBuilder(int index, Type parameterType)
-            : base(index, parameterType) {
+        internal StringReferenceArgBuilder(Type parameterType)
+            : base(parameterType) {
             Debug.Assert(ElementType == typeof(string));
         }
 
-        internal override Expression ToExpression(IList<Expression> parameters) {
+        internal override Expression Build(Expression parameter) {
             if (_unmanagedTemp == null) {
                 _unmanagedTemp = Expression.Variable(typeof(IntPtr), "unmanagedOutParam");
             }
 
             // (_unmanagedTemp = Marshal.StringToBSTR(<string from underlying builder>)), &_unmanagedTemp
 
-            return Ast.Comma(
-                Ast.Assign(
+            return Expression.Comma(
+                Expression.Assign(
                     _unmanagedTemp,
-                    Ast.Call(
+                    Expression.Call(
                         typeof(Marshal).GetMethod("StringToBSTR"),
-                        base.ToExpression(parameters))),
+                        base.Build(parameter))),
                 _unmanagedTemp);
         }
 
@@ -61,7 +63,7 @@ namespace Microsoft.Scripting.Com {
 
         protected override Expression UpdatedValue() {
             // Marhsal.PtrToStringBSTR(_unmanagedTemp)
-            return Ast.Call(
+            return Expression.Call(
                 typeof(Marshal).GetMethod("PtrToStringBSTR"),
                 _unmanagedTemp);
         }
@@ -71,7 +73,7 @@ namespace Microsoft.Scripting.Com {
             Expression expr;
 
             // Marhsal.FreeBSTR(_unmanagedTemp)
-            expr = Ast.Call(
+            expr = Expression.Call(
                 typeof(Marshal).GetMethod("FreeBSTR"),
                 _unmanagedTemp
             );
@@ -79,10 +81,9 @@ namespace Microsoft.Scripting.Com {
             return exprs;
         }
 
-        internal override object Build(object[] args) {
-            object arg = base.Build(args);
+        internal override object Build(object arg) {
             // If the argument is null, Type.InvokeMember will not know to marshal it as a VT_BSTR. Hence, wrap it up in a BStrWrapper
-            return new BStrWrapper((string)arg);
+            return new BStrWrapper((string)base.Build(arg));
         }
     }
 }

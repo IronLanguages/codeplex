@@ -307,7 +307,7 @@ namespace Microsoft.Scripting.Actions {
             if (rule == null || rule.Binding == null) {
                 throw Error.NoOrInvalidRuleProduced();
             }
-            ExpressionWriter.Dump(rule);
+            ExpressionWriter.Dump(rule, Binder);
 
 
             if (originalMonomorphicRule != null) {

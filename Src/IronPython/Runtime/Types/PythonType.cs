@@ -1300,12 +1300,12 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal IAttributesCollection GetMemberDictionary(CodeContext context) {
+        internal PythonDictionary GetMemberDictionary(CodeContext context) {
             return GetMemberDictionary(context, true);
         }
 
-        internal IAttributesCollection GetMemberDictionary(CodeContext context, bool excludeDict) {
-            IAttributesCollection iac = PythonDictionary.MakeSymbolDictionary();
+        internal PythonDictionary GetMemberDictionary(CodeContext context, bool excludeDict) {
+            PythonDictionary iac = PythonDictionary.MakeSymbolDictionary();
             if (IsSystemType) {
                 PythonBinder.GetBinder(context).LookupMembers(context, this, iac);
             } else {
@@ -1320,9 +1320,9 @@ namespace IronPython.Runtime.Types {
                         object val;
                         if (dts.TryGetValue(context, null, this, out val)) {
                             if ((dts is PythonTypeValueSlot) || (dts is PythonTypeUserDescriptorSlot)) {
-                                iac[x] = val;
+                                ((IAttributesCollection)iac)[x] = val;
                             } else {
-                                iac[x] = dts;
+                                ((IAttributesCollection)iac)[x] = dts;
                             }
                         }
                     }

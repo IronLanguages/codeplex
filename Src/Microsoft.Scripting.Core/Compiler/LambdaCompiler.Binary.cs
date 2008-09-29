@@ -23,13 +23,13 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         //CONFORMING
-        private static void EmitBinaryExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitBinaryExpression(Expression expr) {
             BinaryExpression b = (BinaryExpression)expr;
 
             Debug.Assert(b.NodeType != ExpressionType.AndAlso && b.NodeType != ExpressionType.OrElse && b.NodeType != ExpressionType.Coalesce);
 
             if (b.Method != null) {
-                lc.EmitBinaryMethod(b);
+                EmitBinaryMethod(b);
                 return;
             }
 
@@ -44,20 +44,20 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // nullable but not null, then generate a call to x.HasValue.
                 Debug.Assert(!b.IsLiftedToNull || b.Type == typeof(bool?));
                 if (ConstantCheck.IsNull(b.Left) && !ConstantCheck.IsNull(b.Right) && TypeUtils.IsNullableType(b.Right.Type)) {
-                    lc.EmitNullEquality(b.NodeType, b.Right, b.IsLiftedToNull);
+                    EmitNullEquality(b.NodeType, b.Right, b.IsLiftedToNull);
                     return;
                 }
                 if (ConstantCheck.IsNull(b.Right) && !ConstantCheck.IsNull(b.Left) && TypeUtils.IsNullableType(b.Left.Type)) {
-                    lc.EmitNullEquality(b.NodeType, b.Left, b.IsLiftedToNull);
+                    EmitNullEquality(b.NodeType, b.Left, b.IsLiftedToNull);
                     return;
                 }
             }
 
             // Otherwise generate it normally.
-            lc.EmitExpression(b.Left);
-            lc.EmitExpression(b.Right);
+            EmitExpression(b.Left);
+            EmitExpression(b.Right);
 
-            lc.EmitBinaryOperator(b.NodeType, b.Left.Type, b.Right.Type, b.Type, b.IsLiftedToNull);
+            EmitBinaryOperator(b.NodeType, b.Left.Type, b.Right.Type, b.Type, b.IsLiftedToNull);
         }
 
         //CONFORMING
@@ -66,15 +66,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Debug.Assert(op == ExpressionType.Equal || op == ExpressionType.NotEqual);
             // If we are lifted to null then just evaluate the expression for its side effects, discard,
             // and generate null.  If we are not lifted to null then generate a call to HasValue.
-            EmitExpression(e);
             if (isLiftedToNull) {
-                _ilg.Emit(OpCodes.Pop);
+                EmitExpressionAsVoid(e);
                 EmitConstant(null, typeof(bool?));
             } else {
-                LocalBuilder local = _ilg.GetLocal(e.Type);
-                _ilg.Emit(OpCodes.Stloc, local);
-                _ilg.Emit(OpCodes.Ldloca, local);
-                _ilg.FreeLocal(local);
+                EmitAddress(e, e.Type);
                 _ilg.EmitHasValue(e.Type);
                 if (op == ExpressionType.Equal) {
                     _ilg.Emit(OpCodes.Ldc_I4_0);
@@ -115,8 +111,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 ValidateLift(variables, arguments);
                 EmitLift(b.NodeType, resultType, mc, variables, arguments);
             } else {
-                MethodCallExpression mc = Expression.Call(null, b.Method, b.Left, b.Right);
-                EmitMethodCallExpression(this, mc);
+                EmitMethodCallExpression(Expression.Call(null, b.Method, b.Left, b.Right));
             }
         }
 

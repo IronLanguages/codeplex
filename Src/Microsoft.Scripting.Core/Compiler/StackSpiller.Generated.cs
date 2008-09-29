@@ -22,13 +22,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Rewrite the expression
         /// </summary>
-        /// <param name="self">Expression rewriter instance</param>
+        /// 
         /// <param name="node">Expression to rewrite</param>
         /// <param name="stack">State of the stack before the expression is emitted.</param>
         /// <returns>Rewritten expression.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1505:AvoidUnmaintainableCode")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private static Result RewriteExpression(StackSpiller self, Expression node, Stack stack) {
+        private Result RewriteExpression(Expression node, Stack stack) {
             if (node == null) {
                 return new Result(RewriteAction.None, null);
             }
@@ -42,275 +42,271 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // Add
                 case ExpressionType.Add:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // AddChecked
                 case ExpressionType.AddChecked:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // And
                 case ExpressionType.And:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // AndAlso
                 case ExpressionType.AndAlso:
-                    result = RewriteLogicalBinaryExpression(self, node, stack);
+                    result = RewriteLogicalBinaryExpression(node, stack);
                     break;
                 // ArrayLength
                 case ExpressionType.ArrayLength:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // ArrayIndex
                 case ExpressionType.ArrayIndex:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Call
                 case ExpressionType.Call:
-                    result = RewriteMethodCallExpression(self, node, stack);
+                    result = RewriteMethodCallExpression(node, stack);
                     break;
                 // Coalesce
                 case ExpressionType.Coalesce:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Conditional
                 case ExpressionType.Conditional:
-                    result = RewriteConditionalExpression(self, node, stack);
+                    result = RewriteConditionalExpression(node, stack);
                     break;
                 // Constant
                 case ExpressionType.Constant:
-                    result = RewriteConstantExpression(self, node, stack);
+                    result = RewriteConstantExpression(node, stack);
                     break;
                 // Convert
                 case ExpressionType.Convert:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // ConvertChecked
                 case ExpressionType.ConvertChecked:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // Divide
                 case ExpressionType.Divide:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Equal
                 case ExpressionType.Equal:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // ExclusiveOr
                 case ExpressionType.ExclusiveOr:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // GreaterThan
                 case ExpressionType.GreaterThan:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // GreaterThanOrEqual
                 case ExpressionType.GreaterThanOrEqual:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Invoke
                 case ExpressionType.Invoke:
-                    result = RewriteInvocationExpression(self, node, stack);
+                    result = RewriteInvocationExpression(node, stack);
                     break;
                 // Lambda
                 case ExpressionType.Lambda:
-                    result = RewriteLambdaExpression(self, node, stack);
+                    result = RewriteLambdaExpression(node, stack);
                     break;
                 // LeftShift
                 case ExpressionType.LeftShift:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // LessThan
                 case ExpressionType.LessThan:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // LessThanOrEqual
                 case ExpressionType.LessThanOrEqual:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // ListInit
                 case ExpressionType.ListInit:
-                    result = RewriteListInitExpression(self, node, stack);
+                    result = RewriteListInitExpression(node, stack);
                     break;
                 // MemberAccess
                 case ExpressionType.MemberAccess:
-                    result = RewriteMemberExpression(self, node, stack);
+                    result = RewriteMemberExpression(node, stack);
                     break;
                 // MemberInit
                 case ExpressionType.MemberInit:
-                    result = RewriteMemberInitExpression(self, node, stack);
+                    result = RewriteMemberInitExpression(node, stack);
                     break;
                 // Modulo
                 case ExpressionType.Modulo:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Multiply
                 case ExpressionType.Multiply:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // MultiplyChecked
                 case ExpressionType.MultiplyChecked:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Negate
                 case ExpressionType.Negate:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // UnaryPlus
                 case ExpressionType.UnaryPlus:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // NegateChecked
                 case ExpressionType.NegateChecked:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // New
                 case ExpressionType.New:
-                    result = RewriteNewExpression(self, node, stack);
+                    result = RewriteNewExpression(node, stack);
                     break;
                 // NewArrayInit
                 case ExpressionType.NewArrayInit:
-                    result = RewriteNewArrayExpression(self, node, stack);
+                    result = RewriteNewArrayExpression(node, stack);
                     break;
                 // NewArrayBounds
                 case ExpressionType.NewArrayBounds:
-                    result = RewriteNewArrayExpression(self, node, stack);
+                    result = RewriteNewArrayExpression(node, stack);
                     break;
                 // Not
                 case ExpressionType.Not:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // NotEqual
                 case ExpressionType.NotEqual:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Or
                 case ExpressionType.Or:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // OrElse
                 case ExpressionType.OrElse:
-                    result = RewriteLogicalBinaryExpression(self, node, stack);
+                    result = RewriteLogicalBinaryExpression(node, stack);
                     break;
                 // Parameter
                 case ExpressionType.Parameter:
-                    result = RewriteParameterExpression(self, node, stack);
+                    result = RewriteParameterExpression(node, stack);
                     break;
                 // Power
                 case ExpressionType.Power:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Quote
                 case ExpressionType.Quote:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // RightShift
                 case ExpressionType.RightShift:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // Subtract
                 case ExpressionType.Subtract:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // SubtractChecked
                 case ExpressionType.SubtractChecked:
-                    result = RewriteBinaryExpression(self, node, stack);
+                    result = RewriteBinaryExpression(node, stack);
                     break;
                 // TypeAs
                 case ExpressionType.TypeAs:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // TypeIs
                 case ExpressionType.TypeIs:
-                    result = RewriteTypeBinaryExpression(self, node, stack);
+                    result = RewriteTypeBinaryExpression(node, stack);
                     break;
                 // Assign
                 case ExpressionType.Assign:
-                    result = RewriteAssignmentExpression(self, node, stack);
+                    result = RewriteAssignmentExpression(node, stack);
                     break;
                 // Block
                 case ExpressionType.Block:
-                    result = RewriteBlock(self, node, stack);
+                    result = RewriteBlock(node, stack);
                     break;
                 // BreakStatement
                 case ExpressionType.BreakStatement:
-                    result = RewriteBreakStatement(self, node, stack);
+                    result = RewriteBreakStatement(node, stack);
                     break;
                 // Generator
                 case ExpressionType.Generator:
-                    result = RewriteLambdaExpression(self, node, stack);
+                    result = RewriteLambdaExpression(node, stack);
                     break;
                 // ContinueStatement
                 case ExpressionType.ContinueStatement:
-                    result = RewriteContinueStatement(self, node, stack);
+                    result = RewriteContinueStatement(node, stack);
                     break;
                 // DoStatement
                 case ExpressionType.DoStatement:
-                    result = RewriteDoStatement(self, node, stack);
+                    result = RewriteDoStatement(node, stack);
                     break;
                 // Dynamic
                 case ExpressionType.Dynamic:
-                    result = RewriteDynamicExpression(self, node, stack);
+                    result = RewriteDynamicExpression(node, stack);
                     break;
                 // EmptyStatement
                 case ExpressionType.EmptyStatement:
-                    result = RewriteEmptyStatement(self, node, stack);
+                    result = RewriteEmptyStatement(node, stack);
                     break;
                 // Extension
                 case ExpressionType.Extension:
-                    result = RewriteExtensionExpression(self, node, stack);
+                    result = RewriteExtensionExpression(node, stack);
                     break;
                 // Index
                 case ExpressionType.Index:
-                    result = RewriteIndexExpression(self, node, stack);
+                    result = RewriteIndexExpression(node, stack);
                     break;
                 // LabeledStatement
                 case ExpressionType.LabeledStatement:
-                    result = RewriteLabeledStatement(self, node, stack);
+                    result = RewriteLabeledStatement(node, stack);
                     break;
                 // LocalScope
                 case ExpressionType.LocalScope:
-                    result = RewriteLocalScopeExpression(self, node, stack);
+                    result = RewriteLocalScopeExpression(node, stack);
                     break;
                 // LoopStatement
                 case ExpressionType.LoopStatement:
-                    result = RewriteLoopStatement(self, node, stack);
-                    break;
-                // OnesComplement
-                case ExpressionType.OnesComplement:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteLoopStatement(node, stack);
                     break;
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
-                    result = RewriteReturnStatement(self, node, stack);
+                    result = RewriteReturnStatement(node, stack);
                     break;
                 // Scope
                 case ExpressionType.Scope:
-                    result = RewriteScopeExpression(self, node, stack);
+                    result = RewriteScopeExpression(node, stack);
                     break;
                 // SwitchStatement
                 case ExpressionType.SwitchStatement:
-                    result = RewriteSwitchStatement(self, node, stack);
+                    result = RewriteSwitchStatement(node, stack);
                     break;
                 // ThrowStatement
                 case ExpressionType.ThrowStatement:
-                    result = RewriteThrowStatement(self, node, stack);
+                    result = RewriteThrowStatement(node, stack);
                     break;
                 // TryStatement
                 case ExpressionType.TryStatement:
-                    result = RewriteTryStatement(self, node, stack);
+                    result = RewriteTryStatement(node, stack);
                     break;
                 // Unbox
                 case ExpressionType.Unbox:
-                    result = RewriteUnaryExpression(self, node, stack);
+                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // Variable
                 case ExpressionType.Variable:
-                    result = RewriteVariableExpression(self, node, stack);
+                    result = RewriteVariableExpression(node, stack);
                     break;
                 // YieldStatement
                 case ExpressionType.YieldStatement:
-                    result = RewriteYieldStatement(self, node, stack);
+                    result = RewriteYieldStatement(node, stack);
                     break;
 
                 // *** END GENERATED CODE ***

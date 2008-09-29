@@ -16,20 +16,8 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions {
     internal static class ConstantCheck {
-
-        /// <summary>
-        /// Tests to see if the expression is a constant with the given value.
-        /// </summary>
-        /// <param name="expression">The expression to examine</param>
-        /// <param name="value">The constant value to check for.</param>
-        /// <returns>true/false</returns>
-        public static bool Check(Expression expression, object value) {
-            ContractUtils.RequiresNotNull(expression, "expression");
-            return IsConstant(expression, value);
-        }
-
 
         /// <summary>
         /// Tests to see if the expression is a constant with the given value.
@@ -38,7 +26,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <param name="value">The constant value to check for.</param>
         /// <returns>true/false</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        internal static bool IsConstant(Expression e, object value) {
+        internal static bool IsConstant(Expression e, bool value) {
             switch (e.NodeType) {
                 case ExpressionType.AndAlso:
                     return CheckAndAlso((BinaryExpression)e, value);
@@ -47,75 +35,115 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return CheckOrElse((BinaryExpression)e, value);
 
                 case ExpressionType.Constant:
-                    return CheckConstant((ConstantExpression)e, value);
+                    return value.Equals(((ConstantExpression)e).Value);
 
                 case ExpressionType.TypeIs:
-                    return Check((TypeBinaryExpression)e, value);
-
-                default:
-                    return false;
+                    return IsInstanceOf((TypeBinaryExpression)e) == value;
             }
+            return false;
         }
 
-        //CONFORMING
         internal static bool IsNull(Expression e) {
-            return IsConstant(e, null);
+            switch (e.NodeType) {
+                case ExpressionType.Constant:
+                    return ((ConstantExpression)e).Value == null;
+
+                case ExpressionType.TypeAs:
+                    var typeAs = (UnaryExpression)e;
+                    // if the TypeAs check is guarenteed to fail, then its result will be null
+                    return (IsInstanceOf(typeAs) == false);
+            }
+            return false;
         }
 
 
-        private static bool CheckAndAlso(BinaryExpression node, object value) {
+        private static bool CheckAndAlso(BinaryExpression node, bool value) {
             Debug.Assert(node.NodeType == ExpressionType.AndAlso);
 
-            if (node.Method != null) {
-                return false;
-            }
-            //TODO: we can propagate through conversion, but it may not worth it.
-            if (node.Conversion != null) {
+            if (node.Method != null || node.IsLifted) {
                 return false;
             }
     
-            if (value is bool) {
-                if ((bool)value) {
-                    return IsConstant(node.Left, true) && IsConstant(node.Right, true);
-                } else {
-                    // if left isn't a constant it has to be evaluated
-                    return IsConstant(node.Left, false);
-                }
+            if (value) {
+                return IsConstant(node.Left, true) && IsConstant(node.Right, true);
+            } else {
+                // if left isn't a constant it has to be evaluated
+                return IsConstant(node.Left, false);
             }
-            return false;
         }
 
-        private static bool CheckOrElse(BinaryExpression node, object value) {
+        private static bool CheckOrElse(BinaryExpression node, bool value) {
             Debug.Assert(node.NodeType == ExpressionType.OrElse);
 
-            if (node.Method != null) {
+            if (node.Method != null || node.IsLifted) {
                 return false;
             }
 
-            if (value is bool) {
-                if ((bool)value) {
-                    return IsConstant(node.Left, true);
-                } else {
-                    return IsConstant(node.Left, false) && IsConstant(node.Right, false);
-                }
-            }
-            return false;
-        }
-
-        private static bool CheckConstant(ConstantExpression node, object value) {
-            if (value == null) {
-                return node.Value == null;
+            if (value) {
+                return IsConstant(node.Left, true);
             } else {
-                return value.Equals(node.Value);
+                return IsConstant(node.Left, false) && IsConstant(node.Right, false);
             }
         }
 
-        private static bool Check(TypeBinaryExpression node, object value) {
-            // allow constant TypeIs expressions to be optimized away
-            if (value is bool && ((bool)value) == true) {
-                return node.TypeOperand.IsAssignableFrom(node.Expression.Type);
-            }
-            return false;
+        /// <summary>
+        /// If the result of a TypeBinaryExpression is known statically, this
+        /// returns the result, otherwise it returns null, meaning we'll need
+        /// to perform the IsInst instruction at runtime.
+        /// 
+        /// The result of this function must be equivalent to IsInst, or
+        /// null.
+        /// </summary>
+        internal static bool? IsInstanceOf(TypeBinaryExpression typeIs) {
+            return IsInstanceOf(typeIs.Expression.Type, typeIs.TypeOperand);
         }
+
+        /// <summary>
+        /// If the result of a unary TypeAs expression is known statically, this
+        /// returns the result, otherwise it returns null, meaning we'll need
+        /// to perform the IsInst instruction at runtime.
+        /// 
+        /// The result of this function must be equivalent to IsInst, or
+        /// null.
+        /// </summary>
+        internal static bool? IsInstanceOf(UnaryExpression typeAs) {
+            Debug.Assert(typeAs.NodeType == ExpressionType.TypeAs);
+            return IsInstanceOf(typeAs.Operand.Type, typeAs.Type);
+        }
+
+        /// <summary>
+        /// If the result of an isinst opcode is known statically, this
+        /// returns the result, otherwise it returns null, meaning we'll need
+        /// to perform the IsInst instruction at runtime.
+        /// 
+        /// The result of this function must be equivalent to IsInst, or
+        /// null.
+        /// </summary>
+        internal static bool? IsInstanceOf(Type objectType, Type testType) {
+            // Extensive testing showed that Type.IsAssignableFrom,
+            // Type.IsInstanceOf, and the isinst instruction were all
+            // equivalent when used against a live object
+
+            // Oddly, we allow void operands
+            // TODO: this is the LinqV1 behavior of TypeIs, seems bad
+            if (objectType == typeof(void)) {
+                return false;
+            }
+
+            // If we can statically assign, isinst will always succeed
+            if (testType.IsAssignableFrom(objectType)) {
+                return true;
+            }
+
+            // If we couldn't statically assign and the type is sealed, no
+            // value at runtime can make isinst succeed
+            if (objectType.IsSealed) {
+                return false;
+            }
+
+            // Otherwise we need a runtime check
+            return null;
+        }
+
     }
 }

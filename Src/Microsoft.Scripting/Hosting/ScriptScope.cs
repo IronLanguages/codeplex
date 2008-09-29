@@ -295,12 +295,12 @@ namespace Microsoft.Scripting.Hosting {
             public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
                 var result = Expression.Variable(typeof(object), "result");
                 var fallback = action.Fallback(args);
-                var instance = Restrict(typeof(ScriptScope));
+                
                 return new MetaObject(
                     Expression.Scope(
                         Expression.Condition(
                             Expression.Call(
-                                instance.Expression,
+                                Expression.ConvertHelper(Expression, typeof(ScriptScope)),
                                 typeof(ScriptScope).GetMethod("TryGetVariable", new[] { typeof(string), typeof(object).MakeByRefType() }),
                                 Expression.Constant(action.Name),
                                 result
@@ -310,39 +310,37 @@ namespace Microsoft.Scripting.Hosting {
                         ),
                         result
                     ),
-                    instance.Restrictions.Merge(Restrictions.Combine(args)).Merge(fallback.Restrictions)
+                    Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
                 );
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
             public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
-                var instance = Restrict(typeof(ScriptScope));
                 return new MetaObject(
                     Expression.Call(
-                        instance.Expression,
+                        Expression.ConvertHelper(Expression, typeof(ScriptScope)),
                         typeof(ScriptScope).GetMethod("SetVariable", new[] { typeof(string), typeof(object) }),
                         Expression.Constant(action.Name),
                         Expression.Convert(args[1].Expression, typeof(object))
                     ),
-                    instance.Restrictions.Merge(Restrictions.Combine(args))
+                    Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope)))
                 );
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
             public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
                 var fallback = action.Fallback(args);
-                var instance = Restrict(typeof(ScriptScope));
                 return new MetaObject(
                     Expression.Condition(
                         Expression.Call(
-                            instance.Expression,
+                            Expression.ConvertHelper(Expression, typeof(ScriptScope)),
                             typeof(ScriptScope).GetMethod("RemoveVariable"),
                             Expression.Constant(action.Name)
                         ),
                         Expression.Empty(),
                         Expression.Convert(fallback.Expression, typeof(void))
                     ),
-                    instance.Restrictions.Merge(Restrictions.Combine(args)).Merge(fallback.Restrictions)
+                    Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
                 );
             }
 
@@ -393,12 +391,11 @@ namespace Microsoft.Scripting.Hosting {
                 invokeArgs[0] = new MetaObject(result, Restrictions.Empty);
                 var fallbackInvoke = new InvokeAdapter(action).Defer(invokeArgs);
 
-                var instance = Restrict(typeof(ScriptScope));
                 return new MetaObject(
                     Expression.Scope(
                         Expression.Condition(
                             Expression.Call(
-                                instance.Expression,
+                                Expression.ConvertHelper(Expression, typeof(ScriptScope)),
                                 typeof(ScriptScope).GetMethod("TryGetVariable", new[] { typeof(string), typeof(object).MakeByRefType() }),
                                 Expression.Constant(action.Name),
                                 result
@@ -408,7 +405,7 @@ namespace Microsoft.Scripting.Hosting {
                         ),
                         result
                     ),
-                    instance.Restrictions.Merge(Restrictions.Combine(args)).Merge(fallback.Restrictions)
+                    Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
                 );
             }
         }

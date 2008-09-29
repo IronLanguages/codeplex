@@ -36,14 +36,18 @@ namespace IronPython.Runtime {
         private WeakRefTracker _weakref;
 
         public Method(object function, object instance, object @class) {
-            this._func = function;
-            this._inst = instance;
-            this._declaringClass = @class;
+            _func = function;
+            _inst = instance;
+            _declaringClass = @class;
         }
 
         public Method(object function, object instance) {
-            this._func = function;
-            this._inst = instance;
+            if (instance == null) {
+                throw PythonOps.TypeError("unbound methods must have a class provided");
+            }
+
+            _func = function;
+            _inst = instance;
         }
 
         public string __name__ {

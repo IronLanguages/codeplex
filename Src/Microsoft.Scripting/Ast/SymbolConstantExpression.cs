@@ -53,5 +53,9 @@ namespace Microsoft.Scripting.Ast {
                 return Expression.New(_SymbolIdCtor, Expression.Constant(_value.Id));
             }
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            return this;
+        }
     }
 }

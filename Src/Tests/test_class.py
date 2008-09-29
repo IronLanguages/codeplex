@@ -1860,12 +1860,16 @@ def test_dictproxy_access():
     AreEqual(KNew.__dict__.get(0, 'abc'), 'abc')
     AreEqual(KNew.__dict__.get('__new__'), None)
     #CodePlex 15702
-    #AreEqual(int.__dict__.copy(), dict(int.__dict__))
-    #AreEqual(int.__class__.__dict__.copy(), dict(int.__class__.__dict__))
+    AreEqual(int.__dict__.copy(), dict(int.__dict__))
+    AreEqual(int.__class__.__dict__.copy(), dict(int.__class__.__dict__))
     AreEqual(KOld.__dict__.copy(), dict(KOld.__dict__))
     AreEqual(KNew.__dict__.copy(), dict(KNew.__dict__))
     #Dev10 4844754
-    #AreEqual(KNew.__class__.__dict__.copy(), dict(KNew.__class__.__dict__))
+    AreEqual(KNew.__class__.__dict__.copy(), dict(KNew.__class__.__dict__))
+    
+    AreEqual(set(KNew.__dict__.iteritems()), set(dict(KNew.__dict__).iteritems()))
+    AreEqual(set(KNew.__dict__.iterkeys()), set(dict(KNew.__dict__).iterkeys()))
+    AreEqual(set(KNew.__dict__.itervalues()), set(dict(KNew.__dict__).itervalues()))
 
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals
@@ -2367,6 +2371,9 @@ def test_method():
 
     AssertError(TypeError, tst_oc.root)
     AssertError(TypeError, tst_nc.root)
+    
+    instancemethod = type(tst_oc.root)
+    AssertError(TypeError, instancemethod, lambda x:True, None)
 
 def test_descriptors_custom_attrs():
     """verifies the interaction between descriptors and custom attribute access works properly"""
@@ -3137,7 +3144,6 @@ def test_binary_operator_subclass():
     AreEqual(a + b, ('b', 'B'))
     AreEqual(a + c, ('a', 'A'))
 
-@runonly("win32")
 def test_cp2021():
     class KOld:
         def __rmul__(self, other):
@@ -3196,6 +3202,8 @@ def test_oldinstance_creation():
     AreEqual(id(d), id(i.__dict__))
     Assert(isinstance(i, C))
 
+    x = inst(C, None)
+    AreEqual(x.__dict__, {})
     
 def test_metaclass_getattribute():
     class mc(type):
@@ -3263,4 +3271,11 @@ def test_del_getattribute(): # 409747
     def f(): del D.__getattribute__  # AttributeError expected.
     AssertError(AttributeError, f)
 
+def test_bad_mro_error_message():
+    class A(object): pass
+    
+    class B(A): pass
+    
+    AssertErrorWithPartialMessage(TypeError, "A, B", type, "X", (A,B), {})
+    
 run_test(__name__)

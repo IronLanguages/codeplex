@@ -254,39 +254,44 @@ namespace IronPython.Modules {
 
         #region Unicode Escape Encoding
 
-        public static object unicode_escape_decode() {
+        public static PythonTuple unicode_escape_decode() {
             throw PythonOps.NotImplementedError("unicode_escape_decode");
         }
 
-        public static object unicode_escape_encode() {
+        public static PythonTuple unicode_escape_encode() {
             throw PythonOps.NotImplementedError("unicode_escape_encode");
         }
 
-        public static object unicode_internal_decode(object input, string errors) {
-            return utf_8_decode(input, errors);
+        public static PythonTuple unicode_internal_decode(object input, [Optional]string errors) {
+            return utf_16_decode(input, errors);
         }
 
-        public static object unicode_internal_encode(object input, [Optional]string errors) {
-            return utf_8_encode(input, errors);
+        public static PythonTuple unicode_internal_encode(object input, [Optional]string errors) {
+            // length consumed is returned in bytes and for a UTF-16 string that is 2 bytes per char
+            PythonTuple res = DoEncode(Encoding.Unicode, input, errors, false);
+            return PythonTuple.MakeTuple(
+                res[0],
+                ((int)res[1]) * 2
+            );
         }
 
         #endregion
 
         #region Utf-16 Big Endian Functions
 
-        public static object utf_16_be_decode(object input) {
+        public static PythonTuple utf_16_be_decode(object input) {
             return utf_16_be_decode(input, "strict");
         }
 
-        public static object utf_16_be_decode(object input, string errors) {
+        public static PythonTuple utf_16_be_decode(object input, string errors) {
             return DoDecode(Encoding.BigEndianUnicode, input, errors);
         }
 
-        public static object utf_16_be_encode(object input) {
+        public static PythonTuple utf_16_be_encode(object input) {
             return utf_16_be_encode(input, "strict");
         }
 
-        public static object utf_16_be_encode(object input, string errors) {
+        public static PythonTuple utf_16_be_encode(object input, string errors) {
             return DoEncode(Encoding.BigEndianUnicode, input, errors);
         }
 
@@ -294,29 +299,29 @@ namespace IronPython.Modules {
 
         #region Utf-16 Functions
 
-        public static object utf_16_decode(object input) {
+        public static PythonTuple utf_16_decode(object input) {
             return utf_16_decode(input, "strict");
         }
 
-        public static object utf_16_decode(object input, string errors) {
+        public static PythonTuple utf_16_decode(object input, string errors) {
             return DoDecode(Encoding.Unicode, input, errors);
         }
 
-        public static object utf_16_encode(object input) {
+        public static PythonTuple utf_16_encode(object input) {
             return utf_16_encode(input, "strict");
         }
 
-        public static object utf_16_encode(object input, string errors) {
+        public static PythonTuple utf_16_encode(object input, string errors) {
             return DoEncode(Encoding.Unicode, input, errors, true);
         }
 
         #endregion
 
-        public static object utf_16_ex_decode(object input, [Optional]string errors) {
+        public static PythonTuple utf_16_ex_decode(object input, [Optional]string errors) {
             return utf_16_ex_decode(input, errors, null, null);
         }
 
-        public static object utf_16_ex_decode(object input, string errors, object unknown1, object unknown2) {
+        public static PythonTuple utf_16_ex_decode(object input, string errors, object unknown1, object unknown2) {
             byte[] lePre = Encoding.Unicode.GetPreamble();
             byte[] bePre = Encoding.BigEndianUnicode.GetPreamble();
 
@@ -353,20 +358,20 @@ namespace IronPython.Modules {
         }
 
         #region Utf-16 Le Functions
-        
-        public static object utf_16_le_decode(object input) {
+
+        public static PythonTuple utf_16_le_decode(object input) {
             return utf_16_decode(input, "strict");
         }
 
-        public static object utf_16_le_decode(object input, string errors) {
+        public static PythonTuple utf_16_le_decode(object input, string errors) {
             return utf_16_decode(input, errors);
         }
 
-        public static object utf_16_le_encode(object input) {
+        public static PythonTuple utf_16_le_encode(object input) {
             return utf_16_le_encode(input, "strict");
         }
 
-        public static object utf_16_le_encode(object input, string errors) {
+        public static PythonTuple utf_16_le_encode(object input, string errors) {
             return DoEncode(Encoding.Unicode, input, errors);
         }
 
@@ -375,19 +380,19 @@ namespace IronPython.Modules {
         #region Utf-7 Functions
 
 #if !SILVERLIGHT
-        public static object utf_7_decode(object input) {
+        public static PythonTuple utf_7_decode(object input) {
             return utf_7_decode(input, "strict");
         }
 
-        public static object utf_7_decode(object input, string errors) {
+        public static PythonTuple utf_7_decode(object input, string errors) {
             return DoDecode(Encoding.UTF7, input, errors);
         }
 
-        public static object utf_7_encode(object input) {
+        public static PythonTuple utf_7_encode(object input) {
             return utf_7_encode(input, "strict");
         }
 
-        public static object utf_7_encode(object input, string errors) {
+        public static PythonTuple utf_7_encode(object input, string errors) {
             return DoEncode(Encoding.UTF7, input, errors);
         }
 #endif
@@ -396,19 +401,19 @@ namespace IronPython.Modules {
 
         #region Utf-8 Functions
 
-        public static object utf_8_decode(object input) {
+        public static PythonTuple utf_8_decode(object input) {
             return utf_8_decode(input, "strict");
         }
 
-        public static object utf_8_decode(object input, string errors) {
+        public static PythonTuple utf_8_decode(object input, string errors) {
             return DoDecode(Encoding.UTF8, input, errors);
         }
 
-        public static object utf_8_encode(object input) {
+        public static PythonTuple utf_8_encode(object input) {
             return utf_8_encode(input, "strict");
         }
 
-        public static object utf_8_encode(object input, string errors) {
+        public static PythonTuple utf_8_encode(object input, string errors) {
             return DoEncode(Encoding.UTF8, input, errors);
         }
 

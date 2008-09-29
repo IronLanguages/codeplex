@@ -46,9 +46,7 @@ def test_ref_properties():
     AreEqual(com_obj.RefProperty, com_obj)
     AreEqual(com_obj.RefProperty, com_obj)
     AreEqual(com_obj.RefProperty, com_obj)
-    #Merlin 380775 - this is a weird bug. It manifests only if the RefProperty is accessed multiple times
-    #and corrupts com_obj rendering it useless after that. Hence the following line is commented.
-    #AreEqual(com_obj.RefProperty, com_obj)
+    AreEqual(com_obj.RefProperty, com_obj)
     
     if preferComDispatch: #Merlin XXXXXX
         com_obj.PutAndPutRefProperty = 2.0

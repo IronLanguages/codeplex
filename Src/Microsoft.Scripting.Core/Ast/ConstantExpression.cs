@@ -20,10 +20,10 @@ using Microsoft.Scripting;
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class ConstantExpression : Expression {
-        internal static readonly ConstantExpression TrueLiteral = new ConstantExpression(Annotations.Empty, true, typeof(bool));
-        internal static readonly ConstantExpression FalseLiteral = new ConstantExpression(Annotations.Empty, false, typeof(bool));
-        internal static readonly ConstantExpression ZeroLiteral = new ConstantExpression(Annotations.Empty, 0, typeof(int));
-        internal static readonly ConstantExpression NullLiteral = new ConstantExpression(Annotations.Empty, null, typeof(object));
+        internal static readonly ConstantExpression TrueLiteral = new ConstantExpression(null, true, typeof(bool));
+        internal static readonly ConstantExpression FalseLiteral = new ConstantExpression(null, false, typeof(bool));
+        internal static readonly ConstantExpression ZeroLiteral = new ConstantExpression(null, 0, typeof(int));
+        internal static readonly ConstantExpression NullLiteral = new ConstantExpression(null, null, typeof(object));
 
         private readonly object _value;
 
@@ -53,6 +53,10 @@ namespace Microsoft.Linq.Expressions {
             } else {
                 builder.Append("null");
             }
+        }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitConstant(this);
         }
     }
 

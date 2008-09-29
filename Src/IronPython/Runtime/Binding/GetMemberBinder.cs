@@ -51,7 +51,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         internal static MetaObject FallbackWorker(MetaObject/*!*/[] args, Expression/*!*/ codeContext, string name, bool isNoThrow, MetaAction action) {
-            if (args[0].NeedsDeferral) {
+            if (args[0].NeedsDeferral()) {
                 return action.Defer(args);
             }
 
@@ -171,7 +171,11 @@ namespace IronPython.Runtime.Binding {
         private readonly BinderState/*!*/ _state;
 
         public CompatibilityGetMember(BinderState/*!*/ binder, string/*!*/ name)
-            : base(name, false) {
+            : this(binder, name, false) {
+        }
+
+        public CompatibilityGetMember(BinderState/*!*/ binder, string/*!*/ name, bool ignoreCase)
+            : base(name, ignoreCase) {
             _state = binder;
         }
 

@@ -1,9 +1,40 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
   <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\silverlight.settings.targets" />
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>
+    <DocumentationFile>..\..\Bin\DelaySigned Release\Microsoft.Scripting.xml</DocumentationFile>
+    <DefineConstants>TRACE;SIGNED</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+    <BaseAddress>1929379840</BaseAddress>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">
+    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <DocumentationFile>..\..\Bin\DelaySigned Silverlight Release\Microsoft.Scripting.xml</DocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>1591,618</NoWarn>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>true</DelaySign>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
+  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.30718</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -11,7 +42,7 @@
     <RootNamespace>Microsoft.Scripting</RootNamespace>
     <AssemblyName>Microsoft.Scripting</AssemblyName>
     <DocumentationFile>..\..\Bin\Release\Microsoft.Scripting.XML</DocumentationFile>
-    <WarningsNotAsErrors>1685</WarningsNotAsErrors>
+    <WarningsNotAsErrors>1685,649</WarningsNotAsErrors>
     <NoWarn>1591</NoWarn>
     <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
@@ -208,7 +239,10 @@
     <Compile Include="PerfTrack.cs" />
     <Compile Include="Runtime\CompilerContext.cs" />
     <Compile Include="Runtime\DynamicLanguageProviderAttribute.cs" />
+    <Compile Include="Runtime\IRestrictedMetaObject.cs" />
+    <Compile Include="Runtime\MetaObjectExtensions.cs" />
     <Compile Include="Runtime\ParserSink.cs" />
+    <Compile Include="Runtime\RestrictedMetaObject.cs" />
     <Compile Include="Runtime\TokenizerBuffer.cs" />
     <Compile Include="Runtime\TokenizerService.cs" />
     <Compile Include="Generation\MethodSignatureInfo.cs" />
@@ -294,6 +328,7 @@
     <Compile Include="Utils\ReflectedCaller.Generated.cs" />
     <Compile Include="Utils\ReflectedCaller.cs" />
     <Compile Include="Utils\SynchronizedDictionary.cs" />
+    <Compile Include="Utils\ThreadLocal.cs" />
     <Compile Include="Utils\TypeExtensions.cs" />
     <Compile Include="Utils\TypeUtils.cs" />
     <Compile Include="Utils\ValueArray.cs" />

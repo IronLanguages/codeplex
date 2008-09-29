@@ -390,6 +390,7 @@ def test_noeffect_keys():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
 
+@disabled("CodePlex 18523")
 def test_tab_completion_caseinsensitive():
     '''
     Tab-completion is case-insensitive (wrt input)

@@ -110,6 +110,11 @@ def escape(s):
 	s = s.replace('"', '\\"')
 	return s
 	
+def escape_xml(s):
+    s = s.replace("<", "&lt;")
+    s = s.replace(">", "&gt;")
+    return s
+	
 def gen_expr_factory(cw, source):
 	strings = collect_strings(source)
 	exceptions = collect_exceptions(source)
@@ -126,7 +131,7 @@ def gen_expr_factory(cw, source):
 	for ex in strings:
 		result = ""
 		result += "/// <summary>" + "\n"
-		result += '/// A string like  "' + ex.text + '"\n'
+		result += '/// A string like  "' + escape_xml(ex.text) + '"\n'
 		result += "/// </summary>" + "\n"
 		
 		if (ex.param_num > 0):
@@ -157,7 +162,7 @@ def gen_expr_factory(cw, source):
 		if (ex.type == "System.Runtime.InteropServices.COMException"):
 			result += "#if !SILVERLIGHT" + "\n"
 		result += "/// <summary>" + "\n"
-		result += "/// " + ex.type + ' with message like "' + ex.text + '"\n'
+		result += "/// " + ex.type + ' with message like "' + escape_xml(ex.text) + '"\n'
 		result += "/// </summary>" + "\n"
 		if (ex.type == "System.Runtime.InteropServices.COMException"):
 			result += '[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]'  + '\n'

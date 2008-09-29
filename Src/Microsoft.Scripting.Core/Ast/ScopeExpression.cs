@@ -60,6 +60,10 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<VariableExpression> Variables {
             get { return _variables; }
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitScope(this);
+        }
     }
 
     /// <summary>

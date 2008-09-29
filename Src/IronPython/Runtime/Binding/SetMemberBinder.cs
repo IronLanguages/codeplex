@@ -30,12 +30,16 @@ namespace IronPython.Runtime.Binding {
         private readonly BinderState/*!*/ _state;
 
         public SetMemberBinder(BinderState/*!*/ binder, string/*!*/ name)
-            : base(name, false) {
+            : this(binder, name, false) {
+        }
+
+        public SetMemberBinder(BinderState/*!*/ binder, string/*!*/ name, bool caseInsensitive)
+            : base(name, caseInsensitive) {
             _state = binder;
         }
 
         public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
-            if (args[0].NeedsDeferral) {
+            if (args[0].NeedsDeferral()) {
                 return Defer(args);
             }            
 

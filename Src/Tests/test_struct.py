@@ -12,7 +12,6 @@
 #
 #
 #####################################################################################
-
 from lib.assert_util import *
 
 import _struct
@@ -176,6 +175,8 @@ def test_calcsize_alignment():
     for x in struct_format:
         for y in struct_format:
             temp_str = str(x) + str(y)
+            if is_64 and "P" in temp_str: 
+                continue #CodePlex 17683 - we need to test against 64-bit CPython
             Assert(expected[temp_str] == calcsize(temp_str),
                      "_struct.Struct(" + temp_str + ").size is broken")
 

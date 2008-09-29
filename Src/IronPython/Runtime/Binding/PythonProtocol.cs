@@ -139,7 +139,7 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod(methodName),
-                    self.Expression
+                    Ast.ConvertHelper(self.Expression, typeof(object))
                 ),
                 self.Restrictions
             );
@@ -154,7 +154,7 @@ namespace IronPython.Runtime.Binding {
             Assert.NotNullItems(args);
 
             foreach (MetaObject mo in args) {
-                if (mo.NeedsDeferral) {
+                if (mo.NeedsDeferral()) {
                     RestrictTypes(args);
 
                     return call.Defer(

@@ -1103,6 +1103,16 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
+        public static string Add(string self, char other) {
+            return self + other;
+        }
+
+        [SpecialName]
+        public static string Add(char self, string other) {
+            return self + other;
+        }
+
+        [SpecialName]
         public static string Mod(CodeContext/*!*/ context, string self, object other) {
             return new StringFormatter(context, self, other).Format();
         }

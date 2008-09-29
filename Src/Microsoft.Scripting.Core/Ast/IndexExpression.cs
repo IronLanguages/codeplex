@@ -25,7 +25,7 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents property or array indexing
     /// </summary>
-    public class IndexExpression : Expression {
+    public sealed class IndexExpression : Expression {
         private readonly Expression _instance;
         private readonly PropertyInfo _indexer;
         private readonly ReadOnlyCollection<Expression> _arguments;
@@ -89,6 +89,10 @@ namespace Microsoft.Linq.Expressions {
                 _arguments[i].BuildString(builder);
             }
             builder.Append("]");
+        }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitIndex(this);
         }
     }
 

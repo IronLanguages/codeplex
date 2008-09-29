@@ -119,9 +119,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Gets the member name from the object obj.  Throws an exception if the member does not exist or is write-only.
         /// </summary>
         public object GetMember(object obj, string name) {
-            CallSite<Func<CallSite, object, object>> site;
-            site = GetSite<object, object>(_lc.CreateGetMemberBinder(name, false));
-            return site.Target(site, obj);
+            return GetMember(obj, name, false);
         }
 
         /// <summary>
@@ -129,8 +127,63 @@ namespace Microsoft.Scripting.Runtime {
         /// member does not exist, is write-only, or cannot be converted.
         /// </summary>
         public T GetMember<T>(object obj, string name) {
+            return GetMember<T>(obj, name, false);
+        }
+
+        /// <summary>
+        /// Gets the member name from the object obj.  Returns true if the member is successfully retrieved and 
+        /// stores the value in the value out param.
+        /// </summary>
+        public bool TryGetMember(object obj, string name, out object value) {
+            return TryGetMember(obj, name, false, out value);
+        }
+
+        /// <summary>
+        /// Returns true if the object has a member named name, false if the member does not exist.
+        /// </summary>
+        public bool ContainsMember(object obj, string name) {
+            return ContainsMember(obj, name, false);
+        }
+
+        /// <summary>
+        /// Removes the member name from the object obj.  Returns true if the member was successfully removed
+        /// or false if the member does not exist.
+        /// </summary>
+        public bool RemoveMember(object obj, string name) {
+            return RemoveMember(obj, name, false);
+        }
+
+        /// <summary>
+        /// Sets the member name on object obj to value.
+        /// </summary>
+        public void SetMember(object obj, string name, object value) {
+            SetMember(obj, name, value, false);
+        }
+
+        /// <summary>
+        /// Sets the member name on object obj to value.  This overload can be used to avoid
+        /// boxing and casting of strongly typed members.
+        /// </summary>
+        public void SetMember<T>(object obj, string name, T value) {
+            SetMember<T>(obj, name, value, false);
+        }
+
+        /// <summary>
+        /// Gets the member name from the object obj.  Throws an exception if the member does not exist or is write-only.
+        /// </summary>
+        public object GetMember(object obj, string name, bool ignoreCase) {
+            CallSite<Func<CallSite, object, object>> site;
+            site = GetSite<object, object>(_lc.CreateGetMemberBinder(name, ignoreCase));
+            return site.Target(site, obj);
+        }
+
+        /// <summary>
+        /// Gets the member name from the object obj and converts it to the type T.  Throws an exception if the
+        /// member does not exist, is write-only, or cannot be converted.
+        /// </summary>
+        public T GetMember<T>(object obj, string name, bool ignoreCase) {
             CallSite<Func<CallSite, object, T>> site;
-            site = GetSite<object, T>(_lc.CreateGetMemberBinder(name, false));
+            site = GetSite<object, T>(_lc.CreateGetMemberBinder(name, ignoreCase));
             return site.Target(site, obj);
         }
 
@@ -138,10 +191,9 @@ namespace Microsoft.Scripting.Runtime {
         /// Gets the member name from the object obj.  Returns true if the member is successfully retrieved and 
         /// stores the value in the value out param.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "name"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "obj"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
-        public bool TryGetMember(object obj, string name, out object value) {
+        public bool TryGetMember(object obj, string name, bool ignoreCase, out object value) {
             try {
-                value = GetMember(obj, name);
+                value = GetMember(obj, name, ignoreCase);
                 return true;
             } catch (MissingMemberException) {
                 value = null;
@@ -152,28 +204,27 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Returns true if the object has a member named name, false if the member does not exist.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "name"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "obj")]
-        public bool ContainsMember(object obj, string name) {
+        public bool ContainsMember(object obj, string name, bool ignoreCase) {
             object dummy;
-            return TryGetMember(obj, name, out dummy);
+            return TryGetMember(obj, name, ignoreCase, out dummy);
         }
 
         /// <summary>
         /// Removes the member name from the object obj.  Returns true if the member was successfully removed
         /// or false if the member does not exist.
         /// </summary>
-        public bool RemoveMember(object obj, string name) {
+        public bool RemoveMember(object obj, string name, bool ignoreCase) {
             CallSite<Func<CallSite, object, bool>> site;
-            site = GetSite<object, bool>(_lc.CreateDeleteMemberBinder(name, false));
+            site = GetSite<object, bool>(_lc.CreateDeleteMemberBinder(name, ignoreCase));
             return site.Target(site, obj);
         }
 
         /// <summary>
         /// Sets the member name on object obj to value.
         /// </summary>
-        public void SetMember(object obj, string name, object value) {
+        public void SetMember(object obj, string name, object value, bool ignoreCase) {
             CallSite<Func<CallSite, object, object, object>> site;
-            site = GetSite<object, object, object>(_lc.CreateSetMemberBinder(name, false));
+            site = GetSite<object, object, object>(_lc.CreateSetMemberBinder(name, ignoreCase));
             site.Target(site, obj, value);
         }
 
@@ -181,9 +232,9 @@ namespace Microsoft.Scripting.Runtime {
         /// Sets the member name on object obj to value.  This overload can be used to avoid
         /// boxing and casting of strongly typed members.
         /// </summary>
-        public void SetMember<T>(object obj, string name, T value) {
+        public void SetMember<T>(object obj, string name, T value, bool ignoreCase) {
             CallSite<Func<CallSite, object, T, object>> site;
-            site = GetSite<object, T, object>(_lc.CreateSetMemberBinder(name, false));
+            site = GetSite<object, T, object>(_lc.CreateSetMemberBinder(name, ignoreCase));
             site.Target(site, obj, value);
         }
 
@@ -208,7 +259,6 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Converts the object obj to the type T.  Returns true if the value can be converted, false if it cannot.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "obj"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "result")]
         public bool TryConvertTo<T>(object obj, out T result) {
             try {
                 result = ConvertTo<T>(obj);
@@ -225,7 +275,6 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Converts the object obj to the type type.  Returns true if the value can be converted, false if it cannot.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "obj"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "result"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "type")]
         public bool TryConvertTo(object obj, Type type, out object result) {
             try {
                 result = ConvertTo(obj, type);
@@ -262,7 +311,6 @@ namespace Microsoft.Scripting.Runtime {
         /// 
         /// Returns true if the value can be converted, false if it cannot.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "obj"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "result"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "type")]
         public bool TryExplicitConvertTo(object obj, Type type, out object result) {
             try {
                 result = ExplicitConvertTo(obj, type);
@@ -279,7 +327,6 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Converts the object obj to the type T.  Returns true if the value can be converted, false if it cannot.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "obj"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "result")]
         public bool TryExplicitConvertTo<T>(object obj, out T result) {
             try {
                 result = ExplicitConvertTo<T>(obj);

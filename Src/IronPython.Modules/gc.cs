@@ -14,11 +14,14 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
@@ -51,12 +54,15 @@ namespace IronPython.Modules {
             return RuntimeHelpers.True;
         }
 
-#if !SILVERLIGHT // GC.Collect
         public static int collect(int generation) {
             if (generation > GC.MaxGeneration || generation < 0) throw PythonOps.ValueError("invalid generation {0}", generation);
 
             long start = GC.GetTotalMemory(false);
+#if !SILVERLIGHT // GC.Collect
             GC.Collect(generation);
+#else
+            GC.Collect();
+#endif
             GC.WaitForPendingFinalizers();
             
             return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
@@ -64,11 +70,10 @@ namespace IronPython.Modules {
 
         public static int collect() {
             long start = GC.GetTotalMemory(false);
-            GC.Collect(GC.MaxGeneration);
+            GC.Collect();
             GC.WaitForPendingFinalizers();
             return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
         }
-#endif
 
         public static void set_debug(object o) {
             throw PythonOps.NotImplementedError("gc.set_debug isn't implemented");

@@ -23,8 +23,8 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
 
-        private static void EmitQuoteUnaryExpression(LambdaCompiler lc, Expression expr) {
-            lc.EmitQuote((UnaryExpression)expr);
+        private void EmitQuoteUnaryExpression(Expression expr) {
+            EmitQuote((UnaryExpression)expr);
         }
 
         //CONFORMING
@@ -47,8 +47,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private static void EmitUnaryExpression(LambdaCompiler lc, Expression expr) {
-            lc.EmitUnary((UnaryExpression)expr);
+        private void EmitUnaryExpression(Expression expr) {
+            EmitUnary((UnaryExpression)expr);
         }
 
         //CONFORMING
@@ -112,8 +112,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         }
                     case ExpressionType.UnaryPlus:
                     case ExpressionType.NegateChecked:
-                    case ExpressionType.Negate:
-                    case ExpressionType.OnesComplement: {
+                    case ExpressionType.Negate: {
                             Debug.Assert(operandType == resultType);
                             Label labIfNull = _ilg.DefineLabel();
                             Label labEnd = _ilg.DefineLabel();
@@ -167,9 +166,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                             _ilg.Emit(OpCodes.Not);
                         }
                         break;
-                    case ExpressionType.OnesComplement:
-                        _ilg.Emit(OpCodes.Not);
-                        break;
                     case ExpressionType.UnaryPlus:
                         _ilg.Emit(OpCodes.Nop);
                         break;
@@ -192,17 +188,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private static void EmitUnboxUnaryExpression(LambdaCompiler lc, Expression expr) {
+        private void EmitUnboxUnaryExpression(Expression expr) {
             var node = (UnaryExpression)expr;
             Debug.Assert(node.Type.IsValueType && !TypeUtils.IsNullableType(node.Type));
 
             // Unbox_Any leaves the value on the stack
-            lc.EmitExpression(node.Operand);
-            lc.IL.Emit(OpCodes.Unbox_Any, node.Type);
+            EmitExpression(node.Operand);
+            _ilg.Emit(OpCodes.Unbox_Any, node.Type);
         }
 
-        private static void EmitConvertUnaryExpression(LambdaCompiler lc, Expression expr) {
-            lc.EmitConvert((UnaryExpression)expr);
+        private void EmitConvertUnaryExpression(Expression expr) {
+            EmitConvert((UnaryExpression)expr);
         }
 
         //CONFORMING
@@ -263,7 +259,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 EmitLift(node.NodeType, resultType, mc, new VariableExpression[] { v }, new Expression[] { node.Operand });
                 _ilg.EmitConvertToType(resultType, node.Type, false);
             } else {
-                EmitMethodCallExpression(this, Expression.Call(null, node.Method, node.Operand));
+                EmitMethodCallExpression(Expression.Call(null, node.Method, node.Operand));
             }
         }
     }

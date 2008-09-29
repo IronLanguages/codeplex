@@ -15,6 +15,7 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Com;
 
 namespace Microsoft.Scripting.Actions {
     public class MetaObject {
@@ -74,26 +75,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
         }
-
-        /// <summary>
-        /// Checks to see if the known type is good enough for performing operations
-        /// on.  This is possible if the type has a value or of the known type of the
-        /// expression is a sealed type.
-        /// </summary>
-        public virtual bool NeedsDeferral {
-            get {
-                if (HasValue) {
-                    return false;
-                }
-
-                if (Expression.Type.IsSealedOrValueType()) {
-                    return typeof(IDynamicObject).IsAssignableFrom(Expression.Type);
-                }
-
-                return true;
-            }
-        }
-
+        
         public Type LimitType {
             get {
                 return RuntimeType ?? Expression.Type;
@@ -113,64 +95,7 @@ namespace Microsoft.Scripting.Actions {
                 return pe != null && pe.IsByRef;
             }
         }
-
-        public virtual MetaObject Restrict(Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-
-            if (type == Expression.Type && type.IsSealedOrValueType()) {
-                return this;
-            }
-
-            if (type == typeof(None)) {
-                return new RestrictedMetaObject(
-                    Expression.Null(),
-                    Restrictions.Merge(Restrictions.InstanceRestriction(Expression, null)),
-                    Value
-                );
-            }
-
-            if (type == RuntimeType) {
-                if (HasValue) {
-                    return new RestrictedMetaObject(
-                        Expression.ConvertHelper(
-                            Expression,
-                            TypeUtils.GetVisibleType(type)
-                        ),
-                        Restrictions.Merge(Restrictions.TypeRestriction(Expression, type)),
-                        Value
-                    );
-                }
-
-                return new RestrictedMetaObject(
-                    Expression.ConvertHelper(
-                        Expression,
-                        TypeUtils.GetVisibleType(type)
-                    ),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, type))
-                );
-            }
-
-
-            if (HasValue) {
-                return new MetaObject(
-                    Expression.ConvertHelper(
-                        Expression,
-                        TypeUtils.GetVisibleType(type)
-                    ),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, type)),
-                    Value
-                );
-            }
-
-            return new MetaObject(
-                Expression.ConvertHelper(
-                    Expression,
-                    TypeUtils.GetVisibleType(type)
-                ),
-                Restrictions.Merge(Restrictions.TypeRestriction(Expression, type))
-            );
-        }
-
+        
         public virtual MetaObject Operation(OperationAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Fallback(args);
@@ -236,6 +161,19 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return res;
+        }
+
+        public static MetaObject ObjectToMetaObject(object argValue, Expression parameterExpression) {
+            IDynamicObject ido = argValue as IDynamicObject;
+            if (ido != null) {
+                return ido.GetMetaObject(parameterExpression);
+#if !SILVERLIGHT
+            } else if (ComMetaObject.IsComObject(argValue)) {
+                return ComMetaObject.GetComMetaObject(parameterExpression, argValue);
+#endif
+            } else {
+                return new ParameterMetaObject(parameterExpression, argValue);
+            }
         }
     }
 }
