@@ -109,18 +109,6 @@ namespace IronPython.Runtime.Types {
             return new PythonDictionary(context, this);
         }
 
-        public IEnumerator iteritems(CodeContext/*!*/ context) {
-            return new DictionaryItemEnumerator(_dt.GetMemberDictionary(context, false)._storage);
-        }
-
-        public IEnumerator iterkeys(CodeContext/*!*/ context) {
-            return new DictionaryKeyEnumerator(_dt.GetMemberDictionary(context, false)._storage);
-        }
-
-        public IEnumerator itervalues(CodeContext/*!*/ context) {
-            return new DictionaryValueEnumerator(_dt.GetMemberDictionary(context, false)._storage);
-        }
-
         #endregion
 
         #region Object overrides
@@ -158,7 +146,7 @@ namespace IronPython.Runtime.Types {
         #region IEnumerable Members
 
         System.Collections.IEnumerator IEnumerable.GetEnumerator() {
-            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default, false));
+            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default, false).AsObjectKeyedDictionary());
         }
 
         #endregion
@@ -206,7 +194,7 @@ namespace IronPython.Runtime.Types {
         ICollection IDictionary.Values {
             get {
                 List<object> res = new List<object>();
-                foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(DefaultContext.Default, false)) {
+                foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(DefaultContext.Default, false).AsObjectKeyedDictionary()) {
                     res.Add(kvp.Value);
                 }
                 return res;
@@ -259,7 +247,7 @@ namespace IronPython.Runtime.Types {
 
         ICollection<object> IDictionary<object, object>.Values {
             get {
-                return _dt.GetMemberDictionary(DefaultContext.Default, false).Values;
+                return _dt.GetMemberDictionary(DefaultContext.Default, false).AsObjectKeyedDictionary().Values;
             }
         }
 

@@ -510,7 +510,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             LambdaParameterRewriter rewriter = new LambdaParameterRewriter(paramMapping);
-            Expression newBody = rewriter.Visit(_body);
+            Expression newBody = rewriter.VisitNode(_body);
 
             preambuleExpressions.Add(newBody);
             _body = Expression.Comma(preambuleExpressions);

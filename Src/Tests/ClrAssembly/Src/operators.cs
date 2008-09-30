@@ -14,10 +14,9 @@
  * ***************************************************************************/
 
 
-using System; using Microsoft;
+using System;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 using System.Collections.Generic;
 
 using Merlin.Testing;

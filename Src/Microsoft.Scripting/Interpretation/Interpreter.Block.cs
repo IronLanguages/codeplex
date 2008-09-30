@@ -29,9 +29,6 @@ namespace Microsoft.Scripting.Interpretation {
     /// Interpreter partial class. This part contains interpretation code for lambdas.
     /// </summary>
     public static partial class Interpreter {
-        private static int _DelegateCounter;
-        private static WeakDictionary<LambdaExpression, MethodInfo> _Delegates;
-
         private static object DoExecute(InterpreterState state, LambdaExpression lambda) {
             SetSourceLocation(state, lambda);
             object ret = Interpreter.Interpret(state, lambda.Body);
@@ -54,26 +51,24 @@ namespace Microsoft.Scripting.Interpretation {
         /// Input are two arrays - regular arguments passed into the generated delegate,
         /// and (if the delegate had params array), the parameter array, separately.
         /// </summary>
-        internal static object InterpretLambda(InterpreterState lexicalParentState, LambdaExpression lambda, object[] args) {
-            Assert.NotNull(lexicalParentState, lambda, args);
-            
+        internal static object InterpretLambda(InterpreterState parentState, LambdaExpression lambda, object[] args) {
+            ContractUtils.Requires(parentState != null, "parent");
+            ContractUtils.Requires(lambda != null, "lambda");
+            ContractUtils.Requires(args != null, "args");        // was allocated by the generated delegate
+
+            InterpreterState child = parentState.CreateForLambda(lambda, args);
+
             if (lambda.NodeType == ExpressionType.Generator) {
                 // create the user's generator type
-                var state = lexicalParentState.CreateForLambda(lambda, InterpreterState.Current.Value, args);
-                return new Generator(new GeneratorNext(new GeneratorLambdaInvoker(lambda, state).Invoke));
-
-            } else {
-                var state = InterpreterState.Current.Update(
-                    (caller) => lexicalParentState.CreateForLambda(lambda, caller, args)
-                );
-
-                try {
-                    return Execute(state, lambda.Body);
-                } finally {
-                    InterpreterState.Current.Value = state.Caller;
-                }
+                return new Generator(new GeneratorNext(new GeneratorLambdaInvoker(lambda, child).Invoke));
             }
+
+            return Execute(child, lambda.Body);
         }
+
+        private static int _Interpreted;
+
+        private static WeakDictionary<LambdaExpression, MethodInfo> _Delegates;
 
         /// <summary>
         /// Gets the delegate associated with the LambdaExpression.
@@ -163,7 +158,7 @@ namespace Microsoft.Scripting.Interpretation {
             MethodInfo invoke = type.GetMethod("Invoke");
             ParameterInfo[] parameters = invoke.GetParameters();
 
-            string name = "Interpreted_" + Interlocked.Increment(ref _DelegateCounter);
+            string name = "Interpreted_" + Interlocked.Increment(ref _Interpreted);
 
             Type[] signature = CreateInterpreterSignature(parameters);
             DynamicILGen il = Snippets.Shared.CreateDynamicMethod(name, invoke.ReturnType, signature, false);

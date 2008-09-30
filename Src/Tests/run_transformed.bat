@@ -1,7 +1,7 @@
 @echo OFF
 setlocal EnableDelayedExpansion
 
-set IRONPYTHONPATH=%IRONPYTHONPATH%;C:\Workspaces\Merlin\External\Languages\ironpython21\25\Lib
+set IRONPYTHONPATH=%IRONPYTHONPATH%;C:\Workspaces\Merlin\External\Languages\IronPython20\25\Lib
 
 IF EXIST Failed_Testcases (
     RMDIR /s /q Failed_Testcases
@@ -25,9 +25,9 @@ echo Copying CPython testcases...
 FOR /R %Merlin_Root%\Test\RowanTest\Languages\IronPython\2.x\Regression %%G IN (test*_cpy_20.GenericTest) DO (       
     set FILENAME=%%~nG
     set FILENAME=!FILENAME:_cpy_20=.py!
-    FINDSTR /L /I /M /C:"due_to_ironpython" %Merlin_Root%\..\External\Languages\ironpython21\25\lib\test\!FILENAME! >> CPy_Testcases\file_list.txt 
+    FINDSTR /L /I /M /C:"due_to_ironpython" %Merlin_Root%\..\External\Languages\IronPython20\25\lib\test\!FILENAME! >> CPy_Testcases\file_list.txt 
     IF !errorlevel!==1 (
-        copy %Merlin_Root%\..\External\Languages\ironpython21\25\lib\test\!FILENAME! CPy_Testcases\!FILENAME!
+        copy %Merlin_Root%\..\External\Languages\IronPython20\25\lib\test\!FILENAME! CPy_Testcases\!FILENAME!
     )  
 )	
 

@@ -130,6 +130,7 @@ def test_package_simple():
     AreEqual(simplePackage.a.f(), 10)
     AreEqual(simplePackage.b.f(), 20)
     
+@disabled("Dev10 475649")
 def test_package_subpackage():
     compilePackage("subPackage", { "__init__.py" : "import a\nimport b.c\ndef f(): return a.f() + b.c.f()",
                                    "a.py" : "def f(): return 10",
@@ -140,14 +141,6 @@ def test_package_subpackage():
     AreEqual(subPackage.f(), 30)
     AreEqual(subPackage.b.f(), 'kthxbye')    
     AreEqual(subPackage.b.c.f(), 20)
-
-def test_package_subpackage_relative_imports():
-    compilePackage("subPackage_relative", { "__init__.py" : "from foo import bar",
-                                   "foo\\__init__.py" : "from foo import bar",
-                                   "foo\\foo.py" : "bar = 'BAR'"})
-
-    import subPackage_relative
-    AreEqual(subPackage_relative.bar, 'BAR')
 
 #TODO add some more tests for main after this bug is fixed.
 def test_main():

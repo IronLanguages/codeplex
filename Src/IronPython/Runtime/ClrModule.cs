@@ -269,13 +269,7 @@ the assembly object.")]
                 }
             }
 
-            PythonContext pc = PythonContext.GetContext(context);
-
-            // load any compiled code that has been cached...
-            LoadScriptCode(pc, assembly);
-            
-            // load any Python modules
-            pc.LoadBuiltins(pc.Builtins, assembly);
+            LoadScriptCode(PythonContext.GetContext(context), assembly);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
@@ -671,7 +665,7 @@ import Namespace.")]
 
         /// <summary>
         /// Provides a helper for compiling a group of modules into a single assembly.  The assembly can later be
-        /// reloaded using the clr.AddReference API.
+        /// reloaded using the LoadModules API.
         /// </summary>
         public static void CompileModules(CodeContext/*!*/ context, string/*!*/ assemblyName, [ParamDictionary]IAttributesCollection kwArgs, params string/*!*/[]/*!*/ filenames) {
             ContractUtils.RequiresNotNull(assemblyName, "assemblyName");
@@ -679,52 +673,21 @@ import Namespace.")]
 
             PythonContext pc = PythonContext.GetContext(context);
 
-            Dictionary<string, string> packageMap = BuildPackageMap(filenames);
-
             List<ScriptCode> code = new List<ScriptCode>();
             foreach (string filename in filenames) {
                 if (!pc.DomainManager.Platform.FileExists(filename)) {
                     throw PythonOps.IOError("Couldn't find file for compilation: {0}", filename);
                 }
 
+                SourceUnit su = pc.CreateFileUnit(filename, pc.DefaultEncoding, SourceCodeKind.File);
                 ScriptCode sc;
 
-                string modName;
-                string dname = Path.GetDirectoryName(filename);
-                string outFilename = "";
                 if (Path.GetFileName(filename) == "__init__.py") {
-                    // remove __init__.py to get package name
-                    dname = Path.GetDirectoryName(dname);
-                    if (String.IsNullOrEmpty(dname)) {
-                        modName = Path.GetDirectoryName(filename);
-                    } else {
-                        modName = Path.GetFileNameWithoutExtension(Path.GetDirectoryName(filename));
-                    }
-                    outFilename = Path.DirectorySeparatorChar + "__init__.py";
+                    string dirName = Path.GetDirectoryName(filename);
+                    sc = PythonContext.GetContext(context).GetScriptCode(su, dirName, ModuleOptions.Initialize);
                 } else {
-                    modName = Path.GetFileNameWithoutExtension(filename);
+                    sc = PythonContext.GetContext(context).GetScriptCode(su, Path.GetFileNameWithoutExtension(filename), ModuleOptions.Initialize);
                 }
-                
-                // see if we have a parent package, if so incorporate it into
-                // our name
-                string parentPackage;
-                if (packageMap.TryGetValue(dname, out parentPackage)) {
-                    modName = parentPackage + "." + modName;
-                }
-
-                outFilename = modName.Replace('.', Path.DirectorySeparatorChar) + outFilename;
-
-                SourceUnit su = pc.CreateSourceUnit(
-                    new FileStreamContentProvider(
-                        context.LanguageContext.DomainManager.Platform,
-                        filename
-                    ),
-                    outFilename,
-                    pc.DefaultEncoding,
-                    SourceCodeKind.File
-                );
-
-                sc = PythonContext.GetContext(context).GetScriptCode(su, modName, ModuleOptions.Initialize);
 
                 code.Add(sc);
             }
@@ -746,114 +709,23 @@ import Namespace.")]
         }
 
         /// <summary>
-        /// Provides a StreamContentProvider for a stream of content backed by a file on disk.
-        /// </summary>
-        [Serializable]
-        internal sealed class FileStreamContentProvider : StreamContentProvider {
-            private readonly string _path;
-            private readonly PALHolder _pal;
-
-            internal string Path {
-                get { return _path; }
-            }
-
-            #region Construction
-
-            internal FileStreamContentProvider(PlatformAdaptationLayer manager, string path) {
-                ContractUtils.RequiresNotNull(path, "path");
-
-                _path = path;
-                _pal = new PALHolder(manager);
-            }
-
-            #endregion
-
-            public override Stream GetStream() {
-                return _pal.GetStream(Path);
-            }
-
-            [Serializable]
-            private class PALHolder
-#if !SILVERLIGHT
- : MarshalByRefObject
-#endif
- {
-                [NonSerialized]
-                private readonly PlatformAdaptationLayer _pal;
-
-                internal PALHolder(PlatformAdaptationLayer pal) {
-                    _pal = pal;
-                }
-
-                internal Stream GetStream(string path) {
-                    return _pal.OpenInputFileStream(path);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Goes through the list of files identifying the relationship between packages
-        /// and subpackages.  Returns a dictionary with all of the package filenames (minus __init__.py)
-        /// mapping to their full name.  For example given a structure:
+        /// Provides a helper for reloading a set of compiled modules.  A list of assembly names is provided which
+        /// includes the compiled modules.  
         /// 
-        /// C:\
-        ///     someDir\
-        ///         package\
-        ///             __init__.py
-        ///             a.py
-        ///             b\
-        ///                 __init.py
-        ///                 c.py
-        ///         
-        /// Returns:
-        ///     {r'C:\somedir\package' : 'package', r'C:\somedir\package\b', 'package.b'}
-        ///     
-        /// This can then be used for calculating the full module name of individual files
-        /// and packages.  For example a's full name is "package.a" and c's full name is
-        /// "package.b.c".
+        /// After reloading the modules are available via import.  The available modules will not be run until the
+        /// user explicitly imports them for the first time.
         /// </summary>
-        private static Dictionary<string/*!*/, string/*!*/>/*!*/ BuildPackageMap(string/*!*/[]/*!*/ filenames) {
-            // modules which are the children of packages should have the __name__
-            // package.subpackage.modulename, not just modulename.  So first
-            // we need to get a list of all the modules...
-            List<string> modules = new List<string>();
+        public static void LoadModules(CodeContext/*!*/ context, params string/*!*/[]/*!*/ filenames) {
+            ContractUtils.RequiresNotNullItems(filenames, "filenames");
+
+            PythonContext pc = PythonContext.GetContext(context);
+
             foreach (string filename in filenames) {
-                if (filename.EndsWith("__init__.py")) {
-                    // this is a package
-                    modules.Add(filename);
-                }
+                Assembly asm = LoadAssemblyByName(context, filename);
+                LoadScriptCode(pc, asm);
             }
-
-            // next we need to understand the relationship between the packages so
-            // if we have package.subpackage1 and package.subpackage2 we know
-            // both of these are children of the package.  So sort the module names,
-            // shortest name first...
-            SortModules(modules);
-
-            // finally build up the package names for the dirs...
-            Dictionary<string, string> packageMap = new Dictionary<string, string>();
-            foreach (string packageName in modules) {
-                string dirName = Path.GetDirectoryName(packageName);
-                string pkgName = String.Empty;
-                string fullName = Path.GetFileName(Path.GetDirectoryName(packageName));
-
-                do {
-                    if (pkgName != string.Empty) {
-                        fullName = pkgName + "." + fullName;
-                    }
-
-                    dirName = Path.GetDirectoryName(dirName);
-                } while (packageMap.TryGetValue(dirName, out pkgName));
-
-                packageMap[Path.GetDirectoryName(packageName)] = fullName;
-            }
-            return packageMap;
         }
 
-        private static void SortModules(List<string> modules) {
-            modules.Sort((string x, string y) => x.Length - y.Length);
-        }
-        
         private static void LoadScriptCode(PythonContext/*!*/ pc, Assembly/*!*/ asm) {
             ScriptCode[] codes = ScriptCode.LoadFromAssembly(pc.DomainManager, asm);
 

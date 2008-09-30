@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft; 
+ 
 public class TopLevelClass_ToBeRemoved {
     public static string Flag = typeof(TopLevelClass_ToBeRemoved).AssemblyQualifiedName;
 }

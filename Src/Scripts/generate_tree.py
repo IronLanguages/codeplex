@@ -91,6 +91,7 @@ expressions = [
     Expression("LabeledStatement",   "LabeledStatement"),
     Expression("LocalScope",         "LocalScopeExpression"),
     Expression("LoopStatement",      "LoopStatement"),
+    Expression("OnesComplement",     "UnaryExpression"),
     Expression("ReturnStatement",    "ReturnStatement"),
     Expression("Scope",              "ScopeExpression"),
     Expression("SwitchStatement",    "SwitchStatement"),
@@ -103,6 +104,29 @@ expressions = [
 
 def get_unique_types():
     return sorted(list(set(filter(None, map(lambda n: n.type, expressions)))))
+
+default_visit = """// %(type)s
+private Expression DefaultVisit%(type)s(Expression node) {
+    return Visit((%(type)s)node);
+}"""
+
+def gen_visitor_methods(cw):
+    nodes = get_unique_types()
+    nodes.remove("ExtensionExpression")
+    
+    space = 0
+    for node in nodes:
+        if space: cw.write("")
+        cw.write(default_visit, type = node)
+        space = 1
+
+def gen_visitor_switch(cw):
+    for node in expressions:
+        method = "DefaultVisit"
+
+        cw.write("// " + node.kind)
+        cw.write("case ExpressionType." + node.kind + ":")
+        cw.write("    return " + method + node.type + "(node);")
 
 def gen_tree_nodes(cw):
     for node in expressions:
@@ -163,6 +187,8 @@ def gen_ast_writer(cw):
 def main():
     return generate(
         ("Expression Tree Node Types", gen_tree_nodes),
+        ("ExpressionVisitor Switch", gen_visitor_switch),
+        ('ExpressionVisitor Methods', gen_visitor_methods),
         ("StackSpiller Switch", gen_stackspiller_switch),
         ("Ast Interpreter", gen_interpreter),
         ("Expression Compiler", gen_compiler),

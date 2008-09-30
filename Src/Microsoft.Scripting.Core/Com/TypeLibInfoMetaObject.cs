@@ -73,16 +73,8 @@ namespace Microsoft.Scripting.Com {
 
         private static MetaObject[] RestrictThisToType(MetaObject[] args) {
             MetaObject[] copy = args.Copy();
-
-            args[0] = new MetaObject(
-                Expression.ConvertHelper(
-                    args[0].Expression,
-                    typeof(ComTypeLibInfo)
-                ),
-                Restrictions.TypeRestriction(args[0].Expression, typeof(ComTypeLibInfo))
-            );
-
-            return args;
+            args[0] = args[0].Restrict(typeof(ComTypeLibInfo));
+            return copy;
         }
     }
 }

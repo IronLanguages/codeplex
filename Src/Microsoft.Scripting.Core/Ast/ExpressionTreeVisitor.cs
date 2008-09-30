@@ -25,27 +25,27 @@ namespace Microsoft.Linq.Expressions {
     /// automatically.
     /// 
     /// TODO: rename back to ExpressionVisitor (fix the Linq test that has a copy)
-    /// TODO: needs public API vetting
+    /// TODO: needs public API vetting (we'll probably expose it, tree rewriters are *very* useful)
     /// </summary>
-    public abstract class ExpressionTreeVisitor {
+    public partial class ExpressionTreeVisitor {
 
-        public Expression Visit(Expression node) {
-            return (node == null) ?  null : node.Accept(this);
-        }
-
-        protected ReadOnlyCollection<Expression> Visit(ReadOnlyCollection<Expression> nodes) {
+        protected ReadOnlyCollection<Expression> VisitNodes(ReadOnlyCollection<Expression> nodes) {
             Expression[] newNodes = null;
             for (int i = 0, n = nodes.Count; i < n; i++) {
-                Expression node = nodes[i].Accept(this);
-
+                Expression node = nodes[i];
+                if (node == null) {
+                    continue;
+                }
+                // inlined to save stack space
+                Expression e = VisitNode(node);
                 if (newNodes != null) {
-                    newNodes[i] = node;
-                } else if (!object.ReferenceEquals(node, nodes[i])) {
+                    newNodes[i] = e;
+                } else if (!object.ReferenceEquals(e, node)) {
                     newNodes = new Expression[n];
                     for (int j = 0; j < i; j++) {
                         newNodes[j] = nodes[j];
                     }
-                    newNodes[i] = node;
+                    newNodes[i] = e;
                 }
             }
             if (newNodes == null) {
@@ -61,58 +61,18 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="nodes">Input collection.</param>
         /// <param name="elementVisitor">Delegate that visits a single element.</param>
         /// <returns>Collection of visited nodes. Original collection is returned if no nodes were modified.</returns>
-        protected static ReadOnlyCollection<T> Visit<T>(ReadOnlyCollection<T> nodes, Func<T, T> elementVisitor) {
+        protected static ReadOnlyCollection<T> VisitNodes<T>(ReadOnlyCollection<T> nodes, Func<T, T> elementVisitor) {
             T[] newNodes = null;
             for (int i = 0, n = nodes.Count; i < n; i++) {
-                T node = elementVisitor(nodes[i]);
+                T newNode = elementVisitor(nodes[i]);
                 if (newNodes != null) {
-                    newNodes[i] = node;
-                } else if (!object.ReferenceEquals(node, nodes[i])) {
+                    newNodes[i] = newNode;
+                } else if (!object.ReferenceEquals(newNode, nodes[i])) {
                     newNodes = new T[n];
                     for (int j = 0; j < i; j++) {
                         newNodes[j] = nodes[j];
                     }
-                    newNodes[i] = node;
-                }
-            }
-            if (newNodes == null) {
-                return nodes;
-            }
-            return new ReadOnlyCollection<T>(newNodes);
-        }
-
-        protected T VisitAndConvert<T>(T node, string callerName) where T : Expression {
-            if (node == null) {
-                return null;
-            }
-            node = node.Accept(this) as T;
-            if (node == null) {
-                throw Error.MustRewriteToSameType(callerName, typeof(T), callerName);
-            }
-            return node;
-        }
-
-        /// <summary>
-        /// Visits all of the nodes in the collection, and tries to convert each
-        /// result back to the original type. If any conversion fails, it
-        /// throws an error
-        /// </summary>
-        protected ReadOnlyCollection<T> VisitAndConvert<T>(ReadOnlyCollection<T> nodes, string callerName) where T : Expression {
-            T[] newNodes = null;
-            for (int i = 0, n = nodes.Count; i < n; i++) {
-                T node = nodes[i].Accept(this) as T;
-                if (node == null) {
-                    throw Error.MustRewriteToSameType(callerName, typeof(T), callerName);
-                }
-
-                if (newNodes != null) {
-                    newNodes[i] = node;
-                } else if (!object.ReferenceEquals(node, nodes[i])) {
-                    newNodes = new T[n];
-                    for (int j = 0; j < i; j++) {
-                        newNodes[j] = nodes[j];
-                    }
-                    newNodes[i] = node;
+                    newNodes[i] = newNode;
                 }
             }
             if (newNodes == null) {
@@ -124,269 +84,241 @@ namespace Microsoft.Linq.Expressions {
 
         #region Individual Expression Visitors
 
-        protected internal virtual Expression VisitAssignment(AssignmentExpression node) {
-            Expression e = Visit(node.Expression);
-            Expression v = Visit(node.Value);
+        protected virtual Expression Visit(AssignmentExpression node) {
+            Expression e = VisitNode(node.Expression);
+            Expression v = VisitNode(node.Value);
             if (e == node.Expression && v == node.Value) {
                 return node;
             }
-            return Expression.Assign(e, v, node.Annotations);
+            return new AssignmentExpression(node.Annotations, e, v);
         }
 
-        protected internal virtual Expression VisitBinary(BinaryExpression node) {
-            // Walk children in evaluation order: left, conversion, right
-            Expression l = Visit(node.Left);
-            LambdaExpression c = VisitAndConvert(node.Conversion, "VisitBinary");
-            Expression r = Visit(node.Right);
-            if (l == node.Left && r == node.Right && c == node.Conversion) {
+        protected virtual Expression Visit(BinaryExpression node) {
+            // Evaluation order: left, conversion, right
+            Expression l = VisitNode(node.Left);
+            LambdaExpression c = (LambdaExpression)VisitNode(node.Conversion);
+            Expression r = VisitNode(node.Right);
+            if (l == node.Left && r == node.Right) {
                 return node;
             }
-            return Expression.MakeBinary(node.NodeType, l, r, node.IsLiftedToNull, node.Method, c, node.Annotations);
+            return new BinaryExpression(node.Annotations, node.NodeType, l, r, node.Type, node.Method, node.Conversion);
         }
 
-        protected internal virtual Expression VisitBlock(Block node) {
-            ReadOnlyCollection<Expression> e = Visit(node.Expressions);
+        protected virtual Expression Visit(Block node) {
+            ReadOnlyCollection<Expression> e = VisitNodes(node.Expressions);
             if (e == node.Expressions) {
                 return node;
             }
-            if (node.Type == typeof(void)) {
-                return Expression.Block(node.Annotations, e);
-            } else {
-                return Expression.Comma(node.Annotations, e);
-            }
+            return new Block(node.Annotations, e, node.Type);
         }
 
-        protected internal virtual Expression VisitBreak(BreakStatement node) {
-            LabelTarget t = VisitLabelTarget(node.Target);
-            if (t == node.Target) {
-                return node;
-            }
-            return Expression.Break(t, node.Annotations);
+        protected virtual Expression Visit(BreakStatement node) {
+            return node;
         }
 
-        protected internal virtual Expression VisitConditional(ConditionalExpression node) {
-            Expression t = Visit(node.Test);
-            Expression l = Visit(node.IfTrue);
-            Expression r = Visit(node.IfFalse);
+        protected virtual Expression Visit(ConditionalExpression node) {
+            Expression t = VisitNode(node.Test);
+            Expression l = VisitNode(node.IfTrue);
+            Expression r = VisitNode(node.IfFalse);
             if (t == node.Test && l == node.IfTrue && r == node.IfFalse) {
                 return node;
             }
-            return Expression.Condition(t, l, r, node.Annotations);
+            return new ConditionalExpression(node.Annotations, t, l, r, node.Type);
         }
 
-        protected internal virtual Expression VisitConstant(ConstantExpression node) {
+        protected virtual Expression Visit(ConstantExpression node) {
             return node;
         }
 
-        protected internal virtual Expression VisitContinue(ContinueStatement node) {
-            LabelTarget t = VisitLabelTarget(node.Target);
-            if (t == node.Target) {
-                return node;
-            }
-            return Expression.Continue(t, node.Annotations);
+        protected virtual Expression Visit(ContinueStatement node) {
+            return node;
         }
 
-        protected internal virtual Expression VisitDoWhile(DoStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
-            Expression t = Visit(node.Test);
-            Expression b = Visit(node.Body);
-            if (l == node.Label && t == node.Test && b == node.Body) {
+        protected virtual Expression Visit(DoStatement node) {
+            Expression t = VisitNode(node.Test);
+            Expression b = VisitNode(node.Body);
+            if (t == node.Test && b == node.Body) {
                 return node;
             }
-            return Expression.DoWhile(b, t, l, node.Annotations);
+            return new DoStatement(node.Annotations, node.Label, t, b);
         }
 
-        protected internal virtual Expression VisitDynamic(DynamicExpression node) {
-            ReadOnlyCollection<Expression> a = Visit(node.Arguments);
+        protected virtual Expression Visit(DynamicExpression node) {
+            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
             if (a == node.Arguments) {
                 return node;
             }
-            return Expression.MakeDynamic(node.DelegateType, node.Binder, node.Annotations, a);
+            return new DynamicExpression(node.Type, node.Annotations, node.DelegateType, node.Binder, a);
         }
 
-        protected internal virtual Expression VisitEmpty(EmptyStatement node) {
+        protected virtual Expression Visit(EmptyStatement node) {
             return node;
         }
 
-        /// <summary>
-        /// Override called for Extension nodes. This can be overriden to
-        /// rewrite certain extension nodes. If it's not overriden, this method
-        /// will call into Expression.Visit, which gives the node a chance to
-        /// walk its children
-        /// </summary>
-        protected internal virtual Expression VisitExtension(Expression node) {
-            return node.VisitChildren(this);
+        protected virtual Expression VisitExtension(Expression node) {
+            return node;
         }
 
-        protected internal virtual Expression VisitInvocation(InvocationExpression node) {
-            Expression e = Visit(node.Expression);
-            ReadOnlyCollection<Expression> a = Visit(node.Arguments);
+        protected virtual Expression Visit(LocalScopeExpression node) {
+            ReadOnlyCollection<Expression> v = VisitNodes(node.Variables);
+            if (v == node.Variables) {
+                return node;
+            }
+            // go through the factory for validation
+            return Expression.AllVariables(node.Annotations, v);
+        }
+
+        protected virtual Expression Visit(InvocationExpression node) {
+            Expression e = VisitNode(node.Expression);
+            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
             if (e == node.Expression && a == node.Arguments) {
                 return node;
             }
-            return Expression.Invoke(e, node.Annotations, a);
+            return new InvocationExpression(e, node.Annotations, a, node.Type);
         }
 
-        protected virtual LabelTarget VisitLabelTarget(LabelTarget node) {
-            return node;
-        }
-
-        protected internal virtual Expression VisitLabeled(LabeledStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
-            Expression s = Visit(node.Statement);
-            if (l == node.Label && s == node.Statement) {
+        protected virtual Expression Visit(LabeledStatement node) {
+            Expression s = VisitNode(node.Statement);
+            if (s == node.Statement) {
                 return node;
             }
-            return Expression.Labeled(l, s, node.Annotations);
+            return new LabeledStatement(node.Annotations, node.Label, s);
         }
 
-        protected internal virtual Expression VisitLambda(LambdaExpression node) {
-            Expression b = Visit(node.Body);
-            var p = VisitAndConvert(node.Parameters, "VisitLambda");
-            if (b == node.Body && p == node.Parameters) {
+        protected virtual Expression Visit(LambdaExpression node) {
+            Expression b = VisitNode(node.Body);
+            if (b == node.Body) {
                 return node;
             }
-            return Expression.Lambda(node.NodeType, node.Type, node.Name, b, node.Annotations, p);
+            return Expression.Lambda(
+                node.Annotations,
+                node.NodeType,
+                node.Type,
+                node.Name,
+                b,
+                node.Parameters
+            );
         }
 
-        protected internal virtual Expression VisitLoop(LoopStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
-            Expression t = Visit(node.Test);
-            Expression i = Visit(node.Increment);
-            Expression b = Visit(node.Body);
-            Expression e = Visit(node.ElseStatement);
-            if (l == node.Label &&
-                t == node.Test &&
+        protected virtual Expression Visit(LoopStatement node) {
+            Expression t = VisitNode(node.Test);
+            Expression i = VisitNode(node.Increment);
+            Expression b = VisitNode(node.Body);
+            Expression e = VisitNode(node.ElseStatement);
+            if (t == node.Test &&
                 i == node.Increment &&
                 b == node.Body &&
                 e == node.ElseStatement) {
                 return node;
             }
-            return Expression.Loop(t, i, b, e, l, node.Annotations);
+            return new LoopStatement(node.Annotations, node.Label, t, i, b, e);
         }
 
-        protected internal virtual Expression VisitMemberAccess(MemberExpression node) {
-            Expression e = Visit(node.Expression);
+        protected virtual Expression Visit(MemberExpression node) {
+            Expression e = VisitNode(node.Expression);
             if (e == node.Expression) {
                 return node;
             }
-            return Expression.MakeMemberAccess(e, node.Member, node.Annotations);
+            return new MemberExpression(e, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite);
         }
 
-        protected internal virtual Expression VisitIndex(IndexExpression node) {
-            Expression o = Visit(node.Object);
-            ReadOnlyCollection<Expression> a = Visit(node.Arguments);
+        protected virtual Expression Visit(IndexExpression node) {
+            Expression o = VisitNode(node.Object);
+            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
             if (o == node.Object && a == node.Arguments) {
                 return node;
             }
-            return Expression.MakeIndex(o, node.Indexer, node.Annotations, a);
+            return new IndexExpression(o, node.Indexer, node.Annotations, a, node.Type, node.CanRead, node.CanWrite);
         }
 
-        protected internal virtual Expression VisitMethodCall(MethodCallExpression node) {
-            Expression o = Visit(node.Object);
-            ReadOnlyCollection<Expression> a = Visit(node.Arguments);
+        protected virtual Expression Visit(MethodCallExpression node) {
+            Expression o = VisitNode(node.Object);
+            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
             if (o == node.Object && a == node.Arguments) {
                 return node;
             }
-            return Expression.Call(o, node.Method, node.Annotations, a);
+            return new MethodCallExpression(node.Annotations, node.Type, node.Method, o, a);
         }
 
-        protected internal virtual Expression VisitNewArray(NewArrayExpression node) {
-            ReadOnlyCollection<Expression> e = Visit(node.Expressions);
+        protected virtual Expression Visit(NewArrayExpression node) {
+            ReadOnlyCollection<Expression> e = VisitNodes(node.Expressions);
             if (e == node.Expressions) {
                 return node;
             }
-            if (node.NodeType == ExpressionType.NewArrayInit) {
-                return Expression.NewArrayInit(node.Type.GetElementType(), node.Annotations, e);
-            }
-            return Expression.NewArrayBounds(node.Type.GetElementType(), node.Annotations, e);
+            return new NewArrayExpression(node.Annotations, node.NodeType, node.Type, e);
         }
 
-        protected internal virtual Expression VisitNew(NewExpression node) {
-            ReadOnlyCollection<Expression> a = Visit(node.Arguments);
+        protected virtual Expression Visit(NewExpression node) {
+            ReadOnlyCollection<Expression> a = VisitNodes(node.Arguments);
             if (a == node.Arguments) {
                 return node;
             }
-            if (node.Members != null) {
-                return Expression.New(node.Constructor, a, node.Annotations, node.Members);
-            }
-            return Expression.New(node.Constructor, node.Annotations, a);
+            return new NewExpression(node.Annotations, node.Type, node.Constructor, a, node.Members);
         }
 
-        protected internal virtual Expression VisitParameter(ParameterExpression node) {
+        protected virtual Expression Visit(ParameterExpression node) {
             return node;
         }
 
-        protected internal virtual Expression VisitReturn(ReturnStatement node) {
-            Expression e = Visit(node.Expression);
+        protected virtual Expression Visit(ReturnStatement node) {
+            Expression e = VisitNode(node.Expression);
             if (e == node.Expression) {
                 return node;
             }
-            return Expression.Return(e, node.Annotations);
+            return new ReturnStatement(node.Annotations, e);
         }
 
-        protected internal virtual Expression VisitRuntimeVariables(LocalScopeExpression node) {
-            var v = VisitAndConvert(node.Variables, "VisitRuntimeVariables");
-            if (v == node.Variables) {
-                return node;
-            }
-            return Expression.AllVariables(node.Annotations, v);
-        }
-
-        protected internal virtual Expression VisitScope(ScopeExpression node) {
-            Expression b = Visit(node.Body);
-            var v = VisitAndConvert(node.Variables, "VisitScope");
+        protected virtual Expression Visit(ScopeExpression node) {
+            Expression b = VisitNode(node.Body);
             if (b == node.Body) {
                 return node;
             }
-            return Expression.Scope(b, node.Name, node.Annotations, v);
+            return new ScopeExpression(b, node.Name, node.Annotations, node.Variables);
         }
 
-        protected virtual SwitchCase VisitSwitchCase(SwitchCase node) {
-            Expression b = Visit(node.Body);
+        protected virtual SwitchCase Visit(SwitchCase node) {
+            Expression b = VisitNode(node.Body);
             if (b == node.Body) {
                 return node;
             }
-            if (node.IsDefault) {
-                return Expression.DefaultCase(b);
-            }
-            return Expression.SwitchCase(node.Value, b);
+            return new SwitchCase(node.IsDefault, node.Value, b);
         }
 
-        protected internal virtual Expression VisitSwitch(SwitchStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
-            Expression t = Visit(node.TestValue);
-            ReadOnlyCollection<SwitchCase> c = Visit(node.Cases, VisitSwitchCase);
+        protected virtual Expression Visit(SwitchStatement node) {
+            Expression t = VisitNode(node.TestValue);
+            ReadOnlyCollection<SwitchCase> c = VisitNodes(node.Cases, Visit);
 
-            if (l == node.Label && t == node.TestValue && c == node.Cases) {
+            if (t == node.TestValue && c == node.Cases) {
                 return node;
             }
-            return Expression.Switch(t, l, node.Annotations, c);
+
+            return new SwitchStatement(t, node.Label, node.Annotations, c);
         }
 
-        protected internal virtual Expression VisitThrow(ThrowStatement node) {
-            Expression v = Visit(node.Value);
+        protected virtual Expression Visit(ThrowStatement node) {
+            Expression v = VisitNode(node.Value);
             if (v == node.Value) {
                 return node;
             }
-            return Expression.Throw(v, node.Annotations);
+            return new ThrowStatement(node.Annotations, v);
         }
 
-        protected virtual CatchBlock VisitCatchBlock(CatchBlock node) {
-            VariableExpression v = VisitAndConvert(node.Variable, "VisitCatchBlock");
-            Expression b = Visit(node.Body);
-            Expression f = Visit(node.Filter);
+        protected virtual CatchBlock Visit(CatchBlock node) {
+            // TODO: change CatchBlock.Variable to any lvalue?
+            VariableExpression v = (VariableExpression)VisitNode(node.Variable);
+            Expression b = VisitNode(node.Body);
+            Expression f = VisitNode(node.Filter);
             if (v == node.Variable && b == node.Body && f == node.Filter) {
                 return node;
             }
-            return Expression.Catch(node.Test, v, b, f, node.Annotations);
+            return new CatchBlock(node.Annotations, node.Test, v, b, f);
         }
 
-        protected internal virtual Expression VisitTry(TryStatement node) {
-            ReadOnlyCollection<CatchBlock> h = Visit(node.Handlers, VisitCatchBlock);
-            Expression b = Visit(node.Body);
-            Expression y = Visit(node.Finally);
-            Expression f = Visit(node.Fault);
+        protected virtual Expression Visit(TryStatement node) {
+            ReadOnlyCollection<CatchBlock> h = VisitNodes(node.Handlers, Visit);
+            Expression b = VisitNode(node.Body);
+            Expression y = VisitNode(node.Finally);
+            Expression f = VisitNode(node.Fault);
 
             if (b == node.Body &&
                 h == node.Handlers &&
@@ -394,100 +326,143 @@ namespace Microsoft.Linq.Expressions {
                 f == node.Fault) {
                 return node;
             }
-            return Expression.MakeTry(b, y, f, node.Annotations, h);
+
+            return new TryStatement(node.Annotations, b, h, y, f);
         }
 
-        protected internal virtual Expression VisitTypeBinary(TypeBinaryExpression node) {
-            Expression e = Visit(node.Expression);
+        protected virtual Expression Visit(TypeBinaryExpression node) {
+            Expression e = VisitNode(node.Expression);
             if (e == node.Expression) {
                 return node;
             }
-            return Expression.TypeIs(e, node.TypeOperand, node.Annotations);
+            return new TypeBinaryExpression(node.Annotations, node.NodeType, e, node.TypeOperand);
         }
 
-        protected internal virtual Expression VisitUnary(UnaryExpression node) {
-            Expression o = Visit(node.Operand);
+        protected virtual Expression Visit(UnaryExpression node) {
+            Expression o = VisitNode(node.Operand);
             if (o == node.Operand) {
                 return node;
             }
-            return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, node.Annotations);
+            return new UnaryExpression(node.Annotations, node.NodeType, o, node.Type, node.Method);
         }
 
-        protected internal virtual Expression VisitVariable(VariableExpression node) {
+        protected virtual Expression Visit(VariableExpression node) {
             return node;
         }
 
-        protected internal virtual Expression VisitYield(YieldStatement node) {
-            Expression e = Visit(node.Expression);
+        protected virtual Expression Visit(YieldStatement node) {
+            Expression e = VisitNode(node.Expression);
             if (e == node.Expression) {
                 return node;
             }
-            return Expression.Yield(e, node.Annotations);
+            return new YieldStatement(node.Annotations, e);
         }
 
-        protected internal virtual Expression VisitMemberInit(MemberInitExpression node) {
-            NewExpression n = VisitAndConvert(node.NewExpression, "VisitMemberInit");
-            ReadOnlyCollection<MemberBinding> bindings = Visit(node.Bindings, VisitMemberBinding);
+        protected virtual Expression Visit(MemberInitExpression node) {
+            //inlined visit to New as it has to remain NewExpression
+            NewExpression n = node.NewExpression;
+            ReadOnlyCollection<Expression> a = VisitNodes(n.Arguments);
+            if (a != n.Arguments) {
+                n = new NewExpression(n.Annotations, n.Type, n.Constructor, a, n.Members);
+            }
+
+            ReadOnlyCollection<MemberBinding> bindings = VisitNodes(node.Bindings, Visit);
             if (n != node.NewExpression || bindings != node.Bindings) {
                 return Expression.MemberInit(n, bindings);
             }
             return node;
         }
 
-        protected internal virtual Expression VisitListInit(ListInitExpression node) {
-            NewExpression n = VisitAndConvert(node.NewExpression, "VisitListInit");
-            ReadOnlyCollection<ElementInit> initializers = Visit(node.Initializers, VisitElementInit);
+        protected virtual Expression Visit(ListInitExpression node) {
+            //inlined visit to New as it has to remain NewExpression
+            NewExpression n = node.NewExpression;
+            ReadOnlyCollection<Expression> a = VisitNodes(n.Arguments);
+            if (a != n.Arguments) {
+                n = new NewExpression(n.Annotations, n.Type, n.Constructor, a, n.Members);
+            }
+
+            ReadOnlyCollection<ElementInit> initializers = VisitNodes(node.Initializers, Visit);
             if (n != node.NewExpression || initializers != node.Initializers) {
                 return Expression.ListInit(n, initializers);
             }
             return node;
         }
 
-        protected virtual ElementInit VisitElementInit(ElementInit initializer) {
-            ReadOnlyCollection<Expression> arguments = Visit(initializer.Arguments);
+        protected virtual ElementInit Visit(ElementInit initializer) {
+            ReadOnlyCollection<Expression> arguments = VisitNodes(initializer.Arguments);
             if (arguments != initializer.Arguments) {
                 return Expression.ElementInit(initializer.AddMethod, arguments);
             }
             return initializer;
         }
 
-        protected virtual MemberBinding VisitMemberBinding(MemberBinding binding) {
+        protected virtual MemberBinding Visit(MemberBinding binding) {
             switch (binding.BindingType) {
                 case MemberBindingType.Assignment:
-                    return VisitMemberAssignment((MemberAssignment)binding);
+                    return Visit((MemberAssignment)binding);
                 case MemberBindingType.MemberBinding:
-                    return VisitMemberMemberBinding((MemberMemberBinding)binding);
+                    return Visit((MemberMemberBinding)binding);
                 case MemberBindingType.ListBinding:
-                    return VisitMemberListBinding((MemberListBinding)binding);
+                    return Visit((MemberListBinding)binding);
                 default:
                     throw Error.UnhandledBindingType(binding.BindingType);
             }
         }
 
-        protected virtual MemberAssignment VisitMemberAssignment(MemberAssignment assignment) {
-            Expression e = Visit(assignment.Expression);
+        protected virtual MemberAssignment Visit(MemberAssignment assignment) {
+            Expression e = VisitNode(assignment.Expression);
             if (e != assignment.Expression) {
                 return Expression.Bind(assignment.Member, e);
             }
             return assignment;
         }
 
-        protected virtual MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding binding) {
-            ReadOnlyCollection<MemberBinding> bindings = Visit(binding.Bindings, VisitMemberBinding);
+        protected virtual MemberMemberBinding Visit(MemberMemberBinding binding) {
+            ReadOnlyCollection<MemberBinding> bindings = VisitNodes(binding.Bindings, Visit);
             if (bindings != binding.Bindings) {
                 return Expression.MemberBind(binding.Member, bindings);
             }
             return binding;
         }
 
-        protected virtual MemberListBinding VisitMemberListBinding(MemberListBinding binding) {
-            ReadOnlyCollection<ElementInit> initializers = Visit(binding.Initializers, VisitElementInit);
+        protected virtual MemberListBinding Visit(MemberListBinding binding) {
+            ReadOnlyCollection<ElementInit> initializers = VisitNodes(binding.Initializers, Visit);
             if (initializers != binding.Initializers) {
                 return Expression.ListBind(binding.Member, initializers);
             }
             return binding;
         }
 
-        #endregion        
+        #endregion
+
+        #region helpers
+
+        // Helper to add a variable to a scope
+        protected static Expression AddScopedVariable(Expression body, VariableExpression variable, Expression variableInit) {
+            List<VariableExpression> vars = new List<VariableExpression>();
+            string name = null;
+            Annotations annotations = Annotations.Empty;
+            while (body.NodeType == ExpressionType.Scope) {
+                ScopeExpression scope = (ScopeExpression)body;
+                vars.AddRange(scope.Variables);
+                name = scope.Name;
+                annotations = scope.Annotations;
+                body = scope.Body;
+            }
+
+            vars.Add(variable);
+
+            return Expression.Scope(
+                Expression.Comma(
+                    Expression.Assign(variable, variableInit),
+                    body
+                ),
+                name,
+                annotations,
+                vars
+            );
+        }
+
+        #endregion
     }
 }

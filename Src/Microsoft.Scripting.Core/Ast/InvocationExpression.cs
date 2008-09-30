@@ -52,10 +52,6 @@ namespace Microsoft.Linq.Expressions {
             }
             builder.Append(")");
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitInvocation(this);
-        }
     }
 
     /// <summary>

@@ -15,11 +15,9 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.IO;
-
+using System.Text;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using IronPython.Runtime.Operations;
+using System.IO;
 
 namespace IronPython.Runtime {
     public class CompiledLoader {
@@ -29,14 +27,20 @@ namespace IronPython.Runtime {
             _codes.Add(code);
         }
 
-        public ModuleLoader find_module(CodeContext/*!*/ context, string fullname, List path) {
-            string nameOnDisk = fullname.Replace('.', Path.DirectorySeparatorChar);
-            
+        public ModuleLoader find_module(string fullname, List path) {
             foreach (ScriptCode sc in _codes) {
-                if (nameOnDisk == sc.SourceUnit.Path) {
+
+                if (Path.GetFileNameWithoutExtension(sc.SourceUnit.Path) == fullname) {
+                    // normal .py file
                     return new ModuleLoader(sc);
-                } else if (sc.SourceUnit.Path.EndsWith("__init__.py") &&
-                    sc.SourceUnit.Path == Path.Combine(nameOnDisk, "__init__.py")) {
+                } else if (fullname.IndexOf('.') > 0) {
+                    string packagePath = Path.Combine(Path.GetDirectoryName(sc.SourceUnit.Path), Path.GetFileNameWithoutExtension(sc.SourceUnit.Path)).Replace(Path.DirectorySeparatorChar, '.');
+                    if (packagePath == fullname) {
+                        return new ModuleLoader(sc);
+                    }
+                }
+
+                if (sc.SourceUnit.Path.EndsWith("__init__.py") && sc.SourceUnit.Path.EndsWith(fullname + Path.DirectorySeparatorChar + "__init__.py")) {
                     return new ModuleLoader(sc);
                 }
             }

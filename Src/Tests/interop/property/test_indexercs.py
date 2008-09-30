@@ -94,8 +94,10 @@ def test_basic():
         x = t()
         x.Init()
         
-        for y, z in zip(x, range(10)):
-            AreEqual(y,z)
+        #Codeplex bug 18314 - http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18314
+        if t is not StructWithIndexer:
+            for y, z in zip(x, range(10)):
+	            AreEqual(y,z)
 	    
         a, b, c = 2, SimpleStruct(3), SimpleClass(4)
         

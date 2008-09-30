@@ -23,8 +23,8 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _expression;
         private readonly Type _typeOperand;
 
-        internal TypeBinaryExpression(Expression expression, Type typeOperand, Annotations annotations)
-            : base(ExpressionType.TypeIs, typeof(bool), annotations) {
+        internal TypeBinaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type typeOperand)
+            : base(nodeType, typeof(bool), annotations) {
             _expression = expression;
             _typeOperand = typeOperand;
         }
@@ -47,10 +47,6 @@ namespace Microsoft.Linq.Expressions {
             builder.Append(_typeOperand.Name);
             builder.Append(")");
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitTypeBinary(this);
-        }
     }
 
     /// <summary>
@@ -67,7 +63,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
 
-            return new TypeBinaryExpression(expression, type, annotations);
+            return new TypeBinaryExpression(annotations, ExpressionType.TypeIs, expression, type);
         }
     }
 }

@@ -20,28 +20,18 @@ using Microsoft.Scripting.Actions;
 using System.Threading;
 
 namespace Microsoft.Scripting.Interpretation {
-    internal sealed class CallSiteInfo {
-        public int Counter { get; set; }
-        public CallSite CallSite { get; set; }
-        public Interpreter.MatchCallerTarget CallerTarget { get; set; }
-    }
-    
     public class InterpretedScriptCode : ScriptCode {
         // call sites allocated for the tree:
-        private Dictionary<Expression, CallSiteInfo> _callSites;
+        private Dictionary<Expression, CallSite> _callSites;
 
-        internal Dictionary<Expression, CallSiteInfo> CallSites {
+        internal Dictionary<Expression, CallSite> CallSites {
             get {
                 if (_callSites == null) {
-                    Interlocked.CompareExchange(ref _callSites, new Dictionary<Expression, CallSiteInfo>(), null);
+                    Interlocked.CompareExchange(ref _callSites, new Dictionary<Expression, CallSite>(), null);
                 }
 
                 return _callSites;
             }
-        }
-
-        internal bool HasCallSites {
-            get { return _callSites != null; }
         }
 
         public InterpretedScriptCode(LambdaExpression code, SourceUnit sourceUnit)

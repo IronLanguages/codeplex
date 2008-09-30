@@ -98,7 +98,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             } else {
                 // find it now.
                 TryFlowAnalyzer tfa = new TryFlowAnalyzer();
-                tfa.Visit(expression);
+                tfa.VisitNode(expression);
 
                 Debug.Assert(tfa._nesting == 0);
                 Debug.Assert(tfa._switch == 0);
@@ -107,55 +107,55 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        protected internal override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression Visit(LambdaExpression node) {
             // Do not visit nodes in nested lambda
             return node;
         }
 
-        protected internal override Expression VisitBreak(BreakStatement node) {
+        protected override Expression Visit(BreakStatement node) {
             if (_nesting == 0 && _switch == 0) {
                 _result.Break = true;
             }
-            return base.VisitBreak(node);
+            return base.Visit(node);
         }
 
-        protected internal override Expression VisitContinue(ContinueStatement node) {
+        protected override Expression Visit(ContinueStatement node) {
             if (_nesting == 0) {
                 _result.Continue = true;
             }
-            return base.VisitContinue(node);
+            return base.Visit(node);
         }
 
-        protected internal override Expression VisitReturn(ReturnStatement node) {
+        protected override Expression Visit(ReturnStatement node) {
             _result.Return = true;
-            return base.VisitReturn(node);
+            return base.Visit(node);
         }
 
-        protected internal override Expression VisitYield(YieldStatement node) {
+        protected override Expression Visit(YieldStatement node) {
             _result.Yield = true;
-            return base.VisitYield(node);
+            return base.Visit(node);
         }
 
         // Keep track of nested loops, only loop flow control
         // statements outside of nested loops concern us
 
-        protected internal override Expression VisitLoop(LoopStatement node) {
+        protected override Expression Visit(LoopStatement node) {
             _nesting++;
-            base.VisitLoop(node);
+            base.Visit(node);
             _nesting--;
             return node;
         }
 
-        protected internal override Expression VisitDoWhile(DoStatement node) {
+        protected override Expression Visit(DoStatement node) {
             _nesting++;
-            base.VisitDoWhile(node);
+            base.Visit(node);
             _nesting--;
             return node;
         }
 
-        protected internal override Expression VisitSwitch(SwitchStatement node) {
+        protected override Expression Visit(SwitchStatement node) {
             _switch++;
-            base.VisitSwitch(node);
+            base.Visit(node);
             _switch--;
             return node;
         }

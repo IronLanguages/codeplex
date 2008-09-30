@@ -1192,10 +1192,5 @@ def test_decimal_bool():
     AreEqual(bool(System.Decimal(0)), False)
     AreEqual(bool(System.Decimal(1)), True)
 
-@skip("silverlight") # no Char.Parse
-def test_add_str_char():
-    AreEqual('bc' + System.Char.Parse('a'), 'bca')
-    AreEqual(System.Char.Parse('a') + 'bc', 'abc')
-
 run_test(__name__)
 

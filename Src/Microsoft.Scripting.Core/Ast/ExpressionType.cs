@@ -81,6 +81,7 @@ namespace Microsoft.Linq.Expressions {
         LabeledStatement,
         LocalScope,
         LoopStatement,
+        OnesComplement,
         ReturnStatement,
         Scope,
         SwitchStatement,

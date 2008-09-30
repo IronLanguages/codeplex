@@ -88,6 +88,7 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.LabeledStatement: return InterpretLabeledStatement(state, expr);
                  case ExpressionType.LocalScope: return InterpretLocalScopeExpression(state, expr);
                  case ExpressionType.LoopStatement: return InterpretLoopStatement(state, expr);
+                 case ExpressionType.OnesComplement: return InterpretUnaryExpression(state, expr);
                  case ExpressionType.ReturnStatement: return InterpretReturnStatement(state, expr);
                  case ExpressionType.Scope: return InterpretScopeExpression(state, expr);
                  case ExpressionType.SwitchStatement: return InterpretSwitchStatement(state, expr);

@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Binding {
 
         public static MetaObject/*!*/ Operation(OperationAction/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
             foreach (MetaObject mo in args) {
-                if (mo.NeedsDeferral()) {
+                if (mo.NeedsDeferral) {
                     return operation.Defer(args);
                 }
             }
@@ -456,7 +456,8 @@ namespace IronPython.Runtime.Binding {
 
             if (oper == StandardOperators.Multiply && 
                 IsSequence(types[0]) && 
-                !PythonOps.IsNonExtensibleNumericType(types[1].LimitType)) {
+                !PythonOps.IsNonExtensibleNumericType(types[1].LimitType) && 
+                IsIndexType(state, types[1])) {
                 // class M:
                 //      def __rmul__(self, other):
                 //          print "CALLED"

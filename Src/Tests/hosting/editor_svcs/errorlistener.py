@@ -22,7 +22,7 @@ skiptest("win32")
 load_iron_python_test()
 
 import Microsoft.Scripting.Hosting
-from System.Scripting import SourceSpan, SourceLocation
+from Microsoft.Scripting import SourceSpan, SourceLocation
 from Microsoft.Scripting import Severity, SourceCodeKind
 from Microsoft.Scripting.Hosting import ErrorListener, ScriptSource, ScriptRuntime
 from IronPython.Hosting import Python

@@ -18,11 +18,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -97,7 +95,9 @@ namespace IronPython.Modules {
                 case CBuiltin:
                     return LoadBuiltinModule(context, name);
                 case PackageDirectory:
+#if !SILVERLIGHT // file-system
                     return LoadPackageDirectory(pythonContext, name, filename);
+#endif
                 default:
                     throw PythonOps.TypeError("don't know how to import {0}, (type code {1}", name, type);
             }
@@ -177,6 +177,8 @@ namespace IronPython.Modules {
             return false;
         }
 
+#if !SILVERLIGHT
+
         public static object load_compiled(string name, string pathname) {
             return null;
         }
@@ -192,7 +194,8 @@ namespace IronPython.Modules {
         public static object load_dynamic(string name, string pathname, PythonFile file) {
             return null;
         }
-        
+
+#endif
         public static object load_package(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
             if (name == null) throw PythonOps.TypeError("load_package() argument 1 must be string, not None");
             if (pathname == null) throw PythonOps.TypeError("load_package() argument 2 must be string, not None");
@@ -260,25 +263,26 @@ namespace IronPython.Modules {
                 throw PythonOps.TypeError("find_module() argument 1 must be string, not None");
             }
 
-            PlatformAdaptationLayer pal = context.LanguageContext.DomainManager.Platform;
+#if !SILVERLIGHT // files
             foreach (object d in path) {
                 string dir = d as string;
                 if (dir == null) continue;  // skip invalid entries
 
                 string pathName = Path.Combine(dir, name);
-                if (pal.DirectoryExists(pathName)) {
-                    if (pal.FileExists(Path.Combine(pathName, "__init__.py"))) {
+                if (Directory.Exists(pathName)) {
+                    if (File.Exists(Path.Combine(pathName, "__init__.py"))) {
                         return PythonTuple.MakeTuple(null, pathName, PythonTuple.MakeTuple("", "", PackageDirectory));
                     }
                 }
 
                 string fileName = pathName + ".py";
-                if (pal.FileExists(fileName)) {
-                    Stream fs = pal.OpenInputFileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                if (File.Exists(fileName)) {
+                    FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     PythonFile pf = PythonFile.Create(context, fs, fileName, "U");
                     return PythonTuple.MakeTuple(pf, fileName, PythonTuple.MakeTuple(".py", "U", PythonSource));
                 }
             }
+#endif
             throw PythonOps.ImportError("No module named {0}", name);
         }
 
@@ -305,12 +309,15 @@ namespace IronPython.Modules {
             return context.CompileModule(fileName, name, sourceUnit, ModuleOptions.Initialize).Scope;
         }
 
+#if !SILVERLIGHT // files
         private static Scope/*!*/ LoadPackageDirectory(PythonContext/*!*/ context, string moduleName, string path) {
+            
             string initPath = Path.Combine(path, "__init__.py");
             
             SourceUnit sourceUnit =  context.CreateFileUnit(initPath, context.DefaultEncoding);
             return context.CompileModule(initPath, moduleName, sourceUnit, ModuleOptions.Initialize).Scope;
         }
+#endif
 
         private static object LoadBuiltinModule(CodeContext/*!*/ context, string/*!*/ name) {
             Assert.NotNull(context, name);

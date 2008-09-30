@@ -1,4 +1,4 @@
-﻿def codegen_helper():
+def codegen_helper():
     import clr
     clr.AddReference("IronPython")
     from IronPython.Compiler import Ast

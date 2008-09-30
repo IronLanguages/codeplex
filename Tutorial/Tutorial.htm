@@ -354,16 +354,16 @@
 		</li>
 	</ol>
 	<p class="TypedExample">dir(sys)</p>
-	<p class="HiddenOutput">['__name__', '__stderr__', '__stdin__', '__stdout__', '_getframe', 'api_version', 'argv', 'builtin_module_names', 'byteorder', 'copyright', 'displayhook', 'exc_clear', 'exc_info', 'exc_traceback', 'exc_type', 'exc_value', 'excepthook', 'exec_prefix', 'executable', 'exit', 'getcheckinterval', 'getdefaultencoding', 'getfilesystemencoding', 'getrecursionlimit', 'hexversion', 'maxint', 'maxunicode', 'meta_path', 'modules', 'path', 'path_hooks', 'path_importer_cache', 'platform', 'prefix', 'ps1', 'ps2', 'setcheckinterval', 'setdefaultencoding', 'setrecursionlimit', 'settrace', 'stderr', 'stdin', 'stdout', 'version', 'version_info', 'warnoptions', 'winver']</p>
+	<p class="HiddenOutput">['PerformModuleReload', '__name__', '__stderr__', '__stdin__', '__stdout__', '_getframe', 'api_version', 'argv', 'builtin_module_names', 'byteorder', 'copyright', 'displayhook', 'exc_clear', 'exc_info', 'exc_traceback', 'exc_type', 'exc_value', 'excepthook', 'exec_prefix', 'executable', 'exit', 'getcheckinterval', 'getdefaultencoding', 'getfilesystemencoding', 'getrecursionlimit', 'hexversion', 'maxint', 'maxunicode', 'meta_path', 'modules', 'path', 'path_hooks', 'path_importer_cache', 'platform', 'prefix', 'ps1', 'setcheckinterval', 'setdefaultencoding', 'setrecursionlimit', 'settrace', 'stderr', 'stdin', 'stdout', 'version', 'version_info', 'warnoptions', 'winver']</p>
 	<ol start="7">
 		<li>
 		<p class="Step">Print the values of some of the &quot;sys&quot; module attributes:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">sys.path</p>
-	<p class="LooseVerify">['.', '%MERLIN_ROOT%\\Test\\IronPythonTutorial', '%MERLIN_ROOT%\\Test', '%MERLIN_ROOT%\\Languages\\IronPython\\Tutorial', '%MERLIN_ROOT%\\Languages\\IronPython\\Tests', '%MERLIN_ROOT%\\Bin\\Debug\\Lib']</p>
+	<p class="HiddenOutput">['%MERLIN_ROOT%\\Test\\IronPythonTutorial', '%MERLIN_ROOT%\\Test', '%MERLIN_ROOT%\\Languages\\IronPython\\Tutorial', '%MERLIN_ROOT%\\Languages\\IronPython\\Tests', '%MERLIN_ROOT%\\Bin\\Debug\\Lib']</p>
 	<p class="TypedExample">sys.executable</p>
-	<p class="LooseVerify">'%MERLIN_ROOT%\\Bin\\Debug\\ipy.exe'</p>
+	<p class="HiddenOutput">'%MERLIN_ROOT%\\Bin\\Debug\\ipy.exe'</p>
 	<h3><a name="T1.1.3">Task 3: External Python modules</a></h3>
 	<p class="Normal">This task uses the module &quot;first.py&quot; located in the Tutorial
 	folder.</p>
@@ -451,12 +451,12 @@
 	<p class="Stepnonumbering">The expected output of these commands is as follows
 	(with some ellipsis for convenience):</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; dir(System.Environment)</p>
-	<p class="HiddenOutput">['CommandLine', 'CurrentDirectory', 'Equals', 'Exit', 'ExitCode', 'ExpandEnvironmentVariables', 'FailFast', 'GetCommandLineArgs', 'GetEnvironmentVariable', 'GetEnvironmentVariables', 'GetFolderPath', 'GetHashCode', 'GetLogicalDrives', 'GetType', 'HasShutdownStarted', 'MachineName', 'MemberwiseClone', 'NewLine', 'OSVersion', 'ProcessorCount', 'ReferenceEquals', 'SetEnvironmentVariable', 'SpecialFolder', 'StackTrace', 'SystemDirectory', 'TickCount', 'ToString', 'UserDomainName', 'UserInteractive', 'UserName', 'Version', 'WorkingSet', '__all__', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
+	<p class="HiddenOutput">['CommandLine', 'CurrentDirectory', 'Equals', 'Exit', 'ExitCode', 'ExpandEnvironmentVariables', 'FailFast', 'Finalize', 'GetCommandLineArgs', 'GetEnvironmentVariable', 'GetEnvironmentVariables', 'GetFolderPath', 'GetHashCode', 'GetLogicalDrives', 'GetType', 'HasShutdownStarted', 'MachineName', 'MemberwiseClone', 'NewLine', 'OSVersion', 'ProcessorCount', 'ReferenceEquals', 'SetEnvironmentVariable', 'SpecialFolder', 'StackTrace', 'SystemDirectory', 'TickCount', 'ToString', 'UserDomainName', 'UserInteractive', 'UserName', 'Version', 'WorkingSet', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__', 'get_CommandLine', 'get_CurrentDirectory', 'get_ExitCode', 'get_HasShutdownStarted', 'get_MachineName', 'get_NewLine', 'get_OSVersion', 'get_ProcessorCount', 'get_StackTrace', 'get_SystemDirectory', 'get_TickCount', 'get_UserDomainName', 'get_UserInteractive', 'get_UserName', 'get_Version', 'get_WorkingSet', 'set_CurrentDirectory', 'set_ExitCode']</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.OSVersion</p>
 	<p class="Code-Highlighted">&lt;System.OperatingSystem object at 0x000000000000002B [Microsoft Windows NT 6.0.6000.0]</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.CommandLine</p>
 	<p class="Code-Highlighted">&#39;C:\\IronPython\\ipy.exe&#39;
-	<p class="LooseVerify">'"%MERLIN_ROOT%\\Bin\\Debug\\ipy.exe"'
+	<p class="HiddenOutput">'"%MERLIN_ROOT%\\Bin\\Debug\\ipy.exe"'
 	</p>
 	<ol start="4">
 		<li>
@@ -474,7 +474,7 @@ list(set1-set2)
 	</p>
 	<p class="HiddenOutput">
 
-	['Tan','Sqrt','Acos','Sin','Abs','Round','Pow','Floor','Exp','Log','Atan2','IEEERemainder','Atan','__builtins__','Asin','System','E','Cosh','__name__', 'Ceiling','DivRem','BigMul','Cos','Truncate','Min','Tanh','Log10','Sign','Max','Sinh','PI']</p>
+	['Tan', 'Tanh', 'Sin', 'Sinh', 'Ceiling', '__name__', 'Atan', 'Pow', 'Cos', 'Cosh', 'Round', 'Abs', 'Atan2', 'Acos', 'BigMul', 'DivRem', 'Truncate', 'E', 'Max', '__builtins__', 'Log', 'Asin', 'Floor', 'PI', 'Log10', 'System', 'Sign', 'Exp', 'Min', 'IEEERemainder', 'Sqrt']</p>
 	<p class="Stepnonumbering">Now you can call Math methods without having to specify
 	the namespace and class name prefix:</p>
 	<p class="TypedExample">Sin(PI/2)</p>
@@ -506,8 +506,8 @@ list(set1-set2)
 set2 = set(dir(object))
 list(set1-set2)</p>
 	<p class="HiddenOutput">
-        
-        ['Clone','ContainsValue','SyncRoot','hcp','__setitem__','__contains__','KeyEquals','IsSynchronized','GetEnumerator','GetHash','Contains','Item','Values','ContainsKey','Remove','OnDeserialization','__iter__','Add','Synchronized','EqualityComparer','__len__','comparer','Keys','Clear','IsReadOnly','CopyTo','IsFixedSize','__add__','GetObjectData','Count','__getitem__']</p>
+
+	['get_Values', 'ContainsValue', 'Keys', 'get_SyncRoot', 'GetObjectData', 'Count', 'get_IsFixedSize', 'get_Keys', 'Contains', 'Add', '__getitem__', 'get_IsReadOnly', 'get_comparer', 'get_IsSynchronized', 'EqualityComparer', 'get_EqualityComparer', 'GetHash', 'IsFixedSize', 'KeyEquals', 'ContainsKey', 'CopyTo', 'get_Count', 'hcp', 'Clone', 'SyncRoot', '__setitem__', 'GetEnumerator', 'set_comparer', 'Remove', 'Synchronized', 'Clear', '__iter__', 'IsReadOnly', 'comparer', 'Values', 'get_Item', 'get_hcp', 'IsSynchronized', 'OnDeserialization', 'set_Item', 'set_hcp']</p>
 	<ol start="3">
 		<li>
 		<p class="Step">Insert&nbsp;a few elements into the hash table:</p>
@@ -921,7 +921,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
 	<p class="HiddenOutput">
 
-        ['Submatrix','Symmetric','Clone','__sub__','Columns','Trace','__ne__','InfinityNorm','Rows','__setitem__','Multiply','__neg__','Diagonal','Random','Subtract','Item','Square','FrobeniusNorm','Solve','__rmul__','Negate','Add','Inverse','__radd__','__rsub__','__mul__','Determinant','__add__','__eq__','__getitem__','Norm1','Transpose']</p>
+	['FrobeniusNorm', 'InfinityNorm', 'Rows', '__neg__', '__radd__', 'Columns', '__getitem__', 'Symmetric', 'get_Norm1', '__rmul__', '__rsub__', 'Inverse', 'op_UnaryNegation', 'Solve', 'Clone', '__setitem__', 'Multiply', 'get_Square', 'Submatrix', 'Subtract', 'Random', 'get_Trace', 'op_Subtraction', '__eq__', 'get_InfinityNorm', 'Diagonal', 'Trace', 'Negate', 'get_Columns', 'Add', '__sub__', 'get_FrobeniusNorm', 'Determinant', 'Norm1', '__add__', 'get_Symmetric', 'get_Inverse', 'op_Addition', 'op_Equality', 'op_Inequality', 'Transpose', 'get_Determinant', 'Square', 'get_Rows', 'get_Item', '__mul__', '__ne__', 'op_Multiply', 'set_Item']</p>
 	<ol start="7">
 		<li>
 		<p class="Step">Make simple calculations with the matrices:</p>
@@ -969,7 +969,7 @@ list(set1-set2)</p>
 		</li>
 	</ol>
 	<p class="TypedExample">import sys</p>
-    <p class="TypedExample">sys.path.append(r&quot;c:\python25\lib&quot;)</p>
+<p class="TypedExample">sys.path.append(r&quot;c:\python25\lib&quot;)</p>
 	<ol start="3">
 		<li>
 		<p class="Step">Start the IronPython console from the tutorial directory
@@ -985,7 +985,7 @@ list(set1-set2)</p>
 	<p class="Code-Background"></p>
 	<p class="TypedExample">os.getcwd()</p>
 	<p class="Code-Highlighted">'C:\\ironpython\\Tutorial'</p>
-	<p class="LooseVerify">
+	<p class="HiddenOutput">
 
 	'%MERLIN_ROOT%\\Test\\IronPythonTutorial'</p>
 	<p class="LabSummary">Tutorial Summary</p>
@@ -1069,7 +1069,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
 	<p class="HiddenOutput">
 
-    ['GetLifetimeService', 'EndInit', 'IncludeSubdirectories', 'Filter', 'WaitForChanged', 'Disposed', 'OnChanged', 'DesignMode', 'InitializeLifetimeService', 'NotifyFilter', 'GetService', 'Path', 'Created', 'EnableRaisingEvents', 'InternalBufferSize', 'SynchronizingObject', 'OnError', 'Site', 'BeginInit', 'Deleted', 'Error', 'Dispose', '__enter__', 'CanRaiseEvents', 'Events', 'Changed', '__exit__', 'Container', 'OnRenamed', 'Renamed', 'CreateObjRef', 'OnCreated', 'OnDeleted']</p>
+	['SynchronizingObject', 'get_CanRaiseEvents', 'Deleted', 'remove_Error', 'get_SynchronizingObject', 'get_NotifyFilter', 'EnableRaisingEvents', 'set_SynchronizingObject', 'get_Events', 'DesignMode', 'get_DesignMode', 'GetLifetimeService', 'get_Site', 'set_NotifyFilter', 'OnRenamed', 'get_Path', 'remove_Disposed', 'remove_Created', 'InitializeLifetimeService', 'WaitForChanged', 'IncludeSubdirectories', 'remove_Deleted', 'NotifyFilter', 'Filter', 'Renamed', 'Container', 'Site', 'add_Deleted', 'remove_Renamed', 'Changed', 'set_Filter', 'Path', 'Created', 'CreateObjRef', 'set_EnableRaisingEvents', 'GetService', 'add_Created', 'get_Container', 'InternalBufferSize', 'set_InternalBufferSize', 'get_EnableRaisingEvents', 'set_Site', 'add_Error', 'set_Path', 'get_Filter', 'get_InternalBufferSize', 'OnChanged', 'add_Disposed', 'set_IncludeSubdirectories', 'CanRaiseEvents', 'Dispose', 'Disposed', 'BeginInit', 'OnCreated', 'Error', 'get_IncludeSubdirectories', 'add_Changed', 'Events', 'remove_Changed', 'EndInit', 'add_Renamed', 'OnDeleted', 'OnError']</p>
 	<p class="TypedExample">w.Path = &quot;.&quot;</p>
 	<p class="Code-Background"></p>
 	<ol start="4">
@@ -1161,10 +1161,10 @@ list(set1-set2)</p>
 	<p class="Stepnonumbering" style="page-break-after:avoid">The output in the
 	console window will be:</p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; dir(FileSystemEventArgs)</p>
-	<p class="Code-Highlighted">['ChangeType', 'Empty', 'Equals', 'FullPath', 'GetHashCode', 'GetType', 'MemberwiseClone', 'Name', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
+	<p class="Code-Highlighted">['ChangeType', 'Empty', 'Equals', 'Finalize', 'FullPath', 'GetHashCode', 'GetType', 'MemberwiseClone', 'Name', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__', 'get_ChangeType', 'get_FullPath', 'get_Name']</p>
 	<p class="HiddenOutput">
 
-	['FullPath', 'Name', 'Empty', 'ChangeType']</p>
+	['ChangeType', 'get_ChangeType', 'get_Name', 'FullPath', 'get_FullPath', 'Empty', 'Name']</p>
 	<ol start="2">
 		<li>
 		<p class="Step">Now with more knowledge of the event argument properties,
@@ -1356,7 +1356,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
 	<p class="HiddenOutput">
 
-	['Location', 'Y', 'X', 'Button', 'Clicks', 'Empty', 'Delta']</p>
+	['get_Clicks', 'Button', 'get_Delta', 'get_Button', 'get_Location', 'get_X', 'get_Y', 'Delta', 'Empty', 'Clicks', 'Y', 'X', 'Location']</p>
 	<ol start="8">
 		<li>
 		<p class="Step" style="page-break-after:avoid">Knowing the contents of the
@@ -1785,7 +1785,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="Stepnonumbering">The output in the console window will be:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; a = AgentServerClass()<br />
 	&gt;&gt;&gt; dir(a)</p>
-	<p class="Code-Background">['CreateObjRef','Equals','GetAttrNames','GetCharacter','GetCharacter','GetCharacterEx','GetHashCode','GetLifetimeService','GetMemberNames','GetSuspended','GetSuspended','GetType','GetVersion','InitializeLifetimeService','Load','Load','MemberwiseClone','ReferenceEquals','Register','Register','ShowDefaultCharacterProperties','ToString','Unload','Unload','Unregister','Unregister','__class__','__delattr__','__dir__','__doc__','__getattribute__','__hash__','__init__','__new__','__reduce__','__reduce_ex__','__repr__','__setattr__','__str__']</p>
+	<p class="Code-Background">['CreateObjRef', 'Equals', 'Finalize', 'GetAttrNames', 'GetCharacter', 'GetHashCode', 'GetLifetimeService', 'GetMemberNames', 'GetSuspended', 'GetType', 'InitializeLifetimeService', 'Load', 'MemberwiseClone', 'ReferenceEquals', 'Register', 'ToString', 'Unload', 'Unregister', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
 	<ol start="5">
 		<li>
 		<p class="Step">Explore the parameters of the Load method on AgentServerClass:</p>
@@ -1793,7 +1793,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 	</ol>
 	<p class="TypedExample">a.Load.__doc__</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; a.Load.__doc__</p>
-	<p class="Code-Background">'void Load(Object vLoadKey, [out]Int32& pdwCharID, [out]Int32& pdwReqID)'</p>
+	<p class="Code-Background">'(int, int) Load(self, object vLoadKey)'</p>
 	<p class="Stepnonumbering">The Load methods have an input parameter (name of
 	the character to load) and two output parameters.&nbsp; When calling this method, IronPython will turn the two output parameters into
 	multiple return values.</p>
@@ -1805,11 +1805,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 	first value is the actual character ID. Capture the character id in the variable:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">cid = clr.Reference[int]()</p>
-	<p class="Code-Background"></p>
-	<p class="TypedExample">reqid = clr.Reference[int]()</p>
-	<p class="Code-Background"></p>
-	<p class="TypedExample">a.Load(&quot;Merlin.acs&quot;, cid, reqid)</p>
+	<p class="TypedExample">cid = a.Load(&quot;Merlin.acs&quot;)[0]</p>
 	<p class="Code-Background"></p>
 	<ol start="7">
 		<li>
@@ -1818,16 +1814,12 @@ Registering self.on_Clear to handle Clear.Click</p>
 		IronPython Tutorial:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">from System.Runtime.InteropServices import DispatchWrapper, UnknownWrapper</p>
-	<p class="TypedExample">c = clr.StrongBox[object](DispatchWrapper(None))</p>
-	<p class="HiddenOutput"></p>
-	<p class="TypedExample">a.GetCharacter(cid.Value, c)</p>
-	<p class="HiddenOutput"></p>
+	<p class="TypedExample">c = a.GetCharacter(cid)</p>
 	<p class="Code-Background"></p>
-	<p class="TypedExample">c.Value.Show(0, reqid)</p>
-	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
-	<p class="HiddenOutput"></p>
+	<p class="TypedExample">c.Show(0)</p>
+	<p class="HiddenOutput">103</p>
+	<p class="TypedExample">c.Think(&quot;IronPython Tutorial&quot;)</p>
+	<p class="HiddenOutput">104</p>
 	<ol start="8">
 		<li>
 		<p class="Step">Merlin has a lot of animations he can play.&nbsp; Get list of
@@ -1835,11 +1827,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 		&quot;Read&quot;, by calling the Play method:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">enum = clr.StrongBox[object](UnknownWrapper(None))</p>
-	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.GetAnimationNames(enum)</p>
-	<p class="HiddenOutput"></p>
-	<p class="TypedExample">for n in enum.Value: print n</p>
+	<p class="TypedExample">for n in c.GetAnimationNames(): print n</p>
 	<p class="HiddenOutput">RestPose<br>
 Blink<br>
 Idle2_2<br>
@@ -1913,33 +1901,30 @@ GetAttentionContinued<br>
 Process<br>
 Search<br>
 Think<br></p>
-	<p class="TypedExample">c.Value.Play(&quot;Read&quot;, reqid)</p>
-	<p class="HiddenOutput"></p>
+	<p class="TypedExample">c.Play(&quot;Read&quot;)</p>
+	<p class="HiddenOutput">105</p>
 	<ol start="9">
 		<li>
-		<p class="Step">(Optional) To call a series of animations, we could call c.Play(animation_name, reqid)
+		<p class="Step">(Optional) To call a series of animations, we could call c.Play(animation_name)
 		for each animation.&nbsp; Python&#39;s lamda functions can simplify this process.&nbsp; We can create global functions and assign them names based on the animation
 		name:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">c.Value.GetAnimationNames(enum)</p>
-	<p class="HiddenOutput"></p>
-	<p class="TypedExample">for n in enum.Value: globals()[n] = lambda name=n: c.Value.Play(name, reqid)</p>
-	<p class="HiddenOutput"></p>
+	<p class="TypedExample">for n in c.GetAnimationNames(): globals()[n] = lambda name=n: c.Play(name)</p>
+	<p class="HiddenOutput">
+	106</p>
 	<p class="Stepnonumbering">At this point we can have Merlin play animations
 	simply by calling a function from global namespace:</p>
 	<p class="TypedExample">Congratulate()</p>
-	<p class="HiddenOutput"></p>
 	<p class="Code-Background"></p>
 	<ol start="10">
 		<li>
 		<p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
 		</li>
 	</ol>
-	<p class="TypedExample">c.Value.StopAll(0)</p>
-	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.Hide(0, reqid)</p>
-	<p class="HiddenOutput"></p>
+	<p class="TypedExample">c.StopAll(0)</p>
+	<p class="HiddenOutput">109</p>
+	<p class="TypedExample">c.Hide(0)</p>
 	<h2><a name="T3.2">Exercise 2: Use Word for Spell Checking</a></h2>
 	<p class="Body">In this exercise you will create an instance of Microsoft
 	Word and use it to check word spellings.</p>
@@ -2247,7 +2232,7 @@ list(set1-set2)</p>
 	&gt;&gt;&gt; clr.AddReferenceToFile(&quot;csextend.dll&quot;)<br />
 	&gt;&gt;&gt; import Simple<br />
 	&gt;&gt;&gt; dir(Simple)</p>
-	<p class="Code-Highlighted">['Equals', 'GetHashCode', 'GetType', 'MemberwiseClone', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
+	<p class="Code-Highlighted">['Equals', 'Finalize', 'GetHashCode', 'GetType', 'MemberwiseClone', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
 	<ol start="8">
 		<li>
 		<p class="Step">Create instance of the Simple class:</p>
@@ -2315,7 +2300,7 @@ list(set1-set2)</p>
 	<p class="HiddenOutput">
 
 	['GetEnumerator', '__iter__']</p>
-	<p class="Code-Highlighted">['Equals', 'GetEnumerator', 'GetHashCode', 'GetType', 'MemberwiseClone', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__iter__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
+	<p class="Code-Highlighted">['Equals', 'Finalize', 'GetEnumerator', 'GetHashCode', 'GetType', 'MemberwiseClone', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__iter__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
 	<p class="TypedExample">s = Simple(10)</p>
 	<p class="Code-Background"></p>
 	<p class="TypedExample">for i in s: print i</p>
@@ -2393,7 +2378,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
 	<p class="HiddenOutput">
 
-	['GetEnumerator', '__iter__', '__radd__', '__add__']</p>
+	['op_Addition', 'GetEnumerator', '__radd__', '__iter__', '__add__']</p>
 	<p class="TypedExample">a = Simple(10)</p>
 		<p class="Code-Background"></p>
 	<p class="TypedExample">b = Simple(20)</p>
@@ -2585,7 +2570,7 @@ list(set1-set2)</p>
 	&gt;&gt;&gt; clr.AddReferenceToFile(&quot;vbextend.dll&quot;)<br />
 	&gt;&gt;&gt; import Simple<br />
 	&gt;&gt;&gt; dir(Simple)</p>
-	<p class="Code-Highlighted">['Equals', 'GetHashCode', 'GetType', 'MemberwiseClone', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
+	<p class="Code-Highlighted">['Equals', 'Finalize', 'GetHashCode', 'GetType', 'MemberwiseClone', 'ReferenceEquals', 'ToString', '__class__', '__delattr__', '__doc__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__str__']</p>
 	<ol start="8">
 		<li>
 		<p class="Step">Create instance of the Simple class:</p>
@@ -2770,7 +2755,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
 	<p class="HiddenOutput">
 
-	['GetEnumerator', '__iter__', '__radd__', '__add__']</p>
+	['op_Addition', 'GetEnumerator', '__radd__', '__iter__', '__add__']</p>
 	<p class="TypedExample">a = Simple(10)</p>
 	<p class="Code-Background"></p>
 	<p class="TypedExample">b = Simple(20)</p>

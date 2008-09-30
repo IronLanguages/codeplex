@@ -54,10 +54,6 @@ namespace Microsoft.Linq.Expressions {
                 builder.Append("null");
             }
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitConstant(this);
-        }
     }
 
     public partial class Expression {

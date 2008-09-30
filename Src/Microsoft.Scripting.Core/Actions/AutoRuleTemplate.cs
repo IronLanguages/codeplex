@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Actions {
             // re-use the existing one.
             object[] templateArgs = GetConstantValues(newConstants);
 
-            Expression newBody = new TemplateRuleRewriter(newConstants).Visit(to.Binding);
+            Expression newBody = new TemplateRuleRewriter(newConstants).VisitNode(to.Binding);
 
             if (from.Template == null || tooSpecific) {
                 // create a new one - either we are going from a non-templated rule to using a templated rule, 
@@ -145,7 +145,7 @@ namespace Microsoft.Scripting.Actions {
                 _constants = constants;
             }
 
-            protected internal override Expression VisitConstant(ConstantExpression node) {
+            protected override Expression Visit(ConstantExpression node) {
                 int index = _constants.IndexOf(node);
                 if (index != -1) {
                     // this is a constant we want to re-write, replace w/ a templated constant
@@ -157,7 +157,7 @@ namespace Microsoft.Scripting.Actions {
                     return Expression.Property(Expression.Constant(constVal), genType.GetProperty("Value"));
                 }
 
-                return base.VisitConstant(node);
+                return base.Visit(node);
             }
         }
     }

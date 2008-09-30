@@ -25,16 +25,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
@@ -121,14 +119,12 @@ namespace IronPython.Modules {
             return dt.ToString("ddd MMM dd HH:mm:ss yyyy", null);
         }
 
-        public static double clock() {
 #if !SILVERLIGHT    // System.Diagnostics.Stopwatch
+        public static double clock() {
             InitStopWatch();
             return ((double)sw.ElapsedTicks) / Stopwatch.Frequency;
-#else
-            return (double)DateTime.Now.Ticks / (double)TimeSpan.TicksPerSecond;
-#endif
         }
+#endif
 
         public static string ctime(CodeContext/*!*/ context) {
             return asctime(context, localtime());

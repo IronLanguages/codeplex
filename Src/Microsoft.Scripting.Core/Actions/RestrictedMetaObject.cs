@@ -12,23 +12,26 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-namespace Microsoft.Linq.Expressions {
-    public sealed class EmptyStatement : Expression {
-        internal static readonly EmptyStatement Instance = new EmptyStatement(Annotations.Empty);
+using Microsoft.Linq.Expressions;
 
-        internal EmptyStatement(Annotations annotations)
-            : base(ExpressionType.EmptyStatement, typeof(void), annotations) {
-        }
-    }
-
-    public partial class Expression {
-        public static EmptyStatement Empty() {
-            return EmptyStatement.Instance;
+namespace Microsoft.Scripting.Actions {
+    /// <summary>
+    /// A meta object who's exact type is known and additional calls to Restrict
+    /// do nothing.
+    /// </summary>
+    public class RestrictedMetaObject : MetaObject {
+        public RestrictedMetaObject(Expression expr, Restrictions rest)
+            : base(expr, rest) {
         }
 
-        public static EmptyStatement Empty(Annotations annotations) {
-            return new EmptyStatement(annotations);
+        public RestrictedMetaObject(Expression expr, Restrictions rest, object value)
+            : base(expr, rest, value) {
+        }
+
+        public override MetaObject Restrict(Type type) {
+            return this;
         }
     }
 }

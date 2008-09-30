@@ -271,13 +271,8 @@ namespace IronPython.Runtime {
                 // found __path__, importing nested module. The actual name of the nested module
                 // is the name of the mod plus the name of the imported module
                 if (level == -1) {
-                    // absolute import of some module
                     full = modName + "." + name;
-                } else if (name == String.Empty) {
-                    // relative import of ancestor
-                    full = (StringOps.rsplit(modName, ".", level - 1)[0] as string);
                 } else {
-                    // relative import of some ancestors child
                     full = (StringOps.rsplit(modName, ".", level - 1)[0] as string) + "." + name;
                 }
                 return true;                
@@ -329,7 +324,7 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        public static object ReloadModule(CodeContext/*!*/ context, Scope/*!*/ scope) {
+        public static void ReloadModule(CodeContext/*!*/ context, Scope/*!*/ scope) {
             PythonContext pc = PythonContext.GetContext(context);
 
             PythonModule module = pc.GetReloadableModule(scope);
@@ -341,7 +336,7 @@ namespace IronPython.Runtime {
             // built-in module:
             if (fileName == null) {
                 ReloadBuiltinModule(context, module);
-                return scope;
+                return;
             }
 
             string name = module.GetName() as string;
@@ -356,15 +351,7 @@ namespace IronPython.Runtime {
 
                 object reloaded;
                 if (TryLoadMetaPathModule(context, module.GetName() as string, path, out reloaded) && reloaded != null) {
-                    return scope;
-                }
-
-                List sysPath;
-                if (PythonContext.GetContext(context).TryGetSystemPath(out sysPath)) {
-                    object ret = ImportFromPathHook(context, name, name, sysPath, null);
-                    if (ret != null) {
-                        return ret;
-                    }
+                    return;
                 }
             }
 
@@ -374,7 +361,6 @@ namespace IronPython.Runtime {
 
             SourceUnit sourceUnit = pc.CreateFileUnit(fileName, pc.DefaultEncoding, SourceCodeKind.File);
             pc.GetScriptCode(sourceUnit, name, ModuleOptions.None).Run(scope);
-            return scope;
         }
 
         /// <summary>
@@ -710,10 +696,6 @@ namespace IronPython.Runtime {
         #endregion
 
         private static object ImportFromPath(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ fullName, List/*!*/ path) {
-            return ImportFromPathHook(context, name, fullName, path, LoadFromDisk);
-        }
-
-        private static object ImportFromPathHook(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ fullName, List/*!*/ path, Func<CodeContext, string, string, string, object> defaultLoader) {
             Assert.NotNull(context, name, fullName, path);
 
             IDictionary<object, object> importCache = PythonContext.GetContext(context).GetSystemStateValue("path_importer_cache") as IDictionary<object, object>;
@@ -737,33 +719,25 @@ namespace IronPython.Runtime {
                         if (FindAndLoadModuleFromImporter(context, importer, fullName, null, out ret)) {
                             return ret;
                         }
-                    } else if(defaultLoader != null) {
-                        object res = defaultLoader(context, name, fullName, str);
-                        if (res != null) {
-                            return res;
+                    } else {
+                        // default behavior
+                        PythonModule module;
+                        string pathname = Path.Combine(str, name);
+
+                        module = LoadPackageFromSource(context, fullName, pathname);
+                        if (module != null) {
+                            return module.Scope;
+                        }
+
+                        string filename = pathname + ".py";
+                        module = LoadModuleFromSource(context, fullName, filename);
+                        if (module != null) {
+                            return module.Scope;
                         }
                     }
                 }
             }
             
-            return null;
-        }
-
-        private static object LoadFromDisk(CodeContext context, string name, string fullName, string str) {
-            // default behavior
-            PythonModule module;
-            string pathname = Path.Combine(str, name);
-
-            module = LoadPackageFromSource(context, fullName, pathname);
-            if (module != null) {
-                return module.Scope;
-            }
-
-            string filename = pathname + ".py";
-            module = LoadModuleFromSource(context, fullName, filename);
-            if (module != null) {
-                return module.Scope;
-            }
             return null;
         }
 

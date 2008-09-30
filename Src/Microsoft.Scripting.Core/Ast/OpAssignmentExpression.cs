@@ -19,7 +19,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Op")]
-    public sealed class OpAssignmentExpression : Expression {
+    public class OpAssignmentExpression : Expression {
         private readonly Expression _left;
         private readonly Expression _right;
         private readonly MethodInfo _method;
@@ -150,15 +150,6 @@ namespace Microsoft.Linq.Expressions {
             exprs.Add(Expression.Assign(tempIndex, tempValue));
 
             return Expression.Scope(Expression.Comma(exprs), vars);
-        }
-
-        protected internal override Expression VisitChildren(ExpressionTreeVisitor visitor) {
-            Expression l = visitor.Visit(_left);
-            Expression r = visitor.Visit(_right);
-            if (l == _left && r == _right) {
-                return this;
-            }
-            return Expression.OpAssign(_op, l, r);
         }
     }
 

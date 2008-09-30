@@ -122,20 +122,14 @@ namespace IronPython.Compiler.Ast {
                 // ...
                 // n+n-1: right[n-1] = tmpn-1
 
-                // allocate the temps first before transforming so we don't pick up a bad temp...
                 for (int i = 0; i < cnt; i++) {
                     MSAst.Expression tmpVal = ag.Transform(seRight.Items[i]);
                     tmps[i] = ag.GetTemporary("parallelAssign", tmpVal.Type);
 
                     body[i] = Ast.Assign(tmps[i], tmpVal);
-                }
-
-                // then transform which can allocate more temps
-                for (int i = 0; i < cnt; i++) {
                     body[i + cnt] = seLeft.Items[i].TransformSet(ag, SourceSpan.None, tmps[i], Operators.None);
                 }
 
-                // finally free the temps.
                 foreach (MSAst.VariableExpression variable in tmps) {
                     ag.FreeTemp(variable);
                 }

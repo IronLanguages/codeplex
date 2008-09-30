@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft; 
+ 
 namespace NamespaceOrType {
     public class C {
         public static string Flag = typeof(C).FullName;
