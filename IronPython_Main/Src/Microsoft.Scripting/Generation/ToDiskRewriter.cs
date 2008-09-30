@@ -38,13 +38,13 @@ namespace Microsoft.Scripting.Generation {
             TypeGen = typeGen;
         }
 
-        protected override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression Visit(LambdaExpression node) {
             _depth++;
             try {
 
                 // Visit the lambda first, so we walk the tree and find any
                 // constants we need to rewrite.
-                node = (LambdaExpression)base.VisitLambda(node);
+                node = (LambdaExpression)base.Visit(node);
 
                 // Only rewrite if we have constants and this is the top lambda
                 if (_constants == null || _depth != 1) {
@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
                 // Rewrite the constants, they can contain embedded
                 // CodeContextExpressions
                 for (int i = 0; i < _constants.Count; i++) {
-                    _constants[i] = Visit(_constants[i]);
+                    _constants[i] = VisitNode(_constants[i]);
                 }
 
                 // Add the consant pool variable to the top lambda
@@ -85,13 +85,13 @@ namespace Microsoft.Scripting.Generation {
             if (node.NodeType == ExpressionType.Dynamic) {
                 // the node was dynamic, the dynamic nodes were removed,
                 // we now need to rewrite any call sites.
-                return VisitDynamic((DynamicExpression)res);
+                return Visit((DynamicExpression)res);
             }
 
             return res;
         }
 
-        protected override Expression VisitConstant(ConstantExpression node) {
+        protected override Expression Visit(ConstantExpression node) {
             CallSite site = node.Value as CallSite;
             if (site != null) {
                 return RewriteCallSite(site);
@@ -99,21 +99,21 @@ namespace Microsoft.Scripting.Generation {
 
             IExpressionSerializable exprSerializable = node.Value as IExpressionSerializable;
             if (exprSerializable != null) {
-                return Visit(exprSerializable.CreateExpression());
+                return VisitNode(exprSerializable.CreateExpression());
             }
 
-            return base.VisitConstant(node);
+            return base.Visit(node);
         }
 
         // If the DynamicExpression uses a transient (in-memory) type for its
         // delegate, we need to replace it with a new delegate type that can be
         // saved to disk
-        protected override Expression VisitDynamic(DynamicExpression node) {
+        protected override Expression Visit(DynamicExpression node) {
             Type delegateType;
             if (RewriteDelegate(node.DelegateType, out delegateType)) {
                 node = Expression.MakeDynamic(delegateType, node.Binder, node.Annotations, node.Arguments);
             }
-            return base.VisitDynamic(node);
+            return base.Visit(node);
         }
 
         private bool RewriteDelegate(Type delegateType, out Type newDelegateType) {
@@ -185,7 +185,7 @@ namespace Microsoft.Scripting.Generation {
             _constants.Add(Expression.Call(siteType.GetMethod("Create"), serializer.CreateExpression()));
 
             // rewrite the node...
-            return Visit(
+            return VisitNode(
                 Expression.ConvertHelper(
                     Expression.ArrayAccess(_constantPool, Expression.Constant(_constants.Count - 1)),
                     siteType

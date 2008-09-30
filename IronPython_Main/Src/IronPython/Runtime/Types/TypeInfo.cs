@@ -19,17 +19,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using System.Threading;
-
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -808,11 +806,7 @@ namespace IronPython.Runtime.Types {
         class DocumentationDescriptor : PythonTypeSlot {
             internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
                 if (owner.IsSystemType) {
-                    if (instance is IDynamicObject) {
-                        value = PythonContext.GetContext(context).GetDocumentation(instance);
-                    } else {
-                        value = PythonTypeOps.GetDocumentation(owner.UnderlyingSystemType);
-                    }
+                    value = PythonTypeOps.GetDocumentation(owner.UnderlyingSystemType);
                     return true;
                 }
 

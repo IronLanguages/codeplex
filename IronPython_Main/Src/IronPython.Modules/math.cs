@@ -14,12 +14,9 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-
-using Microsoft.Scripting.Math;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("math", typeof(IronPython.Modules.PythonMath))]
 namespace IronPython.Modules {
@@ -79,22 +76,19 @@ namespace IronPython.Modules {
         }
 
         public static double log(double v0, double v1) {
+#if !SILVERLIGHT        // Math.Log overload
             return Check(Math.Log(v0, v1));
+#else
+            if ((v1 != 1) && ((v0 == 1) || ((v1 != 0) && !double.IsPositiveInfinity(v1)))) {
+                return Check((Math.Log(v0) / Math.Log(v1)));
+            }
+            return Check(double.NaN);
+
+#endif
         }
 
         public static double log(BigInteger value) {
             return Check(value.Log());
-        }
-
-        public static double log(IPythonObject value) {
-            // CPython tries float first, then double, so we need
-            // an explicit overload which properly matches the order here
-            double val;
-            if (Converter.TryConvertToDouble(value, out val)) {
-                return log(val);
-            } else {
-                return log(Converter.ConvertToBigInteger(value));
-            }
         }
 
         public static double log(BigInteger value, double newBase) {
@@ -109,30 +103,8 @@ namespace IronPython.Modules {
             return Check(value.Log(newBase));
         }
 
-        public static double log(IPythonObject value, double newBase) {
-            // CPython tries float first, then double, so we need
-            // an explicit overload which properly matches the order here
-            double val;
-            if (Converter.TryConvertToDouble(value, out val)) {
-                return log(val, newBase);
-            } else {
-                return log(Converter.ConvertToBigInteger(value), newBase);
-            }
-        }
-
         public static double log10(BigInteger value) {
             return Check(value.Log10());
-        }
-
-        public static double log10(IPythonObject value) {
-            // CPython tries float first, then double, so we need
-            // an explicit overload which properly matches the order here
-            double val;
-            if (Converter.TryConvertToDouble(value, out val)) {
-                return log10(val);
-            } else {
-                return log10(Converter.ConvertToBigInteger(value));
-            }
         }
 
         private static void SetExponentLe(byte[] v, int exp) {

@@ -333,18 +333,4 @@ def test_builtins_type():
     exec 'abc = 42' in x, y
     AreEqual(type(x['__builtins__']), dict)
 
-def test_exec_locals():
-    exec """    
-def body():
-    AreEqual('anythingatall' in locals(), False)
-
-body()
-foozbab = 2
-def body():
-    AreEqual('foozbab' in locals(), False)
-
-body()
-    
-"""
-
 run_test(__name__)

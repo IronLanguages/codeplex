@@ -34,16 +34,8 @@ namespace Microsoft.Scripting.Interpretation {
 
         public static object TopLevelExecute(InterpretedScriptCode scriptCode, params object[] args) {
             ContractUtils.RequiresNotNull(scriptCode, "scriptCode");
-
-            var state = InterpreterState.Current.Update(
-                (caller) => InterpreterState.CreateForTopLambda(scriptCode, scriptCode.Code, caller, args)
-            );
-
-            try {
-                return DoExecute(state, scriptCode.Code);
-            } finally {
-                InterpreterState.Current.Value = state.Caller;
-            }
+            InterpreterState state = InterpreterState.CreateForTopLambda(scriptCode, scriptCode.Code, args);
+            return DoExecute(state, scriptCode.Code);
         }
 
         internal static object Evaluate(InterpreterState state, Expression expression) {
@@ -131,23 +123,17 @@ namespace Microsoft.Scripting.Interpretation {
             return !pi.IsOut || (pi.Attributes & ParameterAttributes.In) != 0;
         }
 
-        private static object InvokeMethod(InterpreterState state, MethodInfo method, object instance, params object[] parameters) {
+        private static object InvokeMethod(MethodInfo method, object instance, params object[] parameters) {
             // TODO: Cache !!!
             ReflectedCaller _caller = null;
 
             if (_caller == null) {
                 _caller = ReflectedCaller.Create(method);
             }
-
-            try {
-                if (instance == null) {
-                    return _caller.Invoke(parameters);
-                } else {
-                    return _caller.InvokeInstance(instance, parameters);
-                }
-            } catch (Exception e) {
-                state.ScriptCode.LanguageContext.InterpretExceptionThrow(state, e, false);
-                throw;
+            if (instance == null) {
+                return _caller.Invoke(parameters);
+            } else {
+                return _caller.InvokeInstance(instance, parameters);
             }
         }
 
@@ -258,7 +244,7 @@ namespace Microsoft.Scripting.Interpretation {
                 object res;
                 try {
                     // Call the method                    
-                    res = InvokeMethod(state, node.Method, instance, parameters);                   
+                    res = InvokeMethod(node.Method, instance, parameters);                   
                 } finally {
                     // expose by-ref args
                     for (int i = 0; i <= lastByRefParamIndex; i++) {
@@ -741,161 +727,38 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            var metaAction = node.Binder as MetaAction;
-            if (metaAction != null) {
-                return InterpretMetaAction(state, metaAction, node, args);
-            }
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Count, "Interpreter.Site: Compiling non-meta-action");
-            var callSiteInfo = GetCallSite(state, node);
-            return callSiteInfo.CallerTarget(callSiteInfo.CallSite, args);
+            var callSite = GetCallSite(state, node);
+            MatchCallerTarget caller = MatchCaller.GetCaller(callSite.GetType().GetGenericArguments()[0]);
+            return caller(callSite, args);
         }
 
-        private const int SiteCompileThreshold = 2;
-
-        private static object InterpretMetaAction(InterpreterState state, MetaAction action, DynamicExpression node, object[] argValues) {
-            var callSites = state.LambdaState.ScriptCode.CallSites;
-            CallSiteInfo callSiteInfo;
-
-            // TODO: better locking
-            lock (callSites) {
-                if (!callSites.TryGetValue(node, out callSiteInfo)) {
-                    callSiteInfo = new CallSiteInfo();
-                    callSites.Add(node, callSiteInfo);
-                }
-            }
-
-            callSiteInfo.Counter++;
-            if (callSiteInfo.Counter > SiteCompileThreshold) {
-                if (callSiteInfo.CallSite == null) {
-                    SetCallSite(callSiteInfo, node);
-                }
-                return callSiteInfo.CallerTarget(callSiteInfo.CallSite, argValues);
-            }
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Count, "Interpreter: Interpreting meta-action");
-
-            var metaArguments = new MetaObject[argValues.Length];
-            for (int i = 0; i < metaArguments.Length; i++) {
-                metaArguments[i] = MetaObject.ObjectToMetaObject(
-                    argValues[i],
-                    Expression.Constant(argValues[i])
-                );
-            }
-
-            MetaObject binding = action.Bind(metaArguments);
-            if (binding == null) {
-                throw new InvalidOperationException("Bind cannot return null.");
-            }
-
-            // restrictions ignored, they should be valid:
-            AssertTrueRestrictions(state, binding);
-
-            var result = Interpret(state, binding.Expression);
-            return result;
-        }
-
-        [Conditional("DEBUG")]
-        private static void AssertTrueRestrictions(InterpreterState state, MetaObject binding) {
-            var test = binding.Restrictions.CreateTest();
-            var result = Interpret(state, test);
-            Debug.Assert(result is bool && (bool)result);
-        }
-
-        private static CallSiteInfo GetCallSite(InterpreterState state, DynamicExpression node) {
-            CallSiteInfo callSiteInfo;
+        private static CallSite GetCallSite(InterpreterState state, DynamicExpression node) {
+            CallSite callSite;
             var callSites = state.LambdaState.ScriptCode.CallSites;
 
             // TODO: better locking
             lock (callSites) {
-                if (!callSites.TryGetValue(node, out callSiteInfo)) {
-                    callSiteInfo = new CallSiteInfo();
-                    SetCallSite(callSiteInfo, node);
-                    callSites.Add(node, callSiteInfo);
+                if (!callSites.TryGetValue(node, out callSite)) {
+                    ReflectedCaller factory = GetCallSiteFactory(node);
+                    callSite = (CallSite)factory.Invoke(node.Binder);
+                    callSites.Add(node, callSite);
                 }
             }
 
-            return callSiteInfo;
+            return callSite;
         }
 
         // The ReflectiveCaller cache
         private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
-
-        private static void SetCallSite(CallSiteInfo info, DynamicExpression node) {
+        
+        private static ReflectedCaller GetCallSiteFactory(DynamicExpression node) {
             var arguments = node.Arguments;
-
-            // TODO: remove CodeContext special case
-            if (arguments.Count > 0 && arguments[0].Type != typeof(CodeContext)) {
-                switch (arguments.Count) {
-                    case 0:
-                        info.CallSite = CallSite<Func<CallSite, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target0);
-                        return;
-
-                    case 1:
-                        info.CallSite = CallSite<Func<CallSite, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target1);
-                        return;
-
-                    case 2:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target2);
-                        return;
-
-                    case 3:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target3);
-                        return;
-
-                    case 4:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target4);
-                        return;
-
-                    case 5:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target5);
-                        return;
-
-                    case 6:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target6);
-                        return;
-
-                    case 7:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target7);
-                        return;
-
-                    case 8:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target8);
-                        return;
-
-                    case 9:
-                        info.CallSite = CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object>>.Create(node.Binder);
-                        info.CallerTarget = new MatchCallerTarget(MatchCaller.Target9);
-                        return;
-                }
-            }
-
-            var callSite = CreateCallSite(node);
-            info.CallSite = callSite;
-            info.CallerTarget = MatchCaller.GetCaller((callSite.GetType().GetGenericArguments()[0]));
-        }
-
-        private static CallSite CreateCallSite(DynamicExpression node) {
-            var arguments = node.Arguments;
-
-            // non-optimized signatures:
             Type[] types = CompilerHelpers.GetSiteTypes(arguments, node.Type);
 
-            int i = (arguments.Count > 0 && arguments[0].Type != typeof(CodeContext)) ? 1 : 0;
-
+            // TODO: remove CodeContext special case:
+            int i = (arguments.Count > 0 && typeof(CodeContext).IsAssignableFrom(arguments[0].Type)) ? 1 : 0;
             for (; i < arguments.Count; i++) {
-                if (!arguments[i].Type.IsByRef) {
-                    types[i] = typeof(object);
-                }
+                types[i] = typeof(object);
             }
 
             ReflectedCaller rc;
@@ -907,8 +770,7 @@ namespace Microsoft.Scripting.Interpretation {
                     _executeSites[array] = rc = ReflectedCaller.Create(target);
                 }
             }
-
-            return (CallSite)rc.Invoke(node.Binder);
+            return rc;
         }
 
         private static object InterpretIndexAssignment(InterpreterState state, AssignmentExpression node) {
@@ -939,11 +801,11 @@ namespace Microsoft.Scripting.Interpretation {
 
             if (index.Indexer != null) {
                 // For indexed properties, just call the setter
-                InvokeMethod(state, index.Indexer.GetSetMethod(true), instance, args);
+                InvokeMethod(index.Indexer.GetSetMethod(true), instance, args);
             } else if (index.Arguments.Count != 1) {
                 // Multidimensional arrays, call set
                 var set = index.Object.Type.GetMethod("Set", BindingFlags.Public | BindingFlags.Instance);
-                InvokeMethod(state, set, instance, args);
+                InvokeMethod(set, instance, args);
             } else {
                 ((Array)instance).SetValue(value, (int)args[0]);
             }
@@ -1423,8 +1285,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            state.LambdaState.ScriptCode.LanguageContext.InterpretExceptionThrow(state, ex, true);
-            throw ex;
+            throw (Exception)ex;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
@@ -1524,7 +1385,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretExtensionExpression(InterpreterState state, Expression expr) {
-            return Interpret(state, expr.ReduceExtensions());
+            return Interpret(state, expr.ReduceToKnown());
         }
 
         #endregion

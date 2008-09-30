@@ -45,13 +45,13 @@ def CallBack1(f, p0, p = DispatcherPriority.Normal):
 def on_startup(*args):
     global dispatcher
     dispatcher = Dispatcher.FromThread(t)
-    are.Set()
 
 def start():
     try:
         global app
         app = Application()
         app.Startup += on_startup
+        are.Set()
         app.Run()
     finally:
         clr.SetCommandDispatcher(None)

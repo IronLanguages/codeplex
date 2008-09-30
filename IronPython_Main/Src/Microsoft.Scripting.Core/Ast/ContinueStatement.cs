@@ -30,10 +30,6 @@ namespace Microsoft.Linq.Expressions {
         public LabelTarget Target {
             get { return _target; }
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitContinue(this);
-        }
     }
 
     public partial class Expression {

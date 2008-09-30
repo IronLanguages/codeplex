@@ -156,6 +156,7 @@ namespace Microsoft.Scripting.Ast {
 
     public partial class Utils {
         public static TryStatementBuilder Try(Annotations annotations, params Expression[] body) {
+            ContractUtils.RequiresNotNull(annotations, "annotations");
             ContractUtils.RequiresNotNull(body, "body");
             return new TryStatementBuilder(annotations, Expression.Block(body));
         }

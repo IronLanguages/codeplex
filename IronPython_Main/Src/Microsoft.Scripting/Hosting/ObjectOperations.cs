@@ -134,59 +134,6 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Gets the member name from the object obj.  Throws an exception if the member does not exist or is write-only.
-        /// </summary>
-        public object GetMember(object obj, string name, bool ignoreCase) {
-            return _ops.GetMember(obj, name, ignoreCase);
-        }
-
-        /// <summary>
-        /// Gets the member name from the object obj and converts it to the type T.  Throws an exception if the
-        /// member does not exist, is write-only, or cannot be converted.
-        /// </summary>
-        public T GetMember<T>(object obj, string name, bool ignoreCase) {
-            return _ops.GetMember<T>(obj, name, ignoreCase);
-        }
-
-        /// <summary>
-        /// Gets the member name from the object obj.  Returns true if the member is successfully retrieved and 
-        /// stores the value in the value out param.
-        /// </summary>
-        public bool TryGetMember(object obj, string name, bool ignoreCase, out object value) {
-            return _ops.TryGetMember(obj, name, ignoreCase, out value);
-        }
-
-        /// <summary>
-        /// Returns true if the object has a member named name, false if the member does not exist.
-        /// </summary>
-        public bool ContainsMember(object obj, string name, bool ignoreCase) {
-            return _ops.ContainsMember(obj, name, ignoreCase);
-        }
-
-        /// <summary>
-        /// Removes the member name from the object obj.  Returns true if the member was successfully removed
-        /// or false if the member does not exist.
-        /// </summary>
-        public bool RemoveMember(object obj, string name, bool ignoreCase) {
-            return _ops.RemoveMember(obj, name, ignoreCase);
-        }
-
-        /// <summary>
-        /// Sets the member name on object obj to value.
-        /// </summary>
-        public void SetMember(object obj, string name, object value, bool ignoreCase) {
-            _ops.SetMember(obj, name, value, ignoreCase);
-        }
-
-        /// <summary>
-        /// Sets the member name on object obj to value.  This overload can be used to avoid
-        /// boxing and casting of strongly typed members.
-        /// </summary>
-        public void SetMember<T>(object obj, string name, T value, bool ignoreCase) {
-            _ops.SetMember<T>(obj, name, value, ignoreCase);
-        }
-
-        /// <summary>
         /// Convers the object obj to the type T.
         /// </summary>
         public T ConvertTo<T>(object obj) {

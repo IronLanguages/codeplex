@@ -101,7 +101,12 @@ def test_sanity():
     
     #Complex Types
     strongVar = StrongBox[object](CurrencyWrapper(444))
-    com_obj.mCy(CurrencyWrapper(123), strongVar)
+    if preferComDispatch:
+        com_obj.mCy(CurrencyWrapper(123), strongVar)
+    else:
+        #CodePlex 18638
+        strongVar.Value = com_obj.mCy(System.Decimal(123), System.Decimal(124))
+
     AreEqual(strongVar.Value, 123)    
     
     now = DateTime.Now

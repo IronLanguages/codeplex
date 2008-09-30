@@ -122,10 +122,6 @@ namespace Microsoft.Linq.Expressions {
         public T Compile<T>(bool emitDebugSymbols) {
             return LambdaCompiler.CompileLambda<T>(this, emitDebugSymbols);
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitLambda(this);
-        }
     }
 
     //CONFORMING
@@ -152,7 +148,14 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
         //internal lambda factory that creates an instance of Expression<delegateType>
-        internal static LambdaExpression Lambda(ExpressionType nodeType, Type delegateType, string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
+        internal static LambdaExpression Lambda(
+                Annotations annotations,
+                ExpressionType nodeType,
+                Type delegateType,
+                string name,
+                Expression body,
+                ReadOnlyCollection<ParameterExpression> parameters
+        ) {
             Type ot = typeof(Expression<>);
             Type ct = ot.MakeGenericType(new Type[] { delegateType });
             ConstructorInfo ctor = ct.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, ctorTypes, null);
@@ -228,7 +231,7 @@ namespace Microsoft.Linq.Expressions {
                 delegateType = GetFuncType(typeArgs);
             }
 
-            return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, parameterList);
+            return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, parameterList);
         }
 
 
@@ -245,7 +248,7 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
-            return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, paramList);
+            return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, paramList);
         }
 
         //CONFORMING
@@ -336,7 +339,7 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
             ValidateGeneratorReturnType(delegateType);
-            return Lambda(ExpressionType.Generator, delegateType, name, body, annotations, paramList);
+            return Lambda(annotations, ExpressionType.Generator, delegateType, name, body, paramList);
         }
 
         #endregion

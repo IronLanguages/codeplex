@@ -62,10 +62,6 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public MetaObject Restrict(Type type) {
-            return MetaObjectExtensions.Restrict(this, type);
-        }
-
         public PythonType/*!*/ PythonType {
             get {
                 return DynamicHelpers.GetPythonType(Value);

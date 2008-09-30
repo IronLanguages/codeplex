@@ -403,7 +403,7 @@ def test_compiled_code():
     # make sure we can compile multiple files
     clr.CompileModules('test.pyil', testpath.public_testdir + '\\test_class.py', testpath.public_testdir + '\\test_slice.py')
     
-    clr.AddReference('test.pyil')
+    clr.LoadModules('test.pyil')
     import nt
     
     # and make sure we can run some reasonable sophisticated code...

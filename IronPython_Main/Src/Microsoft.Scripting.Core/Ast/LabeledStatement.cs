@@ -39,9 +39,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _expression; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitLabeled(this);
-        }
     }
 
     public partial class Expression {

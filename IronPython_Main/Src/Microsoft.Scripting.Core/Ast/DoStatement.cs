@@ -17,7 +17,6 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
 
-    // TODO: rename to DoWhileExpression
     public sealed class DoStatement : Expression {
         private readonly Expression _test;
         private readonly Expression _body;
@@ -41,10 +40,6 @@ namespace Microsoft.Linq.Expressions {
 
         new public LabelTarget Label {
             get { return _label; }
-        }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitDoWhile(this);
         }
     }
 

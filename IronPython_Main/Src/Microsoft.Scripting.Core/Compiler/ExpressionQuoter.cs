@@ -16,10 +16,6 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
-using System.Collections.Generic;
-using Microsoft.Scripting.Utils;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -28,97 +24,32 @@ namespace Microsoft.Linq.Expressions.Compiler {
     // burned as a constant, and all hoisted variables/parameters are rewritten
     // as indexing expressions.
     //
-    // The behavior of Quote is indended to be like C# and VB expression quoting
+    // TODO: this behavior seems really bizarre for what Quote generally means
+    // in programming languages, but it's needed for backwards compatibility.
     internal sealed class ExpressionQuoter : ExpressionTreeVisitor {
         private readonly HoistedLocals _scope;
         private readonly object[] _locals;
-
-        // A stack of variables that are defined in nested scopes. We search
-        // this first when resolving a variable in case a nested scope shadows
-        // one of our variable instances.
-        //
-        // TODO: should HoistedLocals track shadowing so we don't need to worry
-        // about it here?
-        private readonly Stack<Set<Expression>> _hiddenVars = new Stack<Set<Expression>>();
 
         internal ExpressionQuoter(HoistedLocals scope, object[] locals) {
             _scope = scope;
             _locals = locals;
         }
 
-        protected internal override Expression VisitLambda(LambdaExpression node) {
-            _hiddenVars.Push(new Set<Expression>(node.Parameters));
-            Expression b = Visit(node.Body);
-            _hiddenVars.Pop();
-            if (b == node.Body) {
-                return node;
-            }
-            return Expression.Lambda(node.NodeType, node.Type, node.Name, b, node.Annotations, node.Parameters);
+        protected override Expression Visit(ParameterExpression node) {
+            return VisitVariable(node);
         }
 
-        protected internal override Expression VisitScope(ScopeExpression node) {
-            _hiddenVars.Push(new Set<Expression>(node.Variables));
-            Expression b = Visit(node.Body);
-            _hiddenVars.Pop();
-            if (b == node.Body) {
-                return node;
-            }
-            return Expression.Scope(b, node.Name, node.Annotations, node.Variables);
+        protected override Expression Visit(VariableExpression node) {
+            return VisitVariable(node);
         }
 
-        protected override CatchBlock VisitCatchBlock(CatchBlock node) {
-            _hiddenVars.Push(new Set<Expression>(new[] { node.Variable }));
-            Expression b = Visit(node.Body);
-            Expression f = Visit(node.Filter);
-            _hiddenVars.Pop();
-            if (b == node.Body && f == node.Filter) {
-                return node;
-            }
-            return Expression.Catch(node.Test, node.Variable, b, f, node.Annotations);
-        }
-
-        protected internal override Expression VisitRuntimeVariables(LocalScopeExpression node) {
-            try {
-                return base.VisitRuntimeVariables(node);
-            } catch (InvalidOperationException) {
-                // TODO: this is not a critical feature, but we can add support for
-                // this in a later release (by rewriting the expression to a new
-                // one that combines the boxes from the closed over variables and
-                // the non-closed over variables)
-                throw Error.RuntimeVariablesNotSupportedInQuote(node);
-            }
-        }
-
-        protected internal override Expression VisitParameter(ParameterExpression node) {
-            return VisitVariableOrParameter(node);
-        }
-
-        protected internal override Expression VisitVariable(VariableExpression node) {
-            return VisitVariableOrParameter(node);
-        }
-
-        private Expression VisitVariableOrParameter(Expression node) {
-            IStrongBox box = GetBox(node);
-            if (box == null) {
-                return node;
-            }
-            return Expression.Field(Expression.Constant(box), "Value", node.Annotations);
-        }
-
-        private IStrongBox GetBox(Expression variable) {
-            // Skip variables that are shadowed by a nested scope/lambda
-            foreach (Set<Expression> hidden in _hiddenVars) {
-                if (hidden.Contains(variable)) {
-                    return null;
-                }
-            }
-
+        private Expression VisitVariable(Expression node) {
             HoistedLocals scope = _scope;
             object[] locals = _locals;
             while (true) {
                 int hoistIndex;
-                if (scope.Indexes.TryGetValue(variable, out hoistIndex)) {
-                    return (IStrongBox)locals[hoistIndex];
+                if (scope.Indexes.TryGetValue(node, out hoistIndex)) {
+                    return Expression.Field(Expression.Constant(locals[hoistIndex]), "Value", node.Annotations);
                 }
                 scope = scope.Parent;
                 if (scope == null) {
@@ -126,11 +57,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
                 locals = HoistedLocals.GetParent(locals);
             }
-
-            // TODO: this should be unreachable because it's an unbound
-            // variable, so we should throw here. It's a breaking change,
-            // however
-            return null;
+            return node;            
         }
     }
 }
@@ -141,7 +68,7 @@ namespace Microsoft.Runtime.CompilerServices {
         public static Expression Quote(Expression expression, object hoistedLocals, object[] locals) {
             Debug.Assert(hoistedLocals != null && locals != null);
             ExpressionQuoter quoter = new ExpressionQuoter((HoistedLocals)hoistedLocals, locals);
-            return quoter.Visit(expression);
+            return quoter.VisitNode(expression);
         }
     }
 }

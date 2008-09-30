@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft; 
+ 
 namespace PossibleLoadException {
     public class A {
         public static int F = 10;

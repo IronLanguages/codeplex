@@ -129,7 +129,7 @@ namespace Microsoft.Scripting.Silverlight {
                 return "";
             }
 
-            var stream = Package.GetFile(sourceFile);
+            var stream = DynamicApplication.Download(sourceFile);
             if (stream == null) {
                 return "";
             }
@@ -261,7 +261,7 @@ namespace Microsoft.Scripting.Silverlight {
 
                 ScriptEngine engine;
                 if (_sourceFileName != null &&
-                    DynamicApplication.Current.Runtime.TryGetEngineByFileExtension(System.IO.Path.GetExtension(_sourceFileName), out engine)) {
+                    DynamicApplication.Current.Environment.TryGetEngineByFileExtension(System.IO.Path.GetExtension(_sourceFileName), out engine)) {
                     ExceptionOperations es = engine.GetService<ExceptionOperations>();
                     es.GetExceptionMessage(_exception, out _message, out _errorTypeName);
                 } else {

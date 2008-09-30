@@ -60,7 +60,7 @@ namespace Microsoft.Scripting.Generation {
                     new Expression[]{
                         Context,
                         AstUtils.Constant(SymbolTable.StringToId(lvalue.Name)),
-                        Visit(node.Value)
+                        VisitNode(node.Value)
                     }
                 ),
                 node.Type

@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft; 
+ 
 // generic type, which has different namespace, same name from First.Nongeneric1
 namespace Second {
     public class Nongeneric1<T> {

@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Generation {
             VariableExpression contextVariable = Expression.Variable(typeof(CodeContext), "$globalContext");
 
             _context = contextVariable;
-            lambda = (LambdaExpression)VisitLambda(lambda);
+            lambda = (LambdaExpression)Visit(lambda);
 
             return Expression.Lambda<DlrMainCallTarget>(
                 AddScopedVariable(
@@ -90,10 +90,10 @@ namespace Microsoft.Scripting.Generation {
 
             // Must remove extension nodes because they could contain
             // one of the above node types. See, e.g. DeleteUnboundExpression
-            return Visit(node.ReduceExtensions());
+            return VisitNode(node.ReduceToKnown());
         }
 
-        protected override Expression VisitAssignment(AssignmentExpression node) {
+        protected override Expression Visit(AssignmentExpression node) {
             Expression lvalue = node.Expression;
 
             GlobalVariableExpression global = lvalue as GlobalVariableExpression;
@@ -101,17 +101,17 @@ namespace Microsoft.Scripting.Generation {
                 return RewriteSet(node);
             }
 
-            return base.VisitAssignment(node);
+            return base.Visit(node);
         }
         
-        protected override Expression VisitDynamic(DynamicExpression node) {
+        protected override Expression Visit(DynamicExpression node) {
             Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
 
             // Rewite call site as constant
-            var siteExpr = VisitConstant(Expression.Constant(DynamicSiteHelpers.MakeSite(node.Binder, siteType)));
+            var siteExpr = Visit(Expression.Constant(DynamicSiteHelpers.MakeSite(node.Binder, siteType)));
 
             // Rewrite all of the arguments
-            var args = Visit(node.Arguments);
+            var args = VisitNodes(node.Arguments);
 
             var siteVar = Expression.Variable(siteExpr.Type, "$site");
 
@@ -144,16 +144,14 @@ namespace Microsoft.Scripting.Generation {
 
             // rewrite body with nested context
             _context = nested;
-            Expression body = Visit(ccs.Body);
+            Expression body = VisitNode(ccs.Body);
             _context = saved;
 
             // wrap the body in a scope that initializes the nested context
-            return AddScopedVariable(body, nested, Visit(ccs.NewContext));
+            return AddScopedVariable(body, nested, VisitNode(ccs.NewContext));
         }
 
         #endregion
-
-        #region helpers
 
         protected static void EnsureUniqueName(IDictionary<string, GlobalVariableExpression> varsByName, GlobalVariableExpression node) {
             GlobalVariableExpression n2;
@@ -166,34 +164,6 @@ namespace Microsoft.Scripting.Generation {
 
             varsByName.Add(node.Name, node);
         }
-
-        // Helper to add a variable to a scope
-        protected static Expression AddScopedVariable(Expression body, VariableExpression variable, Expression variableInit) {
-            List<VariableExpression> vars = new List<VariableExpression>();
-            string name = null;
-            Annotations annotations = Annotations.Empty;
-            while (body.NodeType == ExpressionType.Scope) {
-                ScopeExpression scope = (ScopeExpression)body;
-                vars.AddRange(scope.Variables);
-                name = scope.Name;
-                annotations = scope.Annotations;
-                body = scope.Body;
-            }
-
-            vars.Add(variable);
-
-            return Expression.Scope(
-                Expression.Comma(
-                    Expression.Assign(variable, variableInit),
-                    body
-                ),
-                name,
-                annotations,
-                vars
-            );
-        }
-
-        #endregion
     }
 }
 

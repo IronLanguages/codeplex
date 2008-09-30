@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 
-using System; using Microsoft;
+using System;
 namespace Merlin.Testing {
     public class Helper {
         public static int Sum(int[] args) {

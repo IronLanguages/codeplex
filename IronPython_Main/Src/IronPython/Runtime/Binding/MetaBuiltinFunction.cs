@@ -75,7 +75,7 @@ namespace IronPython.Runtime.Binding {
 
         private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             for (int i = 0; i < args.Length; i++) {
-                if (args[i].NeedsDeferral()) {
+                if (args[i].NeedsDeferral) {
                     return call.Defer(args);
                 }
             }

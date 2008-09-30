@@ -19,7 +19,7 @@ using Microsoft.Scripting.Utils;
 using System.Text;
 
 namespace Microsoft.Linq.Expressions {
-
+    //CONFORMING
     /// <summary>
     /// Member expression (statically typed) which represents 
     /// property or field access, both static and instance.
@@ -56,10 +56,6 @@ namespace Microsoft.Linq.Expressions {
             builder.Append(".");
             builder.Append(_member.Name);
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitMemberAccess(this);
-        }
     }
 
     /// <summary>
@@ -72,13 +68,14 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
         public static MemberExpression Field(Expression expression, FieldInfo field) {
-            return Field(expression, field, null);
+            return Field(expression, field, Annotations.Empty);
         }
 
         //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
         public static MemberExpression Field(Expression expression, FieldInfo field, Annotations annotations) {
             ContractUtils.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(annotations, "annotations");
 
             if (field.IsStatic) {
                 ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
@@ -93,12 +90,13 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static MemberExpression Field(Expression expression, string fieldName) {
-            return Field(expression, fieldName, null);
+            return Field(expression, fieldName, Annotations.Empty);
         }
 
         //CONFORMING
         public static MemberExpression Field(Expression expression, string fieldName, Annotations annotations) {
             RequiresCanRead(expression, "expression");
+            ContractUtils.RequiresNotNull(annotations, "annotations");
 
             // bind to public names first
             FieldInfo fi = expression.Type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
@@ -247,19 +245,15 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member) {
-            return MakeMemberAccess(expression, member, null);
-        }
-
-        public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member, Annotations annotations) {
             ContractUtils.RequiresNotNull(member, "member");
 
             FieldInfo fi = member as FieldInfo;
             if (fi != null) {
-                return Expression.Field(expression, fi, annotations);
+                return Expression.Field(expression, fi);
             }
             PropertyInfo pi = member as PropertyInfo;
             if (pi != null) {
-                return Expression.Property(expression, pi, annotations);
+                return Expression.Property(expression, pi);
             }
             throw Error.MemberNotFieldOrProperty(member);
         }

@@ -277,7 +277,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 FileInfo toInfo = new FileInfo(toFile);
 
                 if (fi.Extension.ToUpperInvariant() == ".DLL" || fi.Extension.ToUpperInvariant() == ".EXE") {
-                    if (!File.Exists(toFile) || toInfo.CreationTime != fi.CreationTime) {
+                    if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
                         try {
                             File.Copy(filename, toFile, true);
                         } catch (Exception e) {

@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 
-using System; using Microsoft;
+using System;
 using System.Runtime.InteropServices;
 using Merlin.Testing.TypeSample;
 

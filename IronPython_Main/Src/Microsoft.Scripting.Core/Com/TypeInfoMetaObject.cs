@@ -98,14 +98,15 @@ namespace Microsoft.Scripting.Com {
             MetaObject[] copy = args.Copy();
 
             // Replace self with unwrapped Com object value
-            Expression self = Expression.Property(
-                Expression,
-                typeof(ComObject).GetProperty("Obj")
-            );
-            copy[0] = new MetaObject(
-                Expression.ConvertHelper(self, _comType),
-                MakeRestrictions().Merge(Restrictions.TypeRestriction(self, _comType)),
-                ((ComObject)Value).Obj
+            copy[0] = new MetaUnwrappedComObject(
+                Expression.Convert(
+                    Expression.Property(
+                        Expression,
+                        typeof(ComObject).GetProperty("Obj")
+                    ),
+                    _comType
+                ),
+                MakeRestrictions()
             );
 
             return copy;

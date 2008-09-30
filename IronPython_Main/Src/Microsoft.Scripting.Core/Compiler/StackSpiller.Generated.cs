@@ -276,6 +276,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.LoopStatement:
                     result = RewriteLoopStatement(node, stack);
                     break;
+                // OnesComplement
+                case ExpressionType.OnesComplement:
+                    result = RewriteUnaryExpression(node, stack);
+                    break;
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
                     result = RewriteReturnStatement(node, stack);

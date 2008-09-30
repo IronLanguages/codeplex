@@ -25,10 +25,6 @@ namespace Microsoft.Linq.Expressions {
         public Expression Expression {
             get { return _expr; }
         }
-
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitReturn(this);
-        }
     }
 
     /// <summary>

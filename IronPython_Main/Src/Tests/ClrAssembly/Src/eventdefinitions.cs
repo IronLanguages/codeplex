@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 
-using System; using Microsoft;
+using System;
 using Merlin.Testing.TypeSample;
 
 namespace Merlin.Testing.Event {

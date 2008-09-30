@@ -30,46 +30,6 @@ namespace Microsoft.Scripting.Interpretation {
         /// It is used by the call site cache lookup logic when searching for applicable rule.
         /// </summary>
         internal static class MatchCaller {
-            public static object Target0(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object>>)site).Target(site);
-            }
-
-            public static object Target1(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object>>)site).Target(site, args[0]);
-            }
-
-            public static object Target2(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object>>)site).Target(site, args[0], args[1]);
-            }
-
-            public static object Target3(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object>>)site).Target(site, args[0], args[1], args[2]);
-            }
-
-            public static object Target4(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object, object>>)site).Target(site, args[0], args[1], args[2], args[3]);
-            }
-
-            public static object Target5(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object, object, object>>)site).Target(site, args[0], args[1], args[2], args[3], args[4]);
-            }
-
-            public static object Target6(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object, object, object, object>>)site).Target(site, args[0], args[1], args[2], args[3], args[4], args[5]);
-            }
-
-            public static object Target7(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object, object, object, object, object>>)site).Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-            }
-
-            public static object Target8(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object>>)site).Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-            }
-
-            public static object Target9(CallSite site, object[] args) {
-                return ((CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object>>)site).Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
-            }
-
             private struct RefFixer {
                 internal readonly LocalBuilder Temp;
                 internal readonly int Index;

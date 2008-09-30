@@ -12,19 +12,34 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
-using System.Collections.Generic;
-using System.Text;
+#if !SILVERLIGHT
+
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Runtime {
-    /// <summary>
-    /// Indicates that a MetaObject is already representing a restricted type.  Useful
-    /// when we're already restricted to a known type but this isn't captured in
-    /// the type info (e.g. the type is not sealed).
-    /// </summary>
-    public interface IRestrictedMetaObject {
-        MetaObject Restrict(Type type);
+namespace Microsoft.Scripting.Com {
+    internal class MetaUnwrappedComObject : MetaObject {
+        public MetaUnwrappedComObject(Expression self, Restrictions restrictions)
+            : base(self, restrictions) {
+        }
+        /// <summary>
+        /// Our type information is 100% concrete
+        /// </summary>
+        public override bool NeedsDeferral {
+            get {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// When we hand out one of these the exact type is known and
+        /// cannot be further restricted.
+        /// </summary>
+        public override MetaObject Restrict(Type type) {
+            return this;
+        }
     }
 }
+
+#endif

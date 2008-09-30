@@ -26,16 +26,12 @@ namespace Microsoft.Scripting.Interpretation {
         internal Dictionary<Expression, object> SpilledStack;
         internal YieldStatement CurrentYield;
 
+        // not-null
         internal readonly InterpretedScriptCode ScriptCode;
-        internal readonly LambdaExpression Lambda;
-        internal readonly InterpreterState Caller;
-        internal SourceLocation CurrentLocation;
 
-        public LambdaState(InterpretedScriptCode scriptCode, LambdaExpression lambda, InterpreterState caller) {
-            Assert.NotNull(scriptCode, lambda);
+        public LambdaState(InterpretedScriptCode scriptCode) {
+            Assert.NotNull(scriptCode);
             ScriptCode = scriptCode;
-            Lambda = lambda;
-            Caller = caller;
         }
     }
 
@@ -43,35 +39,35 @@ namespace Microsoft.Scripting.Interpretation {
     /// Represents variable storage for one lambda/scope expression in the
     /// interpreter.
     /// </summary>
-    public sealed class InterpreterState {
-        // Current thread's interpreted method frame.
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public static readonly ThreadLocal<InterpreterState> Current = new ThreadLocal<InterpreterState>();
+    internal sealed class InterpreterState {
 
-        private readonly InterpreterState _lexicalParent;
+        private readonly InterpreterState _parent;
         private readonly Dictionary<Expression, object> _vars = new Dictionary<Expression, object>();
+        internal SourceLocation CurrentLocation;
 
         // per-lambda state, not-null
         private readonly LambdaState _lambdaState;
 
+        internal LambdaState LambdaState {
+            get { return _lambdaState; }
+        }
+
         private InterpreterState(InterpreterState parent, LambdaState lambdaState) {
             Assert.NotNull(lambdaState);
-            _lexicalParent = parent;
+            _parent = parent;
             _lambdaState = lambdaState;
         }
 
-        internal static InterpreterState CreateForTopLambda(InterpretedScriptCode scriptCode, LambdaExpression lambda, InterpreterState caller, params object[] args) {
-            return CreateForLambda(scriptCode, lambda, null, caller, args);
+        public static InterpreterState CreateForTopLambda(InterpretedScriptCode scriptCode, LambdaExpression lambda, params object[] args) {
+            return CreateForLambda(scriptCode, null, lambda, args);
         }
 
-        internal InterpreterState CreateForLambda(LambdaExpression lambda, InterpreterState caller, object[] args) {
-            return CreateForLambda(_lambdaState.ScriptCode, lambda, this, caller, args);
+        public InterpreterState CreateForLambda(LambdaExpression lambda, object[] args) {
+            return CreateForLambda(_lambdaState.ScriptCode, this, lambda, args);
         }
 
-        private static InterpreterState CreateForLambda(InterpretedScriptCode scriptCode, LambdaExpression lambda, 
-            InterpreterState lexicalParent, InterpreterState caller, object[] args) {
-
-            InterpreterState state = new InterpreterState(lexicalParent, new LambdaState(scriptCode, lambda, caller));
+        private static InterpreterState CreateForLambda(InterpretedScriptCode scriptCode, InterpreterState parent, LambdaExpression lambda, object[] args) {
+            InterpreterState state = new InterpreterState(parent, new LambdaState(scriptCode));
 
             Debug.Assert(args.Length == lambda.Parameters.Count, "number of parameters should match number of arguments");
             
@@ -85,7 +81,7 @@ namespace Microsoft.Scripting.Interpretation {
             return state;
         }
 
-        internal InterpreterState CreateForScope(ScopeExpression scope) {
+        public InterpreterState CreateForScope(ScopeExpression scope) {
             InterpreterState state = new InterpreterState(this, _lambdaState);
             foreach (VariableExpression v in scope.Variables) {
                 // initialize variables to default(T)
@@ -100,35 +96,12 @@ namespace Microsoft.Scripting.Interpretation {
             return state;
         }
 
-        public InterpreterState Caller {
-            get { return _lambdaState.Caller; }
-        }
-
-        public LambdaExpression Lambda {
-            get { return _lambdaState.Lambda; }
-        }
-
-        public ScriptCode ScriptCode {
-            get { return _lambdaState.ScriptCode; }
-        }
-
-        public SourceLocation CurrentLocation {
-            get { return _lambdaState.CurrentLocation; }
-            internal set {
-                _lambdaState.CurrentLocation = value; 
-            }
-        }    
-
-        internal LambdaState LambdaState {
-            get { return _lambdaState; }
-        }
-
-        internal YieldStatement CurrentYield {
+        public YieldStatement CurrentYield {
             get { return _lambdaState.CurrentYield; }
             set { _lambdaState.CurrentYield = value; }
         }
 
-        internal bool TryGetStackState<T>(Expression node, out T value) {
+        public bool TryGetStackState<T>(Expression node, out T value) {
             object val;
             if (_lambdaState.SpilledStack != null && _lambdaState.SpilledStack.TryGetValue(node, out val)) {
                 _lambdaState.SpilledStack.Remove(node);
@@ -141,7 +114,7 @@ namespace Microsoft.Scripting.Interpretation {
             return false;
         }
 
-        internal void SaveStackState(Expression node, object value) {
+        public void SaveStackState(Expression node, object value) {
             if (_lambdaState.SpilledStack == null) {
                 _lambdaState.SpilledStack = new Dictionary<Expression, object>();
             }
@@ -149,14 +122,14 @@ namespace Microsoft.Scripting.Interpretation {
             _lambdaState.SpilledStack[node] = value;
         }
 
-        internal object GetValue(Expression variable) {
+        public object GetValue(Expression variable) {
             InterpreterState state = this;
             for (; ; ) {
                 object value;
                 if (state._vars.TryGetValue(variable, out value)) {
                     return value;
                 }
-                state = state._lexicalParent;
+                state = state._parent;
 
                 // Couldn't find variable
                 if (state == null) {
@@ -165,14 +138,14 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
-        internal void SetValue(Expression variable, object value) {
+        public void SetValue(Expression variable, object value) {
             InterpreterState state = this;
             for (; ; ) {
                 if (state._vars.ContainsKey(variable)) {
                     state._vars[variable] = value;
                     return;
                 }
-                state = state._lexicalParent;
+                state = state._parent;
 
                 // Couldn't find variable
                 if (state == null) {
