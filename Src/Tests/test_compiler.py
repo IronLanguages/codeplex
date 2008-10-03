@@ -169,5 +169,33 @@ def test_overwrite():
     
     import overwrite1
     AreEqual(overwrite1.foo(), 'boo')
+
+@disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18575")
+def test_cyclic_modules():
+    compileCode("cyclic_modules", "import cyclic_modules1\nA = 0", "import cyclic_modules0\nA=1")
+    
+    import cyclic_modules0
+    AreEqual(cyclic_modules0.A, 0)
+    AreEqual(cyclic_modules0.cyclic_modules1.A, 1)
+    
+    import cyclic_modules1
+    AreEqual(cyclic_modules1.A, 1)
+    AreEqual(cyclic_modules1.cyclic_modules0.A, 0)
+
+@disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18575")
+def test_cyclic_pkg():
+    compilePackage("cyclic_package", { "__init__.py" : "import cyclic_modules0\nimport cyclic_modules1",
+                                      "cyclic_modules0.py" : "import cyclic_package.cyclic_modules1\nA = 2",
+                                      "cyclic_modules1.py" : "import cyclic_package.cyclic_modules0\nA = 3"})
+                                      
+    import cyclic_package
+    AreEqual(cyclic_package.cyclic_modules0.A, 2)
+    AreEqual(cyclic_package.cyclic_modules0.cyclic_package.cyclic_modules1.A, 3)
+    
+    AreEqual(cyclic_package.cyclic_modules1.A, 3)
+    AreEqual(cyclic_package.cyclic_modules1.cyclic_package.cyclic_modules0.A, 2)
+
+
+#------------------------------------------------------------------------------        
         
 run_test(__name__)
