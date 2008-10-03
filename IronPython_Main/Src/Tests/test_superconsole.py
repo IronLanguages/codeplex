@@ -249,6 +249,20 @@ def test_member_completion():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
 
+def test_cp17797():
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    testRegex = ""
+
+    superConsole.SendKeys('import clr{ENTER}')
+
+    superConsole.SendKeys('print clr.Comp{TAB}{ENTER}')
+    testRegex += '<built-in function CompileModules>'
+
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+    
 @retry_on_failure
 def test_autoindent():
     '''
