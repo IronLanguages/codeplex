@@ -53,7 +53,6 @@ namespace Microsoft.Scripting.Com {
         internal InvokeBinder(IList<Argument> arguments, MetaObject[] args, Restrictions restrictions, Expression method, Expression dispatch, ComMethodDesc methodDesc) {
             ContractUtils.RequiresNotNull(arguments, "arguments");
             ContractUtils.RequiresNotNull(args, "args");
-            ContractUtils.Requires(args.Length > 0, "args", Strings.MustHaveAtLeastTarget);
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(dispatch, "dispatch");
             ContractUtils.Requires(TypeUtils.AreReferenceAssignable(typeof(ComMethodDesc), method.Type), "method");
@@ -117,8 +116,8 @@ namespace Microsoft.Scripting.Com {
         internal MetaObject Invoke() {
             _keywordArgNames = GetArgumentNames();
             // will not include implicit instance argument (if any)
-            Type[] explicitArgTypes = _args.RemoveFirst().Map(a => a.LimitType);
-            Expression[] explicitArgExprs = _args.RemoveFirst().Map(a => a.Expression);
+            Type[] explicitArgTypes = _args.Map(a => a.LimitType);
+            Expression[] explicitArgExprs = _args.Map(a => a.Expression);
             _totalExplicitArgs = explicitArgTypes.Length;
 
             bool hasAmbiguousMatch = false;
@@ -446,9 +445,9 @@ namespace Microsoft.Scripting.Com {
         }
 
         private Expression MakeUnoptimizedInvokeTarget() {
-            Expression[] args = new Expression[_args.Length - 1];
+            Expression[] args = new Expression[_args.Length];
             for (int i = 0; i < args.Length; i++) {
-                args[i] = Expression.ConvertHelper(_args[i + 1].Expression, typeof(object));
+                args[i] = Expression.ConvertHelper(_args[i].Expression, typeof(object));
             }
 
             // UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs)
@@ -462,18 +461,19 @@ namespace Microsoft.Scripting.Com {
         }
 
         /// <summary>
-        /// Gets expressions to access all the arguments. This includes the instance argument. Splat arguments are
-        /// unpacked in the output. The resulting array is similar to Rule.Parameters (but also different in some ways)
+        /// Gets expressions to access all the arguments. This includes the instance argument.
         /// </summary>
         private Expression[] MakeArgumentExpressions() {
-            List<Expression> exprargs = new List<Expression>();
-            if (_instance != null) {
-                exprargs.Add(_instance);
+            if (_instance == null) {
+                return MetaObject.GetExpressions(_args);
             }
-            for (int i = 1; i < _args.Length; i++) {
-                exprargs.Add(_args[i].Expression);
+
+            Expression[] res = new Expression[_args.Length + 1];
+            res[0] = _instance;
+            for (int i = 0; i < _args.Length; i++) {
+                res[i + 1] = _args[i].Expression;
             }
-            return exprargs.ToArray();
+            return res;
         }
 
         /// <summary>

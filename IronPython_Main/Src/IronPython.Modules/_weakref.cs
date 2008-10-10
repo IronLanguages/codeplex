@@ -27,8 +27,6 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-#if !SILVERLIGHT // finalizers not supported
-
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
     public static partial class PythonWeakRef {
@@ -739,5 +737,3 @@ namespace IronPython.Modules {
         }
     }
 }
-
-#endif

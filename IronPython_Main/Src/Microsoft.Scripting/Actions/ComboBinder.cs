@@ -39,7 +39,9 @@ namespace Microsoft.Scripting.Actions {
             _metaBinders = ArrayUtils.ToArray(binders);
         }
 
-        public override MetaObject Bind(params MetaObject[] args) {
+        public override MetaObject Bind(MetaObject target, params MetaObject[] args) {
+            args = ArrayUtils.Insert(target, args);
+
             List<MetaObject> results = new List<MetaObject>(_metaBinders.Length);
             List<Expression> steps = new List<Expression>();
             List<VariableExpression> temps = new List<VariableExpression>();
@@ -48,7 +50,8 @@ namespace Microsoft.Scripting.Actions {
             for (int i = 0; i < _metaBinders.Length; i++) {
                 BinderMappingInfo curBinder = _metaBinders[i];
 
-                MetaObject next = curBinder.Binder.Bind(GetArguments(args, results, i));
+                MetaObject[] tmpargs = GetArguments(args, results, i);
+                MetaObject next = curBinder.Binder.Bind(tmpargs[0], ArrayUtils.RemoveFirst(tmpargs));
                 
                 if (next.Expression.NodeType == ExpressionType.ThrowStatement) {
                     // end of the line... the expression is throwing, none of the other 

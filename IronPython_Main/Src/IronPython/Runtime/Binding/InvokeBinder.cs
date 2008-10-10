@@ -50,42 +50,49 @@ namespace IronPython.Runtime.Binding {
         /// this includes unsplatting any keyword / position arguments.  Finally if it's just a plain
         /// old .NET type we use the default binder which supports CallSignatures.
         /// </summary>
-        public override MetaObject/*!*/ Bind(MetaObject/*!*/[]/*!*/ args) {
-            Debug.Assert(args[0].LimitType == typeof(CodeContext));
+        public override MetaObject/*!*/ Bind(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+            Debug.Assert(args.Length > 0);
 
-            const int codeContext = 0, callTarget = 1;
+            MetaObject cc = target;
+            MetaObject actualTarget = args[0];
+            args = ArrayUtils.RemoveFirst(args);
 
+            Debug.Assert(cc.LimitType == typeof(CodeContext));
+
+            return BindWorker(cc, actualTarget, args);
+        }
+
+        private MetaObject BindWorker(MetaObject/*!*/ context, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             // we don't have CodeContext if an IDO falls back to us when we ask them to produce the Call
-            MetaObject cc = args[codeContext];            
-            MetaObject[] callargs = ArrayUtils.RemoveFirst(args);
-            IPythonInvokable icc = args[callTarget] as IPythonInvokable;
+            IPythonInvokable icc = target as IPythonInvokable;
 
             if (icc != null) {
                 // call it and provide the context
                 return icc.Invoke(
                     this,
-                    cc.Expression,
-                    callargs
+                    context.Expression,
+                    target,
+                    args
                 );
-            } else if (args[callTarget].IsDynamicObject) {
-                return InvokeForeignObject(callargs);
+            } else if (target.IsDynamicObject) {
+                return InvokeForeignObject(target, args);
             }
 
-            return Fallback(cc.Expression, callargs);
+            return Fallback(context.Expression, target, args);
         }
 
         /// <summary>
         /// Fallback - performs the default binding operation if the object isn't recognized
         /// as being invokable.
         /// </summary>
-        internal MetaObject/*!*/ Fallback(Expression codeContext, MetaObject/*!*/[]/*!*/ args) {
-            if (args[0].NeedsDeferral) {
+        internal MetaObject/*!*/ Fallback(Expression codeContext, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+            if (target.NeedsDeferral()) {
                 return Defer(args);
             }
 
-            return PythonProtocol.Call(this, args) ??
-                Binder.Binder.Create(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), args) ??
-                Binder.Binder.Call(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), args);
+            return PythonProtocol.Call(this, target, args) ??
+                Binder.Binder.Create(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), target, args) ??
+                Binder.Binder.Call(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), target, args);
         }
 
         public override object/*!*/ HashCookie {
@@ -135,13 +142,13 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// Creates a nested dynamic site which uses the unpacked arguments.
         /// </summary>
-        protected MetaObject InvokeForeignObject(MetaObject[] args) {
+        protected MetaObject InvokeForeignObject(MetaObject target, MetaObject[] args) {
             // need to unpack any dict / list arguments...
             List<Argument> newArgs;
             List<Expression> metaArgs;
             Expression test;
             Restrictions restrictions;
-            TranslateArguments(args, out newArgs, out metaArgs, out test, out restrictions);
+            TranslateArguments(target, args, out newArgs, out metaArgs, out test, out restrictions);
 
             Debug.Assert(metaArgs.Count > 0);
 
@@ -153,7 +160,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(object),
                         metaArgs.ToArray()
                     ),
-                    restrictions.Merge(Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType))
+                    restrictions.Merge(Restrictions.TypeRestriction(target.Expression, target.LimitType))
                 ),
                 args,
                 new ValidationInfo(test, null)
@@ -164,12 +171,12 @@ namespace IronPython.Runtime.Binding {
         /// Translates our CallSignature into a DLR Argument list and gives the simple MetaObject's which are extracted
         /// from the tuple or dictionary parameters being splatted.
         /// </summary>
-        private void TranslateArguments(MetaObject/*!*/[]/*!*/ args, out List<Argument/*!*/>/*!*/ newArgs, out List<Expression/*!*/>/*!*/ metaArgs, out Expression test, out Restrictions restrictions) {
+        private void TranslateArguments(MetaObject target, MetaObject/*!*/[]/*!*/ args, out List<Argument/*!*/>/*!*/ newArgs, out List<Expression/*!*/>/*!*/ metaArgs, out Expression test, out Restrictions restrictions) {
             ArgumentInfo[] argInfo = _signature.GetArgumentInfos();
 
             newArgs = new List<Argument>();
             metaArgs = new List<Expression>();
-            metaArgs.Add(args[0].Expression);
+            metaArgs.Add(target.Expression);
             Expression splatArgTest = null;
             Expression splatKwArgTest = null;
             restrictions = Restrictions.Empty;
@@ -179,7 +186,7 @@ namespace IronPython.Runtime.Binding {
 
                 switch (ai.Kind) {
                     case ArgumentKind.Dictionary:
-                        IAttributesCollection iac = (IAttributesCollection)args[i + 1].Value;
+                        IAttributesCollection iac = (IAttributesCollection)args[i].Value;
                         List<string> argNames = new List<string>();
 
                         foreach (KeyValuePair<object, object> kvp in iac) {
@@ -189,24 +196,24 @@ namespace IronPython.Runtime.Binding {
 
                             metaArgs.Add(
                                 Expression.Call(
-                                    Expression.ConvertHelper(args[i + 1].Expression, typeof(IAttributesCollection)),
+                                    Expression.ConvertHelper(args[i].Expression, typeof(IAttributesCollection)),
                                     typeof(IAttributesCollection).GetMethod("get_Item"),
                                     AstUtils.Constant(SymbolTable.StringToId(key))
                                 )
                             );
                         }
 
-                        restrictions = restrictions.Merge(Restrictions.TypeRestriction(args[i + 1].Expression, args[i + 1].LimitType));
+                        restrictions = restrictions.Merge(Restrictions.TypeRestriction(args[i].Expression, args[i].LimitType));
                         splatKwArgTest = Expression.Call(
                             typeof(PythonOps).GetMethod("CheckDictionaryMembers"),
-                            Expression.ConvertHelper(args[i + 1].Expression, typeof(IAttributesCollection)),
+                            Expression.ConvertHelper(args[i].Expression, typeof(IAttributesCollection)),
                             Expression.Constant(argNames.ToArray())
                         );
                         break;
                     case ArgumentKind.List:
-                        IList<object> splattedArgs = (IList<object>)args[i + 1].Value;
+                        IList<object> splattedArgs = (IList<object>)args[i].Value;
                         splatArgTest = Expression.Equal(
-                            Expression.Property(Expression.ConvertHelper(args[i + 1].Expression, args[i + 1].LimitType), typeof(ICollection<object>).GetProperty("Count")),
+                            Expression.Property(Expression.ConvertHelper(args[i].Expression, args[i].LimitType), typeof(ICollection<object>).GetProperty("Count")),
                             Expression.Constant(splattedArgs.Count)
                         );
 
@@ -214,22 +221,22 @@ namespace IronPython.Runtime.Binding {
                             newArgs.Add(Expression.PositionalArg(splattedArg + i));
                             metaArgs.Add(
                                 Expression.Call(
-                                    Expression.ConvertHelper(args[i + 1].Expression, typeof(IList<object>)),
+                                    Expression.ConvertHelper(args[i].Expression, typeof(IList<object>)),
                                     typeof(IList<object>).GetMethod("get_Item"),
                                     Expression.Constant(splattedArg)
                                 )
                             );
                         }
 
-                        restrictions = restrictions.Merge(Restrictions.TypeRestriction(args[i + 1].Expression, args[i + 1].LimitType));
+                        restrictions = restrictions.Merge(Restrictions.TypeRestriction(args[i].Expression, args[i].LimitType));
                         break;
                     case ArgumentKind.Named:
                         newArgs.Add(Expression.NamedArg(SymbolTable.IdToString(ai.Name)));
-                        metaArgs.Add(args[i + 1].Expression);
+                        metaArgs.Add(args[i].Expression);
                         break;
                     case ArgumentKind.Simple:
                         newArgs.Add(Expression.PositionalArg(i));
-                        metaArgs.Add(args[i + 1].Expression);
+                        metaArgs.Add(args[i].Expression);
                         break;
                     default:
                         throw new InvalidOperationException();

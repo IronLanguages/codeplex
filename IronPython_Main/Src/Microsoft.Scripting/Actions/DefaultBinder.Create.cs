@@ -26,22 +26,22 @@ namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
     public partial class DefaultBinder : ActionBinder {
-        public MetaObject Create(CallSignature signature, ParameterBinderWithCodeContext parameterBinder, MetaObject[] args) {
-            Type t = GetTargetType(args[0].Value);
+        public MetaObject Create(CallSignature signature, ParameterBinderWithCodeContext parameterBinder, MetaObject target, MetaObject[] args) {
+            Type t = GetTargetType(target.Value);
 
             if (t != null) {
 
-                if (typeof(Delegate).IsAssignableFrom(t) && args.Length == 2) {
+                if (typeof(Delegate).IsAssignableFrom(t) && args.Length == 1) {
                     MethodInfo dc = GetDelegateCtor(t);
 
                     // BinderOps.CreateDelegate<T>(CodeContext context, object callable);
                     return new MetaObject(
-                        Ast.Call(null, dc, parameterBinder.ContextExpression, args[1].Expression),
-                        args[0].Restrictions.Merge(Restrictions.InstanceRestriction(args[0].Expression, args[0].Value))
+                        Ast.Call(null, dc, parameterBinder.ContextExpression, args[0].Expression),
+                        target.Restrictions.Merge(Restrictions.InstanceRestriction(target.Expression, target.Value))
                     );
                 }
 
-                return CallMethod(parameterBinder, CompilerHelpers.GetConstructors(t, PrivateBinding), ArrayUtils.RemoveFirst(args), signature);
+                return CallMethod(parameterBinder, CompilerHelpers.GetConstructors(t, PrivateBinding), args, signature);
             }
 
             return null;

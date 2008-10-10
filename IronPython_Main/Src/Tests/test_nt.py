@@ -341,8 +341,8 @@ def test_popen():
         try:
             nt.chmod(tmpfile, 128)
             nt.unlink(tmpfile)
-        except:
-            print "exc"
+        except Exception, e:
+            print "exc", e
 
     # verify that nt.stat reports times in seconds, not ticks...
 
@@ -353,7 +353,7 @@ def test_popen():
     t = time.time()
     mt = nt.stat(tmpfile).st_mtime
     nt.unlink(tmpfile) # this deletes the file
-    Assert(abs(t-mt) < 60)
+    Assert(abs(t-mt) < 60, "time differs by too much " + str(abs(t-mt)))
 
     tmpfile = 'tmpfile.tmp' # need to open it again since we deleted it with 'unlink'
     f = open(tmpfile, 'w')

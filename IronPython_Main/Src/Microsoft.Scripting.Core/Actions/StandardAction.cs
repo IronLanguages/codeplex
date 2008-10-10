@@ -13,12 +13,14 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+using Microsoft.Scripting.Utils;
+
 namespace Microsoft.Scripting.Actions {
     // TODO: Rename
     public abstract class StandardAction : MetaAction {
         private readonly StandardActionKind _kind;
 
-        protected StandardAction(StandardActionKind kind) {
+        internal StandardAction(StandardActionKind kind) {
             _kind = kind;
         }
 
@@ -26,12 +28,6 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return _kind;
             }
-        }
-
-        public MetaObject Fallback(MetaObject[] args) {
-            return Fallback(args, null);
-        }
-
-        public abstract MetaObject Fallback(MetaObject[] args, MetaObject onBindingError);
+        }        
     }
 }

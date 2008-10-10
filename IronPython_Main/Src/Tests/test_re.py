@@ -774,5 +774,10 @@ def test_cp16657():
     Assert(re.compile(r'b ar(?x)').search('baar') == None)
     Assert(re.compile(r'b ar').search('bar') == None)    
 
+def test_n_m_quantifier():
+    AreEqual(re.search('ab{,2}a', 'abba').span(), (0, 4))
+    AreEqual(re.search('ab{,2}a', 'abbba'), None)
+    AreEqual(re.search('ab{,2}a', 'abba').span(), re.search('ab{0,2}a', 'abba').span())
+    AreEqual(re.search('ab{0,2}a', 'abbba'), None)
         
 run_test(__name__)

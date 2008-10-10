@@ -34,8 +34,8 @@ namespace IronPython.Runtime.Binding {
             _state = state;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
-            return PythonProtocol.Operation(this, args);
+        public override MetaObject/*!*/ Fallback(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+            return PythonProtocol.Operation(this, ArrayUtils.Insert(target, args));
         }
 
         public override object HashCookie {

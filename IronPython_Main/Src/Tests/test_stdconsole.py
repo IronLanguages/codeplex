@@ -344,5 +344,16 @@ AssertionError''',
 def test_cp798():
     TestCommandLine(("", "-c", "dir();print '_' in dir()"), "False\n", 0)
 
+def test_logo():
+    i = IronPythonInstance(sys.executable, sys.exec_prefix, "")
+    AreEqual(i.proc.Start(), True)
+    i.reader = i.proc.StandardOutput
+    x = i.EatToPrompt()
+    Assert(x.find('\r\r\n') == -1)
+    i.End()
+
 run_test(__name__)
 
+if is_cli:
+    # in save assemblies we have too many files being written... give time for things to settle down.
+    Threading.Thread.CurrentThread.Join(10000)

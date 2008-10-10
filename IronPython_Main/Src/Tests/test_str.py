@@ -156,6 +156,9 @@ def test_count():
 def test_expandtabs():
     Assert("\ttext\t".expandtabs(0) == "text")
     Assert("\ttext\t".expandtabs(-10) == "text")
+    
+    AreEqual(len("aaa\taaa\taaa".expandtabs()), 19)
+    AreEqual("aaa\taaa\taaa".expandtabs(), "aaa     aaa     aaa")
 
 # zero-length string
 def test_empty_string():

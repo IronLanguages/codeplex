@@ -52,11 +52,9 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {            
-            MetaObject arg = args[0];
-
-            if (arg.NeedsDeferral) {
-                return Defer(args);
+        public override MetaObject Fallback(MetaObject self, MetaObject onBindingError) {
+            if (self.NeedsDeferral()) {
+                return Defer(self);
             }
 
             Type type = ToType;
@@ -64,71 +62,71 @@ namespace IronPython.Runtime.Binding {
             MetaObject res = null;
             switch (Type.GetTypeCode(type)) {
                 case TypeCode.Boolean:
-                    res = MakeToBoolConversion(args);
+                    res = MakeToBoolConversion(self);
                     break;
                 case TypeCode.Char:
-                    res = TryToCharConversion(arg);
+                    res = TryToCharConversion(self);
                     break;
                 case TypeCode.Object:
                     // !!! Deferral?
-                    if (type.IsArray && arg.Value is PythonTuple && type.GetArrayRank() == 1) {
-                        res = MakeToArrayConversion(arg, type);
-                    } else if (type.IsGenericType && !type.IsAssignableFrom(CompilerHelpers.GetType(arg.Value))) {
+                    if (type.IsArray && self.Value is PythonTuple && type.GetArrayRank() == 1) {
+                        res = MakeToArrayConversion(self, type);
+                    } else if (type.IsGenericType && !type.IsAssignableFrom(CompilerHelpers.GetType(self.Value))) {
                         Type genTo = type.GetGenericTypeDefinition();
 
                         // Interface conversion helpers...
                         if (genTo == typeof(IList<>)) {
-                            res = TryToGenericInterfaceConversion(arg, type, typeof(IList<object>), typeof(ListGenericWrapper<>));
+                            res = TryToGenericInterfaceConversion(self, type, typeof(IList<object>), typeof(ListGenericWrapper<>));
                         } else if (genTo == typeof(IDictionary<,>)) {
-                            res = TryToGenericInterfaceConversion(arg, type, typeof(IDictionary<object, object>), typeof(DictionaryGenericWrapper<,>));
+                            res = TryToGenericInterfaceConversion(self, type, typeof(IDictionary<object, object>), typeof(DictionaryGenericWrapper<,>));
                         } else if (genTo == typeof(IEnumerable<>)) {
-                            res = TryToGenericInterfaceConversion(arg, type, typeof(IEnumerable), typeof(IEnumerableOfTWrapper<>));
+                            res = TryToGenericInterfaceConversion(self, type, typeof(IEnumerable), typeof(IEnumerableOfTWrapper<>));
                         }
                     } else if (type == typeof(IEnumerable)) {
-                        if (arg.LimitType == typeof(string)) {
+                        if (self.LimitType == typeof(string)) {
                             // replace strings normal enumeration with our own which returns strings instead of chars.
                             res = new MetaObject(
                                 Ast.Call(
                                     typeof(StringOps).GetMethod("ConvertToIEnumerable"),
-                                    Ast.ConvertHelper(args[0].Expression, typeof(string))
+                                    Ast.ConvertHelper(self.Expression, typeof(string))
                                 ),
-                                Restrictions.TypeRestriction(args[0].Expression, typeof(string))
+                                Restrictions.TypeRestriction(self.Expression, typeof(string))
                             );
-                        } else if (!typeof(IEnumerable).IsAssignableFrom(arg.LimitType) && IsIndexless(arg)) {
-                            res = PythonProtocol.ConvertToIEnumerable(this, args[0].Restrict(args[0].LimitType));
+                        } else if (!typeof(IEnumerable).IsAssignableFrom(self.LimitType) && IsIndexless(self)) {
+                            res = PythonProtocol.ConvertToIEnumerable(this, self.Restrict(self.LimitType));
                         }
                     } else if (type == typeof(IEnumerator) ) {
-                        if (!typeof(IEnumerator).IsAssignableFrom(arg.LimitType) && 
-                            !typeof(IEnumerable).IsAssignableFrom(arg.LimitType) &&
-                            IsIndexless(arg)) {
-                            res = PythonProtocol.ConvertToIEnumerator(this, args[0].Restrict(args[0].LimitType));
+                        if (!typeof(IEnumerator).IsAssignableFrom(self.LimitType) && 
+                            !typeof(IEnumerable).IsAssignableFrom(self.LimitType) &&
+                            IsIndexless(self)) {
+                            res = PythonProtocol.ConvertToIEnumerator(this, self.Restrict(self.LimitType));
                         }
                     }
                     break;
             }
 
-            if (type.IsEnum && Enum.GetUnderlyingType(type) == args[0].LimitType) {
+            if (type.IsEnum && Enum.GetUnderlyingType(type) == self.LimitType) {
                 // numeric type to enum, this is ok if the value is zero
                 object value = Activator.CreateInstance(type);
 
                 return new MetaObject(
                     Ast.Condition(
                         Ast.Equal(
-                            Ast.ConvertHelper(args[0].Expression, Enum.GetUnderlyingType(type)),
-                            Ast.Constant(Activator.CreateInstance(args[0].LimitType))
+                            Ast.ConvertHelper(self.Expression, Enum.GetUnderlyingType(type)),
+                            Ast.Constant(Activator.CreateInstance(self.LimitType))
                         ),
                         Ast.Constant(value),
                         Ast.Call(
                             typeof(PythonOps).GetMethod("TypeErrorForBadEnumConversion").MakeGenericMethod(type),
-                            Ast.ConvertHelper(args[0].Expression, typeof(object))
+                            Ast.ConvertHelper(self.Expression, typeof(object))
                         )
                     ),
-                    args[0].Restrictions.Merge(Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType)),
+                    self.Restrictions.Merge(Restrictions.TypeRestriction(self.Expression, self.LimitType)),
                     value
                 );
             }
 
-            return res ?? Binder.Binder.ConvertTo(ToType, ResultKind, arg);
+            return res ?? Binder.Binder.ConvertTo(ToType, ResultKind, self);
         }
 
         private static bool IsIndexless(MetaObject/*!*/ arg) {
@@ -257,12 +255,10 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private MetaObject/*!*/ MakeToBoolConversion(MetaObject/*!*/[]/*!*/ args) {
-            MetaObject self = args[0];
-
+        private MetaObject/*!*/ MakeToBoolConversion(MetaObject/*!*/ self) {
             MetaObject res = null;
-            if (self.NeedsDeferral) {
-                res = Defer(args);
+            if (self.NeedsDeferral()) {
+                res = Defer(self);
             } else {
                 if (self.HasValue) {
                     self = self.Restrict(self.RuntimeType);

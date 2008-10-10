@@ -33,18 +33,15 @@ namespace Microsoft.Scripting.Silverlight {
     internal sealed class BrowserPAL : PlatformAdaptationLayer {
         internal static readonly BrowserPAL/*!*/ PAL = new BrowserPAL();
         
-        // TODO: FileExists is used in the ResolveSourceUnit code path
-        // However, it really shouldn't be. Instead TryGetSourceUnit should be called directly.
-        // Otherwise we end up getting the file twice, which is suboptimal
         public override bool FileExists(string path) {
             if (!DynamicApplication.InUIThread) {
                 return false; // Application.GetResourceStream will throw if called from a non-UI thread
             }
-            return DynamicApplication.Download(path) != null;
+            return Package.GetFile(path) != null;
         }
 
         public override Assembly LoadAssemblyFromPath(string path) {
-            Stream stream = DynamicApplication.Download(path);
+            Stream stream = Package.GetFile(path);
             if (stream == null) {
                 throw new FileNotFoundException("could not find assembly in XAP: " + path);
             }
@@ -53,7 +50,7 @@ namespace Microsoft.Scripting.Silverlight {
 
         /// <exception cref="ArgumentException">Invalid path.</exception>
         public override string/*!*/ GetFullPath(string/*!*/ path) {
-            return DynamicApplication.NormalizePath(path);
+            return Package.NormalizePath(path);
         }
 
         /// <exception cref="ArgumentException">Invalid path.</exception>
@@ -63,14 +60,14 @@ namespace Microsoft.Scripting.Silverlight {
 
         private Uri/*!*/ PathToUri(string/*!*/ path) {
             try {
-                return new Uri(DynamicApplication.NormalizePath(path), UriKind.RelativeOrAbsolute);
+                return new Uri(Package.NormalizePath(path), UriKind.RelativeOrAbsolute);
             } catch (UriFormatException e) {
                 throw new ArgumentException("The specified path is invalid", e);
             }
         }
 
         public override Stream OpenInputFileStream(string path) {
-            Stream result = DynamicApplication.Download(GetFullPath(path));
+            Stream result = Package.GetFile(GetFullPath(path));
             if (result == null)
                 throw new IOException(String.Format("file {0} not found in XAP", path));
             return result;

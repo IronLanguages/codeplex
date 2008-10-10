@@ -489,6 +489,7 @@ namespace IronPython.Runtime.Operations {
                         if (tabsize > 0) {
                             int tabs = tabsize - (col % tabsize);
                             ret.Append(' ', tabs);
+                            col = 0;
                         }
                         break;
                     default:
@@ -1099,6 +1100,16 @@ namespace IronPython.Runtime.Operations {
         #region operators
         [SpecialName]
         public static string Add(string self, string other) {
+            return self + other;
+        }
+
+        [SpecialName]
+        public static string Add(string self, char other) {
+            return self + other;
+        }
+
+        [SpecialName]
+        public static string Add(char self, string other) {
             return self + other;
         }
 

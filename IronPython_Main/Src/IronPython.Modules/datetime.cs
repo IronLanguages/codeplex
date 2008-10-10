@@ -204,7 +204,10 @@ namespace IronPython.Modules {
             }
 
             public PythonTuple __reduce__() {
-                return PythonTuple.MakeTuple(DynamicHelpers.GetPythonTypeFromType(this.GetType()), PythonTuple.MakeTuple(_days, _seconds, _microseconds));
+                return PythonTuple.MakeTuple(
+                    DynamicHelpers.GetPythonTypeFromType(GetType()), 
+                    PythonTuple.MakeTuple(_days, _seconds, _microseconds)
+                );
             }
 
             public static object __getnewargs__(int days, int seconds, int microseconds) {
@@ -383,7 +386,7 @@ namespace IronPython.Modules {
             }
 
             public static date fromtimestamp(double timestamp) {
-                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
+                DateTime dt = PythonTime.TimestampToDateTime(timestamp);
                 return new date(dt.Year, dt.Month, dt.Day);
             }
 
@@ -741,7 +744,7 @@ namespace IronPython.Modules {
             }
 
             public static object fromtimestamp(double timestamp, [DefaultParameterValue(null)] tzinfo tz) {
-                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
+                DateTime dt = PythonTime.TimestampToDateTime(timestamp);
 
                 if (tz != null) {
                     dt = dt.ToUniversalTime();
@@ -753,7 +756,7 @@ namespace IronPython.Modules {
             }
 
             public static datetime utcfromtimestamp(double timestamp) {
-                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp));
+                DateTime dt = PythonTime.TimestampToDateTime(timestamp);
                 dt = dt.ToUniversalTime();
                 return new datetime(dt, 0, null);
             }
@@ -998,6 +1001,21 @@ namespace IronPython.Modules {
 
             public override string ToString() {
                 return isoformat(' ');
+            }
+
+            public override PythonTuple __reduce__() {
+                return PythonTuple.MakeTuple(
+                    DynamicHelpers.GetPythonTypeFromType(GetType()),
+                    PythonTuple.MakeTuple(
+                        InternalDateTime.Year, 
+                        InternalDateTime.Month, 
+                        InternalDateTime.Day,
+                        InternalDateTime.Hour,
+                        InternalDateTime.Minute,
+                        InternalDateTime.Second,
+                        InternalDateTime.Millisecond * 1000 + _lostMicroseconds
+                    )
+                );
             }
 
             #region IRichComparable Members

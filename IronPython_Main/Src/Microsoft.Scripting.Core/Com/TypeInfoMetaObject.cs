@@ -56,60 +56,54 @@ namespace Microsoft.Scripting.Com {
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf(), args);
         }
 
-        public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+        public override MetaObject Convert(ConvertAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf());
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf(), args);
         }
 
-        public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+        public override MetaObject DeleteMember(DeleteMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf());
         }
 
-        public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+        public override MetaObject GetMember(GetMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf());
         }
 
         public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf(), args);
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf(), args);
         }
 
-        public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+        public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapComObject(args));
+            return action.Fallback(UnwrapSelf(), value);
         }
 
-        private MetaObject[] UnwrapComObject(MetaObject[] args) {
-            MetaObject[] copy = args.Copy();
-
-            // Replace self with unwrapped Com object value
-            copy[0] = new MetaUnwrappedComObject(
-                Expression.Convert(
-                    Expression.Property(
-                        Expression,
-                        typeof(ComObject).GetProperty("Obj")
-                    ),
-                    _comType
-                ),
-                MakeRestrictions()
+        private MetaObject UnwrapSelf() {
+            Expression self = Expression.Property(
+                Expression,
+                typeof(ComObject).GetProperty("Obj")
             );
-
-            return copy;
+            return new MetaObject(
+                Expression.ConvertHelper(self, _comType),
+                MakeRestrictions(),
+                ((ComObject)Value).Obj
+            );
         }
     }    
 }

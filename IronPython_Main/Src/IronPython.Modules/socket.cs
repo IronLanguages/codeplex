@@ -1725,11 +1725,11 @@ namespace IronPython.Modules {
         }
 
         private static PythonType herror(CodeContext/*!*/ context) {
-            return (PythonType)PythonContext.GetContext(context).GetModuleState("herror");
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("socketherror");
         }
         
         private static PythonType timeout(CodeContext/*!*/ context) {
-            return (PythonType)PythonContext.GetContext(context).GetModuleState("timeout");
+            return (PythonType)PythonContext.GetContext(context).GetModuleState("sockettimeout");
         }
     }
 }

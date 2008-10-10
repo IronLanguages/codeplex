@@ -22,10 +22,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using System.Text;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -1191,8 +1191,9 @@ namespace IronPython.Runtime.Types {
 
             il = DefineMethodOverride(MethodAttributes.Private, typeof(IWeakReferenceable), "SetFinalizer", out decl, out impl);
             il.EmitLoadArg(0);
+            il.EmitFieldAddress(_weakrefField);
             il.EmitLoadArg(1);
-            il.EmitFieldSet(_weakrefField);
+            il.EmitCall(typeof(UserTypeOps).GetMethod("SetFinalizerWorker"));
             il.Emit(OpCodes.Ret);
             _tg.DefineMethodOverride(impl, decl);
 

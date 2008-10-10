@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Com {
             _info = info;
         }
 
-        public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+        public override MetaObject GetMember(GetMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
             string name = action.Name;
 
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Com {
                 name != "VersionMajor" &&
                 name != "VersionMinor") {
 
-                return action.Fallback(args);
+                return action.Fallback(this);
             }
 
             return new MetaObject(
@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Com {
                     Expression.ConvertHelper(Expression, typeof(ComTypeLibInfo)),
                     typeof(ComTypeLibInfo).GetProperty(name)
                 ),
-                ComTypeLibInfoRestrictions(args)
+                ComTypeLibInfoRestrictions(this)
             );
         }
 
@@ -64,17 +64,21 @@ namespace Microsoft.Scripting.Com {
                 );
             }
 
-            return action.Fallback(RestrictThisToType(args));
+            return action.Fallback(RestrictThisToType(), args);
         }
 
-        private Restrictions ComTypeLibInfoRestrictions(MetaObject[] args) {
+        private Restrictions ComTypeLibInfoRestrictions(params MetaObject[] args) {
             return Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ComTypeLibInfo)));
         }
 
-        private static MetaObject[] RestrictThisToType(MetaObject[] args) {
-            MetaObject[] copy = args.Copy();
-            args[0] = args[0].Restrict(typeof(ComTypeLibInfo));
-            return copy;
+        private MetaObject RestrictThisToType() {
+            return new MetaObject(
+                Expression.ConvertHelper(
+                    Expression,
+                    typeof(ComTypeLibInfo)
+                ),
+                Restrictions.TypeRestriction(Expression, typeof(ComTypeLibInfo))
+            );
         }
     }
 }

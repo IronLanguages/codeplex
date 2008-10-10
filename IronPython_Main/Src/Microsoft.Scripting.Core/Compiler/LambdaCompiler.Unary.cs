@@ -112,8 +112,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         }
                     case ExpressionType.UnaryPlus:
                     case ExpressionType.NegateChecked:
-                    case ExpressionType.Negate:
-                    case ExpressionType.OnesComplement: {
+                    case ExpressionType.Negate: {
                             Debug.Assert(operandType == resultType);
                             Label labIfNull = _ilg.DefineLabel();
                             Label labEnd = _ilg.DefineLabel();
@@ -166,9 +165,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         } else {
                             _ilg.Emit(OpCodes.Not);
                         }
-                        break;
-                    case ExpressionType.OnesComplement:
-                        _ilg.Emit(OpCodes.Not);
                         break;
                     case ExpressionType.UnaryPlus:
                         _ilg.Emit(OpCodes.Nop);

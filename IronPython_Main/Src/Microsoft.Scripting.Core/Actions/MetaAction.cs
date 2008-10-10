@@ -26,6 +26,9 @@ using ComMetaObject = Microsoft.Scripting.Com.ComMetaObject;
 namespace Microsoft.Scripting.Actions {
     // TODO: Rename!!!
     public abstract class MetaAction : CallSiteBinder {
+
+        #region Public APIs
+
         public sealed override Rule<T> Bind<T>(object[] args) {
             if (!typeof(Delegate).IsAssignableFrom(typeof(T))) {
                 throw Error.TypeParameterIsNotDelegate(typeof(T));
@@ -40,22 +43,26 @@ namespace Microsoft.Scripting.Actions {
             ParameterExpression[] pes;
             Expression[] expressions = MakeParameters(pis, out pes);
 
-            MetaObject[] mos = new MetaObject[args.Length];
-            for (int i = 0; i < mos.Length; i++) {
-                object arg = args[i];
-                IDynamicObject ido = arg as IDynamicObject;
-                if (ido != null) {
-                    mos[i] = ido.GetMetaObject(expressions[i]);
-#if !SILVERLIGHT
-                } else if (ComMetaObject.IsComObject(arg)) {
-                    mos[i] = ComMetaObject.GetComMetaObject(expressions[i], arg);
-#endif
-                } else {
-                    mos[i] = new ParameterMetaObject(expressions[i], arg);
-                }
+
+            if (args.Length == 0) {
+                throw new InvalidOperationException();
             }
 
-            MetaObject binding = Bind(mos);
+            MetaObject[] mos;
+            if (args.Length != 1) {
+                mos = new MetaObject[args.Length - 1];
+                for (int i = 1; i < args.Length; i++) {
+                    mos[i - 1] = MetaObject.ObjectToMetaObject(args[i], expressions[i]);
+                }
+            } else {
+                mos = MetaObject.EmptyMetaObjects;
+            }
+
+            MetaObject binding = Bind(
+                MetaObject.ObjectToMetaObject(args[0], expressions[0]), 
+                mos
+            );
+            
             if (binding == null) {
                 throw Error.BindingCannotBeNull();
             }
@@ -68,6 +75,24 @@ namespace Microsoft.Scripting.Actions {
                 new ReadOnlyCollection<ParameterExpression>(pes)
             );
         }
+
+        public abstract MetaObject Bind(MetaObject target, MetaObject[] args);
+
+        public MetaObject Defer(params MetaObject[] args) {
+            var exprs = MetaObject.GetExpressions(args);
+
+            // TODO: we should really be using the same delegate as the CallSite
+            return new MetaObject(
+                Expression.Dynamic(
+                    this,
+                    typeof(object),   // !! what's the correct return type?
+                    exprs
+                ),
+                Restrictions.Combine(args)
+            );
+        }
+
+        #endregion
 
         private Expression AddReturn(Expression body, Type retType) {
             switch (body.NodeType) {
@@ -117,7 +142,7 @@ namespace Microsoft.Scripting.Actions {
                         }
                     }
 
-                    goto default;                    
+                    goto default;
                 default:
                     return Expression.Return(Expression.ConvertHelper(body, retType));
             }
@@ -154,22 +179,6 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return body;
-        }
-
-        public abstract MetaObject Bind(MetaObject[] args);
-
-        public MetaObject Defer(MetaObject[] args) {
-            var exprs = MetaObject.GetExpressions(args);
-
-            // TODO: we should really be using the same delegate as the CallSite
-            return new MetaObject(
-                Expression.Dynamic(
-                    this,
-                    typeof(object),   // !! what's the correct return type?
-                    exprs
-                ),
-                Restrictions.Combine(args)
-            );
         }
 
         private static Expression[] MakeParameters(ParameterInfo[] pis, out ParameterExpression[] parameters) {

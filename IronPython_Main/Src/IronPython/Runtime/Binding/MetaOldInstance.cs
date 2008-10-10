@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Binding {
     /// 
     /// TODO: Lots of CodeConetxt references, need to move CodeContext onto OldClass and pull it from there.
     /// </summary>
-    class MetaOldInstance : MetaPythonObject, IPythonInvokable {        
+    class MetaOldInstance : MetaPythonObject, IPythonInvokable, IPythonGetable {        
         public MetaOldInstance(Expression/*!*/ expression, Restrictions/*!*/ restrictions, OldInstance/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
@@ -43,8 +43,17 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
+        #region IPythonGetable Members
+
+        public MetaObject GetMember(GetMemberBinder member, Expression codeContext) {
+            // no codeContext filtering but avoid an extra site by handling this action directly
+            return MakeMemberAccess(member, member.Name, MemberAccess.Get, this);
         }
 
         #endregion
@@ -52,19 +61,19 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
-            return MakeMemberAccess(member, member.Name, MemberAccess.Get, args);
+        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member) {
+            return MakeMemberAccess(member, member.Name, MemberAccess.Get, this);
         }
 
-        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
-            return MakeMemberAccess(member, member.Name, MemberAccess.Set, args);
+        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ member, MetaObject/*!*/ value) {
+            return MakeMemberAccess(member, member.Name, MemberAccess.Set, this, value);
         }
 
-        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
-            return MakeMemberAccess(member, member.Name, MemberAccess.Delete, args);
+        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ member) {
+            return MakeMemberAccess(member, member.Name, MemberAccess.Delete, this);
         }
 
         public override MetaObject/*!*/ Operation(OperationAction/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
@@ -75,30 +84,30 @@ namespace IronPython.Runtime.Binding {
             return base.Operation(operation, args);
         }
 
-        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion) {
             Type type = conversion.ToType;
 
             if (!type.IsEnum) {
                 switch (Type.GetTypeCode(type)) {
                     case TypeCode.Boolean:
-                        return MakeConvertToBool(conversion, args);
+                        return MakeConvertToBool(conversion);
                     case TypeCode.Int32:
-                        return MakeConvertToCommon(conversion, Symbols.ConvertToInt, args);
+                        return MakeConvertToCommon(conversion, Symbols.ConvertToInt);
                     case TypeCode.Double:
-                        return MakeConvertToCommon(conversion, Symbols.ConvertToFloat, args);
+                        return MakeConvertToCommon(conversion, Symbols.ConvertToFloat);
                     case TypeCode.String:
-                        return MakeConvertToCommon(conversion, Symbols.String, args);
+                        return MakeConvertToCommon(conversion, Symbols.String);
                     case TypeCode.Object:
                         if (type == typeof(BigInteger)) {
-                            return MakeConvertToCommon(conversion, Symbols.ConvertToLong, args);
+                            return MakeConvertToCommon(conversion, Symbols.ConvertToLong);
                         } else if (type == typeof(Complex64)) {
-                            return MakeConvertToCommon(conversion, Symbols.ConvertToComplex, args);
+                            return MakeConvertToCommon(conversion, Symbols.ConvertToComplex);
                         } else if (type == typeof(IEnumerable)) {
-                            return MakeConvertToIEnumerable(conversion, args);
+                            return MakeConvertToIEnumerable(conversion);
                         } else if (type == typeof(IEnumerator)) {
-                            return MakeConvertToIEnumerator(conversion, args);
+                            return MakeConvertToIEnumerator(conversion);
                         } else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>)) {
-                            return MakeConvertToIEnumerable(conversion, type.GetGenericArguments()[0], args);
+                            return MakeConvertToIEnumerable(conversion, type.GetGenericArguments()[0]);
                         } else if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
                             return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(OldInstance)));
                         }
@@ -107,7 +116,7 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            return base.Convert(conversion, args);
+            return base.Convert(conversion);
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ invoke, params MetaObject/*!*/[]/*!*/ args) {
@@ -120,7 +129,6 @@ namespace IronPython.Runtime.Binding {
 
         private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ invoke, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
             MetaObject self = Restrict(typeof(OldInstance));
-            args = ArrayUtils.RemoveFirst(args);
 
             Expression[] exprArgs = new Expression[args.Length + 1];
             for (int i = 0; i < args.Length; i++) {
@@ -162,7 +170,7 @@ namespace IronPython.Runtime.Binding {
                             ),
                             tmp
                         ),
-                        BindingHelpers.InvokeFallback(invoke, codeContext, ArrayUtils.Insert((MetaObject)this, args)).Expression
+                        BindingHelpers.InvokeFallback(invoke, codeContext, this, args).Expression
                     ),
                     tmp
                 ),
@@ -174,7 +182,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Conversions
        
-        private MetaObject/*!*/ MakeConvertToIEnumerable(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeConvertToIEnumerable(ConvertAction/*!*/ conversion) {
             VariableExpression tmp = Ast.Variable(typeof(IEnumerable), "res");
             MetaObject self = Restrict(typeof(OldInstance));
 
@@ -195,7 +203,7 @@ namespace IronPython.Runtime.Binding {
                         tmp,
                         Ast.ConvertHelper(
                             Ast.ConvertHelper(  // first to object (incase it's a throw), then to IEnumerable
-                                conversion.Fallback(args).Expression,
+                                conversion.Fallback(this).Expression,
                                 typeof(object)
                             ),
                             typeof(IEnumerable)
@@ -207,7 +215,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private MetaObject/*!*/ MakeConvertToIEnumerator(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeConvertToIEnumerator(ConvertAction/*!*/ conversion) {
             VariableExpression tmp = Ast.Variable(typeof(IEnumerator), "res");
             MetaObject self = Restrict(typeof(OldInstance));
 
@@ -228,7 +236,7 @@ namespace IronPython.Runtime.Binding {
                         tmp,
                         Ast.ConvertHelper(
                             Ast.ConvertHelper(
-                                conversion.Fallback(args).Expression,
+                                conversion.Fallback(this).Expression,
                                 typeof(object)
                             ),
                             typeof(IEnumerator)
@@ -240,7 +248,7 @@ namespace IronPython.Runtime.Binding {
             );            
         }
 
-        private MetaObject/*!*/ MakeConvertToIEnumerable(ConvertAction/*!*/ conversion, Type genericType, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeConvertToIEnumerable(ConvertAction/*!*/ conversion, Type genericType) {
             VariableExpression tmp = Ast.Variable(typeof(IEnumerable), "res");
             MetaObject self = Restrict(typeof(OldInstance));
 
@@ -261,7 +269,7 @@ namespace IronPython.Runtime.Binding {
                         tmp,
                         Ast.ConvertHelper(
                             Ast.ConvertHelper(
-                                conversion.Fallback(args).Expression,
+                                conversion.Fallback(this).Expression,
                                 typeof(object)
                             ),
                             typeof(IEnumerable)
@@ -273,7 +281,7 @@ namespace IronPython.Runtime.Binding {
             );                       
         }
 
-        private MetaObject/*!*/ MakeConvertToCommon(ConvertAction/*!*/ conversion, SymbolId symbolId, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeConvertToCommon(ConvertAction/*!*/ conversion, SymbolId symbolId) {
             VariableExpression tmp = Ast.Variable(typeof(object), "convertResult");
             MetaObject self = Restrict(typeof(OldInstance));
             return new MetaObject(
@@ -282,7 +290,7 @@ namespace IronPython.Runtime.Binding {
                         MakeOneConvert(conversion, self, symbolId, tmp),
                         tmp,
                         Ast.ConvertHelper(
-                            conversion.Fallback(args).Expression,
+                            conversion.Fallback(this).Expression,
                             typeof(object)
                         )
                     ),
@@ -307,11 +315,11 @@ namespace IronPython.Runtime.Binding {
             );
         }
         
-        private MetaObject/*!*/ MakeConvertToBool(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeConvertToBool(ConvertAction/*!*/ conversion) {
             MetaObject self = Restrict(typeof(OldInstance));
 
             VariableExpression tmp = Ast.Variable(typeof(bool?), "tmp");
-            MetaObject fallback = conversion.Fallback(args);
+            MetaObject fallback = conversion.Fallback(this);
             Type resType = BindingHelpers.GetCompatibleType(typeof(bool), fallback.Expression.Type);
 
             return new MetaObject(
@@ -341,7 +349,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Member Access
 
-        private MetaObject/*!*/ MakeMemberAccess(StandardAction/*!*/ member, string name, MemberAccess access, params MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeMemberAccess(MetaAction/*!*/ member, string name, MemberAccess access, params MetaObject/*!*/[]/*!*/ args) {
             MetaObject self = Restrict(typeof(OldInstance));
 
             CustomOldClassDictionaryStorage dict;
@@ -426,7 +434,7 @@ namespace IronPython.Runtime.Binding {
             Delete
         }
         
-        private MetaObject/*!*/ MakeDynamicMemberAccess(StandardAction/*!*/ member, string/*!*/ name, MemberAccess access, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeDynamicMemberAccess(MetaAction/*!*/ member, string/*!*/ name, MemberAccess access, MetaObject/*!*/[]/*!*/ args) {
             MetaObject self = Restrict(typeof(OldInstance));
             Expression target;
             SymbolId symName = SymbolTable.StringToId(name);
@@ -446,7 +454,7 @@ namespace IronPython.Runtime.Binding {
                             ),
                             tmp,
                             Ast.ConvertHelper(
-                                member.Fallback(args).Expression,
+                                FallbackGet(member, args),
                                 typeof(object)
                             )
                         ),
@@ -478,6 +486,15 @@ namespace IronPython.Runtime.Binding {
                 target,
                 self.Restrictions.Merge(Restrictions.Combine(args))
             );
+        }
+
+        private Expression FallbackGet(MetaAction member, MetaObject[] args) {
+            GetMemberAction sa = member as GetMemberAction;
+            if (sa != null) {
+                return sa.Fallback(args[0]).Expression;
+            }
+
+            return ((GetMemberBinder)member).Fallback(args[0], Ast.Constant(BinderState.GetBinderState(member).Context)).Expression;
         }
 
         #endregion

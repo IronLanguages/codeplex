@@ -40,37 +40,37 @@ namespace Microsoft.Linq.Expressions {
                 return _templated.ContainsKey(constantExpr);
             }
 
-            protected override Expression Visit(DynamicExpression node) {
+            protected internal override Expression VisitDynamic(DynamicExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitDynamic(node);
             }
 
-            protected override Expression Visit(AssignmentExpression node) {
+            protected internal override Expression VisitAssignment(AssignmentExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitAssignment(node);
             }
 
-            protected override Expression Visit(BinaryExpression node) {
+            protected internal override Expression VisitBinary(BinaryExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitBinary(node);
             }
 
-            protected override Expression Visit(Block node) {
+            protected internal override Expression VisitBlock(Block node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitBlock(node);
             }
 
-            protected override Expression Visit(BreakStatement node) {
+            protected internal override Expression VisitBreak(BreakStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitBreak(node);
             }
 
-            protected override Expression Visit(ConditionalExpression node) {
+            protected internal override Expression VisitConditional(ConditionalExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitConditional(node);
             }
 
-            protected override Expression Visit(ConstantExpression node) {
+            protected internal override Expression VisitConstant(ConstantExpression node) {
                 // if we've promoted a value to a templated constant turn it
                 // back into a normal constant for the purpose of comparing the trees
                 ITemplatedValue tempVal = node.Value as ITemplatedValue;
@@ -88,45 +88,45 @@ namespace Microsoft.Linq.Expressions {
                 } else {
                     Expressions.Add(node);
                 }
-                return base.Visit(node);
+                return base.VisitConstant(node);
             }
 
-            protected override Expression Visit(ContinueStatement node) {
+            protected internal override Expression VisitContinue(ContinueStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitContinue(node);
             }
 
-            protected override Expression Visit(DoStatement node) {
+            protected internal override Expression VisitDoWhile(DoStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitDoWhile(node);
             }
 
-            protected override Expression Visit(EmptyStatement node) {
+            protected internal override Expression VisitEmpty(EmptyStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitEmpty(node);
             }
 
-            protected override Expression Visit(InvocationExpression node) {
+            protected internal override Expression VisitInvocation(InvocationExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitInvocation(node);
             }
 
-            protected override Expression Visit(LabeledStatement node) {
+            protected internal override Expression VisitLabeled(LabeledStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitLabeled(node);
             }
 
-            protected override Expression Visit(LambdaExpression node) {
+            protected internal override Expression VisitLambda(LambdaExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitLambda(node);
             }
 
-            protected override Expression Visit(LoopStatement node) {
+            protected internal override Expression VisitLoop(LoopStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitLoop(node);
             }
 
-            protected override Expression Visit(MemberExpression node) {
+            protected internal override Expression VisitMemberAccess(MemberExpression node) {
                 // ignore the templated constants but add normal member expressions
                 // We could look for an annotation on TemplatedValue<> incase the user
                 // creates one of these but they shouldn't be doing that.
@@ -137,79 +137,79 @@ namespace Microsoft.Linq.Expressions {
                     Expressions.Add(node);
                 }
 
-                return base.Visit(node);
+                return base.VisitMemberAccess(node);
             }
 
-            protected override Expression Visit(MethodCallExpression node) {
+            protected internal override Expression VisitMethodCall(MethodCallExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitMethodCall(node);
             }
 
-            protected override Expression Visit(NewArrayExpression node) {
+            protected internal override Expression VisitNewArray(NewArrayExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitNewArray(node);
             }
 
-            protected override Expression Visit(NewExpression node) {
+            protected internal override Expression VisitNew(NewExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitNew(node);
             }
 
-            protected override Expression Visit(ParameterExpression node) {
+            protected internal override Expression VisitParameter(ParameterExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitParameter(node);
             }
 
-            protected override Expression Visit(ReturnStatement node) {
+            protected internal override Expression VisitReturn(ReturnStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitReturn(node);
             }
 
-            protected override Expression Visit(ScopeExpression node) {
+            protected internal override Expression VisitScope(ScopeExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitScope(node);
             }
 
-            protected override Expression Visit(SwitchStatement node) {
+            protected internal override Expression VisitSwitch(SwitchStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitSwitch(node);
             }
 
-            protected override Expression Visit(ThrowStatement node) {
+            protected internal override Expression VisitThrow(ThrowStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitThrow(node);
             }
 
-            protected override Expression Visit(TryStatement node) {
+            protected internal override Expression VisitTry(TryStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitTry(node);
             }
 
-            protected override Expression Visit(TypeBinaryExpression node) {
+            protected internal override Expression VisitTypeBinary(TypeBinaryExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitTypeBinary(node);
             }
 
-            protected override Expression Visit(UnaryExpression node) {
+            protected internal override Expression VisitUnary(UnaryExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitUnary(node);
             }
 
-            protected override Expression Visit(VariableExpression node) {
+            protected internal override Expression VisitVariable(VariableExpression node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitVariable(node);
             }
 
-            protected override Expression Visit(YieldStatement node) {
+            protected internal override Expression VisitYield(YieldStatement node) {
                 Expressions.Add(node);
-                return base.Visit(node);
+                return base.VisitYield(node);
             }
 
-            protected override Expression VisitExtension(Expression node) {
-                if (!node.IsReducible) {
+            protected internal override Expression VisitExtension(Expression node) {
+                if (!node.CanReduce) {
                     Expressions.Add(node);
                 } else {
-                    return VisitNode(node.ReduceToKnown());
+                    return Visit(node.ReduceExtensions());
                 }
                 return node;
             }
@@ -260,11 +260,11 @@ namespace Microsoft.Linq.Expressions {
 
             FlatTreeWalker walkLeft = new FlatTreeWalker();
             FlatTreeWalker walkRight = new FlatTreeWalker();
-            walkLeft.VisitNode(left);
+            walkLeft.Visit(left);
 
             Debug.Assert(walkLeft._templated == null);
 
-            walkRight.VisitNode(right);
+            walkRight.Visit(right);
 
             // check the length first to see if the trees are obviously different            
             if (walkLeft.Expressions.Count != walkRight.Expressions.Count) {
@@ -438,7 +438,6 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.Unbox:
                 case ExpressionType.Negate:
                 case ExpressionType.Not:
-                case ExpressionType.OnesComplement:
                 case ExpressionType.Conditional:
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:

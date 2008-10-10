@@ -32,11 +32,11 @@ namespace IronPython.Runtime.Binding {
             return InvokeWorker(create, args, Ast.Constant(BinderState.GetBinderState(create).Context));
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject Convert(ConvertAction/*!*/ conversion) {
             if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(Value.GetType()));
             }
-            return conversion.Fallback(args);
+            return conversion.Fallback(this);
         }
 
 

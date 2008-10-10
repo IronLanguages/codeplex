@@ -14,22 +14,16 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Collections;
-using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using System.Reflection;
 using Microsoft.Scripting.Actions;
+using System.Threading;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions.Calls;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Ast = Microsoft.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Operations {
     
@@ -66,6 +60,12 @@ namespace IronPython.Runtime.Operations {
                     name.ToString(), DynamicHelpers.GetPythonType(prop).Name);
             }
             desc.TrySetValue(DefaultContext.Default, instance, DynamicHelpers.GetPythonType(instance), newValue);
+        }
+
+        public static void SetFinalizerWorker(ref WeakRefTracker tracker, WeakRefTracker newVal) {
+            if (Interlocked.CompareExchange(ref tracker, newVal, null) != null) {
+                GC.SuppressFinalize(newVal);
+            }
         }
 
         public static void AddRemoveEventHelper(object method, object instance, PythonType dt, object eventValue, SymbolId name) {

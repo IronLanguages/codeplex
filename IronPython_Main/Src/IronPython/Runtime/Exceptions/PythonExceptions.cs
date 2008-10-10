@@ -358,7 +358,7 @@ namespace IronPython.Runtime.Exceptions {
                     return _clrException;
                 }
 
-                System.Exception newExcep = CreateClrException(ToString());
+                System.Exception newExcep = CreateClrException(_message != null ? _message.ToString() : String.Empty);
                 AssociateException(newExcep, this);
 
                 Interlocked.CompareExchange<System.Exception>(ref _clrException, newExcep, null);
@@ -756,8 +756,6 @@ namespace IronPython.Runtime.Exceptions {
             } else {
                 se = new _SyntaxError();
             }
-
-            se.message = e.Message;
 
             string sourceLine = PythonContext.GetSourceLine(e);
             string fileName = e.GetSymbolDocumentName();

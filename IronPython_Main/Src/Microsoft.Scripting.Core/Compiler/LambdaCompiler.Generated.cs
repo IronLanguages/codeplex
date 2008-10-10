@@ -267,10 +267,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.LoopStatement:
                     EmitLoopStatement(node);
                     break;
-                // OnesComplement
-                case ExpressionType.OnesComplement:
-                    EmitUnaryExpression(node);
-                    break;
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
                     EmitReturnStatement(node);

@@ -894,7 +894,6 @@ namespace IronPython.Runtime {
             return res;
         }
 
-#if !SILVERLIGHT // finalizers not supported
         ~PythonFile() {
             try {
                 Dispose(false);
@@ -903,7 +902,6 @@ namespace IronPython.Runtime {
                 // flushing could fail due to encoding, ignore it
             }
         }
-#endif
 
         #region Python initialization
 

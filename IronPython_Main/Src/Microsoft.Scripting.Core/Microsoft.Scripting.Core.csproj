@@ -34,7 +34,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -140,6 +140,11 @@
     <Compile Include="Actions\CallSite.cs" />
     <Compile Include="Actions\CallSiteBinder.cs" />
     <Compile Include="Actions\ConvertAction.cs" />
+    <Compile Include="Actions\DeleteIndexAction.cs" />
+    <Compile Include="Actions\Dynamic.cs" />
+    <Compile Include="Actions\ExpandoObject.cs" />
+    <Compile Include="Actions\ExpandoClass.cs" />
+    <Compile Include="Actions\GetIndexAction.cs" />
     <Compile Include="Actions\MatchCaller.Generated.cs" />
     <Compile Include="Actions\CreateAction.cs" />
     <Compile Include="Actions\DeferMetaObject.cs" />
@@ -158,12 +163,12 @@
     <Compile Include="Actions\MetaObject.cs" />
     <Compile Include="Actions\OperationAction.cs" />
     <Compile Include="Actions\ParameterMetaObject.cs" />
-    <Compile Include="Actions\RestrictedMetaObject.cs" />
     <Compile Include="Actions\Restrictions.cs" />
     <Compile Include="Actions\Rule.cs" />
     <Compile Include="Actions\RuleCache.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
+    <Compile Include="Actions\SetIndexAction.cs" />
     <Compile Include="Actions\SetMemberAction.cs" />
     <Compile Include="Actions\SmallRuleSet.cs" />
     <Compile Include="Compiler\DelegateHelpers.cs" />
@@ -266,7 +271,6 @@
     <Compile Include="Com\IDispatchMetaObject.cs" />
     <Compile Include="Com\IDispatchObject.cs" />
     <Compile Include="Com\InvokeBinder.cs" />
-    <Compile Include="Com\MetaUnwrappedComObject.cs" />
     <Compile Include="Com\NullArgBuilder.cs" />
     <Compile Include="Com\ReferenceArgBuilder.cs" />
     <Compile Include="Com\ReturnBuilder.cs" />
@@ -285,7 +289,6 @@
     <Compile Include="Compiler\CompilerScope.cs" />
     <Compile Include="Compiler\ConstantCheck.cs" />
     <Compile Include="Compiler\ExpressionQuoter.cs" />
-    <Compile Include="Ast\ExpressionTreeVisitor.Generated.cs" />
     <Compile Include="Ast\ExpressionTreeVisitor.cs" />
     <Compile Include="Ast\ExpressionWriter.cs" />
     <Compile Include="Compiler\GeneratorInfo.cs" />

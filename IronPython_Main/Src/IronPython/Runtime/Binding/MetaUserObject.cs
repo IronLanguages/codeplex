@@ -21,6 +21,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -38,7 +39,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -47,30 +48,49 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            CodeContext context = BinderState.GetBinderState(action).Context;
+            IPythonObject sdo = (IPythonObject)args[0].Value;
+            PythonTypeSlot foundSlot;
+
+            if (TryGetGetAttribute(context, sdo.PythonType, out foundSlot)) {
+                // we'll always fetch the value, go ahead and invoke afterwards.
+                return BindingHelpers.GenericCall(action, this, args);
+            }
+
+            bool isOldStyle;
+            bool systemTypeResolution;
+            foundSlot = FindSlot(context, action.Name, sdo, out isOldStyle, out systemTypeResolution);
+            if (foundSlot != null && !systemTypeResolution) {
+                // we found the member in the type dictionary, not a .NET type, go ahead and
+                // do the get & invoke.
+                return BindingHelpers.GenericCall(action, this, args);
+            }
+
+            // it's a normal .NET member, let the calling language handle it how it usually does
+            return action.Fallback(this, args);
         }
 
-        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion) {
             Type type = conversion.ToType;
             ValidationInfo typeTest = BindingHelpers.GetValidationInfo(Expression, Value.PythonType);
 
             return BindingHelpers.AddDynamicTestAndDefer(
                 conversion,
-                TryPythonConversion(conversion, type, args) ?? base.Convert(conversion, args),
-                args,
+                TryPythonConversion(conversion, type) ?? base.Convert(conversion),
+                new MetaObject[] { this },
                 typeTest
             );
         }
 
         public override MetaObject/*!*/ Operation(OperationAction/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
-            return PythonProtocol.Operation(operation, args);
+            return PythonProtocol.Operation(operation, ArrayUtils.Insert(this, args));
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             Expression context = Ast.Call(
                 typeof(PythonOps).GetMethod("GetPythonTypeContext"),
                 Ast.Property(
-                    Ast.Convert(args[0].Expression, typeof(IPythonObject)),
+                    Ast.Convert(Expression, typeof(IPythonObject)),
                     "PythonType"
                 )
             );
@@ -91,7 +111,7 @@ namespace IronPython.Runtime.Binding {
 
             return BindingHelpers.AddDynamicTestAndDefer(
                 action,
-                PythonProtocol.Call(action, args) ?? BindingHelpers.InvokeFallback(action, codeContext, args),
+                PythonProtocol.Call(action, this, args) ?? BindingHelpers.InvokeFallback(action, codeContext, this, args),
                 args,
                 typeTest
             );
@@ -101,15 +121,15 @@ namespace IronPython.Runtime.Binding {
 
         #region Conversions
 
-        private MetaObject TryPythonConversion(ConvertAction conversion, Type type, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject TryPythonConversion(ConvertAction conversion, Type type) {
             if (!type.IsEnum) {
                 switch (Type.GetTypeCode(type)) {
                     case TypeCode.Object:
                         if (type == typeof(Complex64)) {
                             // TODO: Fallback to Float
-                            return MakeConvertRuleForCall(conversion, this, args, Symbols.ConvertToComplex, "ConvertToComplex");
+                            return MakeConvertRuleForCall(conversion, this, Symbols.ConvertToComplex, "ConvertToComplex");
                         } else if (type == typeof(BigInteger)) {
-                            return MakeConvertRuleForCall(conversion, this, args, Symbols.ConvertToLong, "ConvertToLong");
+                            return MakeConvertRuleForCall(conversion, this, Symbols.ConvertToLong, "ConvertToLong");
                         } else if (type == typeof(IEnumerable)) {
                             return PythonProtocol.ConvertToIEnumerable(conversion, this);
                         } else if (type == typeof(IEnumerator)) {
@@ -117,9 +137,9 @@ namespace IronPython.Runtime.Binding {
                         }
                         break;
                     case TypeCode.Int32:
-                        return MakeConvertRuleForCall(conversion, this, args, Symbols.ConvertToInt, "ConvertToInt");
+                        return MakeConvertRuleForCall(conversion, this, Symbols.ConvertToInt, "ConvertToInt");
                     case TypeCode.Double:
-                        return MakeConvertRuleForCall(conversion, this, args, Symbols.ConvertToFloat, "ConvertToFloat");
+                        return MakeConvertRuleForCall(conversion, this, Symbols.ConvertToFloat, "ConvertToFloat");
                     case TypeCode.Boolean:
                         return PythonProtocol.ConvertToBool(
                             conversion,
@@ -131,7 +151,7 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        private MetaObject/*!*/ MakeConvertRuleForCall(ConvertAction/*!*/ convertToAction, MetaObject/*!*/ self, MetaObject/*!*/[]/*!*/ args, SymbolId symbolId, string returner) {
+        private MetaObject/*!*/ MakeConvertRuleForCall(ConvertAction/*!*/ convertToAction, MetaObject/*!*/ self, SymbolId symbolId, string returner) {
             PythonType pt = ((IPythonObject)self.Value).PythonType;
             PythonTypeSlot pts;
             CodeContext context = BinderState.GetBinderState(convertToAction).Context;
@@ -179,11 +199,11 @@ namespace IronPython.Runtime.Binding {
                                 ),
                                 callExpr,
                                 Ast.ConvertHelper(
-                                    ConversionFallback(convertToAction, args),
+                                    ConversionFallback(convertToAction),
                                     typeof(object)
                                 )
                             ),
-                            convertToAction.Defer(args).Expression
+                            convertToAction.Defer(this).Expression
                         ),
                         tmp
                     ),
@@ -191,7 +211,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            return convertToAction.Fallback(args);
+            return convertToAction.Fallback(this);
         }
 
         private static Expression/*!*/ AddExtensibleSelfCheck(ConvertAction/*!*/ convertToAction, MetaObject/*!*/ self, Expression/*!*/ callExpr) {
@@ -231,13 +251,13 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private Expression ConversionFallback(ConvertAction/*!*/ convertToAction, MetaObject/*!*/[]/*!*/ args) {
+        private Expression ConversionFallback(ConvertAction/*!*/ convertToAction) {
             ConversionBinder cb = convertToAction as ConversionBinder;
             if (cb != null) {
-                return GetConversionFailedReturnValue(cb, args[0]);
+                return GetConversionFailedReturnValue(cb, this);
             }
 
-            return convertToAction.Defer(args).Expression;
+            return convertToAction.Defer(this).Expression;
         }
 
         private static bool IsBuiltinConversion(CodeContext/*!*/ context, PythonTypeSlot/*!*/ pts, SymbolId name, PythonType/*!*/ selfType) {
@@ -286,24 +306,42 @@ namespace IronPython.Runtime.Binding {
         /// Helper for falling back - if we have a base object fallback to it first (which can
         /// then fallback to the calling site), otherwise fallback to the calling site.
         /// </summary>
-        private MetaObject/*!*/ Fallback(GetMemberAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ Fallback(MetaAction/*!*/ action, Expression codeContext) {
             if (_baseMetaObject != null) {
-                return _baseMetaObject.GetMember(action, args);
+                IPythonGetable ipyget = _baseMetaObject as IPythonGetable;
+                if (ipyget != null) {
+                    GetMemberBinder gmb = action as GetMemberBinder;
+                    if (gmb != null) {
+                        return ipyget.GetMember(gmb, codeContext);
+                    }
+                }
+
+                GetMemberAction gma = action as GetMemberAction;
+                if (gma != null) {
+                    return _baseMetaObject.GetMember(gma);
+                }
+
+                return _baseMetaObject.GetMember(
+                    new CompatibilityGetMember(
+                        BinderState.GetBinderState(action),
+                        GetGetMemberName(action)
+                    )
+                );
             }
 
-            return action.Fallback(args);
+            return GetMemberFallback(action, codeContext);
         }
 
         /// <summary>
         /// Helper for falling back - if we have a base object fallback to it first (which can
         /// then fallback to the calling site), otherwise fallback to the calling site.
         /// </summary>
-        private MetaObject/*!*/ Fallback(SetMemberAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ Fallback(SetMemberAction/*!*/ action, MetaObject/*!*/ value) {
             if (_baseMetaObject != null) {
-                return _baseMetaObject.SetMember(action, args);
+                return _baseMetaObject.SetMember(action, value);
             }
 
-            return action.Fallback(args);
+            return action.Fallback(this, value);
         }
 
         #endregion

@@ -166,14 +166,7 @@ namespace IronPython.Runtime {
                         buf.Append(PythonOps.Repr(context, kv.Key));
                     buf.Append(": ");
 
-                    // StringRepr enforces recursion for ICodeFormattable types, but
-                    // arbitrary dictionaries may not hit that.  We do the simple
-                    // recursive check here and let StringRepr handle the rest.
-                    if (Object.ReferenceEquals(kv.Value, self)) {
-                        buf.Append("{...}");
-                    } else {
-                        buf.Append(PythonOps.Repr(context, kv.Value));
-                    }
+                    buf.Append(PythonOps.Repr(context, kv.Value));
                 }
                 buf.Append("}");
                 return buf.ToString();

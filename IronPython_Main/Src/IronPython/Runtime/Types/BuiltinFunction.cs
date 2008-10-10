@@ -375,6 +375,10 @@ namespace IronPython.Runtime.Types {
             return lres > 0 ? 1 : -1;
         }
 
+        public int __hash__(CodeContext/*!*/ context) {
+            return PythonOps.Hash(context, _instance) ^ PythonOps.Hash(context, _data);
+        }
+
         [SpecialName, PropertyMethod]
         public string Get__module__(CodeContext/*!*/ context) {
             if (Targets.Count > 0) {

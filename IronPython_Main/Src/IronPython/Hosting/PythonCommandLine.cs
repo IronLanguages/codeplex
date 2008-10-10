@@ -44,7 +44,7 @@ namespace IronPython.Hosting {
 
         protected override string/*!*/ Logo {
             get {
-                return GetLogoDisplay().Replace("\n", Environment.NewLine);
+                return GetLogoDisplay();
             }
         }
 
@@ -150,7 +150,15 @@ namespace IronPython.Hosting {
             
             // TODO: must precede path initialization! (??? - test test_importpkg.py)
             int pathIndex = PythonContext.PythonOptions.SearchPaths.Count;
-            
+                        
+            Language.DomainManager.LoadAssembly(typeof(string).Assembly);
+            Language.DomainManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
+
+            InitializePath(ref pathIndex);
+            InitializeModules();
+            InitializeExtensionDLLs();
+            ImportSite();
+
             if (Options.Command == null && Options.FileName != null) {
                 if (Options.FileName == "-") {
                     Options.FileName = "<stdin>";
@@ -167,17 +175,9 @@ namespace IronPython.Hosting {
                     }
 #endif
                     string fullPath = Language.DomainManager.Platform.GetFullPath(Options.FileName);
-                    PythonContext.InsertIntoPath(pathIndex++, Path.GetDirectoryName(fullPath));
+                    PythonContext.InsertIntoPath(0, Path.GetDirectoryName(fullPath));
                 }
             }
-
-            Language.DomainManager.LoadAssembly(typeof(string).Assembly);
-            Language.DomainManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
-
-            InitializePath(ref pathIndex);
-            InitializeModules();
-            InitializeExtensionDLLs();
-            ImportSite();
         }
 
         protected override Scope/*!*/ CreateScope() {

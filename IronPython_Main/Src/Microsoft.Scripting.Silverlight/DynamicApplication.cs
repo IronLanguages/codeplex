@@ -45,6 +45,7 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         public string EntryPoint {
             get { return _entryPoint; }
+            set { _entryPoint = value; }
         }
 
         /// <summary>
@@ -97,29 +98,88 @@ namespace Microsoft.Scripting.Silverlight {
             set { _errorTargetID = value; }
         }
 
+        /// <summary>
+        /// Indicates whether or not CLR stack traces are shown in the error report
+        /// </summary>
+        public bool ExceptionDetail {
+            get { return _exceptionDetail; }
+        }
+
+        /// <summary>
+        /// The ScriptRuntime that application code runs in
+        /// </summary>
+        public ScriptRuntime Runtime {
+            get { return _runtime; }
+        }
+
         #endregion
 
-        #region public helper APIs
+        #region instance variables
+
+        private string _entryPoint;
+        private bool   _debug;
+        private bool   _exceptionDetail;
+        private bool   _reportErrors;
+        private string _errorTargetID;
+
+        private IDictionary<string, string> _initParams;
+
+        private static int _UIThreadId;
+
+        // we need to store this because we can't access Application.Current
+        // if we're not on the UI thread
+        private static volatile DynamicApplication _Current;
+
+        private ScriptRuntime _runtime;
+        private ScriptRuntimeSetup _runtimeSetup;
+
+        internal static bool InUIThread {
+            get { return _UIThreadId == Thread.CurrentThread.ManagedThreadId; }
+        }
+
+        #endregion
+        #region public API
 
         // these are instance methods so you can do Application.Current.TheMethod(...)
 
+        /// <summary>
+        /// Loads a XAML file, represented by a Uri, into a UIElement, and sets
+        /// the UIElement as the RootVisual of the application.
+        /// </summary>
+        /// <param name="root">UIElement to load the XAML into</param>
+        /// <param name="uri">Uri to a XAML file</param>
+        /// <returns></returns>
         public DependencyObject LoadRootVisual(UIElement root, Uri uri) {
             Application.LoadComponent(root, uri);
             RootVisual = root;
             return root;
         }
 
+        /// <summary>
+        /// Loads a XAML file, represented by a string, into a UIElement, and sets
+        /// the UIElement as the RootVisual of the application.
+        /// </summary>
+        /// <param name="root">UIElement to load the XAML into</param>
+        /// <param name="uri">string representing the relative Uri of the XAML file</param>
+        /// <returns></returns>
         public DependencyObject LoadRootVisual(UIElement root, string uri) {
             return LoadRootVisual(root, MakeUri(uri));
         }
 
+        /// <summary>
+        /// Loads a XAML file, represented by a string, into any object.
+        /// </summary>
+        /// <param name="component">The object to load the XAML into</param>
+        /// <param name="uri">string representing the relative Uri of the XAML file</param>
         public void LoadComponent(object component, string uri) {
             LoadComponent(component, MakeUri(uri));
         }
 
         /// <summary>
-        /// Makes a Uri object that is relative to the location of the source file itself
+        /// Makes a Uri object that is relative to the location of the "start" source file.
         /// </summary>
+        /// <param name="relativeUri">Any Uri</param>
+        /// <returns>A Uri relative to the "start" source file</returns>
         public Uri MakeUri(string relativeUri) {
             // Get the source file location so we can make the URI relative to the executing source file
             string baseUri = Path.GetDirectoryName(_entryPoint);
@@ -129,33 +189,7 @@ namespace Microsoft.Scripting.Silverlight {
 
         #endregion
 
-        #region implementation 
-
-        private string _entryPoint;
-        private bool _debug;
-        private bool _exceptionDetail;
-        private bool _reportErrors;
-        private string _errorTargetID;
-        private IDictionary<string, string> _initParams;
-
-        private static int _UIThreadId;
-
-        // we need to store this because we can't access Application.Current
-        // if we're not on the UI thread
-        private static volatile DynamicApplication _Current;
-
-        private const string _DefaultEntryPoint = "app";
-        private const string _LanguagesConfigFile = "languages.config";
-        private ScriptRuntime _runtime;
-        private ScriptRuntimeSetup _runtimeSetup;
-
-        internal static bool InUIThread {
-            get { return _UIThreadId == Thread.CurrentThread.ManagedThreadId; }
-        }
-
-        internal bool ExceptionDetail {
-            get { return _exceptionDetail; }
-        }
+        #region implementation
 
         /// <summary>
         /// Called by Silverlight host when it instantiates our application
@@ -171,42 +205,6 @@ namespace Microsoft.Scripting.Silverlight {
             Startup += new StartupEventHandler(DynamicApplication_Startup);
         }
 
-        #region XAP downloading APIs
-
-        internal static string DownloadContents(string relativePath) {
-            return DownloadContents(new Uri(NormalizePath(relativePath), UriKind.Relative));
-        }
-
-        internal static string DownloadContents(Uri relativeUri) {
-            Stream stream = Download(relativeUri);
-            if (stream == null) {
-                return null;
-            }
-
-            string result;
-            using (StreamReader sr = new StreamReader(stream)) {
-                result = sr.ReadToEnd();
-            }
-            return result;
-        }
-
-        internal static Stream Download(string relativePath) {
-            return Download(new Uri(NormalizePath(relativePath), UriKind.Relative));
-        }
-
-        internal static Stream Download(Uri relativeUri) {
-            StreamResourceInfo sri = Application.GetResourceStream(relativeUri);
-            return (sri != null) ? sri.Stream : null;
-        }
-
-        internal static string NormalizePath(string path) {
-            // files are stored in the XAP using forward slashes
-            return path.Replace(Path.DirectorySeparatorChar, '/');
-        }
-
-        #endregion
-
-
         void DynamicApplication_Startup(object sender, StartupEventArgs e) {
             // Turn error reporting on while we parse initParams.
             // (Otherwise, we would silently fail if the initParams has an error)
@@ -214,41 +212,14 @@ namespace Microsoft.Scripting.Silverlight {
 
             ParseArguments(e.InitParams);
             
-            ScriptRuntimeSetup setup = TryParseConfigurationFile();
+            ScriptRuntimeSetup setup = Configuration.TryParseFile();
             if (setup == null) {
-                setup = LoadConfigFromAssemblies(GetManifestAssemblies());
+                setup = Configuration.LoadFromAssemblies(Package.GetManifestAssemblies());
             }
 
             InitializeDLR(setup);
 
             StartMainProgram();
-        }
-
-        private static ScriptRuntimeSetup LoadConfigFromAssemblies(IEnumerable<Assembly> assemblies) {
-            var setup = new ScriptRuntimeSetup();
-            foreach (var assembly in assemblies) {
-                foreach (DynamicLanguageProviderAttribute attribute in assembly.GetCustomAttributes(typeof(DynamicLanguageProviderAttribute), false)) {
-                    setup.LanguageSetups.Add(new LanguageSetup(
-                        attribute.LanguageContextType.AssemblyQualifiedName,
-                        attribute.DisplayName,
-                        attribute.Names,
-                        attribute.FileExtensions
-                    ));
-                }
-            }
-            return setup;
-        }
-
-        private IEnumerable<Assembly> GetManifestAssemblies() {
-            var result = new List<Assembly>();
-            foreach (var part in Deployment.Current.Parts) {
-                try {
-                    result.Add(BrowserPAL.PAL.LoadAssembly(Path.GetFileNameWithoutExtension(part.Source)));
-                } catch (Exception) {
-                    // skip
-                }
-            }
-            return result;
         }
 
         private void InitializeDLR(ScriptRuntimeSetup setup) {
@@ -270,7 +241,7 @@ namespace Microsoft.Scripting.Silverlight {
         }
 
         private void StartMainProgram() {
-            string code = DownloadEntryPoint();
+            string code = Package.GetEntryPointContents();
 
             ScriptEngine engine = _runtime.GetEngineByFileExtension(Path.GetExtension(_entryPoint));
 
@@ -282,52 +253,6 @@ namespace Microsoft.Scripting.Silverlight {
             sourceCode.Compile(new ErrorFormatter.Sink()).Execute();
         }
 
-        private string DownloadEntryPoint() {
-            string code = null;
-
-            if (_entryPoint == null) {
-                // try default entry point name w/ all extensions
-
-                foreach (var language in _runtime.Setup.LanguageSetups) {
-                    foreach (var ext in language.FileExtensions) {
-                        string file = _DefaultEntryPoint + ext;
-                        string contents = DownloadContents(file);
-                        if (contents != null) {
-                            if (_entryPoint != null) {
-                                throw new ApplicationException(string.Format("Application can only have one entry point, but found two: {0}, {1}", _entryPoint, file));
-                            }
-                            _entryPoint = file;
-                            code = contents;
-                        }
-                    }
-                }
-
-                if (code == null) {
-                    throw new ApplicationException(string.Format("Application must have an entry point called {0}.*, where * is the language's extension", _DefaultEntryPoint));
-                }
-                return code;                
-            }
-
-            // if name was supplied just download it
-            code = DownloadContents(_entryPoint);
-            if (code == null) {
-                throw new ApplicationException(string.Format("Could not find the entry point file {0} in the XAP", _entryPoint));
-            }
-            return code;
-        }
-
-        #endregion
-
-        #region Error handling
-
-        private void OnUnhandledException(object sender, ApplicationUnhandledExceptionEventArgs args) {
-            args.Handled = true;
-            ErrorFormatter.DisplayError(_errorTargetID, args.ExceptionObject);
-        }
-
-        #endregion
-
-        #region arguments and configuration file processing
 
         private void ParseArguments(IDictionary<string, string> args) {
             // save off the initParams (otherwise user code couldn't access it)
@@ -363,76 +288,11 @@ namespace Microsoft.Scripting.Silverlight {
             }
         }
 
-        private ScriptRuntimeSetup TryParseConfigurationFile() {
-            Stream configFile = Download(_LanguagesConfigFile);
-            if (configFile == null) {
-                return null;
-            }
-
-            var result = new ScriptRuntimeSetup();
-            try {
-                XmlReader reader = XmlReader.Create(configFile);
-                reader.MoveToContent();
-                if (!reader.IsStartElement("Languages")) {
-                    throw new ConfigFileException("expected 'Configuration' root element");
-                }
-
-                while (reader.Read()) {
-                    if (reader.NodeType != XmlNodeType.Element || reader.Name != "Language") {
-                        continue;
-                    }
-                    string context = null, assembly = null, exts = null;
-                    while (reader.MoveToNextAttribute()) {
-                        switch (reader.Name) {
-                            case "languageContext":
-                                context = reader.Value;
-                                break;
-                            case "assembly":
-                                assembly = reader.Value;
-                                break;
-                            case "extensions":
-                                exts = reader.Value;
-                                break;
-                        }
-                    }
-
-                    if (context == null || assembly == null || exts == null) {
-                        throw new ConfigFileException("expected 'Language' element to have attributes 'languageContext', 'assembly', 'extensions'");
-                    }
-
-                    string[] extensions = exts.Split(',');
-                    result.LanguageSetups.Add(new LanguageSetup(context + ", " + assembly, String.Empty, extensions, extensions));
-                }
-            } catch (ConfigFileException cfe) {
-                throw cfe;
-            } catch (Exception ex) {
-                throw new ConfigFileException(ex.Message, ex);
-            }
-
-            return result;
-        }
-
-        // an exception parsing the host configuration file
-        public class ConfigFileException : Exception {
-            public ConfigFileException(string msg)
-                : this(msg, null) {
-            }
-            public ConfigFileException(string msg, Exception inner)
-                : base("Invalid configuration file " + _LanguagesConfigFile + ": " + msg, inner) {
-            }
-
+        private void OnUnhandledException(object sender, ApplicationUnhandledExceptionEventArgs args) {
+            args.Handled = true;
+            ErrorFormatter.DisplayError(_errorTargetID, args.ExceptionObject);
         }
 
         #endregion
-
-        public ScriptRuntime Environment {
-            get {
-                return _runtime;
-            }
-        }
-
-        public ScriptRuntimeSetup RuntimeSetup {
-            get { return _runtimeSetup; }
-        }
     }
 }

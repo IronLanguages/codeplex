@@ -13,6 +13,8 @@
 #
 #####################################################################################
 
+from __future__ import with_statement
+
 from lib.assert_util import *
 skiptest("silverlight")
 import sys
@@ -681,6 +683,9 @@ def test_modes():
     x = file('test_file', 'rFOOBAR')
     AreEqual(x.mode, 'rFOOBAR')
 
+import thread
+CP16623_LOCK = thread.allocate_lock()
+
 @skip("win32")  #This test is unstable under RunAgainstCpy.py
 def test_cp16623():
     '''
@@ -690,7 +695,6 @@ def test_cp16623():
     global FINISHED_COUNTER
     FINISHED_COUNTER = 0
     
-    import thread
     import time
     
     expected_lines = ["a", "bbb" * 100, "cc"]
@@ -700,13 +704,16 @@ def test_cp16623():
     
     def write_stuff():
         global FINISHED_COUNTER
+        global CP16623_LOCK
         for j in xrange(100):
             for i in xrange(50):
                 print >> f, "a"
             print >> f, "bbb" * 1000
             for i in xrange(10):
                 print >> f, "cc"
-        FINISHED_COUNTER += 1
+        
+        with CP16623_LOCK:
+            FINISHED_COUNTER += 1
 
     for i in xrange(total_threads):
         thread.start_new_thread(write_stuff, ())

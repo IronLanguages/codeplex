@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return new FunctionBinderHelper(pythonInvoke, this, args).MakeMetaObject();
         }
 
@@ -48,26 +48,26 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject[] args) {
+        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
             return new FunctionBinderHelper(call, this, args).MakeMetaObject();
         }
 
-        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion) {
             if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(PythonFunction)));
             }
-            return conversion.Fallback(args);
+            return conversion.Fallback(this);
         }
 
         public override MetaObject/*!*/ Operation(OperationAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
-                    return MakeCallSignatureRule(args[0]);
+                    return MakeCallSignatureRule(this);
                 case StandardOperators.IsCallable:
-                    return MakeIsCallableRule(args[0]);
+                    return MakeIsCallableRule(this);
             }
 
             return base.Operation(action, args);
@@ -110,7 +110,7 @@ namespace IronPython.Runtime.Binding {
             public FunctionBinderHelper(MetaAction/*!*/ call, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
                 _call = call;
                 _func = function;
-                _args = ArrayUtils.RemoveFirst(args);
+                _args = args;
                 _originalArgs = args;
                 _temps = new List<VariableExpression>();
 
@@ -162,7 +162,7 @@ namespace IronPython.Runtime.Binding {
                 return BindingHelpers.AddDynamicTestAndDefer(
                     _call, 
                     res, 
-                    _originalArgs, 
+                    ArrayUtils.Insert(_func, _originalArgs), 
                     new ValidationInfo(_deferTest, null),
                     res.Expression.Type     // force defer to our return type, our restrictions guarantee this to be true (only defaults can change, and we restrict to the delegate type)
                 );

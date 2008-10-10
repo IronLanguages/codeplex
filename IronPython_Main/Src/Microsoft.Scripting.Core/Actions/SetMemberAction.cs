@@ -40,12 +40,20 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public sealed override MetaObject Bind(MetaObject[] args) {
+        public sealed override MetaObject Bind(MetaObject target, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNullItems(args, "args");
-            ContractUtils.Requires(args.Length > 0);
-            return args[0].SetMember(this, args);
+            ContractUtils.Requires(args.Length == 1);
+
+            return target.SetMember(this, args[0]);
         }
 
+        public MetaObject Fallback(MetaObject self, MetaObject value) {
+            return Fallback(self, value, null);
+        }
+
+        public abstract MetaObject Fallback(MetaObject self, MetaObject value, MetaObject onBindingError);
+        
         public override int GetHashCode() {
             return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0);
         }

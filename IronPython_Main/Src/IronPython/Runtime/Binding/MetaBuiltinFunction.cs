@@ -45,17 +45,17 @@ namespace IronPython.Runtime.Binding {
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject Convert(ConvertAction/*!*/ conversion) {
             if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(BuiltinFunction)));
             }
-            return conversion.Fallback(args);
+            return conversion.Fallback(this);
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
             switch(action.Operation) {
                 case StandardOperators.CallSignatures:
-                    return PythonProtocol.MakeCallSignatureOperation(args[0], Value.Targets);
+                    return PythonProtocol.MakeCallSignatureOperation(this, Value.Targets);
             }
 
             return base.Operation(action, args);
@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -74,13 +74,15 @@ namespace IronPython.Runtime.Binding {
         #region Invoke Implementation
 
         private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
-            for (int i = 0; i < args.Length; i++) {
-                if (args[i].NeedsDeferral) {
-                    return call.Defer(args);
-                }
+            if (this.NeedsDeferral()) {
+                return call.Defer(ArrayUtils.Insert(this, args));
             }
 
-            args = ArrayUtils.RemoveFirst(args);
+            for (int i = 0; i < args.Length; i++) {
+                if (args[i].NeedsDeferral()) {
+                    return call.Defer(ArrayUtils.Insert(this, args));
+                }
+            }
 
             if (Value.IsUnbound) {
                 return MakeSelflessCall(call, codeContext, args);

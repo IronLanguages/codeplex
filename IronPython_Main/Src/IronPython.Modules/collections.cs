@@ -160,7 +160,7 @@ namespace IronPython.Modules {
                     } else if (found == _tail - 1) {
                         pop();
                     } else if (found == -1) {
-                        throw PythonOps.TypeError("deque.remove(value): value not in deque");
+                        throw PythonOps.ValueError("deque.remove(value): value not in deque");
                     } else {
                         // otherwise we're removing from the middle and need to slide the values over...
                         _version++;

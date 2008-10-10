@@ -103,7 +103,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MetaObject MakeGetMemberTarget(GetMemberInfo getMemInfo, MetaObject target) {
-            Type type = target.LimitType;
+            Type type = target.LimitType.IsCOMObject ? target.Expression.Type : target.LimitType;
             Restrictions restrictions = target.Restrictions;
             Expression self = target.Expression;
             target = target.Restrict(target.LimitType);

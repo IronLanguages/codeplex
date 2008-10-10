@@ -21,6 +21,7 @@ using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Ast = Microsoft.Linq.Expressions.Expression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -51,7 +52,7 @@ namespace IronPython.Runtime.Binding {
             return true;
         }
 
-        internal static bool IsNoThrow(GetMemberAction action) {
+        internal static bool IsNoThrow(MetaAction action) {
             GetMemberBinder gmb = action as GetMemberBinder;
             if (gmb != null) {
                 return gmb.IsNoThrow;
@@ -132,7 +133,7 @@ namespace IronPython.Runtime.Binding {
         /// can go away as soon as all of the classes implement the full fidelity of the protocol
         /// </summary>
         internal static MetaObject/*!*/ GenericCall(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            if (args[0].NeedsDeferral) {
+            if (args[0].NeedsDeferral()) {
                 return action.Defer(args);
             }
 
@@ -154,6 +155,37 @@ namespace IronPython.Runtime.Binding {
                     )
                 ),
                 Restrictions.Combine(args).Merge(args[0].Restrict(args[0].LimitType).Restrictions)
+            );
+        }
+
+        /// <summary>
+        /// Transforms a call into a Python GetMember/Invoke.  This isn't quite the correct semantic as
+        /// we shouldn't be returning Python members (e.g. object.__repr__) to non-Python callers.  This
+        /// can go away as soon as all of the classes implement the full fidelity of the protocol
+        /// </summary>
+        internal static MetaObject/*!*/ GenericCall(CallAction/*!*/ action, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+            if (target.NeedsDeferral()) {
+                return action.Defer(args);
+            }
+
+            return new MetaObject(
+                Invoke(
+                    BinderState.GetCodeContext(action),
+                    BinderState.GetBinderState(action),
+                    typeof(object),
+                    GetCallSignature(action),
+                    ArrayUtils.Insert(
+                        Binders.Get(
+                            BinderState.GetCodeContext(action),
+                            BinderState.GetBinderState(action),
+                            typeof(object),
+                            action.Name,
+                            target.Expression
+                        ),
+                        MetaObject.GetExpressions(args)
+                    )
+                ),
+                Restrictions.Combine(args).Merge(target.Restrict(target.LimitType).Restrictions)
             );
         }
 
@@ -399,15 +431,15 @@ namespace IronPython.Runtime.Binding {
         /// Helper to do fallback for Invoke's so we can handle both StandardAction and Python's 
         /// InvokeBinder.
         /// </summary>
-        internal static MetaObject/*!*/ InvokeFallback(MetaAction/*!*/ action, Expression codeContext, MetaObject/*!*/[]/*!*/ args) {
-            StandardAction act = action as StandardAction;
+        internal static MetaObject/*!*/ InvokeFallback(MetaAction/*!*/ action, Expression codeContext, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+            InvokeAction act = action as InvokeAction;
             if (act != null) {
-                return act.Fallback(args);
+                return act.Fallback(target, args);
             }
 
             InvokeBinder invoke = action as InvokeBinder;
             if (invoke != null) {
-                return invoke.Fallback(codeContext, args);
+                return invoke.Fallback(codeContext, target, args);
             }
 
             // unreachable, we always have one of these binders

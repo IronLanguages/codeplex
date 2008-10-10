@@ -23,6 +23,7 @@ using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
@@ -33,7 +34,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, args, codeContext);
         }
 
@@ -42,7 +43,7 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            return BindingHelpers.GenericCall(action, this, args);
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
@@ -54,13 +55,15 @@ namespace IronPython.Runtime.Binding {
         #region Invoke Implementation
 
         private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, MetaObject/*!*/[]/*!*/ args, Expression/*!*/ codeContext) {
-            for (int i = 0; i < args.Length; i++) {
-                if (args[i].NeedsDeferral) {
-                    return call.Defer(args);
-                }
+            if (this.NeedsDeferral()) {
+                return call.Defer(ArrayUtils.Insert(this, args));
             }
 
-            args = ArrayUtils.RemoveFirst(args);
+            for (int i = 0; i < args.Length; i++) {
+                if (args[i].NeedsDeferral()) {
+                    return call.Defer(ArrayUtils.Insert(this, args));
+                }
+            }
 
             if (IsStandardDotNetType(call)) {
                 return MakeStandardDotNetTypeCall(call, codeContext, args);

@@ -42,6 +42,10 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(builder, "builder");
             builder.Append(_name ?? "<param>");
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitParameter(this);
+        }
     }
 
     public partial class Expression {

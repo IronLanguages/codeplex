@@ -17,6 +17,13 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+    internal enum AnalyzeTypeIsResult {
+        KnownFalse,
+        KnownTrue,
+        KnownAssignable, // need null check only
+        Unknown,         // need full runtime check
+    }
+
     internal static class ConstantCheck {
 
         /// <summary>
@@ -38,7 +45,11 @@ namespace Microsoft.Linq.Expressions {
                     return value.Equals(((ConstantExpression)e).Value);
 
                 case ExpressionType.TypeIs:
-                    return IsInstanceOf((TypeBinaryExpression)e) == value;
+                    AnalyzeTypeIsResult result = AnalyzeTypeIs((TypeBinaryExpression)e);
+                    if (value) {
+                        return result == AnalyzeTypeIsResult.KnownTrue;
+                    }
+                    return result == AnalyzeTypeIsResult.KnownFalse;
             }
             return false;
         }
@@ -51,7 +62,7 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.TypeAs:
                     var typeAs = (UnaryExpression)e;
                     // if the TypeAs check is guarenteed to fail, then its result will be null
-                    return (IsInstanceOf(typeAs) == false);
+                    return AnalyzeTypeIs(typeAs) == AnalyzeTypeIsResult.KnownFalse;
             }
             return false;
         }
@@ -94,8 +105,8 @@ namespace Microsoft.Linq.Expressions {
         /// The result of this function must be equivalent to IsInst, or
         /// null.
         /// </summary>
-        internal static bool? IsInstanceOf(TypeBinaryExpression typeIs) {
-            return IsInstanceOf(typeIs.Expression.Type, typeIs.TypeOperand);
+        internal static AnalyzeTypeIsResult AnalyzeTypeIs(TypeBinaryExpression typeIs) {
+            return AnalyzeTypeIs(typeIs.Expression, typeIs.TypeOperand);
         }
 
         /// <summary>
@@ -106,9 +117,9 @@ namespace Microsoft.Linq.Expressions {
         /// The result of this function must be equivalent to IsInst, or
         /// null.
         /// </summary>
-        internal static bool? IsInstanceOf(UnaryExpression typeAs) {
+        internal static AnalyzeTypeIsResult AnalyzeTypeIs(UnaryExpression typeAs) {
             Debug.Assert(typeAs.NodeType == ExpressionType.TypeAs);
-            return IsInstanceOf(typeAs.Operand.Type, typeAs.Type);
+            return AnalyzeTypeIs(typeAs.Operand, typeAs.Type);
         }
 
         /// <summary>
@@ -119,31 +130,36 @@ namespace Microsoft.Linq.Expressions {
         /// The result of this function must be equivalent to IsInst, or
         /// null.
         /// </summary>
-        internal static bool? IsInstanceOf(Type objectType, Type testType) {
+        internal static AnalyzeTypeIsResult AnalyzeTypeIs(Expression expression, Type testType) {
             // Extensive testing showed that Type.IsAssignableFrom,
             // Type.IsInstanceOf, and the isinst instruction were all
             // equivalent when used against a live object
 
+            Type objectType = expression.Type;
+
             // Oddly, we allow void operands
             // TODO: this is the LinqV1 behavior of TypeIs, seems bad
             if (objectType == typeof(void)) {
-                return false;
+                return AnalyzeTypeIsResult.KnownFalse;
             }
 
-            // If we can statically assign, isinst will always succeed
+            // See if we can statically assign...
             if (testType.IsAssignableFrom(objectType)) {
-                return true;
+                if (objectType.IsValueType && !objectType.IsNullableType()) {
+                    return AnalyzeTypeIsResult.KnownTrue;
+                }
+                // For reference/nullable types, we need to compare to null at runtime
+                return AnalyzeTypeIsResult.KnownAssignable;
             }
 
             // If we couldn't statically assign and the type is sealed, no
             // value at runtime can make isinst succeed
             if (objectType.IsSealed) {
-                return false;
+                return AnalyzeTypeIsResult.KnownFalse;
             }
 
-            // Otherwise we need a runtime check
-            return null;
+            // Otherwise we need a full runtime check
+            return AnalyzeTypeIsResult.Unknown;
         }
-
     }
 }

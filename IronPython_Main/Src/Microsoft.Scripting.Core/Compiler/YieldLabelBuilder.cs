@@ -78,7 +78,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         internal static GeneratorInfo BuildYieldTargets(LambdaExpression gle) {
             Debug.Assert(gle.NodeType == ExpressionType.Generator);
             YieldLabelBuilder ylb = new YieldLabelBuilder();
-            ylb.VisitNode(gle.Body);
+            ylb.Visit(gle.Body);
 
             // Populate results into the GeneratorInfo
             return new GeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._yieldMarkers);
@@ -86,17 +86,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #region ExpressionVisitor overrides
 
-        protected override Expression Visit(LambdaExpression node) {
+        protected internal override Expression VisitLambda(LambdaExpression node) {
             // Do not visit nodes in nested lambda
             return node;
         }
 
-        protected override Expression Visit(TryStatement node) {
+        protected internal override Expression VisitTry(TryStatement node) {
             TryStatementInfo tsi = new TryStatementInfo(node);
             ExceptionBlock block = new ExceptionBlock(tsi);
 
             _tryBlocks.Push(block);
-            VisitNode(node.Body);
+            Visit(node.Body);
 
             IList<CatchBlock> handlers = node.Handlers;
             if (handlers != null) {
@@ -106,16 +106,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 for (int handler = 0; handler < handlers.Count; handler++) {
                     block.Handler = handler;
                     if (handlers[handler].Filter != null) {
-                        VisitNode(handlers[handler].Filter);
+                        Visit(handlers[handler].Filter);
                     }
-                    VisitNode(handlers[handler].Body);
+                    Visit(handlers[handler].Body);
                 }
             }
 
             if (node.Finally != null || node.Fault != null) {
                 block.State = ExceptionBlock.TryStatementState.Finally;
-                VisitNode(node.Finally);
-                VisitNode(node.Fault);
+                Visit(node.Finally);
+                Visit(node.Fault);
             }
 
             Debug.Assert((object)block == (object)_tryBlocks.Peek());
@@ -130,8 +130,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return node;
         }
 
-        protected override Expression Visit(YieldStatement node) {
-            base.Visit(node);
+        protected internal override Expression VisitYield(YieldStatement node) {
+            base.VisitYield(node);
 
             // Assign the yield statement index for codegen
             int index = _topTargets.Count;

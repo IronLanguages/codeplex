@@ -21,11 +21,6 @@
 
 from lib.assert_util import *
 
-if is_peverify_run:
-    print "CodePlex 18515"
-    from sys import exit
-    exit(0)
-
 # Declare some dummy exceptions to throw
 class MyError(Exception):
   pass

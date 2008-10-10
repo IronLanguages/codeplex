@@ -265,7 +265,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "-X:Interpret",                "Enable interpreted mode" },
                 { "-X:LightweightScopes",        "Generate optimized scopes that can be garbage collected" },
                 { "-X:MaxRecursion",             "Set the maximum recursion level" },
-                { "-X:NoTraceback",              "Do not emit traceback code" },
                 { "-X:PassExceptions",           "Do not catch exceptions that are unhandled by script code" },
                 { "-X:PrivateBinding",           "Enable binding to private members" },
                 { "-X:ShowClrExceptions",        "Display CLS Exception information" },

@@ -364,9 +364,11 @@ namespace IronPython.Runtime {
         }
 
         internal static IAttributesCollection GetAttrLocals(CodeContext/*!*/ context, object locals) {
-            IAttributesCollection attrLocals;
+            IAttributesCollection attrLocals = null;
             if (locals == null) {
-                attrLocals = LocalsAsAttributesCollection(context);
+                if (context.Scope.Parent != null) {
+                    attrLocals = LocalsAsAttributesCollection(context);
+                }
             } else {
                 attrLocals = locals as IAttributesCollection ?? new PythonDictionary(new ObjectAttributesAdapter(context, locals));
             }
@@ -1462,8 +1464,7 @@ namespace IronPython.Runtime {
             if (scope == null) {
                 throw PythonOps.TypeError("unexpected type: NoneType");
             }
-            Importer.ReloadModule(context, scope);
-            return scope;
+            return Importer.ReloadModule(context, scope);
         }
 
         public static object repr(CodeContext/*!*/ context, object o) {
@@ -1704,9 +1705,9 @@ namespace IronPython.Runtime {
         }
 
         internal static Scope/*!*/ GetExecEvalScope(CodeContext/*!*/ context, IAttributesCollection/*!*/ globals,
-            IAttributesCollection/*!*/ locals, bool copyModule, bool setBuiltinsToModule) {
+            IAttributesCollection locals, bool copyModule, bool setBuiltinsToModule) {
 
-            Assert.NotNull(context, globals, locals);
+            Assert.NotNull(context, globals);
 
             PythonContext python = PythonContext.GetContext(context);
 
@@ -1721,7 +1722,7 @@ namespace IronPython.Runtime {
                 globalScope.SetExtension(python.ContextId, module);
             }
 
-            Scope localScope = new Scope(globalScope, locals);
+            Scope localScope = locals == null ? globalScope : new Scope(globalScope, locals);
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
                 if (setBuiltinsToModule) {

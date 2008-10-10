@@ -106,7 +106,6 @@ namespace IronPython.Runtime {
             return callbacks[index].LongRef.Target;
         }
 
-#if !SILVERLIGHT // finalizers not supported
         ~WeakRefTracker() {
             // callbacks are delivered last registered to first registered.
             for (int i = callbacks.Count - 1; i >= 0; i--) {
@@ -141,7 +140,6 @@ namespace IronPython.Runtime {
                 }
             }
         }
-#endif
     }
 
 

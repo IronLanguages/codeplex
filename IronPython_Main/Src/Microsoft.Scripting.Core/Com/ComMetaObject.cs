@@ -29,49 +29,48 @@ namespace Microsoft.Scripting.Com {
 
         public override MetaObject Call(CallAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+        public override MetaObject Convert(ConvertAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(WrapSelf());
         }
 
         public override MetaObject Create(CreateAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+        public override MetaObject DeleteMember(DeleteMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(WrapSelf());
         }
 
-        public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+        public override MetaObject GetMember(GetMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(WrapSelf());
         }
 
         public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(args.AddFirst(WrapSelf()));
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+        public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(Wrap(args));
+            return action.Defer(WrapSelf(), value);
         }
 
         #endregion
 
-        private MetaObject[] Wrap(MetaObject[] args) {
-            MetaObject[] wrap = args.Copy();
-            wrap[0] = new MetaObject(
+        private MetaObject WrapSelf() {
+            return new MetaObject(
                 Expression.Call(
                     typeof(ComObject).GetMethod("ObjectToComObject"),
                     Expression.ConvertHelper(Expression, typeof(object))
@@ -89,7 +88,6 @@ namespace Microsoft.Scripting.Com {
                     )
                 )
             );
-            return wrap;
         }
 
         internal static MetaObject GetComMetaObject(Expression expression, object arg) {

@@ -34,6 +34,8 @@ def test_strftime():
     t = time.gmtime()
     AreEqual(time.strftime('%c', t), time.strftime('%x %X', t))
 
+    AreEqual(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.mktime((1994,11,15,12,3,10,0,0,-1)))), "1994-11-15 12:03:10")
+
 def test_strptime():
     import time
     d = time.strptime("July 3, 2006 At 0724 GMT", "%B %d, %Y At %H%M GMT")
@@ -103,5 +105,8 @@ def test_struct_time():
         def __len__(self): return 9
     
     AssertError(Exc, time.struct_time, C())
+
+def test_gmtime():
+    AreEqual(time.gmtime(1015758000.0), (2002, 3, 10, 11, 0, 0, 6, 69, 0))
 
 run_test(__name__)

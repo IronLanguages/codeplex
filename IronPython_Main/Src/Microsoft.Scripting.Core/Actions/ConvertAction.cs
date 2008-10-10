@@ -39,10 +39,17 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public sealed override MetaObject Bind(MetaObject[] args) {
-            ContractUtils.RequiresNotNullItems(args, "args");
-            ContractUtils.Requires(args.Length > 0);
-            return args[0].Convert(this, args);
+        public MetaObject Fallback(MetaObject self) {
+            return Fallback(self, null);
+        }
+
+        public abstract MetaObject Fallback(MetaObject self, MetaObject onBindingError);
+        
+        public sealed override MetaObject Bind(MetaObject target, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(target, "target");
+            ContractUtils.Requires(args.Length == 0);
+
+            return target.Convert(this);
         }
 
         [Confined]

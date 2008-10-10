@@ -34,39 +34,37 @@ namespace Microsoft.Scripting.Actions {
         /// Provides default binding for performing a call on the specified meta objects.
         /// </summary>
         /// <param name="signature">The signature describing the call</param>
+        /// <param name="target">The object to be called</param>
         /// <param name="args">
-        /// The first meta object in the array is the object to be called.
-        /// 
         /// Additional meta objects are the parameters for the call as specified by the CallSignature in the CallAction.
         /// </param>
         /// <returns>A MetaObject representing the call or the error.</returns>
-        public MetaObject Call(CallSignature signature, params MetaObject[] args) {
-            return Call(signature, new ParameterBinder(this), args);
+        public MetaObject Call(CallSignature signature, MetaObject target, params MetaObject[] args) {
+            return Call(signature, new ParameterBinder(this), target, args);
         }
 
         /// <summary>
         /// Provides default binding for performing a call on the specified meta objects.
         /// </summary>
         /// <param name="signature">The signature describing the call</param>
+        /// <param name="target">The meta object to be called.</param>
         /// <param name="args">
-        /// The first meta object in the array is the object to be called.
-        /// 
         /// Additional meta objects are the parameters for the call as specified by the CallSignature in the CallAction.
         /// </param>
         /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
         /// <returns>A MetaObject representing the call or the error.</returns>
-        public MetaObject Call(CallSignature signature, ParameterBinder parameterBinder, params MetaObject[] args) {
+        public MetaObject Call(CallSignature signature, ParameterBinder parameterBinder, MetaObject target, params MetaObject[] args) {
             ContractUtils.RequiresNotNullItems(args, "args");
             ContractUtils.RequiresNotNull(parameterBinder, "parameterBinder");
 
-            TargetInfo targetInfo = GetTargetInfo(signature, args);
+            TargetInfo targetInfo = GetTargetInfo(signature, target, args);
 
             if (targetInfo != null) {
                 // we're calling a well-known MethodBase
                 return MakeMetaMethodCall(signature, parameterBinder, targetInfo);
             } else {
                 // we can't call this object
-                return MakeCannotCallRule(args[0], args[0].LimitType);
+                return MakeCannotCallRule(target, target.LimitType);
             }
         }
 
@@ -109,22 +107,22 @@ namespace Microsoft.Scripting.Actions {
         /// If this object is a BoundMemberTracker we bind to the methods with the bound instance.
         /// If the underlying type has defined an operator Call method we'll bind to that method.
         /// </summary>
-        private TargetInfo GetTargetInfo(CallSignature signature, MetaObject[] args) {
-            Debug.Assert(args[0].HasValue);
-            object target = args[0].Value;
+        private TargetInfo GetTargetInfo(CallSignature signature, MetaObject target, MetaObject[] args) {
+            Debug.Assert(target.HasValue);
+            object objTarget = target.Value;
 
             return
-                TryGetDelegateTargets(args, target as Delegate) ??
-                TryGetMemberGroupTargets(args, target as MemberGroup) ??
-                TryGetMethodGroupTargets(args, target as MethodGroup) ??
-                TryGetBoundMemberTargets(args, target as BoundMemberTracker) ??
-                TryGetOperatorTargets(args, target, signature);
+                TryGetDelegateTargets(target, args, objTarget as Delegate) ??
+                TryGetMemberGroupTargets(target, args, objTarget as MemberGroup) ??
+                TryGetMethodGroupTargets(target, args, objTarget as MethodGroup) ??
+                TryGetBoundMemberTargets(target, args, objTarget as BoundMemberTracker) ??
+                TryGetOperatorTargets(target, args, target, signature);
         }
 
         /// <summary>
         /// Binds to the methods in a method group.
         /// </summary>
-        private static TargetInfo TryGetMethodGroupTargets(MetaObject[] args, MethodGroup mthgrp) {
+        private static TargetInfo TryGetMethodGroupTargets(MetaObject target, MetaObject[] args, MethodGroup mthgrp) {
             if (mthgrp != null) {
                 List<MethodBase> foundTargets = new List<MethodBase>();
 
@@ -132,7 +130,7 @@ namespace Microsoft.Scripting.Actions {
                     foundTargets.Add(mt.Method);
                 }
 
-                return new TargetInfo(null, args, Restrictions.InstanceRestriction(args[0].Expression, mthgrp), foundTargets.ToArray());
+                return new TargetInfo(null, ArrayUtils.Insert(target, args), Restrictions.InstanceRestriction(target.Expression, mthgrp), foundTargets.ToArray());
             }
             return null;
         }
@@ -142,7 +140,7 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// TODO: We should really only have either MemberGroup or MethodGroup, not both.
         /// </summary>
-        private static TargetInfo TryGetMemberGroupTargets(MetaObject[] args, MemberGroup mg) {
+        private static TargetInfo TryGetMemberGroupTargets(MetaObject target, MetaObject[] args, MemberGroup mg) {
             if (mg != null) {
                 MethodBase[] targets;
                 List<MethodInfo> foundTargets = new List<MethodInfo>();
@@ -152,7 +150,7 @@ namespace Microsoft.Scripting.Actions {
                     }
                 }
                 targets = foundTargets.ToArray();
-                return new TargetInfo(null, args, targets);
+                return new TargetInfo(null, ArrayUtils.Insert(target, args), targets);
             }
             return null;
         }
@@ -161,8 +159,7 @@ namespace Microsoft.Scripting.Actions {
         /// Binds to the BoundMemberTracker and uses the instance in the tracker and restricts
         /// based upon the object instance type.
         /// </summary>
-        private TargetInfo TryGetBoundMemberTargets(MetaObject[] args, BoundMemberTracker bmt) {
-            MetaObject self = args[0];
+        private TargetInfo TryGetBoundMemberTargets(MetaObject self, MetaObject[] args, BoundMemberTracker bmt) {
             if (bmt != null) {
                 Debug.Assert(bmt.Instance == null); // should be null for trackers that leak to user code
 
@@ -203,7 +200,7 @@ namespace Microsoft.Scripting.Actions {
                         throw new InvalidOperationException(); // nothing else binds yet
                 }
 
-                return new TargetInfo(instance, ArrayUtils.RemoveFirst(args), restrictions, targets);
+                return new TargetInfo(instance, args, restrictions, targets);
             }
             return null;
         }
@@ -211,9 +208,9 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Binds to the Invoke method on a delegate if this is a delegate type.
         /// </summary>
-        private static TargetInfo TryGetDelegateTargets(MetaObject[] args, Delegate d) {
+        private static TargetInfo TryGetDelegateTargets(MetaObject target, MetaObject[] args, Delegate d) {
             if (d != null) {
-                return new TargetInfo(args[0], ArrayUtils.RemoveFirst(args), d.GetType().GetMethod("Invoke"));
+                return new TargetInfo(target, args, d.GetType().GetMethod("Invoke"));
             }
             return null;
         }
@@ -221,8 +218,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Attempts to bind to an operator Call method.
         /// </summary>
-        private TargetInfo TryGetOperatorTargets(MetaObject[] args, object target, CallSignature signature) {
-            MetaObject self = args[0];
+        private TargetInfo TryGetOperatorTargets(MetaObject self, MetaObject[] args, object target, CallSignature signature) {
             MethodBase[] targets;
 
             Type targetType = CompilerHelpers.GetType(target);
@@ -242,7 +238,7 @@ namespace Microsoft.Scripting.Actions {
             if (callTargets.Count > 0) {
                 targets = callTargets.ToArray();
                 instance = Ast.Convert(self.Expression, CompilerHelpers.GetType(target));
-                return new TargetInfo(null, args, targets);
+                return new TargetInfo(null, ArrayUtils.Insert(self, args), targets);
             }
 
             return null;

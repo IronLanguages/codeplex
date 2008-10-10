@@ -1151,7 +1151,7 @@ def test_serialization():
         pass
     newX = cPickle.loads(cPickle.dumps(tempX))
     for attr in ['args', 'filename', 'text', 'lineno', 'msg', 'offset', 'print_file_and_line',
-                 #CodePlex 8098: 'message', 
+                 'message',
                  ]:
         AreEqual(eval("newX.%s" % attr), 
                  eval("tempX.%s" % attr))
@@ -1192,5 +1192,42 @@ def test_decimal_bool():
     AreEqual(bool(System.Decimal(0)), False)
     AreEqual(bool(System.Decimal(1)), True)
 
+@skip("silverlight") # no Char.Parse
+def test_add_str_char():
+    AreEqual('bc' + System.Char.Parse('a'), 'bca')
+    AreEqual(System.Char.Parse('a') + 'bc', 'abc')
+
+def test_import_star_enum():
+    from System.AttributeTargets import *
+    Assert('ReturnValue' in dir())
+
+@skip("silverlight")
+def test_cp11971():
+    old_syspath = [x for x in sys.path]
+    try:
+        sys.path.append(testpath.temporary_dir)
+        
+        #Module using System
+        write_to_file(path_combine(testpath.temporary_dir, "cp11971_module.py"), 
+                      """def a():
+    from System import Array
+    return Array.CreateInstance(int, 2, 2)""")
+
+        #Module which doesn't use System directly
+        write_to_file(path_combine(testpath.temporary_dir, "cp11971_caller.py"), 
+                      """import cp11971_module
+A = cp11971_module.a()
+if not hasattr(A, 'Rank'):
+    raise 'CodePlex 11971'
+    """)
+    
+        #Validations
+        import cp11971_caller
+        Assert(hasattr(cp11971_caller.A, 'Rank'))
+        Assert(hasattr(cp11971_caller.cp11971_module.a(), 'Rank'))
+    
+    finally:
+        sys.path = old_syspath
+    
 run_test(__name__)
 

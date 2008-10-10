@@ -214,6 +214,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {
             Debug.Assert(_variable != null, "Shouldn't be called by lamda expression");
 
+            ag.DisableInterpreter = true;
             MSAst.Expression function = TransformToFunctionExpression(ag);
             return AstUtils.Assign(_variable.Variable, function, new SourceSpan(Start, Header));
         }

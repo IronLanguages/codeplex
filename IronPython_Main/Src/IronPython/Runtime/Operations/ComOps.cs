@@ -66,42 +66,6 @@ namespace IronPython.Runtime.Operations {
                 self.ToString(),
                 PythonOps.HexId(self));
         }
-
-        public static IList<object>/*!*/ GetAttrNames(CodeContext/*!*/ context, object/*!*/ self) {
-            return (IList<object>)GetMemberNames(context, self);
-        }
-
-        public static IList<object>/*!*/ GetMemberNames(CodeContext/*!*/ context, object/*!*/ self) {
-            // resolve statically known names from .NET objects...
-            Dictionary<string, string> names = new Dictionary<string, string>();
-            PythonBinder.GetBinder(context).ResolveMemberNames(context, DynamicHelpers.GetPythonType(self), DynamicHelpers.GetPythonType(self), names);
-
-            // then pcik up any names from the COM object...
-            ComObject co = self as ComObject;
-            if (self == null && IsComObject(self)) {
-                co = ComObject.ObjectToComObject(self);
-            }
-
-            if (co != null) {
-                foreach (string o in GetMemberNames_inner(context, co)) {
-                    names[o] = o;
-                }
-            }
-
-            List<object> res = new List<object>();
-            foreach (string name in names.Keys) {
-                res.Add(name);
-            }
-            return res;
-        }
-
-        private static IList<string>/*!*/ GetMemberNames_inner(CodeContext/*!*/ context, ComObject/*!*/ self) {
-            List<string> res = new List<string>();
-            foreach (string name in self.MemberNames) {
-                res.Add(name);
-            }
-            return res;
-        }
     }
 }
 

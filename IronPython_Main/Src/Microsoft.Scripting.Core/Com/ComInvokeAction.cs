@@ -41,21 +41,8 @@ namespace Microsoft.Scripting.Com {
             return base.Equals(obj as ComInvokeAction);
         }
 
-        public override MetaObject Fallback(MetaObject[] args, MetaObject onBindingError) {
-            if (onBindingError == null) {
-                onBindingError =
-                    new MetaObject(
-                        Expression.Throw(
-                            Expression.New(
-                                typeof(NotSupportedException).GetConstructor(new Type[] { typeof(string) }),
-                                Expression.Constant("Cannot perform call")
-                            )
-                        ),
-                        Restrictions.Combine(args)
-                    );
-            }
-
-            return onBindingError;
+        public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            return onBindingError ?? MetaObject.Throw(target, args, typeof(NotSupportedException), "Cannot perform call");
         }
     }
 }

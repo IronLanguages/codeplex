@@ -41,6 +41,9 @@ def test_raw_unicode_escape_dashes():
 
     Assert(ok, "dashes and underscores should be interchangable")
 
+def test_raw_unicode_escape_trailing_backslash():
+    AreEqual(unicode('\\', 'raw_unicode_escape'), u'\\')
+
 @skip("silverlight")
 def test_unicode_error():
     

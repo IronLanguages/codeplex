@@ -134,7 +134,7 @@ namespace IronPython.Runtime.Binding {
         /// Gets the resulting meta object for the full body.  FinishCondition
         /// must have been called.
         /// </summary>
-        public MetaObject/*!*/ GetMetaObject(MetaObject/*!*/[]/*!*/ types) {
+        public MetaObject/*!*/ GetMetaObject(params MetaObject/*!*/[]/*!*/ types) {
             if (_body == null) {
                 throw new InvalidOperationException("FinishCondition not called before GetMetaObject");
             }

@@ -421,17 +421,41 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //CONFORMING
         private void EmitTypeBinaryExpression(Expression expr) {
             TypeBinaryExpression node = (TypeBinaryExpression)expr;
+            Type type = node.Expression.Type;
 
             // Try to determine the result statically
-            bool? result = ConstantCheck.IsInstanceOf(node);
-            if (result.HasValue) {
-                // Emit the expression for its side effects
+            AnalyzeTypeIsResult result = ConstantCheck.AnalyzeTypeIs(node);
+
+            if (result == AnalyzeTypeIsResult.KnownTrue ||
+                result == AnalyzeTypeIsResult.KnownFalse) {
+                // Result is known statically, so just emit the expression for
+                // its side effects and return the result
                 EmitExpressionAsVoid(node.Expression);
-                _ilg.EmitBoolean(result.Value);
+                _ilg.EmitBoolean(result == AnalyzeTypeIsResult.KnownTrue);
                 return;
             }
 
-            Type type = node.Expression.Type;
+            if (result == AnalyzeTypeIsResult.KnownAssignable) {
+                // We know the type can be assigned, but still need to check
+                // for null at runtime
+                if (type.IsNullableType()) {
+                    EmitAddress(node.Expression, type);
+                    _ilg.EmitHasValue(type);
+                    return;
+                }
+
+                Debug.Assert(!type.IsValueType);
+                EmitExpression(node.Expression);
+                _ilg.Emit(OpCodes.Ldnull);
+                _ilg.Emit(OpCodes.Ceq);
+                _ilg.Emit(OpCodes.Ldc_I4_0);
+                _ilg.Emit(OpCodes.Ceq);
+                return;
+            }
+
+            Debug.Assert(result == AnalyzeTypeIsResult.Unknown);
+
+            // Emit a full runtime "isinst" check
             EmitExpression(node.Expression);
             if (type.IsValueType) {
                 _ilg.Emit(OpCodes.Box, type);

@@ -15,6 +15,8 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Com;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Actions {
     public class MetaObject {
@@ -22,6 +24,9 @@ namespace Microsoft.Scripting.Actions {
         private readonly Restrictions _restrictions;
         private readonly object _value;
         private readonly bool _hasValue;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
+        public static readonly MetaObject[] EmptyMetaObjects = new MetaObject[0];
 
         public MetaObject(Expression expression, Restrictions restrictions) {
             ContractUtils.RequiresNotNull(expression, "expression");
@@ -74,26 +79,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
         }
-
-        /// <summary>
-        /// Checks to see if the known type is good enough for performing operations
-        /// on.  This is possible if the type has a value or of the known type of the
-        /// expression is a sealed type.
-        /// </summary>
-        public virtual bool NeedsDeferral {
-            get {
-                if (HasValue) {
-                    return false;
-                }
-
-                if (Expression.Type.IsSealedOrValueType()) {
-                    return typeof(IDynamicObject).IsAssignableFrom(Expression.Type);
-                }
-
-                return true;
-            }
-        }
-
+        
         public Type LimitType {
             get {
                 return RuntimeType ?? Expression.Type;
@@ -103,7 +89,11 @@ namespace Microsoft.Scripting.Actions {
         public bool IsDynamicObject {
             get {
                 // We can skip _hasValue check as it implies _value == null
-                return _value is IDynamicObject;
+                return _value is IDynamicObject 
+#if !SILVERLIGHT
+                    || Com.ComMetaObject.IsComObject(_value)
+#endif
+                ;
             }
         }
 
@@ -114,102 +104,60 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public virtual MetaObject Restrict(Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-
-            if (type == Expression.Type && type.IsSealedOrValueType()) {
-                return this;
-            }
-
-            if (type == typeof(None)) {
-                return new RestrictedMetaObject(
-                    Expression.Null(),
-                    Restrictions.Merge(Restrictions.InstanceRestriction(Expression, null)),
-                    Value
-                );
-            }
-
-            if (type == RuntimeType) {
-                if (HasValue) {
-                    return new RestrictedMetaObject(
-                        Expression.ConvertHelper(
-                            Expression,
-                            TypeUtils.GetVisibleType(type)
-                        ),
-                        Restrictions.Merge(Restrictions.TypeRestriction(Expression, type)),
-                        Value
-                    );
-                }
-
-                return new RestrictedMetaObject(
-                    Expression.ConvertHelper(
-                        Expression,
-                        TypeUtils.GetVisibleType(type)
-                    ),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, type))
-                );
-            }
-
-
-            if (HasValue) {
-                return new MetaObject(
-                    Expression.ConvertHelper(
-                        Expression,
-                        TypeUtils.GetVisibleType(type)
-                    ),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, type)),
-                    Value
-                );
-            }
-
-            return new MetaObject(
-                Expression.ConvertHelper(
-                    Expression,
-                    TypeUtils.GetVisibleType(type)
-                ),
-                Restrictions.Merge(Restrictions.TypeRestriction(Expression, type))
-            );
+        public virtual MetaObject Convert(ConvertAction action) {
+            ContractUtils.RequiresNotNull(action, "action");
+            return action.Fallback(this);
         }
 
-        public virtual MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public virtual MetaObject GetMember(GetMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this);
         }
 
-        public virtual MetaObject Convert(ConvertAction action, MetaObject[] args) {
+        public virtual MetaObject SetMember(SetMemberAction action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this, value);
         }
 
-        public virtual MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+        public virtual MetaObject DeleteMember(DeleteMemberAction action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this);
         }
 
-        public virtual MetaObject SetMember(SetMemberAction action, MetaObject[] args) {
+        public virtual MetaObject GetIndex(GetIndexAction action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this, args);
         }
 
-        public virtual MetaObject DeleteMember(DeleteMemberAction action, MetaObject[] args) {
+        public virtual MetaObject SetIndex(SetIndexAction action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this, args);
+        }
+
+        public virtual MetaObject DeleteIndex(DeleteIndexAction action, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+            return action.Fallback(this, args);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")]
-        public virtual MetaObject Call(CallAction action, MetaObject[] args) {
+        public virtual MetaObject Call(CallAction action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this, args);
         }
 
-        public virtual MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+        public virtual MetaObject Invoke(InvokeAction action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this, args);
         }
 
-        public virtual MetaObject Create(CreateAction action, MetaObject[] args) {
+        public virtual MetaObject Create(CreateAction action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(args);
+            return action.Fallback(this, args);
+        }
+
+        public virtual MetaObject Operation(OperationAction action, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(action, "action");
+            return action.Fallback(this, args);
         }
 
         // Internal helpers
@@ -236,6 +184,54 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return res;
+        }
+
+        public static MetaObject ObjectToMetaObject(object argValue, Expression parameterExpression) {
+            IDynamicObject ido = argValue as IDynamicObject;
+            if (ido != null) {
+                return ido.GetMetaObject(parameterExpression);
+#if !SILVERLIGHT
+            } else if (ComMetaObject.IsComObject(argValue)) {
+                return ComMetaObject.GetComMetaObject(parameterExpression, argValue);
+#endif
+            } else {
+                return new ParameterMetaObject(parameterExpression, argValue);
+            }
+        }
+
+        public static MetaObject Throw(MetaObject target, MetaObject[] args, Type exception, params object[] exceptionArgs) {
+            ContractUtils.RequiresNotNull(exceptionArgs, "exceptionArgs");
+
+            return Throw(
+                target,
+                args,
+                exception,
+                exceptionArgs.Map<object, Expression>((arg) => Expression.Constant(arg))
+            );
+        }
+
+        public static MetaObject Throw(MetaObject target, MetaObject[] args, Type exception, params Expression[] exceptionArgs) {
+            ContractUtils.RequiresNotNull(target, "target");
+            ContractUtils.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(exception, "exception");
+            ContractUtils.RequiresNotNull(exceptionArgs, "exceptionArgs");
+
+            Type[] argTypes = exceptionArgs.Map((arg) => arg.Type);
+            ConstructorInfo constructor = exception.GetConstructor(argTypes);
+
+            if (constructor == null) {
+                throw new ArgumentException(Strings.TypeDoesNotHaveConstructorForTheSignature);
+            }
+
+            return new MetaObject(
+                Expression.Throw(
+                    Expression.New(
+                        exception.GetConstructor(argTypes),
+                        exceptionArgs
+                    )
+                ),
+                target.Restrictions.Merge(Restrictions.Combine(args))
+            );
         }
     }
 }
