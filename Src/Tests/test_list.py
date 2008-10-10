@@ -404,4 +404,12 @@ def test_index_multiply():
         AssertError(TypeError, lambda : data * None)
         AssertError(TypeError, lambda : None * data)
 
+def test_sequence_assign():
+    tokens = [(chr(ord('a') + val), val) for val in range(0,10)]
+    (first,pos),tokens = tokens[0], tokens[1:]
+    
+    AreEqual(first, 'a')
+    AreEqual(pos, 0)
+    AreEqual(tokens, [('b', 1), ('c', 2), ('d', 3), ('e', 4), ('f', 5), ('g', 6), ('h', 7), ('i', 8), ('j', 9)])
+
 run_test(__name__)

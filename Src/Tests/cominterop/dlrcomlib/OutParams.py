@@ -100,14 +100,12 @@ def test_sanity():
     AreEqual(strongVar.Value, com_obj)    
     
     #Complex Types
-    strongVar = StrongBox[object](CurrencyWrapper(444))
-    if preferComDispatch:
-        com_obj.mCy(CurrencyWrapper(123), strongVar)
+    if not preferComDispatch:
+        AreEqual(callMethodWithStrongBox(com_obj.mCy, Decimal(0), Decimal), 0)
     else:
-        #CodePlex 18638
-        strongVar.Value = com_obj.mCy(System.Decimal(123), System.Decimal(124))
-
-    AreEqual(strongVar.Value, 123)    
+        strongVar = StrongBox[object](CurrencyWrapper(444))
+        com_obj.mCy(CurrencyWrapper(123), strongVar)
+        AreEqual(strongVar.Value, 123)    
     
     now = DateTime.Now
     AreEqual(str(callMethodWithStrongBox(com_obj.mDate, now, DateTime)), str(now))        

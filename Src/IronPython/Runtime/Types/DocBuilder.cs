@@ -660,6 +660,11 @@ namespace IronPython.Runtime.Types {
                                             text.Append(xr.Value, 2, xr.Value.Length - 2);
                                     }
                                     break;
+                                case "paramref":
+                                    if (xr.MoveToAttribute("name")) {
+                                        text.Append(xr.Value);
+                                    }
+                                    break;
                             }
                             break;
                     }

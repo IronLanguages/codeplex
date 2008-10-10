@@ -100,14 +100,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
 
                 // Clone the lambda, replacing the body & variables
-                return Expression.Lambda(
-                    lambda.Annotations,
-                    lambda.NodeType,
-                    lambda.Type,
-                    lambda.Name,
-                    newBody,
-                    lambda.Parameters
-                );
+                return Expression.Lambda(lambda.NodeType, lambda.Type, lambda.Name, newBody, lambda.Annotations, lambda.Parameters);
             }
 
             return lambda;
@@ -878,7 +871,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private Result RewriteExtensionExpression(Expression expr, Stack stack) {
-            Result result = RewriteExpression(expr.ReduceToKnown(), stack);
+            Result result = RewriteExpression(expr.ReduceExtensions(), stack);
             // it's at least Copy because we reduced the node
             return new Result(result.Action | RewriteAction.Copy, result.Node);
         }

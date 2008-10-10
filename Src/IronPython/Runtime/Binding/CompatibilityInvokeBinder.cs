@@ -20,13 +20,13 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using Microsoft.Scripting.Actions.Calls;
 
 namespace IronPython.Runtime.Binding {
     /// <summary>
@@ -42,23 +42,23 @@ namespace IronPython.Runtime.Binding {
             _state = state;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
-            if (args[0].IsDynamicObject) {
+        public override MetaObject/*!*/ Fallback(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+            if (target.IsDynamicObject) {
                 // try creating an instance...
-                return args[0].Create(
+                return target.Create(
                     new CreateFallback(this, Arguments),
                     args
                 );
             }
 
-            return InvokeFallback(args, BindingHelpers.ArgumentArrayToSignature(Arguments));
+            return InvokeFallback(target, args, BindingHelpers.ArgumentArrayToSignature(Arguments));
         }
 
-        internal MetaObject/*!*/ InvokeFallback(MetaObject/*!*/[]/*!*/ args, CallSignature sig) {
+        internal MetaObject/*!*/ InvokeFallback(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args, CallSignature sig) {
             var parameterBinder = new ParameterBinderWithCodeContext(Binder.Binder, Expression.Constant(_state.Context));
-            return PythonProtocol.Call(this, args) ??
-               Binder.Binder.Create(sig, parameterBinder, args) ??
-               Binder.Binder.Call(sig, parameterBinder, args);
+            return PythonProtocol.Call(this, target, args) ??
+               Binder.Binder.Create(sig, parameterBinder, target, args) ??
+               Binder.Binder.Call(sig, parameterBinder, target, args);
         }
 
         public override int GetHashCode() {

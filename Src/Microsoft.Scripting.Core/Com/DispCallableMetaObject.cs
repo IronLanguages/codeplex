@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Com {
         }
 
         public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
-            var callable = args[0].Expression;
+            var callable = Expression;
             var dispCall = Expression.Convert(callable, typeof(DispCallable));
             var methodDesc = Expression.Property(dispCall, typeof(DispCallable).GetProperty("ComMethodDesc"));
             var methodRestriction = Expression.Equal(methodDesc, Expression.Constant(_callable.ComMethodDesc));
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Com {
                     return IsCallable(args);
             }
 
-            return action.Fallback(args);
+            return action.Fallback(this, args);
         }
 
         private MetaObject Documentation(MetaObject[] args) {

@@ -25,14 +25,16 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting;
 using System.Text;
 using System.Threading;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
@@ -94,11 +96,11 @@ namespace IronPython.Modules {
 #endif
         }
 
-        internal static long TimestampToTicks(double seconds) {
+        private static long TimestampToTicks(double seconds) {
             return (long)((seconds + epochDifference) * ticksPerSecond);
         }
 
-        internal static double TicksToTimestamp(long ticks) {
+        private static double TicksToTimestamp(long ticks) {
             return (ticks / ticksPerSecond) - epochDifference;
         }
 
@@ -119,12 +121,14 @@ namespace IronPython.Modules {
             return dt.ToString("ddd MMM dd HH:mm:ss yyyy", null);
         }
 
-#if !SILVERLIGHT    // System.Diagnostics.Stopwatch
         public static double clock() {
+#if !SILVERLIGHT    // System.Diagnostics.Stopwatch
             InitStopWatch();
             return ((double)sw.ElapsedTicks) / Stopwatch.Frequency;
-        }
+#else
+            return (double)DateTime.Now.Ticks / (double)TimeSpan.TicksPerSecond;
 #endif
+        }
 
         public static string ctime(CodeContext/*!*/ context) {
             return asctime(context, localtime());
@@ -141,7 +145,7 @@ namespace IronPython.Modules {
         }
 
         public static double time() {
-            return TicksToTimestamp(DateTime.Now.Ticks);
+            return DateTimeToTimestamp(DateTime.Now);
         }
 
         public static PythonTuple localtime() {
@@ -151,8 +155,7 @@ namespace IronPython.Modules {
         public static PythonTuple localtime(object seconds) {
             if (seconds == null) return localtime();
 
-            long ticks = TimestampToTicks(GetTimestampFromObject(seconds));
-            DateTime dt = new DateTime(ticks, DateTimeKind.Local);
+            DateTime dt = TimestampToDateTime(GetTimestampFromObject(seconds));
             return GetDateTimeTuple(dt, dt.IsDaylightSavingTime());
         }
 
@@ -163,8 +166,9 @@ namespace IronPython.Modules {
         public static PythonTuple gmtime(object seconds) {
             if (seconds == null) return gmtime();
 
-            long ticks = TimestampToTicks(GetTimestampFromObject(seconds));
-            return GetDateTimeTuple(new DateTime(ticks).ToUniversalTime(), false);
+            DateTime dt = TimestampToDateTime(GetTimestampFromObject(seconds));
+            
+            return GetDateTimeTuple(dt.ToUniversalTime(), false);
         }
 
         public static double mktime(CodeContext/*!*/ context, PythonTuple localTime) {
@@ -277,6 +281,46 @@ namespace IronPython.Modules {
                 res = res.Replace("%w", ((int)dt.DayOfWeek).ToString());
             }
             return res.ToString();
+        }
+
+        internal static double DateTimeToTimestamp(DateTime dateTime) {
+            return TicksToTimestamp(RemoveDst(dateTime).Ticks);
+        }
+
+        internal static DateTime TimestampToDateTime(double timeStamp) {
+            return AddDst(new DateTime(TimestampToTicks(timeStamp)));
+        }
+
+        private static DateTime RemoveDst(DateTime dt) {
+            return RemoveDst(dt, false);
+        }
+
+        private static DateTime RemoveDst(DateTime dt, bool always) {
+#if !SILVERLIGHT
+            DaylightTime dayTime = TimeZone.CurrentTimeZone.GetDaylightChanges(dt.Year);
+            if (always || (dt > dayTime.Start && dt < dayTime.End)) {
+                dt -= dayTime.Delta;
+            }
+#else
+            if (always || TimeZoneInfo.Local.IsDaylightSavingTime(dt)) {
+                dt = dt - (TimeZoneInfo.Local.GetUtcOffset(dt) - TimeZoneInfo.Local.BaseUtcOffset);
+            }
+#endif
+            return dt;
+        }
+
+        private static DateTime AddDst(DateTime dt) {
+#if !SILVERLIGHT
+            DaylightTime dayTime = TimeZone.CurrentTimeZone.GetDaylightChanges(dt.Year);
+            if (dt > dayTime.Start && dt < dayTime.End) {
+                dt += dayTime.Delta;
+            }
+#else
+            if (TimeZoneInfo.Local.IsDaylightSavingTime(dt)) {
+                dt = dt + (TimeZoneInfo.Local.GetUtcOffset(dt) - TimeZoneInfo.Local.BaseUtcOffset);
+            }
+#endif
+            return dt;
         }
 
         private static double GetTimestampFromObject(object seconds) {
@@ -480,13 +524,11 @@ namespace IronPython.Modules {
             int[] ints = ValidateDateTimeTuple(context, t);
             DateTime res = new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
 
-            if (ints[IsDaylightSavingsIndex] == 0) {
-#if !SILVERLIGHT
-                DaylightTime dayTime = TimeZone.CurrentTimeZone.GetDaylightChanges(ints[YearIndex]);
-                res = res + dayTime.Delta;
-#else
-                res = res + (TimeZoneInfo.Local.GetUtcOffset(res) - TimeZoneInfo.Local.BaseUtcOffset);
-#endif
+            switch (ints[IsDaylightSavingsIndex]) {
+                // automatic detection
+                case -1: res = RemoveDst(res); break;
+                // is daylight savings time, force adjustment
+                case 1: res = RemoveDst(res, true); break;
             }
             return res;
         }

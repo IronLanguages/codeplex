@@ -152,6 +152,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Gets the value at the specified index from the instance.
         /// 
         /// One or more indexes can be provided as individual arguments.
+        /// Obsolete: Use GetIndexAction instead
         /// </summary>
         public const string GetItem = "GetItem";
         /// <summary>
@@ -160,6 +161,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Sets the value at the specified index in the instance.
         /// 
         /// One or more indexes can be provided as individual arguments.  The last value provided is the value to be set.
+        /// Obsolete: Use SetIndexAction instead
         /// </summary>
         public const string SetItem = "SetItem";                    
         /// <summary>
@@ -168,6 +170,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Removes the item from the specified index in the instance.
         /// 
         /// One or more indexes can be provided as individual arguments.
+        /// Obsolete: Use DeleteIndexAction instead
         /// </summary>
         public const string DeleteItem = "DeleteItem";
         /// <summary>
@@ -438,6 +441,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Gets the value at the specified index from the instance.
         /// 
         /// One or more indexes can be provided as individual arguments.
+        /// Obsolete: Use GetIndexAction instead
         /// </summary>
         GetItem,                    
         /// <summary>
@@ -446,6 +450,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Sets the value at the specified index in the instance.
         /// 
         /// One or more indexes can be provided as individual arguments.  The last value provided is the value to be set.
+        /// Obsolete: Use SetIndexAction instead
         /// </summary>
         SetItem,                    
         /// <summary>
@@ -454,6 +459,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Removes the item from the specified index in the instance.
         /// 
         /// One or more indexes can be provided as individual arguments.
+        /// Obsolete: Use DeleteIndexAction instead
         /// </summary>
         DeleteItem,
         /// <summary>

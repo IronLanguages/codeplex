@@ -130,7 +130,6 @@ def test_package_simple():
     AreEqual(simplePackage.a.f(), 10)
     AreEqual(simplePackage.b.f(), 20)
     
-@disabled("Dev10 475649")
 def test_package_subpackage():
     compilePackage("subPackage", { "__init__.py" : "import a\nimport b.c\ndef f(): return a.f() + b.c.f()",
                                    "a.py" : "def f(): return 10",
@@ -141,6 +140,14 @@ def test_package_subpackage():
     AreEqual(subPackage.f(), 30)
     AreEqual(subPackage.b.f(), 'kthxbye')    
     AreEqual(subPackage.b.c.f(), 20)
+
+def test_package_subpackage_relative_imports():
+    compilePackage("subPackage_relative", { "__init__.py" : "from foo import bar",
+                                   "foo\\__init__.py" : "from foo import bar",
+                                   "foo\\foo.py" : "bar = 'BAR'"})
+
+    import subPackage_relative
+    AreEqual(subPackage_relative.bar, 'BAR')
 
 #TODO add some more tests for main after this bug is fixed.
 def test_main():
@@ -170,32 +177,30 @@ def test_overwrite():
     import overwrite1
     AreEqual(overwrite1.foo(), 'boo')
 
-@disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18575")
+
 def test_cyclic_modules():
-    compileCode("cyclic_modules", "import cyclic_modules1\nA = 0", "import cyclic_modules0\nA=1")
+    compileCode("cyclic_modules", "import cyclic_modules1\nA = 0", "import cyclic_modules\nA=1")
     
-    import cyclic_modules0
-    AreEqual(cyclic_modules0.A, 0)
-    AreEqual(cyclic_modules0.cyclic_modules1.A, 1)
+    import cyclic_modules
+    AreEqual(cyclic_modules.A, 0)
+    AreEqual(cyclic_modules.cyclic_modules1.A, 1)
     
     import cyclic_modules1
     AreEqual(cyclic_modules1.A, 1)
-    AreEqual(cyclic_modules1.cyclic_modules0.A, 0)
+    AreEqual(cyclic_modules1.cyclic_modules.A, 0)
 
-@disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18575")
 def test_cyclic_pkg():
-    compilePackage("cyclic_package", { "__init__.py" : "import cyclic_modules0\nimport cyclic_modules1",
-                                      "cyclic_modules0.py" : "import cyclic_package.cyclic_modules1\nA = 2",
-                                      "cyclic_modules1.py" : "import cyclic_package.cyclic_modules0\nA = 3"})
+    compilePackage("cyclic_package", { "__init__.py" : "import cyclic_submodules0\nimport cyclic_submodules1",
+                                      "cyclic_submodules0.py" : "import cyclic_package.cyclic_submodules1\nA = 2",
+                                      "cyclic_submodules1.py" : "import cyclic_package.cyclic_submodules0\nA = 3"})
                                       
     import cyclic_package
-    AreEqual(cyclic_package.cyclic_modules0.A, 2)
-    AreEqual(cyclic_package.cyclic_modules0.cyclic_package.cyclic_modules1.A, 3)
+    AreEqual(cyclic_package.cyclic_submodules0.A, 2)
+    AreEqual(cyclic_package.cyclic_submodules0.cyclic_package.cyclic_submodules1.A, 3)
     
-    AreEqual(cyclic_package.cyclic_modules1.A, 3)
-    AreEqual(cyclic_package.cyclic_modules1.cyclic_package.cyclic_modules0.A, 2)
+    AreEqual(cyclic_package.cyclic_submodules1.A, 3)
+    AreEqual(cyclic_package.cyclic_submodules1.cyclic_package.cyclic_submodules0.A, 2)
 
 
 #------------------------------------------------------------------------------        
-        
 run_test(__name__)

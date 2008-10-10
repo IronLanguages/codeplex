@@ -960,7 +960,9 @@ namespace IronPython.Runtime.Operations {
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
                     foreach (string name in Microsoft.Scripting.Com.ComObject.ObjectToComObject(o).MemberNames) {
-                        res.AddNoLock(name);
+                        if (!res.Contains(name)) {
+                            res.AddNoLock(name);
+                        }
                     }
                 }
 #endif
@@ -1576,9 +1578,11 @@ namespace IronPython.Runtime.Operations {
             Scope scope = newmod as Scope;
             NamespaceTracker nt = newmod as NamespaceTracker;
             PythonType pt = newmod as PythonType;
-            
-            if (pt != null && (!pt.UnderlyingSystemType.IsAbstract || !pt.UnderlyingSystemType.IsSealed)) {
-                // from type import * only allowed on static classes
+
+            if (pt != null &&
+                !pt.UnderlyingSystemType.IsEnum &&
+                (!pt.UnderlyingSystemType.IsAbstract || !pt.UnderlyingSystemType.IsSealed)) {
+                // from type import * only allowed on static classes (and enums)
                 throw PythonOps.ImportError("no module named {0}", pt.Name);
             }
 
@@ -2793,8 +2797,8 @@ namespace IronPython.Runtime.Operations {
             return method.CheckSelf(self);
         }
 
-        public static object GeneratorCheckThrowableAndReturnSendValue(PythonGenerator self) {
-            return self.CheckThrowableAndReturnSendValue();
+        public static object GeneratorCheckThrowableAndReturnSendValue(object self) {
+            return ((PythonGenerator)self).CheckThrowableAndReturnSendValue();
         }
 
         public static ItemEnumerable CreateItemEnumerable(object baseObject) {
@@ -3448,8 +3452,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception TypeErrorForUnIndexableObject(object o) {
+            IPythonObject ipo;
             if (o == null) {
                 return PythonOps.TypeError("'NoneType' object cannot be interpreted as an index");
+            } else if ((ipo = o as IPythonObject) != null) {
+                return TypeError("'{0}' object cannot be interpreted as an index", ipo.PythonType.Name);
             }
 
             return TypeError("object cannot be interpreted as an index");

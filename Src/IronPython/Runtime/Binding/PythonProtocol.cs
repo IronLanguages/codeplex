@@ -139,7 +139,7 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod(methodName),
-                    self.Expression
+                    Ast.ConvertHelper(self.Expression, typeof(object))
                 ),
                 self.Restrictions
             );
@@ -149,31 +149,35 @@ namespace IronPython.Runtime.Binding {
 
         #region Calls
 
-        internal static MetaObject Call(MetaAction/*!*/ call, MetaObject/*!*/[]/*!*/ args) {
+        internal static MetaObject Call(MetaAction/*!*/ call, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
             Assert.NotNull(call, args);
             Assert.NotNullItems(args);
 
+            if (target.NeedsDeferral()) {
+                return call.Defer(ArrayUtils.Insert(target, args));
+            }
+
             foreach (MetaObject mo in args) {
-                if (mo.NeedsDeferral) {
+                if (mo.NeedsDeferral()) {
                     RestrictTypes(args);
 
                     return call.Defer(
-                        args
+                        ArrayUtils.Insert(target, args)
                     );
                 }
             }
 
-            MetaObject self = args[0].Restrict(args[0].LimitType);
+            MetaObject self = target.Restrict(target.LimitType);
 
-            ValidationInfo valInfo = BindingHelpers.GetValidationInfo(null, args[0]);
-            PythonType pt = DynamicHelpers.GetPythonType(args[0].Value);
+            ValidationInfo valInfo = BindingHelpers.GetValidationInfo(null, target);
+            PythonType pt = DynamicHelpers.GetPythonType(target.Value);
             Expression body = GetCallError(self);
             BinderState state = BinderState.GetBinderState(call);
 
             // look for __call__, if it's present dispatch to it.  Otherwise fall back to the
             // default binder
             PythonTypeSlot callSlot;
-            if (!typeof(Delegate).IsAssignableFrom(args[0].LimitType) &&
+            if (!typeof(Delegate).IsAssignableFrom(target.LimitType) &&
                 pt.TryResolveSlot(state.Context, Symbols.Call, out callSlot)) {
                 Expression[] callArgs = ArrayUtils.Insert(
                     BinderState.GetCodeContext(call),
@@ -184,7 +188,7 @@ namespace IronPython.Runtime.Binding {
                         GetPythonType(self),
                         Ast.ConvertHelper(body, typeof(object))
                     ), 
-                    MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
+                    MetaObject.GetExpressions(args)
                 );
 
                 body = Ast.Dynamic(

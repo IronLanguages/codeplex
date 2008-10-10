@@ -36,7 +36,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -45,7 +45,7 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            return BindingHelpers.GenericCall(action, this, args);
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
@@ -56,7 +56,7 @@ namespace IronPython.Runtime.Binding {
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
-                    return PythonProtocol.MakeCallSignatureOperation(args[0], Value.Template.Targets);
+                    return PythonProtocol.MakeCallSignatureOperation(this, Value.Template.Targets);
             }
 
             return base.Operation(action, args);
@@ -67,8 +67,6 @@ namespace IronPython.Runtime.Binding {
         #region Invoke Implementation
 
         private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
-            args = ArrayUtils.RemoveFirst(args);
-
             CallSignature signature = BindingHelpers.GetCallSignature(call);
             Restrictions selfRestrict = Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions);
 

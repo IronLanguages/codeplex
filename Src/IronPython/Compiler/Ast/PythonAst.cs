@@ -29,9 +29,10 @@ namespace IronPython.Compiler.Ast {
     public class PythonAst : ScopeStatement {
         private readonly Statement _body;
         private readonly bool _isModule;
-        private readonly bool _printExpressions;
+        private readonly bool _printExpressions;        
         private readonly PythonLanguageFeatures _languageFeatures;
         private PythonVariable _docVariable, _nameVariable, _fileVariable;
+        private bool _disableInterpreter;
 
         /// <summary>
         /// The globals that free variables in the functions bind to,
@@ -99,6 +100,15 @@ namespace IronPython.Compiler.Ast {
         
         internal override bool IsGlobal {
             get { return true; }
+        }
+
+        internal bool DisableInterpreter {
+            get {
+                return _disableInterpreter;
+            }
+            set {
+                _disableInterpreter = value;
+            }
         }
 
         protected override bool ExposesLocalVariables {
@@ -196,6 +206,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
+            DisableInterpreter = ag.DisableInterpreter;
             return ag.Block.MakeLambda();
         }
 

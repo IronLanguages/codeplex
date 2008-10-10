@@ -16,12 +16,14 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Scripting.Runtime;
 using System.Text;
+
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("marshal", typeof(IronPython.Modules.PythonMarshal))]
 namespace IronPython.Modules {
@@ -594,11 +596,7 @@ namespace IronPython.Modules {
                 string str = DecodeString(PythonAsciiEncoding.Instance, ReadBytes(_myBytes.Current));
 
                 double res = 0;
-#if !SILVERLIGHT        // Double.Parse
                 double.TryParse(str, out res);
-#else
-                try { res = double.Parse(str); } catch { }
-#endif
                 return res;
             }
 

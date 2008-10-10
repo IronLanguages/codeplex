@@ -262,7 +262,7 @@ def test_cp17797():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
-    
+
 @retry_on_failure
 def test_autoindent():
     '''
@@ -404,7 +404,6 @@ def test_noeffect_keys():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
 
-@disabled("CodePlex 18523")
 def test_tab_completion_caseinsensitive():
     '''
     Tab-completion is case-insensitive (wrt input)

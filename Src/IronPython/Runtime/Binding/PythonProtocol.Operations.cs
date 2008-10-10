@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Binding {
 
         public static MetaObject/*!*/ Operation(OperationAction/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
             foreach (MetaObject mo in args) {
-                if (mo.NeedsDeferral) {
+                if (mo.NeedsDeferral()) {
                     return operation.Defer(args);
                 }
             }
@@ -456,8 +456,7 @@ namespace IronPython.Runtime.Binding {
 
             if (oper == StandardOperators.Multiply && 
                 IsSequence(types[0]) && 
-                !PythonOps.IsNonExtensibleNumericType(types[1].LimitType) && 
-                IsIndexType(state, types[1])) {
+                !PythonOps.IsNonExtensibleNumericType(types[1].LimitType)) {
                 // class M:
                 //      def __rmul__(self, other):
                 //          print "CALLED"
@@ -1978,7 +1977,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             // let the site produce its own error
-            return action.Fallback(args);
+            return action.Fallback(args[0], new[] { args[1] });
         }
 
         private static List<string/*!*/>/*!*/ GetMemberNames(CodeContext/*!*/ context, PythonType/*!*/ pt, object value) {
@@ -2026,7 +2025,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            return action.Fallback(types);
+            return action.Fallback(types[0], ArrayUtils.RemoveFirst(types));
         }
     }
 }

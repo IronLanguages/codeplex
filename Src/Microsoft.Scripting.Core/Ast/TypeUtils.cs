@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         //CONFORMING
-        internal static bool IsNullableType(Type type) {
+        internal static bool IsNullableType(this Type type) {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 

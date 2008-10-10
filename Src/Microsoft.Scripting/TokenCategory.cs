@@ -112,7 +112,7 @@ namespace Microsoft.Scripting {
         // Whitespace:
         Whitespace,
         EndOfLine,
-        LineJoin,               // Python: \<eoln>, VBX: _<eoln>
+        LineJoin,               // Python: \<eoln>
         Indentation,
 
         // Comments:
@@ -133,7 +133,7 @@ namespace Microsoft.Scripting {
 
         // Identifiers:
         Identifier,             // identifier
-        VerbatimIdentifier,     // VBX: [...]; PHP/CLR: i'...', 
+        VerbatimIdentifier,     // PHP/CLR: i'...', 
         Variable,               // Ruby: @identifier, @@identifier; PHP, Ruby: $identifier, 
 
         // Numbers:

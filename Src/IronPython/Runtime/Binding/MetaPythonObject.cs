@@ -62,6 +62,10 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
+        public MetaObject Restrict(Type type) {
+            return MetaObjectExtensions.Restrict(this, type);
+        }
+
         public PythonType/*!*/ PythonType {
             get {
                 return DynamicHelpers.GetPythonType(Value);
@@ -129,6 +133,28 @@ namespace IronPython.Runtime.Binding {
                 ),
                 arg.Restrictions
             );
+        }
+
+        protected MetaObject GetMemberFallback(MetaAction member, Expression codeContext) {
+            GetMemberBinder gmb = member as GetMemberBinder;
+            if (gmb != null) {
+                return gmb.Fallback(this, codeContext);
+            }
+
+            GetMemberAction gma = (GetMemberAction)member;
+
+            return gma.Fallback(this);
+        }
+
+        protected string GetGetMemberName(MetaAction member) {
+            GetMemberBinder gmb = member as GetMemberBinder;
+            if (gmb != null) {
+                return gmb.Name;
+            }
+
+            GetMemberAction gma = (GetMemberAction)member;
+
+            return gma.Name;
         }
 
     }

@@ -16,6 +16,7 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+    // TODO: rename to LoopExpression
     public sealed class LoopStatement : Expression {
         private readonly Expression _test;
         private readonly Expression _increment;
@@ -53,6 +54,10 @@ namespace Microsoft.Linq.Expressions {
 
         new public LabelTarget Label {
             get { return _label; }
+        }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitLoop(this);
         }
     }
 

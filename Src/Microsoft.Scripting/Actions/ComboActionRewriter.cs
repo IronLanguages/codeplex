@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Actions {
         protected override Expression VisitExtension(Expression node) {
             CodeContextScopeExpression contextScope = node as CodeContextScopeExpression;
             if (contextScope != null) {
-                Expression body = VisitNode(contextScope.Body);
+                Expression body = Visit(contextScope.Body);
 
                 if (body != contextScope.Body) {
                     node = AstUtils.CodeContextScope(body, contextScope.NewContext);
@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
-        /// A reducable node which we use to generate the combo dynamic sites.  Each time we encounter
+        /// A reducible node which we use to generate the combo dynamic sites.  Each time we encounter
         /// a dynamic site we replace it with a ComboDynamicSiteExpression.  When a child of a dynamic site
         /// turns out to be a ComboDynamicSiteExpression we will then merge the child with the parent updating
         /// the binding mapping info.  If any of the inputs cause side effects then we'll stop the combination.
@@ -80,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected override Expression Visit(DynamicExpression node) {
+        protected override Expression VisitDynamic(DynamicExpression node) {
             MetaAction metaBinder = node.Binder as MetaAction;
 
             if (metaBinder == null) {
@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Actions {
 
                 if (!foundSideEffectingArgs) {
                     // attempt to combine the arguments...
-                    Expression rewritten = VisitNode(e);
+                    Expression rewritten = Visit(e);
 
                     ComboDynamicSiteExpression combo = rewritten as ComboDynamicSiteExpression;
                     ConstantExpression ce;

@@ -26,7 +26,7 @@ using AstUtils = Microsoft.Scripting.Ast.Utils;
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
-    class MetaOldClass : MetaPythonObject, IPythonInvokable {
+    class MetaOldClass : MetaPythonObject, IPythonInvokable, IPythonGetable {
         public MetaOldClass(Expression/*!*/ expression, Restrictions/*!*/ restrictions, OldClass/*!*/ value)
             : base(expression, Restrictions.Empty, value) {
             Assert.NotNull(value);
@@ -34,8 +34,17 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
-            return MakeCallRule(pythonInvoke, codeContext, ArrayUtils.RemoveFirst(args));
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+            return MakeCallRule(pythonInvoke, codeContext, args);
+        }
+
+        #endregion
+
+        #region IPythonGetable Members
+
+        public MetaObject GetMember(GetMemberBinder member, Expression codeContext) {
+            // no codeContext filtering but avoid an extra site by handling this action directly
+            return MakeGetMember(member, codeContext);
         }
 
         #endregion
@@ -43,26 +52,26 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            return BindingHelpers.GenericCall(action, this, args);
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
-            return MakeCallRule(call, Ast.Constant(BinderState.GetBinderState(call).Context), ArrayUtils.RemoveFirst(args));
+            return MakeCallRule(call, Ast.Constant(BinderState.GetBinderState(call).Context), args);
         }
 
         public override MetaObject/*!*/ Create(CreateAction/*!*/ create, params MetaObject/*!*/[]/*!*/ args) {
             return MakeCallRule(create, Ast.Constant(BinderState.GetBinderState(create).Context), args);
         }
 
-        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
-            return MakeGetMember(member, args);
+        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member) {
+            return MakeGetMember(member, BinderState.GetCodeContext(member));
         }
 
-        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
-            return MakeSetMember(member.Name, args[1]);
+        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ member, MetaObject/*!*/ value) {
+            return MakeSetMember(member.Name, value);
         }
 
-        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ member) {
             return MakeDeleteMember(member);
         }
 
@@ -77,11 +86,11 @@ namespace IronPython.Runtime.Binding {
             return base.Operation(operation, args);
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject Convert(ConvertAction/*!*/ conversion) {
             if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(OldClass)));
             }
-            return conversion.Fallback(args);
+            return conversion.Fallback(this);
         }
 
         #endregion
@@ -241,11 +250,12 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private MetaObject/*!*/ MakeGetMember(GetMemberAction/*!*/ member, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeGetMember(MetaAction/*!*/ member, Expression codeContext) {
             MetaObject self = Restrict(typeof(OldClass));
 
             Expression target;
-            switch (member.Name) {
+            string memberName = GetGetMemberName(member);
+            switch (memberName) {
                 case "__dict__":
                     target = Ast.Comma(
                         Ast.Call(
@@ -279,12 +289,12 @@ namespace IronPython.Runtime.Binding {
                                     typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
                                     Ast.Constant(BinderState.GetBinderState(member).Context),
                                     self.Expression,
-                                    AstUtils.Constant(SymbolTable.StringToId(member.Name)),
+                                    AstUtils.Constant(SymbolTable.StringToId(memberName)),
                                     tmp
                                 ),
                                 tmp,
                                 Ast.ConvertHelper(
-                                    member.Fallback(args).Expression,
+                                    GetMemberFallback(member, codeContext).Expression,
                                     typeof(object)
                                 )
                             ),
@@ -310,6 +320,6 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        #endregion
+        #endregion        
     }
 }

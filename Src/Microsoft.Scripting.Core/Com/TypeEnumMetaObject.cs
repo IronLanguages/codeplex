@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Com {
             _desc = desc;
         }
 
-        public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+        public override MetaObject GetMember(GetMemberAction action) {
             if (_desc.HasMember(action.Name)) {
                 return new MetaObject(
                     // return (.bound $arg0).GetValue("<name>")
@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Com {
                         typeof(ComTypeEnumDesc).GetMethod("GetValue"),
                         Expression.Constant(action.Name)
                     ),
-                    Restrictions.Combine(args).Merge(EnumRestrictions())
+                    EnumRestrictions()
                 );
             }
 

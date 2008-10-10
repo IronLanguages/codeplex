@@ -78,10 +78,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MetaObject MakeSetMemberTarget(SetOrDeleteMemberInfo memInfo, MetaObject target, MetaObject value) {
-            Type type = target.LimitType;
+            Type type = target.LimitType.IsCOMObject ? target.Expression.Type : target.LimitType;
             Expression self = target.Expression;
             
-            target = target.Restrict(type);
+            target = target.Restrict(target.LimitType);
 
             memInfo.Body.Restrictions = target.Restrictions;
 

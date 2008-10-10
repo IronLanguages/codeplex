@@ -108,7 +108,7 @@ namespace IronPython.Compiler.Ast {
                 typeof(object),
                 ag.TransformAndConvert(_bases, typeof(object))
             );
-
+            ag.DisableInterpreter = true;
             AstGenerator body = new AstGenerator(ag, MSAst.Expression.Annotate(SourceSpan.None), SymbolTable.IdToString(_name), false, false);
 
             List<MSAst.Expression> init = new List<MSAst.Expression>();

@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Actions {
         internal RuleBuilder() { }
 
         /// <summary>
-        /// An expression that should return true iff Target should be executed
+        /// An expression that should return true if and only if Target should be executed
         /// </summary>
         public Expression Test {
             get { return _test; }

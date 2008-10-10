@@ -34,7 +34,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.30718</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -239,7 +239,10 @@
     <Compile Include="PerfTrack.cs" />
     <Compile Include="Runtime\CompilerContext.cs" />
     <Compile Include="Runtime\DynamicLanguageProviderAttribute.cs" />
+    <Compile Include="Runtime\IRestrictedMetaObject.cs" />
+    <Compile Include="Runtime\MetaObjectExtensions.cs" />
     <Compile Include="Runtime\ParserSink.cs" />
+    <Compile Include="Runtime\RestrictedMetaObject.cs" />
     <Compile Include="Runtime\TokenizerBuffer.cs" />
     <Compile Include="Runtime\TokenizerService.cs" />
     <Compile Include="Generation\MethodSignatureInfo.cs" />
@@ -325,6 +328,7 @@
     <Compile Include="Utils\ReflectedCaller.Generated.cs" />
     <Compile Include="Utils\ReflectedCaller.cs" />
     <Compile Include="Utils\SynchronizedDictionary.cs" />
+    <Compile Include="Utils\ThreadLocal.cs" />
     <Compile Include="Utils\TypeExtensions.cs" />
     <Compile Include="Utils\TypeUtils.cs" />
     <Compile Include="Utils\ValueArray.cs" />

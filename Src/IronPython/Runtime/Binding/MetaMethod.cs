@@ -12,13 +12,17 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+
 using Ast = Microsoft.Linq.Expressions.Expression;
 
 namespace IronPython.Runtime.Binding {
@@ -31,7 +35,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, args);
         }
 
@@ -40,11 +44,19 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
-            return BindingHelpers.GenericCall(action, args);
+            return BindingHelpers.GenericCall(action, this, args);
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ callAction, params MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(callAction, args);
+        }
+
+        public override MetaObject Convert(ConvertAction action) {
+            if (action.ToType.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(action, action.ToType, Restrict(typeof(Method)));
+            }
+
+            return base.Convert(action);
         }
 
         #endregion
@@ -52,8 +64,6 @@ namespace IronPython.Runtime.Binding {
         #region Invoke Implementation
 
         private MetaObject InvokeWorker(MetaAction/*!*/ callAction, MetaObject/*!*/[] args) {
-            args = ArrayUtils.RemoveFirst(args);
-
             CallSignature signature = BindingHelpers.GetCallSignature(callAction);
             MetaObject self = Restrict(typeof(Method));
             Restrictions restrictions = self.Restrictions;

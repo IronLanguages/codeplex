@@ -27,15 +27,11 @@ namespace Microsoft.Scripting.Com {
             _lib = lib;
         }
 
-        public override MetaObject GetMember(GetMemberAction action, MetaObject[] args) {
+        public override MetaObject GetMember(GetMemberAction action) {
             if (_lib.HasMember(action.Name)) {
                 Restrictions restrictions =
-                    Restrictions.Combine(
-                        args
-                    ).Merge(
-                        Restrictions.TypeRestriction(
-                            Expression, typeof(ComTypeLibDesc)
-                        )
+                    Restrictions.TypeRestriction(
+                        Expression, typeof(ComTypeLibDesc)
                     ).Merge(
                         Restrictions.ExpressionRestriction(
                             Expression.Equal(
@@ -60,7 +56,7 @@ namespace Microsoft.Scripting.Com {
                 );
             }
 
-            return base.GetMember(action, args);
+            return base.GetMember(action);
         }
 
         public override MetaObject Operation(OperationAction action, MetaObject[] args) {

@@ -70,7 +70,7 @@ namespace Microsoft.Scripting.Actions {
             MetaObject res;
 
             if (CompilerHelpers.IsComparisonOperator(operation)) {
-                res = MakeComparisonRule(info, args);
+                res = MakeComparisonRule(info, codeContext, args);
             } else {
                 res = MakeOperatorRule(info, codeContext, args);
             }
@@ -80,10 +80,10 @@ namespace Microsoft.Scripting.Actions {
 
         #region Comparison operator
 
-        private MetaObject MakeComparisonRule(OperatorInfo info, MetaObject[] args) {
+        private MetaObject MakeComparisonRule(OperatorInfo info, Expression codeContext, MetaObject[] args) {
             return
-                TryComparisonMethod(info, args[0], args) ??   // check the first type if it has an applicable method
-                TryComparisonMethod(info, args[0], args) ??   // then check the second type
+                TryComparisonMethod(info, codeContext, args[0], args) ??   // check the first type if it has an applicable method
+                TryComparisonMethod(info, codeContext, args[0], args) ??   // then check the second type
                 TryNumericComparison(info, args) ??           // try Compare: cmp(x,y) (>, <, >=, <=, ==, !=) 0
                 TryInvertedComparison(info, args[0], args) ?? // try inverting the operator & result (e.g. if looking for Equals try NotEquals, LessThan for GreaterThan)...
                 TryInvertedComparison(info, args[0], args) ?? // inverted binding on the 2nd type
@@ -92,10 +92,10 @@ namespace Microsoft.Scripting.Actions {
                 MakeOperatorError(info, args);                // no comparisons are possible            
         }
 
-        private MetaObject TryComparisonMethod(OperatorInfo info, MetaObject target, MetaObject[] args) {
+        private MetaObject TryComparisonMethod(OperatorInfo info, Expression codeContext, MetaObject target, MetaObject[] args) {
             MethodInfo[] targets = GetApplicableMembers(target.LimitType, info);
             if (targets.Length > 0) {
-                return TryMakeBindingTarget(targets, args, Restrictions.Empty);
+                return TryMakeBindingTarget(targets, args, codeContext, Restrictions.Empty);
             }
 
             return null;
@@ -232,8 +232,8 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")] // TODO: fix
         private MetaObject MakeOperatorRule(OperatorInfo info, Expression codeContext, MetaObject[] args) {
             return
-                TryForwardOperator(info, args) ??
-                TryReverseOperator(info, args) ??
+                TryForwardOperator(info, codeContext, args) ??
+                TryReverseOperator(info, codeContext, args) ??
                 TryInplaceOperator(info, codeContext, args) ??
                 TryPrimitiveOperator(info, args) ??
                 TryMakeDefaultUnaryRule(info, codeContext, args) ??
@@ -272,25 +272,31 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MetaObject TryForwardOperator(OperatorInfo info, MetaObject[] args) {
-            MethodInfo[] targets = GetApplicableMembers(args[0].LimitType, info);
-            Restrictions restrictions = Restrictions.Empty;
-            if (targets.Length == 0) {
-                targets = GetFallbackMembers(args[0].LimitType, info, args, out restrictions);
-            }
+        private MetaObject TryForwardOperator(OperatorInfo info, Expression codeContext, MetaObject[] args) {
+            // we need a special conversion for the return type on MemberNames
+            if (info.Operator != Operators.MemberNames) {
+                MethodInfo[] targets = GetApplicableMembers(args[0].LimitType, info);
+                Restrictions restrictions = Restrictions.Empty;
+                if (targets.Length == 0) {
+                    targets = GetFallbackMembers(args[0].LimitType, info, args, out restrictions);
+                }
 
-            if (targets.Length > 0) {
-                return TryMakeBindingTarget(targets, args, restrictions);
+                if (targets.Length > 0) {
+                    return TryMakeBindingTarget(targets, args, codeContext, restrictions);
+                }
             }
 
             return null;
         }
 
-        private MetaObject TryReverseOperator(OperatorInfo info, MetaObject[] args) {
-            if (args.Length > 0) {
-                MethodInfo[] targets = GetApplicableMembers(args[0].LimitType, info);
-                if (targets.Length > 0) {
-                    return TryMakeBindingTarget(targets, args, Restrictions.Empty);
+        private MetaObject TryReverseOperator(OperatorInfo info, Expression codeContext, MetaObject[] args) {
+            // we need a special conversion for the return type on MemberNames
+            if (info.Operator != Operators.MemberNames) {
+                if (args.Length > 0) {
+                    MethodInfo[] targets = GetApplicableMembers(args[0].LimitType, info);
+                    if (targets.Length > 0) {
+                        return TryMakeBindingTarget(targets, args, codeContext, Restrictions.Empty);
+                    }
                 }
             }
 
@@ -556,13 +562,13 @@ namespace Microsoft.Scripting.Actions {
 
         #region Common helpers
 
-        private MetaObject TryMakeBindingTarget(MethodInfo[] targets, MetaObject[] args, Restrictions restrictions) {
+        private MetaObject TryMakeBindingTarget(MethodInfo[] targets, MetaObject[] args, Expression codeContext, Restrictions restrictions) {
             MethodBinder mb = MethodBinder.MakeBinder(this, targets[0].Name, targets);
 
             BindingTarget target = mb.MakeBindingTarget(CallTypes.None, args);
             if (target.Success) {
                 return new MetaObject(
-                    target.MakeExpression(),
+                    target.MakeExpression(new ParameterBinderWithCodeContext(this, codeContext)),
                     restrictions.Merge(Restrictions.Combine(target.RestrictedArguments))
                 );
             }

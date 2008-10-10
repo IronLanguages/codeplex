@@ -1097,5 +1097,11 @@ def test_cp13704():
     AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (10 given)", 
                            datetime.datetime, None, None, None, None, None, None, None, None, None, None)
                            
-    
+
+def test_pickle():
+    import cPickle
+    now = datetime.datetime.now()
+    nowstr = cPickle.dumps(now)
+    AreEqual(now, cPickle.loads(nowstr))
+
 run_test(__name__)

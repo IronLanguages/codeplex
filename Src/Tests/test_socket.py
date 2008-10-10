@@ -467,6 +467,9 @@ def test_fileobject_close():
     """verify we can construct fileobjects w/ the close kw arg"""
     fd = socket._fileobject(None, close=True)
     AreEqual(fd.mode, 'rb')
+    if sys.platform=="win32":
+        #CodePlex 17894
+        AreEqual(fd.closed, True)
 
 @disabled("TODO: fails consistently on certain machines")
 def test_cp5814():

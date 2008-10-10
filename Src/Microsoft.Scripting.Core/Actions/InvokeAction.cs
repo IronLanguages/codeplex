@@ -36,10 +36,17 @@ namespace Microsoft.Scripting.Actions {
             get { return _arguments; }
         }
 
-        public sealed override MetaObject Bind(MetaObject[] args) {
+        public MetaObject Fallback(MetaObject target, MetaObject[] args) {
+            return Fallback(target, args, null);
+        }
+
+        public abstract MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError);
+
+        public sealed override MetaObject Bind(MetaObject target, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNullItems(args, "args");
-            ContractUtils.Requires(args.Length > 0);
-            return args[0].Invoke(this, args);
+            
+            return target.Invoke(this, args);
         }
 
         [Confined]

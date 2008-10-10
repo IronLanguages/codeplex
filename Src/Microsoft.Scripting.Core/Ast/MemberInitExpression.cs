@@ -53,6 +53,10 @@ namespace Microsoft.Linq.Expressions {
             }
             builder.Append("}");
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitMemberInit(this);
+        }
     }
 
     public partial class Expression {

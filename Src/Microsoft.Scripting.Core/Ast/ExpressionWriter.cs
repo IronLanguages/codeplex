@@ -134,14 +134,14 @@ namespace Microsoft.Linq.Expressions {
         /// Write out the given rule's AST (only if ShowRules is enabled)
         /// </summary>
         [Conditional("DEBUG")]
-        internal static void Dump<T>(Rule<T> rule) where T : class {
+        internal static void Dump<T>(Rule<T> rule, CallSiteBinder binder) where T : class {
             if (DebugOptions.ShowRules) {
 #if !SILVERLIGHT
                 ConsoleColor color = Console.ForegroundColor;
                 try {
                     Console.ForegroundColor = GetAstColor();
 #endif
-                    ExpressionWriter.Dump(rule.Binding, "Rule", System.Console.Out);
+                    ExpressionWriter.Dump(rule.Binding, "Rule for " + binder.ToString(), System.Console.Out);
 #if !SILVERLIGHT
                 } finally {
                     Console.ForegroundColor = color;
@@ -178,7 +178,7 @@ namespace Microsoft.Linq.Expressions {
         private void DoDump(Expression node, string description) {
             WritePrologue(description);
 
-            VisitNode(node);
+            Visit(node);
             WriteLine();
 
             WriteLambdas();
@@ -320,7 +320,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        protected override Expression Visit(DynamicExpression node) {
+        protected internal override Expression VisitDynamic(DynamicExpression node) {
             Out(".site", Flow.Space);
 
             Out("(");
@@ -332,7 +332,7 @@ namespace Microsoft.Linq.Expressions {
             Indent();
             NewLine();
             foreach (Expression arg in node.Arguments) {
-                VisitNode(arg);
+                Visit(arg);
                 NewLine();
             }
             Dedent();
@@ -341,11 +341,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        protected override Expression Visit(BinaryExpression node) {
+        protected internal override Expression VisitBinary(BinaryExpression node) {
             if (node.NodeType == ExpressionType.ArrayIndex) {
-                VisitNode(node.Left);
+                Visit(node.Left);
                 Out("[");
-                VisitNode(node.Right);
+                Visit(node.Right);
                 Out("]");
             } else {
                 string op;
@@ -384,36 +384,36 @@ namespace Microsoft.Linq.Expressions {
                 } else {
                     Out(Flow.Break, "(", Flow.None);
                 }
-                VisitNode(node.Left);
+                Visit(node.Left);
                 Out(Flow.Space, op, Flow.Space | Flow.Break);
-                VisitNode(node.Right);
+                Visit(node.Right);
                 Out(Flow.None, ")", Flow.Break);
             }
             return node;
         }
 
-        protected override Expression Visit(AssignmentExpression node) {
-            VisitNode(node.Expression);
+        protected internal override Expression VisitAssignment(AssignmentExpression node) {
+            Visit(node.Expression);
             Out(" = ");
-            VisitNode(node.Value);
+            Visit(node.Value);
             return node;
         }
 
-        protected override Expression Visit(VariableExpression node) {
+        protected internal override Expression VisitVariable(VariableExpression node) {
             Out("(.var", Flow.Space);
             Out(node.Name ?? "");
             Out(")");
             return node;
         }
 
-        protected override Expression Visit(ParameterExpression node) {
+        protected internal override Expression VisitParameter(ParameterExpression node) {
             Out("(.arg", Flow.Space);
             Out(node.Name ?? "");
             Out(")");
             return node;
         }
 
-        protected override Expression Visit(LambdaExpression node) {
+        protected internal override Expression VisitLambda(LambdaExpression node) {
             int id = Enqueue(node);
             Out(
                 String.Format(CultureInfo.CurrentCulture, 
@@ -427,13 +427,13 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(ConditionalExpression node) {
+        protected internal override Expression VisitConditional(ConditionalExpression node) {
             Out(".if (", Flow.Break);
-            VisitNode(node.Test);
+            Visit(node.Test);
             Out(" ) {", Flow.Break);
-            VisitNode(node.IfTrue);
+            Visit(node.IfTrue);
             Out(Flow.Break, "} .else {", Flow.Break);
-            VisitNode(node.IfFalse);
+            Visit(node.IfFalse);
             Out("}", Flow.Break);
             return node;
         }
@@ -462,17 +462,17 @@ namespace Microsoft.Linq.Expressions {
             return "(" + value.GetType().Name + ")" + value.ToString();
         }
 
-        protected override Expression Visit(ConstantExpression node) {
+        protected internal override Expression VisitConstant(ConstantExpression node) {
             Out(Constant(node.Value));
             return node;
         }
 
-        protected override Expression Visit(LocalScopeExpression node) {
+        protected internal override Expression VisitRuntimeVariables(LocalScopeExpression node) {
             Out(".localScope (", Flow.NewLine);
             Indent();
             foreach (Expression v in node.Variables) {
                 Out(Flow.NewLine, "");
-                VisitNode(v);
+                Visit(v);
             }
             Dedent();
             Out(Flow.NewLine, ")", Flow.NewLine);
@@ -482,7 +482,7 @@ namespace Microsoft.Linq.Expressions {
         // Prints ".instanceField" or "declaringType.staticField"
         private void OutMember(Expression instance, MemberInfo member) {
             if (instance != null) {
-                VisitNode(instance);
+                Visit(instance);
                 Out("." + member.Name);
             } else {
                 // For static members, include the type name
@@ -490,19 +490,19 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        protected override Expression Visit(MemberExpression node) {
+        protected internal override Expression VisitMemberAccess(MemberExpression node) {
             OutMember(node.Expression, node.Member);
             return node;
         }
 
-        protected override Expression Visit(InvocationExpression node) {
+        protected internal override Expression VisitInvocation(InvocationExpression node) {
             Out("(");
-            VisitNode(node.Expression);
+            Visit(node.Expression);
             Out(").Invoke(");
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
                 foreach (Expression e in node.Arguments) {
-                    VisitNode(e);
+                    Visit(e);
                     Out(",", Flow.NewLine);
                 }
                 Dedent();
@@ -511,10 +511,10 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(MethodCallExpression node) {
+        protected internal override Expression VisitMethodCall(MethodCallExpression node) {
             if (node.Object != null) {
                 Out("(");
-                VisitNode(node.Object);
+                Visit(node.Object);
                 Out(").");
             }
             if (node.Method.ReflectedType != null) {
@@ -525,7 +525,7 @@ namespace Microsoft.Linq.Expressions {
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
                 foreach (Expression e in node.Arguments) {
-                    VisitNode(e);
+                    Visit(e);
                     Out(",", Flow.NewLine);
                 }
                 Dedent();
@@ -534,14 +534,14 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(NewArrayExpression node) {
+        protected internal override Expression VisitNewArray(NewArrayExpression node) {
             if (node.NodeType == ExpressionType.NewArrayBounds) {
                 // .new MyType[expr1, expr2]
                 Out(".new " + node.Type.GetElementType().Name + "[");
                 if (node.Expressions != null && node.Expressions.Count > 0) {
                     NewLine(); Indent();
                     foreach (Expression e in node.Expressions) {
-                        VisitNode(e);
+                        Visit(e);
                         Out(",", Flow.NewLine);
                     }
                     Dedent();
@@ -554,7 +554,7 @@ namespace Microsoft.Linq.Expressions {
                 if (node.Expressions != null && node.Expressions.Count > 0) {
                     NewLine(); Indent();
                     foreach (Expression e in node.Expressions) {
-                        VisitNode(e);
+                        Visit(e);
                         Out(",", Flow.NewLine);
                     }
                     Dedent();
@@ -564,12 +564,12 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(NewExpression node) {
+        protected internal override Expression VisitNew(NewExpression node) {
             Out(".new " + node.Type.Name + "(");
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
                 foreach (Expression e in node.Arguments) {
-                    VisitNode(e);
+                    Visit(e);
                     Out(",", Flow.NewLine);
                 }
                 Dedent();
@@ -578,14 +578,14 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(TypeBinaryExpression node) {
-            VisitNode(node.Expression);
+        protected internal override Expression VisitTypeBinary(TypeBinaryExpression node) {
+            Visit(node.Expression);
             Out(Flow.Space, ".is", Flow.Space);
             Out(node.TypeOperand.Name);
             return node;
         }
 
-        protected override Expression Visit(UnaryExpression node) {
+        protected internal override Expression VisitUnary(UnaryExpression node) {
             switch (node.NodeType) {
                 case ExpressionType.Convert:
                     Out("(" + node.Type.Name + ")");
@@ -607,9 +607,6 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.UnaryPlus:
                     Out("+");
                     break;
-                case ExpressionType.OnesComplement:
-                    Out("~");
-                    break;
                 case ExpressionType.ArrayLength:
                     break;
                 case ExpressionType.Quote:
@@ -617,7 +614,7 @@ namespace Microsoft.Linq.Expressions {
                     break;
             }
 
-            VisitNode(node.Operand);
+            Visit(node.Operand);
 
             switch (node.NodeType) {
                 case ExpressionType.ConvertChecked:
@@ -637,11 +634,11 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(Block node) {
+        protected internal override Expression VisitBlock(Block node) {
             Out(node.Type != typeof(void) ? ".comma {" : "{");
             NewLine(); Indent();
             foreach (Expression s in node.Expressions) {
-                VisitNode(s);
+                Visit(s);
                 NewLine();
             }
             Dedent();
@@ -649,21 +646,21 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(BreakStatement node) {
+        protected internal override Expression VisitBreak(BreakStatement node) {
             Out(".break ");
             DumpLabel(node.Target);
             Out(";", Flow.NewLine);
             return node;
         }
 
-        protected override Expression Visit(ContinueStatement node) {
+        protected internal override Expression VisitContinue(ContinueStatement node) {
             Out(".continue ");
             DumpLabel(node.Target);
             Out(";", Flow.NewLine);
             return node;
         }
 
-        protected override Expression Visit(DoStatement node) {
+        protected internal override Expression VisitDoWhile(DoStatement node) {
             Out(".do ");
             if (node.Label != null) {
                 DumpLabel(node.Label);
@@ -671,55 +668,55 @@ namespace Microsoft.Linq.Expressions {
             }
             Out("{", Flow.NewLine);
             Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent();
             Out(Flow.NewLine, "} .while (");
-            VisitNode(node.Test);
+            Visit(node.Test);
             Out(");");
             return node;
         }
 
-        protected override Expression Visit(EmptyStatement node) {
+        protected internal override Expression VisitEmpty(EmptyStatement node) {
             Out("/*empty*/;", Flow.NewLine);
             return node;
         }
 
-        protected override Expression Visit(LabeledStatement node) {
+        protected internal override Expression VisitLabeled(LabeledStatement node) {
             Out(".labeled ");
             DumpLabel(node.Label);
             Out(" {", Flow.NewLine);
             Indent();
-            VisitNode(node.Statement);
+            Visit(node.Statement);
             Dedent();
             Out(Flow.NewLine, "}");
             return node;
         }
 
-        protected override Expression Visit(LoopStatement node) {
+        protected internal override Expression VisitLoop(LoopStatement node) {
             Out(".for ");
             if (node.Label != null) {
                 DumpLabel(node.Label);
                 Out(" ");
             }
             Out("(; ");
-            VisitNode(node.Test);
+            Visit(node.Test);
             Out("; ");
-            VisitNode(node.Increment);
+            Visit(node.Increment);
             Out(") {", Flow.NewLine);
             Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent();
             Out(Flow.NewLine, "}"); return node;
         }
 
-        protected override Expression Visit(ReturnStatement node) {
+        protected internal override Expression VisitReturn(ReturnStatement node) {
             Out(".return", Flow.Space);
-            VisitNode(node.Expression);
+            Visit(node.Expression);
             Out(";", Flow.NewLine);
             return node;
         }
 
-        protected override Expression Visit(ScopeExpression node) {
+        protected internal override Expression VisitScope(ScopeExpression node) {
             Out(".scope", Flow.Space);
             if (node.Name != null) {
                 Out(node.Name, Flow.Space);
@@ -734,13 +731,13 @@ namespace Microsoft.Linq.Expressions {
             Dedent();
             Out(Flow.NewLine, ") {", Flow.NewLine);
             Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent();
             Out("}", Flow.NewLine);
             return node;
         }
 
-        protected override SwitchCase Visit(SwitchCase node) {
+        protected override SwitchCase VisitSwitchCase(SwitchCase node) {
             if (node.IsDefault) {
                 Out(".default");
             } else {
@@ -748,64 +745,64 @@ namespace Microsoft.Linq.Expressions {
             }
             Out(":", Flow.NewLine);
             Indent(); Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent(); Dedent();
             NewLine();
             return node;
         }
 
-        protected override Expression Visit(SwitchStatement node) {
+        protected internal override Expression VisitSwitch(SwitchStatement node) {
             Out(".switch ");
             if (node.Label != null) {
                 DumpLabel(node.Label);
                 Out(" ");
             }
             Out("(");
-            VisitNode(node.TestValue);
+            Visit(node.TestValue);
             Out(") {", Flow.NewLine);
-            VisitNodes(node.Cases, Visit);
+            Visit(node.Cases, VisitSwitchCase);
             Out("}", Flow.NewLine);
             return node;
         }
 
-        protected override Expression Visit(ThrowStatement node) {
+        protected internal override Expression VisitThrow(ThrowStatement node) {
             Out(Flow.NewLine, ".throw (");
-            VisitNode(node.Exception);
+            Visit(node.Exception);
             Out(")", Flow.NewLine);
             return node;
         }
 
-        protected override CatchBlock Visit(CatchBlock node) {
+        protected override CatchBlock VisitCatchBlock(CatchBlock node) {
             Out("} .catch ( " + node.Test.Name);
             if (node.Variable != null) {
                 Out(Flow.Space, node.Variable.Name ?? "");
             }
             if (node.Filter != null) {
                 Out(") if (", Flow.Break);
-                VisitNode(node.Filter);
+                Visit(node.Filter);
             }
             Out(") {", Flow.NewLine);
             Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent();
             return node;
         }
 
-        protected override Expression Visit(TryStatement node) {
+        protected internal override Expression VisitTry(TryStatement node) {
             Out(".try {", Flow.NewLine);
             Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent();
-            VisitNodes(node.Handlers, Visit);
+            Visit(node.Handlers, VisitCatchBlock);
             if (node.Finally != null) {
                 Out("} .finally {", Flow.NewLine);
                 Indent();
-                VisitNode(node.Finally);
+                Visit(node.Finally);
                 Dedent();
             } else if (node.Fault != null) {
                 Out("} .fault {", Flow.NewLine);
                 Indent();
-                VisitNode(node.Fault);
+                Visit(node.Fault);
                 Dedent();
             }
 
@@ -813,18 +810,18 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression Visit(YieldStatement node) {
+        protected internal override Expression VisitYield(YieldStatement node) {
             Out(".yield ");
-            VisitNode(node.Expression);
+            Visit(node.Expression);
             Out(";", Flow.NewLine);
             return node;
         }
 
-        protected override Expression Visit(IndexExpression node) {
+        protected internal override Expression VisitIndex(IndexExpression node) {
             if (node.Indexer != null) {
                 OutMember(node.Object, node.Indexer);
             } else {
-                VisitNode(node.Object);
+                Visit(node.Object);
                 Out(".");
             }
 
@@ -832,7 +829,7 @@ namespace Microsoft.Linq.Expressions {
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 NewLine(); Indent();
                 foreach (Expression e in node.Arguments) {
-                    VisitNode(e);
+                    Visit(e);
                     Out(",", Flow.NewLine);
                 }
                 Dedent();
@@ -841,14 +838,14 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected override Expression VisitExtension(Expression node) {
+        protected internal override Expression VisitExtension(Expression node) {
             Out(".extension (");
             Out(node.Type.Name);
             Out(")", Flow.Space);
 
             // print the known node (best we can do)
-            if (node.IsReducible) {
-                VisitNode(node.ReduceToKnown());
+            if (node.CanReduce) {
+                Visit(node.ReduceExtensions());
             }
 
             Out(";", Flow.NewLine);
@@ -883,7 +880,7 @@ namespace Microsoft.Linq.Expressions {
             Dedent();
             Out(Flow.NewLine, ") {", Flow.NewLine);
             Indent();
-            VisitNode(node.Body);
+            Visit(node.Body);
             Dedent();
             Out(Flow.NewLine, "}");
         }

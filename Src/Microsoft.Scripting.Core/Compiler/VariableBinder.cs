@@ -40,7 +40,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // A stack of variables that are defined in nested scopes. We search
         // this first when resolving a variable in case a nested scope shadows
-        // one of our variable insteances.
+        // one of our variable instances.
         private readonly Stack<Set<Expression>> _hiddenVars = new Stack<Set<Expression>>();
 
         // For each variable in this scope: should it be hoisted to a closure?
@@ -111,7 +111,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Queue<Expression> mergedScopes = MergeScopes(ref body);
 
             // Walk the body to figure out which variables to hoist
-            VisitNode(body);
+            Visit(body);
 
             List<Expression> hoisted = new List<Expression>();
             List<Expression> locals = new List<Expression>();
@@ -211,7 +211,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void Reference(Expression variable, bool hoist) {
-            // Skip variables that belong to another scope/lambda
+            // Skip variables that are shadowed by a nested scope/lambda
             foreach (Set<Expression> hidden in _hiddenVars) {
                 if (hidden.Contains(variable)) {
                     return;
@@ -245,32 +245,32 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #region ExpressionVisitor overrides
 
-        protected override Expression Visit(VariableExpression node) {
+        protected internal override Expression VisitVariable(VariableExpression node) {
             Reference(node, !InTopLambda);
             return node;
         }
 
-        protected override Expression Visit(ParameterExpression node) {
+        protected internal override Expression VisitParameter(ParameterExpression node) {
             Reference(node, !InTopLambda);
             return node;
         }
 
-        protected override Expression Visit(LambdaExpression node) {
+        protected internal override Expression VisitLambda(LambdaExpression node) {
             LambdaExpression saved = _currentLambda;
             _currentLambda = node;
             _hiddenVars.Push(new Set<Expression>(node.Parameters));
-            VisitNode(node.Body);
+            Visit(node.Body);
             _hiddenVars.Pop();
             _currentLambda = saved;
             return node;
         }
 
-        protected override Expression Visit(ScopeExpression node) {
+        protected internal override Expression VisitScope(ScopeExpression node) {
             if (InTopLambda && _scopes != null) {
                 _scopes.Push(node);
             }
             _hiddenVars.Push(new Set<Expression>(node.Variables));
-            VisitNode(node.Body);
+            Visit(node.Body);
             _hiddenVars.Pop();
 
             // may have been popped already
@@ -282,7 +282,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return node;
         }
 
-        protected override Expression Visit(LocalScopeExpression node) {
+        protected internal override Expression VisitRuntimeVariables(LocalScopeExpression node) {
             // Force hoisting of these variables
             foreach (Expression v in node.Variables) {
                 Reference(v, true);
@@ -290,7 +290,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return node;
         }
 
-        protected override Expression Visit(YieldStatement node) {
+        protected internal override Expression VisitYield(YieldStatement node) {
             if (InTopLambda) {
                 if (_expression.NodeType == ExpressionType.Lambda) {
                     // Validation: yield cannot appear outside of a generator
@@ -311,24 +311,24 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
 
-            return base.Visit(node);
+            return base.VisitYield(node);
         }
 
-        protected override Expression Visit(TryStatement node) {
+        protected internal override Expression VisitTry(TryStatement node) {
             if (InTopLambda && _expression.NodeType == ExpressionType.Generator) {
                 if ((node.Finally ?? node.Fault) != null) {
                     // We need a generator temp to store the exception variable
                     _temps.Add(Expression.Variable(typeof(Exception), "tempException$" + _temps.Count));
                 }
             }
-            return base.Visit(node);
+            return base.VisitTry(node);
         }
 
         // This may not belong here because it is checking for the
         // tree type consistency. However, since it is the only check
         // it seems unwarranted to make an extra walk of the tree just
         // to verify this condition.
-        protected override Expression Visit(ReturnStatement node) {
+        protected internal override Expression VisitReturn(ReturnStatement node) {
             // If we're binding the lambda, and we're in it or in ones of its
             // scopes, check return
             if (InTopLambda && _expression.NodeType != ExpressionType.Scope) {
@@ -348,20 +348,20 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
 
-            return base.Visit(node);
+            return base.VisitReturn(node);
         }
 
-        protected override CatchBlock Visit(CatchBlock node) {
+        protected override CatchBlock VisitCatchBlock(CatchBlock node) {
             _catch++;
-            base.Visit(node);
+            base.VisitCatchBlock(node);
             _catch--;
             return node;
         }
 
-        protected override Expression Visit(ThrowStatement node) {
+        protected internal override Expression VisitThrow(ThrowStatement node) {
             //rethrow is only valid inside a catch.
             if (node.Exception != null || _catch > 0) {
-                base.Visit(node);
+                base.VisitThrow(node);
                 return node;
             } else {
                 throw Error.RethrowRequiresCatch();

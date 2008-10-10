@@ -223,11 +223,7 @@ def repeat_on_class(C):
     if not newStyle:
         Assert(x.find("{...}") != -1)
     else:    
-        #Codeplex bug 18312 http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18312
-        if is_cli or is_silverlight:
-            Assert(x.find("{...}") != -1)
-        else:
-            Assert(x.find("'abc': <dictproxy object at") != -1)
+        Assert(x.find("'abc': <dictproxy object at") != -1)
     del C.abc
 
     keys, values = d.keys(), d.values()
@@ -338,44 +334,43 @@ def repeat_on_class(C):
     
     ############### IN THIS POINT, d LOOKS LIKE ###############
     ##  {'f1': f1, 'f2': f2, 'f3': f3, 'x3': 30, '__doc__': 'This is comment', '__module__': '??'}
-    # Codeplex bug 18313 - http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=18313
-    if not is_cli and not is_silverlight:
-        ## iteritems
-        lk = []
-        for (k, v) in d.iteritems():
-            lk.append(k)
-            exp = None
-            if k == 'f1': exp = 11
-            elif k == 'f2': exp == 22
-            elif k == 'f3': exp == 33
-            
-            if exp <> None:
-                AreEqual(v(c), exp)
+
+    ## iteritems
+    lk = []
+    for (k, v) in d.iteritems():
+        lk.append(k)
+        exp = None
+        if k == 'f1': exp = 11
+        elif k == 'f2': exp == 22
+        elif k == 'f3': exp == 33
         
-        if not newStyle:
-            contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
-        else:
-            contains(lk, 'f1', '__module__', '__dict__', 'x1', '__weakref__', '__doc__')
-            
-        # iterkeys
-        lk = []
-        for k in d.iterkeys():
-            lk.append(k)
+        if exp <> None:
+            AreEqual(v(c), exp)
+    
+    if not newStyle:
+        contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+    else:
+        contains(lk, 'f1', '__module__', '__dict__', 'x1', '__weakref__', '__doc__')
         
-        if not newStyle:
-            contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
-        else:
-            contains(lk, 'f1', '__module__', '__dict__', 'x1', '__weakref__', '__doc__')
-        
-        # itervalues
-        for v in d.itervalues():
-            if callable(v):
-                exp = v(c)
-                Assert(exp in [11, 22, 33])
-            elif v is str:
-                Assert(v == 'This is comment')
-            elif v is int:
-                Assert(v == 30)
+    # iterkeys
+    lk = []
+    for k in d.iterkeys():
+        lk.append(k)
+    
+    if not newStyle:
+        contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+    else:
+        contains(lk, 'f1', '__module__', '__dict__', 'x1', '__weakref__', '__doc__')
+    
+    # itervalues
+    for v in d.itervalues():
+        if callable(v):
+            exp = v(c)
+            Assert(exp in [11, 22, 33])
+        elif v is str:
+            Assert(v == 'This is comment')
+        elif v is int:
+            Assert(v == 30)
         
     if not newStyle:        
         ## something fun before destorying it
@@ -1051,4 +1046,13 @@ def test_cp15882():
             AreEqual(x, {})
             AssertError(KeyError, x.__delitem__, stuff)
             
+
+def test_comparison_operators():
+    x = {2:3}
+    y = {2:4}
+    for oper in ('__lt__', '__gt__', '__le__', '__ge__'):
+        for data in (y, None, 1, 1.0, 1L, (), [], 1j, "abc"):
+            AreEqual(getattr(x, oper)(data), NotImplemented)
+    
+
 run_test(__name__)

@@ -65,7 +65,7 @@ namespace Microsoft.Linq.Expressions {
         public Expression Body {
             get { return _body; }
         }
-        
+
         public Type ReturnType {
             get { return Type.GetMethod("Invoke").ReturnType; }
         }
@@ -122,6 +122,10 @@ namespace Microsoft.Linq.Expressions {
         public T Compile<T>(bool emitDebugSymbols) {
             return LambdaCompiler.CompileLambda<T>(this, emitDebugSymbols);
         }
+
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitLambda(this);
+        }
     }
 
     //CONFORMING
@@ -148,14 +152,7 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
         //internal lambda factory that creates an instance of Expression<delegateType>
-        internal static LambdaExpression Lambda(
-                Annotations annotations,
-                ExpressionType nodeType,
-                Type delegateType,
-                string name,
-                Expression body,
-                ReadOnlyCollection<ParameterExpression> parameters
-        ) {
+        internal static LambdaExpression Lambda(ExpressionType nodeType, Type delegateType, string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
             Type ot = typeof(Expression<>);
             Type ct = ot.MakeGenericType(new Type[] { delegateType });
             ConstructorInfo ctor = ct.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, ctorTypes, null);
@@ -231,7 +228,7 @@ namespace Microsoft.Linq.Expressions {
                 delegateType = GetFuncType(typeArgs);
             }
 
-            return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, parameterList);
+            return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, parameterList);
         }
 
 
@@ -248,7 +245,7 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
-            return Lambda(annotations, ExpressionType.Lambda, delegateType, name, body, paramList);
+            return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, paramList);
         }
 
         //CONFORMING
@@ -339,14 +336,13 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
             ValidateGeneratorReturnType(delegateType);
-            return Lambda(annotations, ExpressionType.Generator, delegateType, name, body, paramList);
+            return Lambda(ExpressionType.Generator, delegateType, name, body, annotations, paramList);
         }
 
         #endregion
 
 
         //CONFORMING
-        // TODO: expand to 8 arguments
         public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
 
@@ -368,13 +364,48 @@ namespace Microsoft.Linq.Expressions {
                 case 5:
                     funcType = typeof(Func<,,,,>).MakeGenericType(typeArgs);
                     break;
+                case 6:
+                    funcType = typeof(Func<,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 7:
+                    funcType = typeof(Func<,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 8:
+                    funcType = typeof(Func<,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 9:
+                    funcType = typeof(Func<,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 10:
+                    funcType = typeof(Func<,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 11:
+                    funcType = typeof(Func<,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 12:
+                    funcType = typeof(Func<,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 13:
+                    funcType = typeof(Func<,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 14:
+                    funcType = typeof(Func<,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 15:
+                    funcType = typeof(Func<,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 16:
+                    funcType = typeof(Func<,,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 17:
+                    funcType = typeof(Func<,,,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
                 default:
                     throw Error.IncorrectNumberOfTypeArgsForFunc();
             }
             return funcType;
         }
         //CONFORMING
-        // TODO: expand to 8 arguments
         public static Type GetActionType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
 
@@ -395,6 +426,42 @@ namespace Microsoft.Linq.Expressions {
                     break;
                 case 4:
                     actionType = typeof(Action<,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 5:
+                    actionType = typeof(Action<,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 6:
+                    actionType = typeof(Action<,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 7:
+                    actionType = typeof(Action<,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 8:
+                    actionType = typeof(Action<,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 9:
+                    actionType = typeof(Action<,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 10:
+                    actionType = typeof(Action<,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 11:
+                    actionType = typeof(Action<,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 12:
+                    actionType = typeof(Action<,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 13:
+                    actionType = typeof(Action<,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 14:
+                    actionType = typeof(Action<,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 15:
+                    actionType = typeof(Action<,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
+                    break;
+                case 16:
+                    actionType = typeof(Action<,,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
                     break;
                 default:
                     throw Error.IncorrectNumberOfTypeArgsForAction();

@@ -14,10 +14,12 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using IronPython.Runtime;
+using System.Globalization;
+
 using Microsoft.Scripting.Runtime;
 
-#if !SILVERLIGHT    // System.Text.RegularExpressions
+using IronPython.Runtime;
+
 [assembly: PythonModule("_sre", typeof(IronPython.Modules.PythonSRegEx))]
 namespace IronPython.Modules {
     public static class PythonSRegEx {
@@ -31,7 +33,7 @@ namespace IronPython.Modules {
             if (encInt == (int)PythonRegex.UNICODE) {
                 return (int)Char.ToLower((char)charVal);
             } else {
-                return (int)Char.ToLowerInvariant((char)charVal);
+                return (int)Char.ToLower((char)charVal, CultureInfo.InvariantCulture);
             }
         }
 
@@ -40,4 +42,3 @@ namespace IronPython.Modules {
         }
     }
 }
-#endif

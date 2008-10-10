@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Com {
 
         #region MetaObject
 
-        public override MetaObject Convert(ConvertAction action, MetaObject[] args) {
+        public override MetaObject Convert(ConvertAction action) {
             ContractUtils.RequiresNotNull(action, "action");
             if (action.ToType.IsInterface) {
                 // Converting a COM object to any interface is always considered possible - it will result in 
@@ -35,16 +35,16 @@ namespace Microsoft.Scripting.Com {
                 return new MetaObject(
                      Expression.Convert(
                          Expression.Property(
-                             Expression.ConvertHelper(args[0].Expression, typeof(GenericComObject)),
+                             Expression.ConvertHelper(Expression, typeof(GenericComObject)),
                              typeof(ComObject).GetProperty("Obj")
                          ),
                          action.ToType
                      ),
-                    args[0].Restrictions.Merge(Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType))
+                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, LimitType))
                 );
             }
 
-            return base.Convert(action, args);
+            return base.Convert(action);
         }
 
         #endregion

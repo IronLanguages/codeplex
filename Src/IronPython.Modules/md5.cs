@@ -54,6 +54,7 @@ namespace IronPython.Modules {
         public class md5 : ICloneable {
             byte[] _bytes;
             byte[] _hash;
+            public const int digest_size = 16;
 
             public md5() : this(new byte[0]) { }
 

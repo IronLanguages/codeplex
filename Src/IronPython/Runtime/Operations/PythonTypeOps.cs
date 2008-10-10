@@ -810,17 +810,25 @@ namespace IronPython.Runtime.Operations {
         /// If we have only interfaces, we'll need to insert object's base
         /// </summary>
         internal static PythonTuple EnsureBaseType(PythonTuple bases) {
+            bool hasInterface = false;
             foreach (object baseClass in bases) {
                 if (baseClass is OldClass) continue;
 
                 PythonType dt = baseClass as PythonType;
 
-                if (!dt.UnderlyingSystemType.IsInterface)
+                if (!dt.UnderlyingSystemType.IsInterface) {
                     return bases;
+                } else {
+                    hasInterface = true;
+                }
             }
 
-            // We found only interfaces. We need do add System.Object to the bases
-            return new PythonTuple(bases, TypeCache.Object);
+            if (hasInterface || bases.Count == 0) {
+                // We found only interfaces. We need do add System.Object to the bases
+                return new PythonTuple(bases, TypeCache.Object);
+            }
+
+            throw PythonOps.TypeError("a new-style class can't have only classic bases");
         }
 
         internal static Type GetFinalSystemType(Type type) {

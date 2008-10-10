@@ -84,10 +84,7 @@ def test_methodEquality():
     d[com_obj.IntArguments] = "IntArguments"
     d[com_obj.SumArgs] = "SumArgs2"
     d[com_obj2.SumArgs] = "obj2_SumArgs"
-    if preferComDispatch:
-        AreEqual(d, {com_obj.SumArgs:"SumArgs2", com_obj.IntArguments:"IntArguments", com_obj2.SumArgs:"obj2_SumArgs"})
-    else:
-        print "CodePlex 18639"
+    AreEqual(d, {com_obj.SumArgs:"SumArgs2", com_obj.IntArguments:"IntArguments", com_obj2.SumArgs:"obj2_SumArgs"})
 
 def test_namedArgs():
     # Named arguments
