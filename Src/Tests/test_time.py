@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import time
 
@@ -87,6 +87,9 @@ def test_sleep():
         Assert(y-x < sleep_time*(1+safe_deviation))  # make sure we're close...
 
 def test_dst():
+    if is_silverlight:
+        print "Dev10 524020"
+        return
     AreEqual(time.altzone, time.timezone+[3600,-3600][time.daylight])
     t = time.time()
     AreEqual(time.mktime(time.gmtime(t))-time.mktime(time.localtime(t)), time.timezone)

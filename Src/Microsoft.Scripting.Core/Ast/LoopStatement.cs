@@ -22,18 +22,21 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _increment;
         private readonly Expression _body;
         private readonly Expression _else;
-        private readonly LabelTarget _label;
+        private readonly LabelTarget _break;
+        private readonly LabelTarget _continue;
+
 
         /// <summary>
         /// Null test means infinite loop.
         /// </summary>
-        internal LoopStatement(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else)
+        internal LoopStatement(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, Annotations annotations)
             : base(ExpressionType.LoopStatement, typeof(void), annotations) {
             _test = test;
             _increment = increment;
             _body = body;
             _else = @else;
-            _label = label;
+            _break = @break;
+            _continue = @continue;
         }
 
         public Expression Test {
@@ -52,8 +55,12 @@ namespace Microsoft.Linq.Expressions {
             get { return _else; }
         }
 
-        new public LabelTarget Label {
-            get { return _label; }
+        public LabelTarget BreakLabel {
+            get { return _break; }
+        }
+
+        public LabelTarget ContinueLabel {
+            get { return _continue; }
         }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
@@ -66,11 +73,11 @@ namespace Microsoft.Linq.Expressions {
     /// TODO: review which of these overloads we actually need
     /// </summary>
     public partial class Expression {
-        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label) {
-            return Loop(test, increment, body, @else, label, Annotations.Empty);
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue) {
+            return Loop(test, increment, body, @else, @break, @continue, null);
         }
 
-        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label, Annotations annotations) {
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, Annotations annotations) {
             RequiresCanRead(body, "body");
             if (test != null) {
                 RequiresCanRead(test, "test");
@@ -82,7 +89,10 @@ namespace Microsoft.Linq.Expressions {
             if (@else != null) {
                 RequiresCanRead(@else, "else");
             }
-            return new LoopStatement(annotations, label, test, increment, body, @else);
+            // TODO: lift the restriction on break, and allow loops to have non-void type
+            ContractUtils.Requires(@break == null || @break.Type == typeof(void), "break", Strings.LabelTypeMustBeVoid);
+            ContractUtils.Requires(@continue == null || @continue.Type == typeof(void), "continue", Strings.LabelTypeMustBeVoid);
+            return new LoopStatement(test, increment, body, @else, @break, @continue, annotations);
         }
     }
 }

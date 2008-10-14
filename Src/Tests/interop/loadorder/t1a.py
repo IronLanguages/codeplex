@@ -13,7 +13,7 @@
 #
 #####################################################################################
     
-from lib.assert_util import *
+from iptest.assert_util import *
 
 add_clr_assemblies("loadorder_1a")
 

@@ -22,34 +22,31 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static LoopStatement While(Expression test, Expression body, Expression @else) {
-            return Expression.Loop(test, null, body, @else, null);
+            return Expression.Loop(test, null, body, @else, null, null);
         }
 
-        public static LoopStatement While(Expression test, Expression body, Expression @else, LabelTarget label) {
-            return Expression.Loop(test, null, body, @else, label);
+        public static LoopStatement While(Expression test, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue) {
+            return Expression.Loop(test, null, body, @else, @break, @continue);
         }
 
-        public static LoopStatement While(Expression test, Expression body, Expression @else, LabelTarget label, SourceLocation header, SourceSpan span) {
-            return Expression.Loop(test, null, body, @else, label, Expression.Annotate(header, span));
+        public static LoopStatement While(Expression test, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, SourceLocation header, SourceSpan span) {
+            return Expression.Loop(test, null, body, @else, @break, @continue, Expression.Annotate(header, span));
         }
-
 
         public static LoopStatement Infinite(Expression body) {
-            return Expression.Loop(null, null, body, null, null);
+            return Expression.Loop(null, null, body, null, null, null);
         }
 
-        public static LoopStatement Infinite(Expression body, LabelTarget label) {
-            return Expression.Loop(null, null, body, null, label);
+        public static LoopStatement Infinite(Expression body, LabelTarget @break, LabelTarget @continue) {
+            return Expression.Loop(null, null, body, null, @break, @continue);
         }
-
 
         public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else) {
-            return Expression.Loop(test, increment, body, @else, null);
+            return Expression.Loop(test, increment, body, @else, null, null);
         }
 
-
-        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget label, SourceLocation header, SourceSpan span) {
-            return Expression.Loop(test, increment, body, @else, label, Expression.Annotate(span, header));
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, SourceLocation header, SourceSpan span) {
+            return Expression.Loop(test, increment, body, @else, @break, @continue, Expression.Annotate(span, header));
         }
     }
 }

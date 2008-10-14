@@ -1,0 +1,93 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Public License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Public License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
+
+namespace Microsoft.Scripting.Ast {
+    /// <summary>
+    /// Represents either a YieldBreak or YieldReturn in a GeneratorExpression
+    /// If Value is non-null, it's a YieldReturn; otherwise it's a YieldBreak
+    /// and executing it will stop enumeration of the generator, causing
+    /// MoveNext to return false.
+    /// </summary>
+    public sealed class YieldExpression : Expression {
+        private readonly LabelTarget _target;
+        private readonly Expression _value;
+
+        internal YieldExpression(LabelTarget target, Expression value, Annotations annotations)
+            : base(typeof(void), false, annotations) {
+            _target = target;
+            _value = value;
+        }
+
+        /// <summary>
+        /// The value yieled from this expression, if it is a yield return
+        /// </summary>
+        public Expression Value {
+            get { return _value; }
+        }
+
+        /// <summary>
+        /// The label used to yield from this generator
+        /// </summary>
+        public LabelTarget Target {
+            get { return _target; }
+        }
+                
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            Expression v = visitor.Visit(_value);
+            if (v == _value) {
+                return this;
+            }
+            return Utils.MakeYield(_target, v, Annotations);
+        }
+    }
+
+    public partial class Utils {
+        public static YieldExpression YieldBreak(LabelTarget target) {
+            return MakeYield(target, null, null);
+        }
+        public static YieldExpression YieldBreak(LabelTarget target, Annotations annotations) {
+            return MakeYield(target, null, annotations);
+        }
+        public static YieldExpression YieldReturn(LabelTarget target, Expression value) {
+            return MakeYield(target, value, null);
+        }
+        public static YieldExpression YieldReturn(LabelTarget target, Expression value, Annotations annotations) {
+            ContractUtils.RequiresNotNull(value, "value");
+            return MakeYield(target, value, annotations);
+        }
+        public static YieldExpression MakeYield(LabelTarget target, Expression value, Annotations annotations) {
+            ContractUtils.RequiresNotNull(target, "target");
+            ContractUtils.Requires(target.Type != typeof(void), "target", "generator label must have a non-void type");
+            if (value != null) {
+                ContractUtils.Requires(value.CanRead, "value", "must be readable");
+
+                if (!TypeUtils.AreReferenceAssignable(target.Type, value.Type)) {
+                    // C# autoquotes generator return values
+                    if (target.Type.IsSubclassOf(typeof(Expression)) &&
+                        TypeUtils.AreAssignable(target.Type, value.GetType())) {
+                        value = Expression.Quote(value);
+                    }
+                    throw new ArgumentException(string.Format("Expression of type '{0}' cannot be yielded to a generator label of type '{1}'", value.Type, target.Type));
+                }
+            }
+
+            return new YieldExpression(target, value, annotations);
+        }
+    }
+}

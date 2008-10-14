@@ -119,13 +119,13 @@ namespace IronPython.Runtime.Binding {
             } else {
                 RestrictTypes(types);
 
-                VariableExpression curIndex = Ast.Variable(typeof(int), "count");
+                ParameterExpression curIndex = Ast.Variable(typeof(int), "count");
                 sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.GetItem, types[0], new MetaObject(curIndex, Restrictions.Empty));
                 if (sf.Success) {
                     // defines __getitem__, need to loop over the indexes and see if we match
 
-                    VariableExpression getItemRes = Ast.Variable(sf.ReturnType, "getItemRes");
-                    VariableExpression containsRes = Ast.Variable(typeof(bool), "containsRes");
+                    ParameterExpression getItemRes = Ast.Variable(sf.ReturnType, "getItemRes");
+                    ParameterExpression containsRes = Ast.Variable(typeof(bool), "containsRes");
 
                     LabelTarget target = Ast.Label();
                     res = new MetaObject(
@@ -162,7 +162,8 @@ namespace IronPython.Runtime.Binding {
                                         )
                                     ),
                                     null,                                               // loop else
-                                    target                                              // label target
+                                    target,                                             // break label target
+                                    null
                                 ),
                                 containsRes
                             ),
@@ -600,7 +601,7 @@ namespace IronPython.Runtime.Binding {
         private static bool MakeOneCompareGeneric(SlotOrFunction/*!*/ target, bool reverse, MetaObject/*!*/[]/*!*/ types, ComparisonHelper returner, ConditionalBuilder/*!*/ bodyBuilder) {
             if (target == SlotOrFunction.Empty || !target.Success) return true;
 
-            VariableExpression tmp;
+            ParameterExpression tmp;
 
             if (target.ReturnType == typeof(bool)) {
                 tmp = bodyBuilder.CompareRetBool;
@@ -642,7 +643,7 @@ namespace IronPython.Runtime.Binding {
             } else if (target.MaybeNotImplemented) {
                 Debug.Assert(target.ReturnType == typeof(object));
 
-                VariableExpression tmp = Ast.Variable(typeof(object), "slot");
+                ParameterExpression tmp = Ast.Variable(typeof(object), "slot");
                 bodyBuilder.AddVariable(tmp);
 
                 bodyBuilder.AddCondition(
@@ -685,8 +686,8 @@ namespace IronPython.Runtime.Binding {
             //      tmp :
             //      RestOfOperation
             //
-            VariableExpression callable = Ast.Variable(typeof(object), "slot");
-            VariableExpression tmp = Ast.Variable(typeof(object), "slot");
+            ParameterExpression callable = Ast.Variable(typeof(object), "slot");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "slot");
 
             bodyBuilder.AddCondition(
                 Ast.AndAlso(
@@ -732,8 +733,8 @@ namespace IronPython.Runtime.Binding {
         /// calls __coerce__ for old-style classes and performs the operation if the coercion is successful.
         /// </summary>
         private static void DoCoerce(OperationAction/*!*/ operation, ConditionalBuilder/*!*/ bodyBuilder, string op, MetaObject/*!*/[]/*!*/ types, bool reverse, Func<Expression, Expression> returnTransform) {
-            VariableExpression coerceResult = Ast.Variable(typeof(object), "coerceResult");
-            VariableExpression coerceTuple = Ast.Variable(typeof(PythonTuple), "coerceTuple");
+            ParameterExpression coerceResult = Ast.Variable(typeof(object), "coerceResult");
+            ParameterExpression coerceTuple = Ast.Variable(typeof(PythonTuple), "coerceTuple");
 
             if (!bodyBuilder.TestCoercionRecursionCheck) {
                 // during coercion we need to enforce recursion limits if
@@ -797,14 +798,14 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private static MethodCallExpression/*!*/ CoerceTwo(VariableExpression/*!*/ coerceTuple) {
+        private static MethodCallExpression/*!*/ CoerceTwo(ParameterExpression/*!*/ coerceTuple) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetCoerceResultTwo"),
                 coerceTuple
             );
         }
 
-        private static MethodCallExpression/*!*/ CoerceOne(VariableExpression/*!*/ coerceTuple) {
+        private static MethodCallExpression/*!*/ CoerceOne(ParameterExpression/*!*/ coerceTuple) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetCoerceResultOne"),
                 coerceTuple
@@ -890,6 +891,11 @@ namespace IronPython.Runtime.Binding {
         /// Makes the comparison rule which returns an int (-1, 0, 1).  TODO: Better name?
         /// </summary>
         private static MetaObject/*!*/ MakeSortComparisonRule(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation) {
+            MetaObject fastPath = FastPathCompare(types);
+            if (fastPath != null) {
+                return fastPath;
+            }
+
             string op = operation.Operation;
 
             // Python compare semantics: 
@@ -1004,6 +1010,50 @@ namespace IronPython.Runtime.Binding {
             }
 
             return bodyBuilder.GetMetaObject(types);
+        }
+
+        private static MetaObject FastPathCompare(MetaObject/*!*/[] types) {
+            if (types[0].LimitType == types[1].LimitType) {
+                // fast paths for comparing some types which don't define __cmp__
+                if (types[0].LimitType == typeof(List)) {
+                    types[0] = types[0].Restrict(typeof(List));
+                    types[1] = types[1].Restrict(typeof(List));
+
+                    return new MetaObject(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CompareLists"),
+                            types[0].Expression,
+                            types[1].Expression
+                        ),
+                        Restrictions.Combine(types)
+                    );
+                } else if (types[0].LimitType == typeof(PythonTuple)) {
+                    types[0] = types[0].Restrict(typeof(PythonTuple));
+                    types[1] = types[1].Restrict(typeof(PythonTuple));
+
+                    return new MetaObject(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CompareTuples"),
+                            types[0].Expression,
+                            types[1].Expression
+                        ),
+                        Restrictions.Combine(types)
+                    );
+                } else if (types[0].LimitType == typeof(double)) {
+                    types[0] = types[0].Restrict(typeof(double));
+                    types[1] = types[1].Restrict(typeof(double));
+
+                    return new MetaObject(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CompareFloats"),
+                            types[0].Expression,
+                            types[1].Expression
+                        ),
+                        Restrictions.Combine(types)
+                    );
+                }
+            }
+            return null;
         }
 
         private static void MakeCompareToZero(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse) {
@@ -1448,7 +1498,7 @@ namespace IronPython.Runtime.Binding {
         /// Derived IndexBuilder for calling __*slice__ methods
         /// </summary>
         class SliceBuilder : IndexBuilder {
-            private VariableExpression _lengthVar;        // Nullable<int>, assigned if we need to calculate the length of the object during the call.
+            private ParameterExpression _lengthVar;        // Nullable<int>, assigned if we need to calculate the length of the object during the call.
 
             public SliceBuilder(MetaObject/*!*/[]/*!*/ types, Callable/*!*/ callable)
                 : base(types, callable) {

@@ -235,7 +235,7 @@ namespace IronPython.Compiler.Ast {
 
             // Transform the parameters.
             // Populate the list of the parameter names and defaults.
-            List<MSAst.Expression> defaults = new List<MSAst.Expression>();
+            List<MSAst.Expression> defaults = new List<MSAst.Expression>(0);
             List<MSAst.Expression> names = new List<MSAst.Expression>();
             TransformParameters(ag, bodyGen, defaults, names);
 
@@ -257,7 +257,7 @@ namespace IronPython.Compiler.Ast {
                 statements.Add(s1);
             }
             
-            MSAst.VariableExpression extracted = null;
+            MSAst.ParameterExpression extracted = null;
             if (!IsGenerator && _canSetSysExcInfo) {
                 // need to allocate the exception here so we don't share w/ exceptions made & freed
                 // during the body.
@@ -312,7 +312,7 @@ namespace IronPython.Compiler.Ast {
             
             MSAst.Expression code;
             if (IsGenerator) {
-                code = bodyGen.Block.MakeGenerator(GetGeneratorDelegateType(_parameters, needsWrapperMethod));
+                code = bodyGen.Block.MakeGenerator(bodyGen.GeneratorLabel, GetGeneratorDelegateType(_parameters, needsWrapperMethod));
                 flags |= FunctionAttributes.Generator;
             } else {
                 code = bodyGen.Block.MakeLambda(GetDelegateType(_parameters, needsWrapperMethod));

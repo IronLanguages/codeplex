@@ -17,7 +17,7 @@
 ## Testing list comprehension
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 ## positive
 

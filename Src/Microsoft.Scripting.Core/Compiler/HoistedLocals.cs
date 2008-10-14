@@ -15,6 +15,8 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
@@ -62,15 +64,15 @@ namespace Microsoft.Linq.Expressions.Compiler {
         internal readonly ReadOnlyDictionary<Expression, int> Indexes;
 
         // The variables, in the order they appear in the array
-        internal readonly ReadOnlyCollection<Expression> Variables;
+        internal readonly ReadOnlyCollection<ParameterExpression> Variables;
 
         // A virtual variable for accessing this locals array
-        internal readonly VariableExpression SelfVariable;
+        internal readonly ParameterExpression SelfVariable;
 
-        internal HoistedLocals(HoistedLocals parent, VariableExpression selfVar, ReadOnlyCollection<Expression> vars) {
+        internal HoistedLocals(HoistedLocals parent, ParameterExpression selfVar, ReadOnlyCollection<ParameterExpression> vars) {
             if (parent != null) {
                 // Add the parent locals array as the 0th element in the array
-                vars = new ReadOnlyCollection<Expression>(vars.AddFirst(parent.SelfVariable));
+                vars = new ReadOnlyCollection<ParameterExpression>(vars.AddFirst(parent.SelfVariable));
             }
 
             Dictionary<Expression, int> indexes = new Dictionary<Expression, int>(vars.Count);
@@ -84,12 +86,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Indexes = new ReadOnlyDictionary<Expression, int>(indexes);
         }
 
-        internal VariableExpression ParentVariable {
+        internal ParameterExpression ParentVariable {
             get { return Parent != null ? Parent.SelfVariable : null; }
         }
 
         internal static object[] GetParent(object[] locals) {
-            return (object[])locals[0];
+            return ((StrongBox<object[]>)locals[0]).Value;
         }
     }
 }

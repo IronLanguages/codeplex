@@ -13,8 +13,8 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
-from lib.misc_util import ip_supported_encodings
+from iptest.assert_util import *
+from iptest.misc_util import ip_supported_encodings
 
 def test_raw_unicode_escape():
     for raw_unicode_escape in ['raw-unicode-escape', 'raw unicode escape']:

@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Microsoft.Linq.Expressions;
@@ -185,8 +186,8 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        protected override MethodBuilder CompileForSave(TypeGen typeGen, string name) {
-            ToDiskRewriter diskRewriter = new ToDiskRewriter(typeGen);
+        protected override MethodBuilder CompileForSave(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict, string name) {
+            ToDiskRewriter diskRewriter = new ToDiskRewriter(typeGen, symbolDict);
             LambdaExpression lambda = diskRewriter.RewriteLambda(Code, name);
             MethodBuilder builder = lambda.CompileToMethod(typeGen.TypeBuilder, CompilerHelpers.PublicStatic | MethodAttributes.SpecialName, false);
 
@@ -196,34 +197,6 @@ namespace Microsoft.Scripting.Runtime {
             ));
 
             return builder;
-        }
-
-        public static OptimizedScriptCode TryLoad(MethodInfo method, LanguageContext language) {
-            ContractUtils.RequiresNotNull(method, "method");
-            object[] attrs = method.GetCustomAttributes(typeof(CachedOptimizedCodeAttribute), false);
-            if (attrs.Length != 1) {
-                return null;
-            }
-
-            // create the CompilerContext for the ScriptCode
-            CachedOptimizedCodeAttribute optimizedCode = (CachedOptimizedCodeAttribute)attrs[0];
-
-            // create the storage for the global scope
-            GlobalsDictionary dict = new GlobalsDictionary(SymbolTable.StringsToIds(optimizedCode.Names));
-
-            // create the CodeContext for the code from the storage
-            Scope scope = new Scope(dict);
-            CodeContext context = new CodeContext(scope, language);
-
-            // initialize the tuple
-            IModuleDictionaryInitialization ici = dict as IModuleDictionaryInitialization;
-            if (ici != null) {
-                ici.InitializeModuleDictionary(context);
-            }
-
-            // finally generate the ScriptCode
-            SourceUnit su = new SourceUnit(language, NullTextContentProvider.Null, method.Name, SourceCodeKind.File);
-            return new OptimizedScriptCode(scope, (DlrMainCallTarget)Delegate.CreateDelegate(typeof(DlrMainCallTarget), method), su);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]

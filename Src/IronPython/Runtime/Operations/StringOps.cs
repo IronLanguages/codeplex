@@ -49,39 +49,7 @@ namespace IronPython.Runtime.Operations {
             return StringOps.Quote(Value);
         }
 
-        #endregion
-
-        #region IRichComparable Members
-
-        [return: MaybeNotImplemented]
-        public static object operator >(ExtensibleString self, object other) {
-            object res = StringOps.__cmp__(self.Value, other);
-            if (res is int) return ((int)res) > 0;
-            return NotImplementedType.Value;
-        }
-
-        [return: MaybeNotImplemented]
-        public static object operator <(ExtensibleString self, object other) {
-            object res = StringOps.__cmp__(self.Value, other);
-            if (res is int) return ((int)res) < 0;
-            return NotImplementedType.Value;
-        }
-
-        [return: MaybeNotImplemented]
-        public static object operator >=(ExtensibleString self, object other) {
-            object res = StringOps.__cmp__(self.Value, other);
-            if (res is int) return ((int)res) >= 0;
-            return NotImplementedType.Value;
-        }
-
-        [return: MaybeNotImplemented]
-        public static object operator <=(ExtensibleString self, object other) {
-            object res = StringOps.__cmp__(self.Value, other);
-            if (res is int) return ((int)res) <= 0;
-            return NotImplementedType.Value;
-        }
-        
-        #endregion
+        #endregion        
 
         [return: MaybeNotImplemented]
         public object __eq__(object other) {
@@ -1230,25 +1198,19 @@ namespace IronPython.Runtime.Operations {
             return StringOps.GetEnumerable(s);
         }
 
-        [return: MaybeNotImplemented]
-        public static object __cmp__(string self, object obj) {
-            if (obj == null) return 1;
-
-            string otherStr;
-
-            if (obj is string) {
-                otherStr = (string)obj;
-            } else if (obj is ExtensibleString) {
-                otherStr = ((ExtensibleString)obj).Value;
-            } else if (obj is char && self.Length == 1) {
-                return (int)(self[0] - (char)obj);
-            } else {
-                return NotImplementedType.Value;
-            }
-
-            int ret = string.CompareOrdinal(self, otherStr);
+        public static int __cmp__(string self, string obj) {
+            int ret = string.CompareOrdinal(self, obj);
             return ret == 0 ? 0 : (ret < 0 ? -1 : +1);
         }
+
+        public static int __cmp__(string self, ExtensibleString obj) {
+            int ret = string.CompareOrdinal(self, obj.Value);
+            return ret == 0 ? 0 : (ret < 0 ? -1 : +1);
+        }
+
+        public static int __cmp__(string self, char obj) {
+            return (int)(self[0] - (char)obj);
+        }        
 
         public static object __getnewargs__(CodeContext/*!*/ context, string self) {
             if (!Object.ReferenceEquals(self, null)) {

@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 #############################################################
 # Helper functions for verifying the calls.  On each call

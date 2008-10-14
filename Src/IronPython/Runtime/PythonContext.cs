@@ -115,6 +115,10 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, object, IEnumerable>> _tryIEnumerableSite;
         private Dictionary<Type, CallSite<Func<CallSite, object, object>>> _implicitConvertSites;
         private Dictionary<string, CallSite<Func<CallSite, object, object, object>>> _binarySites;
+        private Dictionary<Type, DefaultPythonComparer> _defaultComparer;
+        private CallSite<Func<CallSite, CodeContext, object, object, object, int>> _sharedFunctionCompareSite;
+        private CallSite<Func<CallSite, CodeContext, PythonFunction, object, object, int>> _sharedPythonFunctionCompareSite;
+        private CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object, int>> _sharedBuiltinFunctionCompareSite;
 
         private CompiledLoader _compiledLoader;
         internal bool _importWarningThrows;
@@ -132,7 +136,8 @@ namespace IronPython.Runtime {
 
             DefaultContext.CreateContexts(manager, this);
 
-            PythonBinder binder = new PythonBinder(manager, this, DefaultContext.Default);
+            CodeContext defaultCtx = new CodeContext(new Scope(), this);
+            PythonBinder binder = new PythonBinder(manager, this, defaultCtx);
             Binder = binder;
             _defaultBinderState = new BinderState(binder, DefaultContext.Default);
 
@@ -528,7 +533,7 @@ namespace IronPython.Runtime {
             }
 
             PyAst.PythonNameBinder.BindAst(ast, context);
-
+            
             LambdaExpression res = ast.TransformToAst(context);
             disableInterpreter = ast.DisableInterpreter;
 #if DEBUG && !SILVERLIGHT
@@ -580,13 +585,9 @@ namespace IronPython.Runtime {
             return CompileSourceCode(sourceUnit, options, errorSink, false);
         }
 
-        protected override ScriptCode/*!*/ LoadCompiledCode(MethodInfo/*!*/ method) {
-            ScriptCode result = OptimizedScriptCode.TryLoad(method, this);
-            if (result != null) {
-                return result;
-            }
-
-            return base.LoadCompiledCode(method);
+        protected override ScriptCode/*!*/ LoadCompiledCode(DlrMainCallTarget/*!*/ method, string path) {            
+            SourceUnit su = new SourceUnit(this, NullTextContentProvider.Null, path, SourceCodeKind.File);
+            return new OnDiskScriptCode(method, su);
         }
 
         public override SourceCodeReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding/*!*/ defaultEncoding) {
@@ -2585,6 +2586,113 @@ namespace IronPython.Runtime {
             set {
                 base.Binder = value;
             }
+        }
+
+        private class DefaultPythonComparer : IComparer {
+            private CallSite<Func<CallSite, object, object, int>> _site;
+            public DefaultPythonComparer(PythonContext context) {
+                _site = CallSite<Func<CallSite, object, object, int>>.Create(
+                    Binders.BinaryOperationRetType(
+                        context.DefaultBinderState,
+                        StandardOperators.Compare,
+                        typeof(int)
+                    )
+                );
+            }
+
+            public int Compare(object x, object y) {
+                return _site.Target(_site, x, y);
+            }
+        }
+
+        private class FunctionComparer<T> : IComparer {
+            private T _cmpfunc;
+            private CallSite<Func<CallSite, CodeContext, T, object, object, int>> _funcSite;
+            private CodeContext/*!*/ _context;
+
+            public FunctionComparer(PythonContext/*!*/ context, T cmpfunc)
+                : this(context, cmpfunc, MakeCompareSite<T>(context)) { 
+            }
+            
+            public FunctionComparer(PythonContext/*!*/ context, T cmpfunc, CallSite<Func<CallSite, CodeContext, T, object, object, int>> site) {
+                _cmpfunc = cmpfunc;
+                _context = context.DefaultBinderState.Context;
+                _funcSite = site;
+            }
+
+            public int Compare(object o1, object o2) {
+                return _funcSite.Target(_funcSite, _context, _cmpfunc, o1, o2);
+            }
+        }
+
+        private static CallSite<Func<CallSite, CodeContext, T, object, object, int>> MakeCompareSite<T>(PythonContext context) {
+            return CallSite<Func<CallSite, CodeContext, T, object, object, int>>.Create(
+                Binders.InvokeAndConvert(
+                    context.DefaultBinderState,
+                    2,
+                    typeof(int)
+                )
+            );
+        }
+
+        /// <summary>
+        /// Gets a function which can be used for comparing two values.  If cmp is not null
+        /// then the comparison will use the provided comparison function.  Otherwise
+        /// it will use the normal Python semantics.
+        /// 
+        /// If type is null then a generic comparison function is returned.  If type is 
+        /// not null a comparison function is returned that's used for just that type.
+        /// </summary>
+        internal IComparer GetComparer(object cmp, Type type) {
+            if (type == null) {
+                // no type information, return the generic version...                
+                if (cmp == null) {
+                    return new DefaultPythonComparer(this);
+                } else if (cmp is PythonFunction) {
+                    return new FunctionComparer<PythonFunction>(this, (PythonFunction)cmp);
+                } else if (cmp is BuiltinFunction) {
+                    return new FunctionComparer<BuiltinFunction>(this, (BuiltinFunction)cmp);
+                }
+
+                return new FunctionComparer<object>(this, cmp);
+            }
+
+            if (cmp == null) {
+                if (_defaultComparer == null) {
+                    Interlocked.CompareExchange(
+                        ref _defaultComparer,
+                        new Dictionary<Type, DefaultPythonComparer>(),
+                        null
+                    );
+                }
+
+                lock (_defaultComparer) {
+                    DefaultPythonComparer comparer;
+                    if (!_defaultComparer.TryGetValue(type, out comparer)) {
+                        _defaultComparer[type] = comparer = new DefaultPythonComparer(this);
+                    }
+                    return comparer;
+                }
+            } else if (cmp is PythonFunction) {
+                if (_sharedPythonFunctionCompareSite == null) {
+                    _sharedPythonFunctionCompareSite = MakeCompareSite<PythonFunction>(this);
+                }
+
+                return new FunctionComparer<PythonFunction>(this, (PythonFunction)cmp, _sharedPythonFunctionCompareSite);
+            } else if (cmp is BuiltinFunction) {
+                if (_sharedBuiltinFunctionCompareSite == null) {
+                    _sharedBuiltinFunctionCompareSite = MakeCompareSite<BuiltinFunction>(this);
+                }
+
+                return new FunctionComparer<BuiltinFunction>(this, (BuiltinFunction)cmp, _sharedBuiltinFunctionCompareSite);
+            }
+
+            if (_sharedFunctionCompareSite == null) {
+                _sharedFunctionCompareSite = MakeCompareSite<object>(this);
+            }
+
+            return new FunctionComparer<object>(this, cmp, _sharedFunctionCompareSite);
+            
         }
     }
 

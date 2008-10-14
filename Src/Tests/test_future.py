@@ -18,7 +18,7 @@
 ##
 
 from __future__ import division
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # the following are alway true in current context
 def always_true():

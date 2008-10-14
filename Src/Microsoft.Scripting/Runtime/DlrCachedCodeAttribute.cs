@@ -14,7 +14,6 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
@@ -22,20 +21,8 @@ namespace Microsoft.Scripting.Runtime {
     /// An attribute that is applied to saved ScriptCode's to be used to re-create the ScriptCode
     /// from disk.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     public sealed class DlrCachedCodeAttribute : Attribute {
-        private readonly Type _languageContextType;
-
-        public DlrCachedCodeAttribute(Type languageContextType) {
-            ContractUtils.RequiresNotNull(languageContextType, "languageContextType");
-            _languageContextType = languageContextType;
-        }
-
-        public Type LanguageContextType {
-            get {
-                return _languageContextType;
-            }
-        }
     }
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]

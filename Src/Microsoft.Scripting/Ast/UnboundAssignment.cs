@@ -12,12 +12,13 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
+
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System; using Microsoft;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundAssignment : Expression {
@@ -50,6 +51,14 @@ namespace Microsoft.Scripting.Ast {
                 }
             );
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            Expression v = visitor.Visit(_value);
+            if (v == _value) {
+                return this;
+            }
+            return Utils.Assign(_name, v, Annotations);
+        }
     }
 
     /// <summary>
@@ -57,12 +66,16 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static UnboundAssignment Assign(SymbolId name, Expression value) {
-            return Assign(name, value, SourceSpan.None);
+            return Assign(name, value, Expression.Annotate(SourceSpan.None));
         }
+        [Obsolete("use Assign(name, value, Expression.Annotate(span)) instead")]
         public static UnboundAssignment Assign(SymbolId name, Expression value, SourceSpan span) {
+            return Assign(name, value, Expression.Annotate(span));
+        }
+        public static UnboundAssignment Assign(SymbolId name, Expression value, Annotations annotations) {
             ContractUtils.Requires(!name.IsEmpty && !name.IsInvalid, "name", "Invalid or empty name is not allowed");
             ContractUtils.RequiresNotNull(value, "value");
-            return new UnboundAssignment(Expression.Annotate(span), name, value);
+            return new UnboundAssignment(annotations, name, value);
         }
     }
 }

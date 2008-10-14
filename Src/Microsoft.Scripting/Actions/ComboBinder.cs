@@ -44,7 +44,7 @@ namespace Microsoft.Scripting.Actions {
 
             List<MetaObject> results = new List<MetaObject>(_metaBinders.Length);
             List<Expression> steps = new List<Expression>();
-            List<VariableExpression> temps = new List<VariableExpression>();
+            List<ParameterExpression> temps = new List<ParameterExpression>();
             Restrictions restrictions = Restrictions.Empty;
 
             for (int i = 0; i < _metaBinders.Length; i++) {
@@ -60,7 +60,7 @@ namespace Microsoft.Scripting.Actions {
                     break;
                 }
 
-                VariableExpression tmp = Expression.Variable(next.Expression.Type, "comboTemp" + i.ToString());
+                ParameterExpression tmp = Expression.Variable(next.Expression.Type, "comboTemp" + i.ToString());
                 temps.Add(tmp);
 
                 steps.Add(Expression.Assign(tmp, next.Expression));

@@ -12,14 +12,16 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
-        public static BreakStatement Break(LabelTarget target, SourceSpan span) {
-            return Expression.Break(target, Expression.Annotate(span));
+        [Obsolete("Use Expression.Break(target, null, Expression.Annotate(span)) instead")]
+        public static GotoExpression Break(LabelTarget target, SourceSpan span) {
+            return Expression.Break(target, null, Expression.Annotate(span));
         }
     }
 }

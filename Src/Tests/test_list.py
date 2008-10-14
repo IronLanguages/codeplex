@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def test_extend_self():
     l=['a','b','c']
@@ -28,7 +28,7 @@ def test_append_self():
     AreEqual(str(a), "['a', 'b', 'c', [...]]")
 
     ## file
-    from lib.file_util import path_combine
+    from iptest.file_util import path_combine
     fn = path_combine(testpath.temporary_dir, "testfile.txt")
 
     fo = open(fn, "wb")

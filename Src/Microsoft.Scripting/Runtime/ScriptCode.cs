@@ -24,6 +24,7 @@ using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -95,25 +96,22 @@ namespace Microsoft.Scripting {
             return _target;
         }
 
-        internal void CompileToDisk(TypeGen typeGen) {
+        internal MethodBuilder CompileToDisk(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict) {
             if (_code == null) {
                 throw Error.NoCodeToCompile();
             }
 
-            MethodBuilder mb = CompileForSave(typeGen, SourceUnit.Path);
-            mb.SetCustomAttribute(new CustomAttributeBuilder(
-                typeof(DlrCachedCodeAttribute).GetConstructor(new Type[] { typeof(Type) }),
-                new object[] { LanguageContext.GetType() }
-            ));
+            MethodBuilder mb = CompileForSave(typeGen, symbolDict, SourceUnit.Path);
+            return mb;
         }
 
-        public static ScriptCode Load(MethodInfo method, LanguageContext language) {
-            SourceUnit su = new SourceUnit(language, NullTextContentProvider.Null, method.Name, SourceCodeKind.File);
-            return new ScriptCode(null, (DlrMainCallTarget)Delegate.CreateDelegate(typeof(DlrMainCallTarget), method), su);
+        public static ScriptCode Load(DlrMainCallTarget method, LanguageContext language, string path) {
+            SourceUnit su = new SourceUnit(language, NullTextContentProvider.Null, path, SourceCodeKind.File);
+            return new ScriptCode(null, method, su);
         }
 
-        protected virtual MethodBuilder CompileForSave(TypeGen typeGen, string name) {
-            LambdaExpression lambda = new ToDiskRewriter(typeGen).RewriteLambda(_code, name);
+        protected virtual MethodBuilder CompileForSave(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict, string name) {
+            LambdaExpression lambda = new ToDiskRewriter(typeGen, symbolDict).RewriteLambda(_code, name);
             return lambda.CompileToMethod(typeGen.TypeBuilder, CompilerHelpers.PublicStatic | MethodAttributes.SpecialName, false);
         }
 
@@ -143,11 +141,76 @@ namespace Microsoft.Scripting {
             AssemblyGen ag = new AssemblyGen(new AssemblyName(name), dir, ext, /*emitSymbols*/false);
             TypeBuilder tb = ag.DefinePublicType("DLRCachedCode", typeof(object), true);
             TypeGen tg = new TypeGen(ag, tb);
-
+            var symbolDict = new Dictionary<SymbolId, FieldBuilder>();
             // then compile all of the code
+
+            Dictionary<Type, List<KeyValuePair<MethodBuilder, ScriptCode>>> langCtxBuilders = new Dictionary<Type, List<KeyValuePair<MethodBuilder, ScriptCode>>>();
             foreach (ScriptCode sc in codes) {
-                sc.CompileToDisk(tg);
+                List<KeyValuePair<MethodBuilder, ScriptCode>> builders;
+                if (!langCtxBuilders.TryGetValue(sc.LanguageContext.GetType(), out builders)) {
+                    langCtxBuilders[sc.LanguageContext.GetType()] = builders = new List<KeyValuePair<MethodBuilder, ScriptCode>>();
+                }
+
+                builders.Add(
+                    new KeyValuePair<MethodBuilder, ScriptCode>(
+                        sc.CompileToDisk(tg, symbolDict),
+                        sc
+                    )
+                );
             }
+
+            MethodBuilder mb = tb.DefineMethod(
+                "GetScriptCodeInfo",
+                MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.Static,
+                typeof(Tuple<Type[], DlrMainCallTarget[][], string[][], object>),
+                Type.EmptyTypes);
+
+            ILGen ilgen = new ILGen(mb.GetILGenerator());
+
+            var langsWithBuilders = langCtxBuilders.ToArray();
+
+            // lang ctx array
+            ilgen.EmitArray(typeof(Type), langsWithBuilders.Length, (index) => {
+                ilgen.Emit(OpCodes.Ldtoken, langsWithBuilders[index].Key);
+                ilgen.EmitCall(typeof(Type).GetMethod("GetTypeFromHandle", new[] { typeof(RuntimeTypeHandle) }));
+            });
+
+            // builders array of array
+            ilgen.EmitArray(typeof(DlrMainCallTarget[]), langsWithBuilders.Length, (index) => {
+                List<KeyValuePair<MethodBuilder, ScriptCode>> builders = langsWithBuilders[index].Value;
+
+                ilgen.EmitArray(typeof(DlrMainCallTarget), builders.Count, (innerIndex) => {
+                    ilgen.EmitNull();
+                    ilgen.Emit(OpCodes.Ldftn, builders[innerIndex].Key);
+                    ilgen.EmitNew(
+                        typeof(DlrMainCallTarget),
+                        new[] { typeof(object), typeof(IntPtr) }
+                    );
+                });
+            });
+
+            // paths array of array
+            ilgen.EmitArray(typeof(string[]), langsWithBuilders.Length, (index) => {
+                List<KeyValuePair<MethodBuilder, ScriptCode>> builders = langsWithBuilders[index].Value;
+
+                ilgen.EmitArray(typeof(string), builders.Count, (innerIndex) => {
+                    ilgen.EmitString(builders[innerIndex].Value._sourceUnit.Path);
+                });
+            });
+
+            // 4th element in tuple - always null...
+            ilgen.EmitNull();
+
+            ilgen.EmitNew(
+                typeof(Tuple<Type[], DlrMainCallTarget[][], string[][], object>), 
+                new[] { typeof(Type[]), typeof(DlrMainCallTarget[][]), typeof(string[][]), typeof(object) }
+            );
+            ilgen.Emit(OpCodes.Ret);
+
+            mb.SetCustomAttribute(new CustomAttributeBuilder(
+                typeof(DlrCachedCodeAttribute).GetConstructor(Type.EmptyTypes),
+                ArrayUtils.EmptyObjects
+            ));
 
             tg.FinishType();
             ag.Dump();
@@ -175,25 +238,25 @@ namespace Microsoft.Scripting {
 
             List<ScriptCode> codes = new List<ScriptCode>();
 
-            // look for methods which are associated with a saved ScriptCode...
-            foreach (MethodInfo mi in t.GetMethods()) {
-                // we mark the methods as special name when we generate them because the 
-                // method name implies the filename.
-                if (!mi.IsSpecialName) {
-                    continue;
+            MethodInfo mi = t.GetMethod("GetScriptCodeInfo");
+            if (mi.IsSpecialName && mi.IsDefined(typeof(DlrCachedCodeAttribute), false)) {
+                Tuple<Type[], DlrMainCallTarget[][], string[][], object> infos = (Tuple<Type[], DlrMainCallTarget[][], string[][], object>)mi.Invoke(null, ArrayUtils.EmptyObjects);
+
+                for (int i = 0; i < infos.Item000.Length; i++) {
+                    Type curType = infos.Item000[i];
+                    LanguageContext lc = runtime.GetLanguage(curType);
+
+                    Debug.Assert(infos.Item001[i].Length == infos.Item002[i].Length);
+
+                    for (int j = 0; j < infos.Item001[i].Length; j++) {
+                        DlrMainCallTarget[] methods = infos.Item001[i];
+                        string[] names = infos.Item002[i];
+
+                        for(int k = 0; k<methods.Length; k++) {
+                            codes.Add(lc.LoadCompiledCode(methods[k], names[k]));
+                        }
+                    }
                 }
-
-                // we also put an attribute which contains additional information
-                object[] attrs = mi.GetCustomAttributes(typeof(DlrCachedCodeAttribute), false);
-                if (attrs.Length != 1) {
-                    continue;
-                }
-
-                DlrCachedCodeAttribute code = (DlrCachedCodeAttribute)attrs[0];
-
-                LanguageContext lc = runtime.GetLanguage(code.LanguageContextType);
-                ScriptCode sc = lc.LoadCompiledCode(mi);
-                codes.Add(sc);
             }
 
             return codes.ToArray();

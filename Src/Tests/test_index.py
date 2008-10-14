@@ -14,7 +14,7 @@
 #####################################################################################
 
 import sys
-from lib.assert_util import *
+from iptest.assert_util import *
 
 if is_cli or is_silverlight:
     import System

@@ -28,22 +28,19 @@ namespace Microsoft.Linq.Expressions {
     /// TODO: rename to RuntimeVariablesExpression
     /// </summary>
     public sealed class LocalScopeExpression : Expression {
-        private readonly ReadOnlyCollection<Expression> _variables;
+        private readonly ReadOnlyCollection<ParameterExpression> _variables;
 
         internal LocalScopeExpression(
             Annotations annotations,
-            ReadOnlyCollection<Expression> variables)
+            ReadOnlyCollection<ParameterExpression> variables)
             : base(ExpressionType.LocalScope, typeof(ILocalVariables), annotations) {
             _variables = variables;
         }
 
         /// <summary>
         /// The variables or parameters to provide access to
-        /// 
-        /// TODO: should VariableExpressions and ParameterExpressions be two
-        ///       seperate properties?
         /// </summary>
-        public ReadOnlyCollection<Expression> Variables {
+        public ReadOnlyCollection<ParameterExpression> Variables {
             get { return _variables; }
         }
 
@@ -56,27 +53,23 @@ namespace Microsoft.Linq.Expressions {
 
         // TODO: rename to RuntimeVariables
 
-        public static LocalScopeExpression AllVariables(params Expression[] variables) {
-            return AllVariables(Annotations.Empty, (IEnumerable<Expression>)variables);
+        public static LocalScopeExpression AllVariables(params ParameterExpression[] variables) {
+            return AllVariables(Annotations.Empty, (IEnumerable<ParameterExpression>)variables);
         }
-        public static LocalScopeExpression AllVariables(IEnumerable<Expression> variables) {
+        public static LocalScopeExpression AllVariables(IEnumerable<ParameterExpression> variables) {
             return AllVariables(Annotations.Empty, variables);
         }
-        public static LocalScopeExpression AllVariables(Annotations annotations, params Expression[] variables) {
-            return AllVariables(annotations, (IEnumerable<Expression>)variables);
+        public static LocalScopeExpression AllVariables(Annotations annotations, params ParameterExpression[] variables) {
+            return AllVariables(annotations, (IEnumerable<ParameterExpression>)variables);
         }
-        public static LocalScopeExpression AllVariables(Annotations annotations, IEnumerable<Expression> variables) {
+        public static LocalScopeExpression AllVariables(Annotations annotations, IEnumerable<ParameterExpression> variables) {
             ContractUtils.RequiresNotNull(variables, "variables");
 
-            ReadOnlyCollection<Expression> vars = variables.ToReadOnly();
+            var vars = variables.ToReadOnly();
             for (int i = 0; i < vars.Count; i++) {
                 Expression v = vars[i];
                 if (v == null) {
-                    throw new ArgumentNullException(string.Format(System.Globalization.CultureInfo.CurrentUICulture, "variables[{0}]", i));
-                }
-                ExpressionType kind = vars[i].NodeType;
-                if (kind != ExpressionType.Variable && kind != ExpressionType.Parameter) {
-                    throw Error.MustBeVariableOrParameter("variables");
+                    throw new ArgumentNullException("variables[" + i + "]");
                 }
             }
 

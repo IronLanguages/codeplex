@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 if is_cli or is_silverlight:
     from System import Int64, Byte, Int16
 import math

@@ -13,9 +13,9 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("silverlight")
-from lib.console_util import IronPythonInstance
+from iptest.console_util import IronPythonInstance
 import sys
 import nt
 import re

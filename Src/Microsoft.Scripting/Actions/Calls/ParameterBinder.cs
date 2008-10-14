@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// </summary>
     public class ParameterBinder {
         private readonly ActionBinder _actionBinder;
-        private List<VariableExpression> _temps;
+        private List<ParameterExpression> _temps;
 
         public ParameterBinder(ActionBinder actionBinder) {
             Assert.NotNull(actionBinder);
@@ -38,18 +38,18 @@ namespace Microsoft.Scripting.Actions.Calls {
             get { return _actionBinder; }
         }
 
-        internal List<VariableExpression> Temps {
+        internal List<ParameterExpression> Temps {
             get { return _temps; }
         }
 
-        internal VariableExpression GetTemporary(Type type, string name) {
+        internal ParameterExpression GetTemporary(Type type, string name) {
             Assert.NotNull(type, name);
 
             if (_temps == null) {
-                _temps = new List<VariableExpression>();
+                _temps = new List<ParameterExpression>();
             }
 
-            VariableExpression res = Expression.Variable(type, name);
+            ParameterExpression res = Expression.Variable(type, name);
             _temps.Add(res);
             return res;
         }

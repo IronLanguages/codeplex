@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using System.Threading;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {
@@ -116,29 +117,32 @@ namespace Microsoft.Scripting.Interpretation {
         }
     }
 
-    internal class GeneratorLambdaInvoker {
-        private readonly LambdaExpression _lambda;
+    internal sealed class GeneratorInvoker {
+        private readonly GeneratorExpression _generator;
         private readonly InterpreterState _state;
 
-        public GeneratorLambdaInvoker(LambdaExpression lambda, InterpreterState state) {
-            _lambda = lambda;
+        // Arbitrary constant, chosen to be different from "Finished"
+        private const int InterpretingGenerator = GeneratorRewriter.Finished + 1;
+
+        internal GeneratorInvoker(GeneratorExpression generator, InterpreterState state) {
+            _generator = generator;
             _state = state;
         }
 
         /// <summary>
         /// Triggers interpretation of the Lambda
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "generatorType")]
-        public bool Invoke(Generator generatorType, out object ret) {
-            object res = Interpreter.ExecuteGenerator(_state, _lambda.Body);
+        public void Invoke<T>(ref int state, ref T current) {
+            object res = Interpreter.ExecuteGenerator(_state, _generator.Body);
             ControlFlow cf = res as ControlFlow;
-            if (cf != null && cf.Kind == ControlFlowKind.Return) {
-                ret = cf.Value;
-                return true;
+            if (cf != null && cf.Kind == ControlFlowKind.Return && _state.CurrentYield != null) {
+                current = (T)cf.Value;
+                state = InterpretingGenerator;
+                return;
             }
 
-            ret = null;
-            return false;
+            //current = default(T);
+            state = GeneratorRewriter.Finished;
         }
     }
 }

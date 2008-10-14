@@ -25,7 +25,7 @@ TODO:
 
 '''
 
-from lib.assert_util import *
+from iptest.assert_util import *
    
 import System
 import clr

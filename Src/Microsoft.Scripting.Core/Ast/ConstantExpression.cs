@@ -24,6 +24,8 @@ namespace Microsoft.Linq.Expressions {
         internal static readonly ConstantExpression FalseLiteral = new ConstantExpression(null, false, typeof(bool));
         internal static readonly ConstantExpression ZeroLiteral = new ConstantExpression(null, 0, typeof(int));
         internal static readonly ConstantExpression NullLiteral = new ConstantExpression(null, null, typeof(object));
+        internal static readonly ConstantExpression EmptyStringLiteral = new ConstantExpression(null, String.Empty, typeof(string));
+        internal static readonly ConstantExpression[] IntCache = new ConstantExpression[100];
 
         private readonly object _value;
 
@@ -87,6 +89,37 @@ namespace Microsoft.Linq.Expressions {
         
         //CONFORMING
         public static ConstantExpression Constant(object value) {
+            if (value == null) {
+                return Null();
+            }
+
+            Type t = value.GetType();
+            if (!t.IsEnum) {
+                switch (Type.GetTypeCode(t)) {
+                    case TypeCode.Boolean:
+                        if ((bool)value == true) {
+                            return True();
+                        }
+                        return False();
+                    case TypeCode.Int32:
+                        int x = (int)value;
+                        int cacheIndex = x + 2;
+                        if (cacheIndex >= 0 && cacheIndex < ConstantExpression.IntCache.Length) {
+                            ConstantExpression res;
+                            if ((res = ConstantExpression.IntCache[cacheIndex]) == null) {
+                                ConstantExpression.IntCache[cacheIndex] = res = new ConstantExpression(null, x, typeof(int));
+                            }
+                            return res;
+                        }
+                        break;
+                    case TypeCode.String:
+                        if (String.IsNullOrEmpty((string)value)) {
+                            return ConstantExpression.EmptyStringLiteral;
+                        }
+                        break;
+                }
+            }
+
             return new ConstantExpression(Annotations.Empty, value, value == null ? typeof(object) : value.GetType());
         }
 

@@ -14,7 +14,7 @@
 #####################################################################################
 
 #-----------------------------------------------------------------------------------
-#These have to be run first: importing lib.assert_util masked a bug. Just make sure
+#These have to be run first: importing iptest.assert_util masked a bug. Just make sure
 #these do not throw
 for stuff in [bool, True, False]:
     temp = dir(stuff)
@@ -39,7 +39,7 @@ cp946()
 
 
 #-----------------------------------------------------------------------------------
-from lib.assert_util import *
+from iptest.assert_util import *
 
 AssertError(NameError, lambda: __new__)
 

@@ -33,7 +33,7 @@ namespace IronPython.Runtime.Binding {
             : base(expression, restrictions, value) {
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember(BinderState/*!*/ binderState, PythonTypeSlot dts, Expression self, VariableExpression tmp) {
+        internal static MethodCallExpression MakeTryGetTypeMember(BinderState/*!*/ binderState, PythonTypeSlot dts, Expression self, ParameterExpression tmp) {
             return MakeTryGetTypeMember(
                 binderState,
                 dts, 
@@ -48,7 +48,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember(BinderState/*!*/ binderState, PythonTypeSlot dts, VariableExpression tmp, Expression instance, Expression pythonType) {
+        internal static MethodCallExpression MakeTryGetTypeMember(BinderState/*!*/ binderState, PythonTypeSlot dts, ParameterExpression tmp, Expression instance, Expression pythonType) {
             return Ast.Call(
                 TypeInfo._PythonOps.SlotTryGetBoundValue,
                 Ast.Constant(binderState.Context),

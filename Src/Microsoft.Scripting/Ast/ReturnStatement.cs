@@ -12,18 +12,25 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
+        [Obsolete("use Expression.Return(LabelTarget, Expression, Annotations) instead")]
         public static ReturnStatement Return(Expression expression, SourceSpan span) {
+#pragma warning disable 618
             return Expression.Return(expression, Expression.Annotate(span));
+#pragma warning restore 618
         }
 
+        [Obsolete("use Expression.Return(LabelTarget, Annotations) instead")]
         public static ReturnStatement Return(SourceSpan span) {
+#pragma warning disable 618
             return Expression.Return(null, Expression.Annotate(span));
+#pragma warning restore 618
         }
     }
 }

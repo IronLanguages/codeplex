@@ -64,7 +64,7 @@ namespace IronPython.Runtime {
         internal static void CreateContexts(ScriptDomainManager manager, PythonContext/*!*/ context) {
             if (_default == null) {
                 Interlocked.CompareExchange(ref _default, CreateDefaultContext(context), null);
-                Interlocked.CompareExchange(ref _defaultBinder, new PythonBinder(manager, context, _default), null);
+                Interlocked.CompareExchange(ref _defaultBinder, new PythonBinder(manager, context, null), null);
             }
         }
 

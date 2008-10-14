@@ -14,48 +14,44 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Diagnostics;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Interpretation {
     // Singleton objects of this enum type are used as return values from Statement.Execute() to handle control flow.
     enum ControlFlowKind {
         NextStatement,
-        Break,
-        Continue,
+        Goto,
         Return,
         NextForYield
     };
 
     sealed class ControlFlow {
-        private readonly ControlFlowKind _kind;
-        private readonly object _value;          // for returns
+        internal readonly ControlFlowKind Kind;
+        internal readonly LabelTarget Label;
+        internal readonly object Value;
 
         private ControlFlow(ControlFlowKind kind)
-            : this(kind, null) {
+            : this(kind, null, null) {
         }
 
-        private ControlFlow(ControlFlowKind kind, object value) {
-            _kind = kind;
-            _value = value;
-        }
-
-        internal ControlFlowKind Kind {
-            get { return _kind; }
-        }
-
-        internal object Value {
-            get { return _value; }
+        private ControlFlow(ControlFlowKind kind, LabelTarget label, object value) {
+            Kind = kind;
+            Label = label;
+            Value = value;
         }
 
         internal static ControlFlow Return(object value) {
             Debug.Assert(!(value is ControlFlow));
 
-            return new ControlFlow(ControlFlowKind.Return, value);
+            return new ControlFlow(ControlFlowKind.Return, null, value);
         }
 
-        // Hold on to one instance for each member of the ControlFlow enumeration to avoid unnecessary boxing
+        internal static ControlFlow Goto(LabelTarget label, object value) {
+            return new ControlFlow(ControlFlowKind.Goto, label, value);
+        }
+
+        // Hold on to one instance for each member of the ControlFlow enumeration to avoid unnecessary allocation
         internal static readonly ControlFlow NextStatement = new ControlFlow(ControlFlowKind.NextStatement);
-        internal static readonly ControlFlow Break = new ControlFlow(ControlFlowKind.Break);
-        internal static readonly ControlFlow Continue = new ControlFlow(ControlFlowKind.Continue);
         internal static readonly ControlFlow NextForYield = new ControlFlow(ControlFlowKind.NextForYield);
     }
 }

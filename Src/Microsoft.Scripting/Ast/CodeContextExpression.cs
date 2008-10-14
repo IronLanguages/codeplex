@@ -26,8 +26,14 @@ namespace Microsoft.Scripting.Ast {
     ///       tracking their own scope chain explicitly
     /// </summary>
     public sealed class CodeContextExpression : Expression {
+        internal static readonly CodeContextExpression Instance = new CodeContextExpression(Annotations.Empty);
+
         internal CodeContextExpression(Annotations annotations)
             : base(typeof(CodeContext), false, annotations) {
+        }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            return this;
         }
     }
 
@@ -60,11 +66,22 @@ namespace Microsoft.Scripting.Ast {
         public Expression NewContext {
             get { return _newContext; }
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            Expression newContext = visitor.Visit(_newContext);
+            Expression body = visitor.Visit(_body);
+
+            if (newContext == _newContext && body == _body) {
+                return this;
+            }
+
+            return Utils.CodeContextScope(body, newContext);
+        }
     }
 
     public partial class Utils {
         public static Expression CodeContext() {
-            return CodeContext(Annotations.Empty);
+            return CodeContextExpression.Instance;
         }
         public static Expression CodeContext(Annotations annotations) {
             return new CodeContextExpression(annotations);

@@ -34,7 +34,6 @@ namespace IronPython.Runtime.Types {
         private static PythonType frozensetcollection;
         private static PythonType pythonfunction;
         private static PythonType builtin;
-        private static PythonType generator;
         private static PythonType obj;
         private static PythonType setcollection;
         private static PythonType pythontype;
@@ -105,13 +104,6 @@ namespace IronPython.Runtime.Types {
             get {
                 if (builtin == null) builtin = DynamicHelpers.GetPythonTypeFromType(typeof(Builtin));
                 return builtin;
-            }
-        }
-
-        public static PythonType Generator {
-            get {
-                if (generator == null) generator = DynamicHelpers.GetPythonTypeFromType(typeof(Generator));
-                return generator;
             }
         }
 

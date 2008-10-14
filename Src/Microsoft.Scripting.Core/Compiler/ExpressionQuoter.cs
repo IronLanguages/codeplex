@@ -39,7 +39,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //
         // TODO: should HoistedLocals track shadowing so we don't need to worry
         // about it here?
-        private readonly Stack<Set<Expression>> _hiddenVars = new Stack<Set<Expression>>();
+        private readonly Stack<Set<ParameterExpression>> _hiddenVars = new Stack<Set<ParameterExpression>>();
 
         internal ExpressionQuoter(HoistedLocals scope, object[] locals) {
             _scope = scope;
@@ -47,7 +47,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         protected internal override Expression VisitLambda(LambdaExpression node) {
-            _hiddenVars.Push(new Set<Expression>(node.Parameters));
+            _hiddenVars.Push(new Set<ParameterExpression>(node.Parameters));
             Expression b = Visit(node.Body);
             _hiddenVars.Pop();
             if (b == node.Body) {
@@ -57,7 +57,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         protected internal override Expression VisitScope(ScopeExpression node) {
-            _hiddenVars.Push(new Set<Expression>(node.Variables));
+            _hiddenVars.Push(new Set<ParameterExpression>(node.Variables));
             Expression b = Visit(node.Body);
             _hiddenVars.Pop();
             if (b == node.Body) {
@@ -67,7 +67,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         protected override CatchBlock VisitCatchBlock(CatchBlock node) {
-            _hiddenVars.Push(new Set<Expression>(new[] { node.Variable }));
+            _hiddenVars.Push(new Set<ParameterExpression>(new[] { node.Variable }));
             Expression b = Visit(node.Body);
             Expression f = Visit(node.Filter);
             _hiddenVars.Pop();
@@ -90,14 +90,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         protected internal override Expression VisitParameter(ParameterExpression node) {
-            return VisitVariableOrParameter(node);
-        }
-
-        protected internal override Expression VisitVariable(VariableExpression node) {
-            return VisitVariableOrParameter(node);
-        }
-
-        private Expression VisitVariableOrParameter(Expression node) {
             IStrongBox box = GetBox(node);
             if (box == null) {
                 return node;
@@ -105,9 +97,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return Expression.Field(Expression.Constant(box), "Value", node.Annotations);
         }
 
-        private IStrongBox GetBox(Expression variable) {
+        private IStrongBox GetBox(ParameterExpression variable) {
             // Skip variables that are shadowed by a nested scope/lambda
-            foreach (Set<Expression> hidden in _hiddenVars) {
+            foreach (Set<ParameterExpression> hidden in _hiddenVars) {
                 if (hidden.Contains(variable)) {
                     return null;
                 }

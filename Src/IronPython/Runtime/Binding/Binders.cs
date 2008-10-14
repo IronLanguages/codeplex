@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
@@ -30,7 +31,8 @@ namespace IronPython.Runtime.Binding {
                     signature
                 ),
                 resultType,
-                ArrayUtils.Insert(AstUtils.CodeContext(), args)
+                null,
+                new ReadOnlyCollection<Expression>(ArrayUtils.Insert(AstUtils.CodeContext(), args))
             );
         }
 
@@ -58,6 +60,29 @@ namespace IronPython.Runtime.Binding {
                 ),
                 type,
                 target
+            );
+        }
+
+        public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, Expression arg0) {
+            return Ast.Dynamic(
+                new OperationBinder(
+                    binder,
+                    operation
+                ),
+                resultType,
+                arg0
+            );
+        }
+
+        public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, Expression arg0, Expression arg1) {
+            return Ast.Dynamic(
+                new OperationBinder(
+                    binder,
+                    operation
+                ),
+                resultType,
+                arg0,
+                arg1
             );
         }
 

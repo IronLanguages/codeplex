@@ -17,7 +17,7 @@
 
 #For the time being just delegate this to the cominterop package...
 import sys
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("win32", "silverlight")
 
 failed = 0
@@ -28,8 +28,8 @@ except:
 
 #------------------------------------------------------------------------------
 #Re-run everything under w/o -X:PreferComInteropAssembly
-from lib.cominterop_util import preferComDispatch, is_pywin32, AreEqual
-from lib.process_util    import launch_ironpython_changing_extensions
+from iptest.cominterop_util import preferComDispatch, is_pywin32, AreEqual
+from iptest.process_util    import launch_ironpython_changing_extensions
 if not preferComDispatch and not is_pywin32:
     print
     print "#" * 80

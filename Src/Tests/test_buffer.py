@@ -17,7 +17,7 @@
 ## Test builtin-type buffer
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def test_negative():
     AssertError(TypeError, buffer, None)

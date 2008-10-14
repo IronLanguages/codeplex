@@ -18,7 +18,7 @@
 ##
 
 from sys import exit, argv
-from lib.assert_util import *
+from iptest.assert_util import *
 
 if argv.count("OKtoRun")==0 or is_cli==False:
     print "Bailing"

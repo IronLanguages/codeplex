@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
@@ -93,6 +92,26 @@ namespace Microsoft.Linq.Expressions {
 
         #region Call
 
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0) {
+            return Call(null, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0 }));
+        }
+        
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1) {
+            return Call(null, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
+        }
+
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2) {
+            return Call(null, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
+        }
+
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2, Expression arg3) {
+            return Call(null, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3 }));
+        }
+
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) {
+            return Call(null, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3, arg4 }));
+        }
+
         //CONFORMING
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) {
             return Call(null, method, Annotations.Empty, arguments);
@@ -104,12 +123,20 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static MethodCallExpression Call(Expression instance, MethodInfo method) {
-            return Call(instance, method, Annotations.Empty, new Expression[0]);
+            return Call(instance, method, Annotations.Empty, EmptyReadOnlyCollection<Expression>.Instance);
         }
 
         //CONFORMING
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) {
             return Call(instance, method, Annotations.Empty, arguments);
+        }
+
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1) {
+            return Call(instance, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
+        }
+
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1, Expression arg2) {
+            return Call(instance, method, Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
         }
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) {
@@ -171,6 +198,7 @@ namespace Microsoft.Linq.Expressions {
 
             bool invoke = nodeKind == ExpressionType.Invoke;
             ParameterInfo[] pis = method.GetParameters();
+
             if (nodeKind == ExpressionType.Dynamic) {
                 pis = pis.RemoveFirst(); // ignore CallSite argument
             }
@@ -273,7 +301,7 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         private static bool IsCompatible(MethodBase m, Expression[] args) {
-            ParameterInfo[] parms = m.GetParameters();
+            ParameterInfo[] parms = m.GetParametersCached();
             if (parms.Length != args.Length)
                 return false;
             for (int i = 0; i < args.Length; i++) {
@@ -327,7 +355,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.Requires(instance != null ^ method.IsStatic, "instance");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
 
-            ParameterInfo[] parameters = method.GetParameters();
+            ParameterInfo[] parameters = method.GetParametersCached();
 
             ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", Strings.IncorrectArgNumber);
 
@@ -335,9 +363,21 @@ namespace Microsoft.Linq.Expressions {
                 instance = ConvertHelper(instance, method.DeclaringType);
             }
 
-            arguments = ArgumentConvertHelper(arguments, parameters);
+            Expression[] convertedArguments = ArgumentConvertHelper(arguments, parameters);
+            
+            ReadOnlyCollection<Expression> finalArgs;
+            if (convertedArguments == arguments) {
+                // we didn't convert anything, just convert the users original
+                // array to a ROC.
+                finalArgs = convertedArguments.ToReadOnly();
+            } else {
+                // we already copied the array so just stick it in a ROC.
+                finalArgs = new ReadOnlyCollection<Expression>(convertedArguments);
+            }
 
-            return Call(instance, method, arguments);
+            // the arguments are now all correct, avoid re-validating the call parameters and
+            // directly create the expression.
+            return new MethodCallExpression(Annotations.Empty, method.ReturnType, method, instance, finalArgs);
         }
 
         private static Expression[] ArgumentConvertHelper(Expression[] arguments, ParameterInfo[] parameters) {
@@ -380,7 +420,8 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private static bool CompatibleParameterTypes(Type parameter, Type argument) {
-            if (parameter == argument) {
+            if (parameter == argument || 
+                (!parameter.IsValueType && !argument.IsValueType && parameter.IsAssignableFrom(argument))) {
                 return true;
             }
             if (parameter.IsByRef && parameter.GetElementType() == argument) {
@@ -406,7 +447,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
             ContractUtils.Requires(instance != null ^ method.IsStatic, "instance");
 
-            ParameterInfo[] parameters = method.GetParameters();
+            ParameterInfo[] parameters = method.GetParametersCached();
             bool hasParamArray = parameters.Length > 0 && parameters[parameters.Length - 1].IsParamArray();
 
             if (instance != null) {

@@ -23,22 +23,21 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     public class CompiledLoader {
-        private List<ScriptCode> _codes = new List<ScriptCode>();
+        private Dictionary<string, ScriptCode> _codes = new Dictionary<string, ScriptCode>();
 
         internal void AddScriptCode(ScriptCode code) {
-            _codes.Add(code);
+            string name = code.SourceUnit.Path;
+            name = name.Replace(Path.DirectorySeparatorChar, '.');
+            if (name.EndsWith("__init__.py")) {
+                name = name.Substring(0, name.Length - ".__init__.py".Length);
+            }
+            _codes[name] = code;
         }
 
         public ModuleLoader find_module(CodeContext/*!*/ context, string fullname, List path) {
-            string nameOnDisk = fullname.Replace('.', Path.DirectorySeparatorChar);
-            
-            foreach (ScriptCode sc in _codes) {
-                if (nameOnDisk == sc.SourceUnit.Path) {
-                    return new ModuleLoader(sc);
-                } else if (sc.SourceUnit.Path.EndsWith("__init__.py") &&
-                    sc.SourceUnit.Path == Path.Combine(nameOnDisk, "__init__.py")) {
-                    return new ModuleLoader(sc);
-                }
+            ScriptCode sc;
+            if (_codes.TryGetValue(fullname, out sc)) {
+                return new ModuleLoader(sc);
             }
 
             return null;

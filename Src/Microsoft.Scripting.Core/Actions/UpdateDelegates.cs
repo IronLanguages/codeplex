@@ -14,6 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -22,59 +23,42 @@ using System.Threading;
 
 namespace Microsoft.Scripting.Actions {
     internal static partial class UpdateDelegates {
-
         private static Dictionary<Type, WeakReference> _Updaters;
 
         internal static T MakeUpdateDelegate<T>() where T : class {
-            Type target = typeof(T);
-            Type[] args;
-            MethodInfo invoke = target.GetMethod("Invoke");
-
-            if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
-                MethodInfo method;
-                if (invoke.ReturnType == typeof(void)) {
-                    method = typeof(UpdateDelegates).GetMethod("UpdateVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
-                } else {
-                    method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
-                }
-                if (method != null) {
-                    return (T)(object)Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));
-                }
-            }
-
-            return GetOrCreateCustomUpdateDelegate<T>(invoke);
-        }
-
-        private static T GetOrCreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
             if (_Updaters == null) {
                 Interlocked.CompareExchange<Dictionary<Type, WeakReference>>(ref _Updaters, new Dictionary<Type, WeakReference>(), null);
             }
 
-            bool found;
-            WeakReference wr;
-
-            // LOCK to extract the weak reference with the updater DynamicMethod 
+            Type target = typeof(T);
             lock (_Updaters) {
-                found = _Updaters.TryGetValue(typeof(T), out wr);
-            }
+                WeakReference wr;
+                T ret = null;
+                if (!_Updaters.TryGetValue(target, out wr) || ((ret = (T)wr.Target) == null)) {
+                    Type[] args;
+                    MethodInfo invoke = target.GetMethod("Invoke");
 
-            // Extract the DynamicMethod from the WeakReference, if any
-            object target = null;
-            if (found && wr != null) {
-                target = wr.Target;
-            }
+                    MethodInfo method = null;
+                    if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
+                        if (invoke.ReturnType == typeof(void)) {
+                            method = typeof(UpdateDelegates).GetMethod("UpdateVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
+                        } else {
+                            method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
+                        }
+                        if (method != null) {
+                            ret = (T)(object)Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));
+                        }
+                    }
 
-            // No target? Build new one
-            if (target == null) {
-                target = CreateCustomUpdateDelegate<T>(invoke);
+                    if (method == null) {
+                        ret = CreateCustomUpdateDelegate<T>(invoke);
+                    }
 
-                // Insert into dictionary
-                lock (_Updaters) {
-                    _Updaters[typeof(T)] = new WeakReference(target);
+                    Debug.Assert(ret != null);
+                    _Updaters[target] = new WeakReference(ret);
                 }
+                return ret;
             }
-
-            return (T)target;
         }
 
         private static T CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {

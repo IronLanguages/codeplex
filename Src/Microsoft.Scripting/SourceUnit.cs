@@ -81,7 +81,7 @@ namespace Microsoft.Scripting {
             set { _parseResult = value; }
         }
 
-        internal SourceUnit(LanguageContext context, TextContentProvider contentProvider, string path, SourceCodeKind kind) {
+        public SourceUnit(LanguageContext context, TextContentProvider contentProvider, string path, SourceCodeKind kind) {
             Assert.NotNull(context, contentProvider);
             Debug.Assert(path == null || path.Length > 0);
             Debug.Assert(context.CanCreateSourceCode);

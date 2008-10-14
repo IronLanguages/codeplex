@@ -13,8 +13,8 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
-from lib.type_util import *
+from iptest.assert_util import *
+from iptest.type_util import *
 import sys
 
 ############################################################

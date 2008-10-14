@@ -16,24 +16,17 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+    // TODO: merge with UnaryExpression
     public sealed class ThrowStatement : Expression {
-        private readonly Expression _val;
+        private readonly Expression _value;
 
         internal ThrowStatement(Annotations annotations, Expression value)
             : base(ExpressionType.ThrowStatement, typeof(void), annotations) {
-            _val = value;
+            _value = value;
         }
 
         public Expression Value {
-            get {
-                return _val;
-            }
-        }
-
-        public Expression Exception {
-            get {
-                return _val;
-            }
+            get { return _value; }
         }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {

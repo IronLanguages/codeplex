@@ -17,7 +17,7 @@
 ## Test the datetime module
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import datetime
 
 def test_date():

@@ -18,11 +18,11 @@
 ## in the module scope
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 skiptest("silverlight")
 
-from lib.file_util import *
+from iptest.file_util import *
 
 def always_true():
     exec "AreEqual(1 / 2, 0)"

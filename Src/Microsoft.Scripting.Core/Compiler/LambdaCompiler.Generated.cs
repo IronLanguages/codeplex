@@ -20,10 +20,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private void EmitExpression(Expression node, bool emitDebugMarkers) {
+        private void EmitExpression(Expression node, bool emitStart) {
             Debug.Assert(node != null);
 
-            bool startEmitted = emitDebugMarkers && EmitExpressionStart(node);
+            ExpressionStart startEmitted = emitStart ? EmitExpressionStart(node) : ExpressionStart.None;
 
             switch (node.NodeType) {
                 #region Generated Expression Compiler
@@ -223,18 +223,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Block:
                     EmitBlock(node);
                     break;
-                // BreakStatement
-                case ExpressionType.BreakStatement:
-                    EmitBreakStatement(node);
-                    break;
-                // Generator
-                case ExpressionType.Generator:
-                    EmitLambdaExpression(node);
-                    break;
-                // ContinueStatement
-                case ExpressionType.ContinueStatement:
-                    EmitContinueStatement(node);
-                    break;
                 // DoStatement
                 case ExpressionType.DoStatement:
                     EmitDoStatement(node);
@@ -251,13 +239,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Extension:
                     EmitExtensionExpression(node);
                     break;
+                // Goto
+                case ExpressionType.Goto:
+                    EmitGotoExpression(node);
+                    break;
                 // Index
                 case ExpressionType.Index:
                     EmitIndexExpression(node);
                     break;
-                // LabeledStatement
-                case ExpressionType.LabeledStatement:
-                    EmitLabeledStatement(node);
+                // Label
+                case ExpressionType.Label:
+                    EmitLabelExpression(node);
                     break;
                 // LocalScope
                 case ExpressionType.LocalScope:
@@ -291,14 +283,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Unbox:
                     EmitUnboxUnaryExpression(node);
                     break;
-                // Variable
-                case ExpressionType.Variable:
-                    EmitVariableExpression(node);
-                    break;
-                // YieldStatement
-                case ExpressionType.YieldStatement:
-                    EmitYieldStatement(node);
-                    break;
 
                 // *** END GENERATED CODE ***
 
@@ -308,8 +292,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     throw Assert.Unreachable;
             }
 
-            if (startEmitted) {
-                EmitExpressionEnd();
+            if (emitStart) {
+                EmitExpressionEnd(startEmitted);
             }
         }
     }

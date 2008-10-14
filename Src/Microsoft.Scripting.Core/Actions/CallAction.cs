@@ -66,7 +66,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public abstract MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError);
-        public abstract MetaObject FallbackInvoke(MetaObject[] args, MetaObject onBindingError);
+        public abstract MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject onBindingError);
 
         [Confined]
         public override bool Equals(object obj) {

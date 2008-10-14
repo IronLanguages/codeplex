@@ -157,7 +157,7 @@ namespace IronPython.Runtime.Binding {
             CodeContext context = BinderState.GetBinderState(convertToAction).Context;
 
             if (pt.TryResolveSlot(context, symbolId, out pts) && !IsBuiltinConversion(context, pts, symbolId, pt)) {
-                VariableExpression tmp = Ast.Variable(typeof(object), "func");
+                ParameterExpression tmp = Ast.Variable(typeof(object), "func");
 
                 Expression callExpr = Ast.Call(
                     PythonOps.GetConversionHelper(returner, GetResultKind(convertToAction)),
@@ -215,7 +215,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static Expression/*!*/ AddExtensibleSelfCheck(ConvertAction/*!*/ convertToAction, MetaObject/*!*/ self, Expression/*!*/ callExpr) {
-            VariableExpression tmp = Ast.Variable(callExpr.Type, "tmp");
+            ParameterExpression tmp = Ast.Variable(callExpr.Type, "tmp");
             callExpr = Ast.Scope(
                 Ast.Comma(
                     Ast.Assign(tmp, callExpr),

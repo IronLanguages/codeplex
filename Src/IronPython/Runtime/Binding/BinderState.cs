@@ -74,7 +74,6 @@ namespace IronPython.Runtime.Binding {
 
         public Expression CreateExpression() {
             return Expression.Call(
-                null,
                 typeof(PythonOps).GetMethod("GetInitialBinderState"),
                 AstUtils.CodeContext()
             );

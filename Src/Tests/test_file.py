@@ -15,7 +15,7 @@
 
 from __future__ import with_statement
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("silverlight")
 import sys
 import nt

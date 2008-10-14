@@ -78,7 +78,7 @@ namespace IronPython.Compiler.Ast {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
 
                 List<MSAst.Expression> statements = new List<MSAst.Expression>();
-                MSAst.VariableExpression module = ag.GetTemporary("module");
+                MSAst.ParameterExpression module = ag.GetTemporary("module");
 
                 // Create initializer of the array of names being passed to ImportWithNames
                 MSAst.ConstantExpression[] names = new MSAst.ConstantExpression[_names.Length];

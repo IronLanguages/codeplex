@@ -15,7 +15,7 @@
 
 "module doc"
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 @skip('interactive', "multiple_execute")
 def test_sanity():

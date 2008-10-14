@@ -83,7 +83,7 @@ class VariantType:
         cw.exit_block()
 
         # Byref Setter
-        if self.unmanagedRepresentationType == self.managedType or self.managedType == "String":
+        if self.unmanagedRepresentationType == self.managedType or self.isPrimitiveType :
             cw.writeline()
             if not self.clsCompliant:
                 cw.write("[CLSCompliant(false)]")
@@ -100,7 +100,7 @@ class VariantType:
         cw.write('case VarEnum.VT_%s: return typeof(Variant).GetProperty("%s");' % (self.variantType, self.accessorName))
         
     def write_byref_setters(self, cw):
-        if self.unmanagedRepresentationType == self.managedType:
+        if self.unmanagedRepresentationType == self.managedType or self.isPrimitiveType :
             cw.write('case VarEnum.VT_%s: return typeof(Variant).GetMethod("SetAsByref%s");' % (self.variantType, self.name))
         
     def write_hasCommonLayout(self, cw):
@@ -142,9 +142,9 @@ variantTypes = [
     VariantType('UINT', "UIntPtr", clsCompliant=False),
 
     VariantType('BOOL', "bool", 
-        unmanagedRepresentationType="Int32",
+        unmanagedRepresentationType="Int16",
         getStatements=["return _typeUnion._unionTypes._bool != 0;"],
-        setStatements=["_typeUnion._unionTypes._bool = value ? -1 : 0;"]),
+        setStatements=["_typeUnion._unionTypes._bool = value ? (Int16)(-1) : (Int16)0;"]),
     
     VariantType("ERROR", "Int32", isPrimitiveType=False),
 
@@ -160,13 +160,12 @@ variantTypes = [
                         "// _vt overlaps with _decimal, and should be set after setting _decimal", 
                         "_typeUnion._vt = (ushort)VarEnum.VT_DECIMAL;"]),
     VariantType("CY", "Decimal", 
-        isPrimitiveType=False,
         unmanagedRepresentationType="Int64",
         getStatements=["return Decimal.FromOACurrency(_typeUnion._unionTypes._cy);"],
         setStatements=["_typeUnion._unionTypes._cy = Decimal.ToOACurrency(value);"]),
 
     VariantType('DATE', "DateTime", 
-        unmanagedRepresentationType="double",
+        unmanagedRepresentationType="Double",
         getStatements=["return DateTime.FromOADate(_typeUnion._unionTypes._date);"],
         setStatements=["_typeUnion._unionTypes._date = value.ToOADate();"]),
     VariantType('BSTR', "String", 

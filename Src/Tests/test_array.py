@@ -17,7 +17,7 @@
 ## Test array support by IronPython (System.Array)
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 if not sys.platform=="win32":
     import System

@@ -16,7 +16,7 @@
 import sys
 from generate import generate
 
-MAX_ARGS = 5
+MAX_ARGS = 16
 
 def make_params(nargs, *prefix):
     params = ["object arg%d" % i for i in range(nargs)]

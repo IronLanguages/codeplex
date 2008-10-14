@@ -29,18 +29,6 @@ namespace Microsoft.Scripting.Actions {
     /// individual meta binders and produce the resulting code in a single dynamic site.
     /// </summary>
     public class ComboActionRewriter : ExpressionTreeVisitor {
-        protected override Expression VisitExtension(Expression node) {
-            CodeContextScopeExpression contextScope = node as CodeContextScopeExpression;
-            if (contextScope != null) {
-                Expression body = Visit(contextScope.Body);
-
-                if (body != contextScope.Body) {
-                    node = AstUtils.CodeContextScope(body, contextScope.NewContext);
-                }
-            }
-            return node;
-        }
-
         /// <summary>
         /// A reducible node which we use to generate the combo dynamic sites.  Each time we encounter
         /// a dynamic site we replace it with a ComboDynamicSiteExpression.  When a child of a dynamic site
@@ -168,7 +156,6 @@ namespace Microsoft.Scripting.Actions {
 
         private bool IsSideEffectFree(Expression rewritten) {
             if (rewritten is ParameterExpression ||
-                rewritten is VariableExpression ||
                 rewritten is GlobalVariableExpression) {
                 return true;
             }

@@ -13,9 +13,6 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Reflection.Emit;
 
 namespace Microsoft.Linq.Expressions.Compiler {
@@ -25,7 +22,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void Emit(Block node, EmitAs emitAs) {
-            ReadOnlyCollection<Expression> expressions = node.Expressions;
+            var expressions = node.Expressions;
+
+            // Labels defined immediately in the block are valid for the whole block
+            foreach (var e in expressions) {
+                var label = e as LabelExpression;
+                if (label != null) {
+                    DefineLabel(label.Label);
+                }
+            }
+
             for (int index = 0; index < expressions.Count - 1; index++) {
                 EmitExpressionAsVoid(expressions[index]);
             }
@@ -40,72 +46,44 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitBreakStatement(Expression expr) {
-            CheckAndPushTargets(((BreakStatement)expr).Target);
-            EmitBreak();
-            PopTargets();
-        }
-
-        private void EmitContinueStatement(Expression expr) {
-            CheckAndPushTargets(((ContinueStatement)expr).Target);
-            EmitContinue();
-            PopTargets();
-        }
-
         private void EmitDoStatement(Expression expr) {
             DoStatement node = (DoStatement)expr;
 
             Label startTarget = _ilg.DefineLabel();
-            Label breakTarget = _ilg.DefineLabel();
-            Label continueTarget = _ilg.DefineLabel();
+
+            LabelInfo breakTarget = DefineLabel(node.BreakLabel);
+            LabelInfo continueTarget = DefineLabel(node.ContinueLabel);
 
             _ilg.MarkLabel(startTarget);
-            if (node.Label != null) {
-                PushTargets(breakTarget, continueTarget, node.Label);
-            }
 
             EmitExpressionAsVoid(node.Body);
 
-            _ilg.MarkLabel(continueTarget);
+            continueTarget.Mark();
 
             EmitExpressionAndBranch(true, node.Test, startTarget);
 
-            if (node.Label != null) {
-                PopTargets();
-            }
-            _ilg.MarkLabel(breakTarget);
+            breakTarget.Mark();
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitEmptyStatement(Expression expr) {
         }
 
-        private void EmitLabeledStatement(Expression expr) {
-            LabeledStatement node = (LabeledStatement)expr;
-            Debug.Assert(node.Statement != null && node.Label != null);
-
-            Label label = _ilg.DefineLabel();
-            PushTargets(label, label, node.Label);
-
-            EmitExpressionAsVoid(node.Statement);
-
-            _ilg.MarkLabel(label);
-            PopTargets();
-        }
-
         private void EmitLoopStatement (Expression expr) {
             LoopStatement node = (LoopStatement)expr;
             Label? firstTime = null;
-            Label eol = _ilg.DefineLabel();
-            Label breakTarget = _ilg.DefineLabel();
-            Label continueTarget = _ilg.DefineLabel();
+            Label loopEnd = _ilg.DefineLabel();
+
+            PushLabelBlock(LabelBlockKind.Block);
+            LabelInfo breakTarget = DefineLabel(node.BreakLabel);
+            LabelInfo continueTarget = DefineLabel(node.ContinueLabel);
 
             if (node.Increment != null) {
                 firstTime = _ilg.DefineLabel();
                 _ilg.Emit(OpCodes.Br, firstTime.Value);
             }
 
-            _ilg.MarkLabel(continueTarget);
+            continueTarget.Mark();
 
             if (node.Increment != null) {
                 EmitExpressionAsVoid(node.Increment);
@@ -113,30 +91,38 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (node.Test != null) {
-                EmitExpressionAndBranch(false, node.Test, eol);
-            }
-
-            if (node.Label != null) {
-                PushTargets(breakTarget, continueTarget, node.Label);
+                EmitExpressionAndBranch(false, node.Test, loopEnd);
             }
 
             EmitExpressionAsVoid(node.Body);
 
-            _ilg.Emit(OpCodes.Br, continueTarget);
+            _ilg.Emit(OpCodes.Br, continueTarget.Label);
 
-            if (node.Label != null) {
-                PopTargets();
-            }
+            PopLabelBlock(LabelBlockKind.Block);
 
-            _ilg.MarkLabel(eol);
+            _ilg.MarkLabel(loopEnd);
             if (node.ElseStatement != null) {
                 EmitExpressionAsVoid(node.ElseStatement);
             }
-            _ilg.MarkLabel(breakTarget);
+
+            breakTarget.Mark();
         }
 
         private void EmitReturnStatement(Expression expr) {
-            EmitReturn(((ReturnStatement)expr).Expression);
+            var node = (ReturnStatement)expr;
+
+            if (node.Expression != null) {
+                // TODO: should be TypeUtils.AreReferenceAssignable
+                // (but ReturnStatement is going away so it doesn't need to be fixed)
+                if (!_lambda.ReturnType.IsAssignableFrom(node.Expression.Type)) {
+                    throw Error.InvalidReturnTypeOfLambda(node.Expression.Type, _lambda.ReturnType, _lambda.Name);
+                }
+            } else if (_lambda.ReturnType != typeof(void)) {
+                // return without expression can be only from lambda with void return type
+                throw Error.MissingReturnForLambda(_lambda.Name, _lambda.ReturnType);
+            }
+
+            EmitReturn(node.Expression);
         }
 
         #region SwitchStatement
@@ -144,8 +130,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitSwitchStatement(Expression expr) {
             SwitchStatement node = (SwitchStatement)expr;
 
-            Label breakTarget = _ilg.DefineLabel();
-            Label defaultTarget = breakTarget;
+            LabelInfo breakTarget = DefineLabel(node.Label);
+
+            Label defaultTarget = breakTarget.Label;
             Label[] labels = new Label[node.Cases.Count];
 
             // Create all labels
@@ -172,10 +159,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // If "default" present, execute default code, else exit the switch            
             _ilg.Emit(OpCodes.Br, defaultTarget);
 
-            if (node.Label != null) {
-                PushTargets(breakTarget, BlockContinueLabel, node.Label);
-            }
-
             // Emit the bodies
             for (int i = 0; i < node.Cases.Count; i++) {
                 // First put the corresponding labels
@@ -184,11 +167,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 EmitExpressionAsVoid(node.Cases[i].Body);
             }
 
-            if (node.Label != null) {
-                PopTargets();
-            }
-
-            _ilg.MarkLabel(breakTarget);
+            breakTarget.Mark();
         }
 
         private const int MaxJumpTableSize = 65536;
@@ -271,6 +250,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitThrowStatement(Expression expr) {
             ThrowStatement node = (ThrowStatement)expr;
             if (node.Value == null) {
+                CheckRethrow();
+
                 _ilg.Emit(OpCodes.Rethrow);
             } else {
                 EmitExpression(node.Value);
@@ -278,239 +259,23 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+        private void CheckRethrow() {
+            // Rethrow is only valid inside a catch.
+            for (LabelBlockInfo j = _labelBlock; j != null; j = j.Parent) {
+                if (j.Kind == LabelBlockKind.Catch) {
+                    return;
+                } else if (j.Kind == LabelBlockKind.Finally) {
+                    // Rethrow from inside finally is not verifiable
+                    break;
+                }
+            }
+            throw Error.RethrowRequiresCatch();
+        }
+
         #region TryStatement
 
-        private void EmitTryStatement(Expression expr) {
-            TryStatement node = (TryStatement)expr;
-
-            // Codegen is affected by presence/absence of loop control statements
-            // (break/continue) or return/yield statement in finally clause
-            TryFlowResult flow = TryFlowAnalyzer.Analyze(node.Finally ?? node.Fault);
-
-            // This will return null if we are not in a generator
-            // or if the try statement is unaffected by yields
-            TryStatementInfo tsi = GetTsi(node);
-
-            // If there's a yield anywhere, go for a complex codegen
-            if (tsi != null && (YieldInBlock(tsi.TryYields) || tsi.YieldInCatch || YieldInBlock(tsi.FinallyYields))) {
-                EmitGeneratorTry(tsi, node, flow);
-            } else {
-                EmitSimpleTry(node, flow);
-            }
-        }
-
-        private static bool YieldInBlock(List<YieldTarget> block) {
-            return block != null && block.Count > 0;
-        }
-
-        private void EmitGeneratorTry(TryStatementInfo tsi, TryStatement node, TryFlowResult flow) {
-            //
-            // Initialize the flow control flag
-            //
-            LocalBuilder flowControlFlag = null;
-
-            if (flow.Any) {
-                flowControlFlag = _ilg.GetLocal(typeof(int));
-                _ilg.EmitInt(LambdaCompiler.FinallyExitsNormally);
-                _ilg.Emit(OpCodes.Stloc, flowControlFlag);
-            }
-
-            VariableExpression exception = null;
-            if (node.Finally != null || node.Fault != null) {
-                exception = _scope.GetGeneratorTemp(typeof(Exception));
-                _ilg.EmitNull();
-                _scope.EmitSet(exception);
-            }
-
-            //******************************************************************
-            // Entering the try block
-            //******************************************************************
-
-            if (tsi.Target != null) {
-                _ilg.MarkLabel(tsi.Target.EnsureLabel(this));
-            }
-
-            //******************************************************************
-            // If we have a 'finally', transform it into try..catch..finally
-            // and rethrow
-            //******************************************************************
-            Label endFinallyBlock = new Label();
-            if (node.Finally != null || node.Fault != null) {
-                PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-                _ilg.BeginExceptionBlock();
-                endFinallyBlock = _ilg.DefineLabel();
-
-                //**************************************************************
-                // If there is a yield in any catch, that catch will be hoisted
-                // and we need to dispatch to it from here
-                //**************************************************************
-                if (tsi.YieldInCatch) {
-                    EmitYieldDispatch(tsi.CatchYields);
-                }
-
-                if (YieldInBlock(tsi.FinallyYields)) {
-                    foreach (YieldTarget yt in tsi.FinallyYields) {
-                        _ilg.Emit(OpCodes.Ldloc, GotoRouter);
-                        _ilg.EmitInt(yt.Index);
-                        _ilg.Emit(OpCodes.Beq, endFinallyBlock);
-                    }
-                }
-            }
-
-            //******************************************************************
-            // If we have a 'catch', start a try block to handle all the catches
-            //******************************************************************
-
-            Label endCatchBlock = new Label();
-            if (HaveHandlers(node)) {
-                PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-                endCatchBlock = _ilg.BeginExceptionBlock();
-            }
-
-            //******************************************************************
-            // Emit the try block body
-            //******************************************************************
-
-            // First, emit the dispatch within the try block
-            EmitYieldDispatch(tsi.TryYields);
-
-            // Then, emit the actual body
-            EmitExpressionAsVoid(node.Body);
-
-            //******************************************************************
-            // Emit the catch blocks
-            //******************************************************************
-
-            if (HaveHandlers(node)) {
-                List<CatchRecord> catches = new List<CatchRecord>();
-                PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
-
-                ReadOnlyCollection<CatchBlock> handlers = node.Handlers;
-                for (int index = 0; index < handlers.Count; index++) {
-                    CatchBlock cb = handlers[index];
-
-                    if (tsi.CatchBlockYields(index)) {
-                        // The catch block body contains yield, therefore
-                        // delay the body emit till after the try block.
-                        LocalBuilder local = _ilg.GetLocal(cb.Test);
-                        catches.Add(new CatchRecord(local, cb));
-
-                        EmitCatchStart(cb, local);
-                    } else {
-                        EmitCatchStart(cb);
-                        // Emit the body right now, since it doesn't contain yield
-                        EmitExpressionAsVoid(cb.Body);
-                    }
-                }
-
-                PopTargets(TargetBlockType.Catch);
-                EndExceptionBlock();
-                PopTargets(TargetBlockType.Try);
-
-                //******************************************************************
-                // Emit the postponed catch block bodies (with yield in them)
-                //******************************************************************
-                foreach (CatchRecord cr in catches) {
-                    Label next = _ilg.DefineLabel();
-                    _ilg.Emit(OpCodes.Ldloc, cr.Local);
-                    _ilg.EmitNull();
-                    _ilg.Emit(OpCodes.Beq, next);
-
-                    if (cr.Block.Variable != null) {
-                        _ilg.Emit(OpCodes.Ldloc, cr.Local);
-                        _scope.EmitSet(cr.Block.Variable);
-                    }
-
-                    _ilg.FreeLocal(cr.Local);
-                    EmitExpressionAsVoid(cr.Block.Body);
-                    _ilg.MarkLabel(next);
-                }
-            }
-
-            //******************************************************************
-            // Emit the finally body
-            //******************************************************************
-
-            if (node.Finally != null || node.Fault != null) {
-                _ilg.MarkLabel(endFinallyBlock);
-                PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
-                _ilg.BeginCatchBlock(typeof(Exception));
-                _scope.EmitSet(exception);
-
-                PopTargets(TargetBlockType.Catch);
-
-                PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
-
-                if (node.Finally != null) {
-                    _ilg.BeginFinallyBlock();
-                } 
-                // if we're a fault block we can just continue to run after the catch.
-
-                Label exit = _ilg.DefineLabel();
-                _ilg.Emit(OpCodes.Ldloc, GotoRouter);
-                _ilg.EmitInt(LambdaCompiler.GotoRouterYielding);
-                _ilg.Emit(OpCodes.Beq, exit);
-
-                EmitYieldDispatch(tsi.FinallyYields);
-
-                // Emit the finally body
-
-                if (node.Finally != null) {
-                    EmitExpressionAsVoid(node.Finally);
-                } else {
-                    EmitExpressionAsVoid(node.Fault);
-                }
-
-                // Rethrow the exception, if any
-
-                Label noThrow = _ilg.DefineLabel();
-                _scope.EmitGet(exception);
-                _ilg.EmitNull();
-                _ilg.Emit(OpCodes.Beq, noThrow);
-                _scope.EmitGet(exception);
-                _ilg.Emit(OpCodes.Throw);
-                _ilg.MarkLabel(noThrow);
-
-                _ilg.MarkLabel(exit);
-
-                EndExceptionBlock();
-                PopTargets(TargetBlockType.Finally);
-                PopTargets(TargetBlockType.Try);
-
-                //
-                // Emit the flow control for finally, if there was any.
-                //
-                EmitFinallyFlowControl(flow, flowControlFlag);
-            }
-
-            // Clear the target labels
-
-            ClearLabels(tsi.TryYields);
-            ClearLabels(tsi.CatchYields);
-
-            if (tsi.Target != null) {
-                tsi.Target.Clear();
-            }
-        }
-
-        private static bool HaveHandlers(TryStatement node) {
-            return node.Handlers.Count > 0;
-        }
-
-        // TODO: 
-        private static void ClearLabels(List<YieldTarget> targets) {
-            if (targets != null) {
-                foreach (YieldTarget yt in targets) {
-                    yt.Clear();
-                }
-            }
-        }
-
-        private void EmitSaveExceptionOrPop(CatchBlock cb, LocalBuilder saveSlot) {
-            if (saveSlot != null) {
-                // overriding the default save location
-                _ilg.Emit(OpCodes.Stloc, saveSlot);
-            } else if (cb.Variable != null) {
+        private void EmitSaveExceptionOrPop(CatchBlock cb) {
+            if (cb.Variable != null) {
                 // If the variable is present, store the exception
                 // in the variable.
                 _scope.EmitSet(cb.Variable);
@@ -520,114 +285,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitYieldDispatch(List<YieldTarget> targets) {
-            if (YieldInBlock(targets)) {
-                Debug.Assert(GotoRouter != null);
-
-                // TODO: Emit as switch!
-                foreach (YieldTarget yt in targets) {
-                    _ilg.Emit(OpCodes.Ldloc, GotoRouter);
-                    _ilg.EmitInt(yt.Index);
-                    _ilg.Emit(OpCodes.Beq, yt.EnsureLabel(this));
-                }
-            }
-        }
-
-        /// <summary>
-        /// If the finally statement contains break, continue, return or yield, we need to
-        /// handle the control flow statement after we exit out of finally via OpCodes.Endfinally.
-        /// </summary>
-        private void EmitFinallyFlowControl(TryFlowResult flow, LocalBuilder flag) {
-            if (flow.Return || flow.Yield) {
-                Debug.Assert(flag != null);
-
-                Label noReturn = _ilg.DefineLabel();
-
-                _ilg.Emit(OpCodes.Ldloc, flag);
-                _ilg.EmitInt(LambdaCompiler.BranchForReturn);
-                _ilg.Emit(OpCodes.Bne_Un, noReturn);
-
-                if (IsGeneratorBody) {
-                    // return true from the generator method
-                    _ilg.Emit(OpCodes.Ldc_I4_1);
-                    EmitReturn();
-                } else if (flow.Any) {
-                    // return the actual value
-                    EmitReturnValue();
-                    EmitReturn();
-                }
-                _ilg.MarkLabel(noReturn);
-            }
-
-            // Only emit break handling if it is actually needed
-            if (flow.Break) {
-                Debug.Assert(flag != null);
-
-                Label noReturn = _ilg.DefineLabel();
-                _ilg.Emit(OpCodes.Ldloc, flag);
-                _ilg.EmitInt(LambdaCompiler.BranchForBreak);
-                _ilg.Emit(OpCodes.Bne_Un, noReturn);
-                EmitBreak();
-                _ilg.MarkLabel(noReturn);
-            }
-
-            // Only emit continue handling if it if actually needed
-            if (flow.Continue) {
-                Debug.Assert(flag != null);
-
-                Label noReturn = _ilg.DefineLabel();
-                _ilg.Emit(OpCodes.Ldloc, flag);
-                _ilg.EmitInt(LambdaCompiler.BranchForContinue);
-                _ilg.Emit(OpCodes.Bne_Un, noReturn);
-                EmitContinue();
-                _ilg.MarkLabel(noReturn);
-            }
-        }
-
-        private void EmitSimpleTry(TryStatement node, TryFlowResult flow) {
-            //
-            // Initialize the flow control flag
-            //
-            LocalBuilder flowControlFlag = null;
-            if (flow.Any) {
-                Debug.Assert(node.Finally != null);
-
-                flowControlFlag = _ilg.GetLocal(typeof(int));
-                _ilg.EmitInt(LambdaCompiler.FinallyExitsNormally);
-                _ilg.Emit(OpCodes.Stloc, flowControlFlag);
-
-                //  If there is a control flow in finally, emit outer:
-                //  try {
-                //      // try block body and all catch handling
-                //  } catch (Exception all) {
-                //      saved = all;
-                //  } finally {
-                //      finally_body
-                //      if (saved != null) {
-                //          throw saved;
-                //      }
-                //  }
-                //  
-                // if we have a fault handler we turn this into the better:
-                //  try {
-                //      // try block body and all catch handling
-                //  } catch (Exception all) {
-                //      saved = all;
-                //      fault_body
-                //      throw saved
-                //  }
-
-                if (HaveHandlers(node)) {
-                    PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-                    _ilg.BeginExceptionBlock();
-                }
-            }
+        private void EmitTryStatement(Expression expr) {
+            var node = (TryStatement)expr;
 
             //******************************************************************
             // 1. ENTERING TRY
             //******************************************************************
 
-            PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
+            PushLabelBlock(LabelBlockKind.Try);
             _ilg.BeginExceptionBlock();
 
             //******************************************************************
@@ -640,8 +305,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // 3. Emit the catch blocks
             //******************************************************************
 
-            if (HaveHandlers(node)) {
-                PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
+            if (node.Handlers.Count > 0) {
+                PushLabelBlock(LabelBlockKind.Catch);
 
                 foreach (CatchBlock cb in node.Handlers) {
                     // Begin the strongly typed exception block
@@ -653,7 +318,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitExpressionAsVoid(cb.Body);
                 }
 
-                PopTargets(TargetBlockType.Catch);
+                PopLabelBlock(LabelBlockKind.Catch);
             }
 
             //******************************************************************
@@ -661,83 +326,34 @@ namespace Microsoft.Linq.Expressions.Compiler {
             //******************************************************************
 
             if (node.Finally != null || node.Fault != null) {
-                LocalBuilder rethrow = null;
-                if (flow.Any) {
-                    // If there is a control flow in finally/fault, end the catch
-                    // statement and emit the catch-all and finally/fault clause
-                    // with rethrow at the end.
-
-                    if (HaveHandlers(node)) {
-                        EndExceptionBlock();
-                        PopTargets(TargetBlockType.Try);
-                    }
-
-                    PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
-                    _ilg.BeginCatchBlock(typeof(Exception));
-
-                    rethrow = _ilg.GetLocal(typeof(Exception));
-                    _ilg.Emit(OpCodes.Stloc, rethrow);
-
-                    PopTargets(TargetBlockType.Catch);
-                }
-
-                // emit the beginning of the finally/fault start.  If we're
-                // in a fault block and we have flow then we just continue
-                // with the catch block we have above.  Whenever this is 
-                // implemented as a exception handler our code gen isn't ideal
-                // because we say we're in a finally, but it is legal code gen.
-                // The un-optimial part of this is that we'll generate extra 
-                // branches out of the catch block when we could just leave 
-                // directly.
-
-                PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
+                PushLabelBlock(LabelBlockKind.Finally);
 
                 if (node.Finally != null) {
                     _ilg.BeginFinallyBlock();
-                } else if (!flow.Any) {
+                } else if (IsDynamicMethod) {
                     // dynamic methods don't support fault blocks so we
                     // generate a catch/rethrow.
-                    if (IsDynamicMethod) {
-                        _ilg.BeginCatchBlock(typeof(Exception));
-                    } else {
-                        _ilg.BeginFaultBlock();
-                    }
+                    _ilg.BeginCatchBlock(typeof(Exception));
+                } else {
+                    _ilg.BeginFaultBlock();
                 }
 
                 // Emit the body
                 EmitExpressionAsVoid(node.Finally ?? node.Fault);
 
-                // rethrow the exception if we have flow control or a catch in
-                // a dynamic method.
-                if (flow.Any) {
-                    Debug.Assert(rethrow != null);
-                    Label noRethrow = _ilg.DefineLabel();
-
-                    _ilg.Emit(OpCodes.Ldloc, rethrow);
-                    _ilg.EmitNull();
-                    _ilg.Emit(OpCodes.Beq, noRethrow);
-                    _ilg.Emit(OpCodes.Ldloc, rethrow);
-                    _ilg.Emit(OpCodes.Throw);
-                    _ilg.MarkLabel(noRethrow);
-                } else if (node.Fault != null && IsDynamicMethod) {
+                // rethrow the exception if we have a catch in a dynamic method.
+                if (node.Fault != null && IsDynamicMethod) {
                     // rethrow when we generated a catch
                     _ilg.Emit(OpCodes.Rethrow);
                 }
-                
-                EndExceptionBlock();
-                PopTargets(TargetBlockType.Finally);
+
+                _ilg.EndExceptionBlock();
+                PopLabelBlock(LabelBlockKind.Finally);
             } else {
-                EndExceptionBlock();
+                _ilg.EndExceptionBlock();
             }
 
-            PopTargets(TargetBlockType.Try);
-
-            //
-            // Emit the flow control for finally, if there was any.
-            //
-            EmitFinallyFlowControl(flow, flowControlFlag);
-
-            _ilg.FreeLocal(flowControlFlag);
+            PopLabelBlock(LabelBlockKind.Try);
         }
 
         /// <summary>
@@ -746,14 +362,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// variable is provided.
         /// </summary>
         private void EmitCatchStart(CatchBlock cb) {
-            EmitCatchStart(cb, null);
-        }
-
-        /// <summary>
-        /// Emits the start of the catch block.  The exception value is stored in the slot
-        /// if not null or otherwise provided in the variable of the catch block.
-        /// </summary>
-        private void EmitCatchStart(CatchBlock cb, LocalBuilder saveSlot) {
             if (cb.Filter != null && !IsDynamicMethod) {
                 // emit filter block as filter.  Filter blocks are 
                 // untyped so we need to do the type check ourselves.  
@@ -774,8 +382,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // it's our type, save it and emit the filter.
                 _ilg.MarkLabel(rightType);
-                EmitSaveExceptionOrPop(cb, saveSlot);                
+                EmitSaveExceptionOrPop(cb);
+                PushLabelBlock(LabelBlockKind.Filter);
                 EmitExpression(cb.Filter);
+                PopLabelBlock(LabelBlockKind.Filter);
 
                 // begin the catch, clear the exception, we've 
                 // already saved it
@@ -785,14 +395,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
             } else {
                 _ilg.BeginCatchBlock(cb.Test);
                 
-                EmitSaveExceptionOrPop(cb, saveSlot);
+                EmitSaveExceptionOrPop(cb);
 
                 if (cb.Filter != null) {
                     Label catchBlock = _ilg.DefineLabel();
 
                     // filters aren't supported in dynamic methods so instead
                     // emit the filter as if check, if (!expr) rethrow
+                    PushLabelBlock(LabelBlockKind.Filter);
                     EmitExpressionAndBranch(true, cb.Filter, catchBlock);
+                    PopLabelBlock(LabelBlockKind.Filter);
 
                     _ilg.Emit(OpCodes.Rethrow);
                     _ilg.MarkLabel(catchBlock);
@@ -803,10 +415,5 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         #endregion
-
-        private void EmitYieldStatement(Expression expr) {
-            YieldStatement node = (YieldStatement)expr;
-            EmitYield(node.Expression, GetYieldTarget(node));
-        }
     }
 }

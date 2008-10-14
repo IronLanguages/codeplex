@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def get_builtins_dict():
     if type(__builtins__) is type(sys):

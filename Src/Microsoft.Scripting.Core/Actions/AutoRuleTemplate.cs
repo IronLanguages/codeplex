@@ -16,6 +16,7 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
@@ -62,7 +63,7 @@ namespace Microsoft.Scripting.Actions {
                 // or we are further generalizing an existing rule.  We need to re-write the incoming tree 
                 // to be templated over the necessary constants and return the new rule bound to the template.
 
-                return new Rule<T>(newBody, null, new TemplateData<T>(), to.Parameters);
+                return new Rule<T>(newBody, null, new TemplateData<T>(), to.ReturnLabel, to.Parameters);
             }
 
             // we have compatible templated rules, we can just swap out the constant pool and 
@@ -81,7 +82,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             // create a new rule which is bound to the new delegate w/ the expression tree from the old code.            
-            return new Rule<T>(newBody, dlg, from.Template, to.Parameters);
+            return new Rule<T>(newBody, dlg, from.Template, to.ReturnLabel, to.Parameters);
         }
 
         private static Rule<T> FindCompatibleRuleForTemplate<T>(Rule<T> from, Rule<T> to, out List<ConstantExpression> newConstants, out bool tooSpecific) where T : class {
@@ -148,11 +149,25 @@ namespace Microsoft.Scripting.Actions {
             protected internal override Expression VisitConstant(ConstantExpression node) {
                 int index = _constants.IndexOf(node);
                 if (index != -1) {
+                    // clear the constant from the list...  This is incase the rule contains the
+                    // same ConstantExpression instance multiple times and we're replacing the 
+                    // multiple entries.  In that case we want each constant duplicated value
+                    // to line up with a single index.
+                    _constants[index] = null;
+
                     // this is a constant we want to re-write, replace w/ a templated constant
                     object value = node.Value;
 
-                    Type genType = typeof(TemplatedValue<>).MakeGenericType(TypeUtils.GetVisibleType(node.Type));
-                    object constVal = Activator.CreateInstance(genType, value, index);
+                    Type elementType = TypeUtils.GetVisibleType(node.Type);
+                    Type genType = typeof(TemplatedValue<>).MakeGenericType(elementType);
+
+                    var ctor = genType.GetConstructor(
+                        BindingFlags.NonPublic | BindingFlags.Instance,
+                        null,
+                        new Type[] { elementType, typeof(int) },
+                        null
+                    );
+                    object constVal = ctor.Invoke(new object[] { value, index });
 
                     return Expression.Property(Expression.Constant(constVal), genType.GetProperty("Value"));
                 }

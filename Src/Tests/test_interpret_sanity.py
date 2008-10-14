@@ -17,7 +17,7 @@
 Smokescreen test for the -X:Interpret ipy.exe mode.
 '''
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import sys
 
 load_iron_python_test()

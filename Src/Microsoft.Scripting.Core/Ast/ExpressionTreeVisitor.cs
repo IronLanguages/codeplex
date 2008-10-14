@@ -156,14 +156,6 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        protected internal virtual Expression VisitBreak(BreakStatement node) {
-            LabelTarget t = VisitLabelTarget(node.Target);
-            if (t == node.Target) {
-                return node;
-            }
-            return Expression.Break(t, node.Annotations);
-        }
-
         protected internal virtual Expression VisitConditional(ConditionalExpression node) {
             Expression t = Visit(node.Test);
             Expression l = Visit(node.IfTrue);
@@ -178,22 +170,15 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal virtual Expression VisitContinue(ContinueStatement node) {
-            LabelTarget t = VisitLabelTarget(node.Target);
-            if (t == node.Target) {
-                return node;
-            }
-            return Expression.Continue(t, node.Annotations);
-        }
-
         protected internal virtual Expression VisitDoWhile(DoStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
+            LabelTarget @break = VisitLabelTarget(node.BreakLabel);
+            LabelTarget @continue = VisitLabelTarget(node.ContinueLabel);
             Expression t = Visit(node.Test);
-            Expression b = Visit(node.Body);
-            if (l == node.Label && t == node.Test && b == node.Body) {
+            Expression e = Visit(node.Body);
+            if (@break == node.BreakLabel && @continue == node.ContinueLabel && t == node.Test && e == node.Body) {
                 return node;
             }
-            return Expression.DoWhile(b, t, l, node.Annotations);
+            return Expression.DoWhile(e, t, @break, @continue, node.Annotations);
         }
 
         protected internal virtual Expression VisitDynamic(DynamicExpression node) {
@@ -218,6 +203,15 @@ namespace Microsoft.Linq.Expressions {
             return node.VisitChildren(this);
         }
 
+        protected internal virtual Expression VisitGoto(GotoExpression node) {
+            LabelTarget t = VisitLabelTarget(node.Target);
+            Expression v = Visit(node.Value);
+            if (t == node.Target && v == node.Value) {
+                return node;
+            }
+            return Expression.MakeGoto(node.Kind, t, v, node.Annotations);
+        }
+
         protected internal virtual Expression VisitInvocation(InvocationExpression node) {
             Expression e = Visit(node.Expression);
             ReadOnlyCollection<Expression> a = Visit(node.Arguments);
@@ -231,13 +225,13 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal virtual Expression VisitLabeled(LabeledStatement node) {
+        protected internal virtual Expression VisitLabel(LabelExpression node) {
             LabelTarget l = VisitLabelTarget(node.Label);
-            Expression s = Visit(node.Statement);
-            if (l == node.Label && s == node.Statement) {
+            Expression d = Visit(node.DefaultValue);
+            if (l == node.Label && d == node.DefaultValue) {
                 return node;
             }
-            return Expression.Labeled(l, s, node.Annotations);
+            return Expression.Label(l, d, node.Annotations);
         }
 
         protected internal virtual Expression VisitLambda(LambdaExpression node) {
@@ -250,19 +244,21 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal virtual Expression VisitLoop(LoopStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
+            LabelTarget @break = VisitLabelTarget(node.BreakLabel);
+            LabelTarget @continue = VisitLabelTarget(node.ContinueLabel);
             Expression t = Visit(node.Test);
             Expression i = Visit(node.Increment);
             Expression b = Visit(node.Body);
             Expression e = Visit(node.ElseStatement);
-            if (l == node.Label &&
+            if (@break == node.BreakLabel &&
+                @continue == node.ContinueLabel &&
                 t == node.Test &&
                 i == node.Increment &&
                 b == node.Body &&
                 e == node.ElseStatement) {
                 return node;
             }
-            return Expression.Loop(t, i, b, e, l, node.Annotations);
+            return Expression.Loop(t, i, b, e, @break, @continue, node.Annotations);
         }
 
         protected internal virtual Expression VisitMemberAccess(MemberExpression node) {
@@ -322,7 +318,9 @@ namespace Microsoft.Linq.Expressions {
             if (e == node.Expression) {
                 return node;
             }
+#pragma warning disable 618
             return Expression.Return(e, node.Annotations);
+#pragma warning restore 618
         }
 
         protected internal virtual Expression VisitRuntimeVariables(LocalScopeExpression node) {
@@ -373,9 +371,9 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected virtual CatchBlock VisitCatchBlock(CatchBlock node) {
-            VariableExpression v = VisitAndConvert(node.Variable, "VisitCatchBlock");
-            Expression b = Visit(node.Body);
+            ParameterExpression v = VisitAndConvert(node.Variable, "VisitCatchBlock");
             Expression f = Visit(node.Filter);
+            Expression b = Visit(node.Body);
             if (v == node.Variable && b == node.Body && f == node.Filter) {
                 return node;
             }
@@ -383,8 +381,8 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal virtual Expression VisitTry(TryStatement node) {
-            ReadOnlyCollection<CatchBlock> h = Visit(node.Handlers, VisitCatchBlock);
             Expression b = Visit(node.Body);
+            ReadOnlyCollection<CatchBlock> h = Visit(node.Handlers, VisitCatchBlock);
             Expression y = Visit(node.Finally);
             Expression f = Visit(node.Fault);
 
@@ -413,42 +411,30 @@ namespace Microsoft.Linq.Expressions {
             return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, node.Annotations);
         }
 
-        protected internal virtual Expression VisitVariable(VariableExpression node) {
-            return node;
-        }
-
-        protected internal virtual Expression VisitYield(YieldStatement node) {
-            Expression e = Visit(node.Expression);
-            if (e == node.Expression) {
-                return node;
-            }
-            return Expression.Yield(e, node.Annotations);
-        }
-
         protected internal virtual Expression VisitMemberInit(MemberInitExpression node) {
             NewExpression n = VisitAndConvert(node.NewExpression, "VisitMemberInit");
             ReadOnlyCollection<MemberBinding> bindings = Visit(node.Bindings, VisitMemberBinding);
-            if (n != node.NewExpression || bindings != node.Bindings) {
-                return Expression.MemberInit(n, bindings);
+            if (n == node.NewExpression && bindings == node.Bindings) {
+                return node;
             }
-            return node;
+            return Expression.MemberInit(n, node.Annotations, bindings);
         }
 
         protected internal virtual Expression VisitListInit(ListInitExpression node) {
             NewExpression n = VisitAndConvert(node.NewExpression, "VisitListInit");
             ReadOnlyCollection<ElementInit> initializers = Visit(node.Initializers, VisitElementInit);
-            if (n != node.NewExpression || initializers != node.Initializers) {
-                return Expression.ListInit(n, initializers);
+            if (n == node.NewExpression && initializers == node.Initializers) {
+                return node;
             }
-            return node;
+            return Expression.ListInit(n, node.Annotations, initializers);
         }
 
         protected virtual ElementInit VisitElementInit(ElementInit initializer) {
             ReadOnlyCollection<Expression> arguments = Visit(initializer.Arguments);
-            if (arguments != initializer.Arguments) {
-                return Expression.ElementInit(initializer.AddMethod, arguments);
+            if (arguments == initializer.Arguments) {
+                return initializer;
             }
-            return initializer;
+            return Expression.ElementInit(initializer.AddMethod, arguments);
         }
 
         protected virtual MemberBinding VisitMemberBinding(MemberBinding binding) {
@@ -466,26 +452,26 @@ namespace Microsoft.Linq.Expressions {
 
         protected virtual MemberAssignment VisitMemberAssignment(MemberAssignment assignment) {
             Expression e = Visit(assignment.Expression);
-            if (e != assignment.Expression) {
-                return Expression.Bind(assignment.Member, e);
+            if (e == assignment.Expression) {
+                return assignment;
             }
-            return assignment;
+            return Expression.Bind(assignment.Member, e);
         }
 
         protected virtual MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding binding) {
             ReadOnlyCollection<MemberBinding> bindings = Visit(binding.Bindings, VisitMemberBinding);
-            if (bindings != binding.Bindings) {
-                return Expression.MemberBind(binding.Member, bindings);
+            if (bindings == binding.Bindings) {
+                return binding;
             }
-            return binding;
+            return Expression.MemberBind(binding.Member, bindings);
         }
 
         protected virtual MemberListBinding VisitMemberListBinding(MemberListBinding binding) {
             ReadOnlyCollection<ElementInit> initializers = Visit(binding.Initializers, VisitElementInit);
-            if (initializers != binding.Initializers) {
-                return Expression.ListBind(binding.Member, initializers);
+            if (initializers == binding.Initializers) {
+                return binding;
             }
-            return binding;
+            return Expression.ListBind(binding.Member, initializers);
         }
 
         #endregion        

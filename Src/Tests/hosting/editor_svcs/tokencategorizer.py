@@ -16,7 +16,7 @@
 ##
 ## Testing TokenCategorizer
 ##
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("win32")
 
 load_iron_python_test()

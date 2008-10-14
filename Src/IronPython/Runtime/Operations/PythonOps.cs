@@ -3156,6 +3156,18 @@ namespace IronPython.Runtime.Operations {
             return pt.PythonContext.DefaultBinderState.Context;
         }
 
+        public static int CompareLists(List self, List other) {
+            return self.CompareTo(other);
+        }
+
+        public static int CompareTuples(PythonTuple self, PythonTuple other) {
+            return self.CompareTo(other);
+        }
+
+        public static int CompareFloats(double self, double other) {
+            return DoubleOps.Compare(self, other);
+        }
+
         #region Exception Factories
 
         private static Exception MultipleKeywordArgumentError(PythonFunction function, string name) {

@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Generation {
             // Fix up the top-level lambda to have a scope and language parameters
             ParameterExpression scopeParameter = Expression.Parameter(typeof(Scope), "$scope");
             ParameterExpression languageParameter = Expression.Parameter(typeof(LanguageContext), "$language");
-            VariableExpression contextVariable = Expression.Variable(typeof(CodeContext), "$globalContext");
+            ParameterExpression contextVariable = Expression.Variable(typeof(CodeContext), "$globalContext");
 
             _context = contextVariable;
             lambda = (LambdaExpression)VisitLambda(lambda);
@@ -73,6 +73,14 @@ namespace Microsoft.Scripting.Generation {
         #region rewriter overrides
 
         protected override Expression VisitExtension(Expression node) {
+            if (node is YieldExpression ||
+                node is GeneratorExpression ||
+                node is FinallyFlowControlExpression) {
+                // These should be rewritten last, when doing finaly compilation
+                // for now, just walk them so we can find other nodes
+                return base.VisitExtension(node);
+            }
+
             GlobalVariableExpression global = node as GlobalVariableExpression;
             if (global != null) {
                 return RewriteGet(global);
@@ -140,7 +148,7 @@ namespace Microsoft.Scripting.Generation {
 
         private Expression Rewrite(CodeContextScopeExpression ccs) {
             Expression saved = _context;
-            VariableExpression nested = Expression.Variable(typeof(CodeContext), "$frame");
+            ParameterExpression nested = Expression.Variable(typeof(CodeContext), "$frame");
 
             // rewrite body with nested context
             _context = nested;
@@ -168,8 +176,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         // Helper to add a variable to a scope
-        protected static Expression AddScopedVariable(Expression body, VariableExpression variable, Expression variableInit) {
-            List<VariableExpression> vars = new List<VariableExpression>();
+        protected static Expression AddScopedVariable(Expression body, ParameterExpression variable, Expression variableInit) {
+            List<ParameterExpression> vars = new List<ParameterExpression>();
             string name = null;
             Annotations annotations = Annotations.Empty;
             while (body.NodeType == ExpressionType.Scope) {

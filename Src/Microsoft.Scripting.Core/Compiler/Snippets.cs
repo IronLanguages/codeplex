@@ -77,12 +77,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private AssemblyGen GetOrCreateAssembly(bool emitSymbols, bool isUnsafe, ref AssemblyGen assembly) {
             if (assembly == null) {
                 string suffix = (emitSymbols) ? ".debug" : "" + (isUnsafe ? ".unsafe" : "");
-                Interlocked.CompareExchange(ref assembly, CreateNewAssembly(suffix, emitSymbols), null);
+                Interlocked.CompareExchange(ref assembly, CreateNewAssembly(suffix, emitSymbols, isUnsafe), null);
             }
             return assembly;
         }
 
-        private AssemblyGen CreateNewAssembly(string nameSuffix, bool emitSymbols) {
+        private AssemblyGen CreateNewAssembly(string nameSuffix, bool emitSymbols, bool isUnsafe) {
             string dir;
 
             if (_saveSnippets) {
@@ -93,7 +93,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             string name = (_snippetsFileName ?? "Snippets") + nameSuffix;
 
-            return new AssemblyGen(new AssemblyName(name), dir, ".dll", emitSymbols);
+            return new AssemblyGen(new AssemblyName(name), dir, ".dll", emitSymbols, isUnsafe);
         }
 
         internal string GetMethodILDumpFile(MethodBase method) {

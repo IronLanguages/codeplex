@@ -13,9 +13,9 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
-from lib.type_util import *
-from lib.warning_util import warning_trapper
+from iptest.assert_util import *
+from iptest.type_util import *
+from iptest.warning_util import warning_trapper
 
 def test_from_string():
     # complex from string: negative

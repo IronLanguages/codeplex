@@ -19,7 +19,7 @@ Python-based modules.
 '''
 
 import sys
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("silverlight")
 
 if directory_exists(testpath.lib_testdir):

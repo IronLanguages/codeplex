@@ -15,8 +15,6 @@
 using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
@@ -25,296 +23,193 @@ namespace Microsoft.Linq.Expressions.Compiler {
     // break, contiue, return, exceptions, etc
     partial class LambdaCompiler {
 
-        private struct ReturnBlock {
-            internal LocalBuilder ReturnValue;
-            internal Label ReturnStart;
-        }
-
-        private void PushExceptionBlock(TargetBlockType type, LocalBuilder returnFlag) {
-            if (_targets.Count == 0) {
-                _targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, null));
-            } else {
-                Targets t = _targets.Peek();
-                _targets.Push(new Targets(t.BreakLabel, t.ContinueLabel, type, returnFlag ?? t.FinallyReturns, null));
+        private LabelInfo EnsureLabel(LabelTarget node) {
+            LabelInfo result;
+            if (!_labelInfo.TryGetValue(node, out result)) {
+                _labelInfo.Add(node, result = new LabelInfo(_ilg, node, false));
             }
+            return result;
         }
 
-        private void PushTargets(Label? breakTarget, Label? continueTarget, LabelTarget label) {
-            if (_targets.Count == 0) {
-                _targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, label));
-            } else {
-                Targets t = _targets.Peek();
-                TargetBlockType bt = t.BlockType;
-                if (bt == TargetBlockType.Finally && label != null) {
-                    bt = TargetBlockType.LoopInFinally;
-                }
-                _targets.Push(new Targets(breakTarget, continueTarget, bt, t.FinallyReturns, label));
+        private LabelInfo ReferenceLabel(LabelTarget node) {
+            LabelInfo result = EnsureLabel(node);
+            result.Reference(_labelBlock);
+            return result;
+        }
+
+        private LabelInfo DefineLabel(LabelTarget node) {
+            if (node == null) {
+                return new LabelInfo(_ilg, null, false);
             }
+            LabelInfo result = EnsureLabel(node);
+            result.Define(_ilg, _labelBlock);
+            return result;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "type")]
-        private void PopTargets(TargetBlockType type) {
-            Targets t = _targets.Pop();
-            Debug.Assert(t.BlockType == type);
+        private void PushLabelBlock(LabelBlockKind type) {
+            _labelBlock = new LabelBlockInfo(_labelBlock, type);
         }
 
-        private void PopTargets() {
-            _targets.Pop();
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "kind")]
+        private void PopLabelBlock(LabelBlockKind kind) {
+            Debug.Assert(_labelBlock != null && _labelBlock.Kind == kind);
+            _labelBlock = _labelBlock.Parent;
         }
 
-        // TODO: Cleanup, hacky!!!
-        private void CheckAndPushTargets(LabelTarget label) {
-            for (int i = _targets.Count - 1; i >= 0; i--) {
-                if (_targets[i].Label == label) {
-                    PushTargets(_targets[i].BreakLabel, _targets[i].ContinueLabel, null);
-                    return;
-                }
+        private void EmitLabelExpression(Expression expr) {
+            var node = (LabelExpression)expr;
+            Debug.Assert(node.Label != null);
+
+            // If we're an immediate child of a block, our label will already
+            // be defined. If not, we need to define our own block so this
+            // label isn't exposed except to its own child expression.
+            LabelInfo label;
+            if (!_labelBlock.Labels.TryGetValue(node.Label, out label)) {
+                label = DefineLabel(node.Label);
             }
 
-            throw Error.StatementNotOnStack();
+            if (node.DefaultValue != null) {
+                EmitExpression(node.DefaultValue);
+            }
+
+            label.Mark();
         }
 
-        private void EmitBreak() {
-            Targets t = _targets.Peek();
-            int finallyIndex = -1;
-            switch (t.BlockType) {
-                default:
-                case TargetBlockType.Normal:
-                case TargetBlockType.LoopInFinally:
-                    if (t.BreakLabel.HasValue)
-                        _ilg.Emit(OpCodes.Br, t.BreakLabel.Value);
-                    else
-                        throw new InvalidOperationException();
-                    break;
-                case TargetBlockType.Try:
-                case TargetBlockType.Else:
-                case TargetBlockType.Catch:
-                    for (int i = _targets.Count - 1; i >= 0; i--) {
-                        if (_targets[i].BlockType == TargetBlockType.Finally) {
-                            finallyIndex = i;
-                            break;
-                        }
-
-                        if (_targets[i].BlockType == TargetBlockType.LoopInFinally ||
-                            !_targets[i].BreakLabel.HasValue)
-                            break;
-                    }
-
-                    if (finallyIndex == -1) {
-                        if (t.BreakLabel.HasValue)
-                            _ilg.Emit(OpCodes.Leave, t.BreakLabel.Value);
-                        else
-                            throw new InvalidOperationException();
-                    } else {
-                        if (!_targets[finallyIndex].LeaveLabel.HasValue)
-                            _targets[finallyIndex].LeaveLabel = _ilg.DefineLabel();
-
-                        _ilg.EmitInt(LambdaCompiler.BranchForBreak);
-                        _ilg.Emit(OpCodes.Stloc, _targets[finallyIndex].FinallyReturns);
-
-                        _ilg.Emit(OpCodes.Leave, _targets[finallyIndex].LeaveLabel.Value);
-                    }
-                    break;
-                case TargetBlockType.Finally:
-                    _ilg.EmitInt(LambdaCompiler.BranchForBreak);
-                    _ilg.Emit(OpCodes.Stloc, t.FinallyReturns);
-                    _ilg.Emit(OpCodes.Endfinally);
-                    break;
+        private void EmitGotoExpression(Expression expr) {
+            var node = (GotoExpression)expr;
+            if (node.Value != null) {
+                EmitExpression(node.Value);
             }
-        }
 
-        private void EmitContinue() {
-            Targets t = _targets.Peek();
-            switch (t.BlockType) {
-                default:
-                case TargetBlockType.Normal:
-                case TargetBlockType.LoopInFinally:
-                    if (t.ContinueLabel.HasValue)
-                        _ilg.Emit(OpCodes.Br, t.ContinueLabel.Value);
-                    else
-                        throw new InvalidOperationException();
-                    break;
-                case TargetBlockType.Try:
-                case TargetBlockType.Else:
-                case TargetBlockType.Catch:
-                    if (t.ContinueLabel.HasValue)
-                        _ilg.Emit(OpCodes.Leave, t.ContinueLabel.Value);
-                    else
-                        throw new InvalidOperationException();
-                    break;
-                case TargetBlockType.Finally:
-                    _ilg.EmitInt(LambdaCompiler.BranchForContinue);
-                    _ilg.Emit(OpCodes.Stloc, t.FinallyReturns);
-                    _ilg.Emit(OpCodes.Endfinally);
-                    break;
-            }
+            ReferenceLabel(node.Target).EmitJump();           
         }
 
         private void EmitReturn() {
-            int finallyIndex = -1;
-            switch (BlockType) {
-                default:
-                case TargetBlockType.Normal:
-                    _ilg.Emit(OpCodes.Ret);
-                    break;
-                case TargetBlockType.Catch:
-                case TargetBlockType.Try:
-                case TargetBlockType.Else:
-                    // with has it's own finally block, so no need to search...
-                    for (int i = _targets.Count - 1; i >= 0; i--) {
-                        if (_targets[i].BlockType == TargetBlockType.Finally) {
-                            finallyIndex = i;
-                            break;
-                        }
-                    }
-
-                    EnsureReturnBlock();
-                    Debug.Assert(_returnBlock.HasValue);
-                    if (_method.GetReturnType() != typeof(void)) {
-                        _ilg.Emit(OpCodes.Stloc, _returnBlock.Value.ReturnValue);
-                    }
-
-                    if (finallyIndex == -1) {
-                        // emit the real return
-                        _ilg.Emit(OpCodes.Leave, _returnBlock.Value.ReturnStart);
-                    } else {
-                        // need to leave into the inner most finally block,
-                        // the finally block will fall through and check
-                        // the return value.
-                        if (!_targets[finallyIndex].LeaveLabel.HasValue)
-                            _targets[finallyIndex].LeaveLabel = _ilg.DefineLabel();
-
-                        _ilg.EmitInt(LambdaCompiler.BranchForReturn);
-                        _ilg.Emit(OpCodes.Stloc, _targets[finallyIndex].FinallyReturns);
-
-                        _ilg.Emit(OpCodes.Leave, _targets[finallyIndex].LeaveLabel.Value);
-                    }
-                    break;
-                case TargetBlockType.LoopInFinally:
-                case TargetBlockType.Finally: {
-                        Targets t = _targets.Peek();
-                        EnsureReturnBlock();
-                        if (_method.GetReturnType() != typeof(void)) {
-                            _ilg.Emit(OpCodes.Stloc, _returnBlock.Value.ReturnValue);
-                        }
-                        // Assert check ensures that those who pushed the block with finallyReturns as null 
-                        // should not yield in their lambdas.
-                        Debug.Assert(t.FinallyReturns != null);
-                        _ilg.EmitInt(LambdaCompiler.BranchForReturn);
-                        _ilg.Emit(OpCodes.Stloc, t.FinallyReturns);
-                        _ilg.Emit(OpCodes.Endfinally);
+            bool canReturn = true;
+            for (LabelBlockInfo j = _labelBlock; j != null; j = j.Parent) {
+                switch (j.Kind) {
+                    case LabelBlockKind.Finally:
+                        throw Error.ControlCannotLeaveFinally();
+                    case LabelBlockKind.Filter:
+                        throw Error.ControlCannotLeaveFilterTest();
+                    case LabelBlockKind.Try:
+                    case LabelBlockKind.Catch:
+                        canReturn = false;
                         break;
-                    }
-            }
-        }
-
-
-        private void EmitReturnValue() {
-            EnsureReturnBlock();
-            if (_method.GetReturnType() != typeof(void)) {
-                _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value.ReturnValue);
-            }
-        }
-
-        private void EmitReturn(Expression expr) {
-            if (IsGeneratorBody) {
-                EmitReturnInGenerator(expr);
-            } else {
-                if (expr == null) {
-                    Debug.Assert(_method.GetReturnType() == typeof(void));
-                } else {
-                    Type result = _method.GetReturnType();
-                    Debug.Assert(result.IsAssignableFrom(expr.Type));
-                    EmitExpression(expr);
-                    if (!TypeUtils.CanAssign(result, expr.Type)) {
-                        EmitImplicitCast(expr.Type, result);
-                    }
                 }
-                EmitReturn();
             }
+
+            if (canReturn) {
+                _ilg.Emit(OpCodes.Ret);
+                return;
+            }
+
+            // We can't return directly, so store the return value into a local
+            // and then jump to the end of the method
+            EnsureReturnBlock();
+            if (_returnBlock.Value != null) {
+                _ilg.Emit(OpCodes.Stloc, _returnBlock.Value);
+            }
+
+            _ilg.Emit(OpCodes.Leave, _returnBlock.Label);
         }
-
-        private void EmitReturnInGenerator(Expression expr) {
-            EmitSetGeneratorReturnValue(expr);
-
-            _ilg.EmitInt(0);
-            EmitReturn();
-        }
-
-        private void EmitYield(Expression expr, YieldTarget target) {
-            ContractUtils.RequiresNotNull(expr, "expr");
-
-            EmitSetGeneratorReturnValue(expr);
-            EmitUpdateGeneratorLocation(target.Index);
-
-            // Mark that we are yielding, which will ensure we skip
-            // all of the finally bodies that are on the way to exit
-
-            _ilg.EmitInt(GotoRouterYielding);
-            _ilg.Emit(OpCodes.Stloc, GotoRouter);
-
-            _ilg.EmitInt(1);
-            EmitReturn();
-
-            _ilg.MarkLabel(target.EnsureLabel(this));
-            // Reached the routing destination, set router to GotoRouterNone
-            _ilg.EmitInt(GotoRouterNone);
-            _ilg.Emit(OpCodes.Stloc, GotoRouter);
-        }
-
-        private void EmitSetGeneratorReturnValue(Expression node) {
-            EmitLambdaArgument(1);
-            if (node == null) {
-                _ilg.Emit(OpCodes.Ldnull);
+                
+        private void EmitReturn(Expression expr) {
+            if (expr == null) {
+                Debug.Assert(_method.GetReturnType() == typeof(void));
             } else {
-                EmitExpressionAsObject(node);
+                Type result = _method.GetReturnType();
+                Debug.Assert(result.IsAssignableFrom(expr.Type));
+                EmitExpression(expr);
+                if (!TypeUtils.AreReferenceAssignable(result, expr.Type)) {
+                    _ilg.EmitConvertToType(expr.Type, result, false/*unchecked*/);
+                }
             }
-            _ilg.Emit(OpCodes.Stind_Ref);
-        }
-
-        private void EmitUpdateGeneratorLocation(int index) {
-            EmitLambdaArgument(0);
-            _ilg.EmitInt(index);
-            _ilg.EmitCall(typeof(Generator).GetProperty("Location").GetSetMethod());
+            EmitReturn();
         }
 
         private void EnsureReturnBlock() {
-            if (!_returnBlock.HasValue) {
-                ReturnBlock val = new ReturnBlock();
-
-                if (_method.GetReturnType() != typeof(void)) {
-                    val.ReturnValue = GetNamedLocal(_method.GetReturnType(), "retval");
-                }
-                val.ReturnStart = _ilg.DefineLabel();
-
-                _returnBlock = val;
+            if (_returnBlock == null) {
+                _returnBlock = new LabelInfo(_ilg, new LabelTarget(_method.GetReturnType(), null), false);
             }
         }
 
-        private void EndExceptionBlock() {
-            if (_targets.Count > 0) {
-                Targets t = _targets.Peek();
-                Debug.Assert(t.BlockType != TargetBlockType.LoopInFinally);
-                if (t.BlockType == TargetBlockType.Finally && t.LeaveLabel.HasValue) {
-                    _ilg.MarkLabel(t.LeaveLabel.Value);
-                }
+        private bool TryPushLabelBlock(Expression node) {
+            // Anything that is "statement-like" -- e.g. has no associated
+            // stack state can be jumped into, with the exception of try-blocks
+            // We indicate this by a "Block"
+            // 
+            // Otherwise, we push an "Expression" to indicate that it can't be
+            // jumped into
+            switch (node.NodeType) {
+                default:
+                    if (_labelBlock.Kind != LabelBlockKind.Expression) {
+                        PushLabelBlock(LabelBlockKind.Expression);
+                        return true;
+                    }
+                    return false;
+                case ExpressionType.Label:
+                    // LabelExpression is a bit special, if it's directly in a block
+                    // it becomes associate with the block's scope
+                    if (_labelBlock.Kind != LabelBlockKind.Block ||
+                        !_labelBlock.Labels.ContainsKey(((LabelExpression)node).Label)) {
+                        PushLabelBlock(LabelBlockKind.Block);
+                        return true;
+                    }
+                    return false;
+                case ExpressionType.Assign:
+                    // Assignment where left side is a variable/parameter is
+                    // safe to jump into
+                    var assign = (AssignmentExpression)node;
+                    if (assign.Expression.NodeType == ExpressionType.Parameter) {
+                        PushLabelBlock(LabelBlockKind.Block);
+                        return true;
+                    }
+                    return false;
+                case ExpressionType.Conditional:
+                case ExpressionType.Scope:
+                case ExpressionType.Block:
+                case ExpressionType.DoStatement:
+                case ExpressionType.SwitchStatement:
+                case ExpressionType.LoopStatement:
+                case ExpressionType.Goto:
+                case ExpressionType.ReturnStatement:
+                    PushLabelBlock(LabelBlockKind.Block);
+                    return true;
             }
-
-            _ilg.EndExceptionBlock();
-        }        
-
-        private TryStatementInfo GetTsi(TryStatement node) {
-            if (_generatorInfo == null) {
-                return null;
-            }
-            return _generatorInfo.TryGetTsi(node);
         }
 
-        private YieldTarget GetYieldTarget(YieldStatement node) {
-            if (_generatorInfo == null) {
-                return null;
+        // See if this lambda has a return label
+        // If so, we'll create it now and mark it as allowing the "ret" opcode
+        // This allows us to generate better IL
+        private void AddReturnLabel(Expression lambdaBody) {
+            while (true) {
+                switch (lambdaBody.NodeType) {
+                    default:
+                        // Didn't find return label
+                        return;
+                    case ExpressionType.Label:
+                        // Found it!
+                        var label = ((LabelExpression)lambdaBody).Label;
+                        _labelInfo.Add(label, new LabelInfo(_ilg, label, true));
+                        return;
+                    case ExpressionType.Scope:
+                        // Look in the body of a scope
+                        lambdaBody = ((ScopeExpression)lambdaBody).Body;
+                        continue;
+                    case ExpressionType.Block:
+                        // Look in the last expression of a block
+                        var exprs = ((Block)lambdaBody).Expressions;
+
+                        // TODO: shouldn't allow creating empty blocks
+                        if (exprs.Count == 0) {
+                            return;
+                        }
+
+                        lambdaBody = exprs[exprs.Count - 1];
+                        continue;
+                }
             }
-            return _generatorInfo.TryGetYieldTarget(node);
-        }    
+        }
     }
 }

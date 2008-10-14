@@ -30,11 +30,12 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     internal sealed class ToDiskRewriter : GlobalArrayRewriter {
         private List<Expression> _constants;
-        private VariableExpression _constantPool;
+        private ParameterExpression _constantPool;
         private Dictionary<Type, Type> _delegateTypes;
         private int _depth;
 
-        internal ToDiskRewriter(TypeGen typeGen) {
+        internal ToDiskRewriter(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict)
+            : base(symbolDict) {
             TypeGen = typeGen;
         }
 

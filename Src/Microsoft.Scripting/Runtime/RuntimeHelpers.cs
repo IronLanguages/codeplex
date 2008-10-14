@@ -242,9 +242,8 @@ namespace Microsoft.Scripting.Runtime {
         public static void InitializeSymbols(Type t) {
             foreach (FieldInfo fi in t.GetFields()) {
                 if (fi.FieldType == typeof(SymbolId)) {
-                    Debug.Assert(fi.Name.StartsWith("symbol_"));
-
-                    fi.SetValue(null, SymbolTable.StringToId(fi.Name.Substring(7)));
+                    Debug.Assert(((SymbolId)fi.GetValue(null)) == SymbolId.Empty);
+                    fi.SetValue(null, SymbolTable.StringToId(fi.Name));
                 }
             }
         }

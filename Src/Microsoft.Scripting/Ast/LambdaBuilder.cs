@@ -15,6 +15,7 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
@@ -38,9 +39,9 @@ namespace Microsoft.Scripting.Ast {
     /// removed, in favor of languages handling their own local scopes
     /// </summary>
     public class LambdaBuilder {
-        private readonly List<VariableExpression> _locals = new List<VariableExpression>();
+        private readonly List<ParameterExpression> _locals = new List<ParameterExpression>();
         private List<ParameterExpression> _params = new List<ParameterExpression>();
-        private readonly List<KeyValuePair<Expression, bool>> _visibleVars = new List<KeyValuePair<Expression, bool>>();
+        private readonly List<KeyValuePair<ParameterExpression, bool>> _visibleVars = new List<KeyValuePair<ParameterExpression, bool>>();
         private Annotations _annotations;
         private string _name;
         private Type _returnType;
@@ -100,7 +101,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// List of lambda's local variables for direct manipulation.
         /// </summary>
-        public List<VariableExpression> Locals {
+        public List<ParameterExpression> Locals {
             get {
                 return _locals;
             }
@@ -200,7 +201,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(type, "type");            
             ParameterExpression result = Expression.Parameter(type, name);
             _params.Add(result);
-            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, false));
+            _visibleVars.Add(new KeyValuePair<ParameterExpression, bool>(result, false));
             return result;
         }
 
@@ -215,7 +216,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(type, "type");
             ParameterExpression result = Expression.Parameter(type, name);
             _params.Add(result);
-            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, true));
+            _visibleVars.Add(new KeyValuePair<ParameterExpression, bool>(result, true));
             return result;
         }
 
@@ -270,9 +271,9 @@ namespace Microsoft.Scripting.Ast {
                 return Utils.GlobalVariable(type, name, true);
             }
 
-            VariableExpression result = Expression.Variable(type, name);
+            ParameterExpression result = Expression.Variable(type, name);
             _locals.Add(result);
-            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, true));
+            _visibleVars.Add(new KeyValuePair<ParameterExpression, bool>(result, true));
             return result;
         }
 
@@ -286,17 +287,17 @@ namespace Microsoft.Scripting.Ast {
                 return Utils.GlobalVariable(type, name, true);
             }
 
-            VariableExpression result = Expression.Variable(type, name);
+            ParameterExpression result = Expression.Variable(type, name);
             _locals.Add(result);
-            _visibleVars.Add(new KeyValuePair<Expression, bool>(result, false));
+            _visibleVars.Add(new KeyValuePair<ParameterExpression, bool>(result, false));
             return result;
         }
 
         /// <summary>
         /// Creates a temporary variable with specified name and type.
         /// </summary>
-        public VariableExpression HiddenVariable(Type type, string name) {
-            VariableExpression result = Expression.Variable(type, name);
+        public ParameterExpression HiddenVariable(Type type, string name) {
+            ParameterExpression result = Expression.Variable(type, name);
             _locals.Add(result);
             return result;
         }
@@ -306,7 +307,7 @@ namespace Microsoft.Scripting.Ast {
         /// by the builder. This is useful in cases where the variable is
         /// created outside of the builder.
         /// </summary>
-        public void AddHiddenVariable(VariableExpression temp) {
+        public void AddHiddenVariable(ParameterExpression temp) {
             ContractUtils.RequiresNotNull(temp, "temp");
             _locals.Add(temp);
         }
@@ -364,12 +365,13 @@ namespace Microsoft.Scripting.Ast {
         /// After this operation, the builder can no longer be used to create other instances.
         /// </summary>
         /// <returns>New LambdaExpression instance.</returns>
-        public LambdaExpression MakeGenerator(Type lambdaType) {
+        public LambdaExpression MakeGenerator(LabelTarget label, Type lambdaType) {
             Validate();
             EnsureSignature(lambdaType);
-            
-            LambdaExpression lambda = Expression.Generator(
+
+            LambdaExpression lambda = Utils.GeneratorLambda(
                 lambdaType,
+                label,
                 MakeBody(),
                 _name, 
                 _annotations, 
@@ -400,7 +402,6 @@ namespace Microsoft.Scripting.Ast {
             //          
             //  for the situation above the mapping will be  <a, x>, <b, V1>, <n, V2>
             //  where V1 and V2 are synthetic variables and initialized as follows -  V1 = y[0] , V2 = {y[1], y[2],... y[n]}
-            Dictionary<ParameterExpression, Expression> paramMapping = new Dictionary<ParameterExpression, Expression>();
             ParameterInfo[] delegateParams = delegateType.GetMethod("Invoke").GetParameters();
 
             bool delegateHasParamarray = delegateParams.Length > 0 && delegateParams[delegateParams.Length - 1].IsDefined(typeof(ParamArrayAttribute), false);
@@ -419,16 +420,31 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentException("lambda does not have enough parameters");
             }
 
+            // shortcircuit if no rewrite is needed.
+            if (!delegateHasParamarray) {
+                bool needRewrite = false;
+                for (int i = 0; i < copy; i++) {
+                    if (_params[i].Type != delegateParams[i].ParameterType) {
+                        needRewrite = true;
+                    }
+                }
+
+                if (!needRewrite) {
+                    return;
+                }
+            }
+
             List<ParameterExpression> newParams = new List<ParameterExpression>(delegateParams.Length);
-            List<VariableExpression> backingVars = new List<VariableExpression>();
+            List<ParameterExpression> backingVars = new List<ParameterExpression>();
             List<Expression> preambuleExpressions = new List<Expression>();
+            Dictionary<ParameterExpression, ParameterExpression> paramMapping = new Dictionary<ParameterExpression, ParameterExpression>();
 
             for (int i = 0; i < copy; i++) {
                 // map to a converted variable
                 if (_params[i].Type != delegateParams[i].ParameterType) {
                     ParameterExpression newParameter = Expression.Parameter(delegateParams[i].ParameterType, delegateParams[i].Name);
                     ParameterExpression mappedParameter = _params[i];
-                    VariableExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
 
                     newParams.Add(newParameter);
                     backingVars.Add(backingVariable);
@@ -458,7 +474,7 @@ namespace Microsoft.Scripting.Ast {
                 //unwarap delegate paramarray into variables and map parameters to the variables
                 for (int i = 0; i < unwrap; i++) {
                     ParameterExpression mappedParameter = _params[copy + i];
-                    VariableExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
 
                     backingVars.Add(backingVariable);
                     paramMapping.Add(mappedParameter, backingVariable);
@@ -479,7 +495,7 @@ namespace Microsoft.Scripting.Ast {
                 //lambda's paramarray should get elements from the delegate paramarray after skipping those that we unwrapped.
                 if (lambdaHasParamarray) {
                     ParameterExpression mappedParameter = _paramsArray;
-                    VariableExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
 
                     backingVars.Add(backingVariable);
                     paramMapping.Add(mappedParameter, backingVariable);
@@ -504,13 +520,8 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            //shortcircuit if no rewrite is needed.
-            if (delegateHasParamarray == false && backingVars.Count == 0) {
-                return;
-            }
 
-            LambdaParameterRewriter rewriter = new LambdaParameterRewriter(paramMapping);
-            Expression newBody = rewriter.Visit(_body);
+            Expression newBody = new LambdaParameterRewriter(paramMapping).Visit(_body);
 
             preambuleExpressions.Add(newBody);
             _body = Expression.Comma(preambuleExpressions);
@@ -521,9 +532,9 @@ namespace Microsoft.Scripting.Ast {
 
             for (int i = 0; i < _visibleVars.Count; i++) {
                 ParameterExpression p = _visibleVars[i].Key as ParameterExpression;
-                Expression v;
+                ParameterExpression v;
                 if (p != null && paramMapping.TryGetValue(p, out v)) {
-                    _visibleVars[i] = new KeyValuePair<Expression, bool>(v, _visibleVars[i].Value);
+                    _visibleVars[i] = new KeyValuePair<ParameterExpression, bool>(v, _visibleVars[i].Value);
                 }
             }
         }
@@ -562,8 +573,8 @@ namespace Microsoft.Scripting.Ast {
             // wrap a CodeContext scope if needed
             if (!_global && !DoNotAddContext) {
 
-                List<Expression> vars = new List<Expression>(_visibleVars.Count);
-                foreach (KeyValuePair<Expression, bool> v in _visibleVars) {
+                var vars = new List<ParameterExpression>(_visibleVars.Count);
+                foreach (var v in _visibleVars) {
                     if (EmitDictionary || v.Value) {
                         vars.Add(v.Key);
                     }
@@ -584,7 +595,7 @@ namespace Microsoft.Scripting.Ast {
 
             // wrap a scope if needed
             if (_locals != null && _locals.Count > 0) {
-                body = Expression.Scope(body, _name, _locals.ToArray());
+                body = Expression.Scope(body, _name, new ReadOnlyCollection<ParameterExpression>(_locals.ToArray()));
             }
             return body;
         }

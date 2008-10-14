@@ -14,10 +14,10 @@
 #####################################################################################
 
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("silverlight")
 skiptest("stdlib") #Too slow
-from lib.console_util import IronPythonInstance
+from iptest.console_util import IronPythonInstance
 
 remove_ironpython_dlls(testpath.public_testdir)
 
@@ -662,7 +662,7 @@ def test_ipy_dash_m_negative():
         AreEqual(exit, -1)
 
     # Modules within packages should not work
-    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib.assert_util")
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m iptest.assert_util")
     res, output, err, exit = ipi.StartAndRunToCompletion()
     AreEqual(res, True) # run should have worked
     AreEqual(exit, 1)   # should have returned 0
@@ -673,12 +673,12 @@ def test_ipy_dash_m_negative():
 def test_ipy_dash_m_pkgs(): 
     # Python packages work
     import nt
-    Assert("lib" in [x.lower() for x in nt.listdir(nt.getcwd())], nt.getcwd())
+    Assert("iptest" in [x.lower() for x in nt.listdir(nt.getcwd())], nt.getcwd())
     
     old_ipy_path = get_environ_variable("IRONPYTHONPATH")
     try:
         nt.environ["IRONPYTHONPATH"] = nt.getcwd()
-        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib")
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m iptest")
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 0)   # should have returned 0

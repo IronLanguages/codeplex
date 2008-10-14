@@ -66,7 +66,7 @@ namespace IronPython.Compiler.Ast {
                     )
                 );
             } else {
-                MSAst.VariableExpression temp = ag.GetTemporary("inplace");
+                MSAst.ParameterExpression temp = ag.GetTemporary("inplace");
                 return AstUtils.Block(
                     new SourceSpan(Span.Start, span.End),
                     Ast.Assign(temp, ag.Transform(_target)),
@@ -75,7 +75,7 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        private MSAst.Expression SetMemberOperator(AstGenerator ag, MSAst.Expression right, Operators op, MSAst.VariableExpression temp) {
+        private MSAst.Expression SetMemberOperator(AstGenerator ag, MSAst.Expression right, Operators op, MSAst.ParameterExpression temp) {
             return Binders.Set(
                 ag.BinderState,
                 typeof(object),

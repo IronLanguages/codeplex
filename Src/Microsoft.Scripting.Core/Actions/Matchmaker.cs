@@ -87,7 +87,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private static MethodInfo CreateCustomMatchmakerDelegate<T>(MethodInfo invoke) where T : class {
-            ParameterInfo[] parameters = invoke.GetParameters();
+            ParameterInfo[] parameters = invoke.GetParametersCached();
             Type[] signature = new Type[parameters.Length + 1];
 
             signature[0] = typeof(StrongBox<bool>);

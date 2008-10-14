@@ -17,7 +17,7 @@
 ## Test the binascii module
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import binascii
 

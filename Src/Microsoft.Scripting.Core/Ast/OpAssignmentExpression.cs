@@ -87,14 +87,14 @@ namespace Microsoft.Linq.Expressions {
             // temp2
 
             MemberExpression member = (MemberExpression)_left;
-            VariableExpression temp1 = Variable(member.Expression.Type, "temp1");
+            ParameterExpression temp1 = Variable(member.Expression.Type, "temp1");
 
             // 1. temp1 = left
             Expression e1 = Expression.Assign(temp1, member.Expression);
 
             // 2. temp2 = temp1.b (op) r
             Expression e2 = Expression.MakeBinary(_op, Expression.MakeMemberAccess(temp1, member.Member), _right, false, _method);
-            VariableExpression temp2 = Variable(e2.Type, "temp2");
+            ParameterExpression temp2 = Variable(e2.Type, "temp2");
             e2 = Expression.Assign(temp2, e2);
 
             // 3. temp1.b = temp2
@@ -123,7 +123,7 @@ namespace Microsoft.Linq.Expressions {
 
             var index = (IndexExpression)_left;
 
-            var vars = new List<VariableExpression>(index.Arguments.Count + 2);
+            var vars = new List<ParameterExpression>(index.Arguments.Count + 2);
             var exprs = new List<Expression>(index.Arguments.Count + 3);
 
             var tempObj = Expression.Variable(index.Object.Type, "tempObj");
@@ -200,9 +200,9 @@ namespace Microsoft.Linq.Expressions {
             }
 
             if (method != null) {
-                ParameterInfo[] pis = method.GetParameters();
+                ParameterInfo[] pis = method.GetParametersCached();
                 ContractUtils.Requires(pis.Length == 2, "method");
-                ContractUtils.Requires(TypeUtils.CanAssign(pis[0].ParameterType, left.Type));
+                ContractUtils.Requires(TypeUtils.AreReferenceAssignable(pis[0].ParameterType, left.Type));
             }
 
             return new OpAssignmentExpression(Annotations.Empty, op, left, right, left.Type, method);

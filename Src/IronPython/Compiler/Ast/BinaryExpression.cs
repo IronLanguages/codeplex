@@ -94,7 +94,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression rleft = ag.Transform(bright.Left);
 
             // Store it in the temp
-            MSAst.VariableExpression temp = ag.GetTemporary("chained_comparison");
+            MSAst.ParameterExpression temp = ag.GetTemporary("chained_comparison");
 
             // Create binary operation: left <_op> (temp = rleft)
             MSAst.Expression comparison = MakeBinaryOperation(
@@ -167,8 +167,8 @@ namespace IronPython.Compiler.Ast {
                 // Create action expression
                 if (op == PythonOperator.Divide &&
                     (ag.DivisionOptions == PythonDivisionOptions.Warn || ag.DivisionOptions == PythonDivisionOptions.WarnAll)) {
-                    MSAst.VariableExpression tempLeft = ag.GetTemporary("left", left.Type);
-                    MSAst.VariableExpression tempRight = ag.GetTemporary("right", right.Type);
+                    MSAst.ParameterExpression tempLeft = ag.GetTemporary("left", left.Type);
+                    MSAst.ParameterExpression tempRight = ag.GetTemporary("right", right.Type);
                     return Ast.Comma(
                         Ast.Call(
                             AstGenerator.GetHelperMethod("WarnDivision"),

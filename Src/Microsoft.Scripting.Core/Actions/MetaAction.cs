@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions.Compiler;
 
 #if !SILVERLIGHT
 using ComMetaObject = Microsoft.Scripting.Com.ComMetaObject;
@@ -34,7 +35,7 @@ namespace Microsoft.Scripting.Actions {
                 throw Error.TypeParameterIsNotDelegate(typeof(T));
             }
 
-            ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
+            ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParametersCached();
 
             if (pis.Length == 0 || pis[0].ParameterType != typeof(CallSite)) {
                 throw Error.FirstArgumentMustBeCallSite();
@@ -67,39 +68,64 @@ namespace Microsoft.Scripting.Actions {
                 throw Error.BindingCannotBeNull();
             }
 
+            var returnLabel = Expression.Label(GetReturnType(typeof(T)));
+
             return new Rule<T>(
-                Expression.Scope(
-                    GetMetaObjectRule(binding, GetReturnType(typeof(T))),
-                    "<rule>"
-                ),
+                GetMetaObjectRule(binding, returnLabel),
+                returnLabel,
                 new ReadOnlyCollection<ParameterExpression>(pes)
             );
         }
 
         public abstract MetaObject Bind(MetaObject target, MetaObject[] args);
 
+        public MetaObject Defer(MetaObject target, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(target, "target");
+
+            if (args == null) {
+                return MakeDeferred(
+                        target.Restrictions,
+                        target
+                );
+            } else {
+                return MakeDeferred(
+                        target.Restrictions.Merge(Restrictions.Combine(args)),
+                        args.AddFirst(target)
+                );
+            }
+        }
+
         public MetaObject Defer(params MetaObject[] args) {
+            return MakeDeferred(
+                Restrictions.Combine(args),
+                args
+            );
+        }
+
+        private MetaObject MakeDeferred(Restrictions rs, params MetaObject[] args) {
             var exprs = MetaObject.GetExpressions(args);
 
             // TODO: we should really be using the same delegate as the CallSite
+            Type delegateType = DelegateHelpers.MakeDeferredSiteDelegate(args, typeof(object));
+
             return new MetaObject(
-                Expression.Dynamic(
+                Expression.MakeDynamic(
+                    delegateType,
                     this,
-                    typeof(object),   // !! what's the correct return type?
                     exprs
                 ),
-                Restrictions.Combine(args)
+                rs
             );
         }
 
         #endregion
 
-        private Expression AddReturn(Expression body, Type retType) {
+        private Expression AddReturn(Expression body, LabelTarget @return) {
             switch (body.NodeType) {
                 case ExpressionType.Scope:
                     ScopeExpression se = (ScopeExpression)body;
                     return Expression.Scope(
-                        AddReturn(se.Body, retType),
+                        AddReturn(se.Body, @return),
                         se.Variables
                     );
                 case ExpressionType.Conditional:
@@ -107,20 +133,20 @@ namespace Microsoft.Scripting.Actions {
                     if (IsDeferExpression(conditional.IfTrue)) {
                         return Expression.Condition(
                             Expression.Not(conditional.Test),
-                            Expression.Return(Expression.ConvertHelper(conditional.IfFalse, retType)),
+                            Expression.Return(@return, Expression.ConvertHelper(conditional.IfFalse, @return.Type)),
                             Expression.Empty()
                         );
                     } else if (IsDeferExpression(conditional.IfFalse)) {
                         return Expression.Condition(
                             conditional.Test,
-                            Expression.Return(Expression.ConvertHelper(conditional.IfTrue, retType)),
+                            Expression.Return(@return, Expression.ConvertHelper(conditional.IfTrue, @return.Type)),
                             Expression.Empty()
                         );
                     }
                     return Expression.Condition(
                         conditional.Test,
-                        AddReturn(conditional.IfTrue, retType),
-                        AddReturn(conditional.IfFalse, retType)
+                        AddReturn(conditional.IfTrue, @return),
+                        AddReturn(conditional.IfFalse, @return)
                     );
                 case ExpressionType.ThrowStatement:
                     return body;
@@ -133,7 +159,7 @@ namespace Microsoft.Scripting.Actions {
                         for (int i = 0; i < nodes.Length - 1; i++) {
                             nodes[i] = block.Expressions[i];
                         }
-                        nodes[nodes.Length - 1] = AddReturn(block.Expressions[block.Expressions.Count - 1], retType);
+                        nodes[nodes.Length - 1] = AddReturn(block.Expressions[block.Expressions.Count - 1], @return);
 
                         if (block.Type == typeof(void)) {
                             return Expression.Block(nodes);
@@ -144,7 +170,7 @@ namespace Microsoft.Scripting.Actions {
 
                     goto default;
                 default:
-                    return Expression.Return(Expression.ConvertHelper(body, retType));
+                    return Expression.Return(@return, Expression.ConvertHelper(body, @return.Type));
             }
         }
 
@@ -164,10 +190,10 @@ namespace Microsoft.Scripting.Actions {
             return dlgType.GetMethod("Invoke").ReturnType;
         }
 
-        private Expression GetMetaObjectRule(MetaObject binding, Type retType) {
+        private Expression GetMetaObjectRule(MetaObject binding, LabelTarget @return) {
             Debug.Assert(binding != null);
 
-            Expression body = AddReturn(binding.Expression, retType);
+            Expression body = AddReturn(binding.Expression, @return);
 
             if (binding.Restrictions != Restrictions.Empty) {
                 // add the test only if we have one

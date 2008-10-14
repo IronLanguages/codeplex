@@ -38,6 +38,10 @@ namespace Microsoft.Scripting.Ast {
                 AstUtils.Constant(_name)
             );
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            return this;
+        }
     }
 
     /// <summary>

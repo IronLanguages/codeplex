@@ -54,6 +54,10 @@ namespace Microsoft.Scripting.Ast {
         public override string ToString() {
             return string.Format("Global {0} {1}", Type.Name, _name);
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            return this;
+        }
     }
 
     public partial class Utils {

@@ -33,7 +33,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _finally;
         private readonly Expression _fault;
 
-        internal TryStatement(Annotations annotations, Expression body, ReadOnlyCollection<CatchBlock> handlers, Expression @finally, Expression fault)
+        internal TryStatement(Expression body, Expression @finally, Expression fault, Annotations annotations, ReadOnlyCollection<CatchBlock> handlers)
             : base(ExpressionType.TryStatement, typeof(void), annotations) {
             _body = body;
             _handlers = handlers;
@@ -127,13 +127,7 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.TryMustHaveCatchFinallyOrFault();
             }
 
-            return new TryStatement(
-                annotations,
-                body,
-                @catch,
-                @finally,
-                fault
-            );
+            return new TryStatement(body, @finally, fault, annotations, @catch);
         }
     }
 

@@ -29,7 +29,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30718</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -181,6 +181,7 @@
     <Compile Include="Compiler\Ast\WhileStatement.cs" />
     <Compile Include="Compiler\Ast\WithStatement.cs" />
     <Compile Include="Compiler\Ast\YieldExpression.cs" />
+    <Compile Include="Compiler\OnDiskScriptCode.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="Hosting\PythonService.cs" />
     <Compile Include="MaybeNotImplementedAttribute.cs" />
@@ -216,6 +217,7 @@
     <Compile Include="Runtime\PythonModuleAttribute.cs" />
     <Compile Include="Runtime\PythonTypeAttribute.cs" />
     <Compile Include="Runtime\Types\DynamicBaseTypeAttribute.cs" />
+    <Compile Include="Runtime\Types\InstanceCreator.cs" />
     <Compile Include="Runtime\Types\NameConverter.cs" />
     <Compile Include="Runtime\Types\NewSubtypeMaker.cs" />
     <Compile Include="Runtime\Types\NewTypeInfo.cs" />
@@ -367,7 +369,6 @@
     <Compile Include="Runtime\ThrowingErrorSink.cs" />
     <Compile Include="Runtime\Types\CustomAttributeTracker.cs" />
     <Compile Include="Runtime\Types\CustomOldClassDictionary.cs" />
-    <Compile Include="Runtime\Types\DelegateBuilder.cs" />
     <Compile Include="Runtime\Operations\DelegateOps.cs" />
     <Compile Include="Runtime\Types\DictProxy.cs" />
     <Compile Include="Runtime\Types\FunctionType.cs" />
@@ -388,7 +389,6 @@
     <Compile Include="Runtime\Types\TypeCache.Generated.cs" />
     <Compile Include="Runtime\Types\TypeInfo.cs" />
     <Compile Include="Runtime\Types\TypeInfo.Generated.cs" />
-    <Compile Include="Runtime\Types\TypePrepender.cs" />
     <Compile Include="Runtime\Types\BuiltinFunction.cs" />
     <Compile Include="Runtime\Types\BuiltinMethodDescriptor.cs" />
     <Compile Include="Runtime\Types\ConstructorFunction.cs" />

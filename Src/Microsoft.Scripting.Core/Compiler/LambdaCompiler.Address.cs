@@ -23,6 +23,9 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions.Compiler {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     partial class LambdaCompiler {
+        private void EmitAddress(Expression node, Type type) {
+            EmitAddress(node, type, true);
+        }
 
         // TODO: need to remove the address-of support for some of the nodes
         // marked below, because 1) it doesn't make sense (there is no IL
@@ -32,8 +35,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // except where it would in IL: locals, args, fields, and array elements
         // (Unbox is an exception, it's intended to emit a ref to the orignal
         // boxed value)
-        private void EmitAddress(Expression node, Type type) {
+        private void EmitAddress(Expression node, Type type, bool emitStart) {
             Debug.Assert(node != null);
+            ExpressionStart startEmitted = emitStart ? EmitExpressionStart(node) : ExpressionStart.None;
 
             switch (node.NodeType) {
                 default:
@@ -51,11 +55,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // TODO: remove
                 case ExpressionType.Assign:
-                    AddressOf((AssignmentExpression)node);
-                    break;
-
-                case ExpressionType.Variable:
-                    AddressOf((VariableExpression)node, type);
+                    AddressOf((AssignmentExpression)node, type);
                     break;
 
                 case ExpressionType.Parameter:
@@ -82,6 +82,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Index:
                     AddressOf((IndexExpression)node, type);
                     break;
+            }
+
+            if (emitStart) {
+                EmitExpressionEnd(startEmitted);
             }
         }
 
@@ -111,20 +115,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // TODO: remove !!!
-        private void AddressOf(AssignmentExpression node) {
-            ContractUtils.Requires(node.Expression is VariableExpression || node.Expression is ParameterExpression, "node");
+        private void AddressOf(AssignmentExpression node, Type type) {
+            var param = node.Expression as ParameterExpression;
+            if (param == null || param.Type != type) {
+                EmitExpressionAddress(node, type);
+                return;
+            }
 
             EmitExpression(node.Value);
-            _scope.EmitSet(node.Expression);
-            _scope.EmitAddressOf(node.Expression);
-        }
-
-        private void AddressOf(VariableExpression node, Type type) {
-            if (type == node.Type) {
-                _scope.EmitAddressOf(node);
-            } else {
-                EmitExpressionAddress(node, type);
-            }
+            _scope.EmitSet(param);
+            _scope.EmitAddressOf(param);
         }
 
         private void AddressOf(ParameterExpression node, Type type) {
@@ -267,9 +267,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EmitExpressionAddress(Expression node, Type type) {
-            Debug.Assert(TypeUtils.CanAssign(type, node.Type));
+            Debug.Assert(TypeUtils.AreReferenceAssignable(type, node.Type));
 
-            EmitExpression(node);
+            EmitExpression(node, false);
             LocalBuilder tmp = _ilg.GetLocal(type);
             _ilg.Emit(OpCodes.Stloc, tmp);
             _ilg.Emit(OpCodes.Ldloca, tmp);
@@ -281,11 +281,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //
         // For properties, we want to write back into the property if it's
         // passed byref.
-        // 
-        // Note: ExpressionCompiler thinks it needs to writeback
-        // fields, but as far as I can tell, that code path is
-        // unreachable because fields can always emit their address
         private WriteBack EmitAddressWriteBack(Expression node, Type type) {
+            ExpressionStart startEmitted = EmitExpressionStart(node);
+
             WriteBack result = null;
             if (type == node.Type) {
                 switch (node.NodeType) {
@@ -298,8 +296,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
             if (result == null) {
-                EmitAddress(node, type);
+                EmitAddress(node, type, false);
             }
+
+            EmitExpressionEnd(startEmitted);
+
             return result;
         }
 

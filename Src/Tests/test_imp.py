@@ -13,9 +13,9 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 if is_silverlight==False:
-    from lib.file_util import *
+    from iptest.file_util import *
 
 import sys
 import imp
@@ -590,8 +590,8 @@ def test_import_hooks_import_precence():
     def myimport(*args):
         return 'myimport'
 
-    import lib
-    import lib.misc_util
+    import iptest
+    import iptest.misc_util
     mi = myimp()
     sys.meta_path.append(mi)
     builtinimp = get_builtins_dict()['__import__']
@@ -603,12 +603,12 @@ def test_import_hooks_import_precence():
         AreEqual(myimpCalled, None)
                 
         # reload on a built-in hits the loader protocol
-        reload(lib)
-        AreEqual(myimpCalled, ('lib', None))
+        reload(iptest)
+        AreEqual(myimpCalled, ('iptest', None))
         
-        reload(lib.misc_util)
-        AreEqual(myimpCalled[0], 'lib.misc_util')
-        AreEqual(myimpCalled[1][0][-3:], 'lib')
+        reload(iptest.misc_util)
+        AreEqual(myimpCalled[0], 'iptest.misc_util')
+        AreEqual(myimpCalled[1][0][-6:], 'iptest')
     finally:
         get_builtins_dict()['__import__'] = builtinimp
         sys.meta_path.remove(mi)
@@ -670,14 +670,14 @@ def test_import_hooks_importer():
         AreEqual(myimpCalled, ('does_not_exist', None))
         
         try:
-            from lib import blah
+            from iptest import blah
             AssertUnreachable()
         except ImportError:
             pass
 
         AreEqual(type(myimpCalled[1]), list)
-        AreEqual(myimpCalled[0], 'lib.blah')
-        AreEqual(myimpCalled[1][0][-3:], 'lib')
+        AreEqual(myimpCalled[0], 'iptest.blah')
+        AreEqual(myimpCalled[1][0][-6:], 'iptest')
         
         def f(): import does_not_exist_throw
         
@@ -740,15 +740,15 @@ def test_import_hooks_loader():
         AreEqual(does_not_exist_create.fullname, 'does_not_exist_create')
         AreEqual(does_not_exist_create.path, None)
     
-        import lib.does_not_exist_create_sub
-        AreEqual(lib.does_not_exist_create_sub.__file__, '<myloader file 3>')
-        AreEqual(lib.does_not_exist_create_sub.fullname, 'lib.does_not_exist_create_sub')
-        AreEqual(lib.does_not_exist_create_sub.path[0][-3:], 'lib')
+        import iptest.does_not_exist_create_sub
+        AreEqual(iptest.does_not_exist_create_sub.__file__, '<myloader file 3>')
+        AreEqual(iptest.does_not_exist_create_sub.fullname, 'iptest.does_not_exist_create_sub')
+        AreEqual(iptest.does_not_exist_create_sub.path[0][-6:], 'iptest')
         
-        reload(lib.does_not_exist_create_sub)
-        AreEqual(lib.does_not_exist_create_sub.__file__, '<myloader file 4>')
-        AreEqual(lib.does_not_exist_create_sub.fullname, 'lib.does_not_exist_create_sub')
-        AreEqual(lib.does_not_exist_create_sub.path[0][-3:], 'lib')
+        reload(iptest.does_not_exist_create_sub)
+        AreEqual(iptest.does_not_exist_create_sub.__file__, '<myloader file 4>')
+        AreEqual(iptest.does_not_exist_create_sub.fullname, 'iptest.does_not_exist_create_sub')
+        AreEqual(iptest.does_not_exist_create_sub.path[0][-6:], 'iptest')
         
         import does_not_exist_create_pkg.does_not_exist_create_subpkg
         AreEqual(does_not_exist_create_pkg.__file__, '<myloader file 5>')
@@ -901,7 +901,7 @@ def test_import_kw_args():
 
 def test_import_list_empty_string():
     """importing w/ an empty string in the from list should be ignored"""
-    x = __import__('lib', {}, {}, [''])
+    x = __import__('iptest', {}, {}, [''])
     Assert(not '' in dir(x))
 
 @skip("silverlight") #BUG?
@@ -917,7 +917,7 @@ def test_cp7050():
 
     AssertError(ImportError, __import__, "Nt")
     AssertError(ImportError, __import__, "Lib")
-    AssertError(ImportError, __import__, "lib.Assert_Util")
+    AssertError(ImportError, __import__, "iptest.Assert_Util")
             
 
 def test_meta_path_before_builtins():
@@ -1000,13 +1000,13 @@ class Test(object):
     
 def test_import_path_seperator():
     """verify using the path seperator in a direct call will result in an ImportError"""
-    AssertError(ImportError, __import__, 'lib\\warning_util')
-    __import__('lib.warning_util')
+    AssertError(ImportError, __import__, 'iptest\\warning_util')
+    __import__('iptest.warning_util')
     
     
 def test_load_package():
-    import lib
-    pkg = imp.load_package('libcopy', lib.__path__[0])
+    import iptest
+    pkg = imp.load_package('libcopy', iptest.__path__[0])
     AreEqual(sys.modules['libcopy'], pkg)
 
     pkg = imp.load_package('some_new_pkg', 'some_path_that_does_not_and_never_will_exist')

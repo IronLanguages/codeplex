@@ -15,7 +15,7 @@
 
 # test cases to verify the thread safety of the IronPython engine
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("win32")
 skiptest("interpreted") #Too slow
 from System import *

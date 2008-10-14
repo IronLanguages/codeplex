@@ -14,9 +14,9 @@
 #####################################################################################
 
 # COM Interop tests for IronPython
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("silverlight")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 
 if is_cli:
     from System import DateTime, TimeSpan, Reflection, Int32

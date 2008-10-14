@@ -32,11 +32,11 @@ namespace IronPython.Runtime.Binding {
         private readonly MetaAction/*!*/ _action;
         private readonly List<Expression/*!*/>/*!*/ _conditions = new List<Expression>();
         private readonly List<Expression/*!*/>/*!*/ _bodies = new List<Expression>();
-        private readonly List<VariableExpression/*!*/>/*!*/ _variables = new List<VariableExpression>();
+        private readonly List<ParameterExpression/*!*/>/*!*/ _variables = new List<ParameterExpression>();
         private Expression _body;
         private bool _testCoercionRecursionCheck;
         private Restrictions/*!*/ _restrictions = Restrictions.Empty;
-        private VariableExpression _compareRetBool;
+        private ParameterExpression _compareRetBool;
 
         public ConditionalBuilder(MetaAction/*!*/ action) {
             _action = action;
@@ -77,7 +77,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public VariableExpression CompareRetBool {
+        public ParameterExpression CompareRetBool {
             get {
                 if (_compareRetBool == null) {
                     _compareRetBool = Expression.Variable(typeof(bool), "compareRetBool");
@@ -148,7 +148,7 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// Adds a variable which will be scoped at the level of the final expression.
         /// </summary>
-        public void AddVariable(VariableExpression/*!*/ var) {
+        public void AddVariable(ParameterExpression/*!*/ var) {
             if (_body != null) {
                 throw new InvalidOperationException("Variables must be added before calling FinishCondition");
             }

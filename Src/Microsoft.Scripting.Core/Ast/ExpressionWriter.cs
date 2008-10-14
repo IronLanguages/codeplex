@@ -15,12 +15,12 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
-using System.Globalization;
 
 namespace Microsoft.Linq.Expressions {
     // TODO: debug builds only!
@@ -399,15 +399,8 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitVariable(VariableExpression node) {
-            Out("(.var", Flow.Space);
-            Out(node.Name ?? "");
-            Out(")");
-            return node;
-        }
-
         protected internal override Expression VisitParameter(ParameterExpression node) {
-            Out("(.arg", Flow.Space);
+            Out(".prm", Flow.Space);
             Out(node.Name ?? "");
             Out(")");
             return node;
@@ -418,7 +411,7 @@ namespace Microsoft.Linq.Expressions {
             Out(
                 String.Format(CultureInfo.CurrentCulture, 
                     "{0} ({1} {2} #{3})",
-                    node.NodeType == ExpressionType.Lambda ? ".lambda" : ".generator",
+                    ".lambda",
                     node.Name,
                     node.Type,
                     id
@@ -646,25 +639,17 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitBreak(BreakStatement node) {
-            Out(".break ");
-            DumpLabel(node.Target);
-            Out(";", Flow.NewLine);
-            return node;
-        }
-
-        protected internal override Expression VisitContinue(ContinueStatement node) {
-            Out(".continue ");
-            DumpLabel(node.Target);
-            Out(";", Flow.NewLine);
-            return node;
-        }
-
         protected internal override Expression VisitDoWhile(DoStatement node) {
-            Out(".do ");
-            if (node.Label != null) {
-                DumpLabel(node.Label);
-                Out(" ");
+            Out(".do", Flow.Space);
+            if (node.BreakLabel != null) {
+                Out("break:");
+                DumpLabel(node.BreakLabel);
+                Out(Flow.Space, "");
+            }
+            if (node.ContinueLabel != null) {
+                Out("continue:");
+                DumpLabel(node.ContinueLabel);
+                Out(Flow.Space, "");
             }
             Out("{", Flow.NewLine);
             Indent();
@@ -681,22 +666,35 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitLabeled(LabeledStatement node) {
-            Out(".labeled ");
+        protected internal override Expression VisitLabel(LabelExpression node) {
+            Out(".label", Flow.Space);
             DumpLabel(node.Label);
-            Out(" {", Flow.NewLine);
-            Indent();
-            Visit(node.Statement);
-            Dedent();
-            Out(Flow.NewLine, "}");
+            Out(Flow.Space, "(");
+            Visit(node.DefaultValue);
+            Out(")", Flow.Space);
+            return node;
+        }
+
+        protected internal override Expression VisitGoto(GotoExpression node) {
+            Out(".goto", Flow.Space);
+            DumpLabel(node.Target);
+            Out(Flow.Space, "(");
+            Visit(node.Value);
+            Out(")", Flow.Space);
             return node;
         }
 
         protected internal override Expression VisitLoop(LoopStatement node) {
-            Out(".for ");
-            if (node.Label != null) {
-                DumpLabel(node.Label);
-                Out(" ");
+            Out(".for", Flow.Space);
+            if (node.BreakLabel != null) {
+                Out("break:");
+                DumpLabel(node.BreakLabel);
+                Out(Flow.Space, "");
+            }
+            if (node.ContinueLabel != null) {
+                Out("continue:");
+                DumpLabel(node.ContinueLabel);
+                Out(Flow.Space, "");
             }
             Out("(; ");
             Visit(node.Test);
@@ -723,7 +721,7 @@ namespace Microsoft.Linq.Expressions {
             }
             Out("(", Flow.NewLine);
             Indent();
-            foreach (VariableExpression v in node.Variables) {
+            foreach (ParameterExpression v in node.Variables) {
                 Out(Flow.NewLine, "");
                 Out(v.Type.ToString(), Flow.Space);
                 Out(v.Name ?? "");
@@ -767,7 +765,7 @@ namespace Microsoft.Linq.Expressions {
 
         protected internal override Expression VisitThrow(ThrowStatement node) {
             Out(Flow.NewLine, ".throw (");
-            Visit(node.Exception);
+            Visit(node.Value);
             Out(")", Flow.NewLine);
             return node;
         }
@@ -810,13 +808,6 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitYield(YieldStatement node) {
-            Out(".yield ");
-            Visit(node.Expression);
-            Out(";", Flow.NewLine);
-            return node;
-        }
-
         protected internal override Expression VisitIndex(IndexExpression node) {
             if (node.Indexer != null) {
                 OutMember(node.Object, node.Indexer);
@@ -839,25 +830,18 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal override Expression VisitExtension(Expression node) {
-            Out(".extension (");
-            Out(node.Type.Name);
-            Out(")", Flow.Space);
+            Out(".extension", Flow.Space);
 
-            // print the known node (best we can do)
-            if (node.CanReduce) {
-                Visit(node.ReduceExtensions());
-            }
-
-            Out(";", Flow.NewLine);
+            Out(node.GetType().Name, Flow.Space);
+            Out("(", Flow.Space);
+            // walk it
+            base.VisitExtension(node);
+            Out(")", Flow.NewLine);
             return node;
         }
 
-        private static string GetLambdaInfo(LambdaExpression lambda) {
-            string info = lambda.NodeType == ExpressionType.Generator ? ".generator " : ".lambda ";
-
-            info += String.Format(CultureInfo.CurrentCulture, "{0} {1} (", lambda.ReturnType, lambda.Name);
-            info += ")";
-            return info;
+        private static string GetLambdaInfo(LambdaExpression lambda) {            
+            return String.Format(CultureInfo.CurrentCulture, ".lambda {0} {1} ()", lambda.ReturnType, lambda.Name);
         }
 
         private void DumpLabel(LabelTarget target) {
@@ -874,7 +858,7 @@ namespace Microsoft.Linq.Expressions {
             Indent();
             foreach (ParameterExpression p in node.Parameters) {
                 Out(Flow.NewLine, "");
-                Out(p.Type.ToString(), Flow.Space);
+                Out((p.IsByRef ? p.Type.MakeByRefType() : p.Type).ToString(), Flow.Space);
                 Out(p.Name ?? "");
             }
             Dedent();

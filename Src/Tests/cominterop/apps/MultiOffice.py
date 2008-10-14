@@ -15,9 +15,9 @@
 
 # Office Multi-application COM Interop tests
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("win32", "silverlight", "cli64")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 
 if not IsExcelInstalled():
     from sys import exit

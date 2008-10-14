@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Com {
         private SplatCaller MakeCaller(int args) {
             MethodInfo mi = GetType().GetMethod("CallHelper" + args);
             if (mi != null) {
-                Type siteType = mi.GetParameters()[0].ParameterType;
+                Type siteType = mi.GetParametersCached()[0].ParameterType;
                 CallSite site = DynamicSiteHelpers.MakeSite(_binder, siteType);
                 return (SplatCaller)Delegate.CreateDelegate(typeof(SplatCaller), site, mi);
             }

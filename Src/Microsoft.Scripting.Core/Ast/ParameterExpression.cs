@@ -15,6 +15,7 @@
 using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 using System.Text;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
@@ -23,10 +24,15 @@ namespace Microsoft.Linq.Expressions {
         private readonly bool _isByRef;
 
         internal ParameterExpression(Type type, string name, Annotations annotations, bool isByRef)
-            : base(ExpressionType.Parameter, type, false, annotations, true, true) {
+            : this(ExpressionType.Parameter, type, name, annotations, isByRef) {
+        }
+
+        internal ParameterExpression(ExpressionType et, Type type, string name, Annotations annotations, bool isByRef)
+            : base(et, type, false, annotations, true, true) {
             _name = name;
             _isByRef = isByRef;
         }
+
 
         public string Name {
             get { return _name; }
@@ -67,6 +73,34 @@ namespace Microsoft.Linq.Expressions {
             }
 
             return new ParameterExpression(type, name, annotations, byref);
+        }
+
+        public static ParameterExpression Variable(Type type, string name) {
+            return Variable(type, name, Annotations.Empty);
+        }
+        public static ParameterExpression Variable(Type type, string name, Annotations annotations) {
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(type != typeof(void), "type", Strings.ArgumentCannotBeOfTypeVoid);
+            ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
+            return new ParameterExpression(ExpressionType.Parameter, type, name, annotations, false);
+        }
+
+        //Variables must not be ByRef.
+        internal static void RequireVariableNotByRef(ParameterExpression v, string varName) {
+            Assert.NotNull(varName);
+            if (v != null) {
+                ContractUtils.Requires(!v.IsByRef, varName, Strings.VariableMustNotBeByRef);
+            }
+        }
+
+        internal static void RequireVariablesNotByRef(ReadOnlyCollection<ParameterExpression> vs, string collectionName) {
+            Assert.NotNull(vs);
+            Assert.NotNull(collectionName);
+            for (int i = 0; i < vs.Count; i++) {
+                if (vs[i] != null) {
+                    ContractUtils.Requires(!vs[i].IsByRef, string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0}[{1}]", collectionName, i), Strings.VariableMustNotBeByRef);
+                }
+            }
         }
     }
 }

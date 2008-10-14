@@ -19,7 +19,7 @@
 ## * sbs_builtin\test_xrange covers many xrange corner cases
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def test_range():
     Assert(range(10) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])

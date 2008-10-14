@@ -158,7 +158,7 @@ namespace Microsoft.Scripting.Actions {
         protected void MakeOperatorGetMemberBody(Type type, string name) {
             MethodInfo getMem = GetMethod(type, name);
             if (getMem != null && getMem.IsSpecialName) {
-                VariableExpression tmp = Rule.GetTemporary(typeof(object), "getVal");
+                ParameterExpression tmp = Rule.GetTemporary(typeof(object), "getVal");
                 AddToBody(
                     AstUtils.If(
                         Ast.NotEqual(

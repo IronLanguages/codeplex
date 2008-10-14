@@ -14,11 +14,9 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
-using Microsoft.Scripting.Actions;
+using System.Globalization;
 using Microsoft.Scripting.Utils;
 using System.Text;
-using System.Globalization;
-using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -224,6 +222,15 @@ namespace Microsoft.Linq.Expressions {
         }
         internal static void RequiresCanRead(IEnumerable<Expression> items, string paramName) {
             if (items != null) {
+                // this is called a lot, avoid allocating an enumerator if we can...
+                IList<Expression> listItems = items as IList<Expression>;
+                if (listItems != null) {
+                    for (int i = 0; i < listItems.Count; i++) {
+                        RequiresCanRead(listItems[i], paramName);
+                    }
+                    return;
+                }
+
                 foreach (var i in items) {
                     RequiresCanRead(i, paramName);
                 }

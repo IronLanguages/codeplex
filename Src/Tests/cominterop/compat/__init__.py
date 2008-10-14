@@ -16,7 +16,7 @@
 import sys
 import nt
 
-from lib.cominterop_util import is_pywin32
+from iptest.cominterop_util import is_pywin32
 if not is_pywin32:
     print "pywin32 is not installed.  Skipping this test."
     sys.exit(0)
@@ -42,5 +42,5 @@ if sys.platform=="win32":
 
 
 #--Run tests-------------------------------------------------------------------
-from lib.cominterop_util import run_pkg_helper
+from iptest.cominterop_util import run_pkg_helper
 run_pkg_helper(__file__, exclude_list = ["hw"])

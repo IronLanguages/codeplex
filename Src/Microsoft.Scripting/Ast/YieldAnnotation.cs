@@ -12,11 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting {
+using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
+
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// YieldAnnotation can be used to annotate yield statements.  YieldAnnotation can
     /// used with IDebuggableGenerator to change the state of the generator.

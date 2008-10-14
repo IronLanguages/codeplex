@@ -19,7 +19,7 @@
 #
 # Python has equality comparisons between int, float, long (BigInteger), and Complex
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # Check the hash invariant for equal objects.
 def check(x,y):
@@ -93,7 +93,7 @@ def test_userhash_result():
 
 @skip("win32")
 def test_cli_number_hash():
-    from lib.type_util import clr_numbers
+    from iptest.type_util import clr_numbers
     
     for name, value in clr_numbers.iteritems():
         if name.find('Single') != -1:

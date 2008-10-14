@@ -44,6 +44,14 @@ namespace Microsoft.Scripting.Ast {
                 )
             );
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            Expression v = visitor.Visit(_variable);
+            if (v == _variable) {
+                return this;
+            }
+            return Utils.Delete(v, Annotations);
+        }
     }
 
     public static partial class Utils {
@@ -58,9 +66,9 @@ namespace Microsoft.Scripting.Ast {
         public static DeleteStatement Delete(Expression variable, Annotations annotations) {
             ContractUtils.RequiresNotNull(variable, "variable");
             ContractUtils.Requires(
-                variable is VariableExpression || variable is ParameterExpression || variable is GlobalVariableExpression,
+                variable is ParameterExpression || variable is GlobalVariableExpression,
                 "variable",
-                "variable must be VariableExpression, ParameterExpression, or GlobalVariableExpression");
+                "variable must be ParameterExpression or GlobalVariableExpression");
             return new DeleteStatement(annotations, variable);
         }
     }

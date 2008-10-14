@@ -13,5 +13,5 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 Assert(__name__ == "toimport", __name__)

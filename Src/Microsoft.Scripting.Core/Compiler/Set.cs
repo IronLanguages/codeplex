@@ -16,13 +16,13 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 
+// Note: can't move to Utils because name conflicts with Microsoft.Linq.Set
 namespace Microsoft.Linq.Expressions.Compiler {
     
     /// <summary>
     /// A simple hashset, built on Dictionary{K, V}
     /// 
-    /// TODO: replace with one of the ones in System.Core, they probably
-    /// perform a lot better
+    /// TODO: should remove this in favor of HashSet{T}
     /// </summary>
     internal sealed class Set<T> : ICollection<T> {
         private readonly Dictionary<T, object> _data;
@@ -31,8 +31,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _data = new Dictionary<T, object>();
         }
 
-        // TODO: takes non-generic type for covariance
-        internal Set(IList list) {
+        internal Set(IEqualityComparer<T> comparer) {
+            _data = new Dictionary<T, object>(comparer);
+        }
+
+        internal Set(IList<T> list) {
             _data = new Dictionary<T, object>(list.Count);
             foreach (T t in list) {
                 _data.Add(t, null);

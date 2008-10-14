@@ -29,6 +29,17 @@ namespace IronPython.Compiler {
     public delegate object CallTarget3(object arg0, object arg1, object arg2);
     public delegate object CallTarget4(object arg0, object arg1, object arg2, object arg3);
     public delegate object CallTarget5(object arg0, object arg1, object arg2, object arg3, object arg4);
+    public delegate object CallTarget6(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5);
+    public delegate object CallTarget7(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6);
+    public delegate object CallTarget8(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7);
+    public delegate object CallTarget9(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8);
+    public delegate object CallTarget10(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9);
+    public delegate object CallTarget11(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10);
+    public delegate object CallTarget12(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11);
+    public delegate object CallTarget13(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12);
+    public delegate object CallTarget14(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12, object arg13);
+    public delegate object CallTarget15(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12, object arg13, object arg14);
+    public delegate object CallTarget16(object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12, object arg13, object arg14, object arg15);
 
     // *** END GENERATED CODE ***
 
@@ -47,6 +58,17 @@ namespace IronPython.Compiler {
     public delegate IEnumerator GeneratorTarget3(PythonGenerator generator, object arg0, object arg1, object arg2);
     public delegate IEnumerator GeneratorTarget4(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3);
     public delegate IEnumerator GeneratorTarget5(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4);
+    public delegate IEnumerator GeneratorTarget6(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5);
+    public delegate IEnumerator GeneratorTarget7(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6);
+    public delegate IEnumerator GeneratorTarget8(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7);
+    public delegate IEnumerator GeneratorTarget9(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8);
+    public delegate IEnumerator GeneratorTarget10(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9);
+    public delegate IEnumerator GeneratorTarget11(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10);
+    public delegate IEnumerator GeneratorTarget12(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11);
+    public delegate IEnumerator GeneratorTarget13(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12);
+    public delegate IEnumerator GeneratorTarget14(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12, object arg13);
+    public delegate IEnumerator GeneratorTarget15(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12, object arg13, object arg14);
+    public delegate IEnumerator GeneratorTarget16(PythonGenerator generator, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6, object arg7, object arg8, object arg9, object arg10, object arg11, object arg12, object arg13, object arg14, object arg15);
 
     // *** END GENERATED CODE ***
 
@@ -69,6 +91,17 @@ namespace IronPython.Compiler {
                     case 3: return typeof(CallTarget3);
                     case 4: return typeof(CallTarget4);
                     case 5: return typeof(CallTarget5);
+                    case 6: return typeof(CallTarget6);
+                    case 7: return typeof(CallTarget7);
+                    case 8: return typeof(CallTarget8);
+                    case 9: return typeof(CallTarget9);
+                    case 10: return typeof(CallTarget10);
+                    case 11: return typeof(CallTarget11);
+                    case 12: return typeof(CallTarget12);
+                    case 13: return typeof(CallTarget13);
+                    case 14: return typeof(CallTarget14);
+                    case 15: return typeof(CallTarget15);
+                    case 16: return typeof(CallTarget16);
 
                     // *** END GENERATED CODE ***
 
@@ -93,6 +126,17 @@ namespace IronPython.Compiler {
                     case 3: return typeof(GeneratorTarget3);
                     case 4: return typeof(GeneratorTarget4);
                     case 5: return typeof(GeneratorTarget5);
+                    case 6: return typeof(GeneratorTarget6);
+                    case 7: return typeof(GeneratorTarget7);
+                    case 8: return typeof(GeneratorTarget8);
+                    case 9: return typeof(GeneratorTarget9);
+                    case 10: return typeof(GeneratorTarget10);
+                    case 11: return typeof(GeneratorTarget11);
+                    case 12: return typeof(GeneratorTarget12);
+                    case 13: return typeof(GeneratorTarget13);
+                    case 14: return typeof(GeneratorTarget14);
+                    case 15: return typeof(GeneratorTarget15);
+                    case 16: return typeof(GeneratorTarget16);
 
                     // *** END GENERATED CODE ***
 

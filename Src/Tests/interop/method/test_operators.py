@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("silverlight")
 
 add_clr_assemblies("operators", "typesamples")

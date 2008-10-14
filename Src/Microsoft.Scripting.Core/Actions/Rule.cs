@@ -38,29 +38,36 @@ namespace Microsoft.Scripting.Actions {
         private readonly Expression _binding;
 
         /// <summary>
+        /// The return label
+        /// </summary>
+        private readonly LabelTarget _returnLabel;
+
+        /// <summary>
         /// Template data - null for methods which aren't templated.  Non-null for methods which
         /// have been templated.  The same template data is shared across all templated rules with
         /// the same target method.
         /// </summary>
         private readonly TemplateData<T> _template;
 
-        public Rule(Expression binding, params ParameterExpression[] parameters)
-            : this(binding, (IEnumerable<ParameterExpression>)parameters) {
+        public Rule(Expression binding, LabelTarget @return, params ParameterExpression[] parameters)
+            : this(binding, @return, (IEnumerable<ParameterExpression>)parameters) {
         }
 
-        public Rule(Expression binding, IEnumerable<ParameterExpression> parameters) {
+        public Rule(Expression binding, LabelTarget @return, IEnumerable<ParameterExpression> parameters) {
             var @params = parameters.ToReadOnly();
-            ValidateRuleParameters(typeof(T), @params);
+            ValidateRuleParameters(typeof(T), @return, @params);
 
             _binding = binding;
+            _returnLabel = @return;
             _parameters = @params;
             _mySet = new SmallRuleSet<T>(new[] { this });
         }
 
-        internal Rule(Expression binding, T target, TemplateData<T> template, ReadOnlyCollection<ParameterExpression> parameters) {
-            ValidateRuleParameters(typeof(T), parameters);
+        internal Rule(Expression binding, T target, TemplateData<T> template, LabelTarget @return, ReadOnlyCollection<ParameterExpression> parameters) {
+            ValidateRuleParameters(typeof(T), @return, parameters);
 
             _binding = binding;
+            _returnLabel = @return;
             _parameters = parameters;
             _mySet = new SmallRuleSet<T>(target, new Rule<T>[] { this });
             _template = template;
@@ -88,6 +95,13 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public Expression Binding {
             get { return _binding; }
+        }
+
+        /// <summary>
+        /// The label used to return from the rule
+        /// </summary>
+        public LabelTarget ReturnLabel {
+            get { return _returnLabel; }
         }
 
         internal TemplateData<T> Template {
@@ -129,11 +143,14 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private static void ValidateRuleParameters(Type target, ReadOnlyCollection<ParameterExpression> parameters) {
+        private static void ValidateRuleParameters(Type target, LabelTarget @return, ReadOnlyCollection<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(parameters, "parameters");
             ContractUtils.Requires(typeof(Delegate).IsAssignableFrom(target), "target");
             MethodInfo invoke = target.GetMethod("Invoke");
-            ParameterInfo[] pinfos = invoke.GetParameters();
+            ContractUtils.RequiresNotNull(@return, "return");
+            ContractUtils.Requires(@return.Type == invoke.GetReturnType());
+            ParameterInfo[] pinfos = invoke.GetParametersCached();
+
             int count = pinfos.Length - 1;
             ContractUtils.Requires(parameters.Count == count, "parameters");
 

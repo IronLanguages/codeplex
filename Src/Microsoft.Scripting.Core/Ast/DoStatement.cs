@@ -21,14 +21,15 @@ namespace Microsoft.Linq.Expressions {
     public sealed class DoStatement : Expression {
         private readonly Expression _test;
         private readonly Expression _body;
+        private readonly LabelTarget _break;
+        private readonly LabelTarget _continue;
 
-        private readonly LabelTarget _label;
-
-        internal DoStatement(Annotations annotations, LabelTarget label, Expression test, Expression body)
+        internal DoStatement(Expression body, Expression test, LabelTarget @break, LabelTarget @continue, Annotations annotations)
             : base(ExpressionType.DoStatement, typeof(void), annotations) {
             _test = test;
             _body = body;
-            _label = label;
+            _break = @break;
+            _continue = @continue;
         }
 
         public Expression Test {
@@ -39,8 +40,12 @@ namespace Microsoft.Linq.Expressions {
             get { return _body; }
         }
 
-        new public LabelTarget Label {
-            get { return _label; }
+        public LabelTarget BreakLabel {
+            get { return _break; }
+        }
+
+        public LabelTarget ContinueLabel {
+            get { return _continue; }
         }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
@@ -50,16 +55,19 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
         public static DoStatement DoWhile(Expression body, Expression test) {
-            return DoWhile(body, test, null, Annotations.Empty);
+            return DoWhile(body, test, null, null, null);
         }
-        public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label) {
-            return DoWhile(body, test, label, Annotations.Empty);
+        public static DoStatement DoWhile(Expression body, Expression test, LabelTarget @break, LabelTarget @continue) {
+            return DoWhile(body, test, @break, @continue, null);
         }
-        public static DoStatement DoWhile(Expression body, Expression test, LabelTarget label, Annotations annotations) {
+        public static DoStatement DoWhile(Expression body, Expression test, LabelTarget @break, LabelTarget @continue, Annotations annotations) {
             RequiresCanRead(body, "body");
             RequiresCanRead(test, "test");
             ContractUtils.Requires(test.Type == typeof(bool), "test", Strings.ConditionMustBeBoolean);
-            return new DoStatement(annotations, label, test, body);
+            // TODO: lift the restriction on break, and allow loops to have non-void type
+            ContractUtils.Requires(@break == null || @break.Type == typeof(void), "break", Strings.LabelTypeMustBeVoid);
+            ContractUtils.Requires(@continue == null || @continue.Type == typeof(void), "continue", Strings.LabelTypeMustBeVoid);
+            return new DoStatement(body, test, @break, @continue, annotations);
         }
     }
 }

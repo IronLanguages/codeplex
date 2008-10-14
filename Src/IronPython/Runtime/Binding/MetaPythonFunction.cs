@@ -97,8 +97,8 @@ namespace IronPython.Runtime.Binding {
             private readonly MetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
             private readonly MetaAction/*!*/ _call;               // the signature for the method call
 
-            private List<VariableExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
-            private VariableExpression _dict, _params, _paramsLen;  // splatted dictionary & params + the initial length of the params array, null if not provided.
+            private List<ParameterExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
+            private ParameterExpression _dict, _params, _paramsLen;  // splatted dictionary & params + the initial length of the params array, null if not provided.
             private List<Expression> _init;                         // a set of initialization code (e.g. creating a list for the params array)
             private Expression _error;                              // a custom error expression if the default needs to be overridden.
             private bool _extractedParams;                          // true if we needed to extract a parameter from the parameter list.
@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Binding {
                 _func = function;
                 _args = args;
                 _originalArgs = args;
-                _temps = new List<VariableExpression>();
+                _temps = new List<ParameterExpression>();
 
                 // Remove the passed in instance argument if present
                 int instanceIndex = Signature.IndexOf(ArgumentKind.Instance);
@@ -471,7 +471,7 @@ namespace IronPython.Runtime.Binding {
                         // if we have arguments run the tests after the last arg is evaluated.
                         Expression last = exprArgs[exprArgs.Length - 1];
 
-                        VariableExpression temp;
+                        ParameterExpression temp;
 
                         _temps.Add(temp = Ast.Variable(last.Type, "$temp"));
 
@@ -615,7 +615,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            private Expression VariableOrNull(VariableExpression var, Type type) {
+            private Expression VariableOrNull(ParameterExpression var, Type type) {
                 if (var != null) {
                     return Ast.ConvertHelper(
                         var,
@@ -736,7 +736,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 Expression[] dictCreator = new Expression[count];
-                VariableExpression dictRef = _dict;
+                ParameterExpression dictRef = _dict;
                 
                 count = 0;
                 dictCreator[count++] = Ast.Assign(
@@ -803,7 +803,7 @@ namespace IronPython.Runtime.Binding {
                 // and add it into the list of arguments
                 Expression pg = null;
                 if (IsGenerator(method)) {
-                    _temps.Add((VariableExpression)(pg = Ast.Variable(typeof(PythonGenerator), "$gen")));
+                    _temps.Add((ParameterExpression)(pg = Ast.Variable(typeof(PythonGenerator), "$gen")));
 
                     invokeArgs = ArrayUtils.Insert(
                         pg,

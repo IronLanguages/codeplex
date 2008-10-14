@@ -18,9 +18,9 @@
 import sys
 import nt
 
-from lib.assert_util  import *
-from lib.file_util    import *
-from lib.process_util import *
+from iptest.assert_util  import *
+from iptest.file_util    import *
+from iptest.process_util import *
 
 if is_cli:
     import clr
@@ -416,7 +416,7 @@ def pythonToCOM(in_type):
     
 #------------------------------------------------------------------------------
 #--Override a couple of definitions from assert_util
-from lib import assert_util
+from iptest import assert_util
 DEBUG = 1
 
 def assert_helper(in_dict):    
@@ -676,7 +676,7 @@ class skip_comdispatch:
         if not preferComDispatch:
             return f
         else: 
-            from lib.assert_util import _do_nothing
+            from iptest.assert_util import _do_nothing
             return _do_nothing('... Decorated with @skip_comdispatch(%s), Skipping %s ...' % (self.msg, f.func_name))
 
 #------------------------------------------------------------------------------

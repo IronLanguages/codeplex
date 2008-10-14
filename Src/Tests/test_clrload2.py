@@ -14,7 +14,7 @@
 #####################################################################################
 
 import sys
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("win32")
 
 """Test cases for CLR types that don't involve actually loading CLR into the module

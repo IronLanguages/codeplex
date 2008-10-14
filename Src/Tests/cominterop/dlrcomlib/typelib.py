@@ -14,9 +14,9 @@
 #####################################################################################
 
 # COM Interop tests for IronPython
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("win32", "silverlight")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 from System import Type, Activator, Guid
 import clr
 

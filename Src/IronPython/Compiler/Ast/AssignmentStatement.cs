@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
             // 1. Create temp variable for the right value
-            MSAst.VariableExpression right_temp = ag.GetTemporary("assignment");
+            MSAst.ParameterExpression right_temp = ag.GetTemporary("assignment");
 
             // 2. right_temp = right
             statements.Add(
@@ -110,7 +110,7 @@ namespace IronPython.Compiler.Ast {
 
                 // a, b = 1, 2, or [a,b] = 1,2 - not something like a, b = range(2)
                 // we can do a fast parallel assignment
-                MSAst.VariableExpression[] tmps = new MSAst.VariableExpression[cnt];
+                MSAst.ParameterExpression[] tmps = new MSAst.ParameterExpression[cnt];
                 MSAst.Expression[] body = new MSAst.Expression[cnt * 2];
 
                 // generate the body, the 1st n are the temporary assigns, the
@@ -136,7 +136,7 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 // finally free the temps.
-                foreach (MSAst.VariableExpression variable in tmps) {
+                foreach (MSAst.ParameterExpression variable in tmps) {
                     ag.FreeTemp(variable);
                 }
 

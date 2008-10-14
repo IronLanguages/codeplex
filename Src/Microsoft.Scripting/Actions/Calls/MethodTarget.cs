@@ -165,7 +165,7 @@ namespace Microsoft.Scripting.Actions.Calls {
 
             if (updates != null) {
                 if (ret.Type != typeof(void)) {
-                    VariableExpression temp = Ast.Variable(ret.Type, "$ret");
+                    ParameterExpression temp = Ast.Variable(ret.Type, "$ret");
                     updates.Insert(0, Ast.Assign(temp, ret));
                     updates.Add(temp);
                     ret = Ast.Scope(Ast.Comma(updates.ToArray()), temp);

@@ -14,9 +14,9 @@
 #####################################################################################
 
 # COM Interop tests for IronPython
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 from System import *
 from System.Runtime.InteropServices import COMException, DispatchWrapper, UnknownWrapper, CurrencyWrapper
 from clr import StrongBox

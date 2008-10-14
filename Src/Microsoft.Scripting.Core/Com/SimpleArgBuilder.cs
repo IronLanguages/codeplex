@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Globalization;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Com {
     /// <summary>
@@ -28,25 +29,79 @@ namespace Microsoft.Scripting.Com {
     /// </summary>
     internal class SimpleArgBuilder : ArgBuilder {
         private Type _parameterType;
+        protected ParameterExpression _unmanagedTemp;
 
         internal SimpleArgBuilder(Type parameterType) {
             _parameterType = parameterType;
         }
 
-        internal override object Build(object arg) {
-            return Convert(arg, _parameterType);
+        internal virtual ParameterExpression CreateTemp() {
+            return Expression.Variable(_parameterType, "Temp" + _parameterType.Name);
         }
 
-        internal override Expression Build(Expression parameter) {
+        internal override ParameterExpression[] TemporaryVariables {
+            get {
+                if (_unmanagedTemp != null) {
+                    return new ParameterExpression[] { _unmanagedTemp };
+                } else {
+                    return base.TemporaryVariables;
+                }
+            }
+        }
+
+        internal override Expression Unwrap(Expression parameter) {
             Debug.Assert(parameter != null);
             return ConvertExpression(parameter, _parameterType);
         }
 
+        internal override Expression UnwrapByRef(Expression parameter) {
+            Debug.Assert(parameter != null);
+
+            if (_unmanagedTemp == null) {
+                _unmanagedTemp = CreateTemp();
+            }
+
+            Debug.Assert(_unmanagedTemp != null);
+
+            return Expression.Comma(
+                Expression.Assign(
+                    _unmanagedTemp,
+                    ConvertExpression(parameter, _unmanagedTemp.Type)
+                ),
+                _unmanagedTemp
+            );
+        }
+
+        internal override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
+            Debug.Assert(newValue != null && newValue.Type == _parameterType);
+
+            // parameter = newValue
+            return Expression.Assign(
+                parameter,
+                ConvertExpression(newValue, parameter.Type)
+            );
+        }
+
+        internal override Expression UpdateFromReturn(Expression parameter) {
+            if (_unmanagedTemp != null) {
+                return UpdateFromReturn(parameter, _unmanagedTemp);
+            } else {
+                return base.UpdateFromReturn(parameter);
+            }
+        }
+
+
+
+
+        internal override object UnwrapForReflection(object arg) {
+            return Convert(arg, _parameterType);
+        }
+
         internal static Expression ConvertExpression(Expression expr, Type toType) {
-            if (toType.IsAssignableFrom(expr.Type)) {
+            if (TypeUtils.AreReferenceAssignable(toType, expr.Type)) {
                 return expr;
             }
-            return Expression.Convert(expr, toType);
+            return Expression.ConvertHelper(expr, toType);
         }
 
         protected Type ParameterType {

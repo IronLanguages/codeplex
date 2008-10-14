@@ -13,12 +13,13 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
 using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Linq.Expressions.Expression;
-
+    
     public sealed class SuiteStatement : Statement {
         private readonly Statement[] _statements;
 
@@ -41,7 +42,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            return Ast.Block(stmts);
+            return Ast.Block(new ReadOnlyCollection<MSAst.Expression>(stmts));
         }
        
         public override void Walk(PythonWalker walker) {

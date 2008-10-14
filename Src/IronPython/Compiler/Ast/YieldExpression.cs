@@ -70,7 +70,11 @@ namespace IronPython.Compiler.Ast {
             //  }
 
             return Ast.Comma(
-                AstUtils.Yield(ag.Transform(_expression), Span),
+                AstUtils.YieldReturn(
+                    ag.GeneratorLabel,
+                    Ast.ConvertHelper(ag.Transform(_expression), typeof(object)),
+                    Ast.Annotate(Span)
+                ),
                 CreateCheckThrowExpression(ag, this.Span) // emits ($gen.CheckThrowable())
             );
         }

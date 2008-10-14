@@ -146,27 +146,6 @@ namespace Microsoft.Scripting.Utils {
             return false;
         }
 
-        //TODO: deprecate and use AreAssignable?
-        internal static bool CanAssign(Type to, Type from) {
-            if (to == from) {
-                return true;
-            }
-            // Reference types
-            if (!to.IsValueType && !from.IsValueType) {
-                if (to.IsAssignableFrom(from)) {
-                    return true;
-                }
-                // Arrays can be assigned if they have same rank and assignable element types.
-                if (to.IsArray && from.IsArray &&
-                    to.GetArrayRank() == from.GetArrayRank() &&
-                    CanAssign(to.GetElementType(), from.GetElementType())) {
-                    return true;
-                }
-            } 
-
-            return false;
-        }
-
         //CONFORMING
         internal static bool AreReferenceAssignable(Type dest, Type src) {
             // WARNING: This actually implements "Is this identity assignable and/or reference assignable?"

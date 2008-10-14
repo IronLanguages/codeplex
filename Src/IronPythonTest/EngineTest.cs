@@ -660,7 +660,7 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
             string tempFile1 = Path.GetTempFileName();
 
             try {
-                File.WriteAllText(tempFile1, "from lib.does_not_exist import *");
+                File.WriteAllText(tempFile1, "from iptest.does_not_exist import *");
                 ScriptScope scope = _pe.Runtime.CreateScope();
 
                 try {
@@ -668,7 +668,7 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
                     throw new Exception("Scenario7");
                 } catch (IronPython.Runtime.Exceptions.ImportException) { }
 
-                File.WriteAllText(tempFile1, "from lib.assert_util import *");
+                File.WriteAllText(tempFile1, "from iptest.assert_util import *");
                 _pe.SetSearchPaths(new string[] { Common.ScriptTestDirectory });
 
                 _pe.CreateScriptSourceFromFile(tempFile1).Execute(scope);

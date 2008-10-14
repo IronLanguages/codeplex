@@ -46,17 +46,15 @@ namespace Microsoft.Scripting.Com {
         }
 
         internal List<Expression> WriteArgumentVariant(
-            VariableExpression paramVariants, 
+            ParameterExpression paramVariants, 
             int variantIndex,
-            Expression parameter)
-        {
+            Expression parameter) {
             List<Expression> exprs = new List<Expression>();
             Expression expr;
 
             _variantIndex = variantIndex;
             FieldInfo variantArrayField = VariantArray.GetField(variantIndex);
 
-            Expression argument = _builder.Build(parameter);
             if (IsByRef) {
                 // paramVariants._elementN.SetAsByrefT(ref argument)
                 expr = Expression.Call(
@@ -64,12 +62,13 @@ namespace Microsoft.Scripting.Com {
                         paramVariants,
                         variantArrayField),
                     Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
-                    argument
+                    _builder.UnwrapByRef(parameter)
                 );
                 exprs.Add(expr);
                 return exprs;
             }
 
+            Expression argument = _builder.Unwrap(parameter);
             if (Variant.IsPrimitiveType(_targetComType) ||
                 (_targetComType == VarEnum.VT_UNKNOWN) ||
                 (_targetComType == VarEnum.VT_DISPATCH)) {
@@ -85,7 +84,7 @@ namespace Microsoft.Scripting.Com {
                 return exprs;
             }
 
-            switch(_targetComType) {
+            switch (_targetComType) {
                 case VarEnum.VT_EMPTY:
                     return exprs;
 
@@ -107,12 +106,12 @@ namespace Microsoft.Scripting.Com {
             }
         }
 
-        internal List<Expression> Clear(VariableExpression paramVariants) {
+        internal List<Expression> Clear(ParameterExpression paramVariants) {
             List<Expression> exprs = new List<Expression>();
             Expression expr;
 
             if (IsByRef) {
-                StringReferenceArgBuilder comReferenceArgBuilder = _builder as StringReferenceArgBuilder;
+                StringArgBuilder comReferenceArgBuilder = _builder as StringArgBuilder;
                 if (comReferenceArgBuilder != null) {
                     return comReferenceArgBuilder.Clear();
                 }
@@ -149,7 +148,7 @@ namespace Microsoft.Scripting.Com {
         }
 
         internal object Build(object arg) {
-            object result = _builder.Build(arg);
+            object result = _builder.UnwrapForReflection(arg);
             if (_targetComType == VarEnum.VT_DISPATCH) {
                 // Ensure that the object supports IDispatch to match how WriteArgumentVariant would work
                 // (it would call the Variant.AsDispatch setter). Otherwise, Type.InvokeMember might decide

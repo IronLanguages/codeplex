@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Ast {
         /// {result} ::= ((tmp = {_left}) == null) ? {right} : tmp
         /// '??' operator in C#.
         /// </summary>
-        public static Expression Coalesce(Expression left, Expression right, out VariableExpression temp) {
+        public static Expression Coalesce(Expression left, Expression right, out ParameterExpression temp) {
             return CoalesceInternal(left, right, null, false, out temp);
         }
 
@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Ast {
         /// {result} ::= IsTrue(tmp = {left}) ? {right} : tmp
         /// Generalized AND semantics.
         /// </summary>
-        public static Expression CoalesceTrue(Expression left, Expression right, MethodInfo isTrue, out VariableExpression temp) {
+        public static Expression CoalesceTrue(Expression left, Expression right, MethodInfo isTrue, out ParameterExpression temp) {
             ContractUtils.RequiresNotNull(isTrue, "isTrue");
             return CoalesceInternal(left, right, isTrue, false, out temp);
         }
@@ -46,12 +46,12 @@ namespace Microsoft.Scripting.Ast {
         /// {result} ::= IsTrue(tmp = {left}) ? tmp : {right}
         /// Generalized OR semantics.
         /// </summary>
-        public static Expression CoalesceFalse(Expression left, Expression right, MethodInfo isTrue, out VariableExpression temp) {
+        public static Expression CoalesceFalse(Expression left, Expression right, MethodInfo isTrue, out ParameterExpression temp) {
             ContractUtils.RequiresNotNull(isTrue, "isTrue");
             return CoalesceInternal(left, right, isTrue, true, out temp);
         }
 
-        private static Expression CoalesceInternal(Expression left, Expression right, MethodInfo isTrue, bool isReverse, out VariableExpression temp) {
+        private static Expression CoalesceInternal(Expression left, Expression right, MethodInfo isTrue, bool isReverse, out ParameterExpression temp) {
             ContractUtils.RequiresNotNull(left, "left");
             ContractUtils.RequiresNotNull(right, "right");
 
@@ -88,7 +88,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Expression Coalesce(LambdaBuilder builder, Expression left, Expression right) {
-            VariableExpression temp;
+            ParameterExpression temp;
             Expression result = Coalesce(left, right, out temp);
             builder.AddHiddenVariable(temp);
             return result;
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static Expression CoalesceTrue(LambdaBuilder builder, Expression left, Expression right, MethodInfo isTrue) {
             ContractUtils.RequiresNotNull(isTrue, "isTrue");
-            VariableExpression temp;
+            ParameterExpression temp;
             Expression result = CoalesceTrue(left, right, isTrue, out temp);
             builder.AddHiddenVariable(temp);
             return result;
@@ -114,7 +114,7 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static Expression CoalesceFalse(LambdaBuilder builder, Expression left, Expression right, MethodInfo isTrue) {
             ContractUtils.RequiresNotNull(isTrue, "isTrue");
-            VariableExpression temp;
+            ParameterExpression temp;
             Expression result = CoalesceFalse(left, right, isTrue, out temp);
             builder.AddHiddenVariable(temp);
             return result;

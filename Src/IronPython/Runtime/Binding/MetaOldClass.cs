@@ -106,8 +106,8 @@ namespace IronPython.Runtime.Binding {
                 exprArgs[i] = args[i].Expression;
             }
 
-            VariableExpression init = Ast.Variable(typeof(object), "init");
-            VariableExpression instTmp = Ast.Variable(typeof(object), "inst");
+            ParameterExpression init = Ast.Variable(typeof(object), "init");
+            ParameterExpression instTmp = Ast.Variable(typeof(object), "inst");
             MetaObject self = Restrict(typeof(OldClass));
 
             return new MetaObject(
@@ -281,7 +281,7 @@ namespace IronPython.Runtime.Binding {
                     );
                     break;
                 default:
-                    VariableExpression tmp = Ast.Variable(typeof(object), "lookupVal");
+                    ParameterExpression tmp = Ast.Variable(typeof(object), "lookupVal");
                     return new MetaObject(
                         Ast.Scope(
                             Ast.Condition(

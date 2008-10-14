@@ -35,14 +35,17 @@ namespace Microsoft.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-         public static ReturnStatement Return() {
-            return Return(null);
+        [Obsolete("Use Expression.Return(LabelTarget) instead")]
+        public static ReturnStatement Return() {
+            return Return((Expression)null, (Annotations)null);
         }
 
+        [Obsolete("Use Expression.Return(LabelTarget, Expression) instead")]
         public static ReturnStatement Return(Expression expression) {
-             return Return(expression, Annotations.Empty);
+            return Return(expression, (Annotations)null);
         }
 
+        [Obsolete("Use Expression.Return(LabelTarget, Expression, Annotations) instead")]
         public static ReturnStatement Return(Expression expression, Annotations annotations) {
             if (expression != null) {
                 RequiresCanRead(expression, "expression");

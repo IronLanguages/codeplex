@@ -26,6 +26,13 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
+        [Flags]
+        private enum ExpressionStart {
+            None = 0,
+            DebugMarker = 1,
+            LabelBlock = 2
+        }
+
         /// <summary>
         /// Generates code for this expression in a value position.
         /// This method will leave the value of the expression
@@ -42,7 +49,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitExpressionAsVoid(Expression node) {
             Debug.Assert(node != null);
 
-            bool startEmitted = EmitExpressionStart(node);
+            ExpressionStart startEmitted = EmitExpressionStart(node);
 
             switch (node.NodeType) {
                 case ExpressionType.Assign:
@@ -58,25 +65,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     }
                     break;
             }
-            if (startEmitted) {
-                EmitExpressionEnd();
-            }
-        }
-
-        /// <summary>
-        /// Generates the code for the expression, leaving it on
-        /// the stack typed as object.
-        /// </summary>
-        private void EmitExpressionAsObject(Expression node) {
-            EmitExpression(node);
-            _ilg.EmitBoxing(node.Type);
+            EmitExpressionEnd(startEmitted);
         }
 
         #region DebugMarkers
 
-        private bool EmitExpressionStart(Expression node) {
+        private ExpressionStart EmitExpressionStart(Expression node) {
+            ExpressionStart result = ExpressionStart.None;
+            if (TryPushLabelBlock(node)) {
+                result = ExpressionStart.LabelBlock;
+            }
+
             if (!_emitDebugSymbols) {
-                return false;
+                return result;
             }
 
             Annotations annotations = node.Annotations;
@@ -84,18 +85,25 @@ namespace Microsoft.Linq.Expressions.Compiler {
             SourceLocation header;
 
             if (annotations.TryGet<SourceSpan>(out span)) {
+                // TODO: this is incorrect. Nodes should be annotated with the
+                // correct span, rather than with a Span and a Location
                 if (annotations.TryGet<SourceLocation>(out header)) {
                     EmitPosition(span.Start, header);
                 } else {
                     EmitPosition(span.Start, span.End);
                 }
-                return true;
+                return result | ExpressionStart.DebugMarker;
             }
-            return false;
+            return result;
         }
 
-        private void EmitExpressionEnd() {
-            EmitSequencePointNone();
+        private void EmitExpressionEnd(ExpressionStart emitted) {
+            if ((emitted & ExpressionStart.DebugMarker) != 0) {
+                EmitSequencePointNone();
+            }
+            if ((emitted & ExpressionStart.LabelBlock) != 0) {
+                PopLabelBlock(_labelBlock.Kind);
+            }
         }
 
         #endregion
@@ -304,7 +312,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         //CONFORMING
         private List<WriteBack> EmitArguments(MethodBase method, IList<Expression> args) {
-            ParameterInfo[] pis = method.GetParameters();
+            ParameterInfo[] pis = method.GetParametersCached();
             Debug.Assert(args.Count == pis.Length);
 
             var writeBacks = new List<WriteBack>();
@@ -466,29 +474,28 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EmitVariableAssignment(AssignmentExpression node, EmitAs emitAs) {
-            Expression variable = node.Expression;
+            var variable = (ParameterExpression)node.Expression;
 
-            if (TypeUtils.IsNullableType(node.Type)) {
-                // TODO: this code is wrong, the types should have to match
-
-                // Nullable<T> being assigned...
-                if (ConstantCheck.IsNull(node.Value)) {
-                    _scope.EmitAddressOf(variable);
-                    _ilg.Emit(OpCodes.Initobj, node.Type);
-                    if (emitAs != EmitAs.Void) {
-                        _scope.EmitGet(variable);
-                    }
-                    return;
-                } else if (node.Type != node.Value.Type) {
-                    throw new InvalidOperationException();
-                }
-                // fall through & emit the store from Nullable<T> -> Nullable<T>
-            }
             EmitExpression(node.Value);
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Dup);
             }
-            _scope.EmitSet(variable);
+
+            if (variable.IsByRef) {
+                // Note: the stloc/ldloc pattern is a bit suboptimal, but it
+                // saves us from having to spill stack when assigning to a
+                // byref parameter. We already make this same tradeoff for
+                // hoisted variables, see ElementStorage.EmitStore
+
+                LocalBuilder value = _ilg.GetLocal(variable.Type);
+                _ilg.Emit(OpCodes.Stloc, value);
+                _scope.EmitGet(variable);
+                _ilg.Emit(OpCodes.Ldloc, value);
+                _ilg.FreeLocal(value);
+                _ilg.EmitStoreValueIndirect(variable.Type);
+            } else {
+                _scope.EmitSet(variable);
+            }
         }
 
         private void EmitAssignmentExpression(Expression expr) {
@@ -504,16 +511,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitMemberAssignment(node, emitAs);
                     return;
                 case ExpressionType.Parameter:
-                case ExpressionType.Variable:
                     EmitVariableAssignment(node, emitAs);
                     return;
                 default:
                     throw Error.InvalidLvalue(node.Expression.NodeType);
             }
-        }
-
-        private void EmitVariableExpression(Expression expr) {
-            _scope.EmitGet(expr);
         }
 
         private void EmitParameterExpression(Expression expr) {
@@ -800,7 +802,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region Expression helpers
 
         //CONFORMING
-        internal static void ValidateLift(IList<VariableExpression> variables, IList<Expression> arguments) {
+        internal static void ValidateLift(IList<ParameterExpression> variables, IList<Expression> arguments) {
             System.Diagnostics.Debug.Assert(variables != null);
             System.Diagnostics.Debug.Assert(arguments != null);
 
@@ -816,9 +818,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private void EmitLift(ExpressionType nodeType, Type resultType, MethodCallExpression mc, IList<VariableExpression> parameters, IList<Expression> arguments) {
+        private void EmitLift(ExpressionType nodeType, Type resultType, MethodCallExpression mc, IList<ParameterExpression> parameters, IList<Expression> arguments) {
             Debug.Assert(TypeUtils.GetNonNullableType(resultType) == TypeUtils.GetNonNullableType(mc.Type));
-            ReadOnlyCollection<VariableExpression> paramList = new ReadOnlyCollection<VariableExpression>(parameters);
+            ReadOnlyCollection<ParameterExpression> paramList = new ReadOnlyCollection<ParameterExpression>(parameters);
             ReadOnlyCollection<Expression> argList = new ReadOnlyCollection<Expression>(arguments);
 
             switch (nodeType) {
@@ -831,7 +833,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         Label exitNull = _ilg.DefineLabel();
                         LocalBuilder anyNull = _ilg.DeclareLocal(typeof(bool));
                         for (int i = 0, n = paramList.Count; i < n; i++) {
-                            VariableExpression v = paramList[i];
+                            ParameterExpression v = paramList[i];
                             Expression arg = argList[i];
                             if (TypeUtils.IsNullableType(arg.Type)) {
                                 _scope.AddLocal(this, v);
@@ -906,7 +908,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         _ilg.Emit(OpCodes.Stloc, allNull);
 
                         for (int i = 0, n = paramList.Count; i < n; i++) {
-                            VariableExpression v = paramList[i];
+                            ParameterExpression v = paramList[i];
                             Expression arg = argList[i];
                             _scope.AddLocal(this, v);
                             if (TypeUtils.IsNullableType(arg.Type)) {

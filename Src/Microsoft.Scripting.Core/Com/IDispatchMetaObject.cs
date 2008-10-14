@@ -182,7 +182,7 @@ namespace Microsoft.Scripting.Com {
         private MetaObject IndexOperation(OperationAction action, MetaObject[] args, string method) {
             MetaObject fallback = action.Fallback(UnwrapSelf(), args);
 
-            VariableExpression callable = Expression.Variable(typeof(DispCallable), "callable");
+            ParameterExpression callable = Expression.Variable(typeof(DispCallable), "callable");
 
             Expression[] callArgs = new Expression[args.Length];
             for (int i = 0; i < callArgs.Length; i++) {

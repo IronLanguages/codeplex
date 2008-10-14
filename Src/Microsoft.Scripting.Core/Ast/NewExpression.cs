@@ -142,7 +142,7 @@ namespace Microsoft.Linq.Expressions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private static void ValidateNewArgs(ConstructorInfo constructor, ref ReadOnlyCollection<Expression> arguments, ref ReadOnlyCollection<MemberInfo> members) {
             ParameterInfo[] pis;
-            if ((pis = constructor.GetParameters()).Length > 0) {
+            if ((pis = constructor.GetParametersCached()).Length > 0) {
                 if (arguments.Count != pis.Length) {
                     throw Error.IncorrectNumberOfConstructorArguments();
                 }
@@ -252,7 +252,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
 
-            ParameterInfo[] parameters = constructor.GetParameters();
+            ParameterInfo[] parameters = constructor.GetParametersCached();
             ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", Strings.IncorrectArgNumber);
 
             return New(constructor, ArgumentConvertHelper(arguments, parameters));

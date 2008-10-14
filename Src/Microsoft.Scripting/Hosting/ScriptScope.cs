@@ -344,51 +344,12 @@ namespace Microsoft.Scripting.Hosting {
                 );
             }
 
-            // helper class for FallbackInvoke
-            private sealed class InvokeAdapter : InvokeAction {
-                private readonly CallAction _call;
-
-                internal InvokeAdapter(CallAction call)
-                    : base(RemoveFirst(call.Arguments)) {
-                    _call = call;
-                }
-
-                private static ReadOnlyCollection<Argument> RemoveFirst(ReadOnlyCollection<Argument> args) {
-                    if (args.Count == 0) {
-                        return args;
-                    }
-                    var result = new Argument[args.Count - 1];
-                    for (int i = 0, n = result.Length; i < n; i++) {
-                        result[i] = args[i + 1];
-                    }
-                    return new ReadOnlyCollection<Argument>(result);
-                }
-
-                public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
-                    return _call.FallbackInvoke(ArrayUtils.Insert(target, args), onBindingError);
-                }
-
-                public override object HashCookie {
-                    get { return this; }
-                }
-
-                public override bool Equals(object obj) {
-                    var other = obj as InvokeAdapter;
-                    return other != null && _call.Equals(other._call) && base.Equals(obj);
-                }
-
-                public override int GetHashCode() {
-                    return base.GetHashCode() ^ _call.GetHashCode();
-                }
-            }
-
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
             public override MetaObject Call(CallAction action, MetaObject[] args) {
                 var fallback = action.Fallback(this, args);
                 var result = Expression.Variable(typeof(object), "result");
 
-                var invokeArgs = args.AddFirst(new MetaObject(result, Restrictions.Empty));
-                var fallbackInvoke = new InvokeAdapter(action).Defer(invokeArgs);
+                var fallbackInvoke = action.FallbackInvoke(new MetaObject(result, Restrictions.Empty), args, null);
 
                 return new MetaObject(
                     Expression.Scope(

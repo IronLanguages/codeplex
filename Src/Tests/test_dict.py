@@ -19,7 +19,7 @@ x = dir(dict)
 x = dir(dict.fromkeys)
 
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import operator
 

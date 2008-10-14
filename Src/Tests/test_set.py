@@ -17,8 +17,8 @@
 ## Test built-in types: set/frozenset
 ##
 
-from lib.assert_util import *
-from lib.type_util import myset, myfrozenset
+from iptest.assert_util import *
+from iptest.type_util import myset, myfrozenset
 
 # Some of these tests only apply to Python 2.5 compatibility
 import sys

@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         internal override Expression ToExpression(ParameterBinder parameterBinder, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             List<Expression> sets = new List<Expression>();
 
-            VariableExpression tmp = parameterBinder.GetTemporary(ret.Type, "val");
+            ParameterExpression tmp = parameterBinder.GetTemporary(ret.Type, "val");
             sets.Add(
                 Ast.Assign(tmp, ret)
             );
