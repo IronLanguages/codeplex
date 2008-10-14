@@ -271,7 +271,7 @@ namespace Microsoft.Scripting.Actions {
         private void MakeOperatorGetMemberBody(GetMemberInfo getMemInfo, Expression instance, Type type, string name) {
             MethodInfo getMem = GetMethod(type, name);
             if (getMem != null && getMem.IsSpecialName) {
-                VariableExpression tmp = Ast.Variable(typeof(object), "getVal");
+                ParameterExpression tmp = Ast.Variable(typeof(object), "getVal");
                 getMemInfo.Body.AddVariable(tmp);
 
                 getMemInfo.Body.AddCondition(

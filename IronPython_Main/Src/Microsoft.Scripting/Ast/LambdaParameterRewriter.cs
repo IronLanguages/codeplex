@@ -14,57 +14,22 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
-    // Only used by LambdaBuilder, which is going away
-    // TODO: this doesn't handle parameter shadowing correctly, but since it's
-    // going away it doesn't seem sensible to fix it.
-    internal class LambdaParameterRewriter : ExpressionTreeVisitor {
-        private Dictionary<ParameterExpression, Expression> _paramMapping;
+    internal sealed class LambdaParameterRewriter : ExpressionTreeVisitor {
+        private readonly Dictionary<ParameterExpression, ParameterExpression> _map;
 
-        internal LambdaParameterRewriter(Dictionary<ParameterExpression, Expression> paramMapping) {
-            _paramMapping = paramMapping;
+        internal LambdaParameterRewriter(Dictionary<ParameterExpression, ParameterExpression> map) {
+            _map = map;
         }
 
+        // We don't need to worry about parameter shadowing, because we're
+        // replacing the instances consistently everywhere
         protected override Expression VisitParameter(ParameterExpression node) {
-            if (_paramMapping.ContainsKey(node)) {
-                //parameter may be mapped to itself or to a variable.
-                Debug.Assert(_paramMapping[node].NodeType == ExpressionType.Variable ||
-                             (_paramMapping[node].NodeType == ExpressionType.Parameter &&
-                               _paramMapping[node] == node));
-
-                return _paramMapping[node];
-            } else {
-                return node;
-            }
-        }
-
-        protected override Expression VisitExtension(Expression node) {
-            CodeContextScopeExpression ccse = node as CodeContextScopeExpression;
-            if (ccse != null) {
-                return VisitCodeContextScope(ccse);
-            }
-            if (node.CanReduce) {
-                return base.VisitExtension(node);
-            }
-            // we will ignore other extension nodes that are not redicible
-            // non-reducible extension nodes normally do not have subexpressions
-            return node;
-        }
-
-        private Expression VisitCodeContextScope(CodeContextScopeExpression node) {
-            Expression newcontext = Visit(node.NewContext);
-            Expression body = Visit(node.Body);
-
-            if (newcontext != node.NewContext || body != node.Body) {
-                node = Utils.CodeContextScope(
-                    body,
-                    newcontext,
-                    node.Annotations
-                );
+            ParameterExpression result;
+            if (_map.TryGetValue(node, out result)) {
+                return result;
             }
             return node;
         }

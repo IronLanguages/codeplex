@@ -86,7 +86,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.Requires(delegateType.IsSubclassOf(typeof(Delegate)), "delegateType", Strings.TypeMustBeDerivedFromSystemDelegate);
 
             var method = delegateType.GetMethod("Invoke");
-            var pi = method.GetParameters();
+            var pi = method.GetParametersCached();
             ContractUtils.Requires(pi.Length > 0 && pi[0].ParameterType == typeof(CallSite), "delegateType", Strings.FirstArgumentMustBeCallSite);
 
             var args = arguments.ToReadOnly();
@@ -99,23 +99,43 @@ namespace Microsoft.Linq.Expressions {
             return Dynamic(binder, returnType, null, (IEnumerable<Expression>)arguments);
         }
 
+        public static DynamicExpression Dynamic(CallSiteBinder binder, Type returnType, Expression arg0) {
+            return MakeDynamic(binder, returnType, null, new ReadOnlyCollection<Expression>(new Expression[] { arg0 }));
+        }
+
+        public static DynamicExpression Dynamic(CallSiteBinder binder, Type returnType, Expression arg0, Expression arg1) {
+            return MakeDynamic(binder, returnType, null, new ReadOnlyCollection<Expression>(new Expression[] { arg0, arg1 }));
+        }
+
+        public static DynamicExpression Dynamic(CallSiteBinder binder, Type returnType, Expression arg0, Expression arg1, Expression arg2) {
+            return MakeDynamic(binder, returnType, null, new ReadOnlyCollection<Expression>(new Expression[] { arg0, arg1, arg2 }));
+        }
+
+        public static DynamicExpression Dynamic(CallSiteBinder binder, Type returnType, Expression arg0, Expression arg1, Expression arg2, Expression arg3) {
+            return MakeDynamic(binder, returnType, null, new ReadOnlyCollection<Expression>(new Expression[] { arg0, arg1, arg2, arg3 }));
+        }
+
         public static DynamicExpression Dynamic(CallSiteBinder binder, Type returnType, Annotations annotations, IEnumerable<Expression> arguments) {
+            ContractUtils.RequiresNotNull(arguments, "arguments");
+            ContractUtils.RequiresNotNull(returnType, "returnType");
+
+            return MakeDynamic(binder, returnType, annotations, arguments.ToReadOnly());
+        }
+
+        private static DynamicExpression MakeDynamic(CallSiteBinder binder, Type returnType, Annotations annotations, ReadOnlyCollection<Expression> args) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            
-            var args = arguments.ToReadOnly();
-            var types = new List<Type>();
-            types.Add(typeof(CallSite));
-            foreach (var arg in args) {
+
+            for (int i = 0; i < args.Count; i++) {
+                Expression arg = args[i];
+
                 RequiresCanRead(arg, "arguments");
                 var type = arg.Type;
                 ContractUtils.RequiresNotNull(type, "type");
                 TypeUtils.ValidateType(type);
                 ContractUtils.Requires(type != typeof(void), Strings.ArgumentTypeCannotBeVoid);
-                types.Add(type);
             }
-            types.Add(returnType);
 
-            Type delegateType = DelegateHelpers.MakeDelegate(types.ToArray());
+            Type delegateType = DelegateHelpers.MakeCallSiteDelegate(args, returnType);
 
             // Since we made a delegate with argument types that exactly match,
             // we can skip delegate and argument validation

@@ -153,8 +153,8 @@ namespace Microsoft.Scripting.Runtime {
         /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
         internal protected abstract ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
 
-        internal protected virtual ScriptCode LoadCompiledCode(MethodInfo method) {
-            return ScriptCode.Load(method, this);
+        internal protected virtual ScriptCode LoadCompiledCode(DlrMainCallTarget method, string path) {
+            return ScriptCode.Load(method, this, path);
         }
 
         #endregion
@@ -588,8 +588,8 @@ namespace Microsoft.Scripting.Runtime {
                 return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
-            public override MetaObject FallbackInvoke(MetaObject[] args, MetaObject onBindingError) {
-                return ErrorMetaObject(args[0], args, onBindingError);
+            public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+                return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
             public override object HashCookie {

@@ -17,7 +17,7 @@
 ## Test the cStringIO module
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import cStringIO
 
 text = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"

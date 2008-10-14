@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # adding some negative test case coverage for the sys module; we currently don't implement
 # some methods---there is a CodePlex work item 1042 to track the real implementation of
@@ -90,5 +90,5 @@ else:
     run_test(__name__)
     # this is a destructive test, run it in separate instance of IronPython
     if not is_silverlight and sys.platform!="win32":
-        from lib.process_util import launch_ironpython_changing_extensions
+        from iptest.process_util import launch_ironpython_changing_extensions
         AreEqual(0, launch_ironpython_changing_extensions(__file__, [], [], ("Test_Del_GetFrame",)))

@@ -345,7 +345,7 @@ namespace IronPython.Runtime {
 
         #region Rich Comparison Members
 
-        private int CompareTo(PythonTuple other) {
+        internal int CompareTo(PythonTuple other) {
             return PythonOps.CompareArrays(_data, _data.Length, other._data, other._data.Length);
         }
 

@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 from sys import exit
 
 skiptest("win32")
@@ -344,7 +344,7 @@ def main():
     
         Directory.SetCurrentDirectory(ORIG_DIR)
     
-        from lib.process_util import launch_ironpython_changing_extensions
+        from iptest.process_util import launch_ironpython_changing_extensions
         ret_val = launch_ironpython_changing_extensions("dllsite.py", add=["-S"], additionalScriptParams=("OKtoRun",))
         
     finally:

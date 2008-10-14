@@ -13,11 +13,15 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     internal static partial class DelegateHelpers {
+        private static TypeInfo _DelegateCache = new TypeInfo();
 
         #region Generated Maximum Delegate Arity
 
@@ -29,6 +33,107 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // *** END GENERATED CODE ***
 
         #endregion
+
+        private class TypeInfo {
+            public Type DelegateType;
+            public Dictionary<Type, TypeInfo> TypeChain;
+        }
+
+        /// <summary>
+        /// Finds a delegate type for a CallSite using the types in the ReadOnlyCollection of Expression. 
+        /// 
+        /// We take the ROC of Expression explicitly to avoid allocating memory (an array of types) on
+        /// lookup of delegate types.
+        /// </summary>
+        internal static Type MakeCallSiteDelegate(ReadOnlyCollection<Expression> types, Type returnType) {
+            lock (_DelegateCache) {
+                TypeInfo curTypeInfo = _DelegateCache;
+
+                // CallSite
+                curTypeInfo = NextTypeInfo(typeof(CallSite), curTypeInfo);
+                
+                // arguments
+                for (int i = 0; i < types.Count; i++) {
+                    curTypeInfo = NextTypeInfo(types[i].Type, curTypeInfo);
+                }
+                
+                // return type
+                curTypeInfo = NextTypeInfo(returnType, curTypeInfo);
+
+                // see if we have the delegate already
+                if (curTypeInfo.DelegateType == null) {
+                    // nope, go ahead and create it and spend the
+                    // cost of creating the array.
+                    Type[] paramTypes = new Type[types.Count + 2];
+                    paramTypes[0] = typeof(CallSite);
+                    paramTypes[paramTypes.Length - 1] = returnType;
+                    for (int i = 0; i < types.Count; i++) {
+                        paramTypes[i + 1] = types[i].Type;
+                    }
+
+                    curTypeInfo.DelegateType = MakeDelegate(paramTypes);
+                }
+
+                return curTypeInfo.DelegateType;
+            }
+        }
+
+        internal static Type MakeDeferredSiteDelegate(MetaObject[] args, Type returnType) {
+            lock (_DelegateCache) {
+                TypeInfo curTypeInfo = _DelegateCache;
+
+                // CallSite
+                curTypeInfo = NextTypeInfo(typeof(CallSite), curTypeInfo);
+
+                // arguments
+                for (int i = 0; i < args.Length; i++) {
+                    MetaObject mo = args[i];
+                    Type paramType = mo.Expression.Type;
+                    if (mo.IsByRef) {
+                        paramType = paramType.MakeByRefType();
+                    }
+                    curTypeInfo = NextTypeInfo(paramType, curTypeInfo);
+                }
+
+                // return type
+                curTypeInfo = NextTypeInfo(returnType, curTypeInfo);
+
+                // see if we have the delegate already
+                if (curTypeInfo.DelegateType == null) {
+                    // nope, go ahead and create it and spend the
+                    // cost of creating the array.
+                    Type[] paramTypes = new Type[args.Length + 2];
+                    paramTypes[0] = typeof(CallSite);
+                    paramTypes[paramTypes.Length - 1] = returnType;
+                    for (int i = 0; i < args.Length; i++) {
+                        MetaObject mo = args[i];
+                        Type paramType = mo.Expression.Type;
+                        if (mo.IsByRef) {
+                            paramType = paramType.MakeByRefType();
+                        }
+                        paramTypes[i + 1] = paramType;
+                    }
+
+                    curTypeInfo.DelegateType = MakeDelegate(paramTypes);
+                }
+
+                return curTypeInfo.DelegateType;
+            }
+        }
+
+
+        private static TypeInfo NextTypeInfo(Type initialArg, TypeInfo curTypeInfo) {
+            Type lookingUp = initialArg;
+            TypeInfo nextTypeInfo;
+            if (curTypeInfo.TypeChain == null) {
+                curTypeInfo.TypeChain = new Dictionary<Type, TypeInfo>();
+            }
+
+            if (!curTypeInfo.TypeChain.TryGetValue(lookingUp, out nextTypeInfo)) {
+                curTypeInfo.TypeChain[lookingUp] = nextTypeInfo = new TypeInfo();
+            }
+            return nextTypeInfo;
+        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         internal static Type MakeDelegate(Type[] types) {

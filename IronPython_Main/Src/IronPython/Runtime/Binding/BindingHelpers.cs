@@ -244,11 +244,11 @@ namespace IronPython.Runtime.Binding {
             return o as BuiltinFunction;
         }
 
-        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaAction/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, params VariableExpression[] temps) {
+        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaAction/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, params ParameterExpression[] temps) {
             return AddDynamicTestAndDefer(operation, res, args, typeTest, null, temps);
         }
 
-        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaAction/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, Type deferType, params VariableExpression[] temps) {
+        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaAction/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, Type deferType, params ParameterExpression[] temps) {
             if (typeTest != null) {
                 if (typeTest.Test != null) {
                     // add the test and a validator if persent
@@ -405,7 +405,7 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         internal static Expression AddRecursionCheck(Expression expr) {
             if (PythonFunction.EnforceRecursion) {
-                VariableExpression tmp = Ast.Variable(expr.Type, "callres");
+                ParameterExpression tmp = Ast.Variable(expr.Type, "callres");
 
                 expr = Ast.Scope(
                     Ast.Comma(

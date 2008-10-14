@@ -21,6 +21,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -54,16 +55,6 @@ namespace Microsoft.Scripting.Interpretation {
             }
 
             return result;
-        }
-
-        internal static object Execute(InterpreterState state, Expression expression) {
-            ControlFlow result = Interpret(state, expression) as ControlFlow;
-
-            if (result != null && result.Kind == ControlFlowKind.Return) {
-                return result.Value;
-            }
-
-            return null;
         }
 
         internal static object ExecuteGenerator(InterpreterState state, Expression expression) {
@@ -989,20 +980,11 @@ namespace Microsoft.Scripting.Interpretation {
                 case ExpressionType.MemberAccess:
                     return InterpretMemberAssignment(state, node);
                 case ExpressionType.Parameter:
-                case ExpressionType.Variable:
                 case ExpressionType.Extension:
                     return InterpretVariableAssignment(state, node);
                 default:
                     throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
             }
-        }
-
-        private static object InterpretVariableExpression(InterpreterState state, Expression expr) {
-            if (state.CurrentYield != null) {
-                return ControlFlow.NextForYield;
-            }
-
-            return state.GetValue(expr);
         }
 
         private static object InterpretParameterExpression(InterpreterState state, Expression expr) {
@@ -1174,24 +1156,25 @@ namespace Microsoft.Scripting.Interpretation {
             return result;
         }
 
-        private static object InterpretBreakStatement(InterpreterState state, Expression expr) {
+        private static object InterpretGotoExpression(InterpreterState state, Expression expr) {
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
             }
 
-            BreakStatement node = (BreakStatement)expr;
+            var node = (GotoExpression)expr;
             SetSourceLocation(state, node);
-            return ControlFlow.Break;
-        }
 
-        private static object InterpretContinueStatement(InterpreterState state, Expression expr) {
-            if (state.CurrentYield != null) {
-                return ControlFlow.NextForYield;
+            object value = null;
+            if (node.Value != null) {
+                value = Interpret(state, node.Value);
+                ControlFlow cf = value as ControlFlow;
+                if (cf != null) {
+                    // propagate
+                    return cf;
+                }
             }
 
-            ContinueStatement node = (ContinueStatement)expr;
-            SetSourceLocation(state, node);
-            return ControlFlow.Continue;
+            return ControlFlow.Goto(node.Target, value);
         }
 
         private static object InterpretDoStatement(InterpreterState state, Expression expr) {
@@ -1204,8 +1187,12 @@ namespace Microsoft.Scripting.Interpretation {
                 object ret = Interpret(state, node.Body);
 
                 if ((cf = ret as ControlFlow) != null) {
-                    if (cf == ControlFlow.Break) {
-                        break;
+                    if (cf.Kind == ControlFlowKind.Goto) {
+                        if (cf.Label == node.BreakLabel) {
+                            break;
+                        } else if (cf.Label != node.ContinueLabel) {
+                            return cf;
+                        }
                     } else if (cf.Kind == ControlFlowKind.Return) {
                         return ret;
                     }
@@ -1213,8 +1200,12 @@ namespace Microsoft.Scripting.Interpretation {
 
                 ret = Interpret(state, node.Test);
                 if ((cf = ret as ControlFlow) != null) {
-                    if (cf == ControlFlow.Break) {
-                        break;
+                    if (cf.Kind == ControlFlowKind.Goto) {
+                        if (cf.Label == node.BreakLabel) {
+                            break;
+                        } else if (cf.Label != node.ContinueLabel) {
+                            return cf;
+                        }
                     } else if (cf.Kind == ControlFlowKind.Return) {
                         return ret;
                     }
@@ -1246,12 +1237,13 @@ namespace Microsoft.Scripting.Interpretation {
         /// <summary>
         /// Labeled statement makes break/continue go to the end of the contained expression.
         /// </summary>
-        private static object InterpretLabeledStatement(InterpreterState state, Expression expr) {
-            LabeledStatement node = (LabeledStatement)expr;
+        private static object InterpretLabelExpression(InterpreterState state, Expression expr) {
+            LabelExpression node = (LabelExpression)expr;
             SetSourceLocation(state, node);
 
-            object res = Interpret(state, expr);
-            if (res == ControlFlow.Break || res == ControlFlow.Continue) {
+            object res = Interpret(state, node.DefaultValue);
+            var cf = res as ControlFlow;
+            if (cf != null && cf.Kind == ControlFlowKind.Goto && cf.Label == node.Label) {
                 return ControlFlow.NextStatement;
             }
 
@@ -1268,9 +1260,13 @@ namespace Microsoft.Scripting.Interpretation {
                 if (node.Test != null) {
                     object test = Interpret(state, node.Test);
                     if ((cf = test as ControlFlow) != null) {
-                        if (cf == ControlFlow.Break) {
-                            // Break out of the loop and execute next statement outside
-                            return ControlFlow.NextStatement;
+	                    if (cf.Kind == ControlFlowKind.Goto) {
+	                        if (cf.Label == node.BreakLabel) {
+	                            // Break out of the loop and execute next statement outside
+	                            return ControlFlow.NextStatement;
+	                        } else if (cf.Label != node.ContinueLabel) {
+	                            return cf;
+	                        }
                         } else if (cf.Kind == ControlFlowKind.Return) {
                             return test;
                         }
@@ -1284,9 +1280,13 @@ namespace Microsoft.Scripting.Interpretation {
 
                 object body = Interpret(state, node.Body);
                 if ((cf = body as ControlFlow) != null) {
-                    if (cf == ControlFlow.Break) {
-                        // Break out of the loop and execute next statement outside
-                        return ControlFlow.NextStatement;
+                    if (cf.Kind == ControlFlowKind.Goto) {
+                        if (cf.Label == node.BreakLabel) {
+                            // Break out of the loop and execute next statement outside
+                            return ControlFlow.NextStatement;
+                        } else if (cf.Label != node.ContinueLabel) {
+                            return cf;
+                        }
                     } else if (cf.Kind == ControlFlowKind.Return) {
                         return body;
                     }
@@ -1295,9 +1295,13 @@ namespace Microsoft.Scripting.Interpretation {
                 if (node.Increment != null) {
                     object increment = Interpret(state, node.Increment);
                     if ((cf = increment as ControlFlow) != null) {
-                        if (cf == ControlFlow.Break) {
-                            // Break out of the loop and execute next statement outside
-                            return ControlFlow.NextStatement;
+	                    if (cf.Kind == ControlFlowKind.Goto) {
+	                        if (cf.Label == node.BreakLabel) {
+	                            // Break out of the loop and execute next statement outside
+	                            return ControlFlow.NextStatement;
+	                        } else if (cf.Label != node.ContinueLabel) {
+	                            return cf;
+	                        }
                         } else if (cf.Kind == ControlFlowKind.Return) {
                             return increment;
                         }
@@ -1380,12 +1384,12 @@ namespace Microsoft.Scripting.Interpretation {
                 object result = Interpret(state, sc.Body);
 
                 ControlFlow cf = result as ControlFlow;
-                if (cf == ControlFlow.Continue) {
-                    return cf;
-                } else if (cf == ControlFlow.Break) {
-                    return ControlFlow.NextStatement;
-                } else if (cf.Kind == ControlFlowKind.Return) {
-                    return cf;
+                if (cf != null) {
+                    if (cf.Label == node.Label) {
+                        return ControlFlow.NextStatement;
+                    } else if (cf.Kind == ControlFlowKind.Return || cf.Kind == ControlFlowKind.Goto) {
+                        return cf;
+                    }
                 }
                 target++;
             }
@@ -1426,7 +1430,7 @@ namespace Microsoft.Scripting.Interpretation {
                 ex = LastEvalException;
             } else {
                 object exception;
-                if (InterpretAndCheckFlow(state, node.Exception, out exception)) {
+                if (InterpretAndCheckFlow(state, node.Value, out exception)) {
                     return exception;
                 }
 
@@ -1511,17 +1515,21 @@ namespace Microsoft.Scripting.Interpretation {
             return ret;
         }
 
-        private static object InterpretYieldStatement(InterpreterState state, Expression node) {
-            YieldStatement yield = (YieldStatement)node;
+        private static object InterpretYieldExpression(InterpreterState state, YieldExpression node) {
+            // Yield break
+            if (node.Value == null) {
+                SetSourceLocation(state, node);
+                return ControlFlow.Return(null);
+            }
 
-            if (state.CurrentYield == yield) {
+            if (state.CurrentYield == node) {
                 // we've just advanced past the current yield, start executing code again.
                 state.CurrentYield = null;
                 return ControlFlow.NextStatement;
             }
 
             object res;
-            if (InterpretAndCheckFlow(state, yield.Expression, out res) && res != ControlFlow.NextStatement) {
+            if (InterpretAndCheckFlow(state, node.Value, out res) && res != ControlFlow.NextStatement) {
                 // yield contains flow control.
                 return res;
             }
@@ -1529,7 +1537,7 @@ namespace Microsoft.Scripting.Interpretation {
             if (state.CurrentYield == null) {
                 // we are the yield, we just ran our code, and now we
                 // need to return the result.
-                state.CurrentYield = yield;
+                state.CurrentYield = node;
 
                 return ControlFlow.Return(res);
             }
@@ -1537,7 +1545,49 @@ namespace Microsoft.Scripting.Interpretation {
             return ControlFlow.NextForYield;
         }
 
+        private static object InterpretGeneratorExpression(InterpreterState state, GeneratorExpression generator) {
+            // Fast path for object
+            if (generator.Label.Type == typeof(object)) {
+                return InterpretGenerator<object>(state, generator);
+            }
+
+            // TODO: slow path
+            return ReflectedCaller.Create(
+                typeof(Interpreter).GetMethod(
+                    "InterpretGenerator", BindingFlags.NonPublic | BindingFlags.Static
+                ).MakeGenericMethod(generator.Label.Type)
+            ).Invoke(state, generator);
+        }
+
+        private static object InterpretGenerator<T>(InterpreterState state, GeneratorExpression generator) {
+            var caller = InterpreterState.Current.Value;
+            if (generator.IsEnumerable) {
+                return new GeneratorEnumerable<T>(
+                    () => new GeneratorInvoker(generator, state.CreateForGenerator(caller)).Invoke
+                );
+            } else {
+                return new GeneratorEnumerator<T>(
+                    new GeneratorInvoker(generator, state.CreateForGenerator(caller)).Invoke
+                );
+            }
+        }
+
         private static object InterpretExtensionExpression(InterpreterState state, Expression expr) {
+            var ffc = expr as FinallyFlowControlExpression;
+            if (ffc != null) {
+                return Interpret(state, ffc.Body);
+            }
+
+            var yield = expr as YieldExpression;
+            if (yield != null) {
+                return InterpretYieldExpression(state, yield);
+            }
+
+            var generator = expr as GeneratorExpression;
+            if (generator != null) {
+                return InterpretGeneratorExpression(state, generator);
+            }
+
             return Interpret(state, expr.ReduceExtensions());
         }
 
@@ -1545,7 +1595,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         internal static object EvaluateAssign(InterpreterState state, Expression node, object value) {
             switch (node.NodeType) {
-                case ExpressionType.Variable:
                 case ExpressionType.Parameter:
                 case ExpressionType.Extension:
                     return EvaluateAssignVariable(state, node, value);
@@ -1601,7 +1650,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static EvaluationAddress EvaluateAddress(InterpreterState state, Expression node) {
             switch (node.NodeType) {
-                case ExpressionType.Variable:
                 case ExpressionType.Parameter:
                     return new VariableAddress(node);
                 case ExpressionType.Block:

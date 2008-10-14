@@ -18,13 +18,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {
 
     internal sealed class LambdaState {
         internal Dictionary<Expression, object> SpilledStack;
-        internal YieldStatement CurrentYield;
+        internal YieldExpression CurrentYield;
 
         internal readonly InterpretedScriptCode ScriptCode;
         internal readonly LambdaExpression Lambda;
@@ -68,6 +69,10 @@ namespace Microsoft.Scripting.Interpretation {
             return CreateForLambda(_lambdaState.ScriptCode, lambda, this, caller, args);
         }
 
+        internal InterpreterState CreateForGenerator(InterpreterState caller) {
+            return new InterpreterState(this, new LambdaState(_lambdaState.ScriptCode, caller.Lambda, caller));
+        }
+
         private static InterpreterState CreateForLambda(InterpretedScriptCode scriptCode, LambdaExpression lambda, 
             InterpreterState lexicalParent, InterpreterState caller, object[] args) {
 
@@ -87,7 +92,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         internal InterpreterState CreateForScope(ScopeExpression scope) {
             InterpreterState state = new InterpreterState(this, _lambdaState);
-            foreach (VariableExpression v in scope.Variables) {
+            foreach (ParameterExpression v in scope.Variables) {
                 // initialize variables to default(T)
                 object value;
                 if (v.Type.IsValueType) {
@@ -123,7 +128,7 @@ namespace Microsoft.Scripting.Interpretation {
             get { return _lambdaState; }
         }
 
-        internal YieldStatement CurrentYield {
+        internal YieldExpression CurrentYield {
             get { return _lambdaState.CurrentYield; }
             set { _lambdaState.CurrentYield = value; }
         }
@@ -142,6 +147,8 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         internal void SaveStackState(Expression node, object value) {
+            Debug.Assert(_lambdaState.CurrentYield != null);
+
             if (_lambdaState.SpilledStack == null) {
                 _lambdaState.SpilledStack = new Dictionary<Expression, object>();
             }

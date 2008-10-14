@@ -221,7 +221,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // discrepancy however.
 
                 if (node.IsLifted && (!node.Type.IsValueType || !node.Operand.Type.IsValueType)) {
-                    ParameterInfo[] pis = node.Method.GetParameters();
+                    ParameterInfo[] pis = node.Method.GetParametersCached();
                     Debug.Assert(pis != null && pis.Length == 1);
                     Type paramType = pis[0].ParameterType;
                     if (paramType.IsByRef) {
@@ -230,7 +230,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                     UnaryExpression e = Expression.Convert(
                         Expression.Call(
-                            null,
                             node.Method,
                             Expression.Convert(node.Operand, pis[0].ParameterType)
                         ),
@@ -252,14 +251,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //CONFORMING
         private void EmitUnaryMethod(UnaryExpression node) {
             if (node.IsLifted) {
-                VariableExpression v = Expression.Variable(TypeUtils.GetNonNullableType(node.Operand.Type), null);
-                MethodCallExpression mc = Expression.Call(null, node.Method, v);
+                ParameterExpression v = Expression.Variable(TypeUtils.GetNonNullableType(node.Operand.Type), null);
+                MethodCallExpression mc = Expression.Call(node.Method, v);
 
                 Type resultType = TypeUtils.GetNullableType(mc.Type);
-                EmitLift(node.NodeType, resultType, mc, new VariableExpression[] { v }, new Expression[] { node.Operand });
+                EmitLift(node.NodeType, resultType, mc, new ParameterExpression[] { v }, new Expression[] { node.Operand });
                 _ilg.EmitConvertToType(resultType, node.Type, false);
             } else {
-                EmitMethodCallExpression(Expression.Call(null, node.Method, node.Operand));
+                EmitMethodCallExpression(Expression.Call(node.Method, node.Operand));
             }
         }
     }

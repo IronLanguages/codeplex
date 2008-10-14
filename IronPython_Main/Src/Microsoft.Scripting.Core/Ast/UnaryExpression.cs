@@ -48,7 +48,7 @@ namespace Microsoft.Linq.Expressions {
                 bool operandIsNullable = TypeUtils.IsNullableType(_operand.Type);
                 bool resultIsNullable = TypeUtils.IsNullableType(this.Type);
                 if (_method != null) {
-                    return (operandIsNullable && _method.GetParameters()[0].ParameterType != _operand.Type) ||
+                    return (operandIsNullable && _method.GetParametersCached()[0].ParameterType != _operand.Type) ||
                            (resultIsNullable && _method.ReturnType != this.Type);
                 }
                 return operandIsNullable || resultIsNullable;
@@ -148,7 +148,7 @@ namespace Microsoft.Linq.Expressions {
         private static UnaryExpression GetUserDefinedUnaryOperatorOrThrow(ExpressionType unaryType, string name, Expression operand, Annotations annotations) {
             UnaryExpression u = GetUserDefinedUnaryOperator(unaryType, name, operand, annotations);
             if (u != null) {
-                ValidateParamswithOperandsOrThrow(u.Method.GetParameters()[0].ParameterType, operand.Type, unaryType, name);
+                ValidateParamswithOperandsOrThrow(u.Method.GetParametersCached()[0].ParameterType, operand.Type, unaryType, name);
                 return u;
             }
             throw Error.UnaryOperatorNotDefined(unaryType, operand.Type);
@@ -176,7 +176,7 @@ namespace Microsoft.Linq.Expressions {
         private static UnaryExpression GetMethodBasedUnaryOperator(ExpressionType unaryType, Expression operand, MethodInfo method, Annotations annotations) {
             System.Diagnostics.Debug.Assert(method != null);
             ValidateOperator(method);
-            ParameterInfo[] pms = method.GetParameters();
+            ParameterInfo[] pms = method.GetParametersCached();
             if (pms.Length != 1)
                 throw Error.IncorrectNumberOfMethodCallArguments(method);
             if (ParameterIsAssignable(pms[0], operand.Type)) {
@@ -236,7 +236,7 @@ namespace Microsoft.Linq.Expressions {
                     continue;
                 if (mi.ReturnType != typeTo)
                     continue;
-                ParameterInfo[] pis = mi.GetParameters();
+                ParameterInfo[] pis = mi.GetParametersCached();
                 if (pis[0].ParameterType != typeFrom)
                     continue;
                 return mi;
@@ -247,7 +247,7 @@ namespace Microsoft.Linq.Expressions {
         private static UnaryExpression GetMethodBasedCoercionOperator(ExpressionType unaryType, Expression operand, Type convertToType, MethodInfo method, Annotations annotations) {
             System.Diagnostics.Debug.Assert(method != null);
             ValidateOperator(method);
-            ParameterInfo[] pms = method.GetParameters();
+            ParameterInfo[] pms = method.GetParametersCached();
             if (pms.Length != 1)
                 throw Error.IncorrectNumberOfMethodCallArguments(method);
             if (ParameterIsAssignable(pms[0], operand.Type) && method.ReturnType == convertToType) {

@@ -40,8 +40,9 @@ namespace Microsoft.Scripting.Actions {
         internal Expression _target;                // the target that executes if the rule is true
         internal Expression _context;               // CodeContext, if any.
         internal Expression[] _parameters;          // the parameters which the rule is processing
+        internal LabelTarget _return;               // the return label of the rule
         private bool _error;                        // true if the rule represents an error
-        internal List<VariableExpression> _temps;    // temporaries allocated by the rule
+        internal List<ParameterExpression> _temps;    // temporaries allocated by the rule
 
         // TODO revisit these fields and their uses when LambdaExpression moves down
         internal ParameterExpression[] _paramVariables;       // TODO: Remove me when we can refer to params as expressions
@@ -83,20 +84,24 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        public LabelTarget ReturnLabel {
+            get { return _return; }
+        }
+
         /// <summary>
         /// Allocates a temporary variable for use during the rule.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public VariableExpression GetTemporary(Type type, string name) {
-            VariableExpression t = Expression.Variable(type, name);
+        public ParameterExpression GetTemporary(Type type, string name) {
+            ParameterExpression t = Expression.Variable(type, name);
             AddTemporary(t);
             return t;
         }
 
-        public void AddTemporary(VariableExpression variable) {
+        public void AddTemporary(ParameterExpression variable) {
             ContractUtils.RequiresNotNull(variable, "variable");
             if (_temps == null) {
-                _temps = new List<VariableExpression>();
+                _temps = new List<ParameterExpression>();
             }
             _temps.Add(variable);
         }
@@ -104,13 +109,17 @@ namespace Microsoft.Scripting.Actions {
         public Expression MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.Type != typeof(void)) {
-                VariableExpression variable = GetTemporary(expr.Type, "$retVal");
+                ParameterExpression variable = GetTemporary(expr.Type, "$retVal");
                 Expression conv = binder.ConvertExpression(variable, ReturnType, ConversionResultKind.ExplicitCast, Context);
-                if (conv == variable) return Ast.Return(expr);
+                if (conv == variable) return MakeReturn(expr);
 
-                return Ast.Return(Ast.Comma(Ast.Assign(variable, expr), conv));
+                return MakeReturn(Ast.Comma(Ast.Assign(variable, expr), conv));
             }
-            return Ast.Return(binder.ConvertExpression(expr, ReturnType, ConversionResultKind.ExplicitCast, Context));
+            return MakeReturn(binder.ConvertExpression(expr, ReturnType, ConversionResultKind.ExplicitCast, Context));
+        }
+
+        private Expression MakeReturn(Expression expression) {
+            return Ast.Return(_return, Ast.ConvertHelper(expression, _return.Type));
         }
 
         public Expression MakeError(Expression expr) {
@@ -245,13 +254,15 @@ namespace Microsoft.Scripting.Actions {
                 throw Error.TypeParameterIsNotDelegate(typeof(T));
             }
 
-            ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
+            MethodInfo invoke = typeof(T).GetMethod("Invoke");
+            ParameterInfo[] pis = invoke.GetParameters();
 
             if (pis.Length == 0 || pis[0].ParameterType != typeof(CallSite)) {
                 throw Error.FirstArgumentMustBeCallSite();
             }
 
             MakeParameters(pis);
+            _return = Ast.Label(invoke.GetReturnType());
         }
 
         private void MakeParameters(ParameterInfo[] pis) {
@@ -301,8 +312,9 @@ namespace Microsoft.Scripting.Actions {
                             Ast.Empty()
                         ),
                         "<rule>",
-                        _temps != null ? _temps.ToArray() : new VariableExpression[0]
+                        _temps != null ? _temps.ToArray() : new ParameterExpression[0]
                     ),
+                    _return,
                     new ReadOnlyCollection<ParameterExpression>(_paramVariables)
                 );
             }

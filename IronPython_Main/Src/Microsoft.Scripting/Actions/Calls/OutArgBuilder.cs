@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Actions.Calls {
     internal sealed class OutArgBuilder : ArgBuilder {
         private readonly Type _parameterType;
         private readonly bool _isRef;
-        private VariableExpression _tmp;
+        private ParameterExpression _tmp;
 
         public OutArgBuilder(ParameterInfo info) 
             : base(info) {

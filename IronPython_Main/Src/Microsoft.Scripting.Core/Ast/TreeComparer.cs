@@ -60,9 +60,9 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitBlock(node);
             }
 
-            protected internal override Expression VisitBreak(BreakStatement node) {
+            protected internal override Expression VisitGoto(GotoExpression node) {
                 Expressions.Add(node);
-                return base.VisitBreak(node);
+                return base.VisitGoto(node);
             }
 
             protected internal override Expression VisitConditional(ConditionalExpression node) {
@@ -91,11 +91,6 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitConstant(node);
             }
 
-            protected internal override Expression VisitContinue(ContinueStatement node) {
-                Expressions.Add(node);
-                return base.VisitContinue(node);
-            }
-
             protected internal override Expression VisitDoWhile(DoStatement node) {
                 Expressions.Add(node);
                 return base.VisitDoWhile(node);
@@ -111,9 +106,9 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitInvocation(node);
             }
 
-            protected internal override Expression VisitLabeled(LabeledStatement node) {
+            protected internal override Expression VisitLabel(LabelExpression node) {
                 Expressions.Add(node);
-                return base.VisitLabeled(node);
+                return base.VisitLabel(node);
             }
 
             protected internal override Expression VisitLambda(LambdaExpression node) {
@@ -128,8 +123,6 @@ namespace Microsoft.Linq.Expressions {
 
             protected internal override Expression VisitMemberAccess(MemberExpression node) {
                 // ignore the templated constants but add normal member expressions
-                // We could look for an annotation on TemplatedValue<> incase the user
-                // creates one of these but they shouldn't be doing that.
                 Expression target = node.Expression;
                 if (target == null ||
                     !target.Type.IsGenericType ||
@@ -195,16 +188,6 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitUnary(node);
             }
 
-            protected internal override Expression VisitVariable(VariableExpression node) {
-                Expressions.Add(node);
-                return base.VisitVariable(node);
-            }
-
-            protected internal override Expression VisitYield(YieldStatement node) {
-                Expressions.Add(node);
-                return base.VisitYield(node);
-            }
-
             protected internal override Expression VisitExtension(Expression node) {
                 if (!node.CanReduce) {
                     Expressions.Add(node);
@@ -218,11 +201,11 @@ namespace Microsoft.Linq.Expressions {
         #endregion
 
         class VariableInfo {
-            private Dictionary<VariableExpression, int> _left = new Dictionary<VariableExpression, int>();
-            private Dictionary<VariableExpression, int> _right = new Dictionary<VariableExpression, int>();
+            private Dictionary<ParameterExpression, int> _left = new Dictionary<ParameterExpression, int>();
+            private Dictionary<ParameterExpression, int> _right = new Dictionary<ParameterExpression, int>();
             private int _curLeft, _curRight;
 
-            public int GetLeftVariable(VariableExpression ve) {
+            public int GetLeftVariable(ParameterExpression ve) {
                 if (ve == null) {
                     return -1;
                 }
@@ -235,7 +218,7 @@ namespace Microsoft.Linq.Expressions {
                 return res;
             }
 
-            public int GetRightVariable(VariableExpression ve) {
+            public int GetRightVariable(ParameterExpression ve) {
                 if (ve == null) {
                     return -1;
                 }
@@ -418,23 +401,22 @@ namespace Microsoft.Linq.Expressions {
                         return false;
                     }
                     break;
-                case ExpressionType.Variable:
-                    if (!Compare(varInfo, (VariableExpression)currentLeft, (VariableExpression)currentRight)) {
+                case ExpressionType.Parameter:
+                    if (!Compare(varInfo, (ParameterExpression)currentLeft, (ParameterExpression)currentRight)) {
                         return false;
                     }
                     break;
                 case ExpressionType.Lambda:
-                case ExpressionType.YieldStatement:
                 case ExpressionType.ReturnStatement:
                 case ExpressionType.Block:
                 case ExpressionType.Assign:
-                case ExpressionType.BreakStatement:
+                case ExpressionType.Goto:
                 case ExpressionType.ThrowStatement:
                 case ExpressionType.LoopStatement:
-                case ExpressionType.ContinueStatement:
                 case ExpressionType.EmptyStatement:
                 case ExpressionType.DoStatement:
                 case ExpressionType.Convert:
+                case ExpressionType.TypeAs:
                 case ExpressionType.Unbox:
                 case ExpressionType.Negate:
                 case ExpressionType.Not:
@@ -442,13 +424,10 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
                 case ExpressionType.Invoke:
-                case ExpressionType.Parameter:
                     // these nodes children and types completely
                     // define the node
                     break;
-                case ExpressionType.Generator:
-                // TODO: compare the lamdas
-                case ExpressionType.LabeledStatement:
+                case ExpressionType.Label:
                 // TODO: cache and compare labels
                 case ExpressionType.SwitchStatement:
                 // TODO: compare case values
@@ -563,7 +542,7 @@ namespace Microsoft.Linq.Expressions {
             return true;
         }
 
-        private static bool Compare(VariableInfo varInfo, VariableExpression left, VariableExpression right) {
+        private static bool Compare(VariableInfo varInfo, ParameterExpression left, ParameterExpression right) {
             if (varInfo.GetLeftVariable(left) != varInfo.GetRightVariable(right)) {
                 return false;
             }

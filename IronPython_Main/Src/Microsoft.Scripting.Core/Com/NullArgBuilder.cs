@@ -15,7 +15,6 @@
 using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Com {
@@ -26,11 +25,14 @@ namespace Microsoft.Scripting.Com {
     internal sealed class NullArgBuilder : ArgBuilder {
         internal NullArgBuilder() { }
 
-        internal override object Build(object arg) {
+        internal override object UnwrapForReflection(object arg) {
             return null;
         }
 
-        internal override Expression Build(Expression parameter) {
+        internal override Expression Unwrap(Expression parameter) {
+            return Expression.Null();
+        }
+        internal override Expression UnwrapByRef(Expression parameter) {
             return Expression.Null();
         }
     }

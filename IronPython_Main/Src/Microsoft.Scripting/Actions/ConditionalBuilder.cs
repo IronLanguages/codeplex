@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Actions {
     class ConditionalBuilder {
         private readonly List<Expression> _conditions = new List<Expression>();
         private readonly List<Expression> _bodies = new List<Expression>();
-        private readonly List<VariableExpression> _variables = new List<VariableExpression>();
+        private readonly List<ParameterExpression> _variables = new List<ParameterExpression>();
         private Expression _body;
         private Restrictions _restrictions = Restrictions.Empty;
 
@@ -108,7 +108,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Adds a variable which will be scoped at the level of the final expression.
         /// </summary>
-        public void AddVariable(VariableExpression var) {
+        public void AddVariable(ParameterExpression var) {
             _variables.Add(var);
         }
     }

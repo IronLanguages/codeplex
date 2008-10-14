@@ -189,13 +189,13 @@ namespace Microsoft.Linq.Expressions {
             ParameterInfo[] getParameters = null;
             MethodInfo getter = property.GetGetMethod(true);
             if (getter != null) {
-                getParameters = getter.GetParameters();
+                getParameters = getter.GetParametersCached();
                 ValidateAccessor(instance, getter, getParameters, ref argList);
             }
 
             MethodInfo setter = property.GetSetMethod(true);
             if (setter != null) {
-                ParameterInfo[] setParameters = setter.GetParameters();
+                ParameterInfo[] setParameters = setter.GetParametersCached();
                 ContractUtils.Requires(setParameters.Length > 0, "property", Strings.SetterHasNoParams);
 
                 // valueType is the type of the value passed to the setter (last parameter)

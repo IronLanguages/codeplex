@@ -82,8 +82,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //CONFORMING
         private void EmitBinaryMethod(BinaryExpression b) {
             if (b.IsLifted) {
-                VariableExpression p1 = Expression.Variable(TypeUtils.GetNonNullableType(b.Left.Type), null);
-                VariableExpression p2 = Expression.Variable(TypeUtils.GetNonNullableType(b.Right.Type), null);
+                ParameterExpression p1 = Expression.Variable(TypeUtils.GetNonNullableType(b.Left.Type), null);
+                ParameterExpression p2 = Expression.Variable(TypeUtils.GetNonNullableType(b.Right.Type), null);
                 MethodCallExpression mc = Expression.Call(null, b.Method, p1, p2);
                 Type resultType = null;
                 if (b.IsLiftedToNull) {
@@ -106,7 +106,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                             break;
                     }
                 }
-                IList<VariableExpression> variables = new VariableExpression[] { p1, p2 };
+                IList<ParameterExpression> variables = new ParameterExpression[] { p1, p2 };
                 IList<Expression> arguments = new Expression[] { b.Left, b.Right };
                 ValidateLift(variables, arguments);
                 EmitLift(b.NodeType, resultType, mc, variables, arguments);

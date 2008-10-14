@@ -17,9 +17,9 @@ This test module verifies that properties of COM object are identical to those
 of Python object.
 '''
 #------------------------------------------------------------------------------
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("silverlight")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 
 #------------------------------------------------------------------------------
 #--GLOBALS

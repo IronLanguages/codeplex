@@ -25,8 +25,8 @@ many special cases that are not being covered *yet*.
 Disabled Silverlight tests are due to Rowan #304084
 '''
 
-from lib.assert_util import *
-from lib.misc_util import ip_supported_encodings
+from iptest.assert_util import *
+from iptest.misc_util import ip_supported_encodings
 
 if is_cli or is_silverlight:
     import _codecs as codecs

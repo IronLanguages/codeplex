@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Operations {
 
             InstanceOps.CheckInitArgs(context, null, args\u00F8, cls);
 
-            return cls.CreateInstance(context, ArrayUtils.EmptyObjects);
+            return cls.CreateInstance(context);
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace IronPython.Runtime.Operations {
 
             InstanceOps.CheckInitArgs(context, kwargs\u00F8, args\u00F8, cls);
 
-            return cls.CreateInstance(context, ArrayUtils.EmptyObjects);
+            return cls.CreateInstance(context);
         }
 
         /// <summary>

@@ -21,7 +21,7 @@ TODO:
 - EVERYTHING!  This incomplete test is being checked in now to prevent regressions
 '''
 
-from lib.assert_util import *
+from iptest.assert_util import *
     
 import System
 import clr

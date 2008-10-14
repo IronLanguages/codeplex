@@ -19,7 +19,7 @@
 # Test Pep 342 enhancements to generator, including Throw(), Send(), Close() and yield expressions.
 #
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # Declare some dummy exceptions to throw
 class MyError(Exception):

@@ -22,6 +22,8 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
+    // TODO: If annotations is added here, make sure MemberInitExpression.Reduce
+    // methods and ExpressionTreeVisitor.Visit methods preserve it
     public sealed class ElementInit {
         private MethodInfo _addMethod;
         private ReadOnlyCollection<Expression> _arguments;
@@ -77,7 +79,8 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         private static void ValidateElementInitAddMethodInfo(MethodInfo addMethod) {
             ValidateMethodInfo(addMethod);
-            if (addMethod.GetParameters().Length == 0) {
+            ParameterInfo[] pis = addMethod.GetParametersCached();
+            if (pis.Length == 0) {
                 throw Error.ElementInitializerMethodWithZeroArgs();
             }
             if (!addMethod.Name.Equals("Add", StringComparison.OrdinalIgnoreCase)) {
@@ -86,7 +89,7 @@ namespace Microsoft.Linq.Expressions {
             if (addMethod.IsStatic) {
                 throw Error.ElementInitializerMethodStatic();
             }
-            foreach (ParameterInfo pi in addMethod.GetParameters()) {
+            foreach (ParameterInfo pi in pis) {
                 if (pi.ParameterType.IsByRef) {
                     throw Error.ElementInitializerMethodNoRefOutParam(pi.Name, addMethod.Name);
                 }

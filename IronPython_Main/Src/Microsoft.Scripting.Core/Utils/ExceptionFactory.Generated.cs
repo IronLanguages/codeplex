@@ -329,6 +329,15 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "variable must not be ByRef"
+        /// </summary>
+        internal static string VariableMustNotBeByRef {
+            get {
+                return "variable must not be ByRef";
+            }
+        }
+
+        /// <summary>
         /// A string like  "operation kind must match node type"
         /// </summary>
         internal static string OperationKindMustMatchNodeType {
@@ -608,6 +617,24 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Label type must be System.Void if an expression is not supplied"
+        /// </summary>
+        internal static string LabelMustBeVoidOrHaveExpression {
+            get {
+                return "Label type must be System.Void if an expression is not supplied";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Type must be System.Void for this label argument"
+        /// </summary>
+        internal static string LabelTypeMustBeVoid {
+            get {
+                return "Type must be System.Void for this label argument";
+            }
+        }
+
+        /// <summary>
         /// A string like  "type or bindingInfo must be non-null"
         /// </summary>
         internal static string TypeOrBindingInfoMustBeNonNull {
@@ -866,6 +893,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static string ExpressionTypeDoesNotMatchAssignment(object p0, object p1) {
             return FormatString("Expression of type '{0}' cannot be used for assignment to type '{1}'", p0, p1);
+        }
+
+        /// <summary>
+        /// A string like  "Expression of type '{0}' cannot be used for label of type '{1}'"
+        /// </summary>
+        internal static string ExpressionTypeDoesNotMatchLabel(object p0, object p1) {
+            return FormatString("Expression of type '{0}' cannot be used for label of type '{1}'", p0, p1);
         }
 
         /// <summary>
@@ -1318,13 +1352,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Elements must be variables or parameters: {0}"
-        /// </summary>
-        internal static string MustBeVariableOrParameter(object p0) {
-            return FormatString("Elements must be variables or parameters: {0}", p0);
-        }
-
-        /// <summary>
         /// A string like  "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'"
         /// </summary>
         internal static string ArgumentCountMustMatchBinding(object p0, object p1) {
@@ -1545,11 +1572,59 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Statement not on the stack."
+        /// A string like  "Cannot redefine label '{0}' in an inner block."
         /// </summary>
-        internal static string StatementNotOnStack {
+        internal static string LabelTargetAlreadyDefined(object p0) {
+            return FormatString("Cannot redefine label '{0}' in an inner block.", p0);
+        }
+
+        /// <summary>
+        /// A string like  "Cannot jump to to undefined label '{0}'."
+        /// </summary>
+        internal static string LabelTargetUndefined(object p0) {
+            return FormatString("Cannot jump to to undefined label '{0}'.", p0);
+        }
+
+        /// <summary>
+        /// A string like  "Control cannot leave a finally block."
+        /// </summary>
+        internal static string ControlCannotLeaveFinally {
             get {
-                return "Statement not on the stack.";
+                return "Control cannot leave a finally block.";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Control cannot leave a filter test."
+        /// </summary>
+        internal static string ControlCannotLeaveFilterTest {
+            get {
+                return "Control cannot leave a filter test.";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Cannot jump to ambiguous label '{0}'."
+        /// </summary>
+        internal static string AmbiguousJump(object p0) {
+            return FormatString("Cannot jump to ambiguous label '{0}'.", p0);
+        }
+
+        /// <summary>
+        /// A string like  "Control cannot enter a try block."
+        /// </summary>
+        internal static string ControlCannotEnterTry {
+            get {
+                return "Control cannot enter a try block.";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Control cannot enter an expression--only statements can be jumped into."
+        /// </summary>
+        internal static string ControlCannotEnterExpression {
+            get {
+                return "Control cannot enter an expression--only statements can be jumped into.";
             }
         }
 
@@ -1729,13 +1804,6 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static string UndefinedVariable(object p0, object p1, object p2) {
             return FormatString("variable '{0}' of type '{1}' referenced from scope '{2}', but it is not defined", p0, p1, p2);
-        }
-
-        /// <summary>
-        /// A string like  "yield outside of generator in lambda '{0}'"
-        /// </summary>
-        internal static string YieldOutsideOfGenerator(object p0) {
-            return FormatString("yield outside of generator in lambda '{0}'", p0);
         }
 
         /// <summary>
@@ -2049,6 +2117,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception ExpressionTypeDoesNotMatchAssignment(object p0, object p1) {
             return new ArgumentException(Strings.ExpressionTypeDoesNotMatchAssignment(p0, p1));
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "Expression of type '{0}' cannot be used for label of type '{1}'"
+        /// </summary>
+        internal static Exception ExpressionTypeDoesNotMatchLabel(object p0, object p1) {
+            return new ArgumentException(Strings.ExpressionTypeDoesNotMatchLabel(p0, p1));
         }
 
         /// <summary>
@@ -2451,13 +2526,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "Elements must be variables or parameters: {0}"
-        /// </summary>
-        internal static Exception MustBeVariableOrParameter(object p0) {
-            return new ArgumentException(Strings.MustBeVariableOrParameter(p0));
-        }
-
-        /// <summary>
         /// ArgumentException with message like "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'"
         /// </summary>
         internal static Exception ArgumentCountMustMatchBinding(object p0, object p1) {
@@ -2663,10 +2731,52 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "Statement not on the stack."
+        /// InvalidOperationException with message like "Cannot redefine label '{0}' in an inner block."
         /// </summary>
-        internal static Exception StatementNotOnStack() {
-            return new InvalidOperationException(Strings.StatementNotOnStack);
+        internal static Exception LabelTargetAlreadyDefined(object p0) {
+            return new InvalidOperationException(Strings.LabelTargetAlreadyDefined(p0));
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Cannot jump to to undefined label '{0}'."
+        /// </summary>
+        internal static Exception LabelTargetUndefined(object p0) {
+            return new InvalidOperationException(Strings.LabelTargetUndefined(p0));
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Control cannot leave a finally block."
+        /// </summary>
+        internal static Exception ControlCannotLeaveFinally() {
+            return new InvalidOperationException(Strings.ControlCannotLeaveFinally);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Control cannot leave a filter test."
+        /// </summary>
+        internal static Exception ControlCannotLeaveFilterTest() {
+            return new InvalidOperationException(Strings.ControlCannotLeaveFilterTest);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Cannot jump to ambiguous label '{0}'."
+        /// </summary>
+        internal static Exception AmbiguousJump(object p0) {
+            return new InvalidOperationException(Strings.AmbiguousJump(p0));
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Control cannot enter a try block."
+        /// </summary>
+        internal static Exception ControlCannotEnterTry() {
+            return new InvalidOperationException(Strings.ControlCannotEnterTry);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Control cannot enter an expression--only statements can be jumped into."
+        /// </summary>
+        internal static Exception ControlCannotEnterExpression() {
+            return new InvalidOperationException(Strings.ControlCannotEnterExpression);
         }
 
         /// <summary>
@@ -2821,13 +2931,6 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception UndefinedVariable(object p0, object p1, object p2) {
             return new InvalidOperationException(Strings.UndefinedVariable(p0, p1, p2));
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "yield outside of generator in lambda '{0}'"
-        /// </summary>
-        internal static Exception YieldOutsideOfGenerator(object p0) {
-            return new InvalidOperationException(Strings.YieldOutsideOfGenerator(p0));
         }
 
         /// <summary>

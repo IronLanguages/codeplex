@@ -15,7 +15,6 @@
 using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -28,66 +27,61 @@ namespace Microsoft.Scripting.Com {
     /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
     /// The user passes a StrongBox[T] object whose value will get updated when the call returns.
     /// </summary>
-    internal class ReferenceArgBuilder : SimpleArgBuilder {
+    internal class StrongBoxArgBuilder : ArgBuilder {
+        private Type _parameterType;
         private Type _elementType;
-        private VariableExpression _tmp;
+        private ArgBuilder _innerBuilder;
 
-        internal ReferenceArgBuilder(Type parameterType)
-            : base(parameterType) {
-            Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(StrongBox<>));
-            _elementType = parameterType.GetGenericArguments()[0];
+        internal StrongBoxArgBuilder(Type parameterType, ArgBuilder innerBuilder) {
+            _innerBuilder = innerBuilder;
+            _parameterType = parameterType;
+            Debug.Assert(_parameterType.GetGenericTypeDefinition() == typeof(StrongBox<>));
+            _elementType = _parameterType.GetGenericArguments()[0];
         }
 
-        internal override Expression Build(Expression parameter) {
-            if (_tmp == null) {
-                _tmp = Expression.Variable(_elementType, "outParam");
-            }
+        internal override Expression Unwrap(Expression parameter) {
+            return Expression.ConvertHelper(parameter, _parameterType);
+        }
 
-            // arg is boxType ? &_tmp : throw new ArgumentTypeException()
-            //   IncorrectBoxType throws the exception to avoid stack imbalance issues.
-            Type boxType = typeof(StrongBox<>).MakeGenericType(_elementType);
-            return Expression.Condition(
-                Expression.TypeIs(parameter, ParameterType),
-                Expression.Comma(
-                    Expression.Assign(
-                        _tmp,
-                        Expression.Field(
-                            Expression.ConvertHelper(parameter, boxType),
-                            boxType.GetField("Value")
-                        )
+        internal override Expression UnwrapByRef(Expression parameter) {
+            // temp = { parameter is _parameterType ? parameter.Value : throw error }
+            return _innerBuilder.UnwrapByRef(
+                Expression.Condition(
+                    Expression.TypeIs(parameter, _parameterType),
+                    Expression.Field(
+                        //TODO: could use DirectCast as we really need to be sure we are modifying the original argument.
+                        Expression.ConvertHelper(parameter, _parameterType),
+                        "Value"
                     ),
-                    _tmp
-                ),
-                Expression.Call(
-                    typeof(RuntimeOps).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
-                    Expression.ConvertHelper(parameter, typeof(object))
+                    Expression.Call(
+                        typeof(RuntimeOps).GetMethod("IncorrectBoxType").MakeGenericMethod(_parameterType.GetGenericArguments()[0]),
+                        Expression.ConvertHelper(parameter, typeof(object))
+                    )
                 )
             );
         }
 
-        internal override VariableExpression[] TemporaryVariables {
-            get {
-                return new VariableExpression[] { _tmp };
-            }
-        }
-
-        protected Type ElementType {
-            get { return _elementType; }
-        }
-
-        protected virtual Expression UpdatedValue() {
-            return _tmp;
-        }
-
         internal override Expression UpdateFromReturn(Expression parameter) {
-            return Expression.AssignField(
-                Expression.Convert(parameter, ParameterType),
-                ParameterType.GetField("Value"),
-                UpdatedValue()
+            // we are updating parameter, but also passing it to base so that it had a chance to copyback 
+            // if parameter itself is a temp in the outer builder.
+            // parameter = { parameter.Value = temp, parameter }
+            return _innerBuilder.UpdateFromReturn(
+                Expression.Field(
+                    Expression.TypeAs(parameter, _parameterType),
+                    _parameterType.GetField("Value")
+                )
             );
         }
 
-        internal override object Build(object arg) {
+        internal override ParameterExpression[] TemporaryVariables {
+            get {
+                return _innerBuilder.TemporaryVariables;
+            }
+        }
+
+
+
+        internal override object UnwrapForReflection(object arg) {
             ContractUtils.RequiresNotNull(arg, "args");
             if (arg == null) {
                 Error.FirstArgumentMustBeStrongBox();
@@ -106,7 +100,7 @@ namespace Microsoft.Scripting.Com {
                 return null;
             }
 
-            return Convert(value, _elementType);
+            return SimpleArgBuilder.Convert(value, _elementType);
         }
 
         internal override void UpdateFromReturn(object originalArg, object updatedArg) {
@@ -114,7 +108,6 @@ namespace Microsoft.Scripting.Com {
         }
     }
 }
-
 namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
         // TODO: just emit this in the generated code?

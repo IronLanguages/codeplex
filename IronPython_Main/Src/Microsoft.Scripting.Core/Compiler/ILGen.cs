@@ -833,171 +833,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #endregion
 
-        // TODO: deprecate in favor of the Linq versions
-        #region Conversions
-
-        internal void EmitImplicitCast(Type from, Type to) {
-            if (!TryEmitCast(from, to, true)) {
-                throw Error.NoImplicitCast(from, to);
-            }
-        }
-
-        internal void EmitExplicitCast(Type from, Type to) {
-            if (!TryEmitCast(from, to, false)) {
-                throw Error.NoExplicitCast(from, to);
-            }
-        }
-
-        internal bool TryEmitImplicitCast(Type from, Type to) {
-            return TryEmitCast(from, to, true);
-        }
-
-        internal bool TryEmitExplicitCast(Type from, Type to) {
-            return TryEmitCast(from, to, false);
-        }
-
-        private bool TryEmitCast(Type from, Type to, bool implicitOnly) {
-            ContractUtils.RequiresNotNull(from, "from");
-            ContractUtils.RequiresNotNull(to, "to");
-
-            // No cast necessary if identical types
-            if (from == to) {
-                return true;
-            }
-
-            if (to.IsAssignableFrom(from)) {
-                // T -> Nullable<T>
-                if (TypeUtils.IsNullableType(to)) {
-                    Type nonNullableTo = TypeUtils.GetNonNullableType(to);
-                    if (TryEmitCast(from, nonNullableTo, true)) {
-                        EmitNew(to.GetConstructor(new Type[] { nonNullableTo }));
-                    } else {
-                        return false;
-                    }
-                }
-
-                if (from.IsValueType) {
-                    if (to == typeof(object)) {
-                        EmitBoxing(from);
-                        return true;
-                    }
-                }
-
-                if (to.IsInterface) {
-                    Emit(OpCodes.Box, from);
-                    return true;
-                }
-
-                if (from.IsEnum && to == typeof(Enum)) {
-                    Emit(OpCodes.Box, from);
-                    return true;
-                }
-
-                // They are assignable and reference types.
-                return true;
-            }
-
-            if (to == typeof(void)) {
-                Emit(OpCodes.Pop);
-                return true;
-            }
-
-            if (to.IsValueType && from == typeof(object)) {
-                if (implicitOnly) {
-                    return false;
-                }
-                Emit(OpCodes.Unbox_Any, to);
-                return true;
-            }
-
-            if (to.IsValueType != from.IsValueType) {
-                return false;
-            }
-
-            if (!to.IsValueType) {
-                if (implicitOnly) {
-                    return false;
-                }
-                Emit(OpCodes.Castclass, to);
-                return true;
-            }
-
-            if (to.IsEnum) {
-                to = Enum.GetUnderlyingType(to);
-            }
-            if (from.IsEnum) {
-                from = Enum.GetUnderlyingType(from);
-            }
-
-            if (to == from) {
-                return true;
-            }
-
-            if (EmitNumericCast(from, to, implicitOnly)) {
-                return true;
-            }
-
-            return false;
-        }
-
-        internal bool EmitNumericCast(Type from, Type to, bool implicitOnly) {
-            TypeCode fc = Type.GetTypeCode(from);
-            TypeCode tc = Type.GetTypeCode(to);
-            int fromx, fromy, tox, toy;
-
-            if (!TypeUtils.GetNumericConversionOrder(fc, out fromx, out fromy) ||
-                !TypeUtils.GetNumericConversionOrder(tc, out tox, out toy)) {
-                // numeric <-> non-numeric
-                return false;
-            }
-
-            bool isImplicit = TypeUtils.IsImplicitlyConvertible(fromx, fromy, tox, toy);
-
-            if (implicitOnly && !isImplicit) {
-                return false;
-            }
-
-            // IL conversion instruction also needed for floating point -> integer:
-            if (!isImplicit || toy == 2 || tox == 2) {
-                switch (tc) {
-                    case TypeCode.SByte:
-                        Emit(OpCodes.Conv_I1);
-                        break;
-                    case TypeCode.Int16:
-                        Emit(OpCodes.Conv_I2);
-                        break;
-                    case TypeCode.Int32:
-                        Emit(OpCodes.Conv_I4);
-                        break;
-                    case TypeCode.Int64:
-                        Emit(OpCodes.Conv_I8);
-                        break;
-                    case TypeCode.Byte:
-                        Emit(OpCodes.Conv_U1);
-                        break;
-                    case TypeCode.UInt16:
-                        Emit(OpCodes.Conv_U1);
-                        break;
-                    case TypeCode.UInt32:
-                        Emit(OpCodes.Conv_U2);
-                        break;
-                    case TypeCode.UInt64:
-                        Emit(OpCodes.Conv_U4);
-                        break;
-                    case TypeCode.Single:
-                        Emit(OpCodes.Conv_R4);
-                        break;
-                    case TypeCode.Double:
-                        Emit(OpCodes.Conv_R8);
-                        break;
-                    default:
-                        throw Assert.Unreachable;
-                }
-            }
-
-            return true;
-        }
-
         /// <summary>
         /// Boxes the value of the stack. No-op for reference types. Void is
         /// converted to a null reference. For almost all value types this
@@ -1006,6 +841,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// small values. For Int32 this is purely a performance optimization.
         /// For Boolean this is use to ensure that True and False are always
         /// the same objects.
+        /// 
+        /// TODO: do we still need this?
         /// </summary>
         internal void EmitBoxing(Type type) {
             ContractUtils.RequiresNotNull(type, "type");
@@ -1029,8 +866,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
         }
-
-        #endregion
 
         #region Linq Conversions
 
@@ -1499,74 +1334,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 default:
                     throw Assert.Unreachable;
-            }
-        }
-
-        internal void EmitMissingValue(Type type) {
-            LocalBuilder lb;
-
-            switch (Type.GetTypeCode(type)) {
-                default:
-                case TypeCode.Object:
-                    if (type == typeof(object)) {
-                        // parameter of type object receives the actual Missing value
-                        Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
-                    } else if (!type.IsValueType) {
-                        // reference type
-                        EmitNull();
-                    } else if (type.IsSealed && !type.IsEnum) {
-                        lb = DeclareLocal(type);
-                        Emit(OpCodes.Ldloca, lb);
-                        Emit(OpCodes.Initobj, type);
-                        Emit(OpCodes.Ldloc, lb);
-                    } else {
-                        throw Error.NoDefaultValue();
-                    }
-                    break;
-
-                case TypeCode.Empty:
-                case TypeCode.DBNull:
-                    EmitNull();
-                    break;
-
-                case TypeCode.Boolean:
-                case TypeCode.Char:
-                case TypeCode.SByte:
-                case TypeCode.Byte:
-                case TypeCode.Int16:
-                case TypeCode.UInt16:
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                    EmitInt(0);
-                    break;
-
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    EmitLong(0);
-                    break;
-
-                case TypeCode.Single:
-                    EmitSingle(default(Single));
-                    break;
-
-                case TypeCode.Double:
-                    Emit(OpCodes.Ldc_R8, default(Double));
-                    break;
-
-                case TypeCode.Decimal:
-                    EmitFieldGet(typeof(Decimal).GetField("Zero"));
-                    break;
-
-                case TypeCode.DateTime:
-                    lb = DeclareLocal(typeof(DateTime));
-                    Emit(OpCodes.Ldloca, lb);
-                    Emit(OpCodes.Initobj, typeof(DateTime));
-                    Emit(OpCodes.Ldloc, lb);
-                    break;
-
-                case TypeCode.String:
-                    EmitNull();
-                    break;
             }
         }
 

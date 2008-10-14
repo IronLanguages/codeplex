@@ -53,16 +53,16 @@ namespace IronPython.Runtime.Types {
         // commonly calculatable
         private List<PythonType> _resolutionOrder;          // the search order for methods in the type
         private List<PythonType>/*!*/ _bases;               // the base classes of the type
-        private object _ctor;                               // fast implementation of ctor
+        private BuiltinFunction _ctor;                      // the built-in function which allocates an instance - a .NET ctor
 
         // fields that frequently remain null
         private WeakRefTracker _weakrefTracker;             // storage for Python style weak references
         private OldClass _oldClass;                         // the associated OldClass or null for new-style types  
         private int _originalSlotCount;                     // the number of slots when the type was created
-        private CallSite<Func<CallSite, CodeContext, object, object>> _newDirSite;
-        private CallSite<Func<CallSite, CodeContext, object, object[], object>> _newCtorSite;
-        private CallSite<Func<CallSite, CodeContext, object, string, object>> _newGetattributeSite;
-        private CallSite<Func<CallSite, CodeContext, object, object, string, object, object>> _newSetattrSite;
+        private InstanceCreator _instanceCtor;              // creates instances
+        private CallSite<Func<CallSite, CodeContext, object, object>> _dirSite;
+        private CallSite<Func<CallSite, CodeContext, object, string, object>> _getAttributeSite;
+        private CallSite<Func<CallSite, CodeContext, object, object, string, object, object>> _setAttrSite;
 
         [MultiRuntimeAware]
         private static int MasterVersion = 1;
@@ -148,6 +148,14 @@ namespace IronPython.Runtime.Types {
             _bases = ocs; 
             _resolutionOrder = mro;
             AddSlot(Symbols.Class, new PythonTypeValueSlot(this));
+        }
+
+        internal BuiltinFunction Ctor {
+            get {
+                EnsureConstructor();
+
+                return _ctor;
+            }
         }
 
         #region Public API
@@ -315,7 +323,21 @@ namespace IronPython.Runtime.Types {
         }
 
         public int __cmp__([NotNull]PythonType other) {
-            return Name.CompareTo(other.Name);
+            if (other != this) {
+                int res = Name.CompareTo(other.Name);
+
+                if (res == 0) {
+                    long thisId = IdDispenser.GetId(this);
+                    long otherId = IdDispenser.GetId(other);
+                    if (thisId > otherId) {
+                        return 1;
+                    } else {
+                        return -1;
+                    }
+                }
+                return res;
+            }
+            return 0;
         }
 
         public void __delattr__(CodeContext/*!*/ context, string name) {
@@ -521,39 +543,75 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
-        /// Creates an instance of the dynamic type and runs appropriate class initialization
+        /// Allocates the storage for the instance running the .NET constructor.  This provides
+        /// the creation functionality for __new__ implementations.
         /// </summary>
-        internal object CreateInstance(CodeContext context, params object[] args) {
-            ContractUtils.RequiresNotNull(args, "args");
+        internal object CreateInstance(CodeContext/*!*/ context) {
+            EnsureInstanceCtor();
 
-            EnsureConstructor();
-
-            if (_newCtorSite == null) {
-                Interlocked.CompareExchange(
-                    ref _newCtorSite,
-                    CallSite<Func<CallSite, CodeContext, object, object[], object>>.Create(
-                        new InvokeBinder(
-                            PythonContext.GetContext(context).DefaultBinderState,
-                            new CallSignature(new ArgumentInfo(ArgumentKind.List))
-                        )
-                    ),
-                    null
-                );
-            }
-
-            return _newCtorSite.Target(_newCtorSite, context, _ctor, args);
+            return _instanceCtor.CreateInstance(context);
         }
 
         /// <summary>
-        /// Creates an instance of the object using keyword parameters.
+        /// Allocates the storage for the instance running the .NET constructor.  This provides
+        /// the creation functionality for __new__ implementations.
+        /// </summary>
+        internal object CreateInstance(CodeContext/*!*/ context, object arg0) {
+            EnsureInstanceCtor();
+
+            return _instanceCtor.CreateInstance(context, arg0);
+        }
+
+        /// <summary>
+        /// Allocates the storage for the instance running the .NET constructor.  This provides
+        /// the creation functionality for __new__ implementations.
+        /// </summary>
+        internal object CreateInstance(CodeContext/*!*/ context, object arg0, object arg1) {
+            EnsureInstanceCtor();
+
+            return _instanceCtor.CreateInstance(context, arg0, arg1);
+        }
+
+        /// <summary>
+        /// Allocates the storage for the instance running the .NET constructor.  This provides
+        /// the creation functionality for __new__ implementations.
+        /// </summary>
+        internal object CreateInstance(CodeContext/*!*/ context, object arg0, object arg1, object arg2) {
+            EnsureInstanceCtor();
+
+            return _instanceCtor.CreateInstance(context, arg0, arg1, arg2);
+        }
+
+        /// <summary>
+        /// Allocates the storage for the instance running the .NET constructor.  This provides
+        /// the creation functionality for __new__ implementations.
+        /// </summary>
+        internal object CreateInstance(CodeContext context, params object[] args) {
+            Assert.NotNull(args);
+            EnsureInstanceCtor();
+
+            // unpack args for common cases so we don't generate code to do it...
+            switch (args.Length) {
+                case 0: return _instanceCtor.CreateInstance(context);
+                case 1: return _instanceCtor.CreateInstance(context, args[0]);
+                case 2: return _instanceCtor.CreateInstance(context, args[0], args[1]);
+                case 3: return _instanceCtor.CreateInstance(context, args[0], args[1], args[2]);
+                default: 
+                    return _instanceCtor.CreateInstance(context, args);
+            }
+        }
+
+        /// <summary>
+        /// Allocates the storage for the instance running the .NET constructor.  This provides
+        /// the creation functionality for __new__ implementations.
         /// </summary>
         internal object CreateInstance(CodeContext context, object[] args, string[] names) {
-            ContractUtils.RequiresNotNull(args, "args");
-            ContractUtils.RequiresNotNull(names, "names");
+            Assert.NotNull(args, "args");
+            Assert.NotNull(names, "names");
 
-            EnsureConstructor();
+            EnsureInstanceCtor();
 
-            return PythonOps.CallWithKeywordArgs(context, _ctor, args, names);
+            return _instanceCtor.CreateInstance(context, args, names);
         }
 
         /// <summary>
@@ -684,7 +742,7 @@ namespace IronPython.Runtime.Types {
             lock (_bases) _bases.Add(baseType);
         }
 
-        internal void SetConstructor(object ctor) {
+        internal void SetConstructor(BuiltinFunction ctor) {
             _ctor = ctor;
         }
 
@@ -1022,13 +1080,13 @@ namespace IronPython.Runtime.Types {
         private object InvokeGetAttributeMethod(CodeContext context, SymbolId name, object getattr) {
             EnsureGetAttributeSite(context);
 
-            return _newGetattributeSite.Target(_newGetattributeSite, context, getattr, SymbolTable.IdToString(name));
+            return _getAttributeSite.Target(_getAttributeSite, context, getattr, SymbolTable.IdToString(name));
         }
 
         private void EnsureGetAttributeSite(CodeContext context) {
-            if (_newGetattributeSite == null) {
+            if (_getAttributeSite == null) {
                 Interlocked.CompareExchange(
-                    ref _newGetattributeSite,
+                    ref _getAttributeSite,
                     CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(
                         new InvokeBinder(
                             PythonContext.GetContext(context).DefaultBinderState,
@@ -1112,9 +1170,9 @@ namespace IronPython.Runtime.Types {
         internal bool TrySetMember(CodeContext context, object instance, SymbolId name, object value) {
             object setattr;
             if (TryResolveNonObjectSlot(context, instance, Symbols.SetAttr, out setattr)) {
-                if (_newSetattrSite == null) {
+                if (_setAttrSite == null) {
                     Interlocked.CompareExchange(
-                        ref _newSetattrSite,
+                        ref _setAttrSite,
                         CallSite<Func<CallSite, CodeContext, object, object, string, object, object>>.Create(
                             new InvokeBinder(
                                 PythonContext.GetContext(context).DefaultBinderState,
@@ -1125,7 +1183,7 @@ namespace IronPython.Runtime.Types {
                     );
                 }
 
-                _newSetattrSite.Target(_newSetattrSite, context, setattr, instance, SymbolTable.IdToString(name), value);
+                _setAttrSite.Target(_setAttrSite, context, setattr, instance, SymbolTable.IdToString(name), value);
                 return true;                              
             }
 
@@ -1251,7 +1309,7 @@ namespace IronPython.Runtime.Types {
                 if (TryResolveNonObjectSlot(context, self, SymbolTable.StringToId("__dir__"), out dir)) {
                     EnsureDirSite(context);
 
-                    return new List(_newDirSite.Target(_newDirSite, context, dir));
+                    return new List(_dirSite.Target(_dirSite, context, dir));
                 }
             }
 
@@ -1259,9 +1317,9 @@ namespace IronPython.Runtime.Types {
         }
 
         private void EnsureDirSite(CodeContext context) {
-            if (_newDirSite == null) {
+            if (_dirSite == null) {
                 Interlocked.CompareExchange(
-                    ref _newDirSite,
+                    ref _dirSite,
                     CallSite<Func<CallSite, CodeContext, object, object>>.Create(
                         new InvokeBinder(
                             PythonContext.GetContext(context).DefaultBinderState,
@@ -1363,7 +1421,7 @@ namespace IronPython.Runtime.Types {
             bases = ValidateBases(bases);
 
             _name = name;
-            _ctor = new TypePrepender(this, PythonTypeOps.GetPrependerState(_underlyingSystemType));
+            _ctor = BuiltinFunction.MakeMethod(Name, _underlyingSystemType.GetConstructors(), _underlyingSystemType, FunctionType.Function);
             _bases = GetBasesAsList(bases);
             _resolutionOrder = CalculateMro(this, _bases);
             _pythonContext = PythonContext.GetContext(context);
@@ -1597,7 +1655,14 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         private void AddSystemConstructors() {
             if (typeof(Delegate).IsAssignableFrom(_underlyingSystemType)) {
-                SetConstructor(new DelegateBuilder(_underlyingSystemType));
+                SetConstructor(
+                    BuiltinFunction.MakeMethod(
+                        _underlyingSystemType.Name,
+                        typeof(DelegateOps).GetMethod("__new__"),
+                        _underlyingSystemType,
+                        FunctionType.Function | FunctionType.AlwaysVisible
+                    )
+                );
             } else if (!_underlyingSystemType.IsAbstract) {
                 BuiltinFunction reflectedCtors = GetConstructors();
                 if (reflectedCtors == null) {
@@ -1626,6 +1691,12 @@ namespace IronPython.Runtime.Types {
                     throw new MissingMethodException(Name, ".ctor");
 #endif
                 }
+            }
+        }
+
+        private void EnsureInstanceCtor() {
+            if (_instanceCtor == null) {
+                _instanceCtor = InstanceCreator.Make(this);
             }
         }
 

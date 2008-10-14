@@ -13,8 +13,8 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
-from lib.warning_util import warning_trapper
+from iptest.assert_util import *
+from iptest.warning_util import warning_trapper
 import sys
 
 AreEqual(sys.exc_info(), (None, None, None))

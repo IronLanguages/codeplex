@@ -16,6 +16,7 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
@@ -29,7 +30,18 @@ namespace Microsoft.Scripting.Ast {
         public static Block Block(SourceSpan span, params Expression[] expressions) {
             return Expression.Block(Expression.Annotate(span), (IList<Expression>)expressions);
         }
-
+        
+        public static Block Block(SourceSpan span, Expression arg0) {
+            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
+        }
+        
+        public static Block Block(SourceSpan span, Expression arg0, Expression arg1) {
+            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
+        }
+        
+        public static Block Block(SourceSpan span, Expression arg0, Expression arg1, Expression arg2) {
+            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
+        }
 
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
@@ -40,6 +52,10 @@ namespace Microsoft.Scripting.Ast {
 
         public static Block Comma(SourceSpan span, params Expression[] expressions) {
             return Expression.Comma(Expression.Annotate(span), (IList<Expression>)expressions);
+        }
+        
+        public static Block Comma(SourceSpan span, Expression arg0) {
+            return Expression.Comma(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
         }
     }
 }

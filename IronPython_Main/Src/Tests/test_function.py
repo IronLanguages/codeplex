@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def x(a,b,c):
     z = 8
@@ -185,7 +185,7 @@ AreEqual(C1.f0.__module__, __name__)
 
 ######################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def f(x=0, y=10, z=20, *args, **kws):
     return (x, y, z), args, kws
@@ -535,7 +535,7 @@ AreEqual(foo('', 'index'), True)
 # dispatch to a ReflectOptimized method
 
 if is_cli and not is_silverlight:
-    from lib.console_util import IronPythonInstance
+    from iptest.console_util import IronPythonInstance
     from System import Environment
     from sys import executable
     
@@ -547,7 +547,7 @@ if is_cli and not is_silverlight:
 	    ipi = IronPythonInstance(executable, wkdir, "")
 
     if (ipi.Start()):
-        result = ipi.ExecuteLine("from lib.assert_util import *")
+        result = ipi.ExecuteLine("from iptest.assert_util import *")
         result = ipi.ExecuteLine("load_iron_python_test()")
         result = ipi.ExecuteLine("from IronPythonTest import DefaultParams")
         response = ipi.ExecuteLine("DefaultParams.FuncWithDefaults(1100, z=82)")
@@ -658,7 +658,7 @@ AreEqual(D.classmeth.im_class, MetaType)
 
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 from collections import *
 
 global init

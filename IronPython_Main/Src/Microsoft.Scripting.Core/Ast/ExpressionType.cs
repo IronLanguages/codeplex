@@ -70,15 +70,13 @@ namespace Microsoft.Linq.Expressions {
         TypeIs,
         Assign,
         Block,
-        BreakStatement,
-        Generator,
-        ContinueStatement,
         DoStatement,
         Dynamic,
         EmptyStatement,
         Extension,
+        Goto,
         Index,
-        LabeledStatement,
+        Label,
         LocalScope,
         LoopStatement,
         ReturnStatement,
@@ -87,8 +85,6 @@ namespace Microsoft.Linq.Expressions {
         ThrowStatement,
         TryStatement,
         Unbox,
-        Variable,
-        YieldStatement,
 
         // *** END GENERATED CODE ***
 

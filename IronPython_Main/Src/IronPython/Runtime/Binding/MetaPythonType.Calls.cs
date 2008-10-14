@@ -138,7 +138,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             // then get the statement for calling __init__
-            VariableExpression allocatedInst = Ast.Variable(createExpr.LimitType, "newInst");
+            ParameterExpression allocatedInst = Ast.Variable(createExpr.LimitType, "newInst");
             Expression tmpRead = allocatedInst;
             MetaObject initCall = initAdapter.MakeInitCall(
                 state.Binder,
@@ -633,7 +633,7 @@ namespace IronPython.Runtime.Binding {
             return Restrictions.InstanceRestriction(ai.Self.Expression, ai.Self.Value);
         }
 
-        private Expression/*!*/ GetFinalizerInitialization(MetaAction/*!*/ action, VariableExpression/*!*/ variable) {
+        private Expression/*!*/ GetFinalizerInitialization(MetaAction/*!*/ action, ParameterExpression/*!*/ variable) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("InitializeForFinalization"),
                 Ast.Constant(BinderState.GetBinderState(action).Context),

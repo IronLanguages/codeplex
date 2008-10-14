@@ -13,10 +13,10 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import sys
 if not is_silverlight:
-    from lib.process_util import *
+    from iptest.process_util import *
 
 year = 2005
 month = 3

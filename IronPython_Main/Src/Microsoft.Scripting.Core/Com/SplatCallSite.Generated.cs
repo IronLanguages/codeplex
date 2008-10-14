@@ -22,7 +22,7 @@ namespace Microsoft.Scripting.Com {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args")]
         [Obsolete("used by generated code", true)]
-        public static object CallHelper0(CallSite<DynamicSiteTarget<object>> site, object[] args) {
+        public static object CallHelper0(CallSite<Func<CallSite, object>> site, object[] args) {
             return site.Target(site);
         }
 

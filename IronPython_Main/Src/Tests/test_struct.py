@@ -12,7 +12,7 @@
 #
 #
 #####################################################################################
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import _struct
 
@@ -214,5 +214,23 @@ def test_weakref():
     x = _struct.Struct('i')
     import _weakref
     AreEqual(_weakref.proxy(x).size, x.size)
+
+def test_cp16476():
+    for expected, encoded_val in [(156909,       '\xedd\x02\x00'),
+                                  (sys.maxint,   '\xff\xff\xff\x7f'),
+                                  (sys.maxint-1, '\xfe\xff\xff\x7f'),
+                                  (sys.maxint-2, '\xfd\xff\xff\x7f'),
+                                  (sys.maxint+1, '\x00\x00\x00\x80'),
+                                  (sys.maxint+2, '\x01\x00\x00\x80'),
+                                  (sys.maxint+3, '\x02\x00\x00\x80'),
+                                  (2**16,        '\x00\x00\x01\x00'),
+                                  (2**16+1,      '\x01\x00\x01\x00'),
+                                  (2**16-1,      '\xff\xff\x00\x00'),
+                                  (0,            '\x00\x00\x00\x00'),
+                                  (1,            '\x01\x00\x00\x00'),
+                                    ]:
+        actual_val = unpack('I', encoded_val)
+        AreEqual((expected,), actual_val)
+        AreEqual(type(expected), type(actual_val[0]))
     
 run_test(__name__)

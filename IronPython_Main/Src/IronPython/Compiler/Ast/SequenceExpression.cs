@@ -14,9 +14,13 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Microsoft.Scripting;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Operations;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
 
@@ -68,15 +72,13 @@ namespace IronPython.Compiler.Ast {
                     SourceSpan.None;
             }
 
-            List<MSAst.Expression> statements = new List<MSAst.Expression>();
+            MSAst.Expression[] statements = new MSAst.Expression[3];
 
             // 1. Evaluate the expression and assign the value to the temp.
-            MSAst.VariableExpression right_temp = ag.GetTemporary("unpacking");
+            MSAst.ParameterExpression right_temp = ag.GetTemporary("unpacking");
 
             // 2. Add the assignment "right_temp = right" into the suite/block
-            statements.Add(
-                AstGenerator.MakeAssignment(right_temp, right)
-                );
+            statements[0] = AstGenerator.MakeAssignment(right_temp, right);
 
             // 3. Call GetEnumeratorValues on the right side (stored in temp)
             MSAst.Expression enumeratorValues = Ast.Call(
@@ -88,19 +90,17 @@ namespace IronPython.Compiler.Ast {
             );
 
             // 4. Create temporary variable for the array
-            MSAst.VariableExpression array_temp = ag.GetTemporary("array", typeof(object[]));
+            MSAst.ParameterExpression array_temp = ag.GetTemporary("array", typeof(object[]));
 
             // 5. Assign the value of the method call (mce) into the array temp
             // And add the assignment "array_temp = Ops.GetEnumeratorValues(...)" into the block
-            statements.Add(
-                AstGenerator.MakeAssignment(
-                    array_temp, 
-                    enumeratorValues, 
-                    rightSpan
-                )
+            statements[1] = AstGenerator.MakeAssignment(
+                array_temp, 
+                enumeratorValues, 
+                rightSpan
             );
 
-            List<MSAst.Expression> sets = new List<MSAst.Expression>();            
+            MSAst.Expression[] sets = new MSAst.Expression[_items.Length];
             for (int i = 0; i < _items.Length; i ++) {
                 // target = array_temp[i]
 
@@ -128,17 +128,17 @@ namespace IronPython.Compiler.Ast {
                     throw PythonOps.SyntaxError(string.Format("can't assign to {0}", target.NodeName), ag.Context.SourceUnit, target.Span, -1);
                 }
 
-                sets.Add(set);
+                sets[i] = set;
             }
             // 9. add the sets as their own block so they cna be marked as a single span, if necessary.
-            statements.Add(AstUtils.Block(leftSpan, sets.ToArray()));
+            statements[2] = AstUtils.Block(leftSpan, new ReadOnlyCollection<MSAst.Expression>(sets));
 
             // 10. Free the temps
             ag.FreeTemp(array_temp);
             ag.FreeTemp(right_temp);
 
             // 11. Return the suite statement (block)
-            return AstUtils.Block(totalSpan, statements.ToArray());
+            return AstUtils.Block(totalSpan, new ReadOnlyCollection<MSAst.Expression>(statements));
         }
 
         private static bool IsComplexAssignment(Expression expr) {

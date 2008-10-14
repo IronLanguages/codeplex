@@ -380,7 +380,7 @@ namespace IronPython.Runtime.Binding {
             if (BindingHelpers.IsNoThrow(info.Action)) {
                 MetaObject fallback = FallbackGetError(info.Action, codeContext);
                 Type t = BindingHelpers.GetCompatibleType(expr.Type, fallback.Expression.Type);
-                VariableExpression tmp = Ast.Variable(t, "getAttrRes");
+                ParameterExpression tmp = Ast.Variable(t, "getAttrRes");
 
                 expr = Ast.Scope(
                     Ast.Comma(
@@ -477,7 +477,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private void MakeSetAttrTarget(SetBindingInfo bindingInfo, IPythonObject sdo, PythonTypeSlot dts) {
-            VariableExpression tmp = Ast.Variable(typeof(object), "boundVal");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "boundVal");
             bindingInfo.Body.AddVariable(tmp);
 
             bindingInfo.Body.AddCondition(
@@ -513,7 +513,7 @@ namespace IronPython.Runtime.Binding {
 
         private static void MakeSlotsSetTarget(MemberBindingInfo/*!*/ info, ReflectedSlotProperty/*!*/ rsp, Expression/*!*/ value) {
             // type has __slots__ defined for this member, call the setter directly
-            VariableExpression tmp = Ast.Variable(typeof(object), "res");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "res");
             info.Body.AddVariable(tmp);
 
             info.Body.FinishCondition(
@@ -539,7 +539,7 @@ namespace IronPython.Runtime.Binding {
 
 
         private static void MakeSlotSet(SetBindingInfo/*!*/ info, PythonTypeSlot/*!*/ dts) {
-            VariableExpression tmp = Ast.Variable(info.Args[1].Expression.Type, "res");
+            ParameterExpression tmp = Ast.Variable(info.Args[1].Expression.Type, "res");
             info.Body.AddVariable(tmp);
 
             CodeContext context = BinderState.GetBinderState(info.Action).Context;
@@ -669,7 +669,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static void MakeDeleteAttrTarget(DeleteBindingInfo/*!*/ info, IPythonObject self, PythonTypeSlot dts) {
-            VariableExpression tmp = Ast.Variable(typeof(object), "boundVal");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "boundVal");
             info.Body.AddVariable(tmp);
 
             // call __delattr__
@@ -773,9 +773,9 @@ namespace IronPython.Runtime.Binding {
 
         class GetBindingInfo : MemberBindingInfo {
             public readonly MetaAction/*!*/ Action;
-            public readonly VariableExpression/*!*/ Self, Result;
+            public readonly ParameterExpression/*!*/ Self, Result;
 
-            public GetBindingInfo(MetaAction/*!*/ action, MetaObject/*!*/[]/*!*/ args, VariableExpression/*!*/ self, VariableExpression/*!*/ result, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validationInfo)
+            public GetBindingInfo(MetaAction/*!*/ action, MetaObject/*!*/[]/*!*/ args, ParameterExpression/*!*/ self, ParameterExpression/*!*/ result, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validationInfo)
                 : base(args, body, validationInfo) {
                 Action = action;
                 Self = self;

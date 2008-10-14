@@ -17,6 +17,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpretation {
 
@@ -31,7 +32,7 @@ namespace Microsoft.Scripting.Interpretation {
     /// </summary>
     internal sealed class InterpreterVariables : ILocalVariables {
         private readonly InterpreterState _state;
-        private readonly ReadOnlyCollection<Expression> _vars;
+        private readonly ReadOnlyCollection<ParameterExpression> _vars;
         private ReadOnlyCollection<string> _names;
 
         internal InterpreterVariables(InterpreterState state, LocalScopeExpression node) {
@@ -46,15 +47,7 @@ namespace Microsoft.Scripting.Interpretation {
         public ReadOnlyCollection<string> Names {
             get {
                 if (_names == null) {
-                    string[] names = new string[_vars.Count];
-                    for (int i = 0; i < _vars.Count; i++) {
-                        if (_vars[i].NodeType == ExpressionType.Variable) {
-                            names[i] = ((VariableExpression)_vars[i]).Name;
-                        } else {
-                            names[i] = ((ParameterExpression)_vars[i]).Name;
-                        }
-                    }
-                    _names = new ReadOnlyCollection<string>(names);
+                    _names = new ReadOnlyCollection<string>(_vars.Map(v => v.Name));
                 }
                 return _names;
             }

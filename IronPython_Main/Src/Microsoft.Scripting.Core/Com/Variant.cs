@@ -48,12 +48,14 @@ namespace Microsoft.Scripting.Com {
 #endif
 
         // Most of the data types in the Variant are carried in _typeUnion
-        [FieldOffset(0)] private TypeUnion _typeUnion;
+        [FieldOffset(0)]
+        private TypeUnion _typeUnion;
 
         // Decimal is the largest data type and it needs to use the space that is normally unused in TypeUnion._wReserved1, etc.
         // Hence, it is declared to completely overlap with TypeUnion. A Decimal does not use the first two bytes, and so
         // TypeUnion._vt can still be used to encode the type.
-        [FieldOffset(0)] private Decimal _decimal;
+        [FieldOffset(0)]
+        private Decimal _decimal;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct TypeUnion {
@@ -90,12 +92,12 @@ namespace Microsoft.Scripting.Com {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]
             [FieldOffset(0)] internal IntPtr _int;
             [FieldOffset(0)] internal UIntPtr _uint;
-            [FieldOffset(0)] internal Int32 _bool;
+            [FieldOffset(0)] internal Int16 _bool;
             [FieldOffset(0)] internal Int32 _error;
             [FieldOffset(0)] internal Single _r4;
             [FieldOffset(0)] internal Double _r8;
             [FieldOffset(0)] internal Int64 _cy;
-            [FieldOffset(0)] internal double _date;
+            [FieldOffset(0)] internal Double _date;
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]
             [FieldOffset(0)] internal IntPtr _bstr;
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]
@@ -107,8 +109,10 @@ namespace Microsoft.Scripting.Com {
 
             #endregion
 
-            [FieldOffset(0)] internal IntPtr _byref;
-            [FieldOffset(0)] internal Record _record;
+            [FieldOffset(0)]
+            internal IntPtr _byref;
+            [FieldOffset(0)]
+            internal Record _record;
         }
 
         public override string ToString() {
@@ -158,7 +162,7 @@ namespace Microsoft.Scripting.Com {
         /// like BStrs. It does not include composite types like arrays and user-defined COM types (IUnknown/IDispatch).
         /// </summary>
         internal static bool IsPrimitiveType(VarEnum varEnum) {
-            switch(varEnum) {
+            switch (varEnum) {
                 #region Generated Variant IsPrimitiveType
 
                 // *** BEGIN GENERATED CODE ***
@@ -178,6 +182,7 @@ namespace Microsoft.Scripting.Com {
                 case VarEnum.VT_R4:
                 case VarEnum.VT_R8:
                 case VarEnum.VT_DECIMAL:
+                case VarEnum.VT_CY:
                 case VarEnum.VT_DATE:
                 case VarEnum.VT_BSTR:
 
@@ -237,8 +242,7 @@ namespace Microsoft.Scripting.Com {
                     try {
                         IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
                         return Marshal.GetObjectForNativeVariant(variantPtr);
-                    }
-                    catch (Exception) {
+                    } catch (Exception) {
                         throw Error.VariantToObjectNYI(VariantType);
                     }
             }
@@ -273,18 +277,18 @@ namespace Microsoft.Scripting.Com {
             }
         }
 
-        public VarEnum VariantType { 
-            get { 
-                return (VarEnum)_typeUnion._vt; 
+        public VarEnum VariantType {
+            get {
+                return (VarEnum)_typeUnion._vt;
             }
             set {
                 _typeUnion._vt = (ushort)value;
             }
         }
 
-        internal bool IsEmpty { 
-            get { 
-                return _typeUnion._vt == ((ushort)VarEnum.VT_EMPTY); 
+        internal bool IsEmpty {
+            get {
+                return _typeUnion._vt == ((ushort)VarEnum.VT_EMPTY);
             }
         }
 
@@ -530,8 +534,15 @@ namespace Microsoft.Scripting.Com {
             set {
                 Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
                 VariantType = VarEnum.VT_BOOL;
-                _typeUnion._unionTypes._bool = value ? -1 : 0;
+                _typeUnion._unionTypes._bool = value ? (Int16)(-1) : (Int16)0;
             }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+        public void SetAsByrefBool(ref Int16 value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            VariantType = (VarEnum.VT_BOOL | VarEnum.VT_BYREF);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertInt16ByrefToPtr(ref value);
         }
 
         // VT_ERROR
@@ -637,6 +648,13 @@ namespace Microsoft.Scripting.Com {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+        public void SetAsByrefCy(ref Int64 value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            VariantType = (VarEnum.VT_CY | VarEnum.VT_BYREF);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertInt64ByrefToPtr(ref value);
+        }
+
         // VT_DATE
 
         public DateTime AsDate {
@@ -649,6 +667,13 @@ namespace Microsoft.Scripting.Com {
                 VariantType = VarEnum.VT_DATE;
                 _typeUnion._unionTypes._date = value.ToOADate();
             }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+        public void SetAsByrefDate(ref Double value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            VariantType = (VarEnum.VT_DATE | VarEnum.VT_BYREF);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertDoubleByrefToPtr(ref value);
         }
 
         // VT_BSTR
@@ -706,7 +731,7 @@ namespace Microsoft.Scripting.Com {
         #endregion
 
         internal static System.Reflection.PropertyInfo GetAccessor(VarEnum varType) {
-            switch(varType) {
+            switch (varType) {
 
                 #region Generated Variant accessors PropertyInfos
 
@@ -744,7 +769,7 @@ namespace Microsoft.Scripting.Com {
         }
 
         internal static System.Reflection.MethodInfo GetByrefSetter(VarEnum varType) {
-            switch(varType) {
+            switch (varType) {
 
                 #region Generated Variant byref setter
 
@@ -761,16 +786,18 @@ namespace Microsoft.Scripting.Com {
                 case VarEnum.VT_UI8: return typeof(Variant).GetMethod("SetAsByrefUi8");
                 case VarEnum.VT_INT: return typeof(Variant).GetMethod("SetAsByrefInt");
                 case VarEnum.VT_UINT: return typeof(Variant).GetMethod("SetAsByrefUint");
+                case VarEnum.VT_BOOL: return typeof(Variant).GetMethod("SetAsByrefBool");
                 case VarEnum.VT_ERROR: return typeof(Variant).GetMethod("SetAsByrefError");
                 case VarEnum.VT_R4: return typeof(Variant).GetMethod("SetAsByrefR4");
                 case VarEnum.VT_R8: return typeof(Variant).GetMethod("SetAsByrefR8");
                 case VarEnum.VT_DECIMAL: return typeof(Variant).GetMethod("SetAsByrefDecimal");
+                case VarEnum.VT_CY: return typeof(Variant).GetMethod("SetAsByrefCy");
+                case VarEnum.VT_DATE: return typeof(Variant).GetMethod("SetAsByrefDate");
+                case VarEnum.VT_BSTR: return typeof(Variant).GetMethod("SetAsByrefBstr");
 
                 // *** END GENERATED CODE ***
 
                 #endregion
-
-                case VarEnum.VT_BSTR: return typeof(Variant).GetMethod("SetAsByrefBstr");
 
                 default:
                     throw Error.VariantGetAccessorNYI(varType);
@@ -778,7 +805,7 @@ namespace Microsoft.Scripting.Com {
         }
 
         internal static bool HasCommonLayout(VarEnum varEnum) {
-            switch(varEnum) {
+            switch (varEnum) {
 
                 #region Generated HasCommonLayout
 

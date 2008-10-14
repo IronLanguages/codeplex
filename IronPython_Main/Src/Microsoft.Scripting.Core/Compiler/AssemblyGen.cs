@@ -29,8 +29,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
     internal sealed class AssemblyGen {
         private readonly AssemblyBuilder _myAssembly;
         private readonly ModuleBuilder _myModule;
-        private readonly PortableExecutableKinds _peKind;
-        private readonly ImageFileMachine _machine;
         private readonly bool _isDebuggable;
 
 #if !SILVERLIGHT
@@ -50,13 +48,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        internal AssemblyGen(AssemblyName name, string outDir, string outFileExtension, bool isDebuggable)
-            : this(name, outDir, outFileExtension, isDebuggable, PortableExecutableKinds.ILOnly, ImageFileMachine.I386) {
-        }
-
-        internal AssemblyGen(AssemblyName name, string outDir, string outFileExtension, bool isDebuggable,
-            PortableExecutableKinds peKind, ImageFileMachine machine) {
-
+        internal AssemblyGen(AssemblyName name, string outDir, string outFileExtension, bool isDebuggable, bool isUnsafe) {
             ContractUtils.RequiresNotNull(name, "name");
 
 #if SILVERLIGHT  // AssemblyBuilderAccess.RunAndSave, Environment.CurrentDirectory
@@ -84,24 +76,37 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // mark the assembly transparent so that it works in partial trust:
-            CustomAttributeBuilder[] attributes = new CustomAttributeBuilder[] { 
-                new CustomAttributeBuilder(typeof(SecurityTransparentAttribute).GetConstructor(Type.EmptyTypes), new object[0])
-            };
+            CustomAttributeBuilder[] attributes;
+
+            if (isUnsafe) {
+                attributes = new CustomAttributeBuilder[0];
+            } else {
+                attributes = new CustomAttributeBuilder[] { 
+                    new CustomAttributeBuilder(typeof(SecurityTransparentAttribute).GetConstructor(Type.EmptyTypes), new object[0])
+                };
+            }
 
             if (outDir != null) {
                 _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, outDir,
                     null, null, null, null, false, attributes);
 
                 _myModule = _myAssembly.DefineDynamicModule(name.Name, _outFileName, isDebuggable);
-            } else {
+            } else {                
                 _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run, attributes);
-                _myModule = _myAssembly.DefineDynamicModule(name.Name, isDebuggable);
+                _myModule = _myAssembly.DefineDynamicModule(name.Name, isDebuggable);                
+            }
+
+            if (isUnsafe) {
+                _myModule.SetCustomAttribute(
+                    new CustomAttributeBuilder(
+                        typeof(UnverifiableCodeAttribute).GetConstructor(Type.EmptyTypes), 
+                        new object[0]
+                    )
+                );
             }
 
             _myAssembly.DefineVersionInfoResource();
 #endif
-            _machine = machine;
-            _peKind = peKind;
             _isDebuggable = isDebuggable;
 
             if (isDebuggable) {
@@ -152,7 +157,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         internal void Dump() {
 #if !SILVERLIGHT // AssemblyBuilder.Save
-            _myAssembly.Save(_outFileName, _peKind, _machine);
+            _myAssembly.Save(_outFileName, PortableExecutableKinds.ILOnly, ImageFileMachine.I386);
 #endif
         }
 

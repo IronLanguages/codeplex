@@ -105,7 +105,7 @@ namespace IronPython.Runtime.Operations {
 
             CheckInitArgs(context, null, args\u00F8, type\u00F8);
 
-            return type\u00F8.CreateInstance(context, ArrayUtils.EmptyObjects);
+            return type\u00F8.CreateInstance(context);
         }
 
         public static object DefaultNewClsKW(CodeContext context, PythonType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {

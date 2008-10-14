@@ -14,7 +14,7 @@
 #####################################################################################
 
 import sys
-from lib.assert_util import *
+from iptest.assert_util import *
 
 #System.Xml is unavailable in silverlight
 skiptest("silverlight")

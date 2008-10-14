@@ -174,15 +174,9 @@ namespace Microsoft.Linq.Expressions {
                 // Block
                 case ExpressionType.Block:
                     return DefaultVisitBlock(node);
-                // BreakStatement
-                case ExpressionType.BreakStatement:
-                    return DefaultVisitBreakStatement(node);
                 // Generator
                 case ExpressionType.Generator:
                     return DefaultVisitLambdaExpression(node);
-                // ContinueStatement
-                case ExpressionType.ContinueStatement:
-                    return DefaultVisitContinueStatement(node);
                 // DoStatement
                 case ExpressionType.DoStatement:
                     return DefaultVisitDoStatement(node);
@@ -195,12 +189,15 @@ namespace Microsoft.Linq.Expressions {
                 // Extension
                 case ExpressionType.Extension:
                     return DefaultVisitExtensionExpression(node);
+                // Goto
+                case ExpressionType.Goto:
+                    return DefaultVisitGotoExpression(node);
                 // Index
                 case ExpressionType.Index:
                     return DefaultVisitIndexExpression(node);
-                // LabeledStatement
-                case ExpressionType.LabeledStatement:
-                    return DefaultVisitLabeledStatement(node);
+                // Label
+                case ExpressionType.Label:
+                    return DefaultVisitLabelExpression(node);
                 // LocalScope
                 case ExpressionType.LocalScope:
                     return DefaultVisitLocalScopeExpression(node);
@@ -264,11 +261,6 @@ namespace Microsoft.Linq.Expressions {
             return Visit((Block)node);
         }
 
-        // BreakStatement
-        private Expression DefaultVisitBreakStatement(Expression node) {
-            return Visit((BreakStatement)node);
-        }
-
         // ConditionalExpression
         private Expression DefaultVisitConditionalExpression(Expression node) {
             return Visit((ConditionalExpression)node);
@@ -277,11 +269,6 @@ namespace Microsoft.Linq.Expressions {
         // ConstantExpression
         private Expression DefaultVisitConstantExpression(Expression node) {
             return Visit((ConstantExpression)node);
-        }
-
-        // ContinueStatement
-        private Expression DefaultVisitContinueStatement(Expression node) {
-            return Visit((ContinueStatement)node);
         }
 
         // DoStatement
@@ -299,6 +286,11 @@ namespace Microsoft.Linq.Expressions {
             return Visit((EmptyStatement)node);
         }
 
+        // GotoExpression
+        private Expression DefaultVisitGotoExpression(Expression node) {
+            return Visit((GotoExpression)node);
+        }
+
         // IndexExpression
         private Expression DefaultVisitIndexExpression(Expression node) {
             return Visit((IndexExpression)node);
@@ -309,9 +301,9 @@ namespace Microsoft.Linq.Expressions {
             return Visit((InvocationExpression)node);
         }
 
-        // LabeledStatement
-        private Expression DefaultVisitLabeledStatement(Expression node) {
-            return Visit((LabeledStatement)node);
+        // LabelExpression
+        private Expression DefaultVisitLabelExpression(Expression node) {
+            return Visit((LabelExpression)node);
         }
 
         // LambdaExpression

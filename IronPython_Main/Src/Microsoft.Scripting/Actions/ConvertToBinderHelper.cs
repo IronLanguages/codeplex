@@ -503,7 +503,7 @@ namespace Microsoft.Scripting.Actions {
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
                 var conversion = Expression.Dynamic(OldConvertToAction.Make(Binder, valueType, Action.ResultKind), typeof(object), _rule.Context, _rule.Parameters[0]);
 
-                VariableExpression tmp = _rule.GetTemporary(typeof(object), "tmp");
+                ParameterExpression tmp = _rule.GetTemporary(typeof(object), "tmp");
                 _rule.Target =
                     AstUtils.If(
                         Ast.NotEqual(

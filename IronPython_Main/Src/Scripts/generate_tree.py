@@ -78,27 +78,23 @@ expressions = [
 
     # New types in LINQ V2
 
-    Expression("Assign",             "AssignmentExpression"),
-    Expression("Block",              "Block"),
-    Expression("BreakStatement",     "BreakStatement"),
-    Expression("Generator",          "LambdaExpression"),
-    Expression("ContinueStatement",  "ContinueStatement"),
+    Expression("Assign",             "AssignmentExpression"), # TODO: change to BinaryExpression
+    Expression("Block",              "Block"),                # TODO: BlockExpression
     Expression("DoStatement",        "DoStatement"),
     Expression("Dynamic",            "DynamicExpression"),
     Expression("EmptyStatement",     "EmptyStatement"),
     Expression("Extension",          "ExtensionExpression"),
+    Expression("Goto",               "GotoExpression"),
     Expression("Index",              "IndexExpression"),
-    Expression("LabeledStatement",   "LabeledStatement"),
-    Expression("LocalScope",         "LocalScopeExpression"),
+    Expression("Label",              "LabelExpression"),
+    Expression("LocalScope",         "LocalScopeExpression"), # TODO: RuntimeVariablesExpression
     Expression("LoopStatement",      "LoopStatement"),
-    Expression("ReturnStatement",    "ReturnStatement"),
+    Expression("ReturnStatement",    "ReturnStatement"),      # TODO: GotoExpression
     Expression("Scope",              "ScopeExpression"),
     Expression("SwitchStatement",    "SwitchStatement"),
     Expression("ThrowStatement",     "ThrowStatement"),
     Expression("TryStatement",       "TryStatement"),
     Expression("Unbox",              "UnaryExpression"),
-    Expression("Variable",           "VariableExpression"),
-    Expression("YieldStatement",     "YieldStatement"),
 ]
 
 def get_unique_types():

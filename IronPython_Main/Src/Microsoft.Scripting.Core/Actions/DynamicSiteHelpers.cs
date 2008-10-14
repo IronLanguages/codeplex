@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         internal static bool SimpleSignature(MethodInfo invoke, out Type[] sig) {
-            ParameterInfo[] pis = invoke.GetParameters();
+            ParameterInfo[] pis = invoke.GetParametersCached();
             ContractUtils.Requires(pis.Length > 0 && pis[0].ParameterType == typeof(CallSite), "T");
 
             Type[] args = new Type[invoke.ReturnType != typeof(void) ? pis.Length : pis.Length - 1];
@@ -71,97 +71,6 @@ namespace Microsoft.Scripting.Actions {
             }
             sig = args;
             return supported;
-        }
-
-        private static Dictionary<Signature, Type> _DynamicSiteTargets;
-
-        private class Signature {
-            private readonly int _hash;
-            private readonly Type[] _types;
-
-            internal Signature(Type[] types) {
-                _types = types;
-                _hash = types.ListHashCode();
-            }
-
-            public override int GetHashCode() {
-                return _hash;
-            }
-
-            public override bool Equals(object obj) {
-                if (obj == this) {
-                    return true;
-                }
-                Signature sig = obj as Signature;
-                if (sig == null) {
-                    return false;
-                }
-                if (sig._hash != _hash) {
-                    return false;
-                }
-                return sig._types.ListEquals(_types);
-            }
-        }
-
-        private static Type MakeBigSiteTargetType(Type[] types) {
-            if (_DynamicSiteTargets == null) {
-                Interlocked.CompareExchange<Dictionary<Signature, Type>>(ref _DynamicSiteTargets, new Dictionary<Signature, Type>(), null);
-            }
-
-            Signature sig = new Signature(types.Copy());
-
-            bool found;
-            Type type;
-
-            //
-            // LOCK to retrieve the delegate type, if any
-            //
-
-            lock (_DynamicSiteTargets) {
-                found = _DynamicSiteTargets.TryGetValue(sig, out type);
-            }
-
-            if (!found && type != null) {
-                return type;
-            }
-
-            //
-            // Create new delegate type
-            //
-
-            type = MakeNewBigSiteTargetType(types);
-
-            //
-            // LOCK to insert new delegate into the cache. If we already have one (racing threads), use the one from the cache
-            //
-
-            lock (_DynamicSiteTargets) {
-                Type conflict;
-                if (_DynamicSiteTargets.TryGetValue(sig, out conflict) && conflict != null) {
-                    type = conflict;
-                } else {
-                    _DynamicSiteTargets[sig] = type;
-                }
-            }
-
-            return type;
-        }
-
-        private const MethodAttributes CtorAttributes = MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public;
-        private const MethodImplAttributes ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed;
-        private const MethodAttributes InvokeAttributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual;
-
-        private static readonly Type[] _DelegateCtorSignature = new Type[] { typeof(object), typeof(IntPtr) };
-
-        private static Type MakeNewBigSiteTargetType(Type[] types) {
-            Type returnType = types[types.Length - 1];
-            Type[] parameters = types.RotateRight(1);
-            parameters[0] = typeof(CallSite);
-
-            TypeBuilder builder = Snippets.Shared.DefineDelegateType("CallSiteTarget" + types.Length);
-            builder.DefineConstructor(CtorAttributes, CallingConventions.Standard, _DelegateCtorSignature).SetImplementationFlags(ImplAttributes);
-            builder.DefineMethod("Invoke", InvokeAttributes, returnType, parameters).SetImplementationFlags(ImplAttributes);
-            return builder.CreateType();
         }
 
         /// <summary>

@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
+using System.Reflection.Emit;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
@@ -26,10 +27,16 @@ namespace Microsoft.Scripting.Generation {
     /// Rewrites globals to elements on a closed over array
     /// </summary>
     internal class GlobalArrayRewriter : GlobalOptimizedRewriter {
+        internal GlobalArrayRewriter() {
+        }
+
+        internal GlobalArrayRewriter(Dictionary<SymbolId, FieldBuilder> symbolDict)
+            : base(symbolDict) {
+        }
 
         // This starts as a List<string>, but becomes readonly when we're finished allocating
         private IList<string> _names = new List<string>();
-        private VariableExpression _array;
+        private ParameterExpression _array;
 
         internal ReadOnlyCollection<string> Names {
             get {

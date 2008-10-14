@@ -15,9 +15,9 @@
 
 # msagent COM Interop tests
 
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 
 import clr
 from System import Type, Activator

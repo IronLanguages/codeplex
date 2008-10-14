@@ -13,13 +13,12 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection.Emit;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection.Emit;
+using System.Text;
 
 namespace Microsoft.Scripting.Utils {
     // Miscellaneous helpers that don't belong anywhere else
@@ -45,6 +44,23 @@ namespace Microsoft.Scripting.Utils {
             T[] ret = new T[count];
             for (int i = 0; i < count; i++) ret[i] = item;
             return ret;
+        }
+
+        internal static T CommonNode<T>(T first, T second, Func<T, T> parent) where T : class {
+            var cmp = EqualityComparer<T>.Default;
+            if (cmp.Equals(first, second)) {
+                return first;
+            }
+            var set = new Microsoft.Linq.Expressions.Compiler.Set<T>(cmp);
+            for (T t = first; t != null; t = parent(t)) {
+                set.Add(t);
+            }
+            for (T t = second; t != null; t = parent(t)) {
+                if (set.Contains(t)) {
+                    return t;
+                }
+            }
+            return null;
         }
 
         internal static string ToValidPath(string path) {

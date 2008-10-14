@@ -124,8 +124,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 "rewrite action does not match node object kind"
             );
 
-            // Type must always match.
-            Debug.Assert(node.Type == result.Node.Type, "rewritten object must have same type as original");
+            // New type must be reference assignable to the old type
+            // (our rewrites preserve type exactly, but the rules for rewriting
+            // an extension node are more lenient, see Expression.ReduceAndCheck())
+            Debug.Assert(
+                TypeUtils.AreReferenceAssignable(node.Type, result.Node.Type),
+                "rewritten object must be reference assignable to the original type"
+            );
         }
 
         private Result RewriteExpressionFreeTemps(Expression expression, Stack stack) {
@@ -227,7 +232,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Expression is evaluated on a stack in current state
             Result value = RewriteExpression(node.Value, stack);
             if (value.Action != RewriteAction.None) {
-                node = Expression.Assign(node.Expression, value.Node);
+                node = Expression.Assign(node.Expression, value.Node, node.Annotations);
             }
             return new Result(value.Action, node);
         }
@@ -235,24 +240,26 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // AssignmentExpression
         private Result RewriteAssignmentExpression(Expression expr, Stack stack) {
             AssignmentExpression node = (AssignmentExpression)expr;
+
             switch (node.Expression.NodeType) {
                 case ExpressionType.Index:
                     return RewriteIndexAssignment(node, stack);
                 case ExpressionType.MemberAccess:
                     return RewriteMemberAssignment(node, stack);
                 case ExpressionType.Parameter:
-                case ExpressionType.Variable:
                     return RewriteVariableAssignment(node, stack);
+                case ExpressionType.Extension:
+                    return RewriteExtensionAssignment(node, stack);
                 default:
                     throw Error.InvalidLvalue(node.Expression.NodeType);
             }
         }
 
-        // VariableExpression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteVariableExpression(Expression expr, Stack stack) {
-            // No action necessary, regardless of the stack state
-            return new Result(RewriteAction.None, expr);
+        private Result RewriteExtensionAssignment(AssignmentExpression node, Stack stack) {
+            node = Expression.Assign(node.Expression.ReduceExtensions(), node.Value, node.Annotations);
+            Result result = RewriteAssignmentExpression(node, stack);
+            // it's at least Copy because we reduced the node
+            return new Result(result.Action | RewriteAction.Copy, result.Node);
         }
 
         // ParameterExpression
@@ -503,7 +510,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     expr = Expression.ListInit((NewExpression)rewrittenNew, new ReadOnlyCollection<ElementInit>(newInits));
                     break;
                 case RewriteAction.SpillStack:
-                    VariableExpression tempNew = MakeTemp(rewrittenNew.Type);
+                    ParameterExpression tempNew = MakeTemp(rewrittenNew.Type);
                     Expression[] comma = new Expression[inits.Count + 2];
                     comma[0] = Expression.Assign(tempNew, rewrittenNew);
 
@@ -552,7 +559,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     expr = Expression.MemberInit((NewExpression)rewrittenNew, new ReadOnlyCollection<MemberBinding>(newBindings));
                     break;
                 case RewriteAction.SpillStack:
-                    VariableExpression tempNew = MakeTemp(rewrittenNew.Type);
+                    ParameterExpression tempNew = MakeTemp(rewrittenNew.Type);
                     Expression[] comma = new Expression[bindings.Count + 2];
                     comma[0] = Expression.Assign(tempNew, rewrittenNew);
                     for (int i = 0; i < bindings.Count; i++) {
@@ -603,20 +610,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(action, expr);
         }
 
-        // BreakStatement
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteBreakStatement(Expression expr, Stack stack) {
-            // No action necessary
-            return new Result(RewriteAction.None, expr);
-        }
-
-        // ContinueStatement
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteContinueStatement(Expression expr, Stack stack) {
-            // No action necessary
-            return new Result(RewriteAction.None, expr);
-        }
-
         // DoStatement
         private Result RewriteDoStatement(Expression expr, Stack stack) {
             DoStatement node = (DoStatement)expr;
@@ -635,7 +628,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (action != RewriteAction.None) {
-                expr = new DoStatement(node.Annotations, node.Label, test.Node, body.Node);
+                expr = new DoStatement(body.Node, test.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
             }
 
             return new Result(action, expr);
@@ -648,13 +641,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(RewriteAction.None, expr);
         }
 
-        // LabeledStatement
-        private Result RewriteLabeledStatement(Expression expr, Stack stack) {
-            LabeledStatement node = (LabeledStatement)expr;
+        // LabelExpression
+        private Result RewriteLabelExpression(Expression expr, Stack stack) {
+            LabelExpression node = (LabelExpression)expr;
 
-            Result expression = RewriteExpression(node.Statement, stack);
+            Result expression = RewriteExpression(node.DefaultValue, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = Expression.Labeled(node.Label, expression.Node, node.Annotations);
+                expr = Expression.Label(node.Label, expression.Node, node.Annotations);
             }
             return new Result(expression.Action, expr);
         }
@@ -679,7 +672,32 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (action != RewriteAction.None) {
-                expr = Expression.Loop(test.Node, incr.Node, body.Node, @else.Node, node.Label, node.Annotations);
+                expr = new LoopStatement(test.Node, incr.Node, body.Node, @else.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
+            }
+            return new Result(action, expr);
+        }
+
+        // GotoExpression
+        // Note: goto does not necessarily need an empty stack. We could always
+        // emit it as a "leave" which would clear the stack for us. That would
+        // prevent us from doing certain optimizations we might want to do,
+        // however, like the switch-case-goto pattern. For now, be conservative
+        private Result RewriteGotoExpression(Expression expr, Stack stack) {
+            GotoExpression node = (GotoExpression)expr;
+
+            // Goto requires empty stack to execute so the expression is
+            // going to execute on an empty stack.
+            Result value = RewriteExpressionFreeTemps(node.Value, Stack.Empty);
+
+            // However, the statement itself needs an empty stack for itself
+            // so if stack is not empty, rewrite to empty the stack.
+            RewriteAction action = value.Action;
+            if (stack != Stack.Empty) {
+                action = RewriteAction.SpillStack;
+            }
+
+            if (action != RewriteAction.None) {
+                expr = Expression.MakeGoto(node.Kind, node.Target, value.Node, node.Annotations);
             }
             return new Result(action, expr);
         }
@@ -700,7 +718,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (action != RewriteAction.None) {
+#pragma warning disable 618
                 expr = Expression.Return(expression.Node, node.Annotations);
+#pragma warning restore 618
             }
             return new Result(action, expr);
         }
@@ -833,39 +853,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     handlers = new ReadOnlyCollection<CatchBlock>(clone);
                 }
 
-                expr = new TryStatement(node.Annotations, body.Node, handlers, @finally.Node, fault.Node);
-            }
-            return new Result(action, expr);
-        }
-
-        // YieldStatement
-        private Result RewriteYieldStatement(Expression expr, Stack stack) {
-            YieldStatement node = (YieldStatement)expr;
-
-            // Yield expression is always execute on an non-empty stack
-            // given the nature of the codegen.
-            Result expression = RewriteExpressionFreeTemps(node.Expression, Stack.NonEmpty);
-
-            RewriteAction action = expression.Action;
-            if (stack != Stack.Empty) {
-                action = RewriteAction.SpillStack;
-            }
-
-            if (action == RewriteAction.SpillStack) {
-                // Yield's argument was changed. We may need to hoist it.
-                // This will flatten nested yields, which simplifies yield codegen. So:
-                //   yield (yield x)
-                // becomes:
-                //   $t = yield x
-                //   yield $t
-                Expression saveArg, tempArg;
-                tempArg = ToTemp(expression.Node, out saveArg);
-                expr = Expression.Block(
-                    saveArg,
-                    Expression.Yield(tempArg, node.Annotations)
-                );
-            } else if (action == RewriteAction.Copy) {
-                expr = Expression.Yield(expression.Node, node.Annotations);
+                expr = new TryStatement(body.Node, @finally.Node, fault.Node, node.Annotations, handlers);
             }
             return new Result(action, expr);
         }

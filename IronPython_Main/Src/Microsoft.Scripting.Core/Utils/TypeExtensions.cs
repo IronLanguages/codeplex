@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using System.Reflection;
-using System.Text;
-using System.Reflection.Emit;
 using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Text;
 
 namespace Microsoft.Scripting.Utils {
 
@@ -61,6 +61,18 @@ namespace Microsoft.Scripting.Utils {
 
         internal static Type GetReturnType(this MethodBase mi) {
             return (mi.IsConstructor) ? mi.DeclaringType : ((MethodInfo)mi).ReturnType;
+        }
+
+        private static CacheDict<MethodBase, ParameterInfo[]> _ParamInfoCache = new CacheDict<MethodBase, ParameterInfo[]>(75);
+        
+        internal static ParameterInfo[] GetParametersCached(this MethodBase method) {
+            ParameterInfo[] pis;
+            lock (_ParamInfoCache) {
+                if (!_ParamInfoCache.TryGetValue(method, out pis)) {
+                    _ParamInfoCache[method] = pis = method.GetParameters();
+                }
+            }
+            return pis;
         }
 
         /// <summary>

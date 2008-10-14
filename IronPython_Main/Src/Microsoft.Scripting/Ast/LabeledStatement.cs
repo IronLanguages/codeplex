@@ -12,15 +12,17 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+
+using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
-        public static LabeledStatement Labeled(LabelTarget label, Expression body, SourceSpan span) {
-            return Expression.Labeled(label, body, Expression.Annotate(span));
+        [Obsolete("use Expression.Label(label, body, Expression.Annotate(span)) instead")]
+        public static LabelExpression Labeled(LabelTarget label, Expression body, SourceSpan span) {
+            return Expression.Label(label, body, Expression.Annotate(span));
         }
     }
 }

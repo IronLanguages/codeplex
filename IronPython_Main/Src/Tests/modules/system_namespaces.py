@@ -18,7 +18,7 @@ Ensures we can import from .NET 2.0 namespaces and types
 '''
 
 #--IMPORTS---------------------------------------------------------------------
-from lib.assert_util import skiptest, is_cli, run_test
+from iptest.assert_util import skiptest, is_cli, run_test
 skiptest("win32", "silverlight")
 
 import clr

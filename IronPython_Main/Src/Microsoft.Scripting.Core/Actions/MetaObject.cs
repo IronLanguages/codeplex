@@ -200,13 +200,11 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static MetaObject Throw(MetaObject target, MetaObject[] args, Type exception, params object[] exceptionArgs) {
-            ContractUtils.RequiresNotNull(exceptionArgs, "exceptionArgs");
-
             return Throw(
                 target,
                 args,
                 exception,
-                exceptionArgs.Map<object, Expression>((arg) => Expression.Constant(arg))
+                exceptionArgs != null ? exceptionArgs.Map<object, Expression>((arg) => Expression.Constant(arg)) : null
             );
         }
 
@@ -214,9 +212,8 @@ namespace Microsoft.Scripting.Actions {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNull(args, "args");
             ContractUtils.RequiresNotNull(exception, "exception");
-            ContractUtils.RequiresNotNull(exceptionArgs, "exceptionArgs");
 
-            Type[] argTypes = exceptionArgs.Map((arg) => arg.Type);
+            Type[] argTypes = exceptionArgs != null ? exceptionArgs.Map((arg) => arg.Type) : Type.EmptyTypes;
             ConstructorInfo constructor = exception.GetConstructor(argTypes);
 
             if (constructor == null) {

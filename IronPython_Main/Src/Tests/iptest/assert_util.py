@@ -203,6 +203,9 @@ def AssertUnreachable(m = None):
 def AreEqual(a, b):
     Assert(a == b, "expected %r, but found %r" % (b, a))
 
+def AssertContains(containing_string, substring):
+    Assert(substring in containing_string, "%s should be in %s" % (substring, containing_string))
+
 def SequencesAreEqual(a, b, m=None):
     Assert(len(a) == len(b), m or 'sequence lengths differ: expected %d, but found %d' % (len(b), len(a)))
     for i in xrange(len(a)):

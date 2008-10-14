@@ -31,24 +31,24 @@ namespace Microsoft.Linq.Expressions.Compiler {
             /// <summary>
             /// List of free temporary variables. These can be recycled for new temps.
             /// </summary>
-            private List<VariableExpression> _freeTemps;
+            private List<ParameterExpression> _freeTemps;
 
             /// <summary>
             /// Stack of currently active temporary variables.
             /// </summary>
-            private Stack<VariableExpression> _usedTemps;
+            private Stack<ParameterExpression> _usedTemps;
 
             /// <summary>
             /// List of all temps created by stackspiller for this rule/lambda
             /// </summary>
-            private List<VariableExpression> _temps = new List<VariableExpression>();
+            private List<ParameterExpression> _temps = new List<ParameterExpression>();
 
-            internal List<VariableExpression> Temps {
+            internal List<ParameterExpression> Temps {
                 get { return _temps; }
             }
 
-            internal VariableExpression Temp(Type type) {
-                VariableExpression temp;
+            internal ParameterExpression Temp(Type type) {
+                ParameterExpression temp;
                 if (_freeTemps != null) {
                     // Recycle from the free-list if possible.
                     for (int i = _freeTemps.Count - 1; i >= 0; i--) {
@@ -65,21 +65,21 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return UseTemp(temp);
             }
 
-            private VariableExpression UseTemp(VariableExpression temp) {
+            private ParameterExpression UseTemp(ParameterExpression temp) {
                 Debug.Assert(_freeTemps == null || !_freeTemps.Contains(temp));
                 Debug.Assert(_usedTemps == null || !_usedTemps.Contains(temp));
 
                 if (_usedTemps == null) {
-                    _usedTemps = new Stack<VariableExpression>();
+                    _usedTemps = new Stack<ParameterExpression>();
                 }
                 _usedTemps.Push(temp);
                 return temp;
             }
 
-            private void FreeTemp(VariableExpression temp) {
+            private void FreeTemp(ParameterExpression temp) {
                 Debug.Assert(_freeTemps == null || !_freeTemps.Contains(temp));
                 if (_freeTemps == null) {
-                    _freeTemps = new List<VariableExpression>();
+                    _freeTemps = new List<ParameterExpression>();
                 }
                 _freeTemps.Add(temp);
             }
@@ -233,7 +233,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
 
-        private VariableExpression MakeTemp(Type type) {
+        private ParameterExpression MakeTemp(Type type) {
             return _tm.Temp(type);
         }
 
@@ -256,8 +256,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         ///     save: temp = expression
         ///     return value: temp
         /// </summary>
-        private VariableExpression ToTemp(Expression expression, out Expression save) {
-            VariableExpression temp = MakeTemp(expression.Type);
+        private ParameterExpression ToTemp(Expression expression, out Expression save) {
+            ParameterExpression temp = MakeTemp(expression.Type);
             save = Expression.Assign(temp, expression);
             return temp;
         }

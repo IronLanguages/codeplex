@@ -77,15 +77,13 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.TypeIs: return InterpretTypeBinaryExpression(state, expr);
                  case ExpressionType.Assign: return InterpretAssignmentExpression(state, expr);
                  case ExpressionType.Block: return InterpretBlock(state, expr);
-                 case ExpressionType.BreakStatement: return InterpretBreakStatement(state, expr);
-                 case ExpressionType.Generator: return InterpretLambdaExpression(state, expr);
-                 case ExpressionType.ContinueStatement: return InterpretContinueStatement(state, expr);
                  case ExpressionType.DoStatement: return InterpretDoStatement(state, expr);
                  case ExpressionType.Dynamic: return InterpretDynamicExpression(state, expr);
                  case ExpressionType.EmptyStatement: return InterpretEmptyStatement(state, expr);
                  case ExpressionType.Extension: return InterpretExtensionExpression(state, expr);
+                 case ExpressionType.Goto: return InterpretGotoExpression(state, expr);
                  case ExpressionType.Index: return InterpretIndexExpression(state, expr);
-                 case ExpressionType.LabeledStatement: return InterpretLabeledStatement(state, expr);
+                 case ExpressionType.Label: return InterpretLabelExpression(state, expr);
                  case ExpressionType.LocalScope: return InterpretLocalScopeExpression(state, expr);
                  case ExpressionType.LoopStatement: return InterpretLoopStatement(state, expr);
                  case ExpressionType.ReturnStatement: return InterpretReturnStatement(state, expr);
@@ -94,8 +92,6 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.ThrowStatement: return InterpretThrowStatement(state, expr);
                  case ExpressionType.TryStatement: return InterpretTryStatement(state, expr);
                  case ExpressionType.Unbox: return InterpretUnboxUnaryExpression(state, expr);
-                 case ExpressionType.Variable: return InterpretVariableExpression(state, expr);
-                 case ExpressionType.YieldStatement: return InterpretYieldStatement(state, expr);
 
                 // *** END GENERATED CODE ***
 

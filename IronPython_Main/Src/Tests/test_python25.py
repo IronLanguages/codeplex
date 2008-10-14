@@ -20,7 +20,7 @@ from __future__ import with_statement
 import sys
 import exceptions
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
 Assert(isPython25)

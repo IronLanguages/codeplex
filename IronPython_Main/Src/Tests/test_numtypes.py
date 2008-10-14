@@ -20,7 +20,7 @@ using standard Python types (int, long, float) and then comparing the results wi
 results produced by the operators implemented on the .NET types.
 """
 
-from lib.assert_util import *
+from iptest.assert_util import *
 from operator import add, sub, mul, div, mod, and_, or_, xor, floordiv, truediv, lshift, rshift, neg, pos, abs, invert
 
 if is_cli or is_silverlight:

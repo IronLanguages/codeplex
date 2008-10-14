@@ -14,11 +14,11 @@
 #####################################################################################
 
 # COM Interop tests for IronPython
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("silverlight")
 from System import DateTime
 from clr import StrongBox
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 
 com_type_name = "DlrComLibrary.Properties"
 com_obj = getRCWFromProgID(com_type_name)

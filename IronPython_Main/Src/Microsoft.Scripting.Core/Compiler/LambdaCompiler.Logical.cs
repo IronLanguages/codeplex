@@ -107,7 +107,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             Type nnLeftType = TypeUtils.GetNonNullableType(b.Left.Type);
             if (b.Method != null) {
-                ParameterInfo[] parameters = b.Method.GetParameters();
+                ParameterInfo[] parameters = b.Method.GetParametersCached();
                 Debug.Assert(b.Method.IsStatic);
                 Debug.Assert(parameters.Length == 1);
                 Debug.Assert(parameters[0].ParameterType.IsAssignableFrom(b.Left.Type) ||
@@ -585,10 +585,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         EmitBranchBlock(branchValue, (Block)node, label);
                         return;
                     case ExpressionType.Equal:
-                        EmitBranchEqual(branchValue, (BinaryExpression)node, label);
-                        return;
                     case ExpressionType.NotEqual:
-                        EmitBranchEqual(!branchValue, (BinaryExpression)node, label);
+                        EmitBranchComparison(branchValue, (BinaryExpression)node, label);
                         return;
                 }
             }
@@ -600,12 +598,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(branch ? OpCodes.Brtrue : OpCodes.Brfalse, label);
         }
 
-        private void EmitBranchEqual(bool branch, BinaryExpression node, Label label) {
+        private void EmitBranchComparison(bool branch, BinaryExpression node, Label label) {
             Debug.Assert(node.NodeType == ExpressionType.Equal || node.NodeType == ExpressionType.NotEqual);
             Debug.Assert(!node.IsLiftedToNull);
 
+            // To share code paths, we want to treat NotEqual as an inverted Equal
+            bool branchWhenEqual = branch == (node.NodeType == ExpressionType.Equal);
+
             if (node.Method != null) {
                 EmitBinaryMethod(node);
+                // EmitBinaryMethod takes into account the Equal/NotEqual
+                // node kind, so use the original branch value
                 EmitBranchOp(branch, label);
             } else if (ConstantCheck.IsNull(node.Left)) {
                 if (TypeUtils.IsNullableType(node.Right.Type)) {
@@ -615,7 +618,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     Debug.Assert(!node.Right.Type.IsValueType);
                     EmitExpression(node.Right);
                 }
-                EmitBranchOp(!branch, label);
+                EmitBranchOp(!branchWhenEqual, label);
             } else if (ConstantCheck.IsNull(node.Right)) {
                 if (TypeUtils.IsNullableType(node.Left.Type)) {
                     EmitAddress(node.Left, node.Left.Type);
@@ -624,14 +627,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     Debug.Assert(!node.Left.Type.IsValueType);
                     EmitExpression(node.Left);
                 }
-                EmitBranchOp(!branch, label);
+                EmitBranchOp(!branchWhenEqual, label);
             } else if (TypeUtils.IsNullableType(node.Left.Type) || TypeUtils.IsNullableType(node.Right.Type)) {
                 EmitBinaryExpression(node);
+                // EmitBinaryExpression takes into account the Equal/NotEqual
+                // node kind, so use the original branch value
                 EmitBranchOp(branch, label);
             } else {
                 EmitExpression(node.Left);
                 EmitExpression(node.Right);
-                if (branch) {
+                if (branchWhenEqual) {
                     _ilg.Emit(OpCodes.Beq, label);
                 } else {
                     _ilg.Emit(OpCodes.Ceq);

@@ -14,7 +14,7 @@
 #####################################################################################
 
 import sys
-from lib.assert_util import *
+from iptest.assert_util import *
 
 load_iron_python_test()
 from IronPythonTest import *

@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// updated return value is returned as one of the resulting return values.
     /// </summary>
     internal sealed class ReturnReferenceArgBuilder : SimpleArgBuilder {
-        private VariableExpression _tmp;
+        private ParameterExpression _tmp;
 
         public ReturnReferenceArgBuilder(ParameterInfo info, int index)
             : base(info, info.ParameterType.GetElementType(), index, false, false) {

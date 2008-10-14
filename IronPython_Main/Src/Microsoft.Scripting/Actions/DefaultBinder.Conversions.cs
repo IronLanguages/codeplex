@@ -323,7 +323,7 @@ namespace Microsoft.Scripting.Actions {
         private static Expression WrapForThrowingTry(ConversionResultKind kind, bool isImplicit, Expression ret, Type retType) {
             if (!isImplicit && kind == ConversionResultKind.ExplicitTry) {
                 Expression convFailed = GetTryConvertReturnValue(retType);
-                VariableExpression tmp = Ast.Variable(convFailed.Type == typeof(object) ? typeof(object) : ret.Type, "tmp");
+                ParameterExpression tmp = Ast.Variable(convFailed.Type == typeof(object) ? typeof(object) : ret.Type, "tmp");
                 ret = Ast.Scope(
                     Ast.Comma(
                         AstUtils.Try(
@@ -436,7 +436,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression conversion = ConvertExpression(arg.Expression, valueType, kind, Ast.Null(typeof(CodeContext)));
 
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
-                VariableExpression tmp = Ast.Variable(typeof(object), "tmp");
+                ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
                 return new MetaObject(
                     Ast.Scope(
                         Ast.Condition(

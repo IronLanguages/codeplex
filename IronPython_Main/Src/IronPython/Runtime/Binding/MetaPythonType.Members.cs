@@ -207,7 +207,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 } else if (pt.IsOldClass) {
                     // mixed new-style/old-style class, search the one slot in it's MRO for the member
-                    VariableExpression tmp = Ast.Variable(typeof(object), "tmp");
+                    ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
                     result = new MetaObject(
                         Ast.Scope(
                             Ast.Condition(
@@ -227,7 +227,7 @@ namespace IronPython.Runtime.Binding {
 
                 } else if (pt.TryLookupSlot(state.Context, SymbolTable.StringToId(GetGetMemberName(member)), out pts)) {
                     // user defined new style class, see if we have a slot.
-                    VariableExpression tmp = Ast.Variable(typeof(object), "tmp");
+                    ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
 
                     result = new MetaObject(
                         Ast.Scope(
@@ -365,7 +365,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 } else if (pt.TryLookupSlot(BinderState.GetBinderState(member).Context, SymbolTable.StringToId(GetGetMemberName(member)), out pts)) {
                     // user defined new style class, see if we have a slot.
-                    VariableExpression tmp = Ast.Variable(typeof(object), "slotRes");
+                    ParameterExpression tmp = Ast.Variable(typeof(object), "slotRes");
                     return Ast.Scope(
                         Ast.Condition(
                             Ast.Call(
@@ -387,7 +387,7 @@ namespace IronPython.Runtime.Binding {
             // the member doesn't exist anywhere in the type hierarchy, see if
             // we define __getattr__ on our meta type.
             if (metaType.TryResolveSlot(BinderState.GetBinderState(member).Context, Symbols.GetBoundAttr, out pts)) {
-                VariableExpression tmp = Ast.Variable(typeof(object), "res");
+                ParameterExpression tmp = Ast.Variable(typeof(object), "res");
                 return Ast.Scope(
                     Ast.Condition(
                         Ast.Call(

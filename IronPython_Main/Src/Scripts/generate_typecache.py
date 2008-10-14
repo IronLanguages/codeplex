@@ -51,7 +51,6 @@ data = [
     TypeData('FrozenSetCollection', entryName='FrozenSet'),
     TypeData('PythonFunction', entryName='Function'),
     TypeData('Builtin'),
-    TypeData('Generator'),
     TypeData('Object', 'obj'),
     TypeData('SetCollection', entryName='Set'),
     TypeData('PythonType'),

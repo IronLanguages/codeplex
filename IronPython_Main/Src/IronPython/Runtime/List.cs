@@ -32,6 +32,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
 
@@ -54,18 +55,28 @@ namespace IronPython.Runtime {
         }
 
         public void __init__([NotNull] ICollection sequence) {
-            if (this == sequence) {
-                // list.__init__(l, l) resets l
-                _size = 0;
-                return;
-            }
-
             _data = new object[sequence.Count];
             int i = 0;
             foreach (object item in sequence) {
                 _data[i++] = item;
             }
             _size = i;
+        }
+
+        public void __init__([NotNull] List sequence) {
+            if (this == sequence) {
+                // list.__init__(l, l) resets l
+                _size = 0;
+                return;
+            }
+
+            lock (sequence) {
+                _data = new object[sequence._size];
+                for (int i = 0; i < sequence._size; i++) {
+                    _data[i] = sequence._data[i];
+                }
+                _size = sequence._size;
+            }
         }
 
         public void __init__([NotNull] string sequence) {
@@ -204,6 +215,10 @@ namespace IronPython.Runtime {
         private static int GetAddSize(int s1, int s2) {
             int length = s1 + s2;
 
+            return GetNewSize(length);
+        }
+
+        private static int GetNewSize(int length) {
             if (length > 256) {
                 return length + (128 - 1) & ~(128 - 1);
             }
@@ -446,39 +461,39 @@ namespace IronPython.Runtime {
         }
 
         private void SliceNoStep(int start, int stop, object value) {
-            IEnumerator enumerator = PythonOps.GetEnumerator(value);
+            // always copy from a List object, even if it's a copy of some user defined enumerator.  This
+            // makes it easy to hold the lock for the duration fo the copy.
+            List other = value as List ?? new List(PythonOps.GetEnumerator(value));
 
-            // save a ref to myData incase other calls cause us 
-            // to re-size.
-
-            List newList = new List(_data.Length); // race is tolerable...
-
-            lock (this) {
-                for (int i = 0; i < start; i++) {
-                    newList.AddNoLock(_data[i]);
-                }
-            }
-
-            // calling user code, get rid of the lock...
-            while (enumerator.MoveNext()) {
-                newList.AddNoLock(enumerator.Current);
-            }
-
-            lock (this) {
-                for (int i = stop; i < _size; i++) {
-                    newList.AddNoLock(_data[i]);
-                }
-
-                if (newList._data.Length < _data.Length) {
-                    // shrinking our array may result in IndexOutOfRange in
-                    // this[...] where we read w/o a lock.
-                    Array.Copy(newList._data, _data, newList._data.Length);
+            using (new OrderedLocker(this, other)) {
+                if ((stop - start) == other.Count) {
+                    // we are simply replacing values, this is fast...
+                    for (int i = 0; i < other.Count; i++) {
+                        _data[i + start] = other._data[i];
+                    }
                 } else {
-                    this._data = newList._data;
-                }
+                    // we are resizing the array (either bigger or smaller), we 
+                    // will copy the data array and replace it all at once.
+                    int newSize = _size - (stop - start) + other.Count;
 
-                this._size = newList._size;
-            }
+                    object[] newData = new object[GetNewSize(newSize)];
+                    for (int i = 0; i < start; i++) {
+                        newData[i] = _data[i];
+                    }
+                    
+                    for (int i = 0; i < other._size; i++) {
+                        newData[i + start] = other._data[i];
+                    }
+
+                    int writeOffset = other.Count - (stop - start);
+                    for (int i = stop; i < _size; i++) {
+                        newData[i + writeOffset] = _data[i];
+                    }
+
+                    _size = newSize;
+                    _data = newData;
+                }
+            }        
         }
 
 
@@ -776,48 +791,6 @@ namespace IronPython.Runtime {
             lock (this) Array.Reverse(_data, index, count);
         }
 
-        private class DefaultPythonComparer : IComparer {
-            public static readonly DefaultPythonComparer Instance = new DefaultPythonComparer();
-            private CallSite<Func<CallSite, object, object, int>> site = CallSite<Func<CallSite, object, object, int>>.Create(
-                Binders.BinaryOperationRetType(
-                    DefaultContext.DefaultPythonContext.DefaultBinderState,
-                    StandardOperators.Compare,
-                    typeof(int)
-                )
-            );
-            public DefaultPythonComparer() { }
-
-            public int Compare(object x, object y) {
-                //??? Putting this optimization here is awfully special case, but comes close to halving sort time for int lists
-                //				if (x is int && y is int) {
-                //					int xi = (int)x;
-                //					int yi = (int)y;
-                //					return xi == yi ? 0 : (xi < yi ? -1 : +1);
-                //				}
-
-                return site.Target(site, x, y);
-            }
-        }
-
-        private class FunctionComparer : IComparer {
-            //??? optimized version when we know we have a Function
-            private object cmpfunc;
-
-            private CallSite<Func<CallSite, CodeContext, object, object, object, int>> FuncSite = CallSite<Func<CallSite, CodeContext, object, object, object, int>>.Create(
-                Binders.InvokeAndConvert(
-                    DefaultContext.DefaultPythonContext.DefaultBinderState,
-                    2,
-                    typeof(int)
-                )
-            );
-
-            public FunctionComparer(object cmpfunc) { this.cmpfunc = cmpfunc; }
-
-            public int Compare(object o1, object o2) {
-                return FuncSite.Target(FuncSite, DefaultContext.Default, cmpfunc, o1, o2);
-            }
-        }
-
         public void sort(CodeContext/*!*/ context) {
             sort(context, null, null, false);
         }
@@ -834,11 +807,29 @@ namespace IronPython.Runtime {
                          [DefaultParameterValue(null)] object cmp,
                          [DefaultParameterValue(null)] object key,
                          [DefaultParameterValue(false)] bool reverse) {
-            IComparer comparer = (cmp == null) ?
-                (IComparer)new DefaultPythonComparer() :
-                (IComparer)new FunctionComparer(cmp);
+            // the empty list is already sorted
+            if (_size != 0) {                
+                IComparer comparer = PythonContext.GetContext(context).GetComparer(
+                    cmp,
+                    GetComparisonType());
 
-            DoSort(context, comparer, key, reverse, 0, _size);
+                DoSort(context, comparer, key, reverse, 0, _size);
+            }
+        }
+
+        private Type GetComparisonType() {
+            if (_size >= 4000) {
+                // we're big, we can afford a custom comparison call site.
+                return null;
+            }
+
+            if (_data.Length > 0) {
+                // use the 1st index to determine the type - we're assuming lists are
+                // homogeneous
+                return CompilerHelpers.GetType(_data[0]);
+            }
+
+            return typeof(object);
         }
 
         internal void DoSort(CodeContext/*!*/ context, IComparer cmp, object key, bool reverse, int index, int count) {
@@ -1216,7 +1207,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        private int CompareTo(List other) {
+        internal int CompareTo(List other) {
             CompareUtil.Push(this, other);
             try {
                 return CompareToWorker(other);

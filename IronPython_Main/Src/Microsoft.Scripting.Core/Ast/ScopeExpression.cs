@@ -26,13 +26,13 @@ namespace Microsoft.Linq.Expressions {
     public sealed class ScopeExpression : Expression {
         private readonly string _name;
         private readonly Expression _body;
-        private readonly ReadOnlyCollection<VariableExpression> _variables;
+        private readonly ReadOnlyCollection<ParameterExpression> _variables;
 
         internal ScopeExpression(
             Expression body,
             string name,
             Annotations annotations,
-            ReadOnlyCollection<VariableExpression> variables)
+            ReadOnlyCollection<ParameterExpression> variables)
             : base(ExpressionType.Scope, body.Type, annotations) {
 
             _body = body;
@@ -57,7 +57,7 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// The variables in this scope
         /// </summary>
-        public ReadOnlyCollection<VariableExpression> Variables {
+        public ReadOnlyCollection<ParameterExpression> Variables {
             get { return _variables; }
         }
 
@@ -70,31 +70,32 @@ namespace Microsoft.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
-        public static ScopeExpression Scope(Expression body, params VariableExpression[] variables) {
-            return Scope(body, null, Annotations.Empty, (IEnumerable<VariableExpression>)variables);
+        public static ScopeExpression Scope(Expression body, params ParameterExpression[] variables) {
+            return Scope(body, null, Annotations.Empty, (IEnumerable<ParameterExpression>)variables);
         }
 
-        public static ScopeExpression Scope(Expression body, IEnumerable<VariableExpression> variables) {
+        public static ScopeExpression Scope(Expression body, IEnumerable<ParameterExpression> variables) {
             return Scope(body, null, Annotations.Empty, variables);
         }
 
-        public static ScopeExpression Scope(Expression body, string name, params VariableExpression[] variables) {
-            return Scope(body, name, Annotations.Empty, (IEnumerable<VariableExpression>)variables);
+        public static ScopeExpression Scope(Expression body, string name, params ParameterExpression[] variables) {
+            return Scope(body, name, Annotations.Empty, (IEnumerable<ParameterExpression>)variables);
         }
 
-        public static ScopeExpression Scope(Expression body, string name, IEnumerable<VariableExpression> variables) {
+        public static ScopeExpression Scope(Expression body, string name, IEnumerable<ParameterExpression> variables) {
             return Scope(body, name, Annotations.Empty, variables);
         }
 
-        public static ScopeExpression Scope(Expression body, string name, Annotations annotations, params VariableExpression[] variables) {
-            return Scope(body, name, annotations, (IEnumerable<VariableExpression>)variables);
+        public static ScopeExpression Scope(Expression body, string name, Annotations annotations, params ParameterExpression[] variables) {
+            return Scope(body, name, annotations, (IEnumerable<ParameterExpression>)variables);
         }
 
-        public static ScopeExpression Scope(Expression body, string name, Annotations annotations, IEnumerable<VariableExpression> variables) {
+        public static ScopeExpression Scope(Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> variables) {
             RequiresCanRead(body, "body");
 
             var varList = variables.ToReadOnly();
             ContractUtils.RequiresNotNullItems(varList, "variables");
+            Expression.RequireVariablesNotByRef(varList, "variables");
 
             return new ScopeExpression(body, name, annotations, varList);
         }

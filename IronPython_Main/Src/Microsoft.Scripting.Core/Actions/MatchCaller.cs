@@ -65,7 +65,7 @@ namespace Microsoft.Scripting.Actions {
                 }
                 if (method != null) {
                     method = method.MakeGenericMethod(args);
-                    if (method.GetParameters()[0].ParameterType == target) {
+                    if (method.GetParametersCached()[0].ParameterType == target) {
                         return method.CreateDelegate<MatchCallerTarget<T>>();
                     }
                 }
@@ -116,7 +116,7 @@ namespace Microsoft.Scripting.Actions {
         private static object CreateCustomCaller<T>() {
             Type type = typeof(T);
             MethodInfo invoke = type.GetMethod("Invoke");
-            ParameterInfo[] parameters = invoke.GetParameters();
+            ParameterInfo[] parameters = invoke.GetParametersCached();
             DynamicILGen il = DynamicSiteHelpers.CreateDynamicMethod(
                 type.IsVisible,
                 "_stub_MatchCaller",

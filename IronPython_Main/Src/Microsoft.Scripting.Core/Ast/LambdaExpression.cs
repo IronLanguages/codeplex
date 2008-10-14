@@ -15,12 +15,13 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
 using System.Text;
-using System.Diagnostics;
+using System.Threading;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
@@ -74,13 +75,22 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(builder, "builder");
 
             if (Parameters.Count == 1) {
-                Parameters[0].BuildString(builder);
+                ParameterExpression pe = Parameters[0];
+                if (pe.IsByRef) {
+                    builder.Append("ref ");
+                }
+                pe.BuildString(builder);
             } else {
                 builder.Append("(");
                 for (int i = 0, n = Parameters.Count; i < n; i++) {
-                    if (i > 0)
+                    if (i > 0) {
                         builder.Append(", ");
-                    Parameters[i].BuildString(builder);
+                    }
+                    ParameterExpression pe = Parameters[i];
+                    if (pe.IsByRef) {
+                        builder.Append("ref ");
+                    }
+                    pe.BuildString(builder);
                 }
                 builder.Append(")");
             }
@@ -151,8 +161,64 @@ namespace Microsoft.Linq.Expressions {
 
 
     public partial class Expression {
+        private static CacheDict<Type, Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>> _exprCtors = new CacheDict<Type, Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>>(200);
+        private static MethodInfo _lambdaCtorMethod;
+
         //internal lambda factory that creates an instance of Expression<delegateType>
-        internal static LambdaExpression Lambda(ExpressionType nodeType, Type delegateType, string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
+        internal static LambdaExpression Lambda(
+                ExpressionType nodeType,
+                Type delegateType,
+                string name,
+                Expression body,
+                Annotations annotations,
+                ReadOnlyCollection<ParameterExpression> parameters
+        ) {
+            if (nodeType == ExpressionType.Lambda) {
+                // got or create a delegate to the public Expression.Lambda<T> method and call that will be used for
+                // creating instances of this delegate type
+                Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression> func;
+                lock (_exprCtors) {
+                    if (_lambdaCtorMethod == null) {
+                        EnsureLambdCtor();
+                    }
+
+                    if (!_exprCtors.TryGetValue(delegateType, out func)) {
+                        _exprCtors[delegateType] = func = (Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>)
+                            Delegate.CreateDelegate(
+                                typeof(Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>),
+                                _lambdaCtorMethod.MakeGenericMethod(delegateType)
+                            );                        
+                    }
+                }
+
+                return func(body, name, annotations, parameters);
+            }
+
+            return SlowMakeLambda(annotations, nodeType, delegateType, name, body, parameters);
+        }
+
+        private static void EnsureLambdCtor() {
+            MethodInfo[] methods = (MethodInfo[])typeof(Expression).GetMember("Lambda", MemberTypes.Method, BindingFlags.Public | BindingFlags.Static);
+            foreach (MethodInfo mi in methods) {
+                if (!mi.IsGenericMethod) {
+                    continue;
+                }
+
+                ParameterInfo[] pis = mi.GetParameters();
+                if (pis.Length == 4) {
+                    if(pis[0].ParameterType == typeof(Expression) &&
+                        pis[1].ParameterType == typeof(string) &&
+                        pis[2].ParameterType == typeof(Annotations) &&
+                        pis[3].ParameterType == typeof(IEnumerable<ParameterExpression>)) {
+                        _lambdaCtorMethod = mi;
+                        break;
+                    }
+                }
+            }
+            Debug.Assert(_lambdaCtorMethod != null);
+        }
+
+        private static LambdaExpression SlowMakeLambda(Annotations annotations, ExpressionType nodeType, Type delegateType, string name, Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
             Type ot = typeof(Expression<>);
             Type ct = ot.MakeGenericType(new Type[] { delegateType });
             ConstructorInfo ctor = ct.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, ctorTypes, null);
@@ -248,6 +314,8 @@ namespace Microsoft.Linq.Expressions {
             return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, paramList);
         }
 
+        private static CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type,MethodInfo>(40);
+
         //CONFORMING
         private static void ValidateLambdaArgs(Type delegateType, ref Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
@@ -256,19 +324,27 @@ namespace Microsoft.Linq.Expressions {
             if (!TypeUtils.AreAssignable(typeof(Delegate), delegateType) || delegateType == typeof(Delegate)) {
                 throw Error.LambdaTypeMustBeDerivedFromSystemDelegate();
             }
-            MethodInfo mi = delegateType.GetMethod("Invoke");
-            ParameterInfo[] pis = mi.GetParameters();
+
+            MethodInfo mi;
+            lock (_LambdaDelegateCache) {
+                if (!_LambdaDelegateCache.TryGetValue(delegateType, out mi)) {
+                    _LambdaDelegateCache[delegateType] = mi = delegateType.GetMethod("Invoke");
+                }
+            }
+
+            ParameterInfo[] pis = mi.GetParametersCached();
+
             if (pis.Length > 0) {
                 if (pis.Length != parameters.Count) {
                     throw Error.IncorrectNumberOfLambdaDeclarationParameters();
                 }
                 for (int i = 0, n = pis.Length; i < n; i++) {
-                    Expression pex = parameters[i];
+                    ParameterExpression pex = parameters[i];
                     ParameterInfo pi = pis[i];
                     RequiresCanRead(pex, "parameters");
                     Type pType = pi.ParameterType;
-                    if (pType.IsByRef || pex.Type.IsByRef) {
-                        throw Error.ExpressionMayNotContainByrefParameters();
+                    if (pex.IsByRef) {
+                        pType = pType.GetElementType();
                     }
                     if (!TypeUtils.AreReferenceAssignable(pex.Type, pType)) {
                         throw Error.ParameterExpressionNotValidAsDelegate(pex.Type, pType);
@@ -293,54 +369,6 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
         }
-
-        private static void ValidateGeneratorReturnType(Type delegateType) {
-            Debug.Assert(delegateType != null && delegateType.IsSubclassOf(typeof(Delegate)));
-            MethodInfo invoke = delegateType.GetMethod("Invoke");
-
-            // Currently only IEnumerator or IEnumerator<object> are supported
-            Type rt = invoke.ReturnType;
-            if (rt != typeof(System.Collections.IEnumerator) &&
-                rt != typeof(IEnumerator<object>)) {
-                throw Error.WrongIteratorReturnType();
-            }
-        }
-
-        // TODO: review factories
-        #region Generator
-
-        public static Expression<TDelegate> Generator<TDelegate>(Expression body, params ParameterExpression[] parameters) {
-            return Generator<TDelegate>(body, null, Annotations.Empty, parameters);
-        }
-
-        public static Expression<TDelegate> Generator<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) {
-            return Generator<TDelegate>(body, name, Annotations.Empty, parameters);
-        }
-
-        public static Expression<TDelegate> Generator<TDelegate>(Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
-            ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
-            ValidateGeneratorReturnType(typeof(TDelegate));
-            return new Expression<TDelegate>(annotations, ExpressionType.Generator, name, body, parameterList);
-        }
-
-        public static LambdaExpression Generator(Type delegateType, Expression body, params ParameterExpression[] parameters) {
-            return Generator(delegateType, body, null, Annotations.Empty, parameters);
-        }
-
-        public static LambdaExpression Generator(Type delegateType, Expression body, string name, params ParameterExpression[] parameters) {
-            return Generator(delegateType, body, name, Annotations.Empty, parameters);
-        }
-
-        public static LambdaExpression Generator(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
-            ValidateLambdaArgs(delegateType, ref body, paramList);
-            ValidateGeneratorReturnType(delegateType);
-            return Lambda(ExpressionType.Generator, delegateType, name, body, annotations, paramList);
-        }
-
-        #endregion
-
 
         //CONFORMING
         public static Type GetFuncType(params Type[] typeArgs) {

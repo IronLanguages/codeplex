@@ -42,6 +42,10 @@ namespace Microsoft.Scripting.Ast {
                 }
             );
         }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            return this;
+        }
     }
 
     public static partial class Utils {

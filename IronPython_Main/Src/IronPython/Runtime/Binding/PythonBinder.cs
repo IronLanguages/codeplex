@@ -20,25 +20,23 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Com;
 
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
-using IronPython.Compiler;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
-    using AstUtils = Microsoft.Scripting.Ast.Utils;
-    
+
     public class PythonBinder : DefaultBinder {
         private PythonContext/*!*/ _context;
         private SlotCache/*!*/ _typeMembers = new SlotCache();
@@ -53,14 +51,16 @@ namespace IronPython.Runtime.Binding {
             : base(manager) {
             ContractUtils.RequiresNotNull(pythonContext, "pythonContext");
 
-            context.LanguageContext.DomainManager.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(DomainManager_AssemblyLoaded);
+            _context = pythonContext;
+            if (context != null) {
+                context.LanguageContext.DomainManager.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(DomainManager_AssemblyLoaded);
 
-            foreach (Assembly asm in pythonContext.DomainManager.GetLoadedAssemblyList()) {
-                DomainManager_AssemblyLoaded(this, new AssemblyLoadedEventArgs(asm));
+                foreach (Assembly asm in pythonContext.DomainManager.GetLoadedAssemblyList()) {
+                    DomainManager_AssemblyLoaded(this, new AssemblyLoadedEventArgs(asm));
+                }
             }
 
             EmptyGetMemberAction = OldGetMemberAction.Make(this, String.Empty);
-            _context = pythonContext;
         }
 
         public override Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType, ConversionResultKind kind, Expression context) {
@@ -772,6 +772,32 @@ namespace IronPython.Runtime.Binding {
                         }
                     }
                 }
+            }
+
+#if !SILVERLIGHT // ComObject
+            ComObjectWithTypeInfo.PublishComTypes(asm);
+#endif
+
+            // Add it to the references tuple if we
+            // loaded a new assembly.
+            ClrModule.ReferencesList rl = _context.ReferencedAssemblies;
+            lock (rl) {
+                rl.Add(asm);
+            }
+
+            // load any compiled code that has been cached...
+            LoadScriptCode(_context, asm);
+
+            // load any Python modules
+            _context.LoadBuiltins(_context.Builtins, asm);
+
+        }
+
+        private static void LoadScriptCode(PythonContext/*!*/ pc, Assembly/*!*/ asm) {
+            ScriptCode[] codes = ScriptCode.LoadFromAssembly(pc.DomainManager, asm);
+
+            foreach (ScriptCode sc in codes) {
+                pc.GetCompiledLoader().AddScriptCode(sc);
             }
         }
 

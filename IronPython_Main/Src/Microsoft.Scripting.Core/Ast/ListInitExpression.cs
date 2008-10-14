@@ -21,12 +21,12 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    // TODO: should support annotations
     public sealed class ListInitExpression : Expression {
-        NewExpression _newExpression;
-        ReadOnlyCollection<ElementInit> _initializers;
-        internal ListInitExpression(NewExpression newExpression, ReadOnlyCollection<ElementInit> initializers)
-            : base(ExpressionType.ListInit, newExpression.Type, null) {
+        private readonly NewExpression _newExpression;
+        private readonly ReadOnlyCollection<ElementInit> _initializers;
+
+        internal ListInitExpression(NewExpression newExpression, ReadOnlyCollection<ElementInit> initializers, Annotations annotations)
+            : base(ExpressionType.ListInit, newExpression.Type, true,  annotations, true, false) {
             _newExpression = newExpression;
             _initializers = initializers;
         }
@@ -50,6 +50,10 @@ namespace Microsoft.Linq.Expressions {
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitListInit(this);
+        }
+
+        public override Expression Reduce() {
+            return MemberInitExpression.ReduceListInit(_newExpression, _initializers, true, Annotations);
         }
     }
 
@@ -100,20 +104,21 @@ namespace Microsoft.Linq.Expressions {
         }
         //CONFORMING
         public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) {
-            ContractUtils.RequiresNotNull(newExpression, "newExpression");
-            ContractUtils.RequiresNotNull(initializers, "initializers");
-            return ListInit(newExpression, initializers.ToReadOnly());
+            return ListInit(newExpression, null, (IEnumerable<ElementInit>)initializers);
         }
         //CONFORMING
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) {
+            return ListInit(newExpression, null, initializers);
+        }
+
+        public static ListInitExpression ListInit(NewExpression newExpression, Annotations annotations, IEnumerable<ElementInit> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
-            ContractUtils.RequiresNotNull(initializers, "initializers");
             ReadOnlyCollection<ElementInit> initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }
             ValidateListInitArgs(newExpression.Type, initializerlist);
-            return new ListInitExpression(newExpression, initializerlist);
+            return new ListInitExpression(newExpression, initializerlist, annotations);
         }
     }
 }

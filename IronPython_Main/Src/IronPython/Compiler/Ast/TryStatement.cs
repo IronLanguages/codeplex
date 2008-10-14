@@ -78,13 +78,13 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // allocated all variables here so they won't be shared w/ other 
             // locals allocated during the body or except blocks.
-            MSAst.VariableExpression noNestedException = null;
+            MSAst.ParameterExpression noNestedException = null;
             if (_finally != null) {
                 noNestedException = ag.GetTemporary("$noException", typeof(bool));
             }
 
-            MSAst.VariableExpression lineUpdated = null;
-            MSAst.VariableExpression runElse = null;
+            MSAst.ParameterExpression lineUpdated = null;
+            MSAst.ParameterExpression runElse = null;
 
             if (_else != null || (_handlers != null && _handlers.Length > 0)) {
                 lineUpdated = ag.GetTemporary("$lineUpdated", typeof(bool));
@@ -101,7 +101,7 @@ namespace IronPython.Compiler.Ast {
                 return null;
             }
 
-            MSAst.VariableExpression exception;
+            MSAst.ParameterExpression exception;
             MSAst.Expression @catch = TransformHandlers(ag, out exception);
             MSAst.Expression result;
 
@@ -172,11 +172,11 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.VariableExpression noNestedException) {
+        private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.ParameterExpression noNestedException) {
             if (_finally != null) {
                 Debug.Assert(noNestedException != null);
 
-                MSAst.VariableExpression nestedFrames = ag.GetTemporary("$nestedFrames", typeof(List<DynamicStackFrame>));
+                MSAst.ParameterExpression nestedFrames = ag.GetTemporary("$nestedFrames", typeof(List<DynamicStackFrame>));
 
                 bool inFinally = ag.InFinally;
                 ag.InFinally = true;
@@ -247,20 +247,20 @@ namespace IronPython.Compiler.Ast {
         /// <param name="ag"></param>
         /// <param name="variable">The variable for the exception in the catch block.</param>
         /// <returns>Null if there are no except handlers. Else the statement to go inside the catch handler</returns>
-        private MSAst.Expression TransformHandlers(AstGenerator ag, out MSAst.VariableExpression variable) {
+        private MSAst.Expression TransformHandlers(AstGenerator ag, out MSAst.ParameterExpression variable) {
             if (_handlers == null || _handlers.Length == 0) {
                 variable = null;
                 return null;
             }
 
-            MSAst.VariableExpression exception = ag.GetTemporary("exception", typeof(Exception));
-            MSAst.VariableExpression extracted = ag.GetTemporary("extracted", typeof(object));
+            MSAst.ParameterExpression exception = ag.GetTemporary("exception", typeof(Exception));
+            MSAst.ParameterExpression extracted = ag.GetTemporary("extracted", typeof(object));
 
             // The variable where the runtime will store the exception.
             variable = exception;
 
             var tests = new List<Microsoft.Scripting.Ast.IfStatementTest>(_handlers.Length);
-            MSAst.VariableExpression converted = null;
+            MSAst.ParameterExpression converted = null;
             MSAst.Expression catchAll = null;
 
             for (int index = 0; index < _handlers.Length; index++) {
@@ -395,7 +395,7 @@ namespace IronPython.Compiler.Ast {
         /// <summary>
         /// Surrounds the body of an except block w/ the appropriate code for maintaining the traceback.
         /// </summary>
-        private static MSAst.Expression GetTracebackHeader(SourceSpan span, AstGenerator ag, MSAst.VariableExpression exception, MSAst.Expression body) {
+        private static MSAst.Expression GetTracebackHeader(SourceSpan span, AstGenerator ag, MSAst.ParameterExpression exception, MSAst.Expression body) {
             // we are about to enter a except block.  We need to emit the line number update so we track
             // the line that the exception was thrown from.  We then need to build exc_info() so that
             // it's available.  Finally we clear the list of dynamic stack frames because they've all

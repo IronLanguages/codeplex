@@ -12,13 +12,15 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
-        public static ContinueStatement Continue(LabelTarget target, SourceSpan span) {
+        [Obsolete("Use Expression.Continue(target, Expression.Annotate(span)) instead")]
+        public static GotoExpression Continue(LabelTarget target, SourceSpan span) {
             return Expression.Continue(target, Expression.Annotate(span));
         }
     }

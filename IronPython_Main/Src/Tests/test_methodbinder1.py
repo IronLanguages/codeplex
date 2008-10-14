@@ -17,8 +17,8 @@
 # PART 1. how IronPython choose the CLI method, treat parameters WHEN NO OVERLOADS PRESENT
 #
 
-from lib.assert_util import *
-from lib.type_util import *
+from iptest.assert_util import *
+from iptest.type_util import *
 
 load_iron_python_test()
 from IronPythonTest.BinderTest import *

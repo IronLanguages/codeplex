@@ -17,14 +17,16 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
 
+    // TODO: probably should not have Annotations, since it's part of TryExpression
+    // They can either go there on on the body
     public sealed class CatchBlock {
         private readonly Annotations _annotations;
         private readonly Type _test;
-        private readonly VariableExpression _var;
+        private readonly ParameterExpression _var;
         private readonly Expression _body;
         private readonly Expression _filter;
 
-        internal CatchBlock(Annotations annotations, Type test, VariableExpression target, Expression body, Expression filter) {
+        internal CatchBlock(Annotations annotations, Type test, ParameterExpression target, Expression body, Expression filter) {
             _test = test;
             _var = target;
             _body = body;
@@ -36,7 +38,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _annotations; }
         }
 
-        public VariableExpression Variable {
+        public ParameterExpression Variable {
             get { return _var; }
         }
 
@@ -60,17 +62,18 @@ namespace Microsoft.Linq.Expressions {
             return Catch(type, null, body, null, Annotations.Empty);
         }
 
-        public static CatchBlock Catch(Type type, VariableExpression target, Expression body) {
+        public static CatchBlock Catch(Type type, ParameterExpression target, Expression body) {
             return Catch(type, target, body, null, Annotations.Empty);
         }
 
-        public static CatchBlock Catch(Type type, VariableExpression target, Expression body, Expression filter) {
+        public static CatchBlock Catch(Type type, ParameterExpression target, Expression body, Expression filter) {
             return Catch(type, target, body, filter, Annotations.Empty);
         }
 
-        public static CatchBlock Catch(Type type, VariableExpression target, Expression body, Expression filter, Annotations annotations) {
+        public static CatchBlock Catch(Type type, ParameterExpression target, Expression body, Expression filter, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(target == null || TypeUtils.CanAssign(target.Type, type), "target");
+            ContractUtils.Requires(target == null || TypeUtils.AreReferenceAssignable(target.Type, type), "target");
+            Expression.RequireVariableNotByRef(target, "target");
             RequiresCanRead(body, "body");
             if (filter != null) {
                 RequiresCanRead(filter, "filter");

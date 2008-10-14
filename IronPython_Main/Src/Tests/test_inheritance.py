@@ -13,13 +13,13 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # Disabled due to Silverlight buffer overrun bug
 # Silverlight bug #403321 in TFS, DLR tracking bug 414787
 # skiptest('silverlightbug?') - bug fixed
 
-from lib.type_util import *
+from iptest.type_util import *
 
 import sys
 

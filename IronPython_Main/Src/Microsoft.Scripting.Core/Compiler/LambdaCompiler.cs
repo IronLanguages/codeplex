@@ -44,12 +44,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // DynamicMethod
         private readonly bool _dynamicMethod;
 
-        /// <summary>
-        /// The generator information for the generator being compiled.
-        /// This is null if the current lambda is not a generator
-        /// </summary>
-        private readonly GeneratorInfo _generatorInfo;
-
         private readonly ILGen _ilg;
 
         // The TypeBuilder backing this method, if any
@@ -57,9 +51,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private readonly MethodInfo _method;
 
-        private readonly ListStack<Targets> _targets = new ListStack<Targets>();
+        // Currently active LabelTargets and their mapping to IL labels
+        private LabelBlockInfo _labelBlock = new LabelBlockInfo(null, LabelBlockKind.Block);
+        // Mapping of labels used for "long" jumps (jumping out and into blocks)
+        private readonly Dictionary<LabelTarget, LabelInfo> _labelInfo = new Dictionary<LabelTarget, LabelInfo>();
 
-        private Nullable<ReturnBlock> _returnBlock;
+        // Synthetic label info for doing returns
+        // TODO: remove when merging ReturnStatement and GotoExpression
+        private LabelInfo _returnBlock;
 
         // The currently active variable scope
         private CompilerScope _scope;
@@ -86,16 +85,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private readonly List<object> _boundConstants;
         private readonly Dictionary<object, int> _constantCache;
 
-        // true if emitting generator body, false otherwise
-        private bool _generatorBody;
-
-        // Slot that stores the number of the label to go to.
-        private LocalBuilder _gotoRouter;
-
-        private const int FinallyExitsNormally = 0;
-        private const int BranchForReturn = 1;
-        private const int BranchForBreak = 2;
-        private const int BranchForContinue = 3;
 
         private LambdaCompiler(
             CompilerScope scope,
@@ -115,11 +104,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _dynamicMethod = dynamicMethod;
             _scope = scope;
 
-            // get generator info is this is a generator
-            if (_lambda.NodeType == ExpressionType.Generator) {
-                _generatorInfo = YieldLabelBuilder.BuildYieldTargets(_lambda);
-            }
-
             // Create the ILGen instance, debug or not
             if (DebugOptions.DumpIL || DebugOptions.ShowIL) {
                 _ilg = CreateDebugILGen(ilg, method, paramTypes);
@@ -135,6 +119,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             Debug.Assert(!emitDebugSymbols || _typeBuilder != null, "emitting debug symbols requires a TypeBuilder");
             _emitDebugSymbols = emitDebugSymbols;
+
+            // See if we can find a return label, so we can emit better IL
+            AddReturnLabel(_lambda.Body);
         }
 
         public override string ToString() {
@@ -159,43 +146,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private bool HasClosure {
             get { return _paramTypes[0] == typeof(Closure); }
-        }
-
-        private TargetBlockType BlockType {
-            get {
-                if (_targets.Count == 0) return TargetBlockType.Normal;
-                Targets t = _targets.Peek();
-                return t.BlockType;
-            }
-        }
-
-        private Label? BlockContinueLabel {
-            get {
-                if (_targets.Count == 0) return Targets.NoLabel;
-                Targets t = _targets.Peek();
-                return t.ContinueLabel;
-            }
-        }
-
-        internal bool IsGeneratorBody {
-            get {
-                return _generatorBody;
-            }
-            private set {
-                _generatorBody = value;
-            }
-        }
-
-        private const int GotoRouterNone = -1;
-        private const int GotoRouterYielding = -2;
-
-        private LocalBuilder GotoRouter {
-            get {
-                return _gotoRouter;
-            }
-            set {
-                _gotoRouter = value;
-            }
         }
 
         #endregion
@@ -309,21 +259,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             ExpressionWriter.Dump(lambda, lambda.Name);
         }
 
-        private void EmitImplicitCast(Type from, Type to) {
-            if (!TryEmitImplicitCast(from, to)) {
-                throw Error.CannotCastTypeToType(from, to);
-            }
-        }
-
-        private bool TryEmitImplicitCast(Type from, Type to) {
-            if (from.IsValueType && to == typeof(object)) {
-                _ilg.EmitBoxing(from);
-                return true;
-            } else {
-                return _ilg.TryEmitImplicitCast(from, to);
-            }
-        }
-
         private void EmitSequencePointNone() {
             EmitPosition(SourceLocation.None, SourceLocation.None);
         }
@@ -353,15 +288,20 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return lb;
         }
 
-        internal void Finish() {
-            Debug.Assert(_targets.Count == 0);
+        private void Finish() {
+            Debug.Assert(_labelBlock.Parent == null && _labelBlock.Kind == LabelBlockKind.Block);
 
-            if (_returnBlock.HasValue) {
-                _ilg.MarkLabel(_returnBlock.Value.ReturnStart);
-                if (_method.GetReturnType() != typeof(void)) {
-                    _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value.ReturnValue);
+            if (_returnBlock != null) {
+                _ilg.MarkLabel(_returnBlock.Label);
+                if (_returnBlock.Value != null) {
+                    _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value);
                 }
                 _ilg.Emit(OpCodes.Ret);
+            }
+
+            // Validate labels
+            foreach (LabelInfo label in _labelInfo.Values) {
+                label.ValidateFinish();
             }
 
             if (_dynamicMethod) {

@@ -72,6 +72,8 @@ namespace Microsoft.Linq.Expressions {
             var caseList = cases.ToReadOnly();
             ContractUtils.RequiresNotEmpty(caseList, "cases");
             ContractUtils.RequiresNotNullItems(caseList, "cases");
+            // TODO: does it make sense for switch to have non-void type?
+            ContractUtils.Requires(label == null || label.Type == typeof(void), "label", Strings.LabelTypeMustBeVoid);
 
             bool @default = false;
             int max = Int32.MinValue;

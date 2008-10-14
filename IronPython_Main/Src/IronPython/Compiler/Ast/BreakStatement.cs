@@ -24,7 +24,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
             if (ag.InLoop) {
-                return AstUtils.Break(ag.LoopLabel, Span);
+                return AstUtils.Break(ag.BreakLabel, Span);
             } else {
                 ag.AddError("'break' outside loop", Span);
                 return null;

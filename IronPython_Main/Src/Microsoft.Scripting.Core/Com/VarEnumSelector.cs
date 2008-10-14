@@ -167,6 +167,10 @@ namespace Microsoft.Scripting.Com {
         internal static Type GetManagedMarshalType(VarEnum varEnum) {
             Debug.Assert((varEnum & VarEnum.VT_BYREF) == 0);
 
+            if (varEnum == VarEnum.VT_CY) {
+                return typeof(CurrencyWrapper);
+            }
+
             if (Variant.IsPrimitiveType(varEnum)) {
                 return _ComToManagedPrimitiveTypes[varEnum];
             }
@@ -181,8 +185,6 @@ namespace Microsoft.Scripting.Com {
 
                 case VarEnum.VT_ERROR:
                     return typeof(ErrorWrapper);
-                case VarEnum.VT_CY:
-                    return typeof(CurrencyWrapper);
 
                 default:
                     throw Error.UnexpectedVarEnum(varEnum);
@@ -211,6 +213,7 @@ namespace Microsoft.Scripting.Com {
             dict[VarEnum.VT_R4] = typeof(Single);
             dict[VarEnum.VT_R8] = typeof(Double);
             dict[VarEnum.VT_DECIMAL] = typeof(Decimal);
+            dict[VarEnum.VT_CY] = typeof(Decimal);
             dict[VarEnum.VT_DATE] = typeof(DateTime);
             dict[VarEnum.VT_BSTR] = typeof(String);
 
@@ -348,7 +351,6 @@ namespace Microsoft.Scripting.Com {
                 _isSupportedByFastPath = false;
                 return VarEnum.VT_ERROR;
             } else if (argumentType == typeof(CurrencyWrapper)) {
-                _isSupportedByFastPath = false;
                 return VarEnum.VT_CY;
             }
 
@@ -415,23 +417,44 @@ namespace Microsoft.Scripting.Com {
                 return new VariantBuilder(VarEnum.VT_NULL, new NullArgBuilder());
             }
 
+            ArgBuilder argBuilder;
+
+            if (argumentType.IsByRef) {
+                Type elementType = argumentType.GetElementType();
+                VarEnum elementVarEnum = GetComType(elementType);
+                argBuilder = GetArgBuilder(elementType, elementVarEnum);
+                return new VariantBuilder(elementVarEnum | VarEnum.VT_BYREF, argBuilder);
+            }
+
             if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
                 Type elementType = argumentType.GetGenericArguments()[0];
                 VarEnum elementVarEnum = GetComType(elementType);
-                ArgBuilder argBuilder;
-                if (elementType == typeof(string)) {
-                    argBuilder = new StringReferenceArgBuilder(argumentType);
-                } else {
-                    if (!Variant.HasCommonLayout(elementVarEnum)) {
-                        _isSupportedByFastPath = false;
-                    }
-                    argBuilder = new ReferenceArgBuilder(argumentType);
-                }
+                argBuilder = new StrongBoxArgBuilder(argumentType, GetArgBuilder(elementType, elementVarEnum));
                 return new VariantBuilder(elementVarEnum | VarEnum.VT_BYREF, argBuilder);
             }
 
             VarEnum varEnum = GetComType(argumentType);
-            return new VariantBuilder(varEnum, new SimpleArgBuilder(GetManagedMarshalType(varEnum)));
+            argBuilder = GetArgBuilder(argumentType, varEnum);
+            return new VariantBuilder(varEnum, argBuilder);
+        }
+
+        private ArgBuilder GetArgBuilder(Type elementType, VarEnum elementVarEnum) {
+            ArgBuilder argBuilder;
+            if (elementType == typeof(string)) {
+                argBuilder = new StringArgBuilder(elementType);
+            } else if (elementType == typeof(bool)) {
+                argBuilder = new BoolArgBuilder(elementType);
+            } else if (elementType == typeof(DateTime)) {
+                argBuilder = new DateTimeArgBuilder(elementType);
+            } else if (elementType == typeof(CurrencyWrapper)) {
+                argBuilder = new CurrencyArgBuilder(elementType);
+            } else {
+                if (!Variant.HasCommonLayout(elementVarEnum)) {
+                    _isSupportedByFastPath = false;
+                }
+                argBuilder = new SimpleArgBuilder(elementType);
+            }
+            return argBuilder;
         }
     }
 }

@@ -232,18 +232,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Block:
                     result = RewriteBlock(node, stack);
                     break;
-                // BreakStatement
-                case ExpressionType.BreakStatement:
-                    result = RewriteBreakStatement(node, stack);
-                    break;
-                // Generator
-                case ExpressionType.Generator:
-                    result = RewriteLambdaExpression(node, stack);
-                    break;
-                // ContinueStatement
-                case ExpressionType.ContinueStatement:
-                    result = RewriteContinueStatement(node, stack);
-                    break;
                 // DoStatement
                 case ExpressionType.DoStatement:
                     result = RewriteDoStatement(node, stack);
@@ -260,13 +248,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Extension:
                     result = RewriteExtensionExpression(node, stack);
                     break;
+                // Goto
+                case ExpressionType.Goto:
+                    result = RewriteGotoExpression(node, stack);
+                    break;
                 // Index
                 case ExpressionType.Index:
                     result = RewriteIndexExpression(node, stack);
                     break;
-                // LabeledStatement
-                case ExpressionType.LabeledStatement:
-                    result = RewriteLabeledStatement(node, stack);
+                // Label
+                case ExpressionType.Label:
+                    result = RewriteLabelExpression(node, stack);
                     break;
                 // LocalScope
                 case ExpressionType.LocalScope:
@@ -299,14 +291,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // Unbox
                 case ExpressionType.Unbox:
                     result = RewriteUnaryExpression(node, stack);
-                    break;
-                // Variable
-                case ExpressionType.Variable:
-                    result = RewriteVariableExpression(node, stack);
-                    break;
-                // YieldStatement
-                case ExpressionType.YieldStatement:
-                    result = RewriteYieldStatement(node, stack);
                     break;
 
                 // *** END GENERATED CODE ***

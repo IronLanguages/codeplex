@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # types are always true.
 def test_types():

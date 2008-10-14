@@ -17,11 +17,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using System.Threading;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -31,9 +31,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
     /// </summary>
     partial class LambdaCompiler {
         private static int _Counter;
-        private static int _GeneratorCounter;
-
-        private static readonly string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
         internal void EmitConstantArray<T>(T[] array) {
             // Emit as runtime constant if possible
@@ -177,16 +174,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return prefix + "$" + Interlocked.Increment(ref _Counter);
         }
 
-        // Used by Compiler
-        internal void EmitBody() {
-            if (_generatorInfo != null) {
-                EmitGeneratorLambdaBody();
-            } else {
-                EmitLambdaBody();
-            }
-        }
-
-        private void EmitLambdaBody() {
+        private void EmitBody() {
             _scope.EnterLambda(this);
 
             EmitLambdaStart(_lambda);
@@ -205,11 +193,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitExpressionAsVoid(_lambda.Body);
                     EmitLambdaEnd(_lambda);
 
-                    if (TypeUtils.CanAssign(typeof(object), returnType)) {
-                        _ilg.EmitNull();
-                    } else {
-                        _ilg.EmitMissingValue(returnType);
-                    }
+                    _ilg.EmitDefault(returnType);
                 }
             }
             //must be the last instruction in the body
@@ -279,108 +263,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 EmitPosition(span.End, span.End);
             }
             EmitSequencePointNone();
-        }
-
-        #endregion
-
-
-        #region GeneratorLambdaExpression
-
-        /// <summary>
-        /// Defines the method with the correct signature and sets up the context slot appropriately.
-        /// </summary>
-        /// <returns></returns>
-        private LambdaCompiler CreateGeneratorLambdaCompiler() {
-            // Create the GenerateNext function
-            LambdaCompiler ncg = CreateLambdaCompiler(
-                _scope,
-                GetGeneratorMethodName(_scope.Lambda.Name),     // Method Name
-                typeof(bool),                           // Return Type
-                new Type[] {                            // signature
-                    typeof(Generator),
-                    typeof(object).MakeByRefType()
-                },
-                _GeneratorSigNames,                     // param names
-                _scope.HasHoistedLocals || _scope.IsClosure
-            );
-
-            // We are emitting generator, mark the Compiler
-            ncg.IsGeneratorBody = true;
-
-            return ncg;
-        }
-
-        /// <summary>
-        /// Emits the body of the function that creates a Generator object.  Also creates another
-        /// Compiler for the inner method which implements the user code defined in the generator.
-        /// </summary>
-        private void EmitGeneratorLambdaBody() {
-            // 1. Create a nested code gen and emit the generator body
-            LambdaCompiler ncg = CreateGeneratorLambdaCompiler();
-            ncg.EmitGenerator();
-
-            // 2. Emit the generator construction
-            _scope.EnterGeneratorOuter(this);
-            bool needsClosure = _scope.IsClosure || _scope.HasHoistedLocals;
-            EmitDelegateConstruction(ncg, typeof(GeneratorNext), needsClosure);
-
-            // The presence of yieldmarkers map indicates that the generator needs to be debugabble
-            if (_generatorInfo.YieldMarkers != null) {
-                // Emit the debug-cookie map
-                EmitDebugCookieMap(_generatorInfo.YieldMarkers);
-
-                _ilg.EmitNew(typeof(DebuggableGenerator), new Type[] { typeof(GeneratorNext), typeof(int[]) });
-
-            } else {
-                _ilg.EmitNew(typeof(Generator), new Type[] { typeof(GeneratorNext) });
-            }
-            EmitReturn();
-        }
-
-        private void EmitDebugCookieMap(IList<int> yieldMarkers) {
-            if (_boundConstants != null) {
-                // Emit as a constant
-                EmitConstant(yieldMarkers.ToArray(), typeof(int[]));
-            } else {
-                // Emit creation of the array
-                _ilg.EmitArray<int>(yieldMarkers);
-            }
-        }
-
-        private static string GetGeneratorMethodName(string name) {
-            return name + "$g" + _GeneratorCounter++;
-        }
-
-        private void EmitGenerator() {
-            _scope.EnterGeneratorInner(this);
-
-            IList<YieldTarget> topTargets = _generatorInfo.TopTargets;
-            Debug.Assert(topTargets != null);
-
-            Label[] jumpTable = new Label[topTargets.Count];
-            for (int i = 0; i < jumpTable.Length; i++) {
-                jumpTable[i] = topTargets[i].EnsureLabel(this);
-            }
-
-            EmitLambdaArgument(0);
-            _ilg.EmitCall(typeof(Generator).GetProperty("Location").GetGetMethod());
-            _ilg.Emit(OpCodes.Dup);
-            GotoRouter = _ilg.GetLocal(typeof(int));
-            _ilg.Emit(OpCodes.Stloc, GotoRouter);
-            _ilg.Emit(OpCodes.Switch, jumpTable);
-
-            // fall-through on first pass
-            // yield statements will insert the needed labels after their returns
-
-            EmitExpression(_lambda.Body);
-
-            // fall-through is almost always possible in generators, so this
-            // is almost always needed
-            EmitReturnInGenerator(null);
-            Finish();
-
-            _ilg.FreeLocal(GotoRouter);
-            GotoRouter = null;
         }
 
         #endregion

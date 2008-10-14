@@ -26,30 +26,44 @@ namespace Microsoft.Scripting.Com {
     /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
     internal abstract class ArgBuilder {
-
-        internal virtual VariableExpression[] TemporaryVariables {
+        internal virtual ParameterExpression[] TemporaryVariables {
             get {
-                return new VariableExpression[0];
+                return new ParameterExpression[0];
             }
         }
 
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
         /// </summary>
-        internal abstract Expression Build(Expression parameter);
+        internal abstract Expression Unwrap(Expression parameter);
 
         /// <summary>
-        /// Builds the value of the argument to be passed for a call via reflection.
+        /// Provides the Expression which provides the value to be passed to the argument.
+        /// This method is called when result is intended to be used ByRef.
         /// </summary>
-        internal abstract object Build(object arg);
+        internal abstract Expression UnwrapByRef(Expression parameter);
 
         /// <summary>
-        /// Provides an Expression which will update the provided value after a call to the method.  May
-        /// return null if no update is required.
+        /// Provides an Expression which will update the provided value after a call to the method.  
+        /// May return null if no update is required.
         /// </summary>
         internal virtual Expression UpdateFromReturn(Expression parameter) {
             return null;
         }
+
+        /// <summary>
+        /// Provides an Expression which will update the provided value after a call to the method.
+        /// May return null if no update is required.
+        /// </summary>
+        internal virtual Expression UpdateFromReturn(Expression parameter, Expression newValue) {
+            return null;
+        }
+
+
+        /// <summary>
+        /// Builds the value of the argument to be passed for a call via reflection.
+        /// </summary>
+        internal abstract object UnwrapForReflection(object arg);
 
         /// <summary>
         /// If the argument produces a return value (e.g. a ref or out value) this

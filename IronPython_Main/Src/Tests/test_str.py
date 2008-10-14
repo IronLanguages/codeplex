@@ -17,8 +17,8 @@
 ## Test builtin-method of str
 ##
 
-from lib.assert_util import *
-from lib.misc_util import ip_supported_encodings
+from iptest.assert_util import *
+from iptest.misc_util import ip_supported_encodings
 import sys
  
 def test_none():

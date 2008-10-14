@@ -88,19 +88,7 @@ def gen_easy_sites(cw):
     for n in range(MaxSiteArity + 1):
         cw.write(easy_sites, ts = gsig(n), tparams = gparms(n), targs = gargs(n), arity = n)
 
-site_targets = """/// <summary>
-/// Dynamic site delegate type - arity %(arity)d
-/// </summary>
-[GeneratedCode("DLR", "2.0")]
-[Obsolete("use Func<CallSite, %(ts)s> or a custom delegate instead")]
-public delegate TRet DynamicSiteTarget<%(ts)s>(CallSite site%(tparams)s);
-"""
-
 MaxTypes = MaxSiteArity + 2
-
-def gen_dynamic_site_targets(cw):
-    for n in range(MaxTypes):
-        cw.write(site_targets, ts = gsig(n), tparams = gparms(n), arity = n)
 
 def gen_delegate_func(cw):
     for i in range(MaxTypes + 1):
@@ -225,7 +213,6 @@ def main():
         ("Maximum Delegate Arity", gen_max_delegate_arity),
         ("Predefined Update Targets", gen_update_targets),
         ("Predefined Void Update Targets", gen_void_update_targets),
-        ("Dynamic Site Targets", gen_dynamic_site_targets),
         ("Easy Dynamic Sites", gen_easy_sites),
         ("Matchmaker", gen_matchmaker),
         ("Void Matchmaker", gen_void_matchmaker),

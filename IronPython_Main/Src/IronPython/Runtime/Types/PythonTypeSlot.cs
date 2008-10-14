@@ -78,7 +78,7 @@ namespace IronPython.Runtime.Types {
         /// this and provide a more optimal implementation.
         /// </summary>
         internal virtual Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
-            VariableExpression tmp = Ast.Variable(typeof(object), "slotTmp");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "slotTmp");
             Expression call = Ast.Call(
                  typeof(PythonOps).GetMethod("SlotTryGetValue"),
                  codeContext,

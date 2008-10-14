@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 from collections import *
 
 def nolocals():
@@ -459,7 +459,7 @@ if not is_silverlight:
 
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 # Some utilities
 
@@ -856,7 +856,7 @@ test_undefined(test_nested_scope_variable_access)
 
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 result = "Failed"
 
 a = 2

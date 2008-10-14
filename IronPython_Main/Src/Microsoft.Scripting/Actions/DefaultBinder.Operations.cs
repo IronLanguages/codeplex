@@ -449,7 +449,7 @@ namespace Microsoft.Scripting.Actions {
                     defaults);
 
                 MetaObject[] selfWithArgs = args;
-                VariableExpression arg2 = null;
+                ParameterExpression arg2 = null;
 
                 if (oper == StandardOperators.SetItem) {
                     Debug.Assert(args.Length >= 2);

@@ -19,8 +19,8 @@ def _raise_exception():
 
 _retb = (18, 0, 'test_traceback.py', '_raise_exception')
 
-from lib.assert_util import *
-from lib.file_util import *
+from iptest.assert_util import *
+from iptest.file_util import *
 if not is_cli: import os
 def _raise_exception_with_finally():
     try:

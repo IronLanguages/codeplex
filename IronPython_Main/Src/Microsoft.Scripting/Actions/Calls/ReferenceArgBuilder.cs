@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// </summary>
     internal sealed class ReferenceArgBuilder : SimpleArgBuilder {
         private readonly Type _elementType;
-        private VariableExpression _tmp;
+        private ParameterExpression _tmp;
 
         public ReferenceArgBuilder(ParameterInfo info, Type parameterType, int index)
             : base(info, parameterType, index, false, false) {

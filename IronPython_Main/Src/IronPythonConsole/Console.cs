@@ -21,6 +21,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Utils;
 using System.Diagnostics;
+using System.Reflection.Emit;
 
 internal sealed class PythonConsoleHost : ConsoleHost {
 
@@ -63,6 +64,11 @@ internal sealed class PythonConsoleHost : ConsoleHost {
         // instead indicate that we're a dumb terminal
         if (Environment.GetEnvironmentVariable("TERM") == null) {
             Environment.SetEnvironmentVariable("TERM", "dumb");
+        }
+
+        if (typeof(DynamicMethod).GetConstructor(new Type[] { typeof(string), typeof(Type), typeof(Type[]), typeof(bool) }) == null) {
+            Console.WriteLine("IronPython requires .NET 2.0 SP1 or later to run.");
+            Environment.Exit(1);
         }
 
         return new PythonConsoleHost().Run(args);

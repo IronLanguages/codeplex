@@ -27,6 +27,14 @@ namespace Microsoft.Scripting.Generation {
         private readonly Dictionary<GlobalVariableExpression, Expression> _mapToExpression = new Dictionary<GlobalVariableExpression, Expression>();
         private readonly Dictionary<string, GlobalVariableExpression> _globalNames = new Dictionary<string, GlobalVariableExpression>();
 
+        internal GlobalOptimizedRewriter() {
+            _indirectSymbolIds = new Dictionary<SymbolId, FieldBuilder>();
+        }
+
+        internal GlobalOptimizedRewriter(Dictionary<SymbolId, FieldBuilder> symbolDict) {
+            _indirectSymbolIds = symbolDict;
+        }
+
         protected abstract Expression MakeWrapper(GlobalVariableExpression variable);
 
         protected override Expression RewriteGet(GlobalVariableExpression node) {
@@ -71,7 +79,7 @@ namespace Microsoft.Scripting.Generation {
         protected TypeGen TypeGen { get; set; }
 
         // If TypeGen is non-null, we rewrite SymbolIds to static field accesses
-        private readonly Dictionary<SymbolId, FieldBuilder> _indirectSymbolIds = new Dictionary<SymbolId, FieldBuilder>();
+        private readonly Dictionary<SymbolId, FieldBuilder> _indirectSymbolIds;
 
         protected override Expression VisitExtension(Expression node) {
             var symbol = node as SymbolConstantExpression;
@@ -99,7 +107,7 @@ namespace Microsoft.Scripting.Generation {
             if (!_indirectSymbolIds.TryGetValue(id, out value)) {
                 // create field, emit fix-up...
 
-                value = TypeGen.AddStaticField(typeof(SymbolId), FieldAttributes.Public, "symbol_" + SymbolTable.IdToString(id));
+                value = TypeGen.AddStaticField(typeof(SymbolId), FieldAttributes.Public, SymbolTable.IdToString(id));
                 ILGen init = TypeGen.TypeInitializer;
                 if (_indirectSymbolIds.Count == 0) {
                     init.EmitType(TypeGen.TypeBuilder);

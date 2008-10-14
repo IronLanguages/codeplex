@@ -341,7 +341,7 @@ namespace Microsoft.Scripting.Actions {
             if (self != null) {
                 MethodInfo setMem = GetMethod(type, name);
                 if (setMem != null && setMem.IsSpecialName) {
-                    VariableExpression tmp = Ast.Variable(target.Expression.Type, "setValue");
+                    ParameterExpression tmp = Ast.Variable(target.Expression.Type, "setValue");
                     memInfo.Body.AddVariable(tmp);
 
                     Expression call = MakeCallExpression(memInfo.CodeContext, setMem, Ast.ConvertHelper(self, type), Ast.Constant(memInfo.Name), tmp);

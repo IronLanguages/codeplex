@@ -82,7 +82,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 1. mgr = (EXPR)
             //******************************************************************
-            MSAst.VariableExpression manager = ag.GetTemporary("with_manager");
+            MSAst.ParameterExpression manager = ag.GetTemporary("with_manager");
             statements[0] = AstGenerator.MakeAssignment(
                 manager,
                 ag.Transform(_contextManager),
@@ -92,7 +92,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 2. exit = mgr.__exit__  # Not calling it yet
             //******************************************************************
-            MSAst.VariableExpression exit = ag.GetTemporary("with_exit");
+            MSAst.ParameterExpression exit = ag.GetTemporary("with_exit");
             statements[1] = AstGenerator.MakeAssignment(
                 exit,
                 Binders.Get(
@@ -106,7 +106,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 3. value = mgr.__enter__()
             //******************************************************************
-            MSAst.VariableExpression value = ag.GetTemporary("with_value");
+            MSAst.ParameterExpression value = ag.GetTemporary("with_value");
             statements[2] = AstGenerator.MakeAssignment(
                 value,
                 Binders.Invoke(
@@ -125,7 +125,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 4. exc = True
             //******************************************************************
-            MSAst.VariableExpression exc = ag.GetTemporary("with_exc", typeof(bool));
+            MSAst.ParameterExpression exc = ag.GetTemporary("with_exc", typeof(bool));
             statements[3] = AstGenerator.MakeAssignment(
                 exc,
                 Ast.True()
@@ -149,7 +149,7 @@ namespace IronPython.Compiler.Ast {
             //          exit(None, None, None)
             //******************************************************************
 
-            MSAst.VariableExpression exception = ag.GetTemporary("exception", typeof(Exception));
+            MSAst.ParameterExpression exception = ag.GetTemporary("exception", typeof(Exception));
 
             statements[4] =
                 // try:
@@ -220,7 +220,7 @@ namespace IronPython.Compiler.Ast {
             return AstUtils.Block(_body.Span, statements);
         }
 
-        private MSAst.Expression MakeExitCall(AstGenerator ag, MSAst.VariableExpression exit, MSAst.Expression exception) {
+        private MSAst.Expression MakeExitCall(AstGenerator ag, MSAst.ParameterExpression exit, MSAst.Expression exception) {
             // The 'with' statement's exceptional clause explicitly does not set the thread's current exception information.
             // So while the pseudo code says:
             //    exit(*sys.exc_info())

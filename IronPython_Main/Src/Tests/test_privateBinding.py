@@ -17,7 +17,7 @@
 ## Test "-X:PrivateBinding"
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import System
 
 if not is_silverlight:
@@ -121,5 +121,5 @@ else:
 run_test(__name__, noOutputPlease=True)
 
 if not privateBinding and not is_silverlight:
-    from lib.process_util import launch_ironpython_changing_extensions
+    from iptest.process_util import launch_ironpython_changing_extensions
     AreEqual(launch_ironpython_changing_extensions(__file__, add=["-X:PrivateBinding"]), 0)

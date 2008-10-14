@@ -15,7 +15,7 @@
 
 """Test cases for features that require WinForms and may display UI"""
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("win32")
 skiptest("silverlight")
 

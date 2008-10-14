@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 def test_axiom(a,b):
     Assert((a / b) * b + (a % b) == a, "(" + str(a) + " / " + str(b) + ") * " + str(b) + " + ( " + str(a) + " % " + str(b) + ") != " + str(a))

@@ -34,7 +34,6 @@ namespace IronPython.Runtime.Operations {
         private static readonly Dictionary<ReflectionCache.MethodBaseCache, ConstructorFunction> _ctors = new Dictionary<ReflectionCache.MethodBaseCache, ConstructorFunction>();
         private static readonly Dictionary<EventTracker, ReflectedEvent> _eventCache = new Dictionary<EventTracker, ReflectedEvent>();
         internal static readonly Dictionary<PropertyTracker, ReflectedGetterSetter> _propertyCache = new Dictionary<PropertyTracker, ReflectedGetterSetter>();
-        private static readonly Dictionary<Type, TypePrepender.PrependerState> _prependerState = new Dictionary<Type, TypePrepender.PrependerState>();
 
         internal static PythonTuple MroToPython(IList<PythonType> types) {
             List<object> res = new List<object>(types.Count);
@@ -367,9 +366,9 @@ namespace IronPython.Runtime.Operations {
             lock (_eventCache) {
                 if (!_eventCache.TryGetValue(tracker, out res)) {
                     if (PythonBinder.IsExtendedType(tracker.DeclaringType)) {
-                        _eventCache[tracker] = res = new ReflectedEvent(tracker.Event, false);
-                    } else {
                         _eventCache[tracker] = res = new ReflectedEvent(tracker.Event, true);
+                    } else {
+                        _eventCache[tracker] = res = new ReflectedEvent(tracker.Event, false);
                     }
                 }
             }
@@ -793,17 +792,6 @@ namespace IronPython.Runtime.Operations {
 
             value = null;
             return false;
-        }
-
-        internal static TypePrepender.PrependerState GetPrependerState(Type t) {
-            TypePrepender.PrependerState prependerState;
-            lock (_prependerState) {
-                if (!_prependerState.TryGetValue(t, out prependerState)) {
-                    _prependerState[t] = prependerState =
-                        new TypePrepender.PrependerState(BuiltinFunction.MakeMethod(t.Name, t.GetConstructors(), t, FunctionType.Function));
-                }
-            }
-            return prependerState;
         }
 
         /// <summary>

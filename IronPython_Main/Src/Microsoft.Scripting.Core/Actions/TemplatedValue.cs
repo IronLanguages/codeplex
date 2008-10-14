@@ -14,7 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 namespace Microsoft.Scripting.Actions {
-    interface ITemplatedValue {
+    internal interface ITemplatedValue {
         int Index { get; }
         object CopyWithNewValue(object value);
         object ObjectValue { get; }
@@ -24,7 +24,8 @@ namespace Microsoft.Scripting.Actions {
         private T _value;
         private int _index;
 
-        public TemplatedValue(T value, int index) {
+        // constructor is internal as this type should be used by DLR only
+        internal TemplatedValue(T value, int index) {
             _index = index;
             _value = value;
         }

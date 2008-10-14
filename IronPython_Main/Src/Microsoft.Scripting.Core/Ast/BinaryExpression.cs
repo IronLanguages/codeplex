@@ -76,7 +76,7 @@ namespace Microsoft.Linq.Expressions {
                 }
                 bool leftIsNullable = TypeUtils.IsNullableType(_left.Type);
                 if (_method != null) {
-                    return leftIsNullable && _method.GetParameters()[0].ParameterType != _left.Type;
+                    return leftIsNullable && _method.GetParametersCached()[0].ParameterType != _left.Type;
                 }
                 return leftIsNullable;
             }
@@ -210,7 +210,7 @@ namespace Microsoft.Linq.Expressions {
         private static BinaryExpression GetMethodBasedBinaryOperator(ExpressionType binaryType, Expression left, Expression right, MethodInfo method, bool liftToNull, Annotations annotations) {
             System.Diagnostics.Debug.Assert(method != null);
             ValidateOperator(method);
-            ParameterInfo[] pms = method.GetParameters();
+            ParameterInfo[] pms = method.GetParametersCached();
             if (pms.Length != 2)
                 throw Error.IncorrectNumberOfMethodCallArguments(method);
             if (ParameterIsAssignable(pms[0], left.Type) && ParameterIsAssignable(pms[1], right.Type)) {
@@ -237,8 +237,9 @@ namespace Microsoft.Linq.Expressions {
         private static BinaryExpression GetUserDefinedBinaryOperatorOrThrow(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull, Annotations annotations) {
             BinaryExpression b = GetUserDefinedBinaryOperator(binaryType, name, left, right, liftToNull, annotations);
             if (b != null) {
-                ValidateParamswithOperandsOrThrow(b.Method.GetParameters()[0].ParameterType, left.Type, binaryType, name);
-                ValidateParamswithOperandsOrThrow(b.Method.GetParameters()[1].ParameterType, right.Type, binaryType, name);
+                ParameterInfo[] pis = b.Method.GetParametersCached();
+                ValidateParamswithOperandsOrThrow(pis[0].ParameterType, left.Type, binaryType, name);
+                ValidateParamswithOperandsOrThrow(pis[1].ParameterType, right.Type, binaryType, name);
                 return b;
             }
             throw Error.BinaryOperatorNotDefined(binaryType, left.Type, right.Type);
@@ -247,14 +248,13 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         private static MethodInfo GetUserDefinedBinaryOperator(ExpressionType binaryType, Type leftType, Type rightType, string name) {
             // UNDONE: This algorithm is wrong, we should be checking for uniqueness and erroring if
-            // UNDONE: it is defined on both types.  We can also optimize away the case where the types
-            // UNDONE: are identical.
+            // UNDONE: it is defined on both types.
             Type[] types = new Type[] { leftType, rightType };
             Type nnLeftType = TypeUtils.GetNonNullableType(leftType);
             Type nnRightType = TypeUtils.GetNonNullableType(rightType);
             BindingFlags flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
             MethodInfo method = nnLeftType.GetMethod(name, flags, null, types, null);
-            if (method == null) {
+            if (method == null && leftType != rightType) {
                 method = nnRightType.GetMethod(name, flags, null, types, null);
             }
 
@@ -335,7 +335,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         private static void ValidateUserDefinedConditionalLogicOperator(ExpressionType nodeType, Type left, Type right, MethodInfo method) {
             ValidateOperator(method);
-            ParameterInfo[] pms = method.GetParameters();
+            ParameterInfo[] pms = method.GetParametersCached();
             if (pms.Length != 2)
                 throw Error.IncorrectNumberOfMethodCallArguments(method);
             if (!ParameterIsAssignable(pms[0], left)) {
@@ -481,8 +481,11 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         private static BinaryExpression GetEqualityComparisonOperator(ExpressionType binaryType, string opName, Expression left, Expression right, bool liftToNull, Annotations annotations) {
-            // numeric to numeric or object to object is a known comparison
-            if (left.Type == right.Type && (TypeUtils.IsNumeric(left.Type) || left.Type == typeof(object))) {
+            // known comparison - numeric types, bools, object, enums
+            if (left.Type == right.Type && (TypeUtils.IsNumeric(left.Type) || 
+                left.Type == typeof(object) || 
+                TypeUtils.IsBool(left.Type) || 
+                TypeUtils.GetNonNullableType(left.Type).IsEnum)) {
                 if (TypeUtils.IsNullableType(left.Type) && liftToNull) {
                     return new BinaryExpression(annotations, binaryType, left, right, typeof(bool?));
                 } else {
@@ -682,7 +685,7 @@ namespace Microsoft.Linq.Expressions {
             MethodInfo method = delegateType.GetMethod("Invoke");
             if (method.ReturnType == typeof(void))
                 throw Error.UserDefinedOperatorMustNotBeVoid(conversion);
-            ParameterInfo[] pms = method.GetParameters();
+            ParameterInfo[] pms = method.GetParametersCached();
             Debug.Assert(pms.Length == conversion.Parameters.Count);
             if (pms.Length != 1)
                 throw Error.IncorrectNumberOfMethodCallArguments(conversion);

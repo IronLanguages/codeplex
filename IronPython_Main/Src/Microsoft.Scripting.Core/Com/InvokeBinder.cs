@@ -40,15 +40,15 @@ namespace Microsoft.Scripting.Com {
         private string[] _keywordArgNames;
         private int _totalExplicitArgs; // Includes the individial elements of ArgumentKind.Dictionary (if any)
 
-        private VariableExpression _dispatchObject;
-        private VariableExpression _dispatchPointer;
-        private VariableExpression _dispId;
-        private VariableExpression _dispParams;
-        private VariableExpression _paramVariants;
-        private VariableExpression _invokeResult;
-        private VariableExpression _returnValue;
-        private VariableExpression _dispIdsOfKeywordArgsPinned;
-        private VariableExpression _propertyPutDispId;
+        private ParameterExpression _dispatchObject;
+        private ParameterExpression _dispatchPointer;
+        private ParameterExpression _dispId;
+        private ParameterExpression _dispParams;
+        private ParameterExpression _paramVariants;
+        private ParameterExpression _invokeResult;
+        private ParameterExpression _returnValue;
+        private ParameterExpression _dispIdsOfKeywordArgsPinned;
+        private ParameterExpression _propertyPutDispId;
 
         internal InvokeBinder(IList<Argument> arguments, MetaObject[] args, Restrictions restrictions, Expression method, Expression dispatch, ComMethodDesc methodDesc) {
             ContractUtils.RequiresNotNull(arguments, "arguments");
@@ -70,43 +70,43 @@ namespace Microsoft.Scripting.Com {
             _instance = dispatch;
         }
 
-        private VariableExpression DispatchObjectVariable {
+        private ParameterExpression DispatchObjectVariable {
             get { return EnsureVariable(ref _dispatchObject, typeof(IDispatchObject), "dispatchObject"); }
         }
 
-        private VariableExpression DispatchPointerVariable {
+        private ParameterExpression DispatchPointerVariable {
             get { return EnsureVariable(ref _dispatchPointer, typeof(IntPtr), "dispatchPointer"); }
         }
 
-        private VariableExpression DispIdVariable {
+        private ParameterExpression DispIdVariable {
             get { return EnsureVariable(ref _dispId, typeof(int), "dispId"); }
         }
 
-        private VariableExpression DispParamsVariable {
+        private ParameterExpression DispParamsVariable {
             get { return EnsureVariable(ref _dispParams, typeof(ComTypes.DISPPARAMS), "dispParams"); }
         }
 
-        private VariableExpression ParamVariantsVariable {
+        private ParameterExpression ParamVariantsVariable {
             get { return EnsureVariable(ref _paramVariants, typeof(VariantArray), "paramVariants"); }
         }
 
-        private VariableExpression InvokeResultVariable {
+        private ParameterExpression InvokeResultVariable {
             get { return EnsureVariable(ref _invokeResult, typeof(Variant), "invokeResult"); }
         }
 
-        private VariableExpression ReturnValueVariable {
+        private ParameterExpression ReturnValueVariable {
             get { return EnsureVariable(ref _returnValue, typeof(object), "returnValue"); }
         }
 
-        private VariableExpression DispIdsOfKeywordArgsPinnedVariable {
+        private ParameterExpression DispIdsOfKeywordArgsPinnedVariable {
             get { return EnsureVariable(ref _dispIdsOfKeywordArgsPinned, typeof(GCHandle), "dispIdsOfKeywordArgsPinned"); }
         }
 
-        private VariableExpression PropertyPutDispIdVariable {
+        private ParameterExpression PropertyPutDispIdVariable {
             get { return EnsureVariable(ref _propertyPutDispId, typeof(int), "propertyPutDispId"); }
         }
 
-        private static VariableExpression EnsureVariable(ref VariableExpression var, Type type, string name) {
+        private static ParameterExpression EnsureVariable(ref ParameterExpression var, Type type, string name) {
             if (var != null) {
                 return var;
             }
@@ -117,12 +117,14 @@ namespace Microsoft.Scripting.Com {
             _keywordArgNames = GetArgumentNames();
             // will not include implicit instance argument (if any)
             Type[] explicitArgTypes = _args.Map(a => a.LimitType);
+            Type[] marshalArgTypes = _args.Map(a => a.IsByRef ? a.LimitType.MakeByRefType() : a.LimitType);
+
             Expression[] explicitArgExprs = _args.Map(a => a.Expression);
             _totalExplicitArgs = explicitArgTypes.Length;
 
             bool hasAmbiguousMatch = false;
             try {
-                _varEnumSelector = new VarEnumSelector(typeof(object), explicitArgTypes);
+                _varEnumSelector = new VarEnumSelector(typeof(object), marshalArgTypes);
             } catch (AmbiguousMatchException) {
                 hasAmbiguousMatch = true;
             }
@@ -151,12 +153,12 @@ namespace Microsoft.Scripting.Com {
             );
         }
 
-        private static void AddNotNull(List<VariableExpression> list, VariableExpression var) {
+        private static void AddNotNull(List<ParameterExpression> list, ParameterExpression var) {
             if (var != null) list.Add(var);
         }
 
         private Expression CreateScope(Expression expression) {
-            List<VariableExpression> vars = new List<VariableExpression>();
+            List<ParameterExpression> vars = new List<ParameterExpression>();
             AddNotNull(vars, _dispatchObject);
             AddNotNull(vars, _dispatchPointer);
             AddNotNull(vars, _dispId);
@@ -173,9 +175,9 @@ namespace Microsoft.Scripting.Com {
             //
             // Declare variables
             //
-            VariableExpression excepInfo = Expression.Variable(typeof(ExcepInfo), "excepInfo");
-            VariableExpression argErr = Expression.Variable(typeof(uint), "argErr");
-            VariableExpression hresult = Expression.Variable(typeof(int), "hresult");
+            ParameterExpression excepInfo = Expression.Variable(typeof(ExcepInfo), "excepInfo");
+            ParameterExpression argErr = Expression.Variable(typeof(uint), "argErr");
+            ParameterExpression hresult = Expression.Variable(typeof(int), "hresult");
 
             List<Expression> tryStatements = new List<Expression>();
             Expression expr;
@@ -437,7 +439,7 @@ namespace Microsoft.Scripting.Com {
             exprs.Add(expr);
 
             exprs.Add(ReturnValueVariable);
-            List<VariableExpression> vars = new List<VariableExpression>();
+            List<ParameterExpression> vars = new List<ParameterExpression>();
             foreach (ArgBuilder ab in _varEnumSelector.GetArgBuilders()) {
                 vars.AddRange(ab.TemporaryVariables);
             }

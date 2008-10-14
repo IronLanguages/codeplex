@@ -48,7 +48,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression right = ag.Transform(_right);
 
             Type t = left.Type == right.Type ? left.Type : typeof(object);
-            MSAst.VariableExpression tmp = ag.GetTemporary("__all__", t);
+            MSAst.ParameterExpression tmp = ag.GetTemporary("__all__", t);
             
             return Ast.Condition(
                 Binders.Convert(

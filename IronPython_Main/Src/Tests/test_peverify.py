@@ -15,8 +15,8 @@
 
 # make sure the peverify logic works
 
-from lib.assert_util import *
-from lib.process_util import *
+from iptest.assert_util import *
+from iptest.process_util import *
 
 skiptest("silverlight")
 skiptest("win32")

@@ -44,9 +44,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private sealed class LocalStorage : Storage {
             private readonly LocalBuilder _local;
 
-            internal LocalStorage(LambdaCompiler compiler, Expression variable)
+            internal LocalStorage(LambdaCompiler compiler, ParameterExpression variable)
                 : base(compiler, variable) {
-                _local = compiler.GetNamedLocal(variable.Type, CompilerScope.GetName(variable));
+                _local = compiler.GetNamedLocal(variable.Type, variable.Name);
             }
 
             internal override void EmitLoad() {
@@ -83,16 +83,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private sealed class ElementStorage : Storage {
+        private sealed class ElementBoxStorage : Storage {
             private readonly int _index;
             private readonly Storage _array;
             private readonly Type _boxType;
             private readonly FieldInfo _boxValueField;
 
-            internal ElementStorage(HoistedLocals hoistedLocals, Storage array, Expression variable)
+            internal ElementBoxStorage(Storage array, int index, Expression variable)
                 : base(array.Compiler, variable) {
                 _array = array;
-                _index = hoistedLocals.Indexes[variable];
+                _index = index;
                 _boxType = typeof(StrongBox<>).MakeGenericType(variable.Type);
                 _boxValueField = _boxType.GetField("Value");
             }
@@ -135,11 +135,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             private readonly Type _boxType;
             private readonly FieldInfo _boxValueField;
 
-            internal LocalBoxStorage(LambdaCompiler compiler, Expression variable)
+            internal LocalBoxStorage(LambdaCompiler compiler, ParameterExpression variable)
                 : base(compiler, variable) {
                 _boxType = typeof(StrongBox<>).MakeGenericType(variable.Type);
                 _boxValueField = _boxType.GetField("Value");
-                _boxLocal = compiler.GetNamedLocal(_boxType, CompilerScope.GetName(variable));
+                _boxLocal = compiler.GetNamedLocal(_boxType, variable.Name);
             }
 
             internal override void EmitLoad() {

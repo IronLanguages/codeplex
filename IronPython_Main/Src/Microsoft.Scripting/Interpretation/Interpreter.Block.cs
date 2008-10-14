@@ -57,21 +57,21 @@ namespace Microsoft.Scripting.Interpretation {
         internal static object InterpretLambda(InterpreterState lexicalParentState, LambdaExpression lambda, object[] args) {
             Assert.NotNull(lexicalParentState, lambda, args);
             
-            if (lambda.NodeType == ExpressionType.Generator) {
-                // create the user's generator type
-                var state = lexicalParentState.CreateForLambda(lambda, InterpreterState.Current.Value, args);
-                return new Generator(new GeneratorNext(new GeneratorLambdaInvoker(lambda, state).Invoke));
+            var state = InterpreterState.Current.Update(
+                (caller) => lexicalParentState.CreateForLambda(lambda, caller, args)
+            );
 
-            } else {
-                var state = InterpreterState.Current.Update(
-                    (caller) => lexicalParentState.CreateForLambda(lambda, caller, args)
-                );
+            try {
+                object result = Interpret(state, lambda.Body);
 
-                try {
-                    return Execute(state, lambda.Body);
-                } finally {
-                    InterpreterState.Current.Value = state.Caller;
+                var cf = result as ControlFlow;
+                if (cf != null) {
+                    return (cf.Kind == ControlFlowKind.Return) ? cf.Value : null;
                 }
+
+                return result;
+            } finally {
+                InterpreterState.Current.Value = state.Caller;
             }
         }
 

@@ -18,7 +18,7 @@ Testing IronPython Engine under a few stressful scenarios
 '''
 
 #--IMPORTS---------------------------------------------------------------------
-from lib.assert_util import *
+from iptest.assert_util import *
 load_iron_python_test()
 import IronPythonTest
 

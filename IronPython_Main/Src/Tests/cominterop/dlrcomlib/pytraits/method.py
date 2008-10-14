@@ -17,9 +17,9 @@ This test module verifies that properties of COM methods are identical to those
 of new-style class methods.
 '''
 #------------------------------------------------------------------------------
-from lib.assert_util import skiptest
+from iptest.assert_util import skiptest
 skiptest("silverlight")
-from lib.cominterop_util import *
+from iptest.cominterop_util import *
 
 #------------------------------------------------------------------------------
 #--GLOBALS
@@ -490,7 +490,7 @@ def test_invoke_from_eval_neg():
 def test_from_cmdline():
     '''
     '''
-    from lib.console_util import IronPythonInstance
+    from iptest.console_util import IronPythonInstance
     from sys import executable, exec_prefix
     from System import Environment
     
@@ -517,7 +517,7 @@ def test_from_cmdline():
 def test_from_cmdline_neg():
     '''
     '''
-    from lib.console_util import IronPythonInstance
+    from iptest.console_util import IronPythonInstance
     from sys import executable, exec_prefix
     from System import Environment
     
@@ -645,7 +645,7 @@ def test_type():
             AreEqual(str(type(m)), "<type 'DispMethod'>")
     
 def test_isinstance():
-    from lib.type_util import types
+    from iptest.type_util import types
     for m in m0, m2, m1kw1:
         #Merlin 378009 and 378011
         if isinstance(com_obj, DlrUniversalObj) or not is_cli:

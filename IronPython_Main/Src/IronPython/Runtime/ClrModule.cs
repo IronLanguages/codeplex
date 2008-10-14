@@ -255,27 +255,7 @@ the assembly object.")]
         }
 
         private static void AddReference(CodeContext/*!*/ context, Assembly assembly) {
-            // Load the assembly into IronPython
-            if (context.LanguageContext.DomainManager.LoadAssembly(assembly)) {
-#if !SILVERLIGHT // ComObject
-                ComObjectWithTypeInfo.PublishComTypes(assembly);
-#endif
-
-                // Add it to the references tuple if we
-                // loaded a new assembly.
-                ReferencesList rl = PythonContext.GetContext(context).ReferencedAssemblies;
-                lock (rl) {
-                    rl.Add(assembly);
-                }
-            }
-
-            PythonContext pc = PythonContext.GetContext(context);
-
-            // load any compiled code that has been cached...
-            LoadScriptCode(pc, assembly);
-            
-            // load any Python modules
-            pc.LoadBuiltins(pc.Builtins, assembly);
+            context.LanguageContext.DomainManager.LoadAssembly(assembly);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
@@ -854,14 +834,6 @@ import Namespace.")]
             modules.Sort((string x, string y) => x.Length - y.Length);
         }
         
-        private static void LoadScriptCode(PythonContext/*!*/ pc, Assembly/*!*/ asm) {
-            ScriptCode[] codes = ScriptCode.LoadFromAssembly(pc.DomainManager, asm);
-
-            foreach (ScriptCode sc in codes) {
-                pc.GetCompiledLoader().AddScriptCode(sc);
-            }
-        }
-
 #if !SILVERLIGHT
         /// <summary>
         /// Serializes data using the .NET serialization formatter for complex

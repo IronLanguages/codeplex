@@ -13,7 +13,7 @@
 #
 #####################################################################################
     
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import clr
 clr.AddReferenceToFileAndPath(testpath.rowan_root + r"\Test\ClrAssembly\folder1\loadorder_6.dll") # TODO

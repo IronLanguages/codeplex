@@ -16,35 +16,51 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+
     /// <summary>
-    /// Used by BreakStatement and ContinueStatement to specify the target of
-    /// the break/continue. The label object is shared with the enclosing
-    /// LabeledStatement, LoopStatement, SwitchStatement, or DoStatement, 
-    /// indicating which statement to break/continue out of
+    /// Used to denote the target of a GotoExpression
     /// </summary>
     public sealed class LabelTarget {
+        private readonly Type _type;
         private readonly string _name;
 
-        internal LabelTarget(string name) {
+        internal LabelTarget(Type type, string name) {
+            _type = type;
             _name = name;
         }
 
-        /// <summary>
-        /// The name of the label, possibly empty.
-        /// The name is purely descriptive, so it doesn't have to be unique
-        /// </summary>
+        // TODO: Annotations instead of name ?
         public string Name {
             get { return _name; }
+        }
+
+        /// <summary>
+        /// The type of value that is passed when jumping to the label
+        /// (or System.Void if no value should be passed)
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")]
+        public Type Type {
+            get { return _type; }
         }
     }
 
     public partial class Expression {
         public static LabelTarget Label() {
-            return new LabelTarget(null);
+            return Label(typeof(void), null);
         }
 
         public static LabelTarget Label(string name) {
-            return new LabelTarget(name);
+            return Label(typeof(void), name);
+        }
+
+        public static LabelTarget Label(Type type) {
+            return Label(type, null);
+        }
+
+        public static LabelTarget Label(Type type, string name) {
+            ContractUtils.RequiresNotNull(type, "type");
+            TypeUtils.ValidateType(type);
+            return new LabelTarget(type, name);
         }
     }
 }

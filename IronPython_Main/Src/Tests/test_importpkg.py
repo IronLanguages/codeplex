@@ -15,11 +15,11 @@
 
 import toimport
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 if not is_silverlight:
-    from lib.file_util import *
-    from lib.process_util import *
+    from iptest.file_util import *
+    from iptest.process_util import *
     import nt
 
 
@@ -122,7 +122,7 @@ if not is_silverlight:
 
     from ImportTestDir import Gen
     result = sys.modules
-    #u = sys.modules.pop("lib")
+    #u = sys.modules.pop("iptest")
     g = sys.modules.pop("ImportTestDir.Gen")
     from ImportTestDir import Gen
     AreEqual(Gen.gen().next(), "yield inside try")
@@ -130,7 +130,7 @@ if not is_silverlight:
 #########################################################################################
 # using import in nested blocks
 
-del time  # picked this up from lib.assert_util
+del time  # picked this up from iptest.assert_util
 
 def f():
     import time
@@ -369,13 +369,13 @@ import longpath
 ''')
 
     write_to_file(_f_longpath, '''
-from lib.assert_util import *
+from iptest.assert_util import *
 import pkg_q.pkg_r.pkg_s.mod_s
 Assert(pkg_q.pkg_r.pkg_s.mod_s.result == "Success")
 ''')
 
     write_to_file(_f_recursive, '''
-from lib.assert_util import *
+from iptest.assert_util import *
 import pkg_a.mod_a
 Assert(pkg_a.mod_a.pkg_b.mod_b.pkg_c.mod_c.pkg_d.mod_d.result == "Success")
 ''')
@@ -497,7 +497,7 @@ def test_copyfrompackages():
 import sys
 sys.path.append(sys.path[0] + '\\..')
 
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import sys
 sys.path.append(sys.path[0] +'\\ModPath')
@@ -525,7 +525,7 @@ AreEqual(id2, id3)
     write_to_file(_f_pkg2, '''
 import sys
 sys.path.append(sys.path[0] + '\\..')
-from lib.assert_util import *
+from iptest.assert_util import *
 
 import sys
 load_iron_python_test()

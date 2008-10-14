@@ -15,22 +15,20 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
 
     // TODO: should be ICollection<object> at least
     [Serializable]
-    public sealed class Annotations : IEnumerable<object>, IEnumerable {
+    public abstract class Annotations : IEnumerable<object>, IEnumerable {
         // Internal storage as low level as possible 
-        private readonly object[] _annotations;
-
-        internal Annotations(object[] annotations) {
-            _annotations = annotations;
+        internal Annotations() {
         }
 
         public int Count {
-            get { return _annotations.Length; }
+            get { return CountImpl; }
         }
 
         //
@@ -44,9 +42,13 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public bool TryGet<T>(out T annotation) {
-            for (int i = 0; i < _annotations.Length; i++) {
-                if (_annotations[i].GetType() == typeof(T)) {
-                    annotation = (T)_annotations[i];
+            return TryGetImpl<T>(out annotation);
+        }
+
+        internal virtual bool TryGetImpl<T>(out T annotation) {
+            for (int i = 0; i < Count; i++) {
+                if (this[i].GetType() == typeof(T)) {
+                    annotation = (T)this[i];
                     return true;
                 }
             }
@@ -60,10 +62,16 @@ namespace Microsoft.Linq.Expressions {
         public Annotations Add<T>(T annotation) {
             ContractUtils.RequiresNotNull(annotation, "annotation");
 
-            object[] newAnnotations = _annotations;
-            Array.Resize(ref newAnnotations, _annotations.Length + 1);
-            newAnnotations[_annotations.Length] = annotation;
-            return new Annotations(newAnnotations);
+            if (Count == 0) {
+                return new AnnotationsSingle<T>(annotation);
+            } else {
+                object[] newAnnotations = new object[Count + 1];
+                for (int i = 0; i < Count; i++) {
+                    newAnnotations[i] = this[i];
+                }
+                newAnnotations[Count] = annotation;
+                return new AnnotationsArray(newAnnotations);
+            }
         }
 
         /// <summary>
@@ -71,20 +79,20 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         public Annotations Remove<T>() {
             int count = 0;
-            object[] filtered = new object[_annotations.Length];
-            for (int i = 0; i < _annotations.Length; i++) {
-                if (_annotations[i].GetType() != typeof(T)) {
-                    filtered[count] = _annotations[i];
+            object[] filtered = new object[Count];
+            for (int i = 0; i < Count; i++) {
+                if (this[i].GetType() != typeof(T)) {
+                    filtered[count] = this[i];
                     count++;
                 }
             }
             Array.Resize(ref filtered, count);
-            return new Annotations(filtered);
+            return new AnnotationsArray(filtered);
         }
 
         public bool Contains<T>() {
-            for (int i = 0; i < _annotations.Length; i++) {
-                if (_annotations[i].GetType() == typeof(T)) {
+            for (int i = 0; i < Count; i++) {
+                if (this[i].GetType() == typeof(T)) {
                     return true;
                 }
             }
@@ -96,27 +104,98 @@ namespace Microsoft.Linq.Expressions {
         //
 
         #region IEnumerable Members
-
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes", Scope = "member", Target = "Microsoft.Linq.Expressions.Annotations.#System.Collections.IEnumerable.GetEnumerator()")]
         IEnumerator IEnumerable.GetEnumerator() {
-            return _annotations.GetEnumerator();
+            for (int i = 0; i < Count; ++i) {
+                yield return this[i];
+            }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes", Scope = "member", Target = "Microsoft.Linq.Expressions.Annotations.#System.Collections.Generic.IEnumerable`1<System.Object>.GetEnumerator()")]
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
-            for (int i = 0; i < _annotations.Length; ++i) {
-                yield return _annotations[i];
+            for (int i = 0; i < Count; ++i) {
+                yield return this[i];
             }
         }
 
         #endregion
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public static readonly Annotations Empty = new Annotations(new object[0]);
+        public static readonly Annotations Empty = new AnnotationsArray(new object[0]);
+
+        internal abstract int CountImpl {
+            get;
+        }
+
+        internal abstract object this[int index] {
+            get;
+        }
+    }
+
+    internal class AnnotationsArray : Annotations {
+        private readonly object[] _annotations;
+
+        internal AnnotationsArray(object[] data) {
+            _annotations = data;
+        }
+
+        internal override object this[int index] {
+            get { return _annotations[index]; }
+        }
+
+        internal override int CountImpl {
+            get {
+                return _annotations.Length;
+            }
+        }
+    }
+
+    internal class AnnotationsSingle<T> : Annotations {
+        private readonly T _annotation;
+
+        internal AnnotationsSingle(T data) {
+            _annotation = data;
+        }
+
+        internal override object this[int index] {
+            get {
+                Debug.Assert(index == 0);
+                return _annotation;
+            }
+        }
+
+        internal override int CountImpl {
+            get {
+                return 1;
+            }
+        }
+
+        internal override bool TryGetImpl<TAnnoationType>(out TAnnoationType annotation) {
+            if (typeof(T) == typeof(TAnnoationType)) {
+                annotation = (TAnnoationType)(object)_annotation;
+                return true;
+            }
+            annotation = default(TAnnoationType);
+            return false;
+        }
     }
 
     /// <summary>
     /// Factory methods.
     /// </summary>
     public partial class Expression {
+        public static Annotations Annotate() {
+            return Annotations.Empty;
+        }
+
+        public static Annotations Annotate<T>(T item0) {
+            return new AnnotationsSingle<T>(item0);
+        }
+
+        public static Annotations Annotate(object item0, object item1) {
+            return new AnnotationsArray(new[] { item0, item1 });
+        }
+
         public static Annotations Annotate(params object[] items) {
             if (items == null) {
                 return Annotations.Empty;
@@ -125,7 +204,7 @@ namespace Microsoft.Linq.Expressions {
                 return Annotations.Empty;
             }
 
-            return new Annotations((object[])items.Clone());
+            return new AnnotationsArray((object[])items.Clone());
         }
     }
 }

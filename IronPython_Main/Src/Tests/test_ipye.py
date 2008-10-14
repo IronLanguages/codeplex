@@ -17,7 +17,7 @@
 ## Testing IronPython Engine
 ##
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import sys
 
 if not is_silverlight:

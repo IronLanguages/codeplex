@@ -17,7 +17,7 @@
 All bugs in this module are currently test blocking.
 '''
 
-from lib.assert_util import *
+from iptest.assert_util import *
 skiptest("silverlight")
 
 add_clr_assemblies("baseclasscs", "typesamples")

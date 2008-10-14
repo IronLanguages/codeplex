@@ -44,7 +44,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.VariableExpression list = ag.GetTemporary("list_comprehension_list", typeof(List));
+            MSAst.ParameterExpression list = ag.GetTemporary("list_comprehension_list", typeof(List));
 
             // 1. Initialization code - create list and store it in the temp variable
             MSAst.AssignmentExpression initialize =

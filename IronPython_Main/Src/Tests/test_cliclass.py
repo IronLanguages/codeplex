@@ -16,7 +16,7 @@
 """Test cases for class-related features specific to CLI"""
 from __future__ import with_statement
 
-from lib.assert_util import *
+from iptest.assert_util import *
 import clr
 import System
 
@@ -576,7 +576,7 @@ def test_strange_inheritance():
 #lib.process_util, file, etc are not available in silverlight
 @skip("silverlight")
 def test_nondefault_indexers():
-    from lib.process_util import *
+    from iptest.process_util import *
 
     if not has_vbc(): return
     import nt
@@ -1228,6 +1228,42 @@ if not hasattr(A, 'Rank'):
     
     finally:
         sys.path = old_syspath
+
+@skip("silverlight") # no Stack on Silverlight
+def test_ienumerable__getiter__():
+    
+    #--empty list
+    called = 0
+    x = System.Collections.Generic.List[int]()
+    Assert(hasattr(x, "__iter__"))
+    for stuff in x:
+        called +=1 
+    AreEqual(called, 0)
+    
+    #--add one element to the list
+    called = 0
+    x.Add(1)
+    for stuff in x:
+        AreEqual(stuff, 1)
+        called +=1
+    AreEqual(called, 1)
+    
+    #--one element list before __iter__ is called
+    called = 0
+    x = System.Collections.Generic.List[int]()
+    x.Add(1)
+    for stuff in x:
+        AreEqual(stuff, 1)
+        called +=1
+    AreEqual(called, 1)
+    
+    #--two elements in the list
+    called = 0
+    x.Add(2)
+    for stuff in x:
+        AreEqual(stuff-1, called)
+        called +=1
+    AreEqual(called, 2)
     
 run_test(__name__)
 

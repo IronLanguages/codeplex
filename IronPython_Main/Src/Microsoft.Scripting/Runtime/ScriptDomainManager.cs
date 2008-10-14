@@ -165,12 +165,17 @@ namespace Microsoft.Scripting.Runtime {
         public bool LoadAssembly(Assembly assembly) {
             ContractUtils.RequiresNotNull(assembly, "assembly");
 
-            EventHandler<AssemblyLoadedEventArgs> assmLoaded = AssemblyLoaded;
-            if (assmLoaded != null) {
-                assmLoaded(this, new AssemblyLoadedEventArgs(assembly));
+            if (_scopeWrapper.LoadAssembly(assembly)) {
+                // only deliver the event if we've never added the assembly before
+                EventHandler<AssemblyLoadedEventArgs> assmLoaded = AssemblyLoaded;
+                if (assmLoaded != null) {
+                    assmLoaded(this, new AssemblyLoadedEventArgs(assembly));
+                }
+
+                return true;
             }
 
-            return _scopeWrapper.LoadAssembly(assembly);
+            return false;
         }
 
         #region ScopeAttributesWrapper

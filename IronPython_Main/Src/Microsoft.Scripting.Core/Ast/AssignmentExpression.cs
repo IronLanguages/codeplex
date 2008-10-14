@@ -22,7 +22,6 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents assignment: Expression = Value. The left had side
     /// must be a valid lvalue:
-    ///   VariableExpression
     ///   ParameterExpression
     ///   MemberExpression with writable property/field
     ///   IndexExpression

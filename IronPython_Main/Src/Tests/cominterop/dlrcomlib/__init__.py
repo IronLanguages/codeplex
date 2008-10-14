@@ -12,12 +12,12 @@
 #
 #
 #####################################################################################
-from lib.assert_util import testpath
+from iptest.assert_util import testpath
 
 if testpath.basePyDir.lower()=='src':
     import sys
     print "Skipping DLR COM Lib tests..."
     sys.exit(0)
 
-from lib.cominterop_util import run_pkg_helper
+from iptest.cominterop_util import run_pkg_helper
 run_pkg_helper(__file__)

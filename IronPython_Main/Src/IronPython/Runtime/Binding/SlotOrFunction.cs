@@ -136,7 +136,7 @@ namespace IronPython.Runtime.Binding {
                     return res;
                 }
             } else if (MetaUserObject.GetPythonType(types[0]).TryResolveSlot(state.Context, op, out slot)) {
-                VariableExpression tmp = Ast.Variable(typeof(object), "slotVal");
+                ParameterExpression tmp = Ast.Variable(typeof(object), "slotVal");
 
                 Expression[] args = new Expression[types.Length - 1];
                 for (int i = 1; i < types.Length; i++) {

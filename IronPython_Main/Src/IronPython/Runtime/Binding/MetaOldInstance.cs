@@ -135,7 +135,7 @@ namespace IronPython.Runtime.Binding {
                 exprArgs[i + 1] = args[i].Expression;
             }
 
-            VariableExpression tmp = Ast.Variable(typeof(object), "callFunc");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "callFunc");
 
             exprArgs[0] = tmp;
             return new MetaObject(
@@ -183,7 +183,7 @@ namespace IronPython.Runtime.Binding {
         #region Conversions
        
         private MetaObject/*!*/ MakeConvertToIEnumerable(ConvertAction/*!*/ conversion) {
-            VariableExpression tmp = Ast.Variable(typeof(IEnumerable), "res");
+            ParameterExpression tmp = Ast.Variable(typeof(IEnumerable), "res");
             MetaObject self = Restrict(typeof(OldInstance));
 
             return new MetaObject(
@@ -216,7 +216,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private MetaObject/*!*/ MakeConvertToIEnumerator(ConvertAction/*!*/ conversion) {
-            VariableExpression tmp = Ast.Variable(typeof(IEnumerator), "res");
+            ParameterExpression tmp = Ast.Variable(typeof(IEnumerator), "res");
             MetaObject self = Restrict(typeof(OldInstance));
 
             return new MetaObject(
@@ -249,7 +249,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private MetaObject/*!*/ MakeConvertToIEnumerable(ConvertAction/*!*/ conversion, Type genericType) {
-            VariableExpression tmp = Ast.Variable(typeof(IEnumerable), "res");
+            ParameterExpression tmp = Ast.Variable(typeof(IEnumerable), "res");
             MetaObject self = Restrict(typeof(OldInstance));
 
             return new MetaObject(
@@ -282,7 +282,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private MetaObject/*!*/ MakeConvertToCommon(ConvertAction/*!*/ conversion, SymbolId symbolId) {
-            VariableExpression tmp = Ast.Variable(typeof(object), "convertResult");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "convertResult");
             MetaObject self = Restrict(typeof(OldInstance));
             return new MetaObject(
                 Ast.Scope(
@@ -300,7 +300,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static BinaryExpression/*!*/ MakeOneConvert(ConvertAction/*!*/ conversion, MetaObject/*!*/ self, SymbolId symbolId, VariableExpression/*!*/ tmp) {
+        private static BinaryExpression/*!*/ MakeOneConvert(ConvertAction/*!*/ conversion, MetaObject/*!*/ self, SymbolId symbolId, ParameterExpression/*!*/ tmp) {
             return Ast.NotEqual(
                 Ast.Assign(
                     tmp,
@@ -318,7 +318,7 @@ namespace IronPython.Runtime.Binding {
         private MetaObject/*!*/ MakeConvertToBool(ConvertAction/*!*/ conversion) {
             MetaObject self = Restrict(typeof(OldInstance));
 
-            VariableExpression tmp = Ast.Variable(typeof(bool?), "tmp");
+            ParameterExpression tmp = Ast.Variable(typeof(bool?), "tmp");
             MetaObject fallback = conversion.Fallback(this);
             Type resType = BindingHelpers.GetCompatibleType(typeof(bool), fallback.Expression.Type);
 
@@ -358,7 +358,7 @@ namespace IronPython.Runtime.Binding {
                 return MakeDynamicMemberAccess(member, name, access, args);
             }
 
-            VariableExpression tmp = Ast.Variable(typeof(object), "dict");
+            ParameterExpression tmp = Ast.Variable(typeof(object), "dict");
             Expression target;
 
             ValidationInfo test = new ValidationInfo(
@@ -441,7 +441,7 @@ namespace IronPython.Runtime.Binding {
 
             switch (access) {
                 case MemberAccess.Get:                    
-                    VariableExpression tmp = Ast.Variable(typeof(object), "result");
+                    ParameterExpression tmp = Ast.Variable(typeof(object), "result");
 
                     target = Ast.Scope(
                         Ast.Condition(
