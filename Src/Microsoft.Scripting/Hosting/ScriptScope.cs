@@ -56,10 +56,6 @@ namespace Microsoft.Scripting.Hosting {
             get { return _scope; }
         }
 
-        internal bool CanExecuteCode {
-            get { return _engine.LanguageContext.CanCreateSourceCode; }
-        }
-
         /// <summary>
         /// Gets an engine for the language associated with this scope.
         /// Returns invariant engine if the scope is language agnostic.
@@ -75,46 +71,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _engine;
             }
         }
-
-        #region Code Execution (for convenience)
-
-        /// <summary>
-        /// Executes specified code against the scope using the engine of the language associated with the scope.
-        /// </summary>
-        /// <exception cref="NotSupportedException">No language is associated with the scope.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="code"/> is a <c>null</c> reference.</exception>
-        public object Execute(string code) {
-            ContractUtils.RequiresNotNull(code, "code");
-            if (!CanExecuteCode) throw new NotSupportedException("Cannot execute code on language agnostic scope");
-            return _engine.LanguageContext.CreateSnippet(code, SourceCodeKind.Expression).Execute(_scope);
-        }
-
-        /// <summary>
-        /// Executes specified code against the scope using the engine of the language associated with the scope.
-        /// Converts the result to the specified type using the conversion that the language associated with the scope defines.
-        /// </summary>
-        /// <exception cref="NotSupportedException">No language is associated with the scope.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="code"/> is a <c>null</c> reference.</exception>
-        public T Execute<T>(string code) {
-            object result = Execute(code);
-            return _engine.Operations.ConvertTo<T>(result);
-        }
-
-        /// <summary>
-        /// Executes content of the specified physical file against the scope using the engine of the language associated with the scope.
-        /// Converts the result to the specified type using the conversion that the language associated with the scope defines.
-        /// </summary>
-        /// <exception cref="NotSupportedException">No language is associated with the scope.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="path"/> is a <c>null</c> reference.</exception>
-        public void IncludeFile(string path) {
-            ContractUtils.RequiresNotNull(path, "path");
-            if (!CanExecuteCode) throw new NotSupportedException("Cannot execute code on language agnostic scope");
-
-            _engine.LanguageContext.CreateFileUnit(path).Execute(_scope);
-        }
-
-        #endregion
-
+        
         /// <summary>
         /// Gets a value stored in the scope under the given name.
         /// </summary>

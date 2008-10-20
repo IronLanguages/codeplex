@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Silverl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chiron", "Chiron\Chiron.csproj", "{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.ExtensionAttribute", "Microsoft.Scripting.Core\Microsoft.Scripting.ExtensionAttribute.csproj", "{8B0F1074-750E-4D64-BF23-A1E0F54261E5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		DelaySigned Release|Any CPU = DelaySigned Release|Any CPU
@@ -31,6 +33,10 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
     {7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.DelaySigned Release|Any CPU.Build.0 = DelaySigned Release|Any CPU
     {7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.DelaySigned Release|Any CPU.ActiveCfg = DelaySigned Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Silverlight Release|Any CPU.Build.0 = DelaySigned Silverlight Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Silverlight Release|Any CPU.ActiveCfg = DelaySigned Silverlight Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Release|Any CPU.Build.0 = DelaySigned Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Release|Any CPU.ActiveCfg = DelaySigned Release|Any CPU
 		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.DelaySigned Silverlight Release|Any CPU.Build.0 = DelaySigned Silverlight Release|Any CPU
 		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.DelaySigned Silverlight Release|Any CPU.ActiveCfg = DelaySigned Silverlight Release|Any CPU
 		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.DelaySigned Release|Any CPU.ActiveCfg = Silverlight DelaySigned Release|Any CPU
@@ -121,6 +127,16 @@ Global
 		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Release|Any CPU.Build.0 = Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.FxCop|Any CPU.ActiveCfg = FxCop|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.FxCop|Any CPU.Build.0 = FxCop|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

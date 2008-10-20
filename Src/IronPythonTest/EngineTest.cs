@@ -774,7 +774,7 @@ if id(a) == id(b):
 
         private void TestLineInfo(ScriptScope/*!*/ scope, string lineNumber) {
             try {
-                scope.IncludeFile(Common.InputTestDirectory + "\\raise.py");
+                scope.Engine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", scope);
                 throw new Exception("We should not get here");
             } catch (StringException e2) {
                 if (scope.Engine.Runtime.Setup.DebugMode != e2.StackTrace.Contains(lineNumber))

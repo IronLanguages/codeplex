@@ -776,8 +776,12 @@ def test_cp16657():
 
 def test_n_m_quantifier():
     AreEqual(re.search('ab{,2}a', 'abba').span(), (0, 4))
+    AreEqual(re.search('ab{,2}a', 'aba').span(), (0, 3))
     AreEqual(re.search('ab{,2}a', 'abbba'), None)
     AreEqual(re.search('ab{,2}a', 'abba').span(), re.search('ab{0,2}a', 'abba').span())
     AreEqual(re.search('ab{0,2}a', 'abbba'), None)
+    AreEqual(re.search('ab{2,}a', 'abba').span(), (0,4))
+    AreEqual(re.search('ab{2,}a', 'abbba').span(), (0,5))
+    AreEqual(re.search('ab{2,}a', 'aba'), None)
         
 run_test(__name__)

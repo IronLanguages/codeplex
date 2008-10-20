@@ -77,6 +77,7 @@ namespace Microsoft.Scripting.Actions {
         #region Internal API Surface
 
         internal NamespaceTracker GetOrMakeChildPackage(string childName, Assembly assem) {
+            // lock is held when this is called
             Assert.NotNull(childName, assem);
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             Debug.Assert(_packageAssemblies.Contains(assem)); // Parent namespace must contain all the assemblies of the child
@@ -100,6 +101,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private NamespaceTracker MakeChildPackage(string childName, Assembly assem) {
+            // lock is held when this is called
             Assert.NotNull(childName, assem);
             NamespaceTracker rp = new NamespaceTracker();
             rp.SetTopPackage(_topPackage);
@@ -129,6 +131,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         internal void AddTypeName(string typeName, Assembly assem) {
+            // lock is held when this is called
             Assert.NotNull(typeName, assem);
             Debug.Assert(typeName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
 
@@ -180,6 +183,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         protected void DiscoverAllTypes(Assembly assem) {
+            // lock is held when this is called
             Assert.NotNull(assem);
 
             NamespaceTracker previousPackage = null;
@@ -209,6 +213,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="fullNamespace">Full namespace name. It can be null (for top-level types)</param>
         /// <returns></returns>
         private NamespaceTracker GetOrMakePackageHierarchy(Assembly assem, string fullNamespace) {
+            // lock is held when this is called
             Assert.NotNull(assem);
 
             if (fullNamespace == null) {
@@ -268,41 +273,43 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public bool TryGetValue(SymbolId name, out MemberTracker value) {
-            LoadNamespaces();
+            lock (this) {
+                LoadNamespaces();
 
-            if (_dict.TryGetValue(SymbolTable.IdToString(name), out value)) {
-                return true;
-            }
-
-            MemberTracker existingTypeEntity = null;
-            string nameString = SymbolTable.IdToString(name);
-
-            if (nameString.IndexOf(Type.Delimiter) != -1) {
-                value = null;
-                return false;
-            }
-
-            // Look up the type names and load the type if its name exists
-
-            foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
-                if (!kvp.Value.Contains(nameString)) {
-                    continue;
+                if (_dict.TryGetValue(SymbolTable.IdToString(name), out value)) {
+                    return true;
                 }
 
-                existingTypeEntity = kvp.Value.UpdateTypeEntity((TypeTracker)existingTypeEntity, nameString);
-            }
+                MemberTracker existingTypeEntity = null;
+                string nameString = SymbolTable.IdToString(name);
 
-            if (existingTypeEntity == null) {
-                existingTypeEntity = CheckForUnlistedType(nameString);
-            }
+                if (nameString.IndexOf(Type.Delimiter) != -1) {
+                    value = null;
+                    return false;
+                }
 
-            if (existingTypeEntity != null) {
-                _dict[SymbolTable.IdToString(name)] = existingTypeEntity;
-                value = existingTypeEntity;
-                return true;
-            }
+                // Look up the type names and load the type if its name exists
 
-            return false;
+                foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
+                    if (!kvp.Value.Contains(nameString)) {
+                        continue;
+                    }
+
+                    existingTypeEntity = kvp.Value.UpdateTypeEntity((TypeTracker)existingTypeEntity, nameString);
+                }
+
+                if (existingTypeEntity == null) {
+                    existingTypeEntity = CheckForUnlistedType(nameString);
+                }
+
+                if (existingTypeEntity != null) {
+                    _dict[SymbolTable.IdToString(name)] = existingTypeEntity;
+                    value = existingTypeEntity;
+                    return true;
+                }
+
+                return false;
+            }
         }
 
         public bool Remove(SymbolId name) {
@@ -370,11 +377,13 @@ namespace Microsoft.Scripting.Actions {
         public IDictionary<object, object> AsObjectKeyedDictionary() {
             LoadNamespaces();
 
-            Dictionary<object, object> res = new Dictionary<object, object>();
-            foreach (KeyValuePair<string, MemberTracker> kvp in _dict) {
-                res[kvp.Key] = kvp.Value;
+            lock (this) {
+                Dictionary<object, object> res = new Dictionary<object, object>();
+                foreach (KeyValuePair<string, MemberTracker> kvp in _dict) {
+                    res[kvp.Key] = kvp.Value;
+                }
+                return res;
             }
-            return res;
         }
 
         public int Count {
@@ -385,19 +394,21 @@ namespace Microsoft.Scripting.Actions {
             get {
                 LoadNamespaces();
 
-                List<object> res = new List<object>();
-                foreach (string s in _dict.Keys) res.Add(s);
+                lock (this) {
+                    List<object> res = new List<object>();
+                    foreach (string s in _dict.Keys) res.Add(s);
 
-                foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
-                    foreach (string typeName in kvp.Value.GetNormalizedTypeNames()) {
-                        if (!res.Contains(typeName)) {
-                            res.Add(typeName);
+                    foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
+                        foreach (string typeName in kvp.Value.GetNormalizedTypeNames()) {
+                            if (!res.Contains(typeName)) {
+                                res.Add(typeName);
+                            }
                         }
                     }
-                }
 
-                res.Sort();
-                return res;
+                    res.Sort();
+                    return res;
+                }
             }
         }
 
@@ -594,7 +605,11 @@ namespace Microsoft.Scripting.Actions {
                 NamespaceTracker ns = kvp.Value as NamespaceTracker;
                 if (ns == null) continue;
 
-                ns.UpdateId();
+                lock (ns) {
+                    // namespace trackers are trees so we always take this
+                    // in order
+                    ns.UpdateId();
+                }
             }
         }
     }

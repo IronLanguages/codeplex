@@ -47,6 +47,11 @@ def test_add_mul():
     AssertError(OverflowError, lambda: (sys.maxint + 1) * "a")
 
     class mylong(long): pass
+    
+    if is_cli:
+        from System.IO import Path
+        AreEqual("foo\\", "foo" + Path.DirectorySeparatorChar)
+        AreEqual("\\\\", Path.DirectorySeparatorChar + '\\')
 
     # multiply
     AreEqual("aaaa", "a" * 4L)

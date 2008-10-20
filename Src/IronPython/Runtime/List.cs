@@ -70,13 +70,13 @@ namespace IronPython.Runtime {
                 return;
             }
 
-            lock (sequence) {
-                _data = new object[sequence._size];
-                for (int i = 0; i < sequence._size; i++) {
-                    _data[i] = sequence._data[i];
-                }
-                _size = sequence._size;
+            _data = new object[sequence._size];
+
+            object[] data = sequence._data;
+            for (int i = 0; i < _data.Length; i++) {
+                _data[i] = data[i];
             }
+            _size = _data.Length;
         }
 
         public void __init__([NotNull] string sequence) {
@@ -399,7 +399,11 @@ namespace IronPython.Runtime {
             Slice.FixSliceArguments(_size, ref start, ref stop);
             if (start > stop) return;
 
-            SliceNoStep(start, stop, value);
+            if (value is List) {
+                SliceNoStep(start, stop, (List)value);
+            } else {
+                SliceNoStep(start, stop, value);
+            }
         }
 
         public virtual void __delslice__(int start, int stop) {
@@ -455,7 +459,57 @@ namespace IronPython.Runtime {
                     slice.indices(_size, out start, out stop, out step);
                     if (start > stop) return;
 
-                    SliceNoStep(start, stop, value);
+                    List lstVal = value as List;
+                    if (lstVal != null) {
+                        SliceNoStep(start, stop, lstVal);
+                    } else {
+                        SliceNoStep(start, stop, value);
+                    }
+                }
+            }
+        }
+
+        private void SliceNoStep(int start, int stop, List other) {
+            // We don't lock other here - instead we read it's object array
+            // and size therefore having a stable view even if it resizes.
+            // This means if we had a multithreaded app like:
+            // 
+            //  T1                   T2                     T3
+            //  l1[:] = [1] * 100    l1[:] = [2] * 100      l3[:] = l1[:]
+            //
+            // we can end up with both 1s and 2s in the array.  This is the
+            // same as if our set was implemented on top of get/set item where
+            // we'd take and release the locks repeatedly.
+            int otherSize = other._size;
+            object[] otherData = other._data;
+            
+            lock (this) {
+                if ((stop - start) == otherSize) {
+                    // we are simply replacing values, this is fast...
+                    for (int i = 0; i < otherSize; i++) {
+                        _data[i + start] = otherData[i];
+                    }
+                } else {
+                    // we are resizing the array (either bigger or smaller), we 
+                    // will copy the data array and replace it all at once.
+                    int newSize = _size - (stop - start) + otherSize;
+
+                    object[] newData = new object[GetNewSize(newSize)];
+                    for (int i = 0; i < start; i++) {
+                        newData[i] = _data[i];
+                    }
+
+                    for (int i = 0; i < otherSize; i++) {
+                        newData[i + start] = otherData[i];
+                    }
+
+                    int writeOffset = otherSize - (stop - start);
+                    for (int i = stop; i < _size; i++) {
+                        newData[i + writeOffset] = _data[i];
+                    }
+
+                    _size = newSize;
+                    _data = newData;
                 }
             }
         }
@@ -463,13 +517,13 @@ namespace IronPython.Runtime {
         private void SliceNoStep(int start, int stop, object value) {
             // always copy from a List object, even if it's a copy of some user defined enumerator.  This
             // makes it easy to hold the lock for the duration fo the copy.
-            List other = value as List ?? new List(PythonOps.GetEnumerator(value));
+            IList<object> other = value as IList<object> ?? new List(PythonOps.GetEnumerator(value));
 
-            using (new OrderedLocker(this, other)) {
+            lock (this) {
                 if ((stop - start) == other.Count) {
                     // we are simply replacing values, this is fast...
                     for (int i = 0; i < other.Count; i++) {
-                        _data[i + start] = other._data[i];
+                        _data[i + start] = other[i];
                     }
                 } else {
                     // we are resizing the array (either bigger or smaller), we 
@@ -481,8 +535,8 @@ namespace IronPython.Runtime {
                         newData[i] = _data[i];
                     }
                     
-                    for (int i = 0; i < other._size; i++) {
-                        newData[i + start] = other._data[i];
+                    for (int i = 0; i < other.Count; i++) {
+                        newData[i + start] = other[i];
                     }
 
                     int writeOffset = other.Count - (stop - start);
@@ -495,7 +549,6 @@ namespace IronPython.Runtime {
                 }
             }        
         }
-
 
         private void SliceAssign(int index, object value) {
             this[index] = value;

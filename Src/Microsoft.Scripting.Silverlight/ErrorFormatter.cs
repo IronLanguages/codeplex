@@ -90,7 +90,7 @@ namespace Microsoft.Scripting.Silverlight {
                         target.Id = targetElementId;
                     }
 
-                    HtmlPage.Document.GetElementsByTagName("body")[0].AppendChild(target);
+                    (HtmlPage.Document.GetElementsByTagName("body")[0] as HtmlElement).AppendChild(target);
                 }
 
                 target.SetProperty("innerHTML", FormatErrorAsHtml(e));

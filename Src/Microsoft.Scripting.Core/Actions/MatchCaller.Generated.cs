@@ -55,6 +55,36 @@ namespace Microsoft.Scripting.Actions {
             return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6]);
         }
 
+        /// Matchcaller - arity 8
+        internal static object Call8<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet> target, CallSite site, object[] args) {
+            return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7]);
+        }
+
+        /// Matchcaller - arity 9
+        internal static object Call9<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet> target, CallSite site, object[] args) {
+            return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8]);
+        }
+
+        /// Matchcaller - arity 10
+        internal static object Call10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>(Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet> target, CallSite site, object[] args) {
+            return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9]);
+        }
+
+        /// Matchcaller - arity 11
+        internal static object Call11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet>(Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet> target, CallSite site, object[] args) {
+            return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9], (T10)args[10]);
+        }
+
+        /// Matchcaller - arity 12
+        internal static object Call12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet>(Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet> target, CallSite site, object[] args) {
+            return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9], (T10)args[10], (T11)args[11]);
+        }
+
+        /// Matchcaller - arity 13
+        internal static object Call13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet>(Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet> target, CallSite site, object[] args) {
+            return (object)target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9], (T10)args[10], (T11)args[11], (T12)args[12]);
+        }
+
 
         // *** END GENERATED CODE ***
 
@@ -104,6 +134,42 @@ namespace Microsoft.Scripting.Actions {
         // Matchcaller - arity 7
         internal static object CallVoid7<T0, T1, T2, T3, T4, T5, T6>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6> target, CallSite site, object[] args) {
             target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6]);
+            return null;
+        }
+
+        // Matchcaller - arity 8
+        internal static object CallVoid8<T0, T1, T2, T3, T4, T5, T6, T7>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7> target, CallSite site, object[] args) {
+            target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7]);
+            return null;
+        }
+
+        // Matchcaller - arity 9
+        internal static object CallVoid9<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8> target, CallSite site, object[] args) {
+            target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8]);
+            return null;
+        }
+
+        // Matchcaller - arity 10
+        internal static object CallVoid10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> target, CallSite site, object[] args) {
+            target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9]);
+            return null;
+        }
+
+        // Matchcaller - arity 11
+        internal static object CallVoid11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> target, CallSite site, object[] args) {
+            target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9], (T10)args[10]);
+            return null;
+        }
+
+        // Matchcaller - arity 12
+        internal static object CallVoid12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> target, CallSite site, object[] args) {
+            target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9], (T10)args[10], (T11)args[11]);
+            return null;
+        }
+
+        // Matchcaller - arity 13
+        internal static object CallVoid13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> target, CallSite site, object[] args) {
+            target(site, (T0)args[0], (T1)args[1], (T2)args[2], (T3)args[3], (T4)args[4], (T5)args[5], (T6)args[6], (T7)args[7], (T8)args[8], (T9)args[9], (T10)args[10], (T11)args[11], (T12)args[12]);
             return null;
         }
 

@@ -99,6 +99,87 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
+        #region Code Execution (for convenience)
+
+        /// <summary>
+        /// Executes an expression within a new scope.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="expression"/> is a <c>null</c> reference.</exception>
+        public object Execute(string expression) {
+            return Execute(expression, CreateScope());
+        }
+
+        /// <summary>
+        /// Executes an expression within the specified scope.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="expression"/> is a <c>null</c> reference.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="scope"/> is a <c>null</c> reference.</exception>
+        public object Execute(string expression, ScriptScope scope) {
+            return CreateScriptSourceFromString(expression).Execute(scope);
+        }
+
+        /// <summary>
+        /// Executes an expression within a new scope and converts result to the given type.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="expression"/> is a <c>null</c> reference.</exception>
+        public T Execute<T>(string expression) {
+            return Operations.ConvertTo<T>(Execute(expression));
+        }
+        
+        /// <summary>
+        /// Executes an expression within the specified scope and converts result to the given type.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="expression"/> is a <c>null</c> reference.</exception>
+        public T Execute<T>(string expression, ScriptScope scope) {
+            return Operations.ConvertTo<T>(Execute(expression, scope));
+        }
+
+        /// <summary>
+        /// Executes content of the specified file in a new scope and returns that scope.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is a <c>null</c> reference.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="scope"/> is a <c>null</c> reference.</exception>
+        public ScriptScope ExecuteFile(string path) {
+            return ExecuteFile(path, CreateScope());
+        }
+
+        /// <summary>
+        /// Executes content of the specified file against the given scope.
+        /// </summary>
+        /// <returns>The <paramref name="scope"/>.</returns>
+        /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is a <c>null</c> reference.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="scope"/> is a <c>null</c> reference.</exception>
+        public ScriptScope ExecuteFile(string path, ScriptScope scope) {
+            CreateScriptSourceFromFile(path).Execute(scope);
+            return scope;
+        }
+
+#if !SILVERLIGHT
+        /// <summary>
+        /// Executes the expression in the specified scope and return a result.
+        /// Returns an ObjectHandle wrapping the resulting value of running the code.  
+        /// </summary>
+        public ObjectHandle ExecuteAndWrap(string expression, ScriptScope scope) {
+            return new ObjectHandle(Execute(expression, scope));
+        }
+
+        /// <summary>
+        /// Executes the code in an empty scope.
+        /// Returns an ObjectHandle wrapping the resulting value of running the code.  
+        /// </summary>
+        public ObjectHandle ExecuteAndWrap(string expression) {
+            return new ObjectHandle(Execute(expression));
+        }
+#endif
+        
+        #endregion
+
         #region Scopes
 
         public ScriptScope CreateScope() {
@@ -140,10 +221,10 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The ScriptSource's Path property defaults to <c>null</c>.
         /// </summary>
-        public ScriptSource CreateScriptSourceFromString(string code) {
-            ContractUtils.RequiresNotNull(code, "code");
+        public ScriptSource CreateScriptSourceFromString(string expression) {
+            ContractUtils.RequiresNotNull(expression, "expression");
 
-            return CreateScriptSource(new SourceStringContentProvider(code), null, SourceCodeKind.Expression);
+            return CreateScriptSource(new SourceStringContentProvider(expression), null, SourceCodeKind.Expression);
         }
 
         /// <summary>
@@ -163,10 +244,10 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The default SourceCodeKind is Expression.
         /// </summary>
-        public ScriptSource CreateScriptSourceFromString(string code, string path) {
-            ContractUtils.RequiresNotNull(code, "code");
+        public ScriptSource CreateScriptSourceFromString(string expression, string path) {
+            ContractUtils.RequiresNotNull(expression, "expression");
 
-            return CreateScriptSource(new SourceStringContentProvider(code), path, SourceCodeKind.Expression);
+            return CreateScriptSource(new SourceStringContentProvider(expression), path, SourceCodeKind.Expression);
         }
 
         /// <summary>

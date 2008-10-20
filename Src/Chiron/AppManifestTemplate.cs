@@ -39,9 +39,6 @@ namespace Chiron {
             foreach (Uri source in assemblySources) {
                 XmlElement ap = doc.CreateElement("AssemblyPart", target.NamespaceURI);
                 string src = source.ToString();
-                if (src.EndsWith("Microsoft.Scripting.Silverlight.dll")) {
-                    ap.SetAttribute("x:Name", "Microsoft.Scripting.Silverlight");
-                }
                 ap.SetAttribute("Source", src);
                 target.AppendChild(ap);
             }
