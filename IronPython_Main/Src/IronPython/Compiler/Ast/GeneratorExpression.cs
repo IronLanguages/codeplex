@@ -46,6 +46,18 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
+        public FunctionDefinition Function {
+            get {
+                return _function;
+            }
+        }
+
+        public Expression Iterable {
+            get {
+                return _iterable;
+            }
+        }
+
         public override void Walk(PythonWalker walker) {
             if (walker.Walk(this)) {
                 _function.Walk(walker);

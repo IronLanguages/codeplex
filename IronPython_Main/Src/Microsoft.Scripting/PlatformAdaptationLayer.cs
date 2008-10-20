@@ -72,6 +72,7 @@ namespace Microsoft.Scripting {
             AssemblyName languageKeyVer = new AssemblyName(typeof(PlatformAdaptationLayer).Assembly.FullName);
             AddAssemblyMappings(languageKeyVer, 
                 "Microsoft.Scripting",
+                "Microsoft.Scripting.ExtensionAttribute",
                 "Microsoft.Scripting.Core",
                 "Microsoft.Scripting.Silverlight",
                 "IronPython",

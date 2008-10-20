@@ -369,16 +369,8 @@ namespace Microsoft.Scripting.Runtime {
 
         #region Source Units
 
-        public SourceUnit CreateSnippet(string code) {
-            return CreateSnippet(code, null, SourceCodeKind.Statements);
-        }
-
         public SourceUnit CreateSnippet(string code, SourceCodeKind kind) {
             return CreateSnippet(code, null, kind);
-        }
-
-        public SourceUnit CreateSnippet(string code, string id) {
-            return CreateSnippet(code, id, SourceCodeKind.Statements);
         }
 
         public SourceUnit CreateSnippet(string code, string id, SourceCodeKind kind) {

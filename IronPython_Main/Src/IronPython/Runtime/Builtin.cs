@@ -787,15 +787,27 @@ namespace IronPython.Runtime {
             return string.Intern(s);
         }
 
+        public static bool isinstance(object o, [NotNull]PythonType typeinfo) {
+            return PythonOps.IsInstance(o, typeinfo);
+        }
+
+        public static bool isinstance(object o, [NotNull]PythonTuple typeinfo) {
+            return PythonOps.IsInstance(o, typeinfo);
+        }
+
         public static bool isinstance(object o, object typeinfo) {
             return PythonOps.IsInstance(o, typeinfo);
         }
 
-        public static bool issubclass(OldClass c, object typeinfo) {
+        public static bool issubclass([NotNull]OldClass c, object typeinfo) {
             return PythonOps.IsSubClass(c.TypeObject, typeinfo);
         }
 
-        public static bool issubclass(PythonType c, object typeinfo) {
+        public static bool issubclass([NotNull]PythonType c, object typeinfo) {
+            return PythonOps.IsSubClass(c, typeinfo);
+        }
+
+        public static bool issubclass([NotNull]PythonType c, [NotNull]PythonType typeinfo) {
             return PythonOps.IsSubClass(c, typeinfo);
         }
 

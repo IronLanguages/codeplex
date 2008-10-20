@@ -211,9 +211,11 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             public bool TryGetValue(SymbolId name, out object value) {
-                if (!_dict.TryGetValue(name, out value)) {
-                    value = _tracker.TryGetPackageAny(name);
+                if (_dict.TryGetValue(name, out value)) {
+                    return true;
                 }
+
+                value = _tracker.TryGetPackageAny(name);
                 return value != null;
             }
 

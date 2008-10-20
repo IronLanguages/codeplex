@@ -373,128 +373,13 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
-
-            Type funcType;
-
-            switch (typeArgs.Length) {
-                case 1:
-                    funcType = typeof(Func<>).MakeGenericType(typeArgs);
-                    break;
-                case 2:
-                    funcType = typeof(Func<,>).MakeGenericType(typeArgs);
-                    break;
-                case 3:
-                    funcType = typeof(Func<,,>).MakeGenericType(typeArgs);
-                    break;
-                case 4:
-                    funcType = typeof(Func<,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 5:
-                    funcType = typeof(Func<,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 6:
-                    funcType = typeof(Func<,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 7:
-                    funcType = typeof(Func<,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 8:
-                    funcType = typeof(Func<,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 9:
-                    funcType = typeof(Func<,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 10:
-                    funcType = typeof(Func<,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 11:
-                    funcType = typeof(Func<,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 12:
-                    funcType = typeof(Func<,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 13:
-                    funcType = typeof(Func<,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 14:
-                    funcType = typeof(Func<,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 15:
-                    funcType = typeof(Func<,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 16:
-                    funcType = typeof(Func<,,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 17:
-                    funcType = typeof(Func<,,,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                default:
-                    throw Error.IncorrectNumberOfTypeArgsForFunc();
-            }
-            return funcType;
+            return DelegateHelpers.GetFuncType(typeArgs);
         }
+
         //CONFORMING
         public static Type GetActionType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
-
-            Type actionType;
-
-            switch (typeArgs.Length) {
-                case 0:
-                    actionType = typeof(Action);
-                    break;
-                case 1:
-                    actionType = typeof(Action<>).MakeGenericType(typeArgs);
-                    break;
-                case 2:
-                    actionType = typeof(Action<,>).MakeGenericType(typeArgs);
-                    break;
-                case 3:
-                    actionType = typeof(Action<,,>).MakeGenericType(typeArgs);
-                    break;
-                case 4:
-                    actionType = typeof(Action<,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 5:
-                    actionType = typeof(Action<,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 6:
-                    actionType = typeof(Action<,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 7:
-                    actionType = typeof(Action<,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 8:
-                    actionType = typeof(Action<,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 9:
-                    actionType = typeof(Action<,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 10:
-                    actionType = typeof(Action<,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 11:
-                    actionType = typeof(Action<,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 12:
-                    actionType = typeof(Action<,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 13:
-                    actionType = typeof(Action<,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 14:
-                    actionType = typeof(Action<,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 15:
-                    actionType = typeof(Action<,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                case 16:
-                    actionType = typeof(Action<,,,,,,,,,,,,,,,>).MakeGenericType(typeArgs);
-                    break;
-                default:
-                    throw Error.IncorrectNumberOfTypeArgsForAction();
-            }
-            return actionType;
+            return DelegateHelpers.GetActionType(typeArgs);
         }
     }
 }

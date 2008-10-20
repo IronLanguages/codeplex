@@ -29,7 +29,7 @@
     <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>
     <DelaySign>true</DelaySign>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -104,7 +104,7 @@
     <DocumentationFile>..\..\Bin\Silverlight Debug\Microsoft.Scripting.xml</DocumentationFile>
     <NoWarn>1591,618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -117,7 +117,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30523.8</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
@@ -325,7 +325,6 @@
     <Compile Include="Runtime\TokenTriggers.cs" />
     <Compile Include="Utils\CollectionExtensions.cs" />
     <Compile Include="Utils\CopyOnWriteList.cs" />
-    <Compile Include="Utils\Extension.cs" />
     <Compile Include="Utils\ListEqualityComparer.cs" />
     <Compile Include="Utils\MathUtils.cs" />
     <Compile Include="Utils\Publisher.cs" />
@@ -475,6 +474,10 @@
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting.Core</Name>
       <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Scripting.Core\Microsoft.Scripting.ExtensionAttribute.csproj">
+      <Project>{8B0F1074-750E-4D64-BF23-A1E0F54261E5}</Project>
+      <Name>Microsoft.Scripting.ExtensionAttribute</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

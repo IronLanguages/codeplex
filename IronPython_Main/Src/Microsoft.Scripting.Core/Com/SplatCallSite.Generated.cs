@@ -80,6 +80,36 @@ namespace Microsoft.Scripting.Com {
             return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
         }
 
+        [Obsolete("used by generated code", true)]
+        public static object CallHelper10(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+            return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]);
+        }
+
+        [Obsolete("used by generated code", true)]
+        public static object CallHelper11(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+            return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10]);
+        }
+
+        [Obsolete("used by generated code", true)]
+        public static object CallHelper12(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+            return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11]);
+        }
+
+        [Obsolete("used by generated code", true)]
+        public static object CallHelper13(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+            return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12]);
+        }
+
+        [Obsolete("used by generated code", true)]
+        public static object CallHelper14(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+            return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13]);
+        }
+
+        [Obsolete("used by generated code", true)]
+        public static object CallHelper15(CallSite<Func<CallSite, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>> site, object[] args) {
+            return site.Target(site, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14]);
+        }
+
 
         // *** END GENERATED CODE ***
 

@@ -65,6 +65,36 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(ActionBinder binder) {
+            return DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>.Create(OldCallAction.Make(binder, 8));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>(ActionBinder binder) {
+            return DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>.Create(OldCallAction.Make(binder, 9));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet>(ActionBinder binder) {
+            return DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet>.Create(OldCallAction.Make(binder, 10));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet>(ActionBinder binder) {
+            return DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet>.Create(OldCallAction.Make(binder, 11));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet>(ActionBinder binder) {
+            return DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet>.Create(OldCallAction.Make(binder, 12));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TRet> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TRet>(ActionBinder binder) {
+            return DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TRet>.Create(OldCallAction.Make(binder, 13));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
         public static void CreateSimpleCallSite<T0, TRet>(ActionBinder binder, ref DynamicSite<T0, TRet> site) {
             if (!site.IsInitialized) {
                 site.EnsureInitialized(OldCallAction.Make(binder, 0));
@@ -117,6 +147,48 @@ namespace Microsoft.Scripting.Actions {
         public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, TRet> site) {
             if (!site.IsInitialized) {
                 site.EnsureInitialized(OldCallAction.Make(binder, 7));
+            }
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet> site) {
+            if (!site.IsInitialized) {
+                site.EnsureInitialized(OldCallAction.Make(binder, 8));
+            }
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet> site) {
+            if (!site.IsInitialized) {
+                site.EnsureInitialized(OldCallAction.Make(binder, 9));
+            }
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TRet> site) {
+            if (!site.IsInitialized) {
+                site.EnsureInitialized(OldCallAction.Make(binder, 10));
+            }
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TRet> site) {
+            if (!site.IsInitialized) {
+                site.EnsureInitialized(OldCallAction.Make(binder, 11));
+            }
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TRet> site) {
+            if (!site.IsInitialized) {
+                site.EnsureInitialized(OldCallAction.Make(binder, 12));
+            }
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static void CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TRet>(ActionBinder binder, ref DynamicSite<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TRet> site) {
+            if (!site.IsInitialized) {
+                site.EnsureInitialized(OldCallAction.Make(binder, 13));
             }
         }
 

@@ -88,6 +88,7 @@ namespace Chiron {
         private static IList<Uri> GetLanguageAssemblies(IEnumerable<LanguageInfo> langs) {
             List<Uri> assemblies = new List<Uri>();
             assemblies.Add(GetUri("Microsoft.Scripting.Silverlight.dll"));
+            assemblies.Add(GetUri("Microsoft.Scripting.ExtensionAttribute.dll"));
             assemblies.Add(GetUri("Microsoft.Scripting.Core.dll"));
             assemblies.Add(GetUri("Microsoft.Scripting.dll"));
             foreach (LanguageInfo lang in langs) {

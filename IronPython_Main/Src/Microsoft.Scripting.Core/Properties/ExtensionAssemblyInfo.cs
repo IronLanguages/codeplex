@@ -16,18 +16,17 @@
 using System; using Microsoft;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Microsoft.Scripting")]
+[assembly: AssemblyTitle("Microsoft.Scripting.ExtensionAttribute")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("Microsoft.Scripting")]
+[assembly: AssemblyProduct("Microsoft.Scripting.ExtensionAttribute")]
 [assembly: AssemblyCopyright("© Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -40,7 +39,7 @@ using System.Security;
 [assembly: CLSCompliant(true)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("1bbee69c-30c5-41df-8912-b81da6d658c2")]
+[assembly: Guid("b828a36d-f568-48a7-9bdd-412b0a1bfa32")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -55,9 +54,8 @@ using System.Security;
 
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
-
 #if !SILVERLIGHT
-[assembly: AssemblyVersion("1.0.0.0000")]
+[assembly: AssemblyVersion("1.0.0.5000")]
 [assembly: AssemblyFileVersion("1.0.0.00")]
 [assembly: AssemblyInformationalVersion("1.0")]
 [assembly: AllowPartiallyTrustedCallers]

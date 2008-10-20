@@ -18,7 +18,7 @@ import clr
 from System import *
 
 #This is currently set as MAX_CALL_ARGS + 1 to include the target function as well
-MaxSiteArity = 8
+MaxSiteArity = 14
 
 def gsig(n):
     return ", ".join(["T%d" % i for i in range(n)] + ["TRet"])

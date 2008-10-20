@@ -785,6 +785,14 @@ def test_sta_sleep_Warning():
     ipi = IronPythonInstance(executable, exec_prefix, '-c "from System.Threading import Thread;Thread.Sleep(100)"')    
     retval, stdouttext, stderrtext, exitcode = ipi.StartAndRunToCompletion()
     AreEqual(stderrtext, "warning: RuntimeWarning: Calling Thread.Sleep on an STA thread doesn't pump messages.  Use Thread.CurrentThread.Join instead.\r\n")
+
+def test_newline():
+    ipi = IronPythonInstance(executable, exec_prefix, "")
+    ipi.proc.Start()
+    ipi.reader = ipi.proc.StandardOutput
+    output = ipi.EatToPrompt()
+    Assert('\r\r\n' not in output)
+    Assert('\r\n' in output)
     
 #------------------------------------------------------------------------------
 run_test(__name__)

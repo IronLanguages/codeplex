@@ -66,11 +66,13 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public MemberTracker TryGetPackageLazy(SymbolId name) {
-            MemberTracker ret;
-            if (_dict.TryGetValue(SymbolTable.IdToString(name), out ret)) {
-                return ret;
+            lock (this) {
+                MemberTracker ret;
+                if (_dict.TryGetValue(SymbolTable.IdToString(name), out ret)) {
+                    return ret;
+                }
+                return null;
             }
-            return null;
         }
 
         /// <summary>

@@ -44,7 +44,7 @@ namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
 
     public sealed class PythonContext : LanguageContext {
-        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.0 Beta";
+        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.0";
         internal const string/*!*/ IronPythonNames = "IronPython;Python;py";
         internal const string/*!*/ IronPythonFileExtensions = ".py";
 
@@ -1432,12 +1432,12 @@ namespace IronPython.Runtime {
 
 #if DEBUG
             try {
-                Debug.Assert(Assembly.GetExecutingAssembly().GetName().Version.ToString() == "2.0.0.5000");
+                Debug.Assert(Assembly.GetExecutingAssembly().GetName().Version.ToString() == "2.0.0.0");
             } catch (SecurityException) {
             }
 #endif
 
-            return baseName + ", Version=2.0.0.5000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+            return baseName + ", Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
 #else
             return baseName;
 #endif

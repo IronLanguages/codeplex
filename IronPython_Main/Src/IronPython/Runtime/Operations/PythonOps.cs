@@ -249,6 +249,19 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeError("bad operand type for unary -");
         }
 
+        public static bool IsSubClass(PythonType/*!*/ c, PythonType/*!*/ typeinfo) {
+            Assert.NotNull(c, typeinfo);
+
+            if (typeinfo.UnderlyingSystemType.IsInterface) {
+                // interfaces aren't in bases, and therefore IsSubclassOf doesn't do this check.
+                if (typeinfo.UnderlyingSystemType.IsAssignableFrom(c.UnderlyingSystemType)) {
+                    return true;
+                }
+            }
+
+            return c.IsSubclassOf(typeinfo);
+        }
+
         public static bool IsSubClass(PythonType c, object typeinfo) {
             if (c == null) throw PythonOps.TypeError("issubclass: arg 1 must be a class");
             if (typeinfo == null) throw PythonOps.TypeError("issubclass: arg 2 must be a class");
@@ -303,14 +316,38 @@ namespace IronPython.Runtime.Operations {
                 return false;
             }
 
-            if (dt.UnderlyingSystemType.IsInterface) {
-                // interfaces aren't in bases, and therefore IsSubclassOf doesn't do this check.
-                if (dt.UnderlyingSystemType.IsAssignableFrom(c.UnderlyingSystemType)) {
-                    return true;
-                }
-            } 
+            return IsSubClass(c, dt);
+        }
 
-            return c.IsSubclassOf(dt);
+        public static bool IsInstance(object o, PythonType typeinfo) {
+            PythonType odt = DynamicHelpers.GetPythonType(o);
+            if (IsSubClass(odt, typeinfo)) {
+                return true;
+            }
+
+            return IsInstanceDynamic(o, typeinfo, odt);
+        }
+
+        public static bool IsInstance(object o, PythonTuple typeinfo) {
+            foreach (object type in typeinfo) {
+                try {
+                    PythonOps.FunctionPushFrame();
+                    if (type is PythonType) {
+                        if (IsInstance(o, (PythonType)type)) {
+                            return true;
+                        }
+                    } else if (type is PythonTuple) {
+                        if (IsInstance(o, (PythonTuple)type)) {
+                            return true;
+                        }
+                    } else if (IsInstance(o, type)) {
+                        return true;
+                    }
+                } finally {
+                    PythonOps.FunctionPopFrame();
+                }
+            }
+            return false;
         }
 
         public static bool IsInstance(object o, object typeinfo) {
@@ -318,15 +355,7 @@ namespace IronPython.Runtime.Operations {
 
             PythonTuple tt = typeinfo as PythonTuple;
             if (tt != null) {
-                foreach (object type in tt) {
-                    try {
-                        PythonOps.FunctionPushFrame();
-                        if (IsInstance(o, type)) return true;
-                    } finally {
-                        PythonOps.FunctionPopFrame();
-                    }
-                }
-                return false;
+                return IsInstance(o, tt);
             }
 
             if (typeinfo is OldClass) {
@@ -343,10 +372,20 @@ namespace IronPython.Runtime.Operations {
                 return true;
             }
 
-            object cls;
-            if (PythonOps.TryGetBoundAttr(o, Symbols.Class, out cls) &&
-                (!object.ReferenceEquals(odt, cls))) {
-                return IsSubclassSlow(cls, typeinfo);
+            return IsInstanceDynamic(o, typeinfo);
+        }
+
+        private static bool IsInstanceDynamic(object o, object typeinfo) {
+            return IsInstanceDynamic(o, typeinfo, DynamicHelpers.GetPythonType(o));
+        }
+
+        private static bool IsInstanceDynamic(object o, object typeinfo, PythonType odt) {
+            if (o is IPythonObject || o is OldInstance) {
+                object cls;
+                if (PythonOps.TryGetBoundAttr(o, Symbols.Class, out cls) &&
+                    (!object.ReferenceEquals(odt, cls))) {
+                    return IsSubclassSlow(cls, typeinfo);
+                }
             }
             return false;
         }

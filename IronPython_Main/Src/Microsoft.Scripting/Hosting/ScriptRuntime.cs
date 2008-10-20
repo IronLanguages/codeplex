@@ -254,11 +254,7 @@ namespace Microsoft.Scripting.Hosting {
                 throw new ArgumentException(String.Format("File extension '{0}' is not associated with any language.", extension));
             }
 
-            ScriptSource source = engine.CreateScriptSourceFromFile(path, StringUtils.DefaultEncoding);
-            ScriptScope scope = engine.CreateScope();
-            source.Execute(scope);
-
-            return scope;
+            return engine.ExecuteFile(path);
         }
 
         /// <exception cref="ArgumentNullException">path is null</exception>

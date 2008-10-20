@@ -413,4 +413,16 @@ def test_clr_addreference():
     
     Assert(x.find("Adds a reference to a .NET assembly.") != -1)
 
+@skip("win32", "silverlight")
+def test_paramrefs():
+    # System.DateTime.Parse (for example) has a paramrefs in its help text which get substitued
+    # by paramnames.
+    import System
+    sys.stdout = stdout_reader()
+    help(System.DateTime.Parse)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+       
+    Assert(x.find("A System.DateTime equivalent to the date and time contained in s.") != -1)
+
 run_test(__name__)

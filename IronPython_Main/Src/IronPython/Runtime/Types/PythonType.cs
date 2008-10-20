@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Types {
 
         // commonly calculatable
         private List<PythonType> _resolutionOrder;          // the search order for methods in the type
-        private List<PythonType>/*!*/ _bases;               // the base classes of the type
+        private PythonType/*!*/[]/*!*/ _bases;              // the base classes of the type
         private BuiltinFunction _ctor;                      // the built-in function which allocates an instance - a .NET ctor
 
         // fields that frequently remain null
@@ -87,7 +87,6 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         /// <param name="underlyingSystemType"></param>
         internal PythonType(Type underlyingSystemType) {
-            _bases = new List<PythonType>(1);
             _underlyingSystemType = underlyingSystemType;
 
             InitializeSystemType();
@@ -105,9 +104,8 @@ namespace IronPython.Runtime.Types {
             IsSystemType = baseType.IsSystemType;
             IsPythonType = baseType.IsPythonType;
             Name = name;
-            _bases = new List<PythonType>(1);
-            _bases.Add(baseType);
-            ResolutionOrder = Mro.Calculate(this, new PythonType[] { baseType });
+            _bases = new PythonType[] { baseType };
+            ResolutionOrder = Mro.Calculate(this, _bases);
         }
 
         /// <summary>
@@ -145,7 +143,7 @@ namespace IronPython.Runtime.Types {
             List<PythonType> mro = new List<PythonType>();
             mro.Add(this);
 
-            _bases = ocs; 
+            _bases = ocs.ToArray(); 
             _resolutionOrder = mro;
             AddSlot(Symbols.Class, new PythonTypeValueSlot(this));
         }
@@ -666,7 +664,7 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         internal IList<PythonType>/*!*/ BaseTypes {
             get {
-                lock (_bases) return _bases.ToArray();
+                return _bases;
             }
             set {
                 // validate input...
@@ -690,7 +688,7 @@ namespace IronPython.Runtime.Types {
                     }
 
                     UpdateVersion();
-                    _bases = newBases;
+                    _bases = newBases.ToArray();
                 }
             }
         }
@@ -709,12 +707,16 @@ namespace IronPython.Runtime.Types {
                 return true;
             }
 
-            // check the type hierarchy
-            List<PythonType> bases = _bases;
-            for (int i = 0; i < bases.Count; i++) {
-                PythonType baseClass = bases[i];
+            return IsSubclassWorker(other);
+        }
 
-                if (baseClass.IsSubclassOf(other)) return true;
+        private bool IsSubclassWorker(PythonType other) {
+            for (int i = 0; i < _bases.Length; i++) {
+                PythonType baseClass = _bases[i];
+
+                if (baseClass == other || baseClass.IsSubclassWorker(other)) {
+                    return true;
+                }
             }
 
             return false;
@@ -732,14 +734,6 @@ namespace IronPython.Runtime.Types {
                 if (value) _attrs |= PythonTypeAttributes.SystemType;
                 else _attrs &= (~PythonTypeAttributes.SystemType);
             }
-        }
-
-        internal void AddBaseType(PythonType baseType) {
-            if (_bases == null) {
-                Interlocked.CompareExchange<List<PythonType>>(ref _bases, new List<PythonType>(), null);
-            }
-
-            lock (_bases) _bases.Add(baseType);
         }
 
         internal void SetConstructor(BuiltinFunction ctor) {
@@ -1422,7 +1416,7 @@ namespace IronPython.Runtime.Types {
 
             _name = name;
             _ctor = BuiltinFunction.MakeMethod(Name, _underlyingSystemType.GetConstructors(), _underlyingSystemType, FunctionType.Function);
-            _bases = GetBasesAsList(bases);
+            _bases = GetBasesAsList(bases).ToArray();
             _resolutionOrder = CalculateMro(this, _bases);
             _pythonContext = PythonContext.GetContext(context);
 
@@ -1560,7 +1554,7 @@ namespace IronPython.Runtime.Types {
                 } else {
                     baseType = _underlyingSystemType.BaseType;
                 }
-                _bases.Add(GetPythonType(baseType));
+                _bases = new PythonType[] { GetPythonType(baseType) };
 
                 Type curType = baseType;
                 while (curType != null) {
@@ -1577,12 +1571,22 @@ namespace IronPython.Runtime.Types {
                     AddSystemInterfaces(mro);
                 }
             } else if (_underlyingSystemType.IsInterface) {
-                foreach (Type i in _underlyingSystemType.GetInterfaces()) {
-                    PythonType it = DynamicHelpers.GetPythonTypeFromType(i);
+                // add interfaces to MRO & create bases list
+                Type[] interfaces = _underlyingSystemType.GetInterfaces();
+                PythonType[] bases = new PythonType[interfaces.Length];
+
+                for (int i = 0; i < interfaces.Length; i++) {
+                    Type iface = interfaces[i];
+                    PythonType it = DynamicHelpers.GetPythonTypeFromType(iface);
+
                     mro.Add(it);
-                    AddBaseType(it);
+                    bases[i] = it;
                 }
+                _bases = bases;
+            } else {
+                _bases = new PythonType[0];
             }
+
             _resolutionOrder = mro;
         }
 

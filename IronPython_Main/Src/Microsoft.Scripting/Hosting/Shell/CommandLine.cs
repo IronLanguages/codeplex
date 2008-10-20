@@ -125,7 +125,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected virtual int RunCommand(string command) {
-            return RunFile(_language.CreateSnippet(command));
+            return RunFile(_language.CreateSnippet(command, SourceCodeKind.Statements));
         }
 
         /// <summary>
