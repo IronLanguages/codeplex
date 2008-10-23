@@ -85,5 +85,9 @@ namespace Microsoft.Scripting.Actions.Calls {
         private int GetKeywordIndex(int paramCount) {
             return paramCount - _kwArgCount + _kwArgIndex;
         }
+
+        internal override Expression ByRefArgument {
+            get { return _builder.ByRefArgument; }
+        }
     }
 }

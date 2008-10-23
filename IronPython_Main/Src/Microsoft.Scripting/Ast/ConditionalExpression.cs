@@ -12,12 +12,14 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
+        [Obsolete("use Expression.Condition instead")]
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, SourceSpan span) {
             return Expression.Condition(test, ifTrue, ifFalse, Expression.Annotate(span));
         }

@@ -200,7 +200,7 @@ namespace IronPython.Compiler.Ast {
                     AstUtils.IfThen(
                         exc,
                         Ast.Dynamic(
-                            new InvokeBinder(
+                            new PythonInvokeBinder(
                                 ag.BinderState,
                                 new CallSignature(3)        // signature doesn't include function
                             ),
@@ -233,7 +233,7 @@ namespace IronPython.Compiler.Ast {
                 Binders.Invoke(
                     ag.BinderState,
                     typeof(object),
-                    new CallSignature(ArgumentKind.List),
+                    new CallSignature(ArgumentType.List),
                     exit,
                     Ast.Call(
                         AstGenerator.GetHelperMethod("GetExceptionInfoLocal"),

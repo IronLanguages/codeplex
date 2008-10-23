@@ -29,19 +29,19 @@ namespace IronPython.Runtime.Binding {
     /// Fallback action for performing a new() on a foreign IDynamicObject.  used
     /// when call falls back.
     /// </summary>
-    class CreateFallback : CreateAction, IPythonSite {
+    class CreateFallback : CreateInstanceBinder, IPythonSite {
         private readonly CompatibilityInvokeBinder/*!*/ _fallback;
 
-        public CreateFallback(CompatibilityInvokeBinder/*!*/ realFallback, IEnumerable<Argument/*!*/>/*!*/ arguments)
+        public CreateFallback(CompatibilityInvokeBinder/*!*/ realFallback, IEnumerable<ArgumentInfo/*!*/>/*!*/ arguments)
             : base(arguments) {
             _fallback = realFallback;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override MetaObject/*!*/ FallbackCreateInstance(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
             return _fallback.InvokeFallback(target, args, BindingHelpers.GetCallSignature(this));
         }
 
-        public override object HashCookie {
+        public override object CacheIdentity {
             get { return this; }
         }
 

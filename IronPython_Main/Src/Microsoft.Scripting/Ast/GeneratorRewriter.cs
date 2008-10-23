@@ -94,22 +94,20 @@ namespace Microsoft.Scripting.Ast {
             var allVars = new List<ParameterExpression>(_vars);
             allVars.AddRange(_temps);
 
-            body = Expression.Scope(
+            body = Expression.Comma(
+                allVars,
                 Expression.Lambda(
                     generatorNextOfT,
-                    Expression.Scope(
-                        Expression.Block(
-                            Expression.Switch(Expression.Assign(_gotoRouter, _state), cases),
-                            body,
-                            Expression.Assign(_state, Expression.Constant(Finished)),
-                            Expression.Label(_returnLabels.Peek())
-                        ),
-                        _gotoRouter
+                    Expression.Block(
+                        new ParameterExpression[] { _gotoRouter },
+                        Expression.Switch(Expression.Assign(_gotoRouter, _state), cases),
+                        body,
+                        Expression.Assign(_state, Expression.Constant(Finished)),
+                        Expression.Label(_returnLabels.Peek())
                     ),
                     _state,
                     _current
-                ),
-                allVars
+                )
             );
 
             // Enumerable factory takes Func<GeneratorNext<T>> instead of GeneratorNext<T>
@@ -150,7 +148,7 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
-        private Block ToTemp(ref ReadOnlyCollection<Expression> args) {
+        private BlockExpression ToTemp(ref ReadOnlyCollection<Expression> args) {
             int count = args.Count;
             var block = new Expression[count];
             var newArgs = new Expression[count];
@@ -164,7 +162,7 @@ namespace Microsoft.Scripting.Ast {
 
         #region VisitTry
 
-        protected override Expression VisitTry(TryStatement node) {
+        protected override Expression VisitTry(TryExpression node) {
             int startYields = _yields.Count;
 
             bool savedInTryWithFinally = _inTryWithFinally;
@@ -260,7 +258,7 @@ namespace Microsoft.Scripting.Ast {
                 }
 
                 block[1] = Expression.MakeTry(@try, null, null, null, new ReadOnlyCollection<CatchBlock>(handlers));
-                @try = Expression.Scope(Expression.Block(block), temps);
+                @try = Expression.Block(temps, block);
                 handlers = new CatchBlock[0]; // so we don't reuse these
             }
 
@@ -354,7 +352,7 @@ namespace Microsoft.Scripting.Ast {
 
         #endregion
 
-        private SwitchStatement MakeYieldRouter(int start, int end, LabelTarget newTarget) {
+        private SwitchExpression MakeYieldRouter(int start, int end, LabelTarget newTarget) {
             Debug.Assert(end > start);
             var cases = new SwitchCase[end - start];
             for (int i = start; i < end; i++) {
@@ -416,20 +414,28 @@ namespace Microsoft.Scripting.Ast {
             return Expression.Block(node.Annotations, block);
         }
 
-        protected override Expression VisitScope(ScopeExpression node) {
+        protected override Expression VisitBlock(BlockExpression node) {
             int yields = _yields.Count;
-            var b = Visit(node.Body);
-            if (b == node.Body) {
+            var b = Visit(node.Expressions);
+            if (b == node.Expressions) {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Scope(b, node.Name, node.Annotations, node.Variables);
+                return Expression.Comma(node.Annotations, node.Variables, b);
             }
 
-            // Remove scopes, save the variables for later
+            // save the variables for later
             // (they'll be hoisted outside of the lambda)
             _vars.AddRange(node.Variables);
-            return b;
+
+            //Return a new block expression with the rewritten body except for that
+            //all the variables are removed. The type of the result block is the same
+            //as the input block.
+            if (node.Type == typeof(void)) {
+                return Expression.Block(node.Annotations, null, b);
+            } else {
+                return Expression.Comma(node.Annotations, null, b);
+            }
         }
 
         protected override Expression VisitLambda(LambdaExpression node) {
@@ -485,7 +491,7 @@ namespace Microsoft.Scripting.Ast {
                 }
             } else {
                 // Get the last expression of the rewritten left side
-                var leftBlock = (Block)left;
+                var leftBlock = (BlockExpression)left;
                 left = leftBlock.Expressions[leftBlock.Expressions.Count - 1];
                 block.AddRange(leftBlock.Expressions);
                 block.RemoveAt(block.Count - 1);
@@ -683,7 +689,7 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        protected override Expression VisitThrow(ThrowStatement node) {
+        protected override Expression VisitThrow(ThrowExpression node) {
             int yields = _yields.Count;
             Expression v = Visit(node.Value);
             if (v == node.Value) {

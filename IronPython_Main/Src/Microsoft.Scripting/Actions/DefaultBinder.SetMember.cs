@@ -90,7 +90,7 @@ namespace Microsoft.Scripting.Actions {
                 self = null;
 
                 memInfo.Body.Restrictions = memInfo.Body.Restrictions.Merge(
-                    Restrictions.InstanceRestriction(target.Expression, target.Value)
+                    Restrictions.GetInstanceRestriction(target.Expression, target.Value)
                 );
             }
 

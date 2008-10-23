@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         protected override Expression VisitDynamic(DynamicExpression node) {
-            MetaAction metaBinder = node.Binder as MetaAction;
+            MetaObjectBinder metaBinder = node.Binder as MetaObjectBinder;
 
             if (metaBinder == null) {
                 // don't rewrite non meta-binder nodes, we can't compose them

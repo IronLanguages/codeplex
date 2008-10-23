@@ -27,11 +27,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitAddress(node, type, true);
         }
 
-        // TODO: need to remove the address-of support for some of the nodes
-        // marked below, because 1) it doesn't make sense (there is no IL
-        // equivalent), and/or 2) it's a breaking change from LinqV1
-        //
-        // We don't want to "ref" parameters to modify values of expressions
+        // We don't want "ref" parameters to modify values of expressions
         // except where it would in IL: locals, args, fields, and array elements
         // (Unbox is an exception, it's intended to emit a ref to the orignal
         // boxed value)
@@ -48,23 +44,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     AddressOf((BinaryExpression)node, type);
                     break;
 
-                // TODO: remove
-                case ExpressionType.Conditional:
-                    AddressOf((ConditionalExpression)node, type);
-                    break;
-
-                // TODO: remove
-                case ExpressionType.Assign:
-                    AddressOf((AssignmentExpression)node, type);
-                    break;
-
                 case ExpressionType.Parameter:
                     AddressOf((ParameterExpression)node, type);
-                    break;
-
-                // TODO: remove
-                case ExpressionType.Block:
-                    AddressOf((Block)node, type);
                     break;
 
                 case ExpressionType.MemberAccess:
@@ -114,19 +95,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        // TODO: remove !!!
-        private void AddressOf(AssignmentExpression node, Type type) {
-            var param = node.Expression as ParameterExpression;
-            if (param == null || param.Type != type) {
-                EmitExpressionAddress(node, type);
-                return;
-            }
-
-            EmitExpression(node.Value);
-            _scope.EmitSet(param);
-            _scope.EmitAddressOf(param);
-        }
-
         private void AddressOf(ParameterExpression node, Type type) {
             if (type == node.Type) {
                 if (node.IsByRef) {
@@ -136,40 +104,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             } else {
                 EmitExpressionAddress(node, type);
-            }
-        }
-
-        // TODO: remove !!!
-        private void AddressOf(ConditionalExpression node, Type type) {
-            Label eoi = _ilg.DefineLabel();
-            Label next = _ilg.DefineLabel();
-            EmitExpression(node.Test);
-            _ilg.Emit(OpCodes.Brfalse, next);
-            EmitAddress(node.IfTrue, type);
-            _ilg.Emit(OpCodes.Br, eoi);
-            _ilg.MarkLabel(next);
-            EmitAddress(node.IfFalse, type);
-            _ilg.MarkLabel(eoi);
-        }
-
-        // TODO: remove !!!
-        private void AddressOf(Block node, Type type) {
-            ReadOnlyCollection<Expression> expressions = node.Expressions;
-
-            // TODO: Do something better
-            if (node.Type == typeof(void)) {
-                throw Error.AddressOfVoidBlock();
-            }
-
-            for (int index = 0; index < expressions.Count; index++) {
-                Expression current = expressions[index];
-
-                // Emit the expression
-                if (index == expressions.Count - 1) {
-                    EmitAddress(current, type);
-                } else {
-                    EmitExpressionAsVoid(current);
-                }
             }
         }
 

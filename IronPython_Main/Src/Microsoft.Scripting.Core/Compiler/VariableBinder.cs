@@ -24,213 +24,163 @@ namespace Microsoft.Linq.Expressions.Compiler {
     /// be hoisted.
     /// </summary>
     internal sealed class VariableBinder : ExpressionTreeVisitor {
+        private readonly AnalyzedTree _tree = new AnalyzedTree();
+        private readonly Stack<CompilerScope> _scopes = new Stack<CompilerScope>();
+        private readonly Stack<BoundConstants> _constants = new Stack<BoundConstants>();
+        private bool _inQuote;
 
-        // The parent scope to the one we're binding, or null if we're binding
-        // the outermost scope
-        private readonly CompilerScope _parentScope;
+        internal static AnalyzedTree Bind(LambdaExpression lambda) {
+            var binder = new VariableBinder();
+            binder.VisitLambda(lambda);
+            return binder._tree;
+        }
 
-        // The scope/lambda we're binding
-        private readonly Expression _expression;
+        private VariableBinder() {
+        }
 
-        // A stack of variables that are defined in nested scopes. We search
-        // this first when resolving a variable in case a nested scope shadows
-        // one of our variable instances.
-        private readonly Stack<Set<ParameterExpression>> _hiddenVars = new Stack<Set<ParameterExpression>>();
+        protected internal override Expression VisitConstant(ConstantExpression node) {
+            // If we're in Quote, we can ignore constants completely
+            if (_inQuote) {
+                return node;
+            }
+            
+            // Constants that can be emitted into IL don't need to be stored on
+            // the delegate
+            if (ILGen.CanEmitConstant(node.Value, node.Type)) {
+                return node;
+            }
 
-        // For each variable in this scope: should it be hoisted to a closure?
-        private readonly Dictionary<ParameterExpression, bool> _hoistVariable = new Dictionary<ParameterExpression, bool>();
+            _constants.Peek().AddReference(node.Value, node.Type);
+            return node;
+        }
 
-        // For each variable referenced from this scope, this stores the
-        // reference count. If the variable is referenced "enough", we'll cache
-        // the closure StrongBox<T> into an IL local
-        private readonly Dictionary<ParameterExpression, int> _referenceCount = new Dictionary<ParameterExpression, int>();
-
-        // A list of variables in this scope, including merged ones.
-        // Needed so we can preserve the order
-        private readonly List<ParameterExpression> _myVariables = new List<ParameterExpression>();
-
-        // The lambda that contains the scope we're binding
-        // Or the lambda itself if we're binding a lambda
-        private readonly LambdaExpression _topLambda;
-
-        // The lambda that we're walking in
-        private LambdaExpression _currentLambda;
-
-        // Is this scope a closure?
-        // (references variables from an outer scope)
-        private bool _isClosure;
-
-        private VariableBinder(CompilerScope parent, Expression scope) {
-            _parentScope = parent;
-            _expression = scope;
-            if (scope.NodeType == ExpressionType.Scope) {
-                _topLambda = parent.Lambda;
+        protected internal override Expression VisitUnary(UnaryExpression node) {
+            if (node.NodeType == ExpressionType.Quote) {
+                bool savedInQuote = _inQuote;
+                _inQuote = true;
+                Visit(node.Operand);
+                _inQuote = savedInQuote;
             } else {
-                _topLambda = (LambdaExpression)scope;
+                Visit(node.Operand);
             }
-        }
-
-        /// <summary>
-        /// VariableBinder entry point. Binds the scope that is passed in.
-        /// </summary>
-        internal static CompilerScope Bind(CompilerScope parent, Expression scope) {
-            return new VariableBinder(parent, scope).Bind();
-        }
-
-        private bool InTopLambda {
-            get { return _currentLambda == _topLambda; }
-        }
-
-        private CompilerScope Bind() {
-            // Define variables on this scope
-            Expression body = DefineVariables();
-
-            // Merge with child scopes
-            Queue<Expression> mergedScopes = MergeScopes(ref body);
-
-            // Walk the body to figure out which variables to hoist
-            Visit(body);
-
-            var hoisted = new List<ParameterExpression>();
-            var locals = new List<ParameterExpression>();
-            foreach (var v in _myVariables) {
-                (_hoistVariable[v] ? hoisted : locals).Add(v);
-            }
-           
-            // Dummy variable for hoisted locals
-            ParameterExpression hoistedSelfVar = null;
-            if (hoisted.Count > 0) {
-                // store as an IL local
-                hoistedSelfVar = Expression.Variable(typeof(object[]), "$hoistedLocals");
-                locals.Add(hoistedSelfVar);
-            }
-
-            // Cache the StrongBox for hoisted variables into an IL local
-            var cached = new Set<ParameterExpression>();
-            foreach (var refCount in _referenceCount) {
-                // Cache in local if refcount > 2
-                // TODO: we need a smarter heuristic, especially with the new
-                // generators; we don't want tons of stuff pulled into locals
-                // each time we enter the generator
-                if (refCount.Value > 2) {
-                    cached.Add(refCount.Key);
-                }
-            }
-
-            return new CompilerScope(
-                _parentScope,
-                _expression,
-                _isClosure,
-                hoistedSelfVar,
-                new ReadOnlyCollection<ParameterExpression>(hoisted),
-                new ReadOnlyCollection<ParameterExpression>(locals),
-                mergedScopes,
-                cached
-            );
-        }
-
-        private Expression DefineVariables() {
-            Expression body;
-            if (_expression.NodeType == ExpressionType.Scope) {
-                ScopeExpression scope = (ScopeExpression)_expression;
-                foreach (var v in scope.Variables) {
-                    _myVariables.Add(v);
-                    _hoistVariable.Add(v, false);
-                }
-                body = scope.Body;
-            } else {
-                foreach (var v in _topLambda.Parameters) {
-                    _myVariables.Add(v);
-                    _hoistVariable.Add(v, false);
-                }
-                body = _topLambda.Body;
-            }
-            _currentLambda = _topLambda;
-            return body;
-        }
-
-        // If the immediate child is another scope, merge it into this one
-        // (This is an optimization to save environment allocations and
-        // array accesses)
-        private Queue<Expression> MergeScopes(ref Expression body) {
-            Queue<Expression> mergedScopes = new Queue<Expression>();
-
-            while (body.NodeType == ExpressionType.Scope) {
-                ScopeExpression scope = (ScopeExpression)body;
-                mergedScopes.Enqueue(scope);
-                foreach (var v in scope.Variables) {
-                    _myVariables.Add(v);
-                    _hoistVariable.Add(v, false);
-                }
-                body = scope.Body;
-            }
-
-            return mergedScopes;
-        }
-
-        private void Reference(ParameterExpression variable, bool hoist) {
-            // Skip variables that are shadowed by a nested scope/lambda
-            foreach (Set<ParameterExpression> hidden in _hiddenVars) {
-                if (hidden.Contains(variable)) {
-                    return;
-                }
-            }
-
-            // Increment the reference count
-            int refCount;
-            if (!_referenceCount.TryGetValue(variable, out refCount)) {
-                refCount = 0;
-            }
-            _referenceCount[variable] = refCount + 1;
-
-            // If it belongs to this scope, hoist it
-            if (_hoistVariable.ContainsKey(variable)) {
-                if (hoist) {
-                    if (variable.IsByRef) {
-                        throw Error.CannotCloseOverByRef(variable.Name, CompilerScope.GetName(_currentLambda) ?? "<unnamed>");
-                    }
-                    _hoistVariable[variable] = true;
-                }
-                return;
-            }
-
-            // If we don't have an outer scope, than it's an unbound reference
-            if (_parentScope == null) {
-                throw Error.UnboundVariable(variable.Name, CompilerScope.GetName(_currentLambda) ?? "<unnamed>");
-            }
-
-            // It belongs to an outer scope. Mark this scope as a closure
-            _isClosure = true;
-        }
-
-        protected internal override Expression VisitParameter(ParameterExpression node) {
-            Reference(node, !InTopLambda);
             return node;
         }
 
         protected internal override Expression VisitLambda(LambdaExpression node) {
-            LambdaExpression saved = _currentLambda;
-            _currentLambda = node;
-            _hiddenVars.Push(new Set<ParameterExpression>(node.Parameters));
-            Visit(node.Body);
-            _hiddenVars.Pop();
-            _currentLambda = saved;
+            _scopes.Push(_tree.Scopes[node] = new CompilerScope(node));
+            _constants.Push(_tree.Constants[node] = new BoundConstants());
+            Visit(MergeScopes(node));
+            _constants.Pop();
+            _scopes.Pop();
             return node;
         }
 
-        protected internal override Expression VisitScope(ScopeExpression node) {
-            _hiddenVars.Push(new Set<ParameterExpression>(node.Variables));
-            Visit(node.Body);
-            _hiddenVars.Pop();
+        protected internal override Expression VisitBlock(BlockExpression node) {
+            if (node.Variables.Count == 0) {
+                Visit(node.Expressions);
+                return node;
+            }
+            _scopes.Push(_tree.Scopes[node] = new CompilerScope(node));
+            Visit(MergeScopes(node));
+            _scopes.Pop();
             return node;
         }
 
-        protected internal override Expression VisitRuntimeVariables(LocalScopeExpression node) {
-            // Force hoisting of these variables
+        // If the immediate child is another scope, merge it into this one
+        // This is an optimization to save environment allocations and
+        // array accesses.
+        //
+        // TODO: is this an important optimization? Seems useful to merge
+        // lambdas scopes with immediately nested blocks, but it's rare that
+        // blocks would have only one element
+        private ReadOnlyCollection<Expression> MergeScopes(Expression node) {
+            ReadOnlyCollection<Expression> body;
+            var lambda = node as LambdaExpression;
+            if (lambda != null) {
+                body = new ReadOnlyCollection<Expression>(new[] { lambda.Body });
+            }  else {
+                body = ((BlockExpression)node).Expressions;
+            }
+
+            var currentScope = _scopes.Peek();
+            while (IsMergeable(body, node)) {
+                var block = (BlockExpression)body[0];
+
+                if (block.Variables.Count > 0) {
+                    currentScope.MergedScopes.Add(block);
+                    foreach (var v in block.Variables) {
+                        currentScope.Definitions.Add(v, VariableStorageKind.Local);
+                    }
+                }
+                node = block;
+                body = block.Expressions;
+            }
+            return body;
+        }
+
+        //A block body is mergeable if the body only contains one single block node containing variables,
+        //and the child block has the same type as the parent block.
+        private static bool IsMergeable(ReadOnlyCollection<Expression> body, Expression parent) {
+            return body.Count == 1 &&
+                   body[0].NodeType == ExpressionType.Block &&
+                   //TODO: the following check is only needed because we allow void blocks. 
+                   //It can be removed when that feature goes away.
+                   body[0].Type == parent.Type;
+        }
+
+
+        protected internal override Expression VisitParameter(ParameterExpression node) {
+            Helpers.IncrementCount(node, _scopes.Peek().ReferenceCount);
+            Reference(node, VariableStorageKind.Local);
+            return node;
+        }
+
+        protected internal override Expression VisitRuntimeVariables(RuntimeVariablesExpression node) {
             foreach (var v in node.Variables) {
-                Reference(v, true);
+                // Force hoisting of these variables
+                Reference(v, VariableStorageKind.Hoisted);
             }
             return node;
+        }
+
+        private void Reference(ParameterExpression node, VariableStorageKind storage) {
+            CompilerScope definition = null;
+            foreach (CompilerScope scope in _scopes) {
+                if (scope.Definitions.ContainsKey(node)) {
+                    definition = scope;
+                    break;
+                }
+                scope.NeedsClosure = true;
+                if (scope.Node.NodeType == ExpressionType.Lambda) {
+                    storage = VariableStorageKind.Hoisted;
+                }
+            }
+            if (definition == null) {
+                throw Error.UndefinedVariable(node.Name, node.Type, CurrentLambdaName);
+            }
+            if (storage == VariableStorageKind.Hoisted) {
+                if (node.IsByRef) {
+                    throw Error.CannotCloseOverByRef(node.Name, CurrentLambdaName);
+                }
+                definition.Definitions[node] = VariableStorageKind.Hoisted;
+            }
+        }
+
+        private CompilerScope LambdaScope {
+            get {
+                foreach (var scope in _scopes) {
+                    if (scope.Node.NodeType == ExpressionType.Lambda) {
+                        return scope;
+                    }
+                }
+                throw Assert.Unreachable;
+            }
+        }
+
+        private string CurrentLambdaName {
+            get {
+                return ((LambdaExpression)LambdaScope.Node).Name;
+            }
         }
     }
 }

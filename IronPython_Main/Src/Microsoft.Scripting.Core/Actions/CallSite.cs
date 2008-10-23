@@ -115,7 +115,7 @@ namespace Microsoft.Scripting.Actions {
             Target = target;
         }
 
-        private void AddRule(Rule<T> rule) {
+        private void AddRule(CallSiteRule<T> rule) {
             lock (this) {
                 _rules = _rules.AddRule(rule);
             }
@@ -133,13 +133,13 @@ namespace Microsoft.Scripting.Actions {
             //
             // Declare the locals here upfront. It actually saves JIT stack space.
             //
-            Rule<T>[] applicable;
-            Rule<T> rule;
+            CallSiteRule<T>[] applicable;
+            CallSiteRule<T> rule;
             T ruleTarget, startingTarget = Target;
             object result;
 
             int count, index;
-            Rule<T> originalMonomorphicRule = null;
+            CallSiteRule<T> originalMonomorphicRule = null;
 
             //
             // Create matchmaker, its site and reflected caller. We'll need them regardless.
@@ -159,7 +159,7 @@ namespace Microsoft.Scripting.Actions {
             //
             // Level 1 cache lookup
             //
-            IList<Rule<T>> history = siteRules.GetRules();
+            IList<CallSiteRule<T>> history = siteRules.GetRules();
 
             if (history != null) {
                 count = history.Count;
@@ -253,7 +253,7 @@ namespace Microsoft.Scripting.Actions {
 
             for (; ; ) {
                 // newRule is here just for debugging purposes to compare before & after templating
-                Rule<T> newRule = rule = CreateNewRule(originalMonomorphicRule, args);
+                CallSiteRule<T> newRule = rule = CreateNewRule(originalMonomorphicRule, args);
 
                 //
                 // Add the rule to the level 2 cache. This is an optimistic add so that cache miss
@@ -298,17 +298,18 @@ namespace Microsoft.Scripting.Actions {
             return new CallSite<T>(_binder, Matchmaker.CreateMatchMakingDelegate<T>(box));
         }
 
-        private Rule<T> CreateNewRule(Rule<T> originalMonomorphicRule, object[] args) {
-            Rule<T> rule = _binder.Bind<T>(args);
+        private CallSiteRule<T> CreateNewRule(CallSiteRule<T> originalMonomorphicRule, object[] args) {
+            Expression binding = _binder.Bind(args, CallSiteRule<T>.Parameters, CallSiteRule<T>.ReturnLabel);
 
             //
             // Check the produced rule
             //
-            if (rule == null || rule.Binding == null) {
+            if (binding == null) {
                 throw Error.NoOrInvalidRuleProduced();
             }
-            ExpressionWriter.Dump(rule, Binder);
 
+            var rule = new CallSiteRule<T>(binding);
+            ExpressionWriter.Dump(rule, Binder);
 
             if (originalMonomorphicRule != null) {
                 // compare our new rule and our original monomorphic rule.  If they only differ from constants

@@ -30,31 +30,32 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// BinderHelper for producing rules related to performing conversions.
     /// </summary>
-    public class ConvertToBinderHelper<T> : BinderHelper<T, OldConvertToAction> where T : class {
+    public class ConvertToBinderHelper : BinderHelper<OldConvertToAction> {
         private object _arg;
-        private RuleBuilder<T> _rule = new RuleBuilder<T>();
+        private readonly RuleBuilder _rule;
 
-        public ConvertToBinderHelper(CodeContext context, OldConvertToAction action, params object[] args)
+        public ConvertToBinderHelper(CodeContext context, OldConvertToAction action, object[] args, RuleBuilder rule)
             : base(context, action) {
             ContractUtils.Requires(args.Length == 1, "can only convert single argument");
 
             _arg = args[0];
+            _rule = rule;
         }
 
-        public RuleBuilder<T> MakeRule() {
+        public void MakeRule() {
             Type toType = Action.ToType;
             Type knownType = CompilerHelpers.GetVisibleType(_rule.Parameters[0].Type);
 
             // check for conversion to object first...
             if (TryConvertToObject(toType, knownType)) {
                 _rule.AddTest(Ast.Constant(true));
-                return _rule;
+                return;
             }
 
             // do checks that aren't based upon strongly knowing the object's type (and don't require tests)
             if (TryAllConversions(toType, knownType)) {
                 _rule.AddTest(Ast.Constant(true));
-                return _rule;
+                return;
             }
 
             // try again w/ a test for the known-type
@@ -62,18 +63,17 @@ namespace Microsoft.Scripting.Actions {
             _rule.AddTest(_rule.MakeTypeTest(type, 0));
 
             if (TryAllConversions(toType, type)) {
-                return _rule;
+                return;
             }
 
             // finally try conversions that aren't based upon the incoming type at all but
             // are last chance conversions based on the destination type
             if (TryExtraConversions(toType)) {
-                return _rule;
+                return;
             }
 
             // no conversion is available, make an error rule.
             MakeErrorTarget();
-            return _rule;
         }
 
         #region Conversion attempt helpers
@@ -221,7 +221,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private bool TryImplicitNumericConversion(Type toType, Type type) {
             Type checkType = type;
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Extensible<T>)) {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Extensible<>)) {
                 checkType = type.GetGenericArguments()[0];
             }
 

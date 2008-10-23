@@ -23,12 +23,12 @@ using Microsoft.Scripting.Runtime;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
-    public class CreateInstanceBinderHelper<T> : CallBinderHelper<T, OldCreateInstanceAction> where T : class {
-        public CreateInstanceBinderHelper(CodeContext context, OldCreateInstanceAction action, object[] args)
-            : base(context, action, args) {
+    public class CreateInstanceBinderHelper : CallBinderHelper<OldCreateInstanceAction> {
+        public CreateInstanceBinderHelper(CodeContext context, OldCreateInstanceAction action, object[] args, RuleBuilder rule)
+            : base(context, action, args, rule) {
         }
 
-        public override RuleBuilder<T> MakeRule() {
+        public override void MakeRule() {
             base.MakeRule();
 
             if (Rule.IsError) {
@@ -47,8 +47,6 @@ namespace Microsoft.Scripting.Actions {
                     );
                 }
             }
-
-            return Rule;
         }
 
         private static MethodInfo GetDelegateCtor(Type t) {

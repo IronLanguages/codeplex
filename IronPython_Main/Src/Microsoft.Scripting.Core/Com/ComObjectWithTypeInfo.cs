@@ -26,7 +26,7 @@ using Microsoft.Scripting.Utils;
 using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// A COM object can expose its type information in two ways:

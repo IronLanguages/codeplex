@@ -34,7 +34,7 @@ using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace IronPython.Runtime.Binding {
     
-    class ConversionBinder : ConvertAction, IPythonSite, IExpressionSerializable  {
+    class ConversionBinder : ConvertBinder, IPythonSite, IExpressionSerializable  {
         private readonly BinderState/*!*/ _state;
         private readonly ConversionResultKind/*!*/ _kind;
 
@@ -52,12 +52,12 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public override MetaObject Fallback(MetaObject self, MetaObject onBindingError) {
+        public override MetaObject FallbackConvert(MetaObject self, MetaObject onBindingError) {
             if (self.NeedsDeferral()) {
                 return Defer(self);
             }
 
-            Type type = ToType;
+            Type type = Type;
 
             MetaObject res = null;
             switch (Type.GetTypeCode(type)) {
@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Binding {
                                     typeof(StringOps).GetMethod("ConvertToIEnumerable"),
                                     Ast.ConvertHelper(self.Expression, typeof(string))
                                 ),
-                                Restrictions.TypeRestriction(self.Expression, typeof(string))
+                                Restrictions.GetTypeRestriction(self.Expression, typeof(string))
                             );
                         } else if (!typeof(IEnumerable).IsAssignableFrom(self.LimitType) && IsIndexless(self)) {
                             res = PythonProtocol.ConvertToIEnumerable(this, self.Restrict(self.LimitType));
@@ -121,12 +121,12 @@ namespace IronPython.Runtime.Binding {
                             Ast.ConvertHelper(self.Expression, typeof(object))
                         )
                     ),
-                    self.Restrictions.Merge(Restrictions.TypeRestriction(self.Expression, self.LimitType)),
+                    self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, self.LimitType)),
                     value
                 );
             }
 
-            return res ?? Binder.Binder.ConvertTo(ToType, ResultKind, self);
+            return res ?? Binder.Binder.ConvertTo(Type, ResultKind, self);
         }
 
         private static bool IsIndexless(MetaObject/*!*/ arg) {
@@ -135,7 +135,7 @@ namespace IronPython.Runtime.Binding {
                 arg.LimitType != typeof(BuiltinMethodDescriptor);
         }
 
-        public override object HashCookie {
+        public override object CacheIdentity {
             get { return this; }
         }
 
@@ -233,7 +233,7 @@ namespace IronPython.Runtime.Binding {
                             typeof(string).GetMethod("get_Chars"),
                             Ast.Constant(0)
                         ),
-                        self.Restrictions.Merge(Restrictions.ExpressionRestriction(Ast.Equal(getLen, Ast.Constant(1))))
+                        self.Restrictions.Merge(Restrictions.GetExpressionRestriction(Ast.Equal(getLen, Ast.Constant(1))))
                     );
                 } else {
                     res = new MetaObject(
@@ -244,7 +244,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.NewArrayInit(typeof(object), self.Expression)
                             )
                         ),
-                        self.Restrictions.Merge(Restrictions.ExpressionRestriction(Ast.NotEqual(getLen, Ast.Constant(1))))
+                        self.Restrictions.Merge(Restrictions.GetExpressionRestriction(Ast.NotEqual(getLen, Ast.Constant(1))))
                     );
                 }
             } else {
@@ -328,7 +328,7 @@ namespace IronPython.Runtime.Binding {
         #endregion
 
         public override string ToString() {
-            return String.Format("Python Convert {0} {1}", ToType, ResultKind);
+            return String.Format("Python Convert {0} {1}", Type, ResultKind);
         }
 
         #region IExpressionSerializable Members
@@ -337,7 +337,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeConversionAction"),
                 BindingHelpers.CreateBinderStateExpression(),
-                Ast.Constant(ToType),
+                Ast.Constant(Type),
                 Ast.Constant(ResultKind)
             );
         }

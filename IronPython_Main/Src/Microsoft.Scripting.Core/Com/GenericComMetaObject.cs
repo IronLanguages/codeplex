@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class GenericComMetaObject : MetaObject {
         internal GenericComMetaObject(Expression expression, Restrictions restrictions, object arg)
             : base(expression, restrictions, arg) {
@@ -27,9 +27,9 @@ namespace Microsoft.Scripting.Com {
 
         #region MetaObject
 
-        public override MetaObject Convert(ConvertAction action) {
+        public override MetaObject BindConvert(ConvertBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            if (action.ToType.IsInterface) {
+            if (action.Type.IsInterface) {
                 // Converting a COM object to any interface is always considered possible - it will result in 
                 // a QueryInterface at runtime
                 return new MetaObject(
@@ -38,13 +38,13 @@ namespace Microsoft.Scripting.Com {
                              Expression.ConvertHelper(Expression, typeof(GenericComObject)),
                              typeof(ComObject).GetProperty("Obj")
                          ),
-                         action.ToType
+                         action.Type
                      ),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, LimitType))
+                    Restrictions.Merge(Restrictions.GetTypeRestriction(Expression, LimitType))
                 );
             }
 
-            return base.Convert(action);
+            return base.BindConvert(action);
         }
 
         #endregion

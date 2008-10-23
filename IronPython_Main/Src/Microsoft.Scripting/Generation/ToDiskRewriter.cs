@@ -22,21 +22,28 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System.Threading;
 
 namespace Microsoft.Scripting.Generation {
 
     /// <summary>
     /// Serializes constants and dynamic sites so the code can be saved to disk
     /// </summary>
-    internal sealed class ToDiskRewriter : GlobalArrayRewriter {
+    internal sealed class ToDiskRewriter : StaticLambdaRewriter {
+        private static int _uniqueNameId;
         private List<Expression> _constants;
         private ParameterExpression _constantPool;
         private Dictionary<Type, Type> _delegateTypes;
         private int _depth;
+        private readonly TypeGen _typeGen;
 
-        internal ToDiskRewriter(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict)
-            : base(symbolDict) {
-            TypeGen = typeGen;
+        internal ToDiskRewriter(TypeGen typeGen) {
+            _typeGen = typeGen;
+        }
+
+        public LambdaExpression RewriteLambda(LambdaExpression lambda) {
+            return (LambdaExpression)VisitLambda(lambda);
         }
 
         protected override Expression VisitLambda(LambdaExpression node) {
@@ -47,30 +54,32 @@ namespace Microsoft.Scripting.Generation {
                 // constants we need to rewrite.
                 node = (LambdaExpression)base.VisitLambda(node);
 
-                // Only rewrite if we have constants and this is the top lambda
-                if (_constants == null || _depth != 1) {
+                if (_depth != 1) {
                     return node;
                 }
 
-                // Rewrite the constants, they can contain embedded
-                // CodeContextExpressions
-                for (int i = 0; i < _constants.Count; i++) {
-                    _constants[i] = Visit(_constants[i]);
+                var body = node.Body;
+
+                if (_constants != null) {
+                    // Rewrite the constants, they can contain embedded
+                    // CodeContextExpressions
+                    for (int i = 0; i < _constants.Count; i++) {
+                        _constants[i] = Visit(_constants[i]);
+                    }
+
+                    // Add the consant pool variable to the top lambda
+                    body = AstUtils.AddScopedVariable(
+                        body,
+                        _constantPool,
+                        Expression.NewArrayInit(typeof(object), _constants)
+                    );
                 }
 
-                // Add the consant pool variable to the top lambda
-                Expression body = AddScopedVariable(
-                    node.Body,
-                    _constantPool,
-                    Expression.NewArrayInit(typeof(object), _constants)
-                );
-
                 // Rewrite the lambda
-                Debug.Assert(node.NodeType == ExpressionType.Lambda);
                 return Expression.Lambda(
                     node.Type,
                     body,
-                    node.Name,
+                    node.Name + "$" + Interlocked.Increment(ref _uniqueNameId),
                     node.Annotations,
                     node.Parameters
                 );
@@ -81,15 +90,13 @@ namespace Microsoft.Scripting.Generation {
         }
 
         protected override Expression VisitExtension(Expression node) {
-            Expression res = base.VisitExtension(node);
-
             if (node.NodeType == ExpressionType.Dynamic) {
                 // the node was dynamic, the dynamic nodes were removed,
                 // we now need to rewrite any call sites.
-                return VisitDynamic((DynamicExpression)res);
+                return VisitDynamic((DynamicExpression)node);
             }
 
-            return res;
+            return base.VisitExtension(node);
         }
 
         protected override Expression VisitConstant(ConstantExpression node) {
@@ -131,7 +138,7 @@ namespace Microsoft.Scripting.Generation {
             if (!_delegateTypes.TryGetValue(delegateType, out newDelegateType)) {
                 MethodInfo invoke = delegateType.GetMethod("Invoke");
 
-                newDelegateType = TypeGen.AssemblyGen.MakeDelegateType(
+                newDelegateType = _typeGen.AssemblyGen.MakeDelegateType(
                     delegateType.Name,
                     invoke.GetParameters().Map(p => p.ParameterType),
                     invoke.ReturnType
@@ -161,7 +168,7 @@ namespace Microsoft.Scripting.Generation {
                 return true;
             }
 
-            if (Snippets.Shared.SaveSnippets && module.Assembly != TypeGen.AssemblyGen.AssemblyBuilder) {
+            if (Snippets.Shared.SaveSnippets && module.Assembly != _typeGen.AssemblyGen.AssemblyBuilder) {
                 return true;
             }
 

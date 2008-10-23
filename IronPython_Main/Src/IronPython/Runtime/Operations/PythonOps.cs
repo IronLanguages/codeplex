@@ -998,7 +998,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    foreach (string name in Microsoft.Scripting.Com.ComObject.ObjectToComObject(o).MemberNames) {
+                    foreach (string name in Microsoft.Scripting.ComInterop.ComObject.ObjectToComObject(o).MemberNames) {
                         if (!res.Contains(name)) {
                             res.AddNoLock(name);
                         }
@@ -2797,20 +2797,20 @@ namespace IronPython.Runtime.Operations {
             return NotImplementedType.Value;
         }
 
-        public static MetaAction MakeListCallAction(int count) {
-            ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count);
-            infos[count - 1] = new ArgumentInfo(ArgumentKind.List);
+        public static MetaObjectBinder MakeListCallAction(int count) {
+            Argument[] infos = CompilerHelpers.MakeRepeatedArray(Argument.Simple, count);
+            infos[count - 1] = new Argument(ArgumentType.List);
 
-            return new InvokeBinder(
+            return new PythonInvokeBinder(
                 DefaultContext.DefaultPythonContext.DefaultBinderState,
                 new CallSignature(infos)
             );
         }
 
-        public static MetaAction MakeSimpleCallAction(int count) {
-            return new InvokeBinder(
+        public static MetaObjectBinder MakeSimpleCallAction(int count) {
+            return new PythonInvokeBinder(
                 DefaultContext.DefaultPythonContext.DefaultBinderState,
-                new CallSignature(CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count))
+                new CallSignature(CompilerHelpers.MakeRepeatedArray(Argument.Simple, count))
             );
         }
 
@@ -3127,28 +3127,28 @@ namespace IronPython.Runtime.Operations {
             return pm.BinderState;
         }
 
-        public static MetaAction MakeInvokeAction(CodeContext/*!*/ context, CallSignature signature) {
-            return new InvokeBinder(GetBinderState(context), signature);
+        public static MetaObjectBinder MakeInvokeAction(CodeContext/*!*/ context, CallSignature signature) {
+            return new PythonInvokeBinder(GetBinderState(context), signature);
         }
 
-        public static MetaAction MakeGetAction(CodeContext/*!*/ context, string name, bool isNoThrow) {
-            return new GetMemberBinder(GetBinderState(context), name, isNoThrow);
+        public static MetaObjectBinder MakeGetAction(CodeContext/*!*/ context, string name, bool isNoThrow) {
+            return new PythonGetMemberBinder(GetBinderState(context), name, isNoThrow);
         }
 
-        public static MetaAction MakeSetAction(CodeContext/*!*/ context, string name) {
-            return new SetMemberBinder(GetBinderState(context), name);
+        public static MetaObjectBinder MakeSetAction(CodeContext/*!*/ context, string name) {
+            return new PythonSetMemberBinder(GetBinderState(context), name);
         }
 
-        public static MetaAction MakeDeleteAction(CodeContext/*!*/ context, string name) {
-            return new DeleteMemberBinder(GetBinderState(context), name);
+        public static MetaObjectBinder MakeDeleteAction(CodeContext/*!*/ context, string name) {
+            return new PythonDeleteMemberBinder(GetBinderState(context), name);
         }
 
-        public static MetaAction MakeConversionAction(CodeContext/*!*/ context, Type type, ConversionResultKind kind) {
+        public static MetaObjectBinder MakeConversionAction(CodeContext/*!*/ context, Type type, ConversionResultKind kind) {
             return new ConversionBinder(GetBinderState(context), type, kind);
         }
 
-        public static MetaAction MakeOperationAction(CodeContext/*!*/ context, string operationName) {
-            return new OperationBinder(GetBinderState(context), operationName);
+        public static MetaObjectBinder MakeOperationAction(CodeContext/*!*/ context, string operationName) {
+            return new PythonOperationBinder(GetBinderState(context), operationName);
         }
 
         /// <summary>

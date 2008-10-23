@@ -28,24 +28,25 @@ using Microsoft.Scripting.Actions.Calls;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
-    public class DoOperationBinderHelper<T> : BinderHelper<T, OldDoOperationAction> where T : class {
+    public class DoOperationBinderHelper : BinderHelper<OldDoOperationAction> {
         private object[] _args;                                     // arguments we were created with
         private Type[] _types;                                      // types of our arguments
-        private RuleBuilder<T> _rule = new RuleBuilder<T>();      // the rule we're building and returning
+        private readonly RuleBuilder _rule;                         // the rule we're building and returning
 
-        public DoOperationBinderHelper(CodeContext context, OldDoOperationAction action, object[] args)
+        public DoOperationBinderHelper(CodeContext context, OldDoOperationAction action, object[] args, RuleBuilder rule)
             : base(context, action) {
             _args = args;
             _types = CompilerHelpers.GetTypes(args);
+            _rule = rule;
             _rule.MakeTest(_types);
         }
 
-        public RuleBuilder<T> MakeRule() {
+        public void MakeRule() {
             if (Action.Operation == Operators.GetItem || 
                 Action.Operation == Operators.SetItem) {
                 // try default member first, then look for special name methods.
                 if (MakeDefaultMemberRule(Action.Operation)) {
-                    return _rule;
+                    return;
                 }
             }
 
@@ -55,28 +56,26 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 MakeOperatorRule(info);
             }
-
-            return _rule;
         }
 
         #region Comparison operator
 
-        private RuleBuilder<T> MakeComparisonRule(OperatorInfo info) {
+        private void MakeComparisonRule(OperatorInfo info) {
             // check the first type if it has an applicable method
             MethodInfo[] targets = GetApplicableMembers(info);            
             if (targets.Length > 0 && TryMakeBindingTarget(targets)) {
-                return _rule;
+                return;
             }
 
             // then check the 2nd type.
             targets = GetApplicableMembers(_types[1], info);
             if (targets.Length > 0 && TryMakeBindingTarget(targets)) {
-                return _rule;
+                return;
             }
 
             // try Compare: cmp(x,y) (>, <, >=, <=, ==, !=) 0
             if (TryNumericComparison(info)) {
-                return _rule;
+                return;
             }
 
             // try inverting the operator & result (e.g. if looking for Equals try NotEquals, LessThan for GreaterThan)...
@@ -87,27 +86,26 @@ namespace Microsoft.Scripting.Actions {
             // try the 1st type's opposite function result negated 
             targets = GetApplicableMembers(revInfo);
             if (targets.Length > 0 && TryMakeInvertedBindingTarget(targets)) {
-                return _rule;
+                return;
             }
 
             // then check the 2nd type.
             targets = GetApplicableMembers(_types[1], revInfo);
             if (targets.Length > 0 && TryMakeInvertedBindingTarget(targets)) {
-                return _rule;
+                return;
             }
 
             // see if we're comparing to null w/ an object ref or a Nullable<T>
             if (TryMakeNullComparisonRule()) {
-                return _rule;
+                return;
             }
 
             // see if this is a primitive type where we're comparing the two values.
             if (TryPrimitiveCompare()) {
-                return _rule;
+                return;
             }
 
             SetErrorTarget(info);
-            return _rule;
         }
 
         private bool TryNumericComparison(OperatorInfo info) {
@@ -185,27 +183,28 @@ namespace Microsoft.Scripting.Actions {
         #region Operator Rule
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")] // TODO: fix
-        private RuleBuilder<T> MakeOperatorRule(OperatorInfo info) {
+        private void MakeOperatorRule(OperatorInfo info) {
             MethodInfo[] targets = GetApplicableMembers(info);
             if (targets.Length == 0) {
                 targets = GetFallbackMembers(_types[0], info);
             }
 
             if (targets.Length > 0 && TryMakeBindingTarget(targets)) {
-                return _rule;
+                return;
             }
 
             if (_types.Length > 1) {
                 targets = GetApplicableMembers(_types[1], info);
                 if (targets.Length > 0 && TryMakeBindingTarget(targets)) {
-                    return _rule;
+                    return;
                 }
             }
 
             Operators op = CompilerHelpers.InPlaceOperatorToOperator(info.Operator) ;
             if (op != Operators.None) {
                 // recurse to try and get the non-inplace action...
-                return MakeOperatorRule(OperatorInfo.GetOperatorInfo(op));
+                MakeOperatorRule(OperatorInfo.GetOperatorInfo(op));
+                return;
             }
 
             if (_types.Length == 2 &&
@@ -227,13 +226,12 @@ namespace Microsoft.Scripting.Actions {
                     default: throw new InvalidOperationException();
                 }
                 _rule.Target = _rule.MakeReturn(Binder, expr);
-                return _rule;
+                return;
             } else if(_types.Length == 1 && TryMakeDefaultUnaryRule(info)) {
-                return _rule;
+                return;
             }
             
             SetErrorTarget(info);
-            return _rule;
         }
 
         private bool TryMakeDefaultUnaryRule(OperatorInfo info) {

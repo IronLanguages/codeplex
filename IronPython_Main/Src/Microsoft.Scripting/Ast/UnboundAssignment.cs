@@ -66,9 +66,9 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static UnboundAssignment Assign(SymbolId name, Expression value) {
-            return Assign(name, value, Expression.Annotate(SourceSpan.None));
+            return Assign(name, value, null);
         }
-        [Obsolete("use Assign(name, value, Expression.Annotate(span)) instead")]
+        [Obsolete("use Assign overload without SourceSpan")]
         public static UnboundAssignment Assign(SymbolId name, Expression value, SourceSpan span) {
             return Assign(name, value, Expression.Annotate(span));
         }

@@ -40,32 +40,32 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
             // TODO: Context should come from BuiltinFunction
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion) {
-            if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(BuiltinFunction)));
+        public override MetaObject BindConvert(ConvertBinder/*!*/ conversion) {
+            if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(conversion, conversion.Type, Restrict(typeof(BuiltinFunction)));
             }
-            return conversion.Fallback(this);
+            return conversion.FallbackConvert(this);
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             switch(action.Operation) {
                 case StandardOperators.CallSignatures:
                     return PythonProtocol.MakeCallSignatureOperation(this, Value.Targets);
             }
 
-            return base.Operation(action, args);
+            return base.BindOperation(action, args);
         }
 
         #endregion
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -73,7 +73,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Invoke Implementation
 
-        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ InvokeWorker(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             if (this.NeedsDeferral()) {
                 return call.Defer(ArrayUtils.Insert(this, args));
             }
@@ -91,11 +91,11 @@ namespace IronPython.Runtime.Binding {
             }            
         }
 
-        private MetaObject/*!*/ MakeSelflessCall(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeSelflessCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             // just check if it's the same built-in function.  Because built-in fucntions are
             // immutable the identity check will suffice.  Because built-in functions are uncollectible
             // anyway we don't use the typical InstanceRestriction.
-            Restrictions selfRestrict = Restrictions.ExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
+            Restrictions selfRestrict = Restrictions.GetExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
 
             if (Value.IsOnlyGeneric) {
                 return BindingHelpers.TypeErrorGenericMethod(Value.DeclaringType, Value.Name, selfRestrict);
@@ -137,7 +137,7 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private MetaObject/*!*/ MakeSelfCall(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {            
+        private MetaObject/*!*/ MakeSelfCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {            
             CallSignature signature = BindingHelpers.GetCallSignature(call);
 
             Expression instance = Ast.Property(
@@ -152,12 +152,12 @@ namespace IronPython.Runtime.Binding {
                 instance,
                 CompilerHelpers.GetType(Value.__self__),
                 Restrictions.Merge(
-                    Restrictions.TypeRestriction(
+                    Restrictions.GetTypeRestriction(
                         Expression,
                         typeof(BuiltinFunction)
                     )
                 ).Merge(
-                    Restrictions.ExpressionRestriction(
+                    Restrictions.GetExpressionRestriction(
                         Value.MakeBoundFunctionTest(
                             Ast.ConvertHelper(Expression, typeof(BuiltinFunction))                            
                         )
@@ -220,7 +220,7 @@ namespace IronPython.Runtime.Binding {
             Assert.NotNull(instance, testType);
             object instanceValue = Value.__self__;
 
-            restrictions = restrictions.Merge(Restrictions.TypeRestriction(instance, testType));
+            restrictions = restrictions.Merge(Restrictions.GetTypeRestriction(instance, testType));
 
             // cast the instance to the correct type
             if (CompilerHelpers.IsStrongBox(instanceValue)) {
@@ -277,7 +277,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static CallSignature GetReversedSignature(CallSignature signature) {
-            return new CallSignature(ArrayUtils.Append(signature.GetArgumentInfos(), new ArgumentInfo(ArgumentKind.Simple)));
+            return new CallSignature(ArrayUtils.Append(signature.GetArgumentInfos(), new Argument(ArgumentType.Simple)));
         }
 
         #endregion

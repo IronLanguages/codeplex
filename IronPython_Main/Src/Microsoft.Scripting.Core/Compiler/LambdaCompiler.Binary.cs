@@ -68,7 +68,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // and generate null.  If we are not lifted to null then generate a call to HasValue.
             if (isLiftedToNull) {
                 EmitExpressionAsVoid(e);
-                EmitConstant(null, typeof(bool?));
+                _ilg.EmitConstant(null, typeof(bool?));
             } else {
                 EmitAddress(e, e.Type);
                 _ilg.EmitHasValue(e.Type);

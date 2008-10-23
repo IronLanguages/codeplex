@@ -20,7 +20,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     // TODO: Can it be made internal?
     public class ComTypeClassDesc : ComTypeDesc, IDynamicObject {
         LinkedList<string> _itfs; // implemented interfaces

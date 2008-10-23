@@ -27,9 +27,21 @@ namespace Microsoft.Linq.Expressions {
         private readonly LabelTarget _label;
 
         internal LabelExpression(LabelTarget label, Expression defaultValue, Annotations annotations)
-            : base(ExpressionType.Label, label.Type, annotations) {
+            : base(annotations) {
             _label = label;
             _defaultValue = defaultValue;
+        }
+
+        protected override Type GetExpressionType() {
+            return _label.Type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Label;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
         }
 
         new public LabelTarget Label {

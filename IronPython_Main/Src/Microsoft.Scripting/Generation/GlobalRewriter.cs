@@ -21,6 +21,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -35,7 +36,7 @@ namespace Microsoft.Scripting.Generation {
     /// nodes go away. All that should be left is global support, and even that
     /// can go once OptimizedModules moves into Python.
     /// </summary>
-    public abstract class GlobalRewriter : ExpressionTreeVisitor {
+    public abstract class GlobalRewriter : StaticLambdaRewriter {
         private Expression _context;
 
         // Rewrite entry points
@@ -56,7 +57,7 @@ namespace Microsoft.Scripting.Generation {
             lambda = (LambdaExpression)VisitLambda(lambda);
 
             return Expression.Lambda<DlrMainCallTarget>(
-                AddScopedVariable(
+                AstUtils.AddScopedVariable(
                     lambda.Body,
                     contextVariable,
                     Expression.Call(typeof(RuntimeHelpers).GetMethod("CreateTopLevelCodeContext"), scopeParameter, languageParameter)
@@ -111,31 +112,6 @@ namespace Microsoft.Scripting.Generation {
 
             return base.VisitAssignment(node);
         }
-        
-        protected override Expression VisitDynamic(DynamicExpression node) {
-            Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
-
-            // Rewite call site as constant
-            var siteExpr = VisitConstant(Expression.Constant(DynamicSiteHelpers.MakeSite(node.Binder, siteType)));
-
-            // Rewrite all of the arguments
-            var args = Visit(node.Arguments);
-
-            var siteVar = Expression.Variable(siteExpr.Type, "$site");
-
-            // ($site = siteExpr).Target.Invoke($site, *args)
-            return Expression.Scope(
-                Expression.Call(
-                    Expression.Field(
-                        Expression.Assign(siteVar, siteExpr),
-                        siteType.GetField("Target")
-                    ),
-                    node.DelegateType.GetMethod("Invoke"),
-                    ArrayUtils.Insert(siteVar, args)
-                ),
-                siteVar
-            );
-        }
 
         #endregion
 
@@ -156,7 +132,7 @@ namespace Microsoft.Scripting.Generation {
             _context = saved;
 
             // wrap the body in a scope that initializes the nested context
-            return AddScopedVariable(body, nested, Visit(ccs.NewContext));
+            return AstUtils.AddScopedVariable(body, nested, Visit(ccs.NewContext));
         }
 
         #endregion
@@ -173,32 +149,6 @@ namespace Microsoft.Scripting.Generation {
             }
 
             varsByName.Add(node.Name, node);
-        }
-
-        // Helper to add a variable to a scope
-        protected static Expression AddScopedVariable(Expression body, ParameterExpression variable, Expression variableInit) {
-            List<ParameterExpression> vars = new List<ParameterExpression>();
-            string name = null;
-            Annotations annotations = Annotations.Empty;
-            while (body.NodeType == ExpressionType.Scope) {
-                ScopeExpression scope = (ScopeExpression)body;
-                vars.AddRange(scope.Variables);
-                name = scope.Name;
-                annotations = scope.Annotations;
-                body = scope.Body;
-            }
-
-            vars.Add(variable);
-
-            return Expression.Scope(
-                Expression.Comma(
-                    Expression.Assign(variable, variableInit),
-                    body
-                ),
-                name,
-                annotations,
-                vars
-            );
         }
 
         #endregion

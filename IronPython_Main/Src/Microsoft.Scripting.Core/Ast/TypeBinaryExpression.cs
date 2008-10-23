@@ -24,9 +24,21 @@ namespace Microsoft.Linq.Expressions {
         private readonly Type _typeOperand;
 
         internal TypeBinaryExpression(Expression expression, Type typeOperand, Annotations annotations)
-            : base(ExpressionType.TypeIs, typeof(bool), annotations) {
+            : base(annotations) {
             _expression = expression;
             _typeOperand = typeOperand;
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(bool);
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.TypeIs;
         }
 
         public Expression Expression {

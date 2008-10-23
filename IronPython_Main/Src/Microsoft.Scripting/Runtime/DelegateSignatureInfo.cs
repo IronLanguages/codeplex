@@ -113,12 +113,12 @@ namespace Microsoft.Scripting.Runtime {
         private object[] EmitClrCallStub(ILGen cg) {
 
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
-            Argument[] args = new Argument[_parameters.Length];
+            ArgumentInfo[] args = new ArgumentInfo[_parameters.Length];
             for (int i = 0; i < args.Length; i++) {
                 args[i] = Expression.PositionalArg(i);
             }
-            ConvertAction convert = _context.CreateConvertBinder(_returnType, true);
-            InvokeAction action = _context.CreateInvokeBinder(args);
+            ConvertBinder convert = _context.CreateConvertBinder(_returnType, true);
+            InvokeBinder action = _context.CreateInvokeBinder(args);
 
 
             // Create strongly typed return type from the site.

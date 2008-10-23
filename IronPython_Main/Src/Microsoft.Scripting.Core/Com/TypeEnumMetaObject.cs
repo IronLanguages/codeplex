@@ -18,7 +18,7 @@ using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class TypeEnumMetaObject : MetaObject {
         private readonly ComTypeEnumDesc _desc;
 
@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Com {
             _desc = desc;
         }
 
-        public override MetaObject GetMember(GetMemberAction action) {
+        public override MetaObject BindGetMember(GetMemberBinder action) {
             if (_desc.HasMember(action.Name)) {
                 return new MetaObject(
                     // return (.bound $arg0).GetValue("<name>")
@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Com {
             throw new NotImplementedException();
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             if (action.Operation == "GetMemberNames" || action.Operation == "MemberNames") {
                 // return (arg).GetMemberNames()
                 return new MetaObject(
@@ -59,11 +59,11 @@ namespace Microsoft.Scripting.Com {
         }
 
         private Restrictions EnumRestrictions() {
-            return Restrictions.TypeRestriction(
+            return Restrictions.GetTypeRestriction(
                 Expression, typeof(ComTypeEnumDesc)
             ).Merge(
                 // ((ComTypeEnumDesc)<arg>).TypeLib.Guid == <guid>
-                Restrictions.ExpressionRestriction(
+                Restrictions.GetExpressionRestriction(
                     Expression.Equal(
                         Expression.Property(
                             Expression.Property(
@@ -74,7 +74,7 @@ namespace Microsoft.Scripting.Com {
                     )
                 )
             ).Merge(
-                Restrictions.ExpressionRestriction(
+                Restrictions.GetExpressionRestriction(
                     Expression.Equal(
                         Expression.Property(
                             Expression.ConvertHelper(Expression, typeof(ComTypeEnumDesc)),

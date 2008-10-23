@@ -26,7 +26,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
     /// Provides a list of local variables, supporing read/write of elements
     /// Exposed via LocalScopeExpression
     /// </summary>
-    internal sealed class LocalVariableAccess : ILocalVariables {
+    internal sealed class LocalVariableAccess : IRuntimeVariables {
         // The names of the variables
         private readonly ReadOnlyCollection<string> _names;
 
@@ -42,7 +42,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // closure chain.
         private readonly long[] _indexes;
 
-        internal static readonly ILocalVariables Empty = new LocalVariableAccess(new object[0], new string[0], new long[0]);
+        internal static readonly IRuntimeVariables Empty = new LocalVariableAccess(new object[0], new string[0], new long[0]);
 
         internal LocalVariableAccess(object[] data, string[] names, long[] indexes) {
             Assert.NotNull(names, data, indexes);
@@ -85,13 +85,13 @@ namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
         // creates access for local variables in scope
         [Obsolete("used by generated code", true)]
-        public static ILocalVariables CreateVariableAccess(object[] data, string[] names, long[] indexes) {
+        public static IRuntimeVariables CreateVariableAccess(object[] data, string[] names, long[] indexes) {
             return new LocalVariableAccess(data, names, indexes);
         }
 
         // creates access when there are no variables in scope
         [Obsolete("used by generated code", true)]
-        public static ILocalVariables CreateEmptyVariableAccess() {
+        public static IRuntimeVariables CreateEmptyVariableAccess() {
             return LocalVariableAccess.Empty;
         }
     }

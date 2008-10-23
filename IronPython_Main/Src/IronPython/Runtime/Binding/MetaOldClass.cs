@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return MakeCallRule(pythonInvoke, codeContext, args);
         }
 
@@ -42,7 +42,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonGetable Members
 
-        public MetaObject GetMember(GetMemberBinder member, Expression codeContext) {
+        public MetaObject GetMember(PythonGetMemberBinder member, Expression codeContext) {
             // no codeContext filtering but avoid an extra site by handling this action directly
             return MakeGetMember(member, codeContext);
         }
@@ -51,53 +51,53 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
             return MakeCallRule(call, Ast.Constant(BinderState.GetBinderState(call).Context), args);
         }
 
-        public override MetaObject/*!*/ Create(CreateAction/*!*/ create, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindCreateInstance(CreateInstanceBinder/*!*/ create, params MetaObject/*!*/[]/*!*/ args) {
             return MakeCallRule(create, Ast.Constant(BinderState.GetBinderState(create).Context), args);
         }
 
-        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member) {
+        public override MetaObject/*!*/ BindGetMember(GetMemberBinder/*!*/ member) {
             return MakeGetMember(member, BinderState.GetCodeContext(member));
         }
 
-        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ member, MetaObject/*!*/ value) {
+        public override MetaObject/*!*/ BindSetMember(SetMemberBinder/*!*/ member, MetaObject/*!*/ value) {
             return MakeSetMember(member.Name, value);
         }
 
-        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ member) {
+        public override MetaObject/*!*/ BindDeleteMember(DeleteMemberBinder/*!*/ member) {
             return MakeDeleteMember(member);
         }
 
-        public override MetaObject/*!*/ Operation(OperationAction operation, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindOperation(OperationBinder operation, params MetaObject/*!*/[]/*!*/ args) {
             if (operation.Operation == StandardOperators.IsCallable) {
                 return new MetaObject(
                     Ast.Constant(true),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, typeof(OldClass)))
+                    Restrictions.Merge(Restrictions.GetTypeRestriction(Expression, typeof(OldClass)))
                 );
             }
 
-            return base.Operation(operation, args);
+            return base.BindOperation(operation, args);
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion) {
-            if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(OldClass)));
+        public override MetaObject BindConvert(ConvertBinder/*!*/ conversion) {
+            if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(conversion, conversion.Type, Restrict(typeof(OldClass)));
             }
-            return conversion.Fallback(this);
+            return conversion.FallbackConvert(this);
         }
 
         #endregion
 
         #region Calls
 
-        private MetaObject/*!*/ MakeCallRule(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject[] args) {
+        private MetaObject/*!*/ MakeCallRule(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject[] args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
 
@@ -129,7 +129,7 @@ namespace IronPython.Runtime.Binding {
                                 init
                             ),
                             Ast.Dynamic(
-                                new InvokeBinder(
+                                new PythonInvokeBinder(
                                     BinderState.GetBinderState(call),
                                     signature
                                 ),
@@ -150,8 +150,8 @@ namespace IronPython.Runtime.Binding {
         private Expression NoInitCheckNoArgs(CallSignature signature, MetaObject self, MetaObject[] args) {
             int unusedCount = args.Length;
 
-            Expression dictExpr = GetArgumentExpression(signature, ArgumentKind.Dictionary, ref unusedCount, args);
-            Expression listExpr = GetArgumentExpression(signature, ArgumentKind.List, ref unusedCount, args);
+            Expression dictExpr = GetArgumentExpression(signature, ArgumentType.Dictionary, ref unusedCount, args);
+            Expression listExpr = GetArgumentExpression(signature, ArgumentType.List, ref unusedCount, args);
 
             if (signature.IsSimple || unusedCount > 0) {
                 if (args.Length > 0) {
@@ -172,7 +172,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private Expression GetArgumentExpression(CallSignature signature, ArgumentKind kind, ref int unusedCount, MetaObject/*!*/[]/*!*/ args) {
+        private Expression GetArgumentExpression(CallSignature signature, ArgumentType kind, ref int unusedCount, MetaObject/*!*/[]/*!*/ args) {
             int index = signature.IndexOf(kind);
             if (index != -1) {
                 unusedCount--;
@@ -236,7 +236,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private MetaObject/*!*/ MakeDeleteMember(DeleteMemberAction/*!*/ member) {
+        private MetaObject/*!*/ MakeDeleteMember(DeleteMemberBinder/*!*/ member) {
             MetaObject self = Restrict(typeof(OldClass));
 
             return new MetaObject(
@@ -250,7 +250,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private MetaObject/*!*/ MakeGetMember(MetaAction/*!*/ member, Expression codeContext) {
+        private MetaObject/*!*/ MakeGetMember(MetaObjectBinder/*!*/ member, Expression codeContext) {
             MetaObject self = Restrict(typeof(OldClass));
 
             Expression target;

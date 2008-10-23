@@ -25,10 +25,23 @@ namespace Microsoft.Linq.Expressions {
         private readonly ReadOnlyCollection<MemberBinding> _bindings;
 
         internal MemberInitExpression(NewExpression newExpression, ReadOnlyCollection<MemberBinding> bindings, Annotations annotations)
-            : base(ExpressionType.MemberInit, newExpression.Type, true, annotations, true, false) {
+            : base(annotations) {
             _newExpression = newExpression;
             _bindings = bindings;
         }
+
+        protected override Type GetExpressionType() {
+            return _newExpression.Type;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanReduce | NodeFlags.CanRead;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.MemberInit;
+        }
+
         public NewExpression NewExpression {
             get { return _newExpression; }
         }

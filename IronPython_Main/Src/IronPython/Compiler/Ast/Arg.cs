@@ -42,17 +42,17 @@ namespace IronPython.Compiler.Ast {
             return base.ToString() + ":" + SymbolTable.IdToString(_name);
         }
 
-        internal ArgumentInfo Transform(AstGenerator ag, out MSAst.Expression expression) {
+        internal Argument Transform(AstGenerator ag, out MSAst.Expression expression) {
             expression = ag.Transform(_expression);
 
             if (_name == SymbolId.Empty) {
-                return ArgumentInfo.Simple;
+                return Argument.Simple;
             } else if (_name == Symbols.Star) {
-                return new ArgumentInfo(ArgumentKind.List);
+                return new Argument(ArgumentType.List);
             } else if (_name == Symbols.StarStar) {
-                return new ArgumentInfo(ArgumentKind.Dictionary);
+                return new Argument(ArgumentType.Dictionary);
             } else {
-                return new ArgumentInfo(_name);
+                return new Argument(_name);
             }
         }
 

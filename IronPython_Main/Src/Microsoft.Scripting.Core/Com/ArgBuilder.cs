@@ -15,10 +15,9 @@
 using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// ArgBuilder provides an argument value used by the MethodBinder.  One ArgBuilder exists for each
     /// physical parameter defined on a method.  
@@ -26,29 +25,22 @@ namespace Microsoft.Scripting.Com {
     /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
     internal abstract class ArgBuilder {
-        internal virtual ParameterExpression[] TemporaryVariables {
-            get {
-                return new ParameterExpression[0];
-            }
-        }
-
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
         /// </summary>
-        internal abstract Expression Unwrap(Expression parameter);
+        internal abstract Expression Marshal(Expression parameter);
 
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
         /// This method is called when result is intended to be used ByRef.
+        /// 
+        /// TODO: merge with Unwrap. They're distict because some of the variant
+        /// magic is happening in helpers in Variant.cs, rather than in Unwrap.
+        /// So UnwrapByRef has to duplicate this logic. The logic should just
+        /// move into Unwrap
         /// </summary>
-        internal abstract Expression UnwrapByRef(Expression parameter);
-
-        /// <summary>
-        /// Provides an Expression which will update the provided value after a call to the method.  
-        /// May return null if no update is required.
-        /// </summary>
-        internal virtual Expression UpdateFromReturn(Expression parameter) {
-            return null;
+        internal virtual Expression MarshalToRef(Expression parameter) {
+            return Marshal(parameter);
         }
 
         /// <summary>

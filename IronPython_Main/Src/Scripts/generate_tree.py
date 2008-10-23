@@ -78,22 +78,22 @@ expressions = [
 
     # New types in LINQ V2
 
-    Expression("Assign",             "AssignmentExpression"), # TODO: change to BinaryExpression
-    Expression("Block",              "Block"),                # TODO: BlockExpression
-    Expression("DoStatement",        "DoStatement"),
+    Expression("Assign",             "AssignmentExpression"), # TODO: merge to BinaryExpression
+    Expression("Block",              "Block"),                # TODO: rename to BlockExpression
+    Expression("DebugInfo",          "DebugInfoExpression"),
+    Expression("DoStatement",        "DoStatement"),          # TODO: remove
     Expression("Dynamic",            "DynamicExpression"),
-    Expression("EmptyStatement",     "EmptyStatement"),
+    Expression("EmptyStatement",     "EmptyStatement"),       # TODO: rename to EmptyExpression
     Expression("Extension",          "ExtensionExpression"),
     Expression("Goto",               "GotoExpression"),
     Expression("Index",              "IndexExpression"),
     Expression("Label",              "LabelExpression"),
     Expression("LocalScope",         "LocalScopeExpression"), # TODO: RuntimeVariablesExpression
-    Expression("LoopStatement",      "LoopStatement"),
-    Expression("ReturnStatement",    "ReturnStatement"),      # TODO: GotoExpression
-    Expression("Scope",              "ScopeExpression"),
-    Expression("SwitchStatement",    "SwitchStatement"),
-    Expression("ThrowStatement",     "ThrowStatement"),
-    Expression("TryStatement",       "TryStatement"),
+    Expression("LoopStatement",      "LoopStatement"),        # TODO: LoopExpression
+    Expression("ReturnStatement",    "ReturnStatement"),      # TODO: remove
+    Expression("SwitchStatement",    "SwitchStatement"),      # TODO: SwitchExpression
+    Expression("ThrowStatement",     "ThrowStatement"),       # TODO: merge with UnaryExpression
+    Expression("TryStatement",       "TryStatement"),         # TODO: TryExpression
     Expression("Unbox",              "UnaryExpression"),
 ]
 

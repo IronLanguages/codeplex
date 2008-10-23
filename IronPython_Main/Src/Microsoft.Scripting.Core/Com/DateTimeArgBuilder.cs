@@ -24,35 +24,26 @@ using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal sealed class DateTimeArgBuilder : SimpleArgBuilder {
         internal DateTimeArgBuilder(Type parameterType)
             : base(parameterType) {
             Debug.Assert(parameterType == typeof(DateTime));
         }
 
-        internal override ParameterExpression CreateTemp() {
-            return Expression.Variable(typeof(Double), "TempInt64");
-        }
-
-        internal override Expression UnwrapByRef(Expression parameter) {
-            // parameter.ToOADate
-            return base.UnwrapByRef(
-                    Expression.Call(
-                    Unwrap(parameter),
-                    typeof(DateTime).GetMethod("ToOADate")
-                )
+        internal override Expression MarshalToRef(Expression parameter) {
+            // parameter.ToOADate()
+            return Expression.Call(
+                Marshal(parameter),
+                typeof(DateTime).GetMethod("ToOADate")
             );
         }
 
-        internal override Expression UpdateFromReturn(Expression parameter, Expression temp) {
-            // parameter = DateTime.FromOADate(temp)
-            return base.UpdateFromReturn(
-                parameter,
-                Expression.Call(
-                    typeof(DateTime).GetMethod("FromOADate"),
-                    temp
-                )
+        internal override Expression UnmarshalFromRef(Expression value) {
+            // DateTime.FromOADate(temp)
+            return Expression.Call(
+                typeof(DateTime).GetMethod("FromOADate"),
+                value
             );
         }
     }

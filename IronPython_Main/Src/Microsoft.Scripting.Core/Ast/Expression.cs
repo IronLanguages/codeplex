@@ -26,29 +26,21 @@ namespace Microsoft.Linq.Expressions {
     public abstract partial class Expression {
         // TODO: expose this to derived classes, so ctor doesn't take three booleans?
         [Flags]
-        private enum NodeFlags : byte {
+        internal enum NodeFlags : byte {
             None = 0,
             CanReduce = 1,
             CanRead = 2,
             CanWrite = 4,
         }
 
-        // TODO: these two enums could be stored in one int32
-        private readonly ExpressionType _nodeType;
-        private readonly NodeFlags _flags;
-
-        private readonly Type _type;
-        private readonly Annotations _annotations;
-
+        private readonly Annotations _annotations;        
         // protected ctors are part of API surface area
 
         // LinqV1 ctor
         [Obsolete("use a different constructor that does not take ExpressionType")]
         protected Expression(ExpressionType nodeType, Type type) {
             // Can't enforce anything that V1 didn't
-            _nodeType = nodeType;
-            _type = type;
-            _flags = NodeFlags.CanRead;
+            _annotations = Annotate(new ExtensionInfo(nodeType, type));
         }
 
         // LinqV2: ctor for extension nodes
@@ -59,6 +51,10 @@ namespace Microsoft.Linq.Expressions {
         // LinqV2: ctor for extension nodes with read/write flags
         protected Expression(Type type, bool canReduce, Annotations annotations, bool canRead, bool canWrite)
             : this(ExpressionType.Extension, type, canReduce, annotations, canRead, canWrite) {
+        }
+
+        protected Expression(Annotations annotations) {
+            _annotations = annotations ?? Annotations.Empty;
         }
 
         // internal ctor -- not exposed API
@@ -73,25 +69,36 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(canRead || canWrite, "canRead", Strings.MustBeReadableOrWriteable);
 
-            _annotations = annotations ?? Annotations.Empty;
-            _nodeType = nodeType;
-            _type = type;
-            _flags = (canReduce ? NodeFlags.CanReduce : 0) | (canRead ? NodeFlags.CanRead : 0) | (canWrite ? NodeFlags.CanWrite : 0);
+            ExtensionInfo ei = new ExtensionInfo(
+                nodeType,
+                type,
+                (canReduce ? NodeFlags.CanReduce : 0) | (canRead ? NodeFlags.CanRead : 0) | (canWrite ? NodeFlags.CanWrite : 0)
+            );
+
+            if (annotations != null) {
+                _annotations = annotations.Remove<ExtensionInfo>().Add(ei);
+            } else {
+#pragma warning disable 618
+                _annotations = Annotate(ei);
+#pragma warning restore 618
+            }            
         }
 
         //CONFORMING
         public ExpressionType NodeType {
-            get { return _nodeType; }
+            get { return GetNodeKind(); }
         }
 
         //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1721:PropertyNamesShouldNotMatchGetMethods")]
         public Type Type {
-            get { return _type; }
+            get { return GetExpressionType(); }
         }
-
+        
         public Annotations Annotations {
-            get { return _annotations; }
+            get {
+                return _annotations;
+            }
         }
 
         /// <summary>
@@ -99,21 +106,40 @@ namespace Microsoft.Linq.Expressions {
         /// returns true, Reduce() can be called to produce the reduced form.
         /// </summary>
         public bool CanReduce {
-            get { return (_flags & NodeFlags.CanReduce) != 0; }
+            get { return (GetFlags() & NodeFlags.CanReduce) != 0; }
         }
 
         /// <summary>
         /// Indicates that the node can be read
         /// </summary>
         public bool CanRead {
-            get { return (_flags & NodeFlags.CanRead) != 0; }
+            get { return (GetFlags() & NodeFlags.CanRead) != 0; }
         }
 
         /// <summary>
         /// Indicates that the node can be written
         /// </summary>
         public bool CanWrite {
-            get { return (_flags & NodeFlags.CanWrite) != 0; }
+            get { return (GetFlags() & NodeFlags.CanWrite) != 0; }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        protected virtual ExpressionType GetNodeKind() {
+            return _annotations.Get<ExtensionInfo>().NodeType;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        protected virtual Type GetExpressionType() {
+            return _annotations.Get<ExtensionInfo>().Type;
+        }
+
+        internal virtual NodeFlags GetFlags() {
+            ExtensionInfo info;
+            if (_annotations != null && _annotations.TryGet<ExtensionInfo>(out info)) {
+                return info.Flags;
+            }
+
+            return NodeFlags.CanRead;
         }
 
         /// <summary>
@@ -197,7 +223,7 @@ namespace Microsoft.Linq.Expressions {
         internal virtual void BuildString(StringBuilder builder) {
             ContractUtils.RequiresNotNull(builder, "builder");
             builder.Append("[");
-            builder.Append(_nodeType.ToString());
+            builder.Append(GetNodeKind().ToString());
             builder.Append("]");
         }
 
@@ -243,6 +269,25 @@ namespace Microsoft.Linq.Expressions {
             if (!expression.CanWrite) {
                 throw new ArgumentException(Strings.ExpressionMustBeWriteable, paramName);
             }
+        }
+
+        struct ExtensionInfo {
+            public ExtensionInfo(ExpressionType nodeType, Type type) {
+                NodeType = nodeType;
+                Type = type;
+                Flags = NodeFlags.CanRead;
+            }
+
+            public ExtensionInfo(ExpressionType nodeType, Type type, NodeFlags flags) {
+                NodeType = nodeType;
+                Type = type;
+                Flags = flags;
+            }
+
+            // TODO: remove NodeFlags
+            internal readonly ExpressionType NodeType;
+            internal readonly NodeFlags Flags;
+            internal readonly Type Type;
         }
     }
 }

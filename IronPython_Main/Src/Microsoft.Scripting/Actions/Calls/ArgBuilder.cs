@@ -75,5 +75,13 @@ namespace Microsoft.Scripting.Actions.Calls {
         internal virtual Expression ToReturnExpression(ParameterBinder parameterBinder) {
             throw new InvalidOperationException();
         }
+
+        /// <summary>
+        /// An assignable value that is passed to a byref parameter
+        /// After the call it will contain the updated value
+        /// </summary>
+        internal virtual Expression ByRefArgument {
+            get { return null;  }
+        }
     }
 }

@@ -113,7 +113,7 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// TODO: This should be specialized for each callable object
         /// </summary>
-        protected MetaObject/*!*/ MakeDelegateTarget(MetaAction/*!*/ action, Type/*!*/ toType, MetaObject/*!*/ arg) {
+        protected MetaObject/*!*/ MakeDelegateTarget(MetaObjectBinder/*!*/ action, Type/*!*/ toType, MetaObject/*!*/ arg) {
             Debug.Assert(arg != null);
 
             BinderState state = BinderState.GetBinderState(action);
@@ -135,24 +135,24 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        protected MetaObject GetMemberFallback(MetaAction member, Expression codeContext) {
-            GetMemberBinder gmb = member as GetMemberBinder;
+        protected MetaObject GetMemberFallback(MetaObjectBinder member, Expression codeContext) {
+            PythonGetMemberBinder gmb = member as PythonGetMemberBinder;
             if (gmb != null) {
                 return gmb.Fallback(this, codeContext);
             }
 
-            GetMemberAction gma = (GetMemberAction)member;
+            GetMemberBinder gma = (GetMemberBinder)member;
 
-            return gma.Fallback(this);
+            return gma.FallbackGetMember(this);
         }
 
-        protected string GetGetMemberName(MetaAction member) {
-            GetMemberBinder gmb = member as GetMemberBinder;
+        protected string GetGetMemberName(MetaObjectBinder member) {
+            PythonGetMemberBinder gmb = member as PythonGetMemberBinder;
             if (gmb != null) {
                 return gmb.Name;
             }
 
-            GetMemberAction gma = (GetMemberAction)member;
+            GetMemberBinder gma = (GetMemberBinder)member;
 
             return gma.Name;
         }

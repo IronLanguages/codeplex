@@ -74,9 +74,9 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            _body = Ast.Scope(
-                body,
-                _variables
+            _body = Ast.Comma(
+                _variables,
+                body
             );
         }
 

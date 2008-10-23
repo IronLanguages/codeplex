@@ -36,7 +36,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -44,34 +44,34 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
             // TODO: Context should come from BuiltinFunction
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
                     return PythonProtocol.MakeCallSignatureOperation(this, Value.Template.Targets);
             }
 
-            return base.Operation(action, args);
+            return base.BindOperation(action, args);
         }
 
         #endregion
 
         #region Invoke Implementation
 
-        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
+        private MetaObject/*!*/ InvokeWorker(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
-            Restrictions selfRestrict = Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions);
+            Restrictions selfRestrict = Restrictions.GetInstanceRestriction(Expression, Value).Merge(Restrictions);
 
             selfRestrict = selfRestrict.Merge(
-                Restrictions.ExpressionRestriction(
+                Restrictions.GetExpressionRestriction(
                     MakeFunctionTest(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("GetBuiltinMethodDescriptorTemplate"),

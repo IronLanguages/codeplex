@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     // TODO: should this be an IDO?
     public sealed class BoundDispEvent {
         private object _rcw;

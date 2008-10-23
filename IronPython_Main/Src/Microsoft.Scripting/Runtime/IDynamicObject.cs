@@ -12,12 +12,15 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Runtime {
+    /// <summary>
+    /// Old dynamic interop protocol. Will be removed soon.
+    /// </summary>
     public interface IOldDynamicObject {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")] // TODO: fix
-        RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class;
+        bool GetRule(OldDynamicAction action, CodeContext context, object[] args, RuleBuilder rule);
     }
 }

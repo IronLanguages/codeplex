@@ -223,6 +223,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Block:
                     EmitBlock(node);
                     break;
+                // DebugInfo
+                case ExpressionType.DebugInfo:
+                    EmitDebugInfoExpression(node);
+                    break;
                 // DoStatement
                 case ExpressionType.DoStatement:
                     EmitDoStatement(node);
@@ -262,10 +266,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
                     EmitReturnStatement(node);
-                    break;
-                // Scope
-                case ExpressionType.Scope:
-                    EmitScopeExpression(node);
                     break;
                 // SwitchStatement
                 case ExpressionType.SwitchStatement:

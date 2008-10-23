@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Actions {
                 _packageAssemblies.Add(assem);
                 UpdateId();
 #if !SILVERLIGHT // ComObject
-                Microsoft.Scripting.Com.ComObjectWithTypeInfo.PublishComTypes(assem);
+                Microsoft.Scripting.ComInterop.ComObjectWithTypeInfo.PublishComTypes(assem);
 #endif
             }
 

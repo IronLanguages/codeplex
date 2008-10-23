@@ -465,118 +465,118 @@ namespace Microsoft.Scripting.Runtime {
         #region Object Operations Support
 
         internal static MetaObject ErrorMetaObject(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
-            return onBindingError ?? MetaObject.Throw(target, args, typeof(NotImplementedException), ArrayUtils.EmptyObjects);
+            return onBindingError ?? MetaObject.CreateThrow(target, args, typeof(NotImplementedException), ArrayUtils.EmptyObjects);
         }
 
-        private class DefaultOperationAction : OperationAction {
+        private class DefaultOperationAction : OperationBinder {
             internal DefaultOperationAction(string operation)
                 : base(operation) {
             }
 
-            public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override MetaObject FallbackOperation(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
                 return ErrorMetaObject(target, args, onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual OperationAction CreateOperationBinder(string operation) {
+        public virtual OperationBinder CreateOperationBinder(string operation) {
             return new DefaultOperationAction(operation);
         }
 
-        private class DefaultConvertAction : ConvertAction {
+        private class DefaultConvertAction : ConvertBinder {
             internal DefaultConvertAction(Type type, bool @explicit)
                 : base(type, @explicit) {
             }
 
-            public override MetaObject Fallback(MetaObject self, MetaObject onBindingError) {
-                if (ToType.IsAssignableFrom(self.LimitType)) {
+            public override MetaObject FallbackConvert(MetaObject self, MetaObject onBindingError) {
+                if (Type.IsAssignableFrom(self.LimitType)) {
                     return new MetaObject(
                         self.Expression,
-                        Restrictions.TypeRestriction(self.Expression, self.LimitType)
+                        Restrictions.GetTypeRestriction(self.Expression, self.LimitType)
                     );
                 }
 
                 return onBindingError ??
-                    MetaObject.Throw(
+                    MetaObject.CreateThrow(
                         self,
                         MetaObject.EmptyMetaObjects,
                         typeof(ArgumentTypeException),
-                        String.Format("Expected {0}, got {1}", ToType.FullName, self.LimitType.FullName)
+                        String.Format("Expected {0}, got {1}", Type.FullName, self.LimitType.FullName)
                     );
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual ConvertAction CreateConvertBinder(Type toType, bool explicitCast) {
+        public virtual ConvertBinder CreateConvertBinder(Type toType, bool explicitCast) {
             return new DefaultConvertAction(toType, explicitCast);
         }
 
-        private class DefaultGetMemberAction : GetMemberAction {
+        private class DefaultGetMemberAction : GetMemberBinder {
             internal DefaultGetMemberAction(string name, bool ignoreCase)
                 : base(name, ignoreCase) {
             }
 
-            public override MetaObject Fallback(MetaObject self, MetaObject onBindingError) {
+            public override MetaObject FallbackGetMember(MetaObject self, MetaObject onBindingError) {
                 return ErrorMetaObject(self, MetaObject.EmptyMetaObjects, onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual GetMemberAction CreateGetMemberBinder(string name, bool ignoreCase) {
+        public virtual GetMemberBinder CreateGetMemberBinder(string name, bool ignoreCase) {
             return new DefaultGetMemberAction(name, ignoreCase);
         }
 
-        private class DefaultSetMemberAction : SetMemberAction {
+        private class DefaultSetMemberAction : SetMemberBinder {
             internal DefaultSetMemberAction(string name, bool ignoreCase)
                 : base(name, ignoreCase) {
             }
 
-            public override MetaObject Fallback(MetaObject self, MetaObject value, MetaObject onBindingError) {
+            public override MetaObject FallbackSetMember(MetaObject self, MetaObject value, MetaObject onBindingError) {
                 return ErrorMetaObject(self, new MetaObject[] { value }, onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual SetMemberAction CreateSetMemberBinder(string name, bool ignoreCase) {
+        public virtual SetMemberBinder CreateSetMemberBinder(string name, bool ignoreCase) {
             return new DefaultSetMemberAction(name, ignoreCase);
         }
 
-        private class DefaultDeleteMemberAction : DeleteMemberAction {
+        private class DefaultDeleteMemberAction : DeleteMemberBinder {
             internal DefaultDeleteMemberAction(string name, bool ignoreCase)
                 : base(name, ignoreCase) {
             }
 
-            public override MetaObject Fallback(MetaObject self, MetaObject onBindingError) {
+            public override MetaObject FallbackDeleteMember(MetaObject self, MetaObject onBindingError) {
                 return ErrorMetaObject(self, MetaObject.EmptyMetaObjects, onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual DeleteMemberAction CreateDeleteMemberBinder(string name, bool ignoreCase) {
+        public virtual DeleteMemberBinder CreateDeleteMemberBinder(string name, bool ignoreCase) {
             return new DefaultDeleteMemberAction(name, ignoreCase);
         }
 
-        private class DefaultCallAction : CallAction {
-            internal DefaultCallAction(string name, bool ignoreCase, params Argument[] arguments)
+        private class DefaultCallAction : InvokeMemberBinder {
+            internal DefaultCallAction(string name, bool ignoreCase, params ArgumentInfo[] arguments)
                 : base(name, ignoreCase, arguments) {
             }
 
-            public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override MetaObject FallbackInvokeMember(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
                 return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
@@ -584,67 +584,67 @@ namespace Microsoft.Scripting.Runtime {
                 return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual CallAction CreateCallBinder(string name, bool ignoreCase, params Argument[] arguments) {
+        public virtual InvokeMemberBinder CreateCallBinder(string name, bool ignoreCase, params ArgumentInfo[] arguments) {
             return new DefaultCallAction(name, ignoreCase, arguments);
         }
 
-        private class DefaultInvokeAction: InvokeAction {
-            internal DefaultInvokeAction(params Argument[] arguments)
+        private class DefaultInvokeAction: InvokeBinder {
+            internal DefaultInvokeAction(params ArgumentInfo[] arguments)
                 : base(arguments) {
             }
 
-            public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
                 return ErrorMetaObject(target, args, onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual InvokeAction CreateInvokeBinder(params Argument[] arguments) {
+        public virtual InvokeBinder CreateInvokeBinder(params ArgumentInfo[] arguments) {
             return new DefaultInvokeAction(arguments);
         }
 
-        private class DefaultCreateAction : CreateAction {
-            internal DefaultCreateAction(params Argument[] arguments)
+        private class DefaultCreateAction : CreateInstanceBinder {
+            internal DefaultCreateAction(params ArgumentInfo[] arguments)
                 : base(arguments) {
             }
 
-            public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override MetaObject FallbackCreateInstance(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
                 return ErrorMetaObject(target, args, onBindingError);
             }
 
-            public override object HashCookie {
+            public override object CacheIdentity {
                 get { return this; }
             }
         }
 
-        public virtual CreateAction CreateCreateBinder(params Argument[] arguments) {
+        public virtual CreateInstanceBinder CreateCreateBinder(params ArgumentInfo[] arguments) {
             return new DefaultCreateAction(arguments);
         }
 
         #endregion
 
         /// <summary>
-        /// Called by an interpreter when an exception is about to be thrown by an interpreted <see cref="ThrowStatement"/> or
+        /// Called by an interpreter when an exception is about to be thrown by an interpreted <see cref="ThrowExpression"/> or
         /// when a CLR method is called that threw an exception.
         /// </summary>
         /// <param name="state">
-        /// The current interpreted frame state. The frame is either throwing the exception (via <see cref="ThrowStatement"/>) or 
+        /// The current interpreted frame state. The frame is either throwing the exception (via <see cref="ThrowExpression"/>) or 
         /// is the interpreted frame that is calling a CLR method that threw or propagated the exception. 
         /// </param>
         /// <param name="exception">The exception to be (re)thrown.</param>
-        /// <param name="isInterpretedThrow">Whether the exception is thrown by an interpreted code (<see cref="ThrowStatement"/>).</param>
+        /// <param name="isInterpretedThrow">Whether the exception is thrown by an interpreted code (<see cref="ThrowExpression"/>).</param>
         /// <remarks>
         /// The method can be called multiple times for a single exception if the interpreted code calls some CLR code that
         /// calls an interpreted code that throws an exception. The method is called at each interpeted/non-interpreted frame boundary
-        /// and in the frame that raised the exception by <see cref="ThrowStatement"/>.
+        /// and in the frame that raised the exception by <see cref="ThrowExpression"/>.
         /// </remarks>
         internal protected virtual void InterpretExceptionThrow(InterpreterState state, Exception exception, bool isInterpretedThrow) {
             Assert.NotNull(state, exception);

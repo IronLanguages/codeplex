@@ -21,7 +21,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using ComObject = Microsoft.Scripting.Com.ComObject;
+using ComObject = Microsoft.Scripting.ComInterop.ComObject;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {

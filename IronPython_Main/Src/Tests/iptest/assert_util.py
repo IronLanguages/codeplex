@@ -104,7 +104,7 @@ else:
 
         # get some directories and files
         ip_root             = path_combine(rowan_root, basePyDir)
-        external_dir        = path_combine(rowan_root, r'..\External\Languages\IronPython20')
+        external_dir        = path_combine(rowan_root, r'..\External\Languages\ironpython21')
         clean_external_dir  = path_combine(rowan_root, r'..\External\Languages\CPython\25')
         public_testdir      = path_combine(ip_root, r'Tests')
         compat_testdir      = path_combine(ip_root, r'Tests\compat')
@@ -548,6 +548,11 @@ is_snap = False
 #If the 'THISISSNAP' env variable is set we're running tests under the SNAP harness.
 if not is_silverlight and get_environ_variable("THISISSNAP")!=None: 
     is_snap = True
+
+is_vista = False
+#ipy.bat sets IS_VISTA
+if not is_silverlight and get_environ_variable("IS_VISTA")=="1":
+    is_vista = True
 
 def add_clr_assemblies(*dlls):
     import clr

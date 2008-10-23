@@ -26,7 +26,7 @@ namespace IronPython.Runtime.Binding {
     static class Binders {
         public static Expression/*!*/ Invoke(BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
             return Ast.Dynamic(
-                new InvokeBinder(
+                new PythonInvokeBinder(
                     binder,
                     signature
                 ),
@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, Expression arg0) {
             return Ast.Dynamic(
-                new OperationBinder(
+                new PythonOperationBinder(
                     binder,
                     operation
                 ),
@@ -76,7 +76,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, Expression arg0, Expression arg1) {
             return Ast.Dynamic(
-                new OperationBinder(
+                new PythonOperationBinder(
                     binder,
                     operation
                 ),
@@ -88,7 +88,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Operation(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ operation, params Expression[] args) {
             return Ast.Dynamic(
-                new OperationBinder(
+                new PythonOperationBinder(
                     binder,
                     operation
                 ),
@@ -99,7 +99,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Set(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target, Expression/*!*/ value) {
             return Ast.Dynamic(
-                new SetMemberBinder(
+                new PythonSetMemberBinder(
                     binder,
                     name
                 ),
@@ -115,7 +115,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Get(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
             return Ast.Dynamic(
-                new GetMemberBinder(
+                new PythonGetMemberBinder(
                     binder,
                     name
                 ),
@@ -127,7 +127,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ TryGet(Expression/*!*/ codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {
             return Ast.Dynamic(
-                new GetMemberBinder(
+                new PythonGetMemberBinder(
                     binder,
                     name,
                     true
@@ -144,7 +144,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Delete(BinderState/*!*/ binder, Type/*!*/ resultType, string/*!*/ name, Expression/*!*/ target) {        
             return Ast.Dynamic(
-                new DeleteMemberBinder(
+                new PythonDeleteMemberBinder(
                     binder,
                     name
                 ),
@@ -153,14 +153,14 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public static MetaAction/*!*/ BinaryOperationRetBool(BinderState/*!*/ state, string operatorName) {
+        public static MetaObjectBinder/*!*/ BinaryOperationRetBool(BinderState/*!*/ state, string operatorName) {
             return BinaryOperationRetType(state, operatorName, typeof(bool));
         }
 
-        public static MetaAction/*!*/ BinaryOperationRetType(BinderState/*!*/ state, string operatorName, Type retType) {
+        public static MetaObjectBinder/*!*/ BinaryOperationRetType(BinderState/*!*/ state, string operatorName, Type retType) {
             return new ComboBinder(
                 new BinderMappingInfo(
-                    new OperationBinder(
+                    new PythonOperationBinder(
                         state,
                         operatorName
                     ),
@@ -174,7 +174,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public static MetaAction/*!*/ InvokeAndConvert(BinderState/*!*/ state, int argCount, Type retType) {
+        public static MetaObjectBinder/*!*/ InvokeAndConvert(BinderState/*!*/ state, int argCount, Type retType) {
             // +2 for the target object and CodeContext which InvokeBinder recevies
             ParameterMappingInfo[] args = new ParameterMappingInfo[argCount + 2];   
             for (int i = 0; i < argCount + 2; i++) {
@@ -183,7 +183,7 @@ namespace IronPython.Runtime.Binding {
 
             return new ComboBinder(
                 new BinderMappingInfo(
-                    new InvokeBinder(
+                    new PythonInvokeBinder(
                         state,
                         new CallSignature(argCount)
                     ),
@@ -203,10 +203,10 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         /// <param name="state"></param>
         /// <returns></returns>
-        public static InvokeBinder/*!*/ InvokeSplat(BinderState/*!*/ state) {
-            return new InvokeBinder(
+        public static PythonInvokeBinder/*!*/ InvokeSplat(BinderState/*!*/ state) {
+            return new PythonInvokeBinder(
                 state,
-                new CallSignature(new ArgumentInfo(ArgumentKind.List))
+                new CallSignature(new Argument(ArgumentType.List))
             );
         }
 
@@ -215,10 +215,10 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// The signature of the target site should be object(function), object[], dictionary, retType
         /// </summary>
-        public static InvokeBinder/*!*/ InvokeKeywords(BinderState/*!*/ state) {
-            return new InvokeBinder(
+        public static PythonInvokeBinder/*!*/ InvokeKeywords(BinderState/*!*/ state) {
+            return new PythonInvokeBinder(
                 state,
-                new CallSignature(new ArgumentInfo(ArgumentKind.List), new ArgumentInfo(ArgumentKind.Dictionary))
+                new CallSignature(new Argument(ArgumentType.List), new Argument(ArgumentType.Dictionary))
             );
         }
     }

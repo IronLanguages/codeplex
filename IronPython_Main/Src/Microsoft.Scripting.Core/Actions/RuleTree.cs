@@ -35,24 +35,24 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Looks through the rule list, prunes invalid rules and returns rules that apply
         /// </summary>
-        internal Rule<T>[] FindApplicableRules(Type[] types) {
+        internal CallSiteRule<T>[] FindApplicableRules(Type[] types) {
             //
             // 1. Get the rule list that would apply to the arguments at hand
             //
-            LinkedList<Rule<T>> list = GetRuleList(types);
+            LinkedList<CallSiteRule<T>> list = GetRuleList(types);
 
             lock (list) {
                 //
                 // Clone the list for execution
                 //
                 int live = list.Count;
-                Rule<T>[] rules = null;
+                CallSiteRule<T>[] rules = null;
 
                 if (live > 0) {
-                    rules = new Rule<T>[live];
+                    rules = new CallSiteRule<T>[live];
                     int index = 0;
 
-                    LinkedListNode<Rule<T>> node = list.First;
+                    LinkedListNode<CallSiteRule<T>> node = list.First;
                     while (node != null) {
                         rules[index++] = node.Value;
                         node = node.Next;
@@ -67,8 +67,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private LinkedList<Rule<T>> GetRuleList(Type[] types) {
-            LinkedList<Rule<T>> ruleList;
+        private LinkedList<CallSiteRule<T>> GetRuleList(Type[] types) {
+            LinkedList<CallSiteRule<T>> ruleList;
             lock (_ruleTable) {
                 RuleTable curTable = _ruleTable;
                 foreach (Type objType in types) {
@@ -85,7 +85,7 @@ namespace Microsoft.Scripting.Actions {
                 }
 
                 if (curTable.Rules == null) {
-                    curTable.Rules = new LinkedList<Rule<T>>();
+                    curTable.Rules = new LinkedList<CallSiteRule<T>>();
                 }
 
                 ruleList = curTable.Rules;
@@ -93,18 +93,18 @@ namespace Microsoft.Scripting.Actions {
             return ruleList;
         }
 
-        internal void AddRule(Type[] args, Rule<T> rule) {
-            LinkedList<Rule<T>> list = GetRuleList(args);
+        internal void AddRule(Type[] args, CallSiteRule<T> rule) {
+            LinkedList<CallSiteRule<T>> list = GetRuleList(args);
             lock (list) {
                 list.AddLast(rule);
             }
         }
 
-        internal void RemoveRule(Type[] args, Rule<T> rule) {
-            LinkedList<Rule<T>> list = GetRuleList(args);
+        internal void RemoveRule(Type[] args, CallSiteRule<T> rule) {
+            LinkedList<CallSiteRule<T>> list = GetRuleList(args);
             lock (list) {
-                LinkedListNode<Rule<T>> node = list.First;
-                EqualityComparer<Rule<T>> cmp = EqualityComparer<Rule<T>>.Default;
+                LinkedListNode<CallSiteRule<T>> node = list.First;
+                EqualityComparer<CallSiteRule<T>> cmp = EqualityComparer<CallSiteRule<T>>.Default;
                 while (node != null) {
                     if (cmp.Equals(node.Value, rule)) {
                         list.Remove(node);
@@ -117,7 +117,7 @@ namespace Microsoft.Scripting.Actions {
 
         private class RuleTable {
             internal Dictionary<Type, RuleTable> NextTable;
-            internal LinkedList<Rule<T>> Rules;
+            internal LinkedList<CallSiteRule<T>> Rules;
         }
     }
 }

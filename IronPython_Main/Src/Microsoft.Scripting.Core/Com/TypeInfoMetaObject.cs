@@ -20,7 +20,7 @@ using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal sealed class TypeInfoMetaObject : MetaObject {
         private readonly Type _comType;
 
@@ -37,8 +37,8 @@ namespace Microsoft.Scripting.Com {
         /// succeed only if the wrapper's returned RCW type matches that expected by the test. 
         /// </summary>
         internal Restrictions MakeComRestrictions(Type type, PropertyInfo testProperty, object targetObject) {
-            Restrictions r1 = Restrictions.TypeRestriction(Expression, type);
-            Restrictions r2 = Restrictions.ExpressionRestriction(
+            Restrictions r1 = Restrictions.GetTypeRestriction(Expression, type);
+            Restrictions r2 = Restrictions.GetExpressionRestriction(
                 Expression.Equal(
                     Expression.Property(
                         Expression.ConvertHelper(Expression, type),
@@ -54,44 +54,44 @@ namespace Microsoft.Scripting.Com {
             return MakeComRestrictions(typeof(ComObjectWithTypeInfo), typeof(ComObjectWithTypeInfo).GetProperty("ComType"), _comType);
         }
 
-        public override MetaObject Call(CallAction action, MetaObject[] args) {
+        public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf(), args);
+            return action.FallbackInvokeMember(UnwrapSelf(), args);
         }
 
-        public override MetaObject Convert(ConvertAction action) {
+        public override MetaObject BindConvert(ConvertBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf());
+            return action.FallbackConvert(UnwrapSelf());
         }
 
-        public override MetaObject Create(CreateAction action, MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf(), args);
+            return action.FallbackCreateInstance(UnwrapSelf(), args);
         }
 
-        public override MetaObject DeleteMember(DeleteMemberAction action) {
+        public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf());
+            return action.FallbackDeleteMember(UnwrapSelf());
         }
 
-        public override MetaObject GetMember(GetMemberAction action) {
+        public override MetaObject BindGetMember(GetMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf());
+            return action.FallbackGetMember(UnwrapSelf());
         }
 
-        public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+        public override MetaObject BindInvoke(InvokeBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf(), args);
+            return action.FallbackInvoke(UnwrapSelf(), args);
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf(), args);
+            return action.FallbackOperation(UnwrapSelf(), args);
         }
 
-        public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
+        public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(UnwrapSelf(), value);
+            return action.FallbackSetMember(UnwrapSelf(), value);
         }
 
         private MetaObject UnwrapSelf() {

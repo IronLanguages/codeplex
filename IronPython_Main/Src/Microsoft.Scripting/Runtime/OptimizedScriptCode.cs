@@ -71,9 +71,9 @@ namespace Microsoft.Scripting.Runtime {
             if (_unoptimizedTarget == null) {
                 // TODO: fix generated DLR ASTs - languages should remove their usage
                 // of GlobalVariables and then this can go away.
-                code = new GlobalLookupRewriter().RewriteLambda(code);
+                Expression<DlrMainCallTarget> lambda = new GlobalLookupRewriter().RewriteLambda(code);
 
-                _unoptimizedTarget = code.Compile<DlrMainCallTarget>(SourceUnit.EmitDebugSymbols);
+                _unoptimizedTarget = lambda.Compile(SourceUnit.EmitDebugSymbols);
             }
 
 
@@ -127,10 +127,10 @@ namespace Microsoft.Scripting.Runtime {
 
         private void CompileWithArrayGlobals(out DlrMainCallTarget target, out IAttributesCollection globals) {
             GlobalArrayRewriter rewriter = new GlobalArrayRewriter();
-            LambdaExpression lambda = rewriter.RewriteLambda(Code);
+            Expression<DlrMainCallTarget> lambda = rewriter.RewriteLambda(Code);
 
             // Compile target
-            target = lambda.Compile<DlrMainCallTarget>(SourceUnit.EmitDebugSymbols);
+            target = lambda.Compile(SourceUnit.EmitDebugSymbols);
 
             // Create globals
             globals = rewriter.CreateDictionary();
@@ -186,14 +186,20 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        protected override MethodBuilder CompileForSave(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict, string name) {
-            ToDiskRewriter diskRewriter = new ToDiskRewriter(typeGen, symbolDict);
-            LambdaExpression lambda = diskRewriter.RewriteLambda(Code, name);
+        protected override MethodBuilder CompileForSave(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict) {
+            // first, serialize constants and dynamic sites:
+            ToDiskRewriter diskRewriter = new ToDiskRewriter(typeGen);
+            LambdaExpression lambda = diskRewriter.RewriteLambda(Code);
+            
+            // rewrite global variables:
+            var globalRewriter = new GlobalArrayRewriter(symbolDict);
+            lambda = globalRewriter.RewriteLambda(lambda);
+            
             MethodBuilder builder = lambda.CompileToMethod(typeGen.TypeBuilder, CompilerHelpers.PublicStatic | MethodAttributes.SpecialName, false);
 
             builder.SetCustomAttribute(new CustomAttributeBuilder(
                 typeof(CachedOptimizedCodeAttribute).GetConstructor(new Type[] { typeof(string[]) }),
-                new object[] { ArrayUtils.ToArray(diskRewriter.Names) }
+                new object[] { ArrayUtils.ToArray(globalRewriter.Names) }
             ));
 
             return builder;

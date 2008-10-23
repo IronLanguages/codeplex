@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, args);
         }
 
@@ -43,27 +43,27 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ callAction, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ callAction, params MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(callAction, args);
         }
 
-        public override MetaObject Convert(ConvertAction action) {
-            if (action.ToType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(action, action.ToType, Restrict(typeof(Method)));
+        public override MetaObject BindConvert(ConvertBinder action) {
+            if (action.Type.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(action, action.Type, Restrict(typeof(Method)));
             }
 
-            return base.Convert(action);
+            return base.BindConvert(action);
         }
 
         #endregion
 
         #region Invoke Implementation
 
-        private MetaObject InvokeWorker(MetaAction/*!*/ callAction, MetaObject/*!*/[] args) {
+        private MetaObject InvokeWorker(MetaObjectBinder/*!*/ callAction, MetaObject/*!*/[] args) {
             CallSignature signature = BindingHelpers.GetCallSignature(callAction);
             MetaObject self = Restrict(typeof(Method));
             Restrictions restrictions = self.Restrictions;
@@ -74,7 +74,7 @@ namespace IronPython.Runtime.Binding {
             if (Value.im_self == null) {
                 // restrict to null self (Method is immutable so this is an invariant test)
                 restrictions = restrictions.Merge(
-                    Restrictions.ExpressionRestriction(
+                    Restrictions.GetExpressionRestriction(
                         Ast.Equal(
                             GetSelfExpression(self),
                             Ast.Null()
@@ -98,7 +98,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Comma(
                             MakeCheckSelf(signature, args),
                             Ast.Dynamic(
-                                new InvokeBinder(
+                                new PythonInvokeBinder(
                                     BinderState.GetBinderState(callAction),
                                     BindingHelpers.GetCallSignature(callAction)
                                 ),
@@ -124,7 +124,7 @@ namespace IronPython.Runtime.Binding {
             } else {
                 // restrict to non-null self (Method is immutable so this is an invariant test)
                 restrictions = restrictions.Merge(
-                    Restrictions.ExpressionRestriction(
+                    Restrictions.GetExpressionRestriction(
                         Ast.NotEqual(
                             GetSelfExpression(self),
                             Ast.Null()
@@ -134,12 +134,12 @@ namespace IronPython.Runtime.Binding {
 
                 MetaObject im_self = GetMetaSelf(self);
                 MetaObject[] newArgs = ArrayUtils.Insert(func, im_self, args);
-                CallSignature newSig = new CallSignature(ArrayUtils.Insert(new ArgumentInfo(ArgumentKind.Simple), signature.GetArgumentInfos()));
+                CallSignature newSig = new CallSignature(ArrayUtils.Insert(new Argument(ArgumentType.Simple), signature.GetArgumentInfos()));
 
 
                 call = new MetaObject(
                     Ast.Dynamic(
-                        new InvokeBinder(
+                        new PythonInvokeBinder(
                             BinderState.GetBinderState(callAction),
                             newSig
                         ),
@@ -233,12 +233,12 @@ namespace IronPython.Runtime.Binding {
         }
 
         private Expression/*!*/ MakeCheckSelf(CallSignature signature, MetaObject/*!*/[]/*!*/ args) {
-            ArgumentKind firstArgKind = signature.GetArgumentKind(0);
+            ArgumentType firstArgKind = signature.GetArgumentKind(0);
 
             Expression res;
-            if (firstArgKind == ArgumentKind.Simple || firstArgKind == ArgumentKind.Instance) {
+            if (firstArgKind == ArgumentType.Simple || firstArgKind == ArgumentType.Instance) {
                 res = CheckSelf(Ast.ConvertHelper(Expression, typeof(Method)), args[0].Expression);
-            } else if (firstArgKind != ArgumentKind.List) {
+            } else if (firstArgKind != ArgumentType.List) {
                 res = CheckSelf(Ast.ConvertHelper(Expression, typeof(Method)), Ast.Null());
             } else {
                 // list, check arg[0] and then return original list.  If not a list,

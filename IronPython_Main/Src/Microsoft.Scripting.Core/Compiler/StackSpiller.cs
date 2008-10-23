@@ -96,11 +96,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // (none of these will be hoisted so there is no closure impact)
                 Expression newBody = body.Node;
                 if (_tm.Temps.Count > 0) {
-                    newBody = Expression.Scope(newBody, "$lambda_temp_scope$" + lambda.Name, _tm.Temps);
+                    newBody = Expression.Comma(_tm.Temps, newBody);
                 }
 
                 // Clone the lambda, replacing the body & variables
-                return Expression.Lambda(lambda.NodeType, lambda.Type, lambda.Name, newBody, lambda.Annotations, lambda.Parameters);
+                return lambda.CloneWith(lambda.Name, newBody, lambda.Annotations, lambda.Parameters);
             }
 
             return lambda;
@@ -148,7 +148,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // CallSite is on the stack
             ChildRewriter cr = new ChildRewriter(this, Stack.NonEmpty, node.Arguments.Count);
             cr.Add(node.Arguments);
-            return cr.Finish(cr.Rewrite ? new DynamicExpression(node.Type, node.Annotations, node.DelegateType, node.Binder, cr[0, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? DynamicExpression.Make(node.Type, node.Annotations, node.DelegateType, node.Binder, cr[0, -1]) : expr);
         }
 
         private Result RewriteIndexAssignment(AssignmentExpression node, Stack stack) {
@@ -167,10 +167,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         cr[0],                              // Object
                         index.Indexer,
                         index.Annotations,
-                        cr[1, -2],                          // arguments
-                        index.Type,
-                        index.CanRead,
-                        index.CanWrite
+                        cr[1, -2]                           // arguments                        
                     ),
                     cr[-1]                                  // value
                 );
@@ -333,7 +330,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return cr.Finish(
                     new AssignmentExpression(
                         node.Annotations,
-                        new MemberExpression(cr[0], lvalue.Member, lvalue.Annotations, lvalue.Type, lvalue.CanRead, lvalue.CanWrite),
+                        MemberExpression.Make(cr[0], lvalue.Member, lvalue.Annotations),
                         cr[1]
                     )
                 );
@@ -348,7 +345,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Expression is emitted on top of the stack in current state
             Result expression = RewriteExpression(node.Expression, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = new MemberExpression(expression.Node, node.Member, node.Annotations, node.Type, node.CanRead, node.CanWrite);
+                expr = MemberExpression.Make(expression.Node, node.Member, node.Annotations);
             }
             return new Result(expression.Action, expr);
         }
@@ -369,10 +366,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     cr[0],
                     node.Indexer,
                     node.Annotations,
-                    cr[1, -1],
-                    node.Type,
-                    node.CanRead,
-                    node.CanWrite
+                    cr[1, -1]
                 );
             }
 
@@ -392,7 +386,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new MethodCallExpression(node.Annotations, node.Type, node.Method, cr[0], cr[1, -1]) : expr);
+            return cr.Finish(cr.Rewrite ? MethodCallExpression.Make(node.Annotations, node.Method, cr[0], cr[1, -1]) : expr);
         }
 
         // NewArrayExpression
@@ -438,7 +432,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             ChildRewriter cr = new ChildRewriter(this, stack, node.Arguments.Count);
             cr.Add(node.Arguments);
 
-            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Type, node.Constructor, cr[0, -1], node.Members) : expr);
+            return cr.Finish(cr.Rewrite ? new NewExpression(node.Annotations, node.Constructor, cr[0, -1], node.Members) : expr);
         }
 
         // TypeBinaryExpression
@@ -582,7 +576,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // Block
         private Result RewriteBlock(Expression expr, Stack stack) {
-            Block node = (Block)expr;
+            BlockExpression node = (BlockExpression)expr;
 
             ReadOnlyCollection<Expression> expressions = node.Expressions;
             RewriteAction action = RewriteAction.None;
@@ -605,7 +599,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             if (action != RewriteAction.None) {
                 // okay to wrap since we know no one can mutate the clone array
-                expr = new Block(node.Annotations, new ReadOnlyCollection<Expression>(clone), node.Type);
+                if (node.Type == typeof(void)) {
+                    expr = new BlockExpression(node.Annotations, node.Variables, new ReadOnlyCollection<Expression>(clone));
+                } else {
+                    expr = new CommaExpression(node.Annotations, node.Variables, new ReadOnlyCollection<Expression>(clone));
+                }
             }
             return new Result(action, expr);
         }
@@ -654,7 +652,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // LoopStatement
         private Result RewriteLoopStatement(Expression expr, Stack stack) {
-            LoopStatement node = (LoopStatement)expr;
+            LoopExpression node = (LoopExpression)expr;
 
             // The loop statement requires empty stack for itself, so it
             // can guarantee it to the child nodes.
@@ -672,7 +670,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (action != RewriteAction.None) {
-                expr = new LoopStatement(test.Node, incr.Node, body.Node, @else.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
+                expr = new LoopExpression(test.Node, incr.Node, body.Node, @else.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
             }
             return new Result(action, expr);
         }
@@ -725,28 +723,28 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(action, expr);
         }
 
-        // ScopeExpression
-        private Result RewriteScopeExpression(Expression expr, Stack stack) {
-            ScopeExpression node = (ScopeExpression)expr;
+        // DebugInfoExpression
+        private Result RewriteDebugInfoExpression(Expression expr, Stack stack) {
+            var node = (DebugInfoExpression)expr;
 
-            Result body = RewriteExpression(node.Body, stack);
+            Result body = RewriteExpression(node.Expression, stack);
 
             RewriteAction action = body.Action;
             if (action != RewriteAction.None) {
-                expr = new ScopeExpression(body.Node, node.Name, node.Annotations, node.Variables);
+                expr = new DebugInfoExpression(body.Node, node.Document, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn);
             }
             return new Result(action, expr);
         }
 
         // SwitchStatement
         private Result RewriteSwitchStatement(Expression expr, Stack stack) {
-            SwitchStatement node = (SwitchStatement)expr;
+            SwitchExpression node = (SwitchExpression)expr;
 
             // The switch statement test is emitted on the stack in current state
-            Result test = RewriteExpressionFreeTemps(node.TestValue, stack);
+            Result test = RewriteExpressionFreeTemps(node.Test, stack);
 
             RewriteAction action = test.Action;
-            ReadOnlyCollection<SwitchCase> cases = node.Cases;
+            ReadOnlyCollection<SwitchCase> cases = node.SwitchCases;
             SwitchCase[] clone = null;
             for (int i = 0; i < cases.Count; i++) {
                 SwitchCase @case = cases[i];
@@ -774,7 +772,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     cases = new ReadOnlyCollection<SwitchCase>(clone);
                 }
 
-                expr = new SwitchStatement(test.Node, node.Label, node.Annotations, cases);
+                expr = new SwitchExpression(test.Node, node.BreakLabel, node.Annotations, cases);
             }
 
             return new Result(action, expr);
@@ -782,7 +780,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // ThrowStatement
         private Result RewriteThrowStatement(Expression expr, Stack stack) {
-            ThrowStatement node = (ThrowStatement)expr;
+            ThrowExpression node = (ThrowExpression)expr;
 
             Result value = RewriteExpressionFreeTemps(node.Value, stack);
             if (value.Action != RewriteAction.None) {
@@ -793,7 +791,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // TryStatement
         private Result RewriteTryStatement(Expression expr, Stack stack) {
-            TryStatement node = (TryStatement)expr;
+            TryExpression node = (TryExpression)expr;
 
             // Try statement definitely needs an empty stack so its
             // child nodes execute at empty stack.
@@ -853,7 +851,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     handlers = new ReadOnlyCollection<CatchBlock>(clone);
                 }
 
-                expr = new TryStatement(body.Node, @finally.Node, fault.Node, node.Annotations, handlers);
+                expr = new TryExpression(body.Node, @finally.Node, fault.Node, node.Annotations, handlers);
             }
             return new Result(action, expr);
         }

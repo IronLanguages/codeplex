@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Actions {
     /// and provide a List of BinderMappingInfo representing this data.  From there the ComboBinder
     /// just processes the list to create the resulting code.
     /// </summary>
-    public class ComboBinder : MetaAction {
+    public class ComboBinder : MetaObjectBinder {
         private readonly BinderMappingInfo[] _metaBinders;
 
         public ComboBinder(params BinderMappingInfo[] binders)
@@ -69,9 +69,9 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return new MetaObject(
-                Expression.Scope(
-                    Expression.Comma(steps.ToArray()),
-                    temps.ToArray()
+                Expression.Comma(
+                    temps.ToArray(),
+                    steps.ToArray()
                 ),
                 restrictions
             );
@@ -103,14 +103,14 @@ namespace Microsoft.Scripting.Actions {
             return res;
         }
 
-        public override object HashCookie {
+        public override object CacheIdentity {
             get { return this; }
         }
 
         public override int GetHashCode() {
             int res = 6551;
             foreach (BinderMappingInfo metaBinder in _metaBinders) {
-                res ^= metaBinder.Binder.HashCookie.GetHashCode();
+                res ^= metaBinder.Binder.CacheIdentity.GetHashCode();
 
                 foreach (ParameterMappingInfo mapInfo in metaBinder.MappingInfo) {
                     res ^= mapInfo.GetHashCode();
@@ -131,7 +131,7 @@ namespace Microsoft.Scripting.Actions {
                     BinderMappingInfo self = _metaBinders[i];
                     BinderMappingInfo otherBinders = other._metaBinders[i];
 
-                    if (!self.Binder.HashCookie.Equals(otherBinders.Binder.HashCookie) ||
+                    if (!self.Binder.CacheIdentity.Equals(otherBinders.Binder.CacheIdentity) ||
                         self.MappingInfo.Count != otherBinders.MappingInfo.Count) {
                         return false;
                     }
@@ -265,15 +265,15 @@ namespace Microsoft.Scripting.Actions {
     /// meta-binder and the mapping of parameters, sub-sites, and constants into the binding.
     /// </summary>
     public class BinderMappingInfo {
-        public MetaAction Binder;
+        public MetaObjectBinder Binder;
         public IList<ParameterMappingInfo> MappingInfo;
 
-        public BinderMappingInfo(MetaAction binder, IList<ParameterMappingInfo> mappingInfo) {
+        public BinderMappingInfo(MetaObjectBinder binder, IList<ParameterMappingInfo> mappingInfo) {
             Binder = binder;
             MappingInfo = mappingInfo;
         }
 
-        public BinderMappingInfo(MetaAction binder, params ParameterMappingInfo[] mappingInfos)
+        public BinderMappingInfo(MetaObjectBinder binder, params ParameterMappingInfo[] mappingInfos)
             : this(binder, (IList<ParameterMappingInfo>)mappingInfos) {
         }
 

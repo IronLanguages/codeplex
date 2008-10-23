@@ -65,7 +65,7 @@ namespace Microsoft.Scripting.Actions {
 
             if (typeof(TypeTracker).IsAssignableFrom(type)) {
                 restrictions = restrictions.Merge(
-                    Restrictions.InstanceRestriction(target.Expression, target.Value)
+                    Restrictions.GetInstanceRestriction(target.Expression, target.Value)
                 );
 
                 type = ((TypeTracker)target.Value).Type;

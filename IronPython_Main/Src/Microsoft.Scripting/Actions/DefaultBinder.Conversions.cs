@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Actions {
             // try all the conversions - first look for conversions against the expression type,
             // these can be done w/o any additional tests.  Then look for conversions against the 
             // restricted type.
-            Restrictions typeRestrictions = arg.Restrictions.Merge(Restrictions.TypeRestriction(arg.Expression, arg.LimitType));
+            Restrictions typeRestrictions = arg.Restrictions.Merge(Restrictions.GetTypeRestriction(arg.Expression, arg.LimitType));
 
             return
                 TryConvertToObject(toType, arg.Expression.Type, arg) ??
@@ -324,8 +324,8 @@ namespace Microsoft.Scripting.Actions {
             if (!isImplicit && kind == ConversionResultKind.ExplicitTry) {
                 Expression convFailed = GetTryConvertReturnValue(retType);
                 ParameterExpression tmp = Ast.Variable(convFailed.Type == typeof(object) ? typeof(object) : ret.Type, "tmp");
-                ret = Ast.Scope(
-                    Ast.Comma(
+                ret = Ast.Comma(
+                        new ParameterExpression[] { tmp },
                         AstUtils.Try(
                             Ast.Assign(tmp, Ast.ConvertHelper(ret, tmp.Type))
                         ).Catch(
@@ -333,9 +333,7 @@ namespace Microsoft.Scripting.Actions {
                             Ast.Assign(tmp, convFailed)
                         ),
                         tmp
-                    ),
-                    tmp
-                );
+                     );
             }
             return ret;
         }
@@ -438,7 +436,8 @@ namespace Microsoft.Scripting.Actions {
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
                 ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
                 return new MetaObject(
-                    Ast.Scope(
+                    Ast.Comma(
+                        new ParameterExpression[] { tmp },
                         Ast.Condition(
                             Ast.NotEqual(
                                 Ast.Assign(tmp, conversion),
@@ -452,8 +451,7 @@ namespace Microsoft.Scripting.Actions {
                                 )
                             ),
                             GetTryConvertReturnValue(toType)
-                        ),
-                        tmp
+                        )
                     ),
                     restrictions
                 );

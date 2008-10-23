@@ -120,6 +120,7 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
+        [Obsolete("use a NotEqual overload without SourceSpan")]
         public static BinaryExpression NotEqual(Expression left, Expression right, SourceSpan span) {
             return Expression.NotEqual(left, right, Expression.Annotate(span));
         }

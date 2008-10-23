@@ -167,7 +167,7 @@ namespace Microsoft.Scripting.Actions {
         private static MetaObject TryNullComparisonRule(MetaObject[] args) {
             Type otherType = args[0].LimitType;
 
-            Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
+            Restrictions restrictions = Restrictions.GetTypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
 
             if (args[0].LimitType == typeof(None)) {
                 if (!otherType.IsValueType) {
@@ -218,7 +218,7 @@ namespace Microsoft.Scripting.Actions {
 
                 return new MetaObject(
                     expr,
-                    Restrictions.TypeRestriction(arg0, args[0].LimitType).Merge(Restrictions.TypeRestriction(arg1, args[0].LimitType)).Merge(Restrictions.Combine(args))
+                    Restrictions.GetTypeRestriction(arg0, args[0].LimitType).Merge(Restrictions.GetTypeRestriction(arg1, args[0].LimitType)).Merge(Restrictions.Combine(args))
                 );
             }
 
@@ -316,7 +316,7 @@ namespace Microsoft.Scripting.Actions {
 
         private static MetaObject TryMakeDefaultUnaryRule(OperatorInfo info, Expression codeContext, MetaObject[] args) {
             if (args.Length == 1) {
-                Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
+                Restrictions restrictions = Restrictions.GetTypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
                 switch (info.Operator) {
                     case Operators.IsTrue:
                         if (args[0].LimitType == typeof(bool)) {
@@ -402,7 +402,7 @@ namespace Microsoft.Scripting.Actions {
                         codeContext
                     )
                 ),
-                Restrictions.TypeRestriction(target.Expression, target.LimitType).Merge(target.Restrictions)
+                Restrictions.GetTypeRestriction(target.Expression, target.LimitType).Merge(target.Restrictions)
             );
         }
 
@@ -428,7 +428,7 @@ namespace Microsoft.Scripting.Actions {
 
             return new MetaObject(
                 Ast.Constant(arrres.ToArray()),
-                Restrictions.TypeRestriction(target.Expression, target.LimitType).Merge(target.Restrictions)
+                Restrictions.GetTypeRestriction(target.Expression, target.LimitType).Merge(target.Restrictions)
             );
         }
 
@@ -475,11 +475,9 @@ namespace Microsoft.Scripting.Actions {
                         );
                     } else {
                         return new MetaObject(
-                            Ast.Scope(
-                                Ast.Comma(
-                                    target.MakeExpression(),
-                                    arg2
-                                ),
+                            Ast.Comma(
+                                new ParameterExpression[] { arg2 },
+                                target.MakeExpression(),
                                 arg2
                             ),
                             restrictions.Merge(Restrictions.Combine(target.RestrictedArguments))
@@ -498,7 +496,7 @@ namespace Microsoft.Scripting.Actions {
 
         private MetaObject MakeArrayIndexRule(string oper, MetaObject[] args) {
             if (CanConvertFrom(GetArgType(args, 1), typeof(int), false, NarrowingLevel.All)) {
-                Restrictions restrictions = Restrictions.TypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
+                Restrictions restrictions = Restrictions.GetTypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
 
                 if (oper == StandardOperators.GetItem) {
                     return new MetaObject(
@@ -669,7 +667,7 @@ namespace Microsoft.Scripting.Actions {
                 // Test Generated:
                 //   BinderOps.GetEventHandlerType(((EventTracker)args[0]).Event) == et.Event.EventHandlerType
                 //
-                return Restrictions.ExpressionRestriction(
+                return Restrictions.GetExpressionRestriction(
                     Ast.Equal(
                         Ast.Call(
                             typeof(BinderOps).GetMethod("GetEventHandlerType"),
@@ -689,7 +687,7 @@ namespace Microsoft.Scripting.Actions {
                 // Test Generated:
                 //   BinderOps.GetEventHandlerType(((EventTracker)((BoundMemberTracker)args[0]).BountTo).Event) == et.Event.EventHandlerType
                 //
-                return Restrictions.ExpressionRestriction(
+                return Restrictions.GetExpressionRestriction(
                     Ast.Equal(
                         Ast.Call(
                             typeof(BinderOps).GetMethod("GetEventHandlerType"),

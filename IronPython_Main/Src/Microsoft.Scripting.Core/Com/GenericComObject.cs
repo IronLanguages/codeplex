@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// We have no additional information about this COM object.

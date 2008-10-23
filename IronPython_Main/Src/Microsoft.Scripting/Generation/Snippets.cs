@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using Microsoft.Scripting.Utils;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -28,6 +29,8 @@ namespace Microsoft.Scripting.Generation {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Snippets Shared = new Snippets();
 
+        private Snippets() { }
+        
         private int _methodNameIndex;
 
         private AssemblyGen _assembly;
@@ -113,40 +116,65 @@ namespace Microsoft.Scripting.Generation {
             return Path.Combine(dir, filename);
         }
 
-        public void Dump() {
-            if (!SaveSnippets) {
+        public static void SaveAndVerifyAssemblies() {
+            if (!Shared.SaveSnippets) {
                 return;
             }
+            // Invoke the core Snippets.SaveAssemblies via reflection to get the locations of assemlies
+            // to be verified. Verify them using PEVerify.exe.
+            // Do this before verifying outer ring assemblies because they will depend on
+            // the core ones.
+            // The order needs to be
+            // 1) Save inner ring assemblies.
+            // 2) Save outer ring assemblies. This has to happen before verifying inner ring assemblies because
+            //    inner ring assemblies have dependency on outer ring assemlies via generated IL.
+            // 3) Verify inner ring assemblies.
+            // 4) Verify outer ring assemblies.
+            Assembly core = typeof(Microsoft.Linq.Expressions.Expression).Assembly;
+            Type snippets = core.GetType("Microsoft.Linq.Expressions.Compiler.Snippets");
+            MethodInfo saveAssemblies = snippets.GetMethod("SaveAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
+            string[] coreAssemblyLocations = (string[])saveAssemblies.Invoke(null, null);
+
+            string[] outerAssemblyLocations = Shared.SaveAssemblies();
+
+            foreach (var file in coreAssemblyLocations) {
+                AssemblyGen.PeVerifyAssemblyFile(file);
+            }
+
+            //verify outer ring assemblies
+            foreach (var file in outerAssemblyLocations) {
+                AssemblyGen.PeVerifyAssemblyFile(file);
+            }
+        }
+
+        // Return the assembly locations that need to be verified
+        private string[] SaveAssemblies() {
+            if (!SaveSnippets) {
+                return new string[0];
+            }
+
+            List<string> assemlyLocations = new List<string>();
 
             // first save all assemblies to disk:
             if (_assembly != null) {
-                _assembly.Dump();
-            }
-
-            if (_debugAssembly != null) {
-                _debugAssembly.Dump();
-            }
-
-            // Invoke the core Snippets.Dump via reflection
-            // Do this before verifying because our assemblies will depend on
-            // the core ones
-            Assembly core = typeof(Microsoft.Linq.Expressions.Expression).Assembly;
-            Type snippets = core.GetType("Microsoft.Linq.Expressions.Compiler.Snippets");
-            MethodInfo dump = snippets.GetMethod("Dump", BindingFlags.NonPublic | BindingFlags.Static);
-            dump.Invoke(null, null);
-
-            // then verify the verifiable ones:
-            if (_assembly != null) {
-                _assembly.Verify();
+                string assemblyLocation = _assembly.SaveAssembly();
+                if (assemblyLocation != null) {
+                    assemlyLocations.Add(assemblyLocation);
+                }
                 _assembly = null;
             }
 
             if (_debugAssembly != null) {
-                _debugAssembly.Verify();
+                string debugAssemblyLocation = _debugAssembly.SaveAssembly();
+                if (debugAssemblyLocation != null) {
+                    assemlyLocations.Add(debugAssemblyLocation);
+                }
                 _debugAssembly = null;
             }
 
             _optionsFrozen = false;
+
+            return assemlyLocations.ToArray();
         }
 
         public DynamicILGen CreateDynamicMethod(string methodName, Type returnType, Type[] parameterTypes, bool isDebuggable) {

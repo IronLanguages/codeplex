@@ -595,7 +595,7 @@ namespace Microsoft.Scripting.Ast {
 
             // wrap a scope if needed
             if (_locals != null && _locals.Count > 0) {
-                body = Expression.Scope(body, _name, new ReadOnlyCollection<ParameterExpression>(_locals.ToArray()));
+                body = Expression.Comma(new ReadOnlyCollection<ParameterExpression>(_locals.ToArray()), body);
             }
             return body;
         }
@@ -641,7 +641,7 @@ namespace Microsoft.Scripting.Ast {
             return !factory.IsGenericMethod &&
                 (typeof(CodeContext).IsAssignableFrom(factory.ReturnType)) &&
                 (ps.Length == 3) &&
-                (ps[0].ParameterType == typeof(ILocalVariables)) &&
+                (ps[0].ParameterType == typeof(IRuntimeVariables)) &&
                 (ps[1].ParameterType == typeof(CodeContext)) &&
                 (ps[2].ParameterType == typeof(bool));
         }
@@ -655,6 +655,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="name">Name of the lambda being built.</param>
         /// <param name="span">SourceSpan for the lambda being built.</param>
         /// <returns>New instance of the </returns>
+        [Obsolete("use a Lambda overload without SourceSpan")]
         public static LambdaBuilder Lambda(Type returnType, string name, SourceSpan span) {
             return Lambda(returnType, name, Expression.Annotate(span));
         }
@@ -677,7 +678,7 @@ namespace Microsoft.Scripting.Ast {
 
 namespace Microsoft.Scripting.Runtime {
     public static partial class RuntimeHelpers {
-        public static CodeContext CreateNestedCodeContext(ILocalVariables locals, CodeContext context, bool visible) {
+        public static CodeContext CreateNestedCodeContext(IRuntimeVariables locals, CodeContext context, bool visible) {
             Debug.Assert(locals.Count != 0);
             return new CodeContext(new Scope(context.Scope, new LocalsDictionary(locals), visible), context.LanguageContext, context);
         }

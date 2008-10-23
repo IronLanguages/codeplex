@@ -33,9 +33,21 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _value;
 
         internal AssignmentExpression(Annotations annotations, Expression expression, Expression value)
-            : base(ExpressionType.Assign, expression.Type, annotations) {
+            : base(annotations) {
             _expression = expression;
             _value = value;
+        }
+
+        protected override Type GetExpressionType() {
+            return Expression.Type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Assign;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
         }
 
         public Expression Expression {

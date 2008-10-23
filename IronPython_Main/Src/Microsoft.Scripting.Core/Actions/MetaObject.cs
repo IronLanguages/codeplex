@@ -15,7 +15,7 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Com;
+using Microsoft.Scripting.ComInterop;
 using System.Reflection;
 
 namespace Microsoft.Scripting.Actions {
@@ -91,7 +91,7 @@ namespace Microsoft.Scripting.Actions {
                 // We can skip _hasValue check as it implies _value == null
                 return _value is IDynamicObject 
 #if !SILVERLIGHT
-                    || Com.ComMetaObject.IsComObject(_value)
+                    || ComInterop.ComMetaObject.IsComObject(_value)
 #endif
                 ;
             }
@@ -104,60 +104,60 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public virtual MetaObject Convert(ConvertAction action) {
+        public virtual MetaObject BindConvert(ConvertBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this);
+            return action.FallbackConvert(this);
         }
 
-        public virtual MetaObject GetMember(GetMemberAction action) {
+        public virtual MetaObject BindGetMember(GetMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this);
+            return action.FallbackGetMember(this);
         }
 
-        public virtual MetaObject SetMember(SetMemberAction action, MetaObject value) {
+        public virtual MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, value);
+            return action.FallbackSetMember(this, value);
         }
 
-        public virtual MetaObject DeleteMember(DeleteMemberAction action) {
+        public virtual MetaObject BindDeleteMember(DeleteMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this);
+            return action.FallbackDeleteMember(this);
         }
 
-        public virtual MetaObject GetIndex(GetIndexAction action, params MetaObject[] args) {
+        public virtual MetaObject BindGetIndex(GetIndexBinder action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackGetIndex(this, args);
         }
 
-        public virtual MetaObject SetIndex(SetIndexAction action, params MetaObject[] args) {
+        public virtual MetaObject BindSetIndex(SetIndexBinder action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackSetIndex(this, args);
         }
 
-        public virtual MetaObject DeleteIndex(DeleteIndexAction action, MetaObject[] args) {
+        public virtual MetaObject BindDeleteIndex(DeleteIndexBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackDeleteIndex(this, args);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")]
-        public virtual MetaObject Call(CallAction action, params MetaObject[] args) {
+        public virtual MetaObject BindInvokeMemberl(InvokeMemberBinder action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackInvokeMember(this, args);
         }
 
-        public virtual MetaObject Invoke(InvokeAction action, params MetaObject[] args) {
+        public virtual MetaObject BindInvoke(InvokeBinder action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackInvoke(this, args);
         }
 
-        public virtual MetaObject Create(CreateAction action, params MetaObject[] args) {
+        public virtual MetaObject BindCreateInstance(CreateInstanceBinder action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackCreateInstance(this, args);
         }
 
-        public virtual MetaObject Operation(OperationAction action, params MetaObject[] args) {
+        public virtual MetaObject BindOperation(OperationBinder action, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
-            return action.Fallback(this, args);
+            return action.FallbackOperation(this, args);
         }
 
         // Internal helpers
@@ -199,8 +199,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public static MetaObject Throw(MetaObject target, MetaObject[] args, Type exception, params object[] exceptionArgs) {
-            return Throw(
+        public static MetaObject CreateThrow(MetaObject target, MetaObject[] args, Type exception, params object[] exceptionArgs) {
+            return CreateThrow(
                 target,
                 args,
                 exception,
@@ -208,7 +208,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public static MetaObject Throw(MetaObject target, MetaObject[] args, Type exception, params Expression[] exceptionArgs) {
+        public static MetaObject CreateThrow(MetaObject target, MetaObject[] args, Type exception, params Expression[] exceptionArgs) {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNull(args, "args");
             ContractUtils.RequiresNotNull(exception, "exception");

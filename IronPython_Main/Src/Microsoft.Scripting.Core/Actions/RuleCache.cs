@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Actions {
 
         private RuleTree<T> GetOrMakeRuleTree(CallSiteBinder binder) {
             RuleTree<T> tree;
-            object cookie = binder.HashCookie;
+            object cookie = binder.CacheIdentity;
 
             lock (this) {
                 if (!_trees.TryGetValue(cookie, out tree)) {
@@ -42,17 +42,17 @@ namespace Microsoft.Scripting.Actions {
             return tree;
         }
 
-        internal Rule<T>[] FindApplicableRules(CallSiteBinder binder, Type[] types) {
+        internal CallSiteRule<T>[] FindApplicableRules(CallSiteBinder binder, Type[] types) {
             RuleTree<T> tree = GetOrMakeRuleTree(binder);
             return tree.FindApplicableRules(types);
         }
 
-        internal void AddRule(CallSiteBinder binder, Type[] args, Rule<T> rule) {
+        internal void AddRule(CallSiteBinder binder, Type[] args, CallSiteRule<T> rule) {
             RuleTree<T> tree = GetOrMakeRuleTree(binder);
             tree.AddRule(args, rule);
         }
 
-        internal void RemoveRule(CallSiteBinder binder, Type[] args, Rule<T> rule) {
+        internal void RemoveRule(CallSiteBinder binder, Type[] args, CallSiteRule<T> rule) {
             RuleTree<T> tree = GetOrMakeRuleTree(binder);
             tree.RemoveRule(args, rule);
         }

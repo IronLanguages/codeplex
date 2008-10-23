@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         internal ParameterExpression GetTemporary(Type type, string name) {
-            Assert.NotNull(type, name);
+            Assert.NotNull(type);
 
             if (_temps == null) {
                 _temps = new List<ParameterExpression>();

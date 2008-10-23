@@ -18,7 +18,7 @@ using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class TypeLibMetaObject : MetaObject {
         private readonly ComTypeLibDesc _lib;
 
@@ -27,13 +27,13 @@ namespace Microsoft.Scripting.Com {
             _lib = lib;
         }
 
-        public override MetaObject GetMember(GetMemberAction action) {
+        public override MetaObject BindGetMember(GetMemberBinder action) {
             if (_lib.HasMember(action.Name)) {
                 Restrictions restrictions =
-                    Restrictions.TypeRestriction(
+                    Restrictions.GetTypeRestriction(
                         Expression, typeof(ComTypeLibDesc)
                     ).Merge(
-                        Restrictions.ExpressionRestriction(
+                        Restrictions.GetExpressionRestriction(
                             Expression.Equal(
                                 Expression.Property(
                                     Expression.ConvertHelper(
@@ -56,10 +56,10 @@ namespace Microsoft.Scripting.Com {
                 );
             }
 
-            return base.GetMember(action);
+            return base.BindGetMember(action);
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             switch (action.Operation) {
                 case "GetMemberNames":
                 case "MemberNames":
@@ -68,11 +68,11 @@ namespace Microsoft.Scripting.Com {
                             Expression.ConvertHelper(Expression, typeof(ComTypeLibDesc)),
                             typeof(ComTypeLibDesc).GetMethod("GetMemberNames")
                         ),
-                        Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ComTypeLibDesc)))
+                        Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, typeof(ComTypeLibDesc)))
                     );
 
                 default:
-                    return base.Operation(action, args);
+                    return base.BindOperation(action, args);
             }
         }
     }

@@ -19,6 +19,7 @@ using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
+        [Obsolete("use Expression.Catch instead")]
         public static CatchBlock Catch(Type type, ParameterExpression target, Expression body, Expression filter, SourceSpan span, SourceLocation header) {
             return Expression.Catch(type, target, body, filter, Expression.Annotate(span, header));
         }

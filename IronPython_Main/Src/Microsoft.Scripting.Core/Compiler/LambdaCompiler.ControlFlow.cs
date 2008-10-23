@@ -166,8 +166,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         return true;
                     }
                     return false;
+                case ExpressionType.DebugInfo:
                 case ExpressionType.Conditional:
-                case ExpressionType.Scope:
                 case ExpressionType.Block:
                 case ExpressionType.DoStatement:
                 case ExpressionType.SwitchStatement:
@@ -193,13 +193,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         var label = ((LabelExpression)lambdaBody).Label;
                         _labelInfo.Add(label, new LabelInfo(_ilg, label, true));
                         return;
-                    case ExpressionType.Scope:
-                        // Look in the body of a scope
-                        lambdaBody = ((ScopeExpression)lambdaBody).Body;
+                    case ExpressionType.DebugInfo:
+                        // Look in the body
+                        lambdaBody = ((DebugInfoExpression)lambdaBody).Expression;
                         continue;
                     case ExpressionType.Block:
                         // Look in the last expression of a block
-                        var exprs = ((Block)lambdaBody).Expressions;
+                        var exprs = ((BlockExpression)lambdaBody).Expressions;
 
                         // TODO: shouldn't allow creating empty blocks
                         if (exprs.Count == 0) {

@@ -69,7 +69,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // A virtual variable for accessing this locals array
         internal readonly ParameterExpression SelfVariable;
 
-        internal HoistedLocals(HoistedLocals parent, ParameterExpression selfVar, ReadOnlyCollection<ParameterExpression> vars) {
+        internal HoistedLocals(HoistedLocals parent, ReadOnlyCollection<ParameterExpression> vars) {
+
             if (parent != null) {
                 // Add the parent locals array as the 0th element in the array
                 vars = new ReadOnlyCollection<ParameterExpression>(vars.AddFirst(parent.SelfVariable));
@@ -80,8 +81,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 indexes.Add(vars[i], i);
             }
 
+            SelfVariable = Expression.Variable(typeof(object[]), null);
             Parent = parent;
-            SelfVariable = selfVar;
             Variables = vars;
             Indexes = new ReadOnlyDictionary<Expression, int>(indexes);
         }

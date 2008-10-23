@@ -20,8 +20,9 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
+using System.Runtime.InteropServices;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
@@ -39,47 +40,23 @@ namespace Microsoft.Scripting.Com {
             _elementType = _parameterType.GetGenericArguments()[0];
         }
 
-        internal override Expression Unwrap(Expression parameter) {
-            return Expression.ConvertHelper(parameter, _parameterType);
+        internal override Expression Marshal(Expression parameter) {
+            Debug.Assert(false, "passing StrongBox<T> byval");
+            throw new NotSupportedException();
         }
 
-        internal override Expression UnwrapByRef(Expression parameter) {
-            // temp = { parameter is _parameterType ? parameter.Value : throw error }
-            return _innerBuilder.UnwrapByRef(
-                Expression.Condition(
-                    Expression.TypeIs(parameter, _parameterType),
-                    Expression.Field(
-                        //TODO: could use DirectCast as we really need to be sure we are modifying the original argument.
-                        Expression.ConvertHelper(parameter, _parameterType),
-                        "Value"
-                    ),
-                    Expression.Call(
-                        typeof(RuntimeOps).GetMethod("IncorrectBoxType").MakeGenericMethod(_parameterType.GetGenericArguments()[0]),
-                        Expression.ConvertHelper(parameter, typeof(object))
-                    )
-                )
+        internal override Expression MarshalToRef(Expression parameter) {
+            return _innerBuilder.MarshalToRef(
+                Expression.Field(Expression.ConvertHelper(parameter, _parameterType), "Value")
             );
         }
 
-        internal override Expression UpdateFromReturn(Expression parameter) {
-            // we are updating parameter, but also passing it to base so that it had a chance to copyback 
-            // if parameter itself is a temp in the outer builder.
-            // parameter = { parameter.Value = temp, parameter }
+        internal override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
             return _innerBuilder.UpdateFromReturn(
-                Expression.Field(
-                    Expression.TypeAs(parameter, _parameterType),
-                    _parameterType.GetField("Value")
-                )
+                Expression.Field(Expression.ConvertHelper(parameter, _parameterType), "Value"),
+                newValue
             );
         }
-
-        internal override ParameterExpression[] TemporaryVariables {
-            get {
-                return _innerBuilder.TemporaryVariables;
-            }
-        }
-
-
 
         internal override object UnwrapForReflection(object arg) {
             ContractUtils.RequiresNotNull(arg, "args");
@@ -104,16 +81,11 @@ namespace Microsoft.Scripting.Com {
         }
 
         internal override void UpdateFromReturn(object originalArg, object updatedArg) {
-            ((IStrongBox)originalArg).Value = updatedArg;
-        }
-    }
-}
-namespace Microsoft.Runtime.CompilerServices {
-    public static partial class RuntimeOps {
-        // TODO: just emit this in the generated code?
-        // Having a helper for this one error is overkill
-        public static T IncorrectBoxType<T>(object received) {
-            throw Error.UnexpectedType("StrongBox<" + typeof(T).Name + ">", TypeUtils.GetTypeForBinding(received).Name);
+            IStrongBox originalBox = (IStrongBox)originalArg;
+            object originalValue = originalBox.Value;
+            _innerBuilder.UpdateFromReturn(originalValue, updatedArg);
+
+            originalBox.Value = updatedArg;
         }
     }
 }

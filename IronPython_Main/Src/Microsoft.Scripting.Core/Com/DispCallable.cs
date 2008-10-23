@@ -20,7 +20,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Contracts;
 using System.Globalization;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This represents a bound dispmethod on a IDispatch object.
     /// </summary>

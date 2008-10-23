@@ -217,9 +217,9 @@ namespace Microsoft.Scripting.Ast {
                 block[i] = Expression.Assign(vars[i], param);
             }
             block[count] = new LambdaParameterRewriter(map).Visit(body);
-            return Expression.Scope(
-                Expression.Comma(new ReadOnlyCollection<Expression>(block)),
-                new ReadOnlyCollection<ParameterExpression>(vars)
+            return Expression.Comma(
+                new ReadOnlyCollection<ParameterExpression>(vars), 
+                new ReadOnlyCollection<Expression>(block)
             );
         }
 

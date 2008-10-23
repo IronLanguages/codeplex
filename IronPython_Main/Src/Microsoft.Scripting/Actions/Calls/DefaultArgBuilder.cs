@@ -42,14 +42,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             if (ParameterInfo.ParameterType.IsByRef) {
-                ParameterExpression tmp = parameterBinder.GetTemporary(ParameterInfo.ParameterType.GetElementType(), "optRef");
-                return Ast.Comma(
-                    Ast.Assign(
-                        tmp,
-                        Ast.Convert(Ast.Constant(val), tmp.Type)
-                    ),
-                    tmp
-                );
+                return Ast.Constant(val, ParameterInfo.ParameterType.GetElementType());
             }
 
             return parameterBinder.ConvertExpression(Ast.Constant(val), ParameterInfo, ParameterInfo.ParameterType);            

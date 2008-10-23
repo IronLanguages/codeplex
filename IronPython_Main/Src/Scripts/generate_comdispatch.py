@@ -108,7 +108,7 @@ class VariantType:
             cw.write('case VarEnum.VT_%s: // %s' % (self.variantType, self.managedType))
         
     def write_ComToManagedPrimitiveTypes(self, cw):
-        if not self.isPrimitiveType: return
+        if not self.isPrimitiveType or self.variantType == "CY": return
         cw.write("dict[VarEnum.VT_%s] = typeof(%s);" % (self.variantType, self.managedType))
 
     def write_IsPrimitiveType(self, cw):

@@ -582,7 +582,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         EmitBranchLogical(branchValue, (BinaryExpression)node, label);
                         return;
                     case ExpressionType.Block:
-                        EmitBranchBlock(branchValue, (Block)node, label);
+                        EmitBranchBlock(branchValue, (BlockExpression)node, label);
                         return;
                     case ExpressionType.Equal:
                     case ExpressionType.NotEqual:
@@ -717,11 +717,15 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitBranchBlock(bool branch, Block node, Label label) {
+        private void EmitBranchBlock(bool branch, BlockExpression node, Label label) {
+            EnterScope(node);
+
             for (int i = 0; i < node.Expressions.Count - 1; i++) {
                 EmitExpressionAsVoid(node.Expressions[i]);
             }
             EmitExpressionAndBranch(branch, node.Expressions[node.Expressions.Count - 1], label);
+
+            ExitScope(node);
         }
 
         #endregion

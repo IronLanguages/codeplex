@@ -40,15 +40,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        // TODO: Should this really be Type -> WeakReference?
-        // Issue #1, we'll end up growing the dictionary for each unique type
-        // Issue #2, we'll lose the generated delegate in the first gen-0
-        // collection.
-        //
-        // We probably need to replace this with an actual cache that holds
-        // onto the delegates and ages them out.
-        //
-        private static readonly Dictionary<Type, WeakReference> _Callers = new Dictionary<Type, WeakReference>();
+        private static readonly CacheDict<Type, Delegate> _Callers = new CacheDict<Type, Delegate>(200);
 
         internal static MatchCallerTarget<T> MakeCaller<T>() {
             Type target = typeof(T);
@@ -76,18 +68,12 @@ namespace Microsoft.Scripting.Actions {
 
         private static MatchCallerTarget<T> GetOrCreateCustomCaller<T>() {
             bool found;
-            WeakReference wr;
+            Delegate target = null;
             Type type = typeof(T);
 
             // LOCK to extract the weak reference with the updater DynamicMethod 
             lock (_Callers) {
-                found = _Callers.TryGetValue(type, out wr);
-            }
-
-            // Extract the DynamicMethod from the WeakReference, if any
-            object target = null;
-            if (found && wr != null) {
-                target = wr.Target;
+                found = _Callers.TryGetValue(type, out target);
             }
 
             // No target? Build new one
@@ -96,7 +82,7 @@ namespace Microsoft.Scripting.Actions {
 
                 // Insert into dictionary
                 lock (_Callers) {
-                    _Callers[type] = new WeakReference(target);
+                    _Callers[type] = target;
                 }
             }
 
@@ -113,7 +99,7 @@ namespace Microsoft.Scripting.Actions {
         /// inserting appropriate casts and boxings as needed.
         /// </summary>
         /// <returns>A MatchCallerTarget delegate.</returns>
-        private static object CreateCustomCaller<T>() {
+        private static Delegate CreateCustomCaller<T>() {
             Type type = typeof(T);
             MethodInfo invoke = type.GetMethod("Invoke");
             ParameterInfo[] parameters = invoke.GetParametersCached();

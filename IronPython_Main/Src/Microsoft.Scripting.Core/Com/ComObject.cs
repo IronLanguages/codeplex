@@ -21,7 +21,7 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This is a helper class for runtime-callable-wrappers of COM instances. We create one instance of this type
     /// for every generic RCW instance.

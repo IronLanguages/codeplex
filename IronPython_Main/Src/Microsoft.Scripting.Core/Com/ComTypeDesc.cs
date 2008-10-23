@@ -20,7 +20,7 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices.ComTypes;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     // TODO: Can it be made internal?
     public class ComTypeDesc : ComTypeLibMemberDesc {
         private string _typeName;

@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Restrictions Empty = new Restrictions();
 
-        public static Restrictions TypeRestriction(Expression expression, Type type) {
+        public static Restrictions GetTypeRestriction(Expression expression, Type type) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
 
@@ -151,13 +151,13 @@ namespace Microsoft.Scripting.Actions {
             return new Restrictions(new Restriction(expression, type));
         }
 
-        public static Restrictions InstanceRestriction(Expression expression, object instance) {
+        public static Restrictions GetInstanceRestriction(Expression expression, object instance) {
             ContractUtils.RequiresNotNull(expression, "expression");
 
             return new Restrictions(new Restriction(expression, instance));
         }
 
-        public static Restrictions ExpressionRestriction(Expression expression) {
+        public static Restrictions GetExpressionRestriction(Expression expression) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.Requires(expression.Type == typeof(bool), "expression");
             return new Restrictions(new Restriction(expression));
@@ -175,7 +175,7 @@ namespace Microsoft.Scripting.Actions {
             return res;
         }
 
-        public Expression CreateTest() {
+        public Expression ToExpression() {
             // TODO: Currently totally unoptimized and unordered
             Expression test = null;
             foreach (Restriction r in _restrictions) {

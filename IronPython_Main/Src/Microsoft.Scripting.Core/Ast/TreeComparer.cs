@@ -55,7 +55,7 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitBinary(node);
             }
 
-            protected internal override Expression VisitBlock(Block node) {
+            protected internal override Expression VisitBlock(BlockExpression node) {
                 Expressions.Add(node);
                 return base.VisitBlock(node);
             }
@@ -96,7 +96,7 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitDoWhile(node);
             }
 
-            protected internal override Expression VisitEmpty(EmptyStatement node) {
+            protected internal override Expression VisitEmpty(EmptyExpression node) {
                 Expressions.Add(node);
                 return base.VisitEmpty(node);
             }
@@ -116,7 +116,7 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitLambda(node);
             }
 
-            protected internal override Expression VisitLoop(LoopStatement node) {
+            protected internal override Expression VisitLoop(LoopExpression node) {
                 Expressions.Add(node);
                 return base.VisitLoop(node);
             }
@@ -158,22 +158,17 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitReturn(node);
             }
 
-            protected internal override Expression VisitScope(ScopeExpression node) {
-                Expressions.Add(node);
-                return base.VisitScope(node);
-            }
-
-            protected internal override Expression VisitSwitch(SwitchStatement node) {
+            protected internal override Expression VisitSwitch(SwitchExpression node) {
                 Expressions.Add(node);
                 return base.VisitSwitch(node);
             }
 
-            protected internal override Expression VisitThrow(ThrowStatement node) {
+            protected internal override Expression VisitThrow(ThrowExpression node) {
                 Expressions.Add(node);
                 return base.VisitThrow(node);
             }
 
-            protected internal override Expression VisitTry(TryStatement node) {
+            protected internal override Expression VisitTry(TryExpression node) {
                 Expressions.Add(node);
                 return base.VisitTry(node);
             }
@@ -288,7 +283,7 @@ namespace Microsoft.Linq.Expressions {
                     var dynLeft = (DynamicExpression)currentLeft;
                     var dynRight = (DynamicExpression)currentRight;
 
-                    if (!dynRight.Binder.HashCookie.Equals(dynLeft.Binder.HashCookie)) {
+                    if (!dynRight.Binder.CacheIdentity.Equals(dynLeft.Binder.CacheIdentity)) {
                         return false;
                     }
                     break;
@@ -313,7 +308,7 @@ namespace Microsoft.Linq.Expressions {
                             return false;
                         }
 
-                        if (!leftSite.Binder.HashCookie.Equals(rightSite.Binder.HashCookie)) {
+                        if (!leftSite.Binder.CacheIdentity.Equals(rightSite.Binder.CacheIdentity)) {
                             return false;
                         }
 
@@ -383,9 +378,9 @@ namespace Microsoft.Linq.Expressions {
                         return false;
                     }
                     break;
-                case ExpressionType.Scope:
+                case ExpressionType.Block:
                     // compare factory method
-                    if (!Compare(varInfo, (ScopeExpression)currentLeft, (ScopeExpression)currentRight)) {
+                    if (!Compare(varInfo, (BlockExpression)currentLeft, (BlockExpression)currentRight)) {
                         return false;
                     }
                     break;
@@ -397,7 +392,7 @@ namespace Microsoft.Linq.Expressions {
                     break;
                 case ExpressionType.TryStatement:
                     // compare catch finally blocks and their handler types
-                    if (!Compare(varInfo, (TryStatement)currentLeft, (TryStatement)currentRight)) {
+                    if (!Compare(varInfo, (TryExpression)currentLeft, (TryExpression)currentRight)) {
                         return false;
                     }
                     break;
@@ -408,7 +403,6 @@ namespace Microsoft.Linq.Expressions {
                     break;
                 case ExpressionType.Lambda:
                 case ExpressionType.ReturnStatement:
-                case ExpressionType.Block:
                 case ExpressionType.Assign:
                 case ExpressionType.Goto:
                 case ExpressionType.ThrowStatement:
@@ -500,7 +494,7 @@ namespace Microsoft.Linq.Expressions {
             return true;
         }
 
-        private static bool Compare(VariableInfo varInfo, ScopeExpression left, ScopeExpression right) {
+        private static bool Compare(VariableInfo varInfo, BlockExpression left, BlockExpression right) {
             if (left.Variables.Count != right.Variables.Count) {
                 return false;
             }
@@ -519,7 +513,7 @@ namespace Microsoft.Linq.Expressions {
             return true;
         }
 
-        private static bool Compare(VariableInfo varInfo, TryStatement left, TryStatement right) {
+        private static bool Compare(VariableInfo varInfo, TryExpression left, TryExpression right) {
             if ((left.Finally == null && right.Finally != null) ||
                 (left.Finally != null && right.Finally == null)) {
                 return false;

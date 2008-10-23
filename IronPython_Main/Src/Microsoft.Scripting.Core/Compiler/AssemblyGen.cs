@@ -34,7 +34,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 #if !SILVERLIGHT
         private readonly string _outFileName;       // can be null iff !SaveAndReloadAssemblies
         private readonly string _outDir;            // null means the current directory
-        private const string peverify_exe = "peverify.exe";
 #endif
 
         private int _index;
@@ -153,146 +152,18 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 #endif
 
-        #region Dump and Verify
+        #region Save the assembly
 
-        internal void Dump() {
+        //Return the location of the saved assembly file.
+        //The file location is used by PE verification in Microsoft.Scripting.
+        internal string SaveAssembly() {
 #if !SILVERLIGHT // AssemblyBuilder.Save
             _myAssembly.Save(_outFileName, PortableExecutableKinds.ILOnly, ImageFileMachine.I386);
-#endif
-        }
-
-        internal void Verify() {
-#if !SILVERLIGHT
-            PeVerifyThis();
-#endif
-        }
-
-#if !SILVERLIGHT
-        internal static string FindPeverify() {
-            string path = System.Environment.GetEnvironmentVariable("PATH");
-            string[] dirs = path.Split(';');
-            foreach (string dir in dirs) {
-                string file = Path.Combine(dir, peverify_exe);
-                if (File.Exists(file)) {
-                    return file;
-                }
-            }
+            return Path.Combine(_outDir, _outFileName);
+#else
             return null;
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void PeVerifyThis() {
-            string peverifyPath = FindPeverify();
-            if (peverifyPath == null) {
-                return;
-            }
-
-            int exitCode = 0;
-            string strOut = null;
-            string verifyFile = null;
-
-            try {
-                string pythonPath = new FileInfo(Assembly.GetEntryAssembly().Location).DirectoryName;
-
-                string assemblyFile = Path.Combine(_outDir, _outFileName).ToUpperInvariant();
-                string assemblyName = Path.GetFileNameWithoutExtension(_outFileName);
-                string assemblyExtension = Path.GetExtension(_outFileName);
-                Random rnd = new System.Random();
-
-                for (int i = 0; ; i++) {
-                    string verifyName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}_{2}{3}", assemblyName, i, rnd.Next(1, 100), assemblyExtension);
-                    verifyName = Path.Combine(Path.GetTempPath(), verifyName);
-
-                    try {
-                        File.Copy(assemblyFile, verifyName);
-                        verifyFile = verifyName;
-                        break;
-                    } catch (IOException) {
-                    }
-                }
-
-                // copy any DLLs or EXEs created by the process during the run...
-                CopyFilesCreatedSinceStart(Path.GetTempPath(), Environment.CurrentDirectory);
-                CopyDirectory(Path.GetTempPath(), pythonPath);
-                if (Snippets.Shared.SnippetsDirectory != null && Snippets.Shared.SnippetsDirectory != Path.GetTempPath()) {
-                    CopyFilesCreatedSinceStart(Path.GetTempPath(), Snippets.Shared.SnippetsDirectory);
-                }
-
-                // /IGNORE=80070002 ignores errors related to files we can't find, this happens when we generate assemblies
-                // and then peverify the result.  Note if we can't resolve a token thats in an external file we still
-                // generate an error.
-                ProcessStartInfo psi = new ProcessStartInfo(peverifyPath, "/IGNORE=80070002 \"" + verifyFile + "\"");
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                Process proc = Process.Start(psi);
-                Thread thread = new Thread(
-                    new ThreadStart(
-                        delegate {
-                            using (StreamReader sr = proc.StandardOutput) {
-                                strOut = sr.ReadToEnd();
-                            }
-                        }
-                        ));
-
-                thread.Start();
-                proc.WaitForExit();
-                thread.Join();
-                exitCode = proc.ExitCode;
-                proc.Close();
-            } catch (Exception e) {
-                strOut = "Unexpected exception: " + e.ToString();
-                exitCode = 1;
-            }
-
-            if (exitCode != 0) {
-                Console.WriteLine("Verification failed w/ exit code {0}: {1}", exitCode, strOut);
-                throw Error.VerificationException(
-                    _outFileName,
-                    verifyFile,
-                    strOut ?? "");
-            }
-
-            if (verifyFile != null) {
-                File.Delete(verifyFile);
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void CopyFilesCreatedSinceStart(string pythonPath, string dir) {
-            DateTime start = Process.GetCurrentProcess().StartTime;
-            foreach (string filename in Directory.GetFiles(dir)) {
-                FileInfo fi = new FileInfo(filename);
-                if (fi.Name != _outFileName) {
-                    if (fi.LastWriteTime - start >= TimeSpan.Zero) {
-                        try {
-                            File.Copy(filename, Path.Combine(pythonPath, fi.Name), true);
-                        } catch (Exception e) {
-                            Console.WriteLine("Error copying {0}: {1}", filename, e.Message);
-                        }
-                    }
-                }
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private static void CopyDirectory(string to, string from) {
-            foreach (string filename in Directory.GetFiles(from)) {
-                FileInfo fi = new FileInfo(filename);
-                string toFile = Path.Combine(to, fi.Name);
-                FileInfo toInfo = new FileInfo(toFile);
-
-                if (fi.Extension.ToUpperInvariant() == ".DLL" || fi.Extension.ToUpperInvariant() == ".EXE") {
-                    if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
-                        try {
-                            File.Copy(filename, toFile, true);
-                        } catch (Exception e) {
-                            Console.WriteLine("Error copying {0}: {1}", filename, e.Message);
-                        }
-                    }
-                }
-            }
-        }
 #endif
+        }
         #endregion
 
         internal TypeBuilder DefinePublicType(string name, Type parent, bool preserveName) {

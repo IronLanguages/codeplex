@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// ComEventSinksContainer is just a regular list with a finalizer.
     /// This list is usually attached as a custom data for RCW object and 

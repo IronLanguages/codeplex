@@ -15,6 +15,7 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.SymbolStore;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -35,27 +36,29 @@ namespace Microsoft.Linq.Expressions.Compiler {
         internal void EmitConstantArray<T>(T[] array) {
             // Emit as runtime constant if possible
             // if not, emit into IL
-            if (_boundConstants != null) {
+            if (_dynamicMethod) {
                 EmitConstant(array, typeof(T[]));
             } else {
                 _ilg.EmitArray(array);
             }
         }
 
-        private void EmitClosureCreation(LambdaCompiler inner, bool closure) {
-            bool boundConstants = inner._boundConstants != null;
-            if (!closure && !boundConstants && !(inner._method is DynamicMethod)) {
+        private void EmitClosureCreation(LambdaCompiler inner) {
+            bool closure = inner._scope.NeedsClosure;
+            bool boundConstants = inner._boundConstants.Count > 0;
+
+            if (!closure && !boundConstants) {
                 _ilg.EmitNull();
                 return;
             }
 
             // new Closure(constantPool, currentHoistedLocals)
             if (boundConstants) {
-                EmitConstant(inner._boundConstants.ToArray(), typeof(object[]));
+                _boundConstants.EmitConstant(this, inner._boundConstants.ToArray(), typeof(object[]));
             } else {
                 _ilg.EmitNull();
             }
-            if (_scope.NearestHoistedLocals != null) {
+            if (closure) {
                 _scope.EmitGet(_scope.NearestHoistedLocals.SelfVariable);
             } else {
                 _ilg.EmitNull();
@@ -67,24 +70,21 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// Emits code which creates new instance of the delegateType delegate.
         /// 
         /// Since the delegate is getting closed over the "Closure" argument, this
-        /// cannot be used with virtual/instance methods (delegateFunction must be static method)
+        /// cannot be used with virtual/instance methods (inner must be static method)
         /// </summary>
-        private void EmitDelegateConstruction(LambdaCompiler delegateFunction, Type delegateType, bool closure) {
-            Assert.NotNull(delegateFunction, delegateType);
-
-            DynamicMethod dynamicMethod = delegateFunction._method as DynamicMethod;
+        private void EmitDelegateConstruction(LambdaCompiler inner, Type delegateType) {
+            DynamicMethod dynamicMethod = inner._method as DynamicMethod;
             if (dynamicMethod != null) {
                 // dynamicMethod.CreateDelegate(delegateType, closure)
-                EmitConstant(dynamicMethod, typeof(DynamicMethod));
+                _boundConstants.EmitConstant(this, dynamicMethod, typeof(DynamicMethod));
                 _ilg.EmitType(delegateType);
-                EmitClosureCreation(delegateFunction, closure);
+                EmitClosureCreation(inner);
                 _ilg.EmitCall(typeof(DynamicMethod).GetMethod("CreateDelegate", new Type[] { typeof(Type), typeof(object) }));
                 _ilg.Emit(OpCodes.Castclass, delegateType);
             } else {
                 // new DelegateType(closure)
-
-                EmitClosureCreation(delegateFunction, closure);
-                _ilg.Emit(OpCodes.Ldftn, (MethodInfo)delegateFunction._method);
+                EmitClosureCreation(inner);
+                _ilg.Emit(OpCodes.Ldftn, (MethodInfo)inner._method);
                 _ilg.Emit(OpCodes.Newobj, (ConstructorInfo)(delegateType.GetMember(".ctor")[0]));
             }
         }
@@ -96,56 +96,30 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <param name="lambda">Lambda for which to generate a delegate</param>
         /// <param name="delegateType">Type of the delegate.</param>
         private void EmitDelegateConstruction(LambdaExpression lambda, Type delegateType) {
-            // 1. create the scope
-            CompilerScope scope = VariableBinder.Bind(_scope, lambda);
-
-            // 2. create the signature
+            // 1. create the signature
             List<Type> paramTypes;
             List<string> paramNames;
             string implName;
             Type returnType;
-            ComputeSignature(scope.Lambda, out paramTypes, out paramNames, out implName, out returnType);
+            ComputeSignature(lambda, out paramTypes, out paramNames, out implName, out returnType);
 
-            // 3. create the new compiler
-            LambdaCompiler impl = CreateLambdaCompiler(
-                scope,
-                implName,
-                returnType,
-                paramTypes,
-                paramNames.ToArray(),
-                scope.IsClosure
-            );
-
-            // 4. emit the lambda
-            impl.EmitBody();
-            impl.Finish();
-
-            // 5. emit the delegate creation in the outer lambda
-            EmitDelegateConstruction(impl, delegateType, scope.IsClosure);
-        }
-
-        /// <summary>
-        /// Creates the signature for the actual CLR method to create. The base types come from the
-        /// lambda/LambdaExpression (or its wrapper method), this method may pre-pend an argument to hold
-        /// closure information (for closing over constant pool or the lexical closure)
-        /// </summary>
-        private static Type[] MakeParameterTypeArray(IList<Type> baseTypes, bool dynamicMethod, bool closure) {
-            Assert.NotNullItems(baseTypes);
-
-            Type[] signature;
-
-            if (dynamicMethod || closure) {
-                signature = new Type[baseTypes.Count + 1];
-                baseTypes.CopyTo(signature, 1);
-
-                // Add the closure argument
-                signature[0] = typeof(Closure);
+            // 2. create the new compiler
+            LambdaCompiler impl;
+            if (_dynamicMethod) {
+                impl = CreateDynamicCompiler(_tree, lambda, implName, returnType, paramTypes, paramNames, _emitDebugSymbols, false);
             } else {
-                signature = new Type[baseTypes.Count];
-                baseTypes.CopyTo(signature, 0);
+                impl = CreateStaticCompiler(_tree, lambda, _typeBuilder, implName, TypeUtils.PublicStatic, returnType, paramTypes, paramNames, _dynamicMethod, _emitDebugSymbols);
             }
 
-            return signature;
+            // TODO: better way to flow this in?
+            impl._debugSymbolWriter = _debugSymbolWriter;
+            impl._symbolWriters = _symbolWriters;
+
+            // 3. emit the lambda
+            impl.EmitLambdaBody(_scope);
+
+            // 4. emit the delegate creation in the outer lambda
+            EmitDelegateConstruction(impl, delegateType);
         }
 
         /// <summary>
@@ -174,8 +148,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return prefix + "$" + Interlocked.Increment(ref _Counter);
         }
 
-        private void EmitBody() {
-            _scope.EnterLambda(this);
+        private void EmitLambdaBody(CompilerScope parent) {
+            _scope.Enter(this, parent);
+            if (_emitDebugSymbols && _symbolWriters == null) {
+                _symbolWriters = new Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter>();
+            }
 
             EmitLambdaStart(_lambda);
 
@@ -198,6 +175,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
             //must be the last instruction in the body
             EmitReturn();
+            _scope.Exit();
+            Finish();
         }
 
         #region DebugMarkers
@@ -234,7 +213,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitPosition(lambdaSpan.Start, lambdaSpan.Start);
                 }
             } else {
-                Block body = lambda.Body as Block;
+                BlockExpression body = lambda.Body as BlockExpression;
                 if (body != null) {
                     for (int i = 0; i < body.Expressions.Count; i++) {
                         bodySpan = body.Expressions[i].Annotations.Get<SourceSpan>();

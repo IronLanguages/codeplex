@@ -14,13 +14,12 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -50,8 +49,8 @@ namespace Microsoft.Scripting.Actions {
             get { return _binder; }
         }
 
-        public override Rule<T> Bind<T>(object[] args) {
-            return _binder.Bind<T>(this, args);
+        public override Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
+            return Binder.Bind(this, args, parameters, returnLabel);
         }
 
         [Confined]

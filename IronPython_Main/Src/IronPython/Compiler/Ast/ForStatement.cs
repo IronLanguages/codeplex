@@ -115,7 +115,7 @@ namespace IronPython.Compiler.Ast {
             //    body
             // else:
             //    else
-            MSAst.LoopStatement ls = AstUtils.Loop(
+            MSAst.LoopExpression ls = AstUtils.Loop(
                 Ast.Call(
                     enumerator,
                     typeof(IEnumerator).GetMethod("MoveNext")

@@ -25,12 +25,11 @@ namespace Microsoft.Linq.Expressions {
     /// property or field access, both static and instance.
     /// For instance property/field, Expression must be != null.
     /// </summary>
-    public sealed class MemberExpression : Expression {
-        private readonly MemberInfo _member;
+    public class MemberExpression : Expression {
         private readonly Expression _expression;
 
         public MemberInfo Member {
-            get { return _member; }
+            get { return GetMember(); }
         }
 
         public Expression Expression {
@@ -38,11 +37,28 @@ namespace Microsoft.Linq.Expressions {
         }
 
         // param order: factories args in order, then other args
-        internal MemberExpression(Expression expression, MemberInfo member, Annotations annotations, Type type, bool canRead, bool canWrite)
-            : base(ExpressionType.MemberAccess, type, false, annotations, canRead, canWrite) {
+        internal MemberExpression(Expression expression, Annotations annotations)
+            : base(annotations) {
 
-            _member = member;
             _expression = expression;
+        }
+
+        internal static MemberExpression Make(Expression expression, MemberInfo member, Annotations annotations) {
+            if (member.MemberType == MemberTypes.Field) {
+                FieldInfo fi = (FieldInfo)member;
+                return new FieldExpression(expression, fi, annotations);
+            } else {
+                PropertyInfo pi = (PropertyInfo)member;
+                return new PropertyExpression(expression, pi, annotations);
+            }            
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.MemberAccess;
+        }
+
+        internal virtual MemberInfo GetMember() {
+            throw new NotImplementedException();
         }
 
         internal override void BuildString(StringBuilder builder) {
@@ -51,14 +67,57 @@ namespace Microsoft.Linq.Expressions {
             if (_expression != null) {
                 _expression.BuildString(builder);
             } else {
-                builder.Append(_member.DeclaringType.Name);
+                builder.Append(GetMember().DeclaringType.Name);
             }
             builder.Append(".");
-            builder.Append(_member.Name);
+            builder.Append(GetMember().Name);
         }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitMemberAccess(this);
+        }
+    }
+
+    internal class FieldExpression : MemberExpression {
+        private readonly FieldInfo _field;
+
+        public FieldExpression(Expression expression, FieldInfo member, Annotations annotations)
+            : base(expression, annotations) {
+            _field = member;
+        }
+
+        internal override MemberInfo GetMember() {
+            return _field;
+        }
+
+        protected override Type GetExpressionType() {
+            return _field.FieldType;
+        }
+
+        internal override NodeFlags GetFlags() {
+            return NodeFlags.CanRead |
+                   (!(_field.IsLiteral || _field.IsInitOnly) ? NodeFlags.CanWrite : NodeFlags.None);
+        }
+    }
+
+    internal class PropertyExpression : MemberExpression {
+        private readonly PropertyInfo _property;
+        public PropertyExpression(Expression expression, PropertyInfo member, Annotations annotations)
+            : base(expression, annotations) {
+            _property = member;
+        }
+
+        internal override MemberInfo GetMember() {
+            return _property;
+        }
+
+        protected override Type GetExpressionType() {
+            return _property.PropertyType;
+        }
+
+        internal override NodeFlags GetFlags() {
+            return (_property.CanRead ? NodeFlags.CanRead : NodeFlags.None) |
+                   (_property.CanWrite ? NodeFlags.CanWrite : NodeFlags.None);
         }
     }
 
@@ -88,7 +147,7 @@ namespace Microsoft.Linq.Expressions {
                     throw Error.FieldNotDefinedForType(field, expression.Type);
                 }
             }
-            return new MemberExpression(expression, field, annotations, field.FieldType, true, !(field.IsLiteral | field.IsInitOnly));
+            return MemberExpression.Make(expression, field, annotations);
         }
 
         //CONFORMING
@@ -182,7 +241,7 @@ namespace Microsoft.Linq.Expressions {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);
                 }
             }
-            return new MemberExpression(expression, property, annotations, property.PropertyType, property.CanRead, property.CanWrite);
+            return MemberExpression.Make(expression, property, annotations);
         }
         //CONFORMING
         public static MemberExpression Property(Expression expression, MethodInfo propertyAccessor) {

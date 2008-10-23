@@ -249,12 +249,13 @@ namespace Microsoft.Scripting.Hosting {
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
-            public override MetaObject GetMember(GetMemberAction action) {
+            public override MetaObject BindGetMember(GetMemberBinder action) {
                 var result = Expression.Variable(typeof(object), "result");
-                var fallback = action.Fallback(this);
+                var fallback = action.FallbackGetMember(this);
 
                 return new MetaObject(
-                    Expression.Scope(
+                    Expression.Comma(
+                        new ParameterExpression[] { result },
                         Expression.Condition(
                             Expression.Call(
                                 Expression.ConvertHelper(Expression, typeof(ScriptScope)),
@@ -264,15 +265,14 @@ namespace Microsoft.Scripting.Hosting {
                             ),
                             result,
                             Expression.Convert(fallback.Expression, typeof(object))
-                        ),
-                        result
+                        )
                     ),
-                    Restrictions.TypeRestriction(Expression, typeof(ScriptScope)).Merge(fallback.Restrictions)
+                    Restrictions.GetTypeRestriction(Expression, typeof(ScriptScope)).Merge(fallback.Restrictions)
                 );
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
-            public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
+            public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
                 return new MetaObject(
                     Expression.Call(
                         Expression.ConvertHelper(Expression, typeof(ScriptScope)),
@@ -280,13 +280,13 @@ namespace Microsoft.Scripting.Hosting {
                         Expression.Constant(action.Name),
                         Expression.Convert(value.Expression, typeof(object))
                     ),
-                    Restrictions.Merge(value.Restrictions).Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope)))
+                    Restrictions.Merge(value.Restrictions).Merge(Restrictions.GetTypeRestriction(Expression, typeof(ScriptScope)))
                 );
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
-            public override MetaObject DeleteMember(DeleteMemberAction action) {
-                var fallback = action.Fallback(this);
+            public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
+                var fallback = action.FallbackDeleteMember(this);
                 return new MetaObject(
                     Expression.Condition(
                         Expression.Call(
@@ -297,19 +297,20 @@ namespace Microsoft.Scripting.Hosting {
                         Expression.Empty(),
                         Expression.Convert(fallback.Expression, typeof(void))
                     ),
-                    Restrictions.Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
+                    Restrictions.Merge(Restrictions.GetTypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
                 );
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
-            public override MetaObject Call(CallAction action, MetaObject[] args) {
-                var fallback = action.Fallback(this, args);
+            public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
+                var fallback = action.FallbackInvokeMember(this, args);
                 var result = Expression.Variable(typeof(object), "result");
 
                 var fallbackInvoke = action.FallbackInvoke(new MetaObject(result, Restrictions.Empty), args, null);
 
                 return new MetaObject(
-                    Expression.Scope(
+                    Expression.Comma(
+                        new ParameterExpression[] { result },
                         Expression.Condition(
                             Expression.Call(
                                 Expression.ConvertHelper(Expression, typeof(ScriptScope)),
@@ -319,10 +320,9 @@ namespace Microsoft.Scripting.Hosting {
                             ),
                             Expression.Convert(fallbackInvoke.Expression, typeof(object)),
                             Expression.Convert(fallback.Expression, typeof(object))
-                        ),
-                        result
+                        )
                     ),
-                    Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
+                    Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, typeof(ScriptScope))).Merge(fallback.Restrictions)
                 );
             }
         }

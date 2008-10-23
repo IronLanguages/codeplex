@@ -17,11 +17,12 @@ using System; using Microsoft;
 
 using System.CodeDom.Compiler;
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using System.Globalization;
+using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// Variant is the basic COM type for late-binding. It can contain any other COM data type.
@@ -295,6 +296,38 @@ namespace Microsoft.Scripting.Com {
         public void SetAsNull() {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = VarEnum.VT_NULL;
+        }
+
+        [CLSCompliant(false)]
+        public void SetAsIConvertible(IConvertible value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+
+            TypeCode tc = value.GetTypeCode();
+            CultureInfo ci = CultureInfo.CurrentCulture;
+
+            switch (tc) {
+                case TypeCode.Empty: SetAsNull(); break;
+                case TypeCode.Object: AsUnknown = value; break;
+                case TypeCode.DBNull: SetAsNull(); break;
+                case TypeCode.Boolean: AsBool = value.ToBoolean(ci); break;
+                case TypeCode.Char: AsUi2 = value.ToChar(ci); break;
+                case TypeCode.SByte: AsI1 = value.ToSByte(ci); break;
+                case TypeCode.Byte: AsUi1 = value.ToByte(ci); break;
+                case TypeCode.Int16: AsI2 = value.ToInt16(ci); break;
+                case TypeCode.UInt16: AsUi2 = value.ToUInt16(ci); break;
+                case TypeCode.Int32: AsI4 = value.ToInt32(ci); break;
+                case TypeCode.UInt32: AsUi4 = value.ToUInt32(ci); break;
+                case TypeCode.Int64: AsI8 = value.ToInt64(ci); break;
+                case TypeCode.UInt64: AsI8 = value.ToInt64(ci); break;
+                case TypeCode.Single: AsR4 = value.ToSingle(ci); break;
+                case TypeCode.Double: AsR8 = value.ToDouble(ci); break;
+                case TypeCode.Decimal: AsDecimal = value.ToDecimal(ci); break;
+                case TypeCode.DateTime: AsDate = value.ToDateTime(ci); break;
+                case TypeCode.String: AsBstr = value.ToString(ci); break;
+
+                default:
+                    throw Assert.Unreachable;
+            }
         }
 
         #region Generated Variant accessors
@@ -729,6 +762,7 @@ namespace Microsoft.Scripting.Com {
         // *** END GENERATED CODE ***
 
         #endregion
+
 
         internal static System.Reflection.PropertyInfo GetAccessor(VarEnum varType) {
             switch (varType) {

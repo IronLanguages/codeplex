@@ -60,6 +60,10 @@ namespace Microsoft.Scripting.Actions.Calls {
             return GetDefaultValue();
         }
 
+        internal override Expression ByRefArgument {
+            get { return _isRef ? _tmp : null; }
+        }
+
         private Expression GetDefaultValue() {
             if (_parameterType.IsValueType) {
                 // default(T)                

@@ -21,7 +21,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This is similar to ComTypes.EXCEPINFO, but lets us do our own custom marshaling
     /// </summary>

@@ -33,46 +33,44 @@ namespace Microsoft.Scripting.Actions {
     /// a bound value) and bound built-in method descriptors (w/ a bound value), delegates, types defining a "Call" method marked
     /// with SpecialName.
     /// </summary>
-    /// <typeparam name="T">The type of the dynamic site</typeparam>
     /// <typeparam name="TAction">The specific type of CallAction</typeparam>
-    public class CallBinderHelper<T, TAction> : BinderHelper<T, TAction>
-        where T : class
+    public class CallBinderHelper<TAction> : BinderHelper<TAction>
         where TAction : OldCallAction {
 
         private object[] _args;                                     // the arguments the binder is binding to - args[0] is the target, args[1..n] are args to the target
         private Expression _instance;                               // the instance or null if this is a non-instance call
         private Type _instanceType;                                 // the type of _instance, to override _instance.Type when doing private binding.
         private Expression _test;                                   // the test expression, built up and assigned at the end
-        private RuleBuilder<T> _rule = new RuleBuilder<T>();      // the rule we end up producing
+        private readonly RuleBuilder _rule;                         // the rule we end up producing
         private readonly bool _reversedOperator;                    // if we're producing a binary operator or a reversed operator (should go away, Python specific).
         private readonly MethodBase[] _targets;
         private readonly NarrowingLevel _maxLevel;                  // the maximum narrowing level allowed
 
-        public CallBinderHelper(CodeContext context, TAction action, object[] args)
+        public CallBinderHelper(CodeContext context, TAction action, object[] args, RuleBuilder rule)
             : base(context, action) {
             ContractUtils.RequiresNotEmpty(args, "args");
 
             _maxLevel = NarrowingLevel.All;
             _args = RemoveExplicitInstanceArgument(action, args);
+            _rule = rule;
             _test = _rule.MakeTypeTest(CompilerHelpers.GetType(Callable), 0);
         }
 
-        public CallBinderHelper(CodeContext context, TAction action, object[] args, IList<MethodBase> targets)
-            : this(context, action, args) {
+        public CallBinderHelper(CodeContext context, TAction action, object[] args, RuleBuilder rule, IList<MethodBase> targets)
+            : this(context, action, args, rule) {
             _targets = ArrayUtils.ToArray(targets);
             _maxLevel = NarrowingLevel.All;
         }
 
-        public CallBinderHelper(CodeContext context, TAction action, object[] args, IList<MethodBase> targets, NarrowingLevel maxLevel, bool isReversedOperator)
-            : this(context, action, args) {
+        public CallBinderHelper(CodeContext context, TAction action, object[] args, RuleBuilder rule, IList<MethodBase> targets, NarrowingLevel maxLevel, bool isReversedOperator)
+            : this(context, action, args, rule) {
             _targets = ArrayUtils.ToArray(targets);
             _reversedOperator = isReversedOperator;
             _maxLevel = maxLevel;
         }
 
-        public virtual RuleBuilder<T> MakeRule() {
+        public virtual void MakeRule() {
             Type t = CompilerHelpers.GetType(Callable);
-
 
             MethodBase[] targets = GetTargetMethods();
             if (targets != null && targets.Length > 0) {
@@ -87,7 +85,6 @@ namespace Microsoft.Scripting.Actions {
             if (_rule.Test == null) {
                 _rule.Test = _test;
             }
-            return _rule;
         }
 
         #region Method Call Rule
@@ -143,7 +140,7 @@ namespace Microsoft.Scripting.Actions {
             //Calls that need an instance will pick it up from the bound objects 
             //passed in or the rule. CallType can differentiate between the type 
             //of call during method binding.
-            int instanceIndex = action.Signature.IndexOf(ArgumentKind.Instance);
+            int instanceIndex = action.Signature.IndexOf(ArgumentType.Instance);
             if (instanceIndex > -1) {
                 args = ArrayUtils.RemoveAt(args, instanceIndex + 1);
             }
@@ -197,12 +194,12 @@ namespace Microsoft.Scripting.Actions {
 
             for (int i = 0; i < Action.Signature.ArgumentCount; i++) { // ArgumentCount(Action, _rule)
                 switch (Action.Signature.GetArgumentKind(i)) {
-                    case ArgumentKind.Simple:
-                    case ArgumentKind.Named:
+                    case ArgumentType.Simple:
+                    case ArgumentType.Named:
                         exprargs.Add(_rule.Parameters[i + 1]);
                         break;
 
-                    case ArgumentKind.List:
+                    case ArgumentType.List:
                         IList<object> list = (IList<object>)_args[i + 1];
                         for (int j = 0; j < list.Count; j++) {
                             exprargs.Add(
@@ -218,7 +215,7 @@ namespace Microsoft.Scripting.Actions {
                         }
                         break;
 
-                    case ArgumentKind.Dictionary:
+                    case ArgumentType.Dictionary:
                         IDictionary dict = (IDictionary)_args[i + 1];
 
                         IDictionaryEnumerator dictEnum = dict.GetEnumerator();
@@ -378,7 +375,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeParamsArrayTest() {
-            int listIndex = Action.Signature.IndexOf(ArgumentKind.List);
+            int listIndex = Action.Signature.IndexOf(ArgumentType.List);
             Debug.Assert(listIndex != -1);
             _test = Ast.AndAlso(_test, MakeParamsTest(_args[listIndex + 1], _rule.Parameters[listIndex + 1]));
         }
@@ -471,7 +468,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void GetDictionaryNamesAndTypes(ref SymbolId[] argNames, ref Type[] argTypes) {
-            Debug.Assert(Action.Signature.GetArgumentKind(Action.Signature.ArgumentCount - 1) == ArgumentKind.Dictionary);
+            Debug.Assert(Action.Signature.GetArgumentKind(Action.Signature.ArgumentCount - 1) == ArgumentType.Dictionary);
 
             List<SymbolId> names = new List<SymbolId>(argNames);
             List<Type> types = new List<Type>(argTypes);
@@ -508,7 +505,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public RuleBuilder<T> Rule {
+        public RuleBuilder Rule {
             get {
                 return _rule;
             }

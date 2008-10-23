@@ -56,7 +56,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public static BinderState/*!*/ GetBinderState(MetaAction/*!*/ action) {
+        public static BinderState/*!*/ GetBinderState(MetaObjectBinder/*!*/ action) {
             IPythonSite pySite = action as IPythonSite;
             if (pySite != null) {
                 return pySite.Binder;
@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Binding {
             return Default;
         }
 
-        public static Expression/*!*/ GetCodeContext(MetaAction/*!*/ action) {
+        public static Expression/*!*/ GetCodeContext(MetaObjectBinder/*!*/ action) {
             return Ast.Constant(BinderState.GetBinderState(action).Context);
         }
 

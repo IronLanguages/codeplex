@@ -15,7 +15,7 @@
 using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class ComEventDesc {
         internal Guid sourceIID;
         internal int dispid;

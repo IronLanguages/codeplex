@@ -26,6 +26,8 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _right;
         private readonly MethodInfo _method;
         private readonly LambdaExpression _conversion;
+        private readonly ExpressionType _nodeType;
+        private readonly Type _type;
 
         internal BinaryExpression(Annotations annotations, ExpressionType nodeType, Expression left, Expression right, Type type)
             : this(annotations, nodeType, left, right, type, null, null) {
@@ -43,14 +45,31 @@ namespace Microsoft.Linq.Expressions {
                                   MethodInfo method,
                                   LambdaExpression conversion)
 
-            : base(nodeType, type, false, annotations, true, nodeType == ExpressionType.ArrayIndex) {
+            : base(annotations) {
             // Only Coalesce can have a conversion
             Debug.Assert(conversion == null || nodeType == ExpressionType.Coalesce);
 
+            _nodeType = nodeType;
+            _type = type;
             _left = left;
             _right = right;
             _method = method;
             _conversion = conversion;
+        }
+
+        protected override Type GetExpressionType() {
+            return _type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return _nodeType;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            if (NodeType == ExpressionType.ArrayIndex) {
+                return NodeFlags.CanRead | NodeFlags.CanWrite;
+            }
+            return NodeFlags.CanRead;
         }
 
         public Expression Right {

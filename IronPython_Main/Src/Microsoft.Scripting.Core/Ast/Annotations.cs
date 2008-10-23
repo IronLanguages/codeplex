@@ -184,18 +184,22 @@ namespace Microsoft.Linq.Expressions {
     /// Factory methods.
     /// </summary>
     public partial class Expression {
+        [Obsolete("use Expression.DebugInfo for debug information")]
         public static Annotations Annotate() {
             return Annotations.Empty;
         }
 
+        [Obsolete("use Expression.DebugInfo for debug information")]
         public static Annotations Annotate<T>(T item0) {
             return new AnnotationsSingle<T>(item0);
         }
 
+        [Obsolete("use Expression.DebugInfo for debug information")]
         public static Annotations Annotate(object item0, object item1) {
             return new AnnotationsArray(new[] { item0, item1 });
         }
 
+        [Obsolete("use Expression.DebugInfo for debug information")]
         public static Annotations Annotate(params object[] items) {
             if (items == null) {
                 return Annotations.Empty;

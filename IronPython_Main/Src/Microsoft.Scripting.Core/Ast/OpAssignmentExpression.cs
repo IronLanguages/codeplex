@@ -24,14 +24,28 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _right;
         private readonly MethodInfo _method;
         private readonly ExpressionType _op;
+        private readonly Type _type;        
 
         internal OpAssignmentExpression(Annotations annotations, ExpressionType op, Expression left, Expression right, Type type, MethodInfo method)
-            : base(type, true, annotations) {
+            : base(annotations) {
 
             _left = left;
             _right = right;
             _method = method;
             _op = op;
+            _type = type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
+        }
+
+        protected override Type GetExpressionType() {
+            return _type;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead | NodeFlags.CanReduce;
         }
 
         public Expression Right {
@@ -103,9 +117,9 @@ namespace Microsoft.Linq.Expressions {
             // 3. temp2
             Expression e4 = temp2;
 
-            return Expression.Scope(
-                Expression.Comma(e1, e2, e3, e4),
-                temp1, temp2
+            return Expression.Comma(
+                new ParameterExpression[] { temp1, temp2 },
+                e1, e2, e3, e4
             );
         }
 
@@ -149,7 +163,7 @@ namespace Microsoft.Linq.Expressions {
             // tempObj[tempArg0, ... tempArgN] = tempValue
             exprs.Add(Expression.Assign(tempIndex, tempValue));
 
-            return Expression.Scope(Expression.Comma(exprs), vars);
+            return Expression.Comma(vars, exprs);
         }
 
         protected internal override Expression VisitChildren(ExpressionTreeVisitor visitor) {

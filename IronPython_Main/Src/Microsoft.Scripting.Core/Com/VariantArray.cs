@@ -18,7 +18,7 @@ using System; using Microsoft;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]

@@ -34,21 +34,37 @@ namespace Microsoft.Linq.Expressions {
             Expression instance,
             PropertyInfo indexer,
             Annotations annotations,
-            ReadOnlyCollection<Expression> arguments,
-            Type type,
-            bool canRead,
-            bool canWrite)
-            : base(ExpressionType.Index, type, false, annotations, canRead, canWrite) {
+            ReadOnlyCollection<Expression> arguments)
+            : base(annotations) {
 
             if (indexer == null) {
                 Debug.Assert(instance != null && instance.Type.IsArray);
                 Debug.Assert(instance.Type.GetArrayRank() == arguments.Count);
-                Debug.Assert(instance.Type.GetElementType() == type);
             }
 
             _instance = instance;
             _indexer = indexer;
             _arguments = arguments;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Index;
+        }
+
+        protected override Type GetExpressionType() {
+            if (_indexer != null) {
+                return _indexer.PropertyType; 
+            }
+            return _instance.Type.GetElementType();
+        }
+
+        internal override NodeFlags GetFlags() {
+            if (_indexer != null) {
+                return (_indexer.CanRead ? NodeFlags.CanRead : NodeFlags.None) |
+                       (_indexer.CanWrite ? NodeFlags.CanWrite : NodeFlags.None);
+            }
+
+            return NodeFlags.CanWrite | NodeFlags.CanRead;
         }
 
         public Expression Object {
@@ -144,7 +160,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return new IndexExpression(array, null, annotations, indexList, arrayType.GetElementType(), true, true);
+            return new IndexExpression(array, null, annotations, indexList);
         }
 
         #endregion
@@ -166,7 +182,7 @@ namespace Microsoft.Linq.Expressions {
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, Annotations annotations, IEnumerable<Expression> arguments) {
             var argList = arguments.ToReadOnly();
             ValidateIndexedProperty(instance, indexer, ref argList);
-            return new IndexExpression(instance, indexer, annotations, argList, indexer.PropertyType, indexer.CanRead, indexer.CanWrite);
+            return new IndexExpression(instance, indexer, annotations, argList);
         }
 
         // CTS places no restrictions on properties (see ECMA-335 8.11.3),

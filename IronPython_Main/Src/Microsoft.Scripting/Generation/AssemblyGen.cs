@@ -150,9 +150,12 @@ namespace Microsoft.Scripting.Generation {
 
         #region Dump and Verify
 
-        public void Dump() {
+        public string SaveAssembly() {
 #if !SILVERLIGHT // AssemblyBuilder.Save
             _myAssembly.Save(_outFileName, _peKind, _machine);
+            return Path.Combine(_outDir, _outFileName);
+#else
+            return null;
 #endif
         }
 
@@ -162,21 +165,11 @@ namespace Microsoft.Scripting.Generation {
 #endif
         }
 
-#if !SILVERLIGHT
-        internal static string FindPeverify() {
-            string path = System.Environment.GetEnvironmentVariable("PATH");
-            string[] dirs = path.Split(';');
-            foreach (string dir in dirs) {
-                string file = Path.Combine(dir, peverify_exe);
-                if (File.Exists(file)) {
-                    return file;
-                }
-            }
-            return null;
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void PeVerifyThis() {
+        internal static void PeVerifyAssemblyFile(string fileLocation) {
+#if !SILVERLIGHT
+            string outDir = Path.GetDirectoryName(fileLocation);
+            string outFileName = Path.GetFileName(fileLocation);
             string peverifyPath = FindPeverify();
             if (peverifyPath == null) {
                 return;
@@ -189,9 +182,9 @@ namespace Microsoft.Scripting.Generation {
             try {
                 string pythonPath = new FileInfo(Assembly.GetEntryAssembly().Location).DirectoryName;
 
-                string assemblyFile = Path.Combine(_outDir, _outFileName).ToLower(CultureInfo.InvariantCulture);
-                string assemblyName = Path.GetFileNameWithoutExtension(_outFileName);
-                string assemblyExtension = Path.GetExtension(_outFileName);
+                string assemblyFile = Path.Combine(outDir, outFileName).ToLower(CultureInfo.InvariantCulture);
+                string assemblyName = Path.GetFileNameWithoutExtension(outFileName);
+                string assemblyExtension = Path.GetExtension(outFileName);
                 Random rnd = new System.Random();
 
                 for (int i = 0; ; i++) {
@@ -207,10 +200,10 @@ namespace Microsoft.Scripting.Generation {
                 }
 
                 // copy any DLLs or EXEs created by the process during the run...
-                CopyFilesCreatedSinceStart(Path.GetTempPath(), Environment.CurrentDirectory);
+                CopyFilesCreatedSinceStart(Path.GetTempPath(), Environment.CurrentDirectory, outFileName);
                 CopyDirectory(Path.GetTempPath(), pythonPath);
                 if (Snippets.Shared.SnippetsDirectory != null && Snippets.Shared.SnippetsDirectory != Path.GetTempPath()) {
-                    CopyFilesCreatedSinceStart(Path.GetTempPath(), Snippets.Shared.SnippetsDirectory);
+                    CopyFilesCreatedSinceStart(Path.GetTempPath(), Snippets.Shared.SnippetsDirectory, outFileName);
                 }
 
                 // /IGNORE=80070002 ignores errors related to files we can't find, this happens when we generate assemblies
@@ -242,7 +235,7 @@ namespace Microsoft.Scripting.Generation {
             if (exitCode != 0) {
                 Console.WriteLine("Verification failed w/ exit code {0}: {1}", exitCode, strOut);
                 throw Error.VerificationException(
-                    _outFileName,
+                    outFileName,
                     verifyFile,
                     strOut ?? "");
             }
@@ -250,14 +243,34 @@ namespace Microsoft.Scripting.Generation {
             if (verifyFile != null) {
                 File.Delete(verifyFile);
             }
+#endif
+        }
+
+#if !SILVERLIGHT
+        internal static string FindPeverify() {
+            string path = System.Environment.GetEnvironmentVariable("PATH");
+            string[] dirs = path.Split(';');
+            foreach (string dir in dirs) {
+                string file = Path.Combine(dir, peverify_exe);
+                if (File.Exists(file)) {
+                    return file;
+                }
+            }
+            return null;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void CopyFilesCreatedSinceStart(string pythonPath, string dir) {
+        private void PeVerifyThis() {
+            string fileLocation = Path.Combine(_outDir, _outFileName);
+            PeVerifyAssemblyFile(fileLocation);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        private static void CopyFilesCreatedSinceStart(string pythonPath, string dir, string outFileName) {
             DateTime start = Process.GetCurrentProcess().StartTime;
             foreach (string filename in Directory.GetFiles(dir)) {
                 FileInfo fi = new FileInfo(filename);
-                if (fi.Name != _outFileName) {
+                if (fi.Name != outFileName) {
                     if (fi.LastWriteTime - start >= TimeSpan.Zero) {
                         try {
                             File.Copy(filename, Path.Combine(pythonPath, fi.Name), true);
@@ -277,7 +290,7 @@ namespace Microsoft.Scripting.Generation {
                 FileInfo toInfo = new FileInfo(toFile);
 
                 if (fi.Extension.ToLowerInvariant() == ".dll" || fi.Extension.ToLowerInvariant() == ".exe") {
-                    if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
+                    if (!File.Exists(toFile) || toInfo.CreationTime != fi.CreationTime) {
                         try {
                             File.Copy(filename, toFile, true);
                         } catch (Exception e) {

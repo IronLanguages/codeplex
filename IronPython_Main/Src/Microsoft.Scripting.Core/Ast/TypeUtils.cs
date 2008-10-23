@@ -390,6 +390,56 @@ namespace Microsoft.Scripting.Utils {
                 IsImplicitNullableConversion(source, destination);
         }
 
+        internal static bool IsImplicitlyConvertible(Type source, Type destination, bool considerUserDefined) {
+            return IsImplicitlyConvertible(source, destination) ||
+                (considerUserDefined && GetUserDefinedCoercionMethod(source, destination, true) != null);
+        }
+
+        //CONFORMING
+        internal static MethodInfo GetUserDefinedCoercionMethod(Type convertFrom, Type convertToType, bool implicitOnly) {
+            // check for implicit coercions first
+            Type nnExprType = TypeUtils.GetNonNullableType(convertFrom);
+            Type nnConvType = TypeUtils.GetNonNullableType(convertToType);
+            // try exact match on types
+            MethodInfo[] eMethods = nnExprType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            MethodInfo method = FindConversionOperator(eMethods, convertFrom, convertToType, implicitOnly);
+            if (method != null) {
+                return method;
+            }
+            MethodInfo[] cMethods = nnConvType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            method = FindConversionOperator(cMethods, convertFrom, convertToType, implicitOnly);
+            if (method != null) {
+                return method;
+            }
+            // try lifted conversion
+            if (nnExprType != convertFrom || nnConvType != convertToType) {
+                method = FindConversionOperator(eMethods, nnExprType, nnConvType, implicitOnly);
+                if (method == null) {
+                    method = FindConversionOperator(cMethods, nnExprType, nnConvType, implicitOnly);
+                }
+                if (method != null) {
+                    return method;
+                }
+            }
+            return null;
+        }
+
+        //CONFORMING
+        internal static MethodInfo FindConversionOperator(MethodInfo[] methods, Type typeFrom, Type typeTo, bool implicitOnly) {
+            foreach (MethodInfo mi in methods) {
+                if (mi.Name != "op_Implicit" && (implicitOnly || mi.Name != "op_Explicit"))
+                    continue;
+                if (mi.ReturnType != typeTo)
+                    continue;
+                ParameterInfo[] pis = mi.GetParametersCached();
+                if (pis[0].ParameterType != typeFrom)
+                    continue;
+                return mi;
+            }
+            return null;
+        }
+
+
         //CONFORMING
         private static bool IsIdentityConversion(Type source, Type destination) {
             return source == destination;
@@ -549,7 +599,7 @@ namespace Microsoft.Scripting.Utils {
             }
             return null;
         }
-        
+
         internal static Type NoRef(Type type) {
             return type.IsByRef ? type.GetElementType() : type;
         }
@@ -631,7 +681,7 @@ namespace Microsoft.Scripting.Utils {
                 if (result != null && result.IsSpecialName && !result.ContainsGenericParameters) {
                     return result;
                 }
-                type = type.BaseType;               
+                type = type.BaseType;
             } while (type != null);
             return null;
         }

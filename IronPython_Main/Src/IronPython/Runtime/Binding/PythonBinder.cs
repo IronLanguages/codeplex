@@ -21,7 +21,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Com;
+using Microsoft.Scripting.ComInterop;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;

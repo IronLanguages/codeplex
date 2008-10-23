@@ -100,9 +100,7 @@ def test_sanity():
     AreEqual(strongVar.Value, com_obj)    
     
     #Complex Types
-    if not preferComDispatch:
-        AreEqual(callMethodWithStrongBox(com_obj.mCy, Decimal(0), Decimal), 0)
-    else:
+    if preferComDispatch:
         strongVar = StrongBox[object](CurrencyWrapper(444))
         com_obj.mCy(CurrencyWrapper(123), strongVar)
         AreEqual(strongVar.Value, 123)    

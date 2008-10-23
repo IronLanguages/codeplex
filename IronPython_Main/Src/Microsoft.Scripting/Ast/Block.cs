@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Scripting;
@@ -23,39 +24,75 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
-        public static Block Block(SourceSpan span, IEnumerable<Expression> expressions) {
+        [Obsolete("use Expression.Block instead")]
+        public static BlockExpression Block(SourceSpan span, IEnumerable<Expression> expressions) {
             return Expression.Block(Expression.Annotate(span), expressions);
         }
 
-        public static Block Block(SourceSpan span, params Expression[] expressions) {
+        [Obsolete("use Expression.Block instead")]
+        public static BlockExpression Block(SourceSpan span, params Expression[] expressions) {
             return Expression.Block(Expression.Annotate(span), (IList<Expression>)expressions);
         }
-        
-        public static Block Block(SourceSpan span, Expression arg0) {
+
+        [Obsolete("use Expression.Block instead")]
+        public static BlockExpression Block(SourceSpan span, Expression arg0) {
             return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
         }
-        
-        public static Block Block(SourceSpan span, Expression arg0, Expression arg1) {
+
+        [Obsolete("use Expression.Block instead")]
+        public static BlockExpression Block(SourceSpan span, Expression arg0, Expression arg1) {
             return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
         }
-        
-        public static Block Block(SourceSpan span, Expression arg0, Expression arg1, Expression arg2) {
+
+        [Obsolete("use Expression.Block instead")]
+        public static BlockExpression Block(SourceSpan span, Expression arg0, Expression arg1, Expression arg2) {
             return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
         }
 
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
-        public static Block Comma(SourceSpan span, IEnumerable<Expression> expressions) {
+        [Obsolete("use Expression.Comma instead")]
+        public static BlockExpression Comma(SourceSpan span, IEnumerable<Expression> expressions) {
             return Expression.Comma(Expression.Annotate(span), expressions);
         }
 
-        public static Block Comma(SourceSpan span, params Expression[] expressions) {
+        [Obsolete("use Expression.Comma instead")]
+        public static BlockExpression Comma(SourceSpan span, params Expression[] expressions) {
             return Expression.Comma(Expression.Annotate(span), (IList<Expression>)expressions);
         }
-        
-        public static Block Comma(SourceSpan span, Expression arg0) {
+
+        [Obsolete("use Expression.Comma instead")]
+        public static BlockExpression Comma(SourceSpan span, Expression arg0) {
             return Expression.Comma(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
+        }
+
+        // Helper to add a variable to a block
+        internal static Expression AddScopedVariable(Expression body, ParameterExpression variable, Expression variableInit) {
+            List<ParameterExpression> vars = new List<ParameterExpression>();
+            Annotations annotations = Annotations.Empty;
+            List<Expression> newBody = new List<Expression>();
+
+            var exprs = new ReadOnlyCollection<Expression>(new [] { body });
+            var parent = body;
+            //Merge blocks if the current block has only one child that is another block, 
+            //the blocks to merge must have the same type.
+            while (exprs.Count == 1 && exprs[0].NodeType == ExpressionType.Block && parent.Type == exprs[0].Type) {
+                BlockExpression scope = (BlockExpression)(exprs[0]);
+                vars.AddRange(scope.Variables);
+                annotations = scope.Annotations;
+                parent = scope;
+                exprs = scope.Expressions;
+            }
+
+            newBody.Add(Expression.Assign(variable, variableInit));
+            newBody.AddRange(exprs);
+            vars.Add(variable);
+            return Expression.Comma(
+                annotations,
+                vars,
+                newBody.ToArray()
+            );
         }
     }
 }

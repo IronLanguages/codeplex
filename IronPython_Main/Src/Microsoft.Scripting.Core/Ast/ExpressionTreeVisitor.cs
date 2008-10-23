@@ -30,7 +30,7 @@ namespace Microsoft.Linq.Expressions {
     public abstract class ExpressionTreeVisitor {
 
         public Expression Visit(Expression node) {
-            return (node == null) ?  null : node.Accept(this);
+            return (node == null) ? null : node.Accept(this);
         }
 
         protected ReadOnlyCollection<Expression> Visit(ReadOnlyCollection<Expression> nodes) {
@@ -121,9 +121,6 @@ namespace Microsoft.Linq.Expressions {
             return new ReadOnlyCollection<T>(newNodes);
         }
 
-
-        #region Individual Expression Visitors
-
         protected internal virtual Expression VisitAssignment(AssignmentExpression node) {
             Expression e = Visit(node.Expression);
             Expression v = Visit(node.Value);
@@ -144,15 +141,16 @@ namespace Microsoft.Linq.Expressions {
             return Expression.MakeBinary(node.NodeType, l, r, node.IsLiftedToNull, node.Method, c, node.Annotations);
         }
 
-        protected internal virtual Expression VisitBlock(Block node) {
+        protected internal virtual Expression VisitBlock(BlockExpression node) {
             ReadOnlyCollection<Expression> e = Visit(node.Expressions);
-            if (e == node.Expressions) {
+            var v = VisitAndConvert(node.Variables, "VisitBlock");
+            if (e == node.Expressions && v == node.Variables) {
                 return node;
             }
             if (node.Type == typeof(void)) {
-                return Expression.Block(node.Annotations, e);
+                return Expression.Block(node.Annotations, v, e);
             } else {
-                return Expression.Comma(node.Annotations, e);
+                return Expression.Comma(node.Annotations, v, e);
             }
         }
 
@@ -168,6 +166,14 @@ namespace Microsoft.Linq.Expressions {
 
         protected internal virtual Expression VisitConstant(ConstantExpression node) {
             return node;
+        }
+
+        protected internal virtual Expression VisitDebugInfo(DebugInfoExpression node) {
+            Expression e = Visit(node.Expression);
+            if (e == node.Expression) {
+                return node;
+            }
+            return Expression.DebugInfo(e, node.Document, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn);
         }
 
         protected internal virtual Expression VisitDoWhile(DoStatement node) {
@@ -189,7 +195,7 @@ namespace Microsoft.Linq.Expressions {
             return Expression.MakeDynamic(node.DelegateType, node.Binder, node.Annotations, a);
         }
 
-        protected internal virtual Expression VisitEmpty(EmptyStatement node) {
+        protected internal virtual Expression VisitEmpty(EmptyExpression node) {
             return node;
         }
 
@@ -240,10 +246,10 @@ namespace Microsoft.Linq.Expressions {
             if (b == node.Body && p == node.Parameters) {
                 return node;
             }
-            return Expression.Lambda(node.NodeType, node.Type, node.Name, b, node.Annotations, p);
+            return node.CloneWith(node.Name, b, node.Annotations, p);
         }
 
-        protected internal virtual Expression VisitLoop(LoopStatement node) {
+        protected internal virtual Expression VisitLoop(LoopExpression node) {
             LabelTarget @break = VisitLabelTarget(node.BreakLabel);
             LabelTarget @continue = VisitLabelTarget(node.ContinueLabel);
             Expression t = Visit(node.Test);
@@ -323,21 +329,12 @@ namespace Microsoft.Linq.Expressions {
 #pragma warning restore 618
         }
 
-        protected internal virtual Expression VisitRuntimeVariables(LocalScopeExpression node) {
+        protected internal virtual Expression VisitRuntimeVariables(RuntimeVariablesExpression node) {
             var v = VisitAndConvert(node.Variables, "VisitRuntimeVariables");
             if (v == node.Variables) {
                 return node;
             }
             return Expression.AllVariables(node.Annotations, v);
-        }
-
-        protected internal virtual Expression VisitScope(ScopeExpression node) {
-            Expression b = Visit(node.Body);
-            var v = VisitAndConvert(node.Variables, "VisitScope");
-            if (b == node.Body) {
-                return node;
-            }
-            return Expression.Scope(b, node.Name, node.Annotations, v);
         }
 
         protected virtual SwitchCase VisitSwitchCase(SwitchCase node) {
@@ -351,18 +348,18 @@ namespace Microsoft.Linq.Expressions {
             return Expression.SwitchCase(node.Value, b);
         }
 
-        protected internal virtual Expression VisitSwitch(SwitchStatement node) {
-            LabelTarget l = VisitLabelTarget(node.Label);
-            Expression t = Visit(node.TestValue);
-            ReadOnlyCollection<SwitchCase> c = Visit(node.Cases, VisitSwitchCase);
+        protected internal virtual Expression VisitSwitch(SwitchExpression node) {
+            LabelTarget l = VisitLabelTarget(node.BreakLabel);
+            Expression t = Visit(node.Test);
+            ReadOnlyCollection<SwitchCase> c = Visit(node.SwitchCases, VisitSwitchCase);
 
-            if (l == node.Label && t == node.TestValue && c == node.Cases) {
+            if (l == node.BreakLabel && t == node.Test && c == node.SwitchCases) {
                 return node;
             }
             return Expression.Switch(t, l, node.Annotations, c);
         }
 
-        protected internal virtual Expression VisitThrow(ThrowStatement node) {
+        protected internal virtual Expression VisitThrow(ThrowExpression node) {
             Expression v = Visit(node.Value);
             if (v == node.Value) {
                 return node;
@@ -380,7 +377,7 @@ namespace Microsoft.Linq.Expressions {
             return Expression.Catch(node.Test, v, b, f, node.Annotations);
         }
 
-        protected internal virtual Expression VisitTry(TryStatement node) {
+        protected internal virtual Expression VisitTry(TryExpression node) {
             Expression b = Visit(node.Body);
             ReadOnlyCollection<CatchBlock> h = Visit(node.Handlers, VisitCatchBlock);
             Expression y = Visit(node.Finally);
@@ -473,7 +470,5 @@ namespace Microsoft.Linq.Expressions {
             }
             return Expression.ListBind(binding.Member, initializers);
         }
-
-        #endregion        
     }
 }

@@ -52,8 +52,8 @@ namespace IronPython.Runtime.Binding {
             return true;
         }
 
-        internal static bool IsNoThrow(MetaAction action) {
-            GetMemberBinder gmb = action as GetMemberBinder;
+        internal static bool IsNoThrow(MetaObjectBinder action) {
+            PythonGetMemberBinder gmb = action as PythonGetMemberBinder;
             if (gmb != null) {
                 return gmb.IsNoThrow;
             }
@@ -61,7 +61,7 @@ namespace IronPython.Runtime.Binding {
             return false;
         }
 
-        internal static MetaObject/*!*/ FilterShowCls(Expression/*!*/ codeContext, MetaAction/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
+        internal static MetaObject/*!*/ FilterShowCls(Expression/*!*/ codeContext, MetaObjectBinder/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
             if (action is IPythonSite) {
                 Type resType = BindingHelpers.GetCompatibleType(res.Expression.Type, failure.Type);
 
@@ -90,27 +90,27 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        internal static CallSignature GetCallSignature(MetaAction/*!*/ action) {
+        internal static CallSignature GetCallSignature(MetaObjectBinder/*!*/ action) {
             // Python'so own InvokeBinder which has a real sig
-            InvokeBinder pib = action as InvokeBinder;
+            PythonInvokeBinder pib = action as PythonInvokeBinder;
             if (pib != null) {
                 return pib.Signature;
             }
 
             // DLR Invoke which has a argument array
-            InvokeAction iac = action as InvokeAction;
+            InvokeBinder iac = action as InvokeBinder;
             if (iac != null) {
                 return ArgumentArrayToSignature(iac.Arguments);
             }
 
-            CallAction cla = action as CallAction;
+            InvokeMemberBinder cla = action as InvokeMemberBinder;
             if (cla != null) {
                 return ArgumentArrayToSignature(cla.Arguments);
             }
             
             // DLR Create action which we hand off to our call code, also
             // has an argument array.
-            CreateAction ca = action as CreateAction;
+            CreateInstanceBinder ca = action as CreateInstanceBinder;
             Debug.Assert(ca != null);
 
             return ArgumentArrayToSignature(ca.Arguments);
@@ -118,7 +118,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Invoke(Expression codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
             return Ast.Dynamic(
-                new InvokeBinder(
+                new PythonInvokeBinder(
                     binder,
                     signature
                 ),
@@ -132,7 +132,7 @@ namespace IronPython.Runtime.Binding {
         /// we shouldn't be returning Python members (e.g. object.__repr__) to non-Python callers.  This
         /// can go away as soon as all of the classes implement the full fidelity of the protocol
         /// </summary>
-        internal static MetaObject/*!*/ GenericCall(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        internal static MetaObject/*!*/ GenericCall(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             if (args[0].NeedsDeferral()) {
                 return action.Defer(args);
             }
@@ -163,7 +163,7 @@ namespace IronPython.Runtime.Binding {
         /// we shouldn't be returning Python members (e.g. object.__repr__) to non-Python callers.  This
         /// can go away as soon as all of the classes implement the full fidelity of the protocol
         /// </summary>
-        internal static MetaObject/*!*/ GenericCall(CallAction/*!*/ action, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+        internal static MetaObject/*!*/ GenericCall(InvokeMemberBinder/*!*/ action, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
             if (target.NeedsDeferral()) {
                 return action.Defer(args);
             }
@@ -189,19 +189,19 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        internal static CallSignature ArgumentArrayToSignature(ReadOnlyCollection<Argument/*!*/>/*!*/ args) {
-            ArgumentInfo[] ai = new ArgumentInfo[args.Count];
+        internal static CallSignature ArgumentArrayToSignature(ReadOnlyCollection<ArgumentInfo/*!*/>/*!*/ args) {
+            Argument[] ai = new Argument[args.Count];
 
             for (int i = 0; i < ai.Length; i++) {
                 switch (args[i].ArgumentType) {
-                    case ArgumentType.Named:
-                        ai[i] = new ArgumentInfo(
-                            ArgumentKind.Named,
-                            SymbolTable.StringToId(((NamedArgument)args[i]).Name)
+                    case ArgumentKind.Named:
+                        ai[i] = new Argument(
+                            ArgumentType.Named,
+                            SymbolTable.StringToId(((NamedArgumentInfo)args[i]).Name)
                         );
                         break;
-                    case ArgumentType.Positional:
-                        ai[i] = new ArgumentInfo(ArgumentKind.Simple);
+                    case ArgumentKind.Positional:
+                        ai[i] = new Argument(ArgumentType.Simple);
                         break;
                 }
             }
@@ -244,11 +244,11 @@ namespace IronPython.Runtime.Binding {
             return o as BuiltinFunction;
         }
 
-        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaAction/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, params ParameterExpression[] temps) {
+        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaObjectBinder/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, params ParameterExpression[] temps) {
             return AddDynamicTestAndDefer(operation, res, args, typeTest, null, temps);
         }
 
-        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaAction/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, Type deferType, params ParameterExpression[] temps) {
+        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaObjectBinder/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, Type deferType, params ParameterExpression[] temps) {
             if (typeTest != null) {
                 if (typeTest.Test != null) {
                     // add the test and a validator if persent
@@ -277,7 +277,7 @@ namespace IronPython.Runtime.Binding {
             if (temps.Length > 0) {
                 // finally add the scoped variables
                 res = new MetaObject(
-                    Ast.Scope(res.Expression, temps),
+                    Ast.Comma(temps, res.Expression),
                     res.Restrictions,
                     null
                 );
@@ -407,8 +407,9 @@ namespace IronPython.Runtime.Binding {
             if (PythonFunction.EnforceRecursion) {
                 ParameterExpression tmp = Ast.Variable(expr.Type, "callres");
 
-                expr = Ast.Scope(
+                expr = 
                     Ast.Comma(
+                        new [] { tmp },
                         AstUtils.Try(
                             Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                             Ast.Assign(tmp, expr)
@@ -416,9 +417,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
                         ),
                         tmp
-                    ),
-                    tmp
-                );
+                    );
             }
             return expr;
         }
@@ -431,13 +430,13 @@ namespace IronPython.Runtime.Binding {
         /// Helper to do fallback for Invoke's so we can handle both StandardAction and Python's 
         /// InvokeBinder.
         /// </summary>
-        internal static MetaObject/*!*/ InvokeFallback(MetaAction/*!*/ action, Expression codeContext, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
-            InvokeAction act = action as InvokeAction;
+        internal static MetaObject/*!*/ InvokeFallback(MetaObjectBinder/*!*/ action, Expression codeContext, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+            InvokeBinder act = action as InvokeBinder;
             if (act != null) {
-                return act.Fallback(target, args);
+                return act.FallbackInvoke(target, args);
             }
 
-            InvokeBinder invoke = action as InvokeBinder;
+            PythonInvokeBinder invoke = action as PythonInvokeBinder;
             if (invoke != null) {
                 return invoke.Fallback(codeContext, target, args);
             }

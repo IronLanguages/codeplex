@@ -29,7 +29,15 @@ namespace Microsoft.Scripting.Ast {
         internal static readonly CodeContextExpression Instance = new CodeContextExpression(Annotations.Empty);
 
         internal CodeContextExpression(Annotations annotations)
-            : base(typeof(CodeContext), false, annotations) {
+            : base(annotations) {
+        }
+
+        protected override System.Type GetExpressionType() {
+            return typeof(CodeContext);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {

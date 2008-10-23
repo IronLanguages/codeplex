@@ -131,7 +131,7 @@ namespace Microsoft.Scripting.Ast {
                         vars.Add(info.Variable);
                     }
                 }
-                node = Expression.Scope(node, vars);
+                node = Expression.Comma(vars, node);
             }
             _blocks.Pop();
             return node;
@@ -170,7 +170,7 @@ namespace Microsoft.Scripting.Ast {
             return node;
         }
 
-        protected override Expression VisitTry(TryStatement node) {
+        protected override Expression VisitTry(TryExpression node) {
             // Visit finally/fault block first
             BlockInfo block = new BlockInfo { InFinally = true };
             _blocks.Push(block);
@@ -252,14 +252,12 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // Emit flow control
-            return Expression.Scope(
-                Expression.Block(
-                    node.Annotations,
-                    Expression.MakeTry(@try, @finally, fault, null, handlers),
-                    Expression.Label(block.FlowLabel),
-                    MakeFlowControlSwitch(block)
-                ),
-                all
+            return Expression.Block(
+                node.Annotations,
+                new ParameterExpression[] { all },
+                Expression.MakeTry(@try, @finally, fault, null, handlers),
+                Expression.Label(block.FlowLabel),
+                MakeFlowControlSwitch(block)
             );
         }
 
@@ -362,7 +360,7 @@ namespace Microsoft.Scripting.Ast {
             return base.VisitReturn(node);
         }
 
-        protected override Expression VisitBlock(Block node) {
+        protected override Expression VisitBlock(BlockExpression node) {
             // Grab all labels in the block and define them in the block's scope
             // Labels defined immediately in the block are valid for the whole block
             foreach (var e in node.Expressions) {

@@ -27,19 +27,34 @@ namespace Microsoft.Linq.Expressions {
     /// supported by MetaObject, the run-time behavior can be infered from the
     /// StandardAction
     /// </summary>
-    public sealed class DynamicExpression : Expression {
+    public class DynamicExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly CallSiteBinder _binder;
         private readonly Type _delegateType;
 
-        internal DynamicExpression(Type returnType, Annotations annotations, Type delegateType, CallSiteBinder binder, ReadOnlyCollection<Expression> arguments)
-            : base(ExpressionType.Dynamic, returnType, annotations) {
-            Debug.Assert(returnType == delegateType.GetMethod("Invoke").GetReturnType());
+        internal DynamicExpression(Annotations annotations, Type delegateType, CallSiteBinder binder, ReadOnlyCollection<Expression> arguments)
+            : base(annotations) {
+            Debug.Assert(delegateType.GetMethod("Invoke").GetReturnType() == typeof(object) || GetType() != typeof(DynamicExpression));
             _delegateType = delegateType;
             _binder = binder;
             _arguments = arguments;
         }
 
+        internal static DynamicExpression Make(Type returnType, Annotations annotations, Type delegateType, CallSiteBinder binder, ReadOnlyCollection<Expression> arguments) {
+            if (returnType == typeof(object)) {
+                return new DynamicExpression(annotations, delegateType, binder, arguments);
+            } else {
+                return new TypedDynamicExpression(returnType, annotations, delegateType, binder, arguments);
+            }
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(object);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Dynamic;
+        }
         /// <summary>
         /// The CallSiteBinder, which determines the runtime behavior of the
         /// dynamic site
@@ -75,6 +90,20 @@ namespace Microsoft.Linq.Expressions {
         }
     }
 
+    internal class TypedDynamicExpression : DynamicExpression {
+        private readonly Type _returnType;
+
+        internal TypedDynamicExpression(Type returnType, Annotations annotations, Type delegateType, CallSiteBinder binder, ReadOnlyCollection<Expression> arguments)
+            : base(annotations, delegateType, binder, arguments) {
+            Debug.Assert(delegateType.GetMethod("Invoke").GetReturnType() == returnType);
+            _returnType = returnType;
+        }
+
+        protected override Type GetExpressionType() {
+            return _returnType;
+        }
+    }
+
     public partial class Expression {
 
         public static DynamicExpression MakeDynamic(Type delegateType, CallSiteBinder binder, params Expression[] arguments) {
@@ -92,7 +121,7 @@ namespace Microsoft.Linq.Expressions {
             var args = arguments.ToReadOnly();
             ValidateArgumentTypes(method, ExpressionType.Dynamic, ref args);
 
-            return new DynamicExpression(method.GetReturnType(), annotations, delegateType, binder, args);
+            return DynamicExpression.Make(method.GetReturnType(), annotations, delegateType, binder, args);
         }
 
         public static DynamicExpression Dynamic(CallSiteBinder binder, Type returnType, params Expression[] arguments) {
@@ -139,7 +168,7 @@ namespace Microsoft.Linq.Expressions {
 
             // Since we made a delegate with argument types that exactly match,
             // we can skip delegate and argument validation
-            return new DynamicExpression(returnType, annotations, delegateType, binder, args);
+            return DynamicExpression.Make(returnType, annotations, delegateType, binder, args);
         }
 
         [Obsolete("use Dynamic instead")]

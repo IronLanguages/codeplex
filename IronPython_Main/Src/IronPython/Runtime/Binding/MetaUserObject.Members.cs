@@ -30,7 +30,7 @@ namespace IronPython.Runtime.Binding {
     partial class MetaUserObject : MetaPythonObject, IPythonGetable {
         #region IPythonGetable Members
 
-        public MetaObject GetMember(GetMemberBinder/*!*/ member, Expression/*!*/ codeContext) {
+        public MetaObject GetMember(PythonGetMemberBinder/*!*/ member, Expression/*!*/ codeContext) {
             return GetMemberWorker(member, codeContext);
         }        
 
@@ -38,11 +38,11 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ action) {
+        public override MetaObject/*!*/ BindGetMember(GetMemberBinder/*!*/ action) {
             return GetMemberWorker(action, BinderState.GetCodeContext(action));
         }
 
-        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ action, MetaObject/*!*/ value) {
+        public override MetaObject/*!*/ BindSetMember(SetMemberBinder/*!*/ action, MetaObject/*!*/ value) {
             MetaObject self = Restrict(Value.GetType());
             CodeContext context = BinderState.GetBinderState(action).Context;
             IPythonObject sdo = Value;
@@ -109,7 +109,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ action) {
+        public override MetaObject/*!*/ BindDeleteMember(DeleteMemberBinder/*!*/ action) {
             return MakeDeleteMemberRule(
                 new DeleteBindingInfo(
                     action,
@@ -124,7 +124,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Get Member Helpers
 
-        private MetaObject GetMemberWorker(MetaAction/*!*/ member, Expression codeContext) {
+        private MetaObject GetMemberWorker(MetaObjectBinder/*!*/ member, Expression codeContext) {
             MetaObject self = Restrict(Value.GetType());
             CodeContext context = BinderState.GetBinderState(member).Context;
             IPythonObject sdo = Value;
@@ -361,7 +361,7 @@ namespace IronPython.Runtime.Binding {
 
         private Expression/*!*/ MakeGetAttrCall(GetBindingInfo/*!*/ info, Expression codeContext) {
             Expression call = Ast.Dynamic(
-                new InvokeBinder(
+                new PythonInvokeBinder(
                     BinderState.GetBinderState(info.Action),
                     new CallSignature(1)
                 ),
@@ -490,7 +490,7 @@ namespace IronPython.Runtime.Binding {
                     tmp
                 ),
                 Ast.Dynamic(
-                    new InvokeBinder(
+                    new PythonInvokeBinder(
                         BinderState.GetBinderState(bindingInfo.Action),
                         new CallSignature(2)
                     ),
@@ -683,7 +683,7 @@ namespace IronPython.Runtime.Binding {
                     tmp
                 ),
                 Ast.Dynamic(
-                    new InvokeBinder(
+                    new PythonInvokeBinder(
                         BinderState.GetBinderState(info.Action),
                         new CallSignature(1)
                     ),
@@ -754,28 +754,28 @@ namespace IronPython.Runtime.Binding {
         }
 
         class DeleteBindingInfo : MemberBindingInfo {
-            public readonly DeleteMemberAction/*!*/ Action;
+            public readonly DeleteMemberBinder/*!*/ Action;
 
-            public DeleteBindingInfo(DeleteMemberAction/*!*/ action, MetaObject/*!*/[]/*!*/ args, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validation)
+            public DeleteBindingInfo(DeleteMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validation)
                 : base(args, body, validation) {
                 Action = action;
             }
         }
 
         class SetBindingInfo : MemberBindingInfo {
-            public readonly SetMemberAction/*!*/ Action;
+            public readonly SetMemberBinder/*!*/ Action;
 
-            public SetBindingInfo(SetMemberAction/*!*/ action, MetaObject/*!*/[]/*!*/ args, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validation)
+            public SetBindingInfo(SetMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validation)
                 : base(args, body, validation) {
                 Action = action;
             }
         }
 
         class GetBindingInfo : MemberBindingInfo {
-            public readonly MetaAction/*!*/ Action;
+            public readonly MetaObjectBinder/*!*/ Action;
             public readonly ParameterExpression/*!*/ Self, Result;
 
-            public GetBindingInfo(MetaAction/*!*/ action, MetaObject/*!*/[]/*!*/ args, ParameterExpression/*!*/ self, ParameterExpression/*!*/ result, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validationInfo)
+            public GetBindingInfo(MetaObjectBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args, ParameterExpression/*!*/ self, ParameterExpression/*!*/ result, ConditionalBuilder/*!*/ body, ValidationInfo/*!*/ validationInfo)
                 : base(args, body, validationInfo) {
                 Action = action;
                 Self = self;
@@ -791,7 +791,7 @@ namespace IronPython.Runtime.Binding {
         /// Helper for falling back - if we have a base object fallback to it first (which can
         /// then fallback to the calling site), otherwise fallback to the calling site.
         /// </summary>
-        private MetaObject/*!*/ FallbackGetError(MetaAction/*!*/ action, Expression codeContext) {
+        private MetaObject/*!*/ FallbackGetError(MetaObjectBinder/*!*/ action, Expression codeContext) {
             if (_baseMetaObject != null) {
                 return Fallback(action, codeContext);
             } else if (BindingHelpers.IsNoThrow(action)) {
@@ -799,7 +799,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Field(null, typeof(OperationFailed).GetField("Value")),
                     Restrictions.Empty
                 );
-            } else if (action is GetMemberBinder) {
+            } else if (action is PythonGetMemberBinder) {
                 return new MetaObject(
                     MakeTypeError(GetGetMemberName(action), PythonType),
                     Restrictions.Empty
@@ -813,17 +813,17 @@ namespace IronPython.Runtime.Binding {
         /// Helper for falling back - if we have a base object fallback to it first (which can
         /// then fallback to the calling site), otherwise fallback to the calling site.
         /// </summary>
-        private MetaObject/*!*/ FallbackSetError(SetMemberAction/*!*/ action, MetaObject/*!*/ value) {
+        private MetaObject/*!*/ FallbackSetError(SetMemberBinder/*!*/ action, MetaObject/*!*/ value) {
             if (_baseMetaObject != null) {
-                return _baseMetaObject.SetMember(action, value);
-            } else if (action is SetMemberBinder) {
+                return _baseMetaObject.BindSetMember(action, value);
+            } else if (action is PythonSetMemberBinder) {
                 return new MetaObject(
                     MakeTypeError(action.Name, Value.PythonType),
                     Restrictions.Empty
                 );
             }
 
-            return action.Fallback(this, value);
+            return action.FallbackSetMember(this, value);
         }
 
 
@@ -831,17 +831,17 @@ namespace IronPython.Runtime.Binding {
         /// Helper for falling back - if we have a base object fallback to it first (which can
         /// then fallback to the calling site), otherwise fallback to the calling site.
         /// </summary>
-        private MetaObject/*!*/ FallbackDeleteError(DeleteMemberAction/*!*/ action, MetaObject/*!*/[] args) {
+        private MetaObject/*!*/ FallbackDeleteError(DeleteMemberBinder/*!*/ action, MetaObject/*!*/[] args) {
             if (_baseMetaObject != null) {
-                return _baseMetaObject.DeleteMember(action);
-            } else if (action is DeleteMemberBinder) {
+                return _baseMetaObject.BindDeleteMember(action);
+            } else if (action is PythonDeleteMemberBinder) {
                 return new MetaObject(
                     MakeTypeError(action.Name, ((IPythonObject)args[0].Value).PythonType),
                     Restrictions.Empty
                 );
             }
 
-            return action.Fallback(this);
+            return action.FallbackDeleteMember(this);
         }
 
         #endregion

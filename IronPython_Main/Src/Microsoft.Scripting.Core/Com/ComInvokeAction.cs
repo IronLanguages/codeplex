@@ -19,17 +19,17 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
-    class ComInvokeAction : InvokeAction {
-        public override object HashCookie {
+namespace Microsoft.Scripting.ComInterop {
+    class ComInvokeAction : InvokeBinder {
+        public override object CacheIdentity {
             get { return this; }
         }
 
-        internal ComInvokeAction(params Argument[] arguments)
+        internal ComInvokeAction(params ArgumentInfo[] arguments)
             : base(arguments) {
         }
 
-        internal ComInvokeAction(IEnumerable<Argument> arguments)
+        internal ComInvokeAction(IEnumerable<ArgumentInfo> arguments)
             : base(arguments) {
         }
 
@@ -41,8 +41,8 @@ namespace Microsoft.Scripting.Com {
             return base.Equals(obj as ComInvokeAction);
         }
 
-        public override MetaObject Fallback(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
-            return onBindingError ?? MetaObject.Throw(target, args, typeof(NotSupportedException), "Cannot perform call");
+        public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
+            return errorSuggestion ?? MetaObject.CreateThrow(target, args, typeof(NotSupportedException), "Cannot perform call");
         }
     }
 }

@@ -20,7 +20,7 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     internal class StringArgBuilder : SimpleArgBuilder {
         internal StringArgBuilder(Type parameterType)
@@ -28,42 +28,20 @@ namespace Microsoft.Scripting.Com {
             Debug.Assert(parameterType == typeof(string));
         }
 
-        internal override ParameterExpression CreateTemp() {
-            return Expression.Variable(typeof(IntPtr), "TempIntPtr");
-        }
-
-        internal override Expression UnwrapByRef(Expression parameter) {
-            // temp = Marshal.StringToBSTR(parameter)
-            return base.UnwrapByRef(
-                Expression.Call(
-                    typeof(Marshal).GetMethod("StringToBSTR"),
-                    Unwrap(parameter)
-                )
+        internal override Expression MarshalToRef(Expression parameter) {
+            // Marshal.StringToBSTR(parameter)
+            return Expression.Call(
+                typeof(Marshal).GetMethod("StringToBSTR"),
+                Marshal(parameter)
             );
         }
 
-        internal override Expression UpdateFromReturn(Expression parameter, Expression temp) {
-            // parameter = Marshal.PtrToStringBSTR(temp)
-            return base.UpdateFromReturn(
-                parameter,
-                Expression.Call(
-                    typeof(Marshal).GetMethod("PtrToStringBSTR"),
-                    temp
-                )
+        internal override Expression UnmarshalFromRef(Expression value) {
+            // Marshal.PtrToStringBSTR(temp)
+            return Expression.Call(
+                typeof(Marshal).GetMethod("PtrToStringBSTR"),
+                value
             );
-        }
-
-        internal List<Expression> Clear() {
-            List<Expression> exprs = new List<Expression>();
-            Expression expr;
-
-            // Marshal.FreeBSTR(_unmanagedTemp)
-            expr = Expression.Call(
-                typeof(Marshal).GetMethod("FreeBSTR"),
-                _unmanagedTemp
-            );
-            exprs.Add(expr);
-            return exprs;
         }
 
         internal override object UnwrapForReflection(object arg) {
