@@ -119,7 +119,7 @@ namespace Microsoft.Scripting.Actions {
             MemberGroup members = MemberGroup.EmptyGroup;
             if (typeof(TypeTracker).IsAssignableFrom(type)) {
                 restrictions = restrictions.Merge(
-                    Restrictions.InstanceRestriction(target.Expression, target.Value)
+                    Restrictions.GetInstanceRestriction(target.Expression, target.Value)
                 );
 
                 TypeGroup tg = target.Value as TypeGroup;

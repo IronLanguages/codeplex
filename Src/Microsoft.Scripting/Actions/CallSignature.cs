@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Actions {
         /// Array of additional meta information about the arguments, such as named arguments.
         /// Null for a simple signature that's just an expression list. eg: foo(a*b,c,d)
         /// </summary>
-        private readonly ArgumentInfo[] _infos;
+        private readonly Argument[] _infos;
 
         /// <summary>
         /// Number of arguments in the signature.
@@ -67,13 +67,13 @@ namespace Microsoft.Scripting.Actions {
             _infos = null;
         }
 
-        public CallSignature(params ArgumentInfo[] infos) {
+        public CallSignature(params Argument[] infos) {
             bool simple = true;
 
             if (infos != null) {
                 _argumentCount = infos.Length;
                 for (int i = 0; i < infos.Length; i++) {
-                    if (infos[i].Kind != ArgumentKind.Simple) {
+                    if (infos[i].Kind != ArgumentType.Simple) {
                         simple = false;
                         break;
                     }
@@ -85,13 +85,13 @@ namespace Microsoft.Scripting.Actions {
             _infos = (!simple) ? infos : null;
         }
 
-        public CallSignature(params ArgumentKind[] kinds) {
+        public CallSignature(params ArgumentType[] kinds) {
             bool simple = true;
 
             if (kinds != null) {
                 _argumentCount = kinds.Length;
                 for (int i = 0; i < kinds.Length; i++) {
-                    if (kinds[i] != ArgumentKind.Simple) {
+                    if (kinds[i] != ArgumentType.Simple) {
                         simple = false;
                         break;
                     }
@@ -101,9 +101,9 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (!simple) {
-                _infos = new ArgumentInfo[kinds.Length];
+                _infos = new Argument[kinds.Length];
                 for (int i = 0; i < kinds.Length; i++) {
-                    _infos[i] = new ArgumentInfo(kinds[i]);
+                    _infos[i] = new Argument(kinds[i]);
                 }
             } else {
                 _infos = null;
@@ -166,7 +166,7 @@ namespace Microsoft.Scripting.Actions {
         public override int GetHashCode() {
             int h = 6551;
             if (_infos != null) {
-                foreach (ArgumentInfo info in _infos) {
+                foreach (Argument info in _infos) {
                     h ^= (h << 5) ^ info.GetHashCode();
                 }
             }
@@ -177,15 +177,15 @@ namespace Microsoft.Scripting.Actions {
 
         #region Helpers
 
-        public ArgumentInfo[] GetArgumentInfos() {
-            return (_infos != null) ? ArrayUtils.Copy(_infos) : CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, _argumentCount);
+        public Argument[] GetArgumentInfos() {
+            return (_infos != null) ? ArrayUtils.Copy(_infos) : CompilerHelpers.MakeRepeatedArray(Argument.Simple, _argumentCount);
         }
 
-        public CallSignature InsertArgument(ArgumentInfo info) {
+        public CallSignature InsertArgument(Argument info) {
             return InsertArgumentAt(0, info);
         }
 
-        public CallSignature InsertArgumentAt(int index, ArgumentInfo info) {
+        public CallSignature InsertArgumentAt(int index, Argument info) {
             if (this.IsSimple) {
                 if (info.IsSimple) {
                     return new CallSignature(_argumentCount + 1);
@@ -213,9 +213,9 @@ namespace Microsoft.Scripting.Actions {
             return new CallSignature(ArrayUtils.RemoveAt(_infos, index));
         }
 
-        public int IndexOf(ArgumentKind kind) {
+        public int IndexOf(ArgumentType kind) {
             if (_infos == null) {
-                return (kind == ArgumentKind.Simple && _argumentCount > 0) ? 0 : -1;
+                return (kind == ArgumentType.Simple && _argumentCount > 0) ? 0 : -1;
             }
 
             for (int i = 0; i < _infos.Length; i++) {
@@ -227,19 +227,19 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public bool HasDictionaryArgument() {
-            return IndexOf(ArgumentKind.Dictionary) > -1;
+            return IndexOf(ArgumentType.Dictionary) > -1;
         }
 
         public bool HasInstanceArgument() {
-            return IndexOf(ArgumentKind.Instance) > -1;
+            return IndexOf(ArgumentType.Instance) > -1;
         }
 
         public bool HasListArgument() {
-            return IndexOf(ArgumentKind.List) > -1;
+            return IndexOf(ArgumentType.List) > -1;
         }
 
         internal bool HasNamedArgument() {
-            return IndexOf(ArgumentKind.Named) > -1;
+            return IndexOf(ArgumentType.Named) > -1;
         }
 
         /// <summary>
@@ -247,8 +247,8 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public bool HasKeywordArgument() {
             if (_infos != null) {
-                foreach (ArgumentInfo info in _infos) {
-                    if (info.Kind == ArgumentKind.Dictionary || info.Kind == ArgumentKind.Named) {
+                foreach (Argument info in _infos) {
+                    if (info.Kind == ArgumentType.Dictionary || info.Kind == ArgumentType.Named) {
                         return true;
                     }
                 }
@@ -256,9 +256,9 @@ namespace Microsoft.Scripting.Actions {
             return false;
         }
         
-        public ArgumentKind GetArgumentKind(int index) {
+        public ArgumentType GetArgumentKind(int index) {
             // TODO: Contract.Requires(index >= 0 && index < _argumentCount, "index");
-            return _infos != null ? _infos[index].Kind : ArgumentKind.Simple;
+            return _infos != null ? _infos[index].Kind : ArgumentType.Simple;
         }
 
         public SymbolId GetArgumentName(int index) {
@@ -275,9 +275,9 @@ namespace Microsoft.Scripting.Actions {
 
             if (_infos != null) {
                 for (int i = 0; i < _infos.Length; i++) {
-                    ArgumentKind kind = _infos[i].Kind;
+                    ArgumentType kind = _infos[i].Kind;
 
-                    if (kind == ArgumentKind.Dictionary || kind == ArgumentKind.List || kind == ArgumentKind.Named) {
+                    if (kind == ArgumentType.Dictionary || kind == ArgumentType.List || kind == ArgumentType.Named) {
                         result--;
                     }
                 }
@@ -292,7 +292,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             List<SymbolId> result = new List<SymbolId>();
-            foreach (ArgumentInfo info in _infos) {
+            foreach (Argument info in _infos) {
                 if (info.Name != SymbolId.Empty) {
                     result.Add(info.Name);
                 }
@@ -313,8 +313,8 @@ namespace Microsoft.Scripting.Actions {
                     args[i] = _infos[i].CreateExpression();
                 }
                 return Expression.New(
-                    typeof(CallSignature).GetConstructor(new Type[] { typeof(ArgumentInfo[]) }), 
-                    Expression.NewArrayInit(typeof(ArgumentInfo), args)
+                    typeof(CallSignature).GetConstructor(new Type[] { typeof(Argument[]) }), 
+                    Expression.NewArrayInit(typeof(Argument), args)
                 );
             }
         }

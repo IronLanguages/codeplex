@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return new FunctionBinderHelper(pythonInvoke, this, args).MakeMetaObject();
         }
 
@@ -47,22 +47,22 @@ namespace IronPython.Runtime.Binding {
         
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
             return new FunctionBinderHelper(call, this, args).MakeMetaObject();
         }
 
-        public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion) {
-            if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(conversion, conversion.ToType, Restrict(typeof(PythonFunction)));
+        public override MetaObject/*!*/ BindConvert(ConvertBinder/*!*/ conversion) {
+            if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(conversion, conversion.Type, Restrict(typeof(PythonFunction)));
             }
-            return conversion.Fallback(this);
+            return conversion.FallbackConvert(this);
         }
 
-        public override MetaObject/*!*/ Operation(OperationAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindOperation(OperationBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
                     return MakeCallSignatureRule(this);
@@ -70,7 +70,7 @@ namespace IronPython.Runtime.Binding {
                     return MakeIsCallableRule(this);
             }
 
-            return base.Operation(action, args);
+            return base.BindOperation(action, args);
         }
 
         #endregion
@@ -95,7 +95,7 @@ namespace IronPython.Runtime.Binding {
             private readonly MetaPythonFunction/*!*/ _func;         // the meta object for the function we're calling
             private readonly MetaObject/*!*/[]/*!*/ _args;          // the arguments for the function
             private readonly MetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
-            private readonly MetaAction/*!*/ _call;               // the signature for the method call
+            private readonly MetaObjectBinder/*!*/ _call;               // the signature for the method call
 
             private List<ParameterExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
             private ParameterExpression _dict, _params, _paramsLen;  // splatted dictionary & params + the initial length of the params array, null if not provided.
@@ -107,7 +107,7 @@ namespace IronPython.Runtime.Binding {
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
             private Expression _paramlessCheck;                     // tests when we have no parameters
 
-            public FunctionBinderHelper(MetaAction/*!*/ call, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
+            public FunctionBinderHelper(MetaObjectBinder/*!*/ call, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
                 _call = call;
                 _func = function;
                 _args = args;
@@ -115,7 +115,7 @@ namespace IronPython.Runtime.Binding {
                 _temps = new List<ParameterExpression>();
 
                 // Remove the passed in instance argument if present
-                int instanceIndex = Signature.IndexOf(ArgumentKind.Instance);
+                int instanceIndex = Signature.IndexOf(ArgumentType.Instance);
                 if (instanceIndex > -1) {
                     _args = ArrayUtils.RemoveAt(_args, instanceIndex);
                 }
@@ -198,10 +198,10 @@ namespace IronPython.Runtime.Binding {
                     Ast.Constant(_func.Value.FunctionCompatibility)
                 );
 
-                return Restrictions.TypeRestriction(
+                return Restrictions.GetTypeRestriction(
                     _func.Expression, typeof(PythonFunction)
                 ).Merge(
-                    Restrictions.TypeRestriction(
+                    Restrictions.GetTypeRestriction(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("FunctionGetTarget"),
                             Ast.Convert(_func.Expression, typeof(PythonFunction))
@@ -217,7 +217,7 @@ namespace IronPython.Runtime.Binding {
             /// <returns></returns>
             private Restrictions/*!*/ GetComplexRestriction() {
                 if (_extractedKeyword) {
-                    return Restrictions.InstanceRestriction(_func.Expression, _func.Value);
+                    return Restrictions.GetInstanceRestriction(_func.Expression, _func.Value);
                 }
 
                 return GetSimpleRestriction();
@@ -232,22 +232,22 @@ namespace IronPython.Runtime.Binding {
                 Expression[] exprArgs = new Expression[_func.Value.NormalArgumentCount + _func.Value.ExtraArguments];
                 List<Expression> extraArgs = null;
                 Dictionary<SymbolId, Expression> namedArgs = null;
-                int instanceIndex = Signature.IndexOf(ArgumentKind.Instance);
+                int instanceIndex = Signature.IndexOf(ArgumentType.Instance);
 
                 // walk all the provided args and find out where they go...
                 for (int i = 0; i < _args.Length; i++) {
                     int parameterIndex = (instanceIndex == -1 || i < instanceIndex) ? i : i + 1;
 
                     switch (Signature.GetArgumentKind(i)) {
-                        case ArgumentKind.Dictionary:
+                        case ArgumentType.Dictionary:
                             _args[parameterIndex] = MakeDictionaryCopy(_args[parameterIndex]);
                             continue;
 
-                        case ArgumentKind.List:
+                        case ArgumentType.List:
                             _userProvidedParams = _args[parameterIndex].Expression;
                             continue;
 
-                        case ArgumentKind.Named:
+                        case ArgumentType.Named:
                             _extractedKeyword = true;
                             bool foundName = false;
                             for (int j = 0; j < _func.Value.NormalArgumentCount; j++) {
@@ -916,14 +916,14 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonFunction)
                     )
                 ),
-                Restrictions.TypeRestriction(self.Expression, typeof(PythonFunction))
+                Restrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }
 
         private MetaObject MakeIsCallableRule(MetaObject/*!*/ self) {
             return new MetaObject(
                 Ast.True(),
-                Restrictions.TypeRestriction(self.Expression, typeof(PythonFunction))
+                Restrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }
 

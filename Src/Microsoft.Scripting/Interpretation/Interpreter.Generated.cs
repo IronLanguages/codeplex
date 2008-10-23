@@ -77,6 +77,7 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.TypeIs: return InterpretTypeBinaryExpression(state, expr);
                  case ExpressionType.Assign: return InterpretAssignmentExpression(state, expr);
                  case ExpressionType.Block: return InterpretBlock(state, expr);
+                 case ExpressionType.DebugInfo: return InterpretDebugInfoExpression(state, expr);
                  case ExpressionType.DoStatement: return InterpretDoStatement(state, expr);
                  case ExpressionType.Dynamic: return InterpretDynamicExpression(state, expr);
                  case ExpressionType.EmptyStatement: return InterpretEmptyStatement(state, expr);
@@ -87,7 +88,6 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.LocalScope: return InterpretLocalScopeExpression(state, expr);
                  case ExpressionType.LoopStatement: return InterpretLoopStatement(state, expr);
                  case ExpressionType.ReturnStatement: return InterpretReturnStatement(state, expr);
-                 case ExpressionType.Scope: return InterpretScopeExpression(state, expr);
                  case ExpressionType.SwitchStatement: return InterpretSwitchStatement(state, expr);
                  case ExpressionType.ThrowStatement: return InterpretThrowStatement(state, expr);
                  case ExpressionType.TryStatement: return InterpretTryStatement(state, expr);

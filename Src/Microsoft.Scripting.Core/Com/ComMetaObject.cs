@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class ComMetaObject : MetaObject {
         internal ComMetaObject(Expression expression, Restrictions restrictions, object arg)
             : base(expression, restrictions, arg) {
@@ -27,42 +27,42 @@ namespace Microsoft.Scripting.Com {
 
         #region MetaObject
 
-        public override MetaObject Call(CallAction action, MetaObject[] args) {
+        public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject Convert(ConvertAction action) {
+        public override MetaObject BindConvert(ConvertBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(WrapSelf());
         }
 
-        public override MetaObject Create(CreateAction action, MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject DeleteMember(DeleteMemberAction action) {
+        public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(WrapSelf());
         }
 
-        public override MetaObject GetMember(GetMemberAction action) {
+        public override MetaObject BindGetMember(GetMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(WrapSelf());
         }
 
-        public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+        public override MetaObject BindInvoke(InvokeBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args.AddFirst(WrapSelf()));
         }
 
-        public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
+        public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(WrapSelf(), value);
         }
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Com {
                     typeof(ComObject).GetMethod("ObjectToComObject"),
                     Expression.ConvertHelper(Expression, typeof(object))
                 ),
-                Restrictions.ExpressionRestriction(
+                Restrictions.GetExpressionRestriction(
                     Expression.AndAlso(
                         Expression.NotEqual(
                             Expression.ConvertHelper(Expression, typeof(object)),

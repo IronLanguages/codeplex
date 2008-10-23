@@ -14,7 +14,8 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Actions;
+using System.Collections.ObjectModel;
+using Microsoft.Linq.Expressions;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
@@ -35,8 +36,8 @@ namespace Microsoft.Scripting.Actions {
             _name = name;
         }
 
-        public override Rule<T> Bind<T>(object[] args) {
-            return Binder.Bind<T>(this, args);
+        public override Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
+            return Binder.Bind(this, args, parameters, returnLabel);
         }
 
         [Confined]

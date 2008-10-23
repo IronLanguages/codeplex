@@ -24,7 +24,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// If a managed user type (as opposed to a primitive type or a COM object) is passed as an argument to a COM call, we need
     /// to determine the VarEnum type we will marshal it as. We have the following options:
@@ -40,45 +40,6 @@ namespace Microsoft.Scripting.Com {
     /// VarEnumSelector implements option # 3
     /// </summary>
     internal class VarEnumSelector {
-
-        /// <summary>
-        /// Narrowing conversions are conversions that cannot be proved to always succeed, conversions that are 
-        /// known to possibly lose information, and conversions across domains of types sufficiently different 
-        /// to merit narrowing notation like casts. 
-        /// 
-        /// Its upto every language to define the levels for conversions. The narrowling levels can be used by
-        /// for method overload resolution, where the overload is based on the parameter types (and not the number 
-        /// of parameters).
-        /// </summary>
-        private enum NarrowingLevel {
-            /// <summary>
-            /// Conversions at this level do not do any narrowing. Typically, this will include
-            /// implicit numeric conversions, Type.IsAssignableFrom, StringBuilder to string, etc.
-            /// </summary>
-            None,
-            /// <summary>
-            /// Language defined prefered narrowing conversion.  First level that introduces narrowing
-            /// conversions.
-            /// </summary>
-            One,
-            /// <summary>
-            /// Language defined preferred narrowing conversion.  Second level that introduces narrowing
-            /// conversions and should have more conversions than One.
-            /// </summary>
-            Two,
-            /// <summary>
-            /// Language defined preferred narrowing conversion.  Third level that introduces narrowing
-            /// conversions and should have more conversions that Two.
-            /// </summary>
-            Three,
-            /// <summary>
-            /// A somewhat meaningful conversion is possible, but it will quite likely be lossy.
-            /// For eg. BigInteger to an Int32, Boolean to Int32, one-char string to a char,
-            /// larger number type to a smaller numeric type (where there is no overflow), etc
-            /// </summary>
-            All
-        }
-
         private VariantBuilder[] _variantBuilders;
         private ReturnBuilder _returnBuilder;
         private bool _isSupportedByFastPath = true;
@@ -123,14 +84,6 @@ namespace Microsoft.Scripting.Com {
             get {
                 return _variantBuilders;
             }
-        }
-
-        internal ArgBuilder[] GetArgBuilders() {
-            ArgBuilder[] argBuilders = new ArgBuilder[_variantBuilders.Length];
-            for (int i = 0; i < _variantBuilders.Length; i++) {
-                argBuilders[i] = _variantBuilders[i].ArgBuilder;
-            }
-            return argBuilders;
         }
 
         /// <summary>
@@ -213,13 +166,14 @@ namespace Microsoft.Scripting.Com {
             dict[VarEnum.VT_R4] = typeof(Single);
             dict[VarEnum.VT_R8] = typeof(Double);
             dict[VarEnum.VT_DECIMAL] = typeof(Decimal);
-            dict[VarEnum.VT_CY] = typeof(Decimal);
             dict[VarEnum.VT_DATE] = typeof(DateTime);
             dict[VarEnum.VT_BSTR] = typeof(String);
 
             // *** END GENERATED CODE ***
 
             #endregion
+
+            dict[VarEnum.VT_CY] = typeof(CurrencyWrapper);
 
             return dict;
         }
@@ -239,7 +193,8 @@ namespace Microsoft.Scripting.Com {
                 new VarEnum[] { VarEnum.VT_BOOL },
                 new VarEnum[] { VarEnum.VT_DATE, VarEnum.VT_R8, VarEnum.VT_R4 },
                 new VarEnum[] { VarEnum.VT_DECIMAL },
-                new VarEnum[] { VarEnum.VT_BSTR }
+                new VarEnum[] { VarEnum.VT_BSTR },
+                new VarEnum[] { VarEnum.VT_CY }
             };
 
             return typeFamilies;
@@ -247,7 +202,6 @@ namespace Microsoft.Scripting.Com {
 
         /// <summary>
         /// Get the (one representative type for each) primitive type families that the argument can be converted to
-        /// at the given NarrowingLevel.
         /// </summary>
         private static List<VarEnum> GetConversionsToComPrimitiveTypeFamilies(Type argumentType) {
             List<VarEnum> compatibleComTypes = new List<VarEnum>();
@@ -255,7 +209,7 @@ namespace Microsoft.Scripting.Com {
             foreach (IList<VarEnum> typeFamily in _ComPrimitiveTypeFamilies) {
                 foreach (VarEnum candidateType in typeFamily) {
                     Type candidateManagedType = _ComToManagedPrimitiveTypes[candidateType];
-                    if (candidateManagedType.IsAssignableFrom(argumentType)) {
+                    if (TypeUtils.IsImplicitlyConvertible(argumentType, candidateManagedType, true)) {
                         compatibleComTypes.Add(candidateType);
                         // Move on to the next type family. We need atmost one type from each family
                         break;
@@ -289,12 +243,6 @@ namespace Microsoft.Scripting.Com {
             throw Error.AmbiguousConversion(argumentType.Name, typeNames);
         }
 
-        // We do not use NarrowingLevel.All as it can potentially return degenerate conversions.
-        static private readonly NarrowingLevel[] _ComNarrowingLevels = new NarrowingLevel[] { 
-            NarrowingLevel.None, 
-            NarrowingLevel.One
-        };
-
         /// <summary>
         /// Is there a unique primitive type that has the best conversion for the argument
         /// </summary>
@@ -309,18 +257,11 @@ namespace Microsoft.Scripting.Com {
             }
 
             // Look for a unique type family that the argument can be converted to.
-
-            // Assert the unused values. If the enum is changed, the logic below should be checked to ensure
-            // that it is using the approriate enum values.
-            Debug.Assert(((int)NarrowingLevel.Two) == 2 && ((int)NarrowingLevel.Three) == 3 && ((int)NarrowingLevel.All) == 4);
-
-            foreach (NarrowingLevel narrowingLevel in _ComNarrowingLevels) {
-                List<VarEnum> compatibleComTypes = GetConversionsToComPrimitiveTypeFamilies(argumentType);
-                CheckForAmbiguousMatch(argumentType, compatibleComTypes);
-                if (compatibleComTypes.Count == 1) {
-                    primitiveVarEnum = compatibleComTypes[0];
-                    return true;
-                }
+            List<VarEnum> compatibleComTypes = GetConversionsToComPrimitiveTypeFamilies(argumentType);
+            CheckForAmbiguousMatch(argumentType, compatibleComTypes);
+            if (compatibleComTypes.Count == 1) {
+                primitiveVarEnum = compatibleComTypes[0];
+                return true;
             }
 
             primitiveVarEnum = VarEnum.VT_VOID; // error
@@ -375,6 +316,12 @@ namespace Microsoft.Scripting.Com {
             if (TryGetPrimitiveComType(argumentType, out primitiveVarEnum)) {
                 return primitiveVarEnum;
             }
+
+            // We could not find a way to marshal the type as a specific COM type
+            // So we just indicate that it is an unknown value type (VT_RECORD) 
+            // or unknown reference type (VT_DISPATCH_OR_UNKNOWN)
+            // Note that callers may still find a less generic marshalling method if
+            // the type implements IConvertible and if it is applicable
 
             if (argumentType.IsValueType) {
                 _isSupportedByFastPath = false;
@@ -434,12 +381,40 @@ namespace Microsoft.Scripting.Com {
             }
 
             VarEnum varEnum = GetComType(argumentType);
-            argBuilder = GetArgBuilder(argumentType, varEnum);
+            argBuilder = GetByValArgBuilder(argumentType, varEnum);
+
             return new VariantBuilder(varEnum, argBuilder);
         }
 
+
+        // This helper is called when we are looking for a ByVal marhsalling
+        // In a ByVal case we can take into account IConvertible if all other 
+        // attempts to find marshalling type failed 
+        private ArgBuilder GetByValArgBuilder(Type elementType, VarEnum elementVarEnum) {
+            // check for IConvertible if VT indicates that marshalling type is basically unknown
+            if ((elementVarEnum == VT_DISPATCH_OR_UNKNOWN || elementVarEnum == VarEnum.VT_RECORD) &&
+                  typeof(IConvertible).IsAssignableFrom(elementType)) {
+
+                return new ConvertibleArgBuilder();
+            }
+
+            return GetArgBuilder(elementType, elementVarEnum);
+        }
+
+        // This helper can produce a builder that marshals via an implicit conversion
         private ArgBuilder GetArgBuilder(Type elementType, VarEnum elementVarEnum) {
-            ArgBuilder argBuilder;
+            Type marshalType = GetManagedMarshalType(elementVarEnum);
+            if (!marshalType.IsAssignableFrom(elementType)) {
+                return new ConversionArgBuilder(elementType, GetSimpleArgBuilder(marshalType, elementVarEnum));
+            }
+
+            return GetSimpleArgBuilder(elementType, elementVarEnum);
+        }
+
+        // This helper can produce a builder for types that are directly supported by Variant.
+        private SimpleArgBuilder GetSimpleArgBuilder(Type elementType, VarEnum elementVarEnum) {
+            SimpleArgBuilder argBuilder;
+
             if (elementType == typeof(string)) {
                 argBuilder = new StringArgBuilder(elementType);
             } else if (elementType == typeof(bool)) {

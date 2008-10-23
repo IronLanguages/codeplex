@@ -48,6 +48,10 @@ namespace Microsoft.Scripting.Actions.Calls {
             return _tmp;
         }
 
+        internal override Expression ByRefArgument {
+            get { return _tmp; }
+        }
+
         public override int Priority {
             get {
                 return 5;

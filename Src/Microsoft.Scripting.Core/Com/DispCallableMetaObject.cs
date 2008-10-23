@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class DispCallableMetaObject : MetaObject {
         private readonly DispCallable _callable;
 
@@ -28,23 +28,23 @@ namespace Microsoft.Scripting.Com {
             _callable = callable;
         }
 
-        public override MetaObject Invoke(InvokeAction action, MetaObject[] args) {
+        public override MetaObject BindInvoke(InvokeBinder action, MetaObject[] args) {
             var callable = Expression;
             var dispCall = Expression.Convert(callable, typeof(DispCallable));
             var methodDesc = Expression.Property(dispCall, typeof(DispCallable).GetProperty("ComMethodDesc"));
             var methodRestriction = Expression.Equal(methodDesc, Expression.Constant(_callable.ComMethodDesc));
 
-            return new InvokeBinder(
+            return new ComInvokeBinder(
                 action.Arguments,
                 args,
-                Restrictions.TypeRestriction(callable, Value.GetType()).Merge(Restrictions.ExpressionRestriction(methodRestriction)),
+                Restrictions.GetTypeRestriction(callable, Value.GetType()).Merge(Restrictions.GetExpressionRestriction(methodRestriction)),
                 methodDesc,
                 Expression.Property(dispCall, typeof(DispCallable).GetProperty("DispatchObject")),
                 _callable.ComMethodDesc
             ).Invoke();
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             switch (action.Operation) {
                 case "CallSignatures":
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Com {
                     return IsCallable(args);
             }
 
-            return action.Fallback(this, args);
+            return action.FallbackOperation(this, args);
         }
 
         private MetaObject Documentation(MetaObject[] args) {
@@ -68,7 +68,7 @@ namespace Microsoft.Scripting.Com {
                     ),
                     typeof(ComMethodDesc).GetProperty("Signature")
                 ),
-                Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, Value.GetType()))
+                Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, Value.GetType()))
             );
         }
 
@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Com {
             return new MetaObject(
                 // DispCallable is always callable
                 Expression.True(),
-                Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, Value.GetType()))
+                Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, Value.GetType()))
             );
         }
     }

@@ -18,7 +18,7 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     internal sealed class ReturnBuilder {
         private readonly Type _returnType;

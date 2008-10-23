@@ -24,7 +24,9 @@ namespace Microsoft.Scripting {
     /// </summary>
     [Serializable]
     public struct SourceLocation {
+        // TODO: remove index
         private readonly int _index;
+
         private readonly int _line;
         private readonly int _column;
 

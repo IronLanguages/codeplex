@@ -23,18 +23,15 @@ using System.Threading;
 
 namespace Microsoft.Scripting.Actions {
     internal static partial class UpdateDelegates {
-        private static Dictionary<Type, WeakReference> _Updaters;
+        private static readonly CacheDict<Type, Delegate> _Updaters = new CacheDict<Type, Delegate>(200);
 
         internal static T MakeUpdateDelegate<T>() where T : class {
-            if (_Updaters == null) {
-                Interlocked.CompareExchange<Dictionary<Type, WeakReference>>(ref _Updaters, new Dictionary<Type, WeakReference>(), null);
-            }
-
             Type target = typeof(T);
+
             lock (_Updaters) {
-                WeakReference wr;
-                T ret = null;
-                if (!_Updaters.TryGetValue(target, out wr) || ((ret = (T)wr.Target) == null)) {
+                Delegate ret;
+
+                if (!_Updaters.TryGetValue(target, out ret)) {
                     Type[] args;
                     MethodInfo invoke = target.GetMethod("Invoke");
 
@@ -46,7 +43,7 @@ namespace Microsoft.Scripting.Actions {
                             method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
                         }
                         if (method != null) {
-                            ret = (T)(object)Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));
+                            ret = Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));
                         }
                     }
 
@@ -55,13 +52,14 @@ namespace Microsoft.Scripting.Actions {
                     }
 
                     Debug.Assert(ret != null);
-                    _Updaters[target] = new WeakReference(ret);
+                    _Updaters[target] = ret;
                 }
-                return ret;
+
+                return (T)(object)ret;
             }
         }
 
-        private static T CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
+        private static Delegate CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
             Type siteOfT = typeof(CallSite<T>);
 
             ParameterInfo[] parameters = invoke.GetParameters();
@@ -131,7 +129,7 @@ namespace Microsoft.Scripting.Actions {
 
             il.Emit(OpCodes.Ret);
 
-            return il.Finish().CreateDelegate<T>();
+            return il.Finish().CreateDelegate(typeof(T));
         }
     }
 }

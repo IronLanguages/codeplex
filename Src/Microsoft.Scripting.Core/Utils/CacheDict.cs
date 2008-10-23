@@ -26,12 +26,12 @@ namespace Microsoft.Scripting.Utils {
     /// This class is not thread safe.
     /// </summary>
     internal class CacheDict<TKey, TValue> {
-        private readonly Dictionary<TKey, KeyInfo> _dict = new Dictionary<TKey,KeyInfo>();
+        private readonly Dictionary<TKey, KeyInfo> _dict = new Dictionary<TKey, KeyInfo>();
         private readonly LinkedList<TKey> _list = new LinkedList<TKey>();
         private readonly int _maxSize;
 
         internal CacheDict(int maxSize) {
-            _maxSize = maxSize; 
+            _maxSize = maxSize;
         }
 
         internal bool TryGetValue(TKey key, out TValue value) {
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting.Utils {
         private struct KeyInfo {
             internal readonly TValue Value;
             internal readonly LinkedListNode<TKey> List;
-            
+
             internal KeyInfo(TValue value, LinkedListNode<TKey> list) {
                 Value = value;
                 List = list;

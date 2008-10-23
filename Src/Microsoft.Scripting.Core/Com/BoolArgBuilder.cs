@@ -24,37 +24,28 @@ using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal sealed class BoolArgBuilder : SimpleArgBuilder {
         internal BoolArgBuilder(Type parameterType)
             : base(parameterType) {
             Debug.Assert(parameterType == typeof(bool));
         }
 
-        internal override ParameterExpression CreateTemp() {
-            return Expression.Variable(typeof(Int16), "TempInt16");
-        }
-
-        internal override Expression UnwrapByRef(Expression parameter) {
+        internal override Expression MarshalToRef(Expression parameter) {
             // parameter  ? -1 : 0
-            return base.UnwrapByRef(
-                Expression.Condition(
-                    Unwrap(parameter),
-                    Expression.Constant((Int16)(-1)),
-                    Expression.Constant((Int16)0)
-                )
+            return Expression.Condition(
+                Marshal(parameter),
+                Expression.Constant((Int16)(-1)),
+                Expression.Constant((Int16)0)
             );
         }
 
-        internal override Expression UpdateFromReturn(Expression parameter, Expression temp) {
+        internal override Expression UnmarshalFromRef(Expression value) {
             //parameter = temp != 0
-            return base.UpdateFromReturn(
-                 parameter,
-                 Expression.NotEqual(
-                     temp,
+            return Expression.NotEqual(
+                     value,
                      Expression.Constant((Int16)0)
-                 )
-             );
+            );
         }
     }
 }

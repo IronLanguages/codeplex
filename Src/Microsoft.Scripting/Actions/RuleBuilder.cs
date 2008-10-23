@@ -31,23 +31,54 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Rule Builder
     /// 
-    /// Rule builder is produced by the action binders. The DLR finalizes them into Rules
-    /// which are cached in the dynamic sites and provide means for fast dispatch to commonly
-    /// invoked functionality.
+    /// A rule is the mechanism that LanguageBinders use to specify both what code to execute (the Target)
+    /// for a particular action on a particular set of objects, but also a Test that guards the Target.
+    /// Whenver the Test returns true, it is assumed that the Target will be the correct action to
+    /// take on the arguments.
+    /// 
+    /// In the current design, a RuleBuilder is also used to provide a mini binding scope for the
+    /// parameters and temporary variables that might be needed by the Test and Target.  This will
+    /// probably change in the future as we unify around the notion of Lambdas.
+    /// 
+    /// TODO: remove once everyone is converted over to MetaObjects
     /// </summary>
-    public abstract class RuleBuilder {
+    public sealed class RuleBuilder {
         internal Expression _test;                  // the test that determines if the rule is applicable for its parameters
         internal Expression _target;                // the target that executes if the rule is true
-        internal Expression _context;               // CodeContext, if any.
-        internal Expression[] _parameters;          // the parameters which the rule is processing
-        internal LabelTarget _return;               // the return label of the rule
+        internal readonly Expression _context;               // CodeContext, if any.
         private bool _error;                        // true if the rule represents an error
-        internal List<ParameterExpression> _temps;    // temporaries allocated by the rule
+        internal List<ParameterExpression> _temps;  // temporaries allocated by the rule
 
-        // TODO revisit these fields and their uses when LambdaExpression moves down
-        internal ParameterExpression[] _paramVariables;       // TODO: Remove me when we can refer to params as expressions
+        // the parameters which the rule is processing
+        internal readonly IList<Expression> _parameters;
+        
+        // the return label of the rule
+        internal readonly LabelTarget _return;
 
-        internal RuleBuilder() { }
+        /// <summary>
+        /// Completed rule
+        /// </summary>
+        private Expression _binding;
+
+        public RuleBuilder(ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
+
+            if (parameters.Count > 0 && typeof(CodeContext).IsAssignableFrom(parameters[0].Type)) {
+                _context = parameters[0];
+                var p = ArrayUtils.RemoveAt(parameters, 0);
+                _parameters = p;
+            } else {
+                // TODO: remove the copy when we have covariant IEnumerable<T>
+                _parameters = parameters.ToArray();
+            }
+            _return = returnLabel;
+        }
+
+        public void Clear() {
+            _test = null;
+            _target = null;
+            _error = false;
+            _temps = null;
+        }
 
         /// <summary>
         /// An expression that should return true if and only if Target should be executed
@@ -154,10 +185,6 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public abstract Type ReturnType {
-            get;
-        }
-
         public void MakeTest(params Type[] types) {
             _test = MakeTestForTypes(types, 0);
         }
@@ -222,66 +249,12 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public int ParameterCount {
             get {
-                return _parameters.Length;
+                return _parameters.Count;
             }
         }
 
         public Expression MakeTypeTestExpression(Type t, int param) {
             return MakeTypeTestExpression(t, Parameters[param]);
-        }
-    }
-
-    /// <summary>
-    /// A rule is the mechanism that LanguageBinders use to specify both what code to execute (the Target)
-    /// for a particular action on a particular set of objects, but also a Test that guards the Target.
-    /// Whenver the Test returns true, it is assumed that the Target will be the correct action to
-    /// take on the arguments.
-    /// 
-    /// In the current design, a RuleBuilder is also used to provide a mini binding scope for the
-    /// parameters and temporary variables that might be needed by the Test and Target.  This will
-    /// probably change in the future as we unify around the notion of Lambdas.
-    /// </summary>
-    /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
-    public class RuleBuilder<T> : RuleBuilder where T : class {
-        /// <summary>
-        /// Completed rule
-        /// </summary>
-        private Rule<T> _rule;
-
-        public RuleBuilder() {
-
-            if (!typeof(Delegate).IsAssignableFrom(typeof(T))) {
-                throw Error.TypeParameterIsNotDelegate(typeof(T));
-            }
-
-            MethodInfo invoke = typeof(T).GetMethod("Invoke");
-            ParameterInfo[] pis = invoke.GetParameters();
-
-            if (pis.Length == 0 || pis[0].ParameterType != typeof(CallSite)) {
-                throw Error.FirstArgumentMustBeCallSite();
-            }
-
-            MakeParameters(pis);
-            _return = Ast.Label(invoke.GetReturnType());
-        }
-
-        private void MakeParameters(ParameterInfo[] pis) {
-            int count = pis.Length - 1;
-            ParameterExpression[] vars = new ParameterExpression[count];
-
-            for (int i = 0; i < count; i++) {
-                // First argument is the dynamic site
-                vars[i] = Ast.Parameter(pis[i + 1].ParameterType, "$arg" + i);
-            }
-
-            _paramVariables = vars;
-
-            if (vars.Length > 0 && typeof(CodeContext).IsAssignableFrom(vars[0].Type)) {
-                _context = vars[0];
-                _parameters = ArrayUtils.RemoveAt(vars, 0);
-            } else {
-                _parameters = vars;
-            }
         }
 
         [Confined]
@@ -289,14 +262,12 @@ namespace Microsoft.Scripting.Actions {
             return string.Format("RuleBuilder({0})", _target);
         }
 
-        public override Type ReturnType {
-            get {
-                return typeof(T).GetMethod("Invoke").ReturnType;
-            }
+        public Type ReturnType {
+            get { return _return.Type; }
         }
 
-        public Rule<T> CreateRule() {
-            if (_rule == null) {
+        public Expression CreateRule() {
+            if (_binding == null) {
                 if (_test == null) {
                     throw Error.MissingTest();
                 }
@@ -304,22 +275,17 @@ namespace Microsoft.Scripting.Actions {
                     throw Error.MissingTarget();
                 }
 
-                _rule = new Rule<T>(
-                    Expression.Scope(
-                        Expression.Condition(
-                            _test,
-                            Ast.ConvertHelper(_target, typeof(void)),
-                            Ast.Empty()
-                        ),
-                        "<rule>",
-                        _temps != null ? _temps.ToArray() : new ParameterExpression[0]
-                    ),
-                    _return,
-                    new ReadOnlyCollection<ParameterExpression>(_paramVariables)
+                _binding = Expression.Comma(
+                    _temps != null ? _temps.ToArray() : new ParameterExpression[0],
+                    Expression.Condition(
+                        _test,
+                        Ast.ConvertHelper(_target, typeof(void)),
+                        Ast.Empty()
+                    )
                 );
             }
 
-            return _rule;
+            return _binding;
         }
     }
 }

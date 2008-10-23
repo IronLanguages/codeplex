@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     public sealed class DispPropertyGet : DispCallable {
         internal DispPropertyGet(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {

@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using System.Reflection;
 using Microsoft.Scripting;
@@ -19,10 +20,12 @@ using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
+        [Obsolete("use Expression.Call instead")]
         public static MethodCallExpression Call(MethodInfo method, SourceSpan span, params Expression[] arguments) {
             return Expression.Call(null, method, Expression.Annotate(span), arguments);
         }
 
+        [Obsolete("use Expression.Call instead")]
         public static MethodCallExpression Call(Expression instance, MethodInfo method, SourceSpan span, params Expression[] arguments) {
             return Expression.Call(instance, method, Expression.Annotate(span), arguments);
         }

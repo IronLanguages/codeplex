@@ -17,14 +17,14 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     // TODO: Rename
-    public abstract class StandardAction : MetaAction {
-        private readonly StandardActionKind _kind;
+    public abstract class StandardAction : MetaObjectBinder {
+        private readonly MetaObjectBinderKind _kind;
 
-        internal StandardAction(StandardActionKind kind) {
+        internal StandardAction(MetaObjectBinderKind kind) {
             _kind = kind;
         }
 
-        public StandardActionKind Kind {
+        public MetaObjectBinderKind Kind {
             get {
                 return _kind;
             }

@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Binding {
     static partial class PythonProtocol {
         private const string DisallowCoerce = "DisallowCoerce";
 
-        public static MetaObject/*!*/ Operation(OperationAction/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
+        public static MetaObject/*!*/ Operation(OperationBinder/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
             foreach (MetaObject mo in args) {
                 if (mo.NeedsDeferral()) {
                     return operation.Defer(args);
@@ -51,7 +51,7 @@ namespace IronPython.Runtime.Binding {
             return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo);
         }
 
-        private static MetaObject/*!*/ MakeOperationRule(OperationAction/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject/*!*/ MakeOperationRule(OperationBinder/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
             switch (operation.Operation) {
                 case StandardOperators.Documentation:
                     return MakeDocumentationOperation(operation, args);
@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// For normal .NET enumerables we'll walk the iterator and see if it's present.
         /// </summary>
-        private static MetaObject/*!*/ MakeContainsOperation(OperationAction/*!*/ operation, MetaObject/*!*/[]/*!*/ types) {
+        private static MetaObject/*!*/ MakeContainsOperation(OperationBinder/*!*/ operation, MetaObject/*!*/[]/*!*/ types) {
             MetaObject res;
             // the paramteres come in backwards from how we look up __contains__, flip them.
             Debug.Assert(types.Length == 2);
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Binding {
                         // if(getItemRes == param1) return true
                                         Utils.If(
                                             Ast.Dynamic(
-                                                new OperationBinder(
+                                                new PythonOperationBinder(
                                                     state,
                                                     StandardOperators.Equal
                                                 ),
@@ -221,7 +221,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private static MetaObject/*!*/ MakeHashOperation(OperationAction/*!*/ operation, MetaObject/*!*/ self) {
+        private static MetaObject/*!*/ MakeHashOperation(OperationBinder/*!*/ operation, MetaObject/*!*/ self) {
             self = self.Restrict(self.LimitType);
 
             SlotOrFunction func = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.Hash, self);
@@ -229,7 +229,7 @@ namespace IronPython.Runtime.Binding {
             return func.Target;
         }
 
-        private static MetaObject/*!*/ MakeUnaryOperation(OperationAction/*!*/ operation, MetaObject/*!*/ self) {
+        private static MetaObject/*!*/ MakeUnaryOperation(OperationBinder/*!*/ operation, MetaObject/*!*/ self) {
             self = self.Restrict(self.LimitType);
 
             SlotOrFunction func = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.OperatorToSymbol(operation.Operation), self);
@@ -242,7 +242,7 @@ namespace IronPython.Runtime.Binding {
             return func.Target;
         }
 
-        private static MetaObject/*!*/ MakeUnaryNotOperation(OperationAction/*!*/ operation, MetaObject/*!*/ self) {
+        private static MetaObject/*!*/ MakeUnaryNotOperation(OperationBinder/*!*/ operation, MetaObject/*!*/ self) {
             self = self.Restrict(self.LimitType);
 
             SlotOrFunction nonzero = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.NonZero, self);
@@ -274,7 +274,7 @@ namespace IronPython.Runtime.Binding {
                         notExpr = Ast.Equal(notExpr, Ast.Zero());
                     } else {
                         notExpr = Ast.Dynamic(
-                            new OperationBinder(
+                            new PythonOperationBinder(
                                 BinderState.GetBinderState(operation),
                                 StandardOperators.Compare
                             ),
@@ -297,7 +297,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Reflective Operations
 
-        private static MetaObject/*!*/ MakeDocumentationOperation(OperationAction/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject/*!*/ MakeDocumentationOperation(OperationBinder/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
             BinderState state = BinderState.GetBinderState(operation);
 
             return new MetaObject(
@@ -312,7 +312,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static MetaObject/*!*/ MakeMemberNamesOperation(OperationAction/*!*/ operation, MetaObject[] args) {
+        private static MetaObject/*!*/ MakeMemberNamesOperation(OperationBinder/*!*/ operation, MetaObject[] args) {
             MetaObject self = args[0];
             CodeContext context;
             if (args.Length > 1 && args[0].LimitType == typeof(CodeContext)) {
@@ -332,13 +332,13 @@ namespace IronPython.Runtime.Binding {
             if (pt.IsSystemType) {
                 return new MetaObject(
                     Ast.Constant(strNames),
-                    Restrictions.InstanceRestriction(self.Expression, self.Value).Merge(self.Restrictions)
+                    Restrictions.GetInstanceRestriction(self.Expression, self.Value).Merge(self.Restrictions)
                 );
             }
 
             return new MetaObject(
                 Ast.Constant(strNames),
-                Restrictions.InstanceRestriction(self.Expression, self.Value).Merge(self.Restrictions)
+                Restrictions.GetInstanceRestriction(self.Expression, self.Value).Merge(self.Restrictions)
             );
         }
 
@@ -382,11 +382,11 @@ namespace IronPython.Runtime.Binding {
 
             return new MetaObject(
                 Ast.Constant(arrres.ToArray()),
-                self.Restrictions.Merge(Restrictions.InstanceRestriction(self.Expression, self.Value))
+                self.Restrictions.Merge(Restrictions.GetInstanceRestriction(self.Expression, self.Value))
             );
         }
 
-        private static MetaObject/*!*/ MakeIscallableOperation(OperationAction/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject/*!*/ MakeIscallableOperation(OperationBinder/*!*/ operation, MetaObject/*!*/[]/*!*/ args) {
             // Certain non-python types (encountered during interop) are callable, but don't have 
             // a __call__ attribute. The default base binder also checks these, but since we're overriding
             // the base binder, we check them here.
@@ -423,7 +423,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Common Binary Operations
 
-        private static MetaObject/*!*/ MakeSimpleOperation(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation) {
+        private static MetaObject/*!*/ MakeSimpleOperation(MetaObject/*!*/[]/*!*/ types, OperationBinder/*!*/ operation) {
             RestrictTypes(types);
 
             SlotOrFunction fbinder;
@@ -526,7 +526,7 @@ namespace IronPython.Runtime.Binding {
             return false;
         }
 
-        private static MetaObject/*!*/ MakeBinaryOperatorResult(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation, SlotOrFunction/*!*/ fCand, SlotOrFunction/*!*/ rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
+        private static MetaObject/*!*/ MakeBinaryOperatorResult(MetaObject/*!*/[]/*!*/ types, OperationBinder/*!*/ operation, SlotOrFunction/*!*/ fCand, SlotOrFunction/*!*/ rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
             Assert.NotNull(operation, fCand, rCand);
 
             string op = operation.Operation;
@@ -706,7 +706,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Assign(
                             tmp,
                             Ast.Dynamic(
-                                new InvokeBinder(
+                                new PythonInvokeBinder(
                                     state,
                                     new CallSignature(args.Length)
                                 ),
@@ -723,7 +723,7 @@ namespace IronPython.Runtime.Binding {
             bodyBuilder.AddVariable(tmp);
         }
 
-        private static void DoCoerce(OperationAction/*!*/ operation, ConditionalBuilder/*!*/ bodyBuilder, string op, MetaObject/*!*/[]/*!*/ types, bool reverse) {
+        private static void DoCoerce(OperationBinder/*!*/ operation, ConditionalBuilder/*!*/ bodyBuilder, string op, MetaObject/*!*/[]/*!*/ types, bool reverse) {
             DoCoerce(operation, bodyBuilder, op, types, reverse, delegate(Expression e) {
                 return e;
             });
@@ -732,7 +732,7 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// calls __coerce__ for old-style classes and performs the operation if the coercion is successful.
         /// </summary>
-        private static void DoCoerce(OperationAction/*!*/ operation, ConditionalBuilder/*!*/ bodyBuilder, string op, MetaObject/*!*/[]/*!*/ types, bool reverse, Func<Expression, Expression> returnTransform) {
+        private static void DoCoerce(OperationBinder/*!*/ operation, ConditionalBuilder/*!*/ bodyBuilder, string op, MetaObject/*!*/[]/*!*/ types, bool reverse, Func<Expression, Expression> returnTransform) {
             ParameterExpression coerceResult = Ast.Variable(typeof(object), "coerceResult");
             ParameterExpression coerceTuple = Ast.Variable(typeof(PythonTuple), "coerceTuple");
 
@@ -740,7 +740,7 @@ namespace IronPython.Runtime.Binding {
                 // during coercion we need to enforce recursion limits if
                 // they're enabled and the rule's test needs to reflect this.                
                 bodyBuilder.Restrictions = bodyBuilder.Restrictions.Merge(
-                    Restrictions.ExpressionRestriction(
+                    Restrictions.GetExpressionRestriction(
                         Ast.Equal(
                             Ast.Call(typeof(PythonOps).GetMethod("ShouldEnforceRecursion")),
                             Ast.Constant(PythonFunction.EnforceRecursion)
@@ -782,7 +782,7 @@ namespace IronPython.Runtime.Binding {
                     BindingHelpers.AddRecursionCheck(
                         returnTransform(
                             Ast.Dynamic(
-                                new OperationBinder(
+                                new PythonOperationBinder(
                                     BinderState.GetBinderState(operation),
                                     DisallowCoerce + op
                                 ),
@@ -817,7 +817,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Comparison Operations
 
-        private static MetaObject/*!*/ MakeComparisonOperation(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation) {
+        private static MetaObject/*!*/ MakeComparisonOperation(MetaObject/*!*/[]/*!*/ types, OperationBinder/*!*/ operation) {
             RestrictTypes(types);
 
             string op = NormalizeOperator(operation.Operation);
@@ -890,7 +890,7 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// Makes the comparison rule which returns an int (-1, 0, 1).  TODO: Better name?
         /// </summary>
-        private static MetaObject/*!*/ MakeSortComparisonRule(MetaObject/*!*/[]/*!*/ types, OperationAction/*!*/ operation) {
+        private static MetaObject/*!*/ MakeSortComparisonRule(MetaObject/*!*/[]/*!*/ types, OperationBinder/*!*/ operation) {
             MetaObject fastPath = FastPathCompare(types);
             if (fastPath != null) {
                 return fastPath;
@@ -1164,7 +1164,7 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// So our job here is to first determine if we're to call a __*slice__ method or
         /// a __*item__ method.  
-        private static MetaObject/*!*/ MakeIndexerOperation(OperationAction/*!*/ operation, MetaObject/*!*/[]/*!*/ types) {
+        private static MetaObject/*!*/ MakeIndexerOperation(OperationBinder/*!*/ operation, MetaObject/*!*/[]/*!*/ types) {
             SymbolId item, slice;
             MetaObject indexedType = types[0].Restrict(types[0].LimitType);
             BuiltinFunction itemFunc = null;
@@ -1448,7 +1448,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 Expression retVal = Ast.Dynamic(
-                    new InvokeBinder(
+                    new PythonInvokeBinder(
                         BinderState,
                         new CallSignature(exprArgs.Length)
                     ),
@@ -1552,7 +1552,7 @@ namespace IronPython.Runtime.Binding {
                                     typeof(int),
                                     ConversionResultKind.ExplicitCast,
                                     Ast.Dynamic(
-                                        new InvokeBinder(
+                                        new PythonInvokeBinder(
                                             binder,
                                             new CallSignature(0)
                                         ),
@@ -1650,7 +1650,7 @@ namespace IronPython.Runtime.Binding {
                     if (args[1].LimitType != typeof(Slice) && GetTypeAt(1).TryResolveSlot(binder.Context, Symbols.Index, out indexSlot)) {
                         args[1] = new MetaObject(
                             Ast.Dynamic(
-                                new InvokeBinder(
+                                new PythonInvokeBinder(
                                     binder,
                                     new CallSignature(0)
                                 ),
@@ -1674,7 +1674,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private static bool HasOnlyNumericTypes(MetaAction/*!*/ action, MetaObject/*!*/[]/*!*/ types, bool skipLast) {
+        private static bool HasOnlyNumericTypes(MetaObjectBinder/*!*/ action, MetaObject/*!*/[]/*!*/ types, bool skipLast) {
             bool onlyNumeric = true;
             BinderState state = BinderState.GetBinderState(action);
 
@@ -1789,7 +1789,7 @@ namespace IronPython.Runtime.Binding {
         /// This matches the behavior of CPython.
         /// </summary>
         /// <returns></returns>
-        private static bool ShouldCoerce(OperationAction/*!*/ operation, MetaObject/*!*/ x, MetaObject/*!*/ y, bool isCompare) {
+        private static bool ShouldCoerce(OperationBinder/*!*/ operation, MetaObject/*!*/ x, MetaObject/*!*/ y, bool isCompare) {
             if (operation.Operation.StartsWith(DisallowCoerce)) {
                 return false;
             }
@@ -1938,7 +1938,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
         
-        private static MetaObject/*!*/ MakeRuleForNoMatch(OperationAction/*!*/ operation, string/*!*/ op, params MetaObject/*!*/[]/*!*/ types) {
+        private static MetaObject/*!*/ MakeRuleForNoMatch(OperationBinder/*!*/ operation, string/*!*/ op, params MetaObject/*!*/[]/*!*/ types) {
             // we get the error message w/ {0}, {1} so that TypeError formats it correctly
             return TypeError(
                    operation,
@@ -2010,7 +2010,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private static MetaObject/*!*/ MakeBinaryThrow(OperationAction/*!*/action, string/*!*/ op, MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject/*!*/ MakeBinaryThrow(OperationBinder/*!*/action, string/*!*/ op, MetaObject/*!*/[]/*!*/ args) {
             if (action is IPythonSite) {
                 // produce the custom Python error message
                 return new MetaObject(
@@ -2027,7 +2027,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             // let the site produce its own error
-            return action.Fallback(args[0], new[] { args[1] });
+            return action.FallbackOperation(args[0], new[] { args[1] });
         }
 
         private static List<string/*!*/>/*!*/ GetMemberNames(CodeContext/*!*/ context, PythonType/*!*/ pt, object value) {
@@ -2048,7 +2048,7 @@ namespace IronPython.Runtime.Binding {
         /// Produces an error message for the provided message and type names.  The error message should contain
         /// string formatting characters ({0}, {1}, etc...) for each of the type names.
         /// </summary>
-        public static MetaObject/*!*/ TypeError(OperationAction/*!*/ action, string message, params MetaObject[] types) {
+        public static MetaObject/*!*/ TypeError(OperationBinder/*!*/ action, string message, params MetaObject[] types) {
             if (action is IPythonSite) {
                 // produce our custom errors for Python...
                 Expression[] formatArgs = new Expression[types.Length + 1];
@@ -2075,7 +2075,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            return action.Fallback(types[0], ArrayUtils.RemoveFirst(types));
+            return action.FallbackOperation(types[0], ArrayUtils.RemoveFirst(types));
         }
     }
 }

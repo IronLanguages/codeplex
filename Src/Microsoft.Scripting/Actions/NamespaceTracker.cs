@@ -541,20 +541,19 @@ namespace Microsoft.Scripting.Actions {
 
         #region IOldDynamicObject Members
 
-        public RuleBuilder<T> GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) where T : class {
+        public bool GetRule(OldDynamicAction action, CodeContext context, object[] args, RuleBuilder rule) {
             if (action.Kind == DynamicActionKind.GetMember) {
-                return MakeGetMemberRule<T>((OldGetMemberAction)action, context);
+                return MakeGetMemberRule((OldGetMemberAction)action, context, rule);                
             }
-            return null;
+            return false;
         }
 
-        private RuleBuilder<T> MakeGetMemberRule<T>(OldGetMemberAction action, CodeContext context) where T : class {
+        private bool MakeGetMemberRule(OldGetMemberAction action, CodeContext context, RuleBuilder rule) {
             object value;
             if (TryGetValue(action.Name, out value)) {
                 Debug.Assert(value is MemberTracker);
                 MemberTracker memValue = (MemberTracker)value;
 
-                RuleBuilder<T> rule = new RuleBuilder<T>();
                 rule.MakeTest(typeof(NamespaceTracker));
                 rule.AddTest(
                     Expression.Equal(
@@ -570,9 +569,9 @@ namespace Microsoft.Scripting.Actions {
                 Expression target = context.LanguageContext.Binder.ReturnMemberTracker(memValue.DeclaringType, memValue);
 
                 rule.Target = rule.MakeReturn(context.LanguageContext.Binder, target);
-                return rule;
+                return true;
             }
-            return null;
+            return false;
         }
 
         #endregion

@@ -20,6 +20,7 @@ using Microsoft.Scripting.Utils;
 using System.Threading;
 using Microsoft.Scripting;
 using System.Globalization;
+using System.Collections.Generic;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -116,46 +117,48 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // NOTE: this method is called through reflection from Microsoft.Scripting
-        internal static void Dump() {
-            Shared.DumpAssemblies();
+        internal static string[] SaveAssemblies() {
+            return Shared.DumpAssemblies();
         }
 
-        private void DumpAssemblies() {
+        //return the assembly locations that need to be verified
+        private string[] DumpAssemblies() {
             if (!_saveSnippets) {
-                return;
+                return new string[0];
             }
+
+            List<string> assemlyLocations = new List<string>();
 
             // first save all assemblies to disk:
             if (_assembly != null) {
-                _assembly.Dump();
-            }
-
-            if (_debugAssembly != null) {
-                _debugAssembly.Dump();
-            }
-
-            if (_unsafeAssembly != null) {
-                _unsafeAssembly.Dump();
-            }
-
-            if (_unsafeDebugAssembly != null) {
-                _unsafeDebugAssembly.Dump();
-            }
-
-            // then verify the verifiable ones:
-            if (_assembly != null) {
-                _assembly.Verify();
+                string assemblyLocation = _assembly.SaveAssembly();
+                if (assemblyLocation != null) {
+                    assemlyLocations.Add(assemblyLocation);
+                }
                 _assembly = null;
             }
 
             if (_debugAssembly != null) {
-                _debugAssembly.Verify();
+                string debugAssemblyLocation = _debugAssembly.SaveAssembly();
+                if (debugAssemblyLocation != null) {
+                    assemlyLocations.Add(debugAssemblyLocation);
+                }
                 _debugAssembly = null;
+            }
+
+            if (_unsafeAssembly != null) {
+                _unsafeAssembly.SaveAssembly();
+            }
+
+            if (_unsafeDebugAssembly != null) {
+                _unsafeDebugAssembly.SaveAssembly();
             }
 
             _unsafeDebugAssembly = null;
 
             _optionsFrozen = false;
+
+            return assemlyLocations.ToArray();
         }
 
         internal DynamicILGen CreateDynamicMethod(string methodName, Type returnType, Type[] parameterTypes,

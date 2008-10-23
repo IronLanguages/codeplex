@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Actions {
                     // BinderOps.CreateDelegate<T>(CodeContext context, object callable);
                     return new MetaObject(
                         Ast.Call(null, dc, parameterBinder.ContextExpression, args[0].Expression),
-                        target.Restrictions.Merge(Restrictions.InstanceRestriction(target.Expression, target.Value))
+                        target.Restrictions.Merge(Restrictions.GetInstanceRestriction(target.Expression, target.Value))
                     );
                 }
 

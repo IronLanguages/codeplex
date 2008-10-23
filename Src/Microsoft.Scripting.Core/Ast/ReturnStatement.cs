@@ -18,8 +18,20 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _expr;
 
         internal ReturnStatement(Annotations annotations, Expression expression)
-            : base(ExpressionType.ReturnStatement, typeof(void), annotations) {
+            : base(annotations) {
             _expr = expression;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.ReturnStatement;
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(void);
+        }
+
+        internal override NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
         }
 
         public Expression Expression {

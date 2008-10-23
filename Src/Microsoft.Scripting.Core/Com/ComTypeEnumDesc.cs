@@ -21,7 +21,7 @@ using Microsoft.Scripting.Actions;
 using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     // TODO: Can it be made internal?
     public sealed class ComTypeEnumDesc : ComTypeDesc, IDynamicObject {
         readonly string[] _memberNames;

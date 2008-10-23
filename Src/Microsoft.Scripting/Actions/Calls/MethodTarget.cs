@@ -107,7 +107,8 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         internal Expression MakeExpression(ParameterBinder parameterBinder, IList<Expression> parameters) {
             bool[] usageMarkers;
-            Expression[] args = GetArgumentExpressions(parameterBinder, parameters, out usageMarkers);
+            Expression[] spilledArgs;
+            Expression[] args = GetArgumentExpressions(parameterBinder, parameters, out usageMarkers, out spilledArgs);
             
             MethodBase mb = Method;
             MethodInfo mi = mb as MethodInfo;
@@ -150,6 +151,10 @@ namespace Microsoft.Scripting.Actions.Calls {
                 }
             }
 
+            if (spilledArgs != null) {
+                call = Expression.Comma(spilledArgs.AddLast(call));
+            }
+
             ret = _returnBuilder.ToExpression(parameterBinder, _argBuilders, parameters, call);
 
             List<Expression> updates = null;
@@ -168,7 +173,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                     ParameterExpression temp = Ast.Variable(ret.Type, "$ret");
                     updates.Insert(0, Ast.Assign(temp, ret));
                     updates.Add(temp);
-                    ret = Ast.Scope(Ast.Comma(updates.ToArray()), temp);
+                    ret = Ast.Comma(new [] { temp }, updates.ToArray());
                 } else {
                     updates.Insert(0, ret);
                     ret = Ast.Convert(
@@ -179,13 +184,13 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             if (parameterBinder.Temps != null) {
-                ret = Ast.Scope(ret, parameterBinder.Temps);
+                ret = Ast.Comma(parameterBinder.Temps, ret);
             }
 
             return ret;
         }
 
-        private Expression[] GetArgumentExpressions(ParameterBinder parameterBinder, IList<Expression> parameters, out bool[] usageMarkers) {
+        private Expression[] GetArgumentExpressions(ParameterBinder parameterBinder, IList<Expression> parameters, out bool[] usageMarkers, out Expression[] spilledArgs) {
             int minPriority = Int32.MaxValue;
             int maxPriority = Int32.MinValue;
             foreach (ArgBuilder ab in _argBuilders) {
@@ -194,15 +199,38 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             var args = new Expression[_argBuilders.Count];
+            Expression[] actualArgs = null;
             usageMarkers = new bool[parameters.Count];
             for (int priority = minPriority; priority <= maxPriority; priority++) {
                 for (int i = 0; i < _argBuilders.Count; i++) {
                     if (_argBuilders[i].Priority == priority) {
                         args[i] = _argBuilders[i].ToExpression(parameterBinder, parameters, usageMarkers);
+
+                        // see if this has a temp that needs to be passed as the actual argument
+                        Expression byref = _argBuilders[i].ByRefArgument;
+                        if (byref != null) {
+                            if (actualArgs == null) {
+                                actualArgs = new Expression[_argBuilders.Count];
+                            }
+                            actualArgs[i] = byref;
+                        }
                     }
                 }
             }
+            
+            if (actualArgs != null) {                
+                for (int i = 0, n = args.Length; i < n;  i++) {
+                    if (args[i] != null && actualArgs[i] == null) {
+                        actualArgs[i] = parameterBinder.GetTemporary(args[i].Type, null);
+                        args[i] = Expression.Assign(actualArgs[i], args[i]);
+                    }
+                }
 
+                spilledArgs = RemoveNulls(args);
+                return RemoveNulls(actualArgs);
+            }
+            
+            spilledArgs = null;
             return RemoveNulls(args);
         }
 

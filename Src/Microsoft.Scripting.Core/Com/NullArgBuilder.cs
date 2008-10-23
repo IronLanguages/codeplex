@@ -15,9 +15,10 @@
 using System; using Microsoft;
 #if !SILVERLIGHT
 
+using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// ArgBuilder which always produces null.  
@@ -29,10 +30,7 @@ namespace Microsoft.Scripting.Com {
             return null;
         }
 
-        internal override Expression Unwrap(Expression parameter) {
-            return Expression.Null();
-        }
-        internal override Expression UnwrapByRef(Expression parameter) {
+        internal override Expression Marshal(Expression parameter) {
             return Expression.Null();
         }
     }

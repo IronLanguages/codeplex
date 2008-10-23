@@ -53,17 +53,21 @@ namespace Microsoft.Linq.Expressions.Compiler {
             if (b == node.Body) {
                 return node;
             }
-            return Expression.Lambda(node.NodeType, node.Type, node.Name, b, node.Annotations, node.Parameters);
+            return node.CloneWith(node.Name, b, node.Annotations, node.Parameters);
         }
 
-        protected internal override Expression VisitScope(ScopeExpression node) {
+        protected internal override Expression VisitBlock(BlockExpression node) {
             _hiddenVars.Push(new Set<ParameterExpression>(node.Variables));
-            Expression b = Visit(node.Body);
+            var b = Visit(node.Expressions);
             _hiddenVars.Pop();
-            if (b == node.Body) {
+            if (b == node.Expressions) {
                 return node;
             }
-            return Expression.Scope(b, node.Name, node.Annotations, node.Variables);
+            if (node.Type == typeof(void)) {
+                return Expression.Block(node.Annotations, node.Variables, b);
+            } else {
+                return Expression.Comma(node.Annotations, node.Variables, b);
+            }
         }
 
         protected override CatchBlock VisitCatchBlock(CatchBlock node) {
@@ -77,7 +81,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return Expression.Catch(node.Test, node.Variable, b, f, node.Annotations);
         }
 
-        protected internal override Expression VisitRuntimeVariables(LocalScopeExpression node) {
+        protected internal override Expression VisitRuntimeVariables(RuntimeVariablesExpression node) {
             try {
                 return base.VisitRuntimeVariables(node);
             } catch (InvalidOperationException) {

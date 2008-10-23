@@ -25,14 +25,14 @@ namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
     
-    public sealed class SetMemberBinderHelper<T> : MemberBinderHelper<T, OldSetMemberAction> where T : class {
+    public sealed class SetMemberBinderHelper : MemberBinderHelper<OldSetMemberAction> {
         private bool _isStatic;
 
-        public SetMemberBinderHelper(CodeContext context, OldSetMemberAction action, object[] args)
-            : base(context, action, args) {
+        public SetMemberBinderHelper(CodeContext context, OldSetMemberAction action, object[] args, RuleBuilder rule)
+            : base(context, action, args, rule) {
         }
 
-        public RuleBuilder<T> MakeNewRule() {
+        public void MakeNewRule() {
             Type targetType = CompilerHelpers.GetType(Target);
 
             Rule.MakeTest(StrongBoxType ?? targetType);
@@ -45,8 +45,6 @@ namespace Microsoft.Scripting.Actions {
 
             MakeSetMemberRule(targetType);
             Rule.Target = Body;
-
-            return Rule;
         }
 
         private void MakeSetMemberRule(Type type) {

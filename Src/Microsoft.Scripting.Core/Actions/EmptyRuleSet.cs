@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Actions {
             this._supportAdding = supportAdding;
         }
 
-        internal override RuleSet<T> AddRule(Rule<T> newRule) {
+        internal override RuleSet<T> AddRule(CallSiteRule<T> newRule) {
             if (_supportAdding) {
                 return newRule.RuleSet;
             } else {

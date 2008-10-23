@@ -25,13 +25,13 @@ namespace Microsoft.Scripting.Runtime {
     /// Wraps ILocalVariables in a dictionary
     /// </summary>
     public sealed class LocalsDictionary : CustomSymbolDictionary {
-        private readonly ILocalVariables _locals;
+        private readonly IRuntimeVariables _locals;
 
         // TODO: remove, lazily created stuff for CustomSymbolDictionary
         private Dictionary<SymbolId, IStrongBox> _boxes;
         private SymbolId[] _symbols;
 
-        public LocalsDictionary(ILocalVariables locals) {
+        public LocalsDictionary(IRuntimeVariables locals) {
             Assert.NotNull(locals);
             _locals = locals;
         }

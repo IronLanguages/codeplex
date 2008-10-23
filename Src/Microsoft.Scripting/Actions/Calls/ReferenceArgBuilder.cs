@@ -51,23 +51,16 @@ namespace Microsoft.Scripting.Actions.Calls {
                 _tmp = parameterBinder.GetTemporary(_elementType, "outParam");
             }
 
-            // Ideally we'd pass in Expression.Field(parameters[Index], "Value") but due to
-            // a bug in partial trust we can't access the generic field.
-
-            // arg is boxType ? &_tmp : throw new ArgumentTypeException()
             hasBeenUsed[Index] = true;
             Type boxType = typeof(StrongBox<>).MakeGenericType(_elementType);
             return Expression.Condition(
                 Expression.TypeIs(parameters[Index], Type),
-                Expression.Comma(
-                    Expression.Assign(
-                        _tmp,
-                        Expression.Field(
-                            Expression.ConvertHelper(parameters[Index], boxType),
-                            boxType.GetField("Value")
-                        )
-                    ),
-                    _tmp
+                Expression.Assign(
+                    _tmp,
+                    Expression.Field(
+                        Expression.ConvertHelper(parameters[Index], boxType),
+                        boxType.GetField("Value")
+                    )
                 ),
                 Expression.Call(
                     typeof(RuntimeHelpers).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
@@ -82,6 +75,10 @@ namespace Microsoft.Scripting.Actions.Calls {
                 Type.GetField("Value"),
                 _tmp
             );
+        }
+
+        internal override Expression ByRefArgument {
+            get { return _tmp; }
         }
     }
 }

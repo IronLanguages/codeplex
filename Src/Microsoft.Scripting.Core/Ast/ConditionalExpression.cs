@@ -18,16 +18,30 @@ using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public sealed class ConditionalExpression : Expression {
+    public class ConditionalExpression : Expression {
         private readonly Expression _test;
         private readonly Expression _true;
-        private readonly Expression _false;
 
-        internal ConditionalExpression(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse, Type type)
-            : base(ExpressionType.Conditional, type, annotations) {
+        internal ConditionalExpression(Annotations annotations, Expression test, Expression ifTrue)
+            : base(annotations) {
             _test = test;
             _true = ifTrue;
-            _false = ifFalse;
+        }
+
+        internal static ConditionalExpression Make(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse) {
+            if (ifFalse == EmptyExpression.Instance) {
+                return new ConditionalExpression(annotations, test, ifTrue);
+            } else {
+                return new FullConditionalExpression(annotations, test, ifTrue, ifFalse);
+            }
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Conditional;
+        }        
+
+        protected override Type GetExpressionType() {
+            return IfTrue.Type;
         }
 
         public Expression Test {
@@ -39,7 +53,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public Expression IfFalse {
-            get { return _false; }
+            get { return GetFalse(); }
+        }
+
+        internal virtual Expression GetFalse() {
+            return EmptyExpression.Instance;
         }
 
         internal override void BuildString(StringBuilder builder) {
@@ -50,12 +68,25 @@ namespace Microsoft.Linq.Expressions {
             builder.Append(", ");
             _true.BuildString(builder);
             builder.Append(", ");
-            _false.BuildString(builder);
+            IfFalse.BuildString(builder);
             builder.Append(")");
         }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitConditional(this);
+        }
+    }
+
+    internal class FullConditionalExpression : ConditionalExpression {
+        private readonly Expression _false;
+
+        internal FullConditionalExpression(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse)
+            : base(annotations, test, ifTrue) {
+            _false = ifFalse;
+        }
+
+        internal override Expression GetFalse() {
+            return _false;
         }
     }
 
@@ -77,7 +108,7 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.ArgumentTypesMustMatch();
             }
 
-            return new ConditionalExpression(annotations, test, ifTrue, ifFalse, ifTrue.Type);
+            return ConditionalExpression.Make(annotations, test, ifTrue, ifFalse);
         }
     }
 }

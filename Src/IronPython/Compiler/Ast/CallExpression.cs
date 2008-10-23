@@ -68,7 +68,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Expression[] values = new MSAst.Expression[_args.Length + 2];
-            ArgumentInfo[] kinds = new ArgumentInfo[_args.Length];
+            Argument[] kinds = new Argument[_args.Length];
 
             values[0] = AstUtils.CodeContext();
             values[1] = ag.Transform(_target);

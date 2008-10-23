@@ -91,7 +91,11 @@ namespace Microsoft.Scripting {
 
         private DlrMainCallTarget EnsureTarget(LambdaExpression code) {
             if (_target == null) {
-                Interlocked.CompareExchange(ref _target, code.Compile<DlrMainCallTarget>(SourceUnit.EmitDebugSymbols), null);
+                Expression<DlrMainCallTarget> lambda = code as Expression<DlrMainCallTarget>;
+                if (lambda == null) {
+                    lambda = (new GlobalLookupRewriter().RewriteLambda(code));
+                }
+                Interlocked.CompareExchange(ref _target, lambda.Compile(SourceUnit.EmitDebugSymbols), null);
             }
             return _target;
         }
@@ -101,7 +105,7 @@ namespace Microsoft.Scripting {
                 throw Error.NoCodeToCompile();
             }
 
-            MethodBuilder mb = CompileForSave(typeGen, symbolDict, SourceUnit.Path);
+            MethodBuilder mb = CompileForSave(typeGen, symbolDict);
             return mb;
         }
 
@@ -110,8 +114,10 @@ namespace Microsoft.Scripting {
             return new ScriptCode(null, method, su);
         }
 
-        protected virtual MethodBuilder CompileForSave(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict, string name) {
-            LambdaExpression lambda = new ToDiskRewriter(typeGen, symbolDict).RewriteLambda(_code, name);
+        protected virtual MethodBuilder CompileForSave(TypeGen typeGen, Dictionary<SymbolId, FieldBuilder> symbolDict) {
+            var diskRewriter = new ToDiskRewriter(typeGen);
+            var lambda = diskRewriter.RewriteLambda(_code);
+            
             return lambda.CompileToMethod(typeGen.TypeBuilder, CompilerHelpers.PublicStatic | MethodAttributes.SpecialName, false);
         }
 
@@ -213,7 +219,7 @@ namespace Microsoft.Scripting {
             ));
 
             tg.FinishType();
-            ag.Dump();
+            ag.SaveAssembly();
         }
 
         /// <summary>
@@ -240,7 +246,7 @@ namespace Microsoft.Scripting {
 
             MethodInfo mi = t.GetMethod("GetScriptCodeInfo");
             if (mi.IsSpecialName && mi.IsDefined(typeof(DlrCachedCodeAttribute), false)) {
-                Tuple<Type[], DlrMainCallTarget[][], string[][], object> infos = (Tuple<Type[], DlrMainCallTarget[][], string[][], object>)mi.Invoke(null, ArrayUtils.EmptyObjects);
+                var infos = (Tuple<Type[], DlrMainCallTarget[][], string[][], object>)mi.Invoke(null, ArrayUtils.EmptyObjects);
 
                 for (int i = 0; i < infos.Item000.Length; i++) {
                     Type curType = infos.Item000[i];

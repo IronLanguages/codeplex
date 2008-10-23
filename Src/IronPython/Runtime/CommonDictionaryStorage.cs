@@ -56,7 +56,7 @@ namespace IronPython.Runtime {
 
         class HashSite {
             internal static CallSite<Func<CallSite, object, int>> _HashSite = CallSite<Func<CallSite, object, int>>.Create(
-                new OperationBinder(
+                new PythonOperationBinder(
                     DefaultContext.DefaultPythonContext.DefaultBinderState,
                     OperatorStrings.Hash
                 )

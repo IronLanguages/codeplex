@@ -23,9 +23,9 @@ namespace Microsoft.Scripting.Actions {
     /// RuleSets are all immutable.
     /// </summary>
     internal abstract class RuleSet<T> where T : class {
-        internal abstract RuleSet<T> AddRule(Rule<T> newRule);
+        internal abstract RuleSet<T> AddRule(CallSiteRule<T> newRule);
 
-        internal virtual Rule<T>[] GetRules() {
+        internal virtual CallSiteRule<T>[] GetRules() {
             return null;
         }
 

@@ -90,7 +90,7 @@ namespace Microsoft.Scripting.Interpretation {
             return state;
         }
 
-        internal InterpreterState CreateForScope(ScopeExpression scope) {
+        internal InterpreterState CreateForScope(BlockExpression scope) {
             InterpreterState state = new InterpreterState(this, _lambdaState);
             foreach (ParameterExpression v in scope.Variables) {
                 // initialize variables to default(T)

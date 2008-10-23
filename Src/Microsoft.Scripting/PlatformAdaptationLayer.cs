@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Security;
 
 namespace Microsoft.Scripting {
 
@@ -253,6 +254,35 @@ namespace Microsoft.Scripting {
                 throw new NotImplementedException();
 #endif
             }
+        }
+
+        #endregion
+
+        #region Environmental Variables
+
+        public virtual string GetEnvironmentVariable(string key) {
+#if !SILVERLIGHT
+            return Environment.GetEnvironmentVariable(key);
+#else
+            throw new NotImplementedException();
+#endif
+        }
+
+        public virtual void SetEnvironmentVariable(string key, string value) {
+#if !SILVERLIGHT
+            Environment.SetEnvironmentVariable(key, value);
+#else
+            throw new NotImplementedException();
+#endif
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public virtual System.Collections.IDictionary GetEnvironmentVariables() {
+#if !SILVERLIGHT
+            return Environment.GetEnvironmentVariables();
+#else
+            throw new NotImplementedException();
+#endif
         }
 
         #endregion

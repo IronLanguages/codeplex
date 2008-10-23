@@ -17,6 +17,8 @@ using System; using Microsoft;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Linq.Expressions;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -38,7 +40,7 @@ namespace Microsoft.Scripting.Actions {
             return dcb != null && dcb._args == _args;
         }
 
-        public override object HashCookie {
+        public override object CacheIdentity {
             get { return this; }
         }
 
@@ -50,7 +52,7 @@ namespace Microsoft.Scripting.Actions {
             return cc;
         }
 
-        public override Rule<T> Bind<T>(object[] args) {
+        public override Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
             ContractUtils.RequiresNotNull(args, "args");
             CodeContext cc = ExtractCodeContext(ref args);
             ContractUtils.Requires(args.Length > 0);
@@ -58,9 +60,8 @@ namespace Microsoft.Scripting.Actions {
             ContractUtils.RequiresNotNull(ido, "args");
 
             OldCallAction ca = OldCallAction.Make(cc.LanguageContext.Binder, _args);
-            RuleBuilder<T> builder = ido.GetRule<T>(ca, cc, args);
-
-            if (builder == null) {
+            var builder = new RuleBuilder(parameters, returnLabel);
+            if (!ido.GetRule(ca, cc, args, builder)) {
                 throw new InvalidOperationException("Cannot perform call.");
             }
 

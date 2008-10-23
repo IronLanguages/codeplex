@@ -14,12 +14,11 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -39,21 +38,21 @@ namespace Microsoft.Scripting.Actions {
     internal class SmallRuleSet<T> : RuleSet<T> where T : class {
         private T _target;
         private const int MaxRules = 10;
-        private readonly Rule<T>[] _rules;
+        private readonly CallSiteRule<T>[] _rules;
 
-        internal SmallRuleSet(Rule<T>[] rules) {
+        internal SmallRuleSet(CallSiteRule<T>[] rules) {
             _rules = rules;
         }
 
-        internal SmallRuleSet(T target, Rule<T>[] rules) {
+        internal SmallRuleSet(T target, CallSiteRule<T>[] rules) {
             _rules = rules;
             _target = target;
         }
 
-        internal override RuleSet<T> AddRule(Rule<T> newRule) {
-            List<Rule<T>> newRules = new List<Rule<T>>();
+        internal override RuleSet<T> AddRule(CallSiteRule<T> newRule) {
+            List<CallSiteRule<T>> newRules = new List<CallSiteRule<T>>();
             newRules.Add(newRule);
-            foreach (Rule<T> rule in _rules) {
+            foreach (CallSiteRule<T> rule in _rules) {
                 newRules.Add(rule);
             }
 
@@ -64,7 +63,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        internal override Rule<T>[] GetRules() {
+        internal override CallSiteRule<T>[] GetRules() {
             return _rules;
         }
 
@@ -81,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
                 return _rules[0].RuleSet.GetTarget();
             }
 
-            LambdaExpression stitched = Stitcher.Stitch<T>(_rules);
+            Expression<T> stitched = Stitch(_rules);
             MethodInfo method;
             T t = LambdaCompiler.CompileLambda<T>(stitched, !typeof(T).IsVisible, out method);
 
@@ -90,6 +89,42 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return t;
+        }
+
+        private static Expression<T> Stitch(CallSiteRule<T>[] rules) {
+            Type targetType = typeof(T);
+            Type siteType = typeof(CallSite<T>);
+
+            // TODO: we could cache this on Rule<T>
+            MethodInfo invoke = targetType.GetMethod("Invoke");
+
+            int length = rules.Length;
+            Expression[] body = new Expression[length + 1];
+            for (int i = 0; i < length; i++) {
+                body[i] = rules[i].Binding;
+            }
+
+            var @params = CallSiteRule<T>.Parameters.AddFirst(Expression.Parameter(typeof(CallSite), "$site"));
+
+            body[rules.Length] = Expression.Label(
+                CallSiteRule<T>.ReturnLabel,
+                Expression.Call(
+                    Expression.Field(
+                        Expression.Convert(@params[0], siteType),
+                        siteType.GetField("Update")
+                    ),
+                    invoke,
+                    new ReadOnlyCollection<Expression>(@params)
+                )
+            );
+
+            return new Expression<T>(
+                Annotations.Empty,
+                ExpressionType.Lambda,
+                "_stub_",
+                Expression.Comma(body),
+                new ReadOnlyCollection<ParameterExpression>(@params)
+            );
         }
 
         internal void SetRawTarget(T target) {

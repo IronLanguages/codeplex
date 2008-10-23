@@ -20,7 +20,7 @@ namespace Microsoft.Scripting.Interpretation {
     internal class CommaAddress : EvaluationAddress {
         private List<EvaluationAddress> _addrs;
 
-        internal CommaAddress(Block address, List<EvaluationAddress> addresses)
+        internal CommaAddress(BlockExpression address, List<EvaluationAddress> addresses)
             : base(address) {
             _addrs = addresses;
         }
@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         internal int Index {
             get {
-                return ((Block)Expression).Expressions.Count - 1;
+                return ((BlockExpression)Expression).Expressions.Count - 1;
             }
         }
     }

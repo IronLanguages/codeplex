@@ -28,15 +28,15 @@ namespace IronPython.Runtime.Binding {
             Assert.NotNull(value);
         }
 
-        public override MetaObject Create(CreateAction create, params MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder create, params MetaObject[] args) {
             return InvokeWorker(create, args, Ast.Constant(BinderState.GetBinderState(create).Context));
         }
 
-        public override MetaObject Convert(ConvertAction/*!*/ conversion) {
-            if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(conversion, conversion.ToType, Restrict(Value.GetType()));
+        public override MetaObject BindConvert(ConvertBinder/*!*/ conversion) {
+            if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
+                return MakeDelegateTarget(conversion, conversion.Type, Restrict(Value.GetType()));
             }
-            return conversion.Fallback(this);
+            return conversion.FallbackConvert(this);
         }
 
 

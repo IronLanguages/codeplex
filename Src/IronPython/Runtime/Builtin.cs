@@ -917,7 +917,7 @@ namespace IronPython.Runtime {
 
         private static CallSite<Func<CallSite, CodeContext, T, T1, object>> MakeMapSite<T, T1>(CodeContext/*!*/ context) {
             return CallSite<Func<CallSite, CodeContext, T, T1, object>>.Create(
-                new InvokeBinder(
+                new PythonInvokeBinder(
                     PythonContext.GetContext(context).DefaultBinderState,
                     new CallSignature(1)
                 )

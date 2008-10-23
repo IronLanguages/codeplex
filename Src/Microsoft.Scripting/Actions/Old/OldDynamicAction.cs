@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Actions {
         protected OldDynamicAction() {
         }
 
-        public override object HashCookie {
+        public override object CacheIdentity {
             get { return this; }
         }
 

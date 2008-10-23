@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal sealed class TypeLibInfoMetaObject : MetaObject {
         private readonly ComTypeLibInfo _info;
 
@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Com {
             _info = info;
         }
 
-        public override MetaObject GetMember(GetMemberAction action) {
+        public override MetaObject BindGetMember(GetMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             string name = action.Name;
 
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Com {
                 name != "VersionMajor" &&
                 name != "VersionMinor") {
 
-                return action.Fallback(this);
+                return action.FallbackGetMember(this);
             }
 
             return new MetaObject(
@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Com {
             );
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
 
             if (action.Operation == "GetMemberNames" || action.Operation == "MemberNames") {
@@ -64,11 +64,11 @@ namespace Microsoft.Scripting.Com {
                 );
             }
 
-            return action.Fallback(RestrictThisToType(), args);
+            return action.FallbackOperation(RestrictThisToType(), args);
         }
 
         private Restrictions ComTypeLibInfoRestrictions(params MetaObject[] args) {
-            return Restrictions.Combine(args).Merge(Restrictions.TypeRestriction(Expression, typeof(ComTypeLibInfo)));
+            return Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, typeof(ComTypeLibInfo)));
         }
 
         private MetaObject RestrictThisToType() {
@@ -77,7 +77,7 @@ namespace Microsoft.Scripting.Com {
                     Expression,
                     typeof(ComTypeLibInfo)
                 ),
-                Restrictions.TypeRestriction(Expression, typeof(ComTypeLibInfo))
+                Restrictions.GetTypeRestriction(Expression, typeof(ComTypeLibInfo))
             );
         }
     }

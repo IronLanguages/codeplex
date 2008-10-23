@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     public sealed class DispPropertyPut : DispCallable {
         internal DispPropertyPut(IDispatchObject dispatch, ComMethodDesc methodDesc)

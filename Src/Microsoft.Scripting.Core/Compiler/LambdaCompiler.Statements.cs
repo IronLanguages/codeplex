@@ -14,16 +14,17 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Reflection.Emit;
+using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         private void EmitBlock(Expression expr) {
-            Emit((Block)expr, EmitAs.Default);
+            // emit body
+            Emit((BlockExpression)expr, EmitAs.Default);
         }
 
-        private void Emit(Block node, EmitAs emitAs) {
+        private void Emit(BlockExpression node, EmitAs emitAs) {
             var expressions = node.Expressions;
-
             // Labels defined immediately in the block are valid for the whole block
             foreach (var e in expressions) {
                 var label = e as LabelExpression;
@@ -31,6 +32,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     DefineLabel(label.Label);
                 }
             }
+
+            EnterScope(node);
 
             for (int index = 0; index < expressions.Count - 1; index++) {
                 EmitExpressionAsVoid(expressions[index]);
@@ -43,6 +46,21 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 } else {
                     EmitExpression(expressions[expressions.Count - 1]);
                 }
+            }
+
+            ExitScope(node);
+        }
+
+        private void EnterScope(BlockExpression node) {
+            if (node.Variables.Count > 0 && !_scope.MergedScopes.Contains(node)) {
+                _scope = _tree.Scopes[node].Enter(this, _scope);
+                Debug.Assert(_scope.Node == node);
+            }
+        }
+
+        private void ExitScope(BlockExpression node) {
+            if (_scope.Node == node) {
+                _scope = _scope.Exit();
             }
         }
 
@@ -70,7 +88,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EmitLoopStatement (Expression expr) {
-            LoopStatement node = (LoopStatement)expr;
+            LoopExpression node = (LoopExpression)expr;
             Label? firstTime = null;
             Label loopEnd = _ilg.DefineLabel();
 
@@ -128,26 +146,26 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region SwitchStatement
 
         private void EmitSwitchStatement(Expression expr) {
-            SwitchStatement node = (SwitchStatement)expr;
+            SwitchExpression node = (SwitchExpression)expr;
 
-            LabelInfo breakTarget = DefineLabel(node.Label);
+            LabelInfo breakTarget = DefineLabel(node.BreakLabel);
 
             Label defaultTarget = breakTarget.Label;
-            Label[] labels = new Label[node.Cases.Count];
+            Label[] labels = new Label[node.SwitchCases.Count];
 
             // Create all labels
-            for (int i = 0; i < node.Cases.Count; i++) {
+            for (int i = 0; i < node.SwitchCases.Count; i++) {
                 labels[i] = _ilg.DefineLabel();
 
                 // Default case.
-                if (node.Cases[i].IsDefault) {
+                if (node.SwitchCases[i].IsDefault) {
                     // Set the default target
                     defaultTarget = labels[i];
                 }
             }
 
             // Emit the test value
-            EmitExpression(node.TestValue);
+            EmitExpression(node.Test);
 
             // Check if jmp table can be emitted
             if (!TryEmitJumpTable(node, labels, defaultTarget)) {
@@ -160,11 +178,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Br, defaultTarget);
 
             // Emit the bodies
-            for (int i = 0; i < node.Cases.Count; i++) {
+            for (int i = 0; i < node.SwitchCases.Count; i++) {
                 // First put the corresponding labels
                 _ilg.MarkLabel(labels[i]);
                 // And then emit the Body!!
-                EmitExpressionAsVoid(node.Cases[i].Body);
+                EmitExpressionAsVoid(node.SwitchCases[i].Body);
             }
 
             breakTarget.Mark();
@@ -174,25 +192,27 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private const double MaxJumpTableSparsity = 10;
 
         // Emits the switch as if stmts
-        private void EmitConditionalBranches(SwitchStatement node, Label[] labels) {
-            LocalBuilder testValueSlot = GetNamedLocal(typeof(int), "$switchTestValue");
+        private void EmitConditionalBranches(SwitchExpression node, Label[] labels) {
+            LocalBuilder testValueSlot = _ilg.GetLocal(typeof(int));
             _ilg.Emit(OpCodes.Stloc, testValueSlot);
             
             // For all the "cases" create their conditional branches
-            for (int i = 0; i < node.Cases.Count; i++) {
+            for (int i = 0; i < node.SwitchCases.Count; i++) {
                 // Not default case emit the condition
-                if (!node.Cases[i].IsDefault) {
+                if (!node.SwitchCases[i].IsDefault) {
                     // Test for equality of case value and the test expression
-                    _ilg.EmitInt(node.Cases[i].Value);
+                    _ilg.EmitInt(node.SwitchCases[i].Value);
                     _ilg.Emit(OpCodes.Ldloc, testValueSlot);
                     _ilg.Emit(OpCodes.Beq, labels[i]);
                 }
             }
+
+            _ilg.FreeLocal(testValueSlot);
         }
 
         // Tries to emit switch as a jmp table
-        private bool TryEmitJumpTable(SwitchStatement node, Label[] labels, Label defaultTarget) {
-            if (node.Cases.Count > MaxJumpTableSize) {
+        private bool TryEmitJumpTable(SwitchExpression node, Label[] labels, Label defaultTarget) {
+            if (node.SwitchCases.Count > MaxJumpTableSize) {
                 return false;
             }
 
@@ -200,10 +220,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
             int max = Int32.MinValue;
 
             // Find the min and max of the values
-            for (int i = 0; i < node.Cases.Count; ++i) {
+            for (int i = 0; i < node.SwitchCases.Count; ++i) {
                 // Not the default case.
-                if (!node.Cases[i].IsDefault) {
-                    int val = node.Cases[i].Value;
+                if (!node.SwitchCases[i].IsDefault) {
+                    int val = node.SwitchCases[i].Value;
                     if (min > val) min = val;
                     if (max < val) max = val;
                 }
@@ -215,7 +235,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // Value distribution is too sparse, don't emit jump table.
-            if (delta > node.Cases.Count + MaxJumpTableSparsity) {
+            if (delta > node.SwitchCases.Count + MaxJumpTableSparsity) {
                 return false;
             }
 
@@ -229,8 +249,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // Replace with the actual label target for all cases
-            for (int i = 0; i < node.Cases.Count; i++) {
-                SwitchCase sc = node.Cases[i];
+            for (int i = 0; i < node.SwitchCases.Count; i++) {
+                SwitchCase sc = node.SwitchCases[i];
                 if (!sc.IsDefault) {
                     jmpLabels[sc.Value - min] = labels[i];
                 }
@@ -248,7 +268,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #endregion
 
         private void EmitThrowStatement(Expression expr) {
-            ThrowStatement node = (ThrowStatement)expr;
+            ThrowExpression node = (ThrowExpression)expr;
             if (node.Value == null) {
                 CheckRethrow();
 
@@ -286,7 +306,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EmitTryStatement(Expression expr) {
-            var node = (TryStatement)expr;
+            var node = (TryExpression)expr;
 
             //******************************************************************
             // 1. ENTERING TRY

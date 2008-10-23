@@ -157,7 +157,7 @@ namespace IronPython.Runtime.Binding {
                                     )
                                 ),
                                 Ast.Dynamic(
-                                    new InvokeBinder(
+                                    new PythonInvokeBinder(
                                         state,
                                         new CallSignature(args.Length)
                                     ),
@@ -171,7 +171,7 @@ namespace IronPython.Runtime.Binding {
                             ),
                             tmp
                         ),
-                        Restrictions.Combine(types).Merge(Restrictions.TypeRestriction(types[0].Expression, types[0].LimitType))
+                        Restrictions.Combine(types).Merge(Restrictions.GetTypeRestriction(types[0].Expression, types[0].LimitType))
                     )
                 );
             }

@@ -24,7 +24,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Scripting.Actions;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// An object that implements IDispatch

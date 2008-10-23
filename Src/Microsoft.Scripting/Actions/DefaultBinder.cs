@@ -45,11 +45,7 @@ namespace Microsoft.Scripting.Actions {
         /// override this and provide any custom behavior they need and fallback to the default
         /// implementation if no custom behavior is required.
         /// </summary>
-        /// <typeparam name="T">The type of the DynamicSite the rule is being produced for.</typeparam>
-        /// <param name="action">The Action that is being performed.</param>
-        /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
-        /// <returns></returns>
-        protected override RuleBuilder<T> MakeRule<T>(OldDynamicAction action, object[] args) {
+        protected override void MakeRule(OldDynamicAction action, object[] args, RuleBuilder rule) {
             ContractUtils.RequiresNotNull(action, "action");
             ContractUtils.RequiresNotNull(args, "args");
 
@@ -60,19 +56,26 @@ namespace Microsoft.Scripting.Actions {
 
             switch (action.Kind) {
                 case DynamicActionKind.Call:
-                    return new CallBinderHelper<T, OldCallAction>(callerContext, (OldCallAction)action, extracted).MakeRule();
+                    new CallBinderHelper<OldCallAction>(callerContext, (OldCallAction)action, extracted, rule).MakeRule();
+                    return;
                 case DynamicActionKind.GetMember:
-                    return new GetMemberBinderHelper<T>(callerContext, (OldGetMemberAction)action, extracted).MakeNewRule();
+                    new GetMemberBinderHelper(callerContext, (OldGetMemberAction)action, extracted, rule).MakeNewRule();
+                    return;
                 case DynamicActionKind.SetMember:
-                    return new SetMemberBinderHelper<T>(callerContext, (OldSetMemberAction)action, extracted).MakeNewRule();
+                    new SetMemberBinderHelper(callerContext, (OldSetMemberAction)action, extracted, rule).MakeNewRule();
+                    return;
                 case DynamicActionKind.CreateInstance:
-                    return new CreateInstanceBinderHelper<T>(callerContext, (OldCreateInstanceAction)action, extracted).MakeRule();
+                    new CreateInstanceBinderHelper(callerContext, (OldCreateInstanceAction)action, extracted, rule).MakeRule();
+                    return;
                 case DynamicActionKind.DoOperation:
-                    return new DoOperationBinderHelper<T>(callerContext, (OldDoOperationAction)action, extracted).MakeRule();
+                    new DoOperationBinderHelper(callerContext, (OldDoOperationAction)action, extracted, rule).MakeRule();
+                    return;
                 case DynamicActionKind.DeleteMember:
-                    return new DeleteMemberBinderHelper<T>(callerContext, (OldDeleteMemberAction)action, extracted).MakeRule();
+                    new DeleteMemberBinderHelper(callerContext, (OldDeleteMemberAction)action, extracted, rule).MakeRule();
+                    return;
                 case DynamicActionKind.ConvertTo:
-                    return new ConvertToBinderHelper<T>(callerContext, (OldConvertToAction)action, extracted).MakeRule();
+                    new ConvertToBinderHelper(callerContext, (OldConvertToAction)action, extracted, rule).MakeRule();
+                    return;
                 default:
                     throw new NotImplementedException(action.ToString());
             }

@@ -249,7 +249,7 @@ namespace Microsoft.Scripting.Interpretation {
                 object res;
                 try {
                     // Call the method                    
-                    res = InvokeMethod(state, node.Method, instance, parameters);                   
+                    res = InvokeMethod(state, node.Method, instance, parameters);
                 } finally {
                     // expose by-ref args
                     for (int i = 0; i <= lastByRefParamIndex; i++) {
@@ -651,7 +651,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            LocalScopeExpression node = (LocalScopeExpression)expr;
+            RuntimeVariablesExpression node = (RuntimeVariablesExpression)expr;
             return new InterpreterVariables(state, node);
         }
 
@@ -732,7 +732,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            var metaAction = node.Binder as MetaAction;
+            var metaAction = node.Binder as MetaObjectBinder;
             if (metaAction != null) {
                 return InterpretMetaAction(state, metaAction, node, args);
             }
@@ -744,7 +744,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         private const int SiteCompileThreshold = 2;
 
-        private static object InterpretMetaAction(InterpreterState state, MetaAction action, DynamicExpression node, object[] argValues) {
+        private static object InterpretMetaAction(InterpreterState state, MetaObjectBinder action, DynamicExpression node, object[] argValues) {
             var callSites = state.LambdaState.ScriptCode.CallSites;
             CallSiteInfo callSiteInfo;
 
@@ -802,7 +802,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         [Conditional("DEBUG")]
         private static void AssertTrueRestrictions(InterpreterState state, MetaObject binding) {
-            var test = binding.Restrictions.CreateTest();
+            var test = binding.Restrictions.ToExpression();
             var result = Interpret(state, test);
             Debug.Assert(result is bool && (bool)result);
         }
@@ -822,7 +822,7 @@ namespace Microsoft.Scripting.Interpretation {
 
             return callSiteInfo;
         }
-        
+
         // The ReflectiveCaller cache
         private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
 
@@ -1133,29 +1133,6 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
-        private static object InterpretBlock(InterpreterState state, Expression expr) {
-            Block node = (Block)expr;
-            SetSourceLocation(state, node);
-
-            object result = ControlFlow.NextStatement;
-            for (int index = 0; index < node.Expressions.Count; index++) {
-                Expression current = node.Expressions[index];
-
-                object val;
-                if (InterpretAndCheckFlow(state, current, out val)) {
-                    if (val != ControlFlow.NextStatement) {
-                        return val;
-                    }
-                }
-
-                if (index == node.Expressions.Count - 1 && node.Type != typeof(void)) {
-                    // Save the value at the designated index
-                    result = val;
-                }
-            }
-            return result;
-        }
-
         private static object InterpretGotoExpression(InterpreterState state, Expression expr) {
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
@@ -1229,7 +1206,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            EmptyStatement node = (EmptyStatement)expr;
+            EmptyExpression node = (EmptyExpression)expr;
             SetSourceLocation(state, node);
             return ControlFlow.NextStatement;
         }
@@ -1251,7 +1228,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretLoopStatement(InterpreterState state, Expression expr) {
-            LoopStatement node = (LoopStatement)expr;
+            LoopExpression node = (LoopExpression)expr;
             SetSourceLocation(state, node);
 
             for (; ; ) {
@@ -1260,13 +1237,13 @@ namespace Microsoft.Scripting.Interpretation {
                 if (node.Test != null) {
                     object test = Interpret(state, node.Test);
                     if ((cf = test as ControlFlow) != null) {
-	                    if (cf.Kind == ControlFlowKind.Goto) {
-	                        if (cf.Label == node.BreakLabel) {
-	                            // Break out of the loop and execute next statement outside
-	                            return ControlFlow.NextStatement;
-	                        } else if (cf.Label != node.ContinueLabel) {
-	                            return cf;
-	                        }
+                        if (cf.Kind == ControlFlowKind.Goto) {
+                            if (cf.Label == node.BreakLabel) {
+                                // Break out of the loop and execute next statement outside
+                                return ControlFlow.NextStatement;
+                            } else if (cf.Label != node.ContinueLabel) {
+                                return cf;
+                            }
                         } else if (cf.Kind == ControlFlowKind.Return) {
                             return test;
                         }
@@ -1295,13 +1272,13 @@ namespace Microsoft.Scripting.Interpretation {
                 if (node.Increment != null) {
                     object increment = Interpret(state, node.Increment);
                     if ((cf = increment as ControlFlow) != null) {
-	                    if (cf.Kind == ControlFlowKind.Goto) {
-	                        if (cf.Label == node.BreakLabel) {
-	                            // Break out of the loop and execute next statement outside
-	                            return ControlFlow.NextStatement;
-	                        } else if (cf.Label != node.ContinueLabel) {
-	                            return cf;
-	                        }
+                        if (cf.Kind == ControlFlowKind.Goto) {
+                            if (cf.Label == node.BreakLabel) {
+                                // Break out of the loop and execute next statement outside
+                                return ControlFlow.NextStatement;
+                            } else if (cf.Label != node.ContinueLabel) {
+                                return cf;
+                            }
                         } else if (cf.Kind == ControlFlowKind.Return) {
                             return increment;
                         }
@@ -1336,39 +1313,82 @@ namespace Microsoft.Scripting.Interpretation {
             return ControlFlow.Return(value);
         }
 
-        private static object InterpretScopeExpression(InterpreterState state, Expression expr) {
-            ScopeExpression node = (ScopeExpression)expr;
+        private static object InterpretDebugInfoExpression(InterpreterState state, Expression expr) {
+            var node = (DebugInfoExpression)expr;
+
+            if (state.CurrentYield == null) {
+                // Note: setting index to 0 because we don't have one available
+                // Index should be removed from SourceLocation
+                state.CurrentLocation = new SourceLocation(0, node.StartLine, node.StartColumn);
+            }
+
+            return Interpret(state, node.Expression);
+        }
+
+        private static object InterpretBlock(InterpreterState state, Expression expr) {
+            BlockExpression node = (BlockExpression)expr;
             SetSourceLocation(state, node);
 
-            // restore scope if we yielded
-            InterpreterState child;
-            if (!state.TryGetStackState(node, out child)) {
-                // otherwise, create a new nested scope
-                child = state.CreateForScope(node);
+            InterpreterState child = state;
+            if (node.Variables.Count > 0) {
+                // restore scope if we yielded
+                if (!state.TryGetStackState(node, out child)) {
+                    // otherwise, create a new nested scope
+                    child = state.CreateForScope(node);
+                }
             }
 
-            object result = Interpret(child, node.Body);
+            try {
+                var expressions = node.Expressions;
+                int lastIndex = expressions.Count - 1;
 
-            if (state.CurrentYield != null) {
-                // save scope if yielding so we can restore it
-                state.SaveStackState(node, child);
+                if (lastIndex >= 0) {
+                    object val = null;
+
+                    for (int i = 0; i < lastIndex; i++) {
+                        if (InterpretAndCheckFlow(child, expressions[i], out val)) {
+                            if (val != ControlFlow.NextStatement) {
+                                return val;
+                            }
+                        }
+                    }
+
+                    Expression last = expressions[lastIndex];
+
+                    if (InterpretAndCheckFlow(child, last, out val)) {
+                        if (val != ControlFlow.NextStatement) {
+                            return val;
+                        }
+                    }
+
+                    if (node.Type != typeof(void)) {
+                        return val;
+                    }
+                }
+            } finally {
+                if (node.Variables.Count > 0) {
+                    if (state.CurrentYield != null) {
+                        // save scope if yielding so we can restore it
+                        state.SaveStackState(node, child);
+                    }
+                }
             }
 
-            return result;
+            return ControlFlow.NextStatement;
         }
 
         private static object InterpretSwitchStatement(InterpreterState state, Expression expr) {
             // TODO: yield aware switch
-            SwitchStatement node = (SwitchStatement)expr;
+            SwitchExpression node = (SwitchExpression)expr;
             SetSourceLocation(state, node);
 
             object testValue;
-            if (InterpretAndCheckFlow(state, node.TestValue, out testValue)) {
+            if (InterpretAndCheckFlow(state, node.Test, out testValue)) {
                 return testValue;
             }
 
             int test = (int)testValue;
-            ReadOnlyCollection<SwitchCase> cases = node.Cases;
+            ReadOnlyCollection<SwitchCase> cases = node.SwitchCases;
             int target = 0;
             while (target < cases.Count) {
                 SwitchCase sc = cases[target];
@@ -1385,7 +1405,7 @@ namespace Microsoft.Scripting.Interpretation {
 
                 ControlFlow cf = result as ControlFlow;
                 if (cf != null) {
-                    if (cf.Label == node.Label) {
+                    if (cf.Label == node.BreakLabel) {
                         return ControlFlow.NextStatement;
                     } else if (cf.Kind == ControlFlowKind.Return || cf.Kind == ControlFlowKind.Goto) {
                         return cf;
@@ -1423,7 +1443,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretThrowStatement(InterpreterState state, Expression expr) {
-            ThrowStatement node = (ThrowStatement)expr;
+            ThrowExpression node = (ThrowExpression)expr;
             Exception ex;
 
             if (node.Value == null) {
@@ -1449,7 +1469,7 @@ namespace Microsoft.Scripting.Interpretation {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2219:DoNotRaiseExceptionsInExceptionClauses")]
         private static object InterpretTryStatement(InterpreterState state, Expression expr) {
             // TODO: Yield aware
-            TryStatement node = (TryStatement)expr;
+            TryExpression node = (TryExpression)expr;
             bool rethrow = false, catchFaulted = false;
             Exception savedExc = null;
             object ret = ControlFlow.NextStatement;
@@ -1653,7 +1673,7 @@ namespace Microsoft.Scripting.Interpretation {
                 case ExpressionType.Parameter:
                     return new VariableAddress(node);
                 case ExpressionType.Block:
-                    return EvaluateAddress(state, (Block)node);
+                    return EvaluateAddress(state, (BlockExpression)node);
                 case ExpressionType.Conditional:
                     return EvaluateAddress(state, (ConditionalExpression)node);
                 default:
@@ -1662,7 +1682,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
 
-        private static EvaluationAddress EvaluateAddress(InterpreterState state, Block node) {
+        private static EvaluationAddress EvaluateAddress(InterpreterState state, BlockExpression node) {
             if (node.Type == typeof(void)) {
                 throw new NotSupportedException("Address of block without value");
             }

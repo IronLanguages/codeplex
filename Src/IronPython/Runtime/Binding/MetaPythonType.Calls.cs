@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, args, codeContext);
         }
 
@@ -42,11 +42,11 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ Call(CallAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(call, args, BinderState.GetCodeContext(call));
         }
 
@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Invoke Implementation
 
-        private MetaObject/*!*/ InvokeWorker(MetaAction/*!*/ call, MetaObject/*!*/[]/*!*/ args, Expression/*!*/ codeContext) {
+        private MetaObject/*!*/ InvokeWorker(MetaObjectBinder/*!*/ call, MetaObject/*!*/[]/*!*/ args, Expression/*!*/ codeContext) {
             if (this.NeedsDeferral()) {
                 return call.Defer(ArrayUtils.Insert(this, args));
             }
@@ -76,7 +76,7 @@ namespace IronPython.Runtime.Binding {
         /// Creating a standard .NET type is easy - we just call it's constructor with the provided
         /// arguments.
         /// </summary>
-        private MetaObject/*!*/ MakeStandardDotNetTypeCall(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakeStandardDotNetTypeCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
             BinderState state = BinderState.GetBinderState(call);
             MethodBase[] ctors = CompilerHelpers.GetConstructors(Value.UnderlyingSystemType, state.Binder.PrivateBinding);
@@ -87,7 +87,7 @@ namespace IronPython.Runtime.Binding {
                     ctors,
                     args,
                     signature,
-                    Restrictions.Merge(Restrictions.InstanceRestriction(Expression, Value))
+                    Restrictions.Merge(Restrictions.GetInstanceRestriction(Expression, Value))
                 );
             } else {
                 return new MetaObject(
@@ -97,7 +97,7 @@ namespace IronPython.Runtime.Binding {
                            Ast.Constant("Cannot create instances of " + Value.Name)
                        )
                    ),
-                   Restrictions.Merge(Restrictions.InstanceRestriction(Expression, Value))
+                   Restrictions.Merge(Restrictions.GetInstanceRestriction(Expression, Value))
                 );
             }
         }
@@ -107,12 +107,12 @@ namespace IronPython.Runtime.Binding {
         /// and generate calls to either the builtin funcions directly or embed sites which
         /// call the slots at runtime.
         /// </summary>
-        private MetaObject/*!*/ MakePythonTypeCall(MetaAction/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private MetaObject/*!*/ MakePythonTypeCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             ValidationInfo valInfo = MakeVersionCheck();
 
             MetaObject self = new RestrictedMetaObject(
                 Ast.ConvertHelper(Expression, LimitType),
-                Restrictions.TypeRestriction(Expression, LimitType),
+                Restrictions.GetTypeRestriction(Expression, LimitType),
                 Value
             );
             ArgumentValues ai = new ArgumentValues(BindingHelpers.GetCallSignature(call), self, args);
@@ -211,7 +211,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Adapter support
 
-        private void GetAdapters(ArgumentValues/*!*/ ai, MetaAction/*!*/ call, Expression/*!*/ codeContext, out NewAdapter/*!*/ newAdapter, out InitAdapter/*!*/ initAdapter) {
+        private void GetAdapters(ArgumentValues/*!*/ ai, MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, out NewAdapter/*!*/ newAdapter, out InitAdapter/*!*/ initAdapter) {
             PythonTypeSlot newInst, init;
 
             Value.TryResolveSlot(BinderState.GetBinderState(call).Context, Symbols.NewInst, out newInst);
@@ -224,7 +224,7 @@ namespace IronPython.Runtime.Binding {
             initAdapter = GetInitAdapter(ai, init, call, codeContext);
         }
 
-        private InitAdapter/*!*/ GetInitAdapter(ArgumentValues/*!*/ ai, PythonTypeSlot/*!*/ init, MetaAction/*!*/ call, Expression/*!*/ codeContext) {
+        private InitAdapter/*!*/ GetInitAdapter(ArgumentValues/*!*/ ai, PythonTypeSlot/*!*/ init, MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext) {
             BinderState state = BinderState.GetBinderState(call);
             if (IsMixedNewStyleOldStyle()) {
                 return new MixedInitAdapter(ai, state, codeContext);
@@ -239,7 +239,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private NewAdapter/*!*/ GetNewAdapter(ArgumentValues/*!*/ ai, PythonTypeSlot/*!*/ newInst, MetaAction/*!*/ call, Expression/*!*/ codeContext) {
+        private NewAdapter/*!*/ GetNewAdapter(ArgumentValues/*!*/ ai, PythonTypeSlot/*!*/ newInst, MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext) {
             BinderState state = BinderState.GetBinderState(call);
 
             if (IsMixedNewStyleOldStyle()) {
@@ -338,7 +338,7 @@ namespace IronPython.Runtime.Binding {
 
                 return new MetaObject(
                     Ast.Dynamic(
-                        new InvokeBinder(
+                        new PythonInvokeBinder(
                             BinderState,
                             GetDynamicNewSignature()
                         ),
@@ -360,7 +360,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             protected CallSignature GetDynamicNewSignature() {
-                return Arguments.Signature.InsertArgument(ArgumentInfo.Simple);
+                return Arguments.Signature.InsertArgument(Argument.Simple);
             }
         }
 
@@ -443,7 +443,7 @@ namespace IronPython.Runtime.Binding {
             public override MetaObject/*!*/ GetExpression(DefaultBinder/*!*/ binder) {
                 var mc = new ParameterBinderWithCodeContext(binder, CodeContext);
 
-                CallSignature sig = Arguments.Signature.InsertArgument(new ArgumentInfo(ArgumentKind.Simple));
+                CallSignature sig = Arguments.Signature.InsertArgument(new Argument(ArgumentType.Simple));
                 return binder.CallMethod(
                     mc,
                     _ctor.Targets,
@@ -494,7 +494,7 @@ namespace IronPython.Runtime.Binding {
 
                 return new MetaObject(
                     Ast.Dynamic(
-                        new InvokeBinder(
+                        new PythonInvokeBinder(
                             BinderState,
                             Arguments.Signature
                         ),
@@ -586,7 +586,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Helpers
 
-        private MetaObject/*!*/ MakeIncorrectArgumentsForCallError(MetaAction/*!*/ call, ArgumentValues/*!*/ ai, ValidationInfo/*!*/ valInfo) {
+        private MetaObject/*!*/ MakeIncorrectArgumentsForCallError(MetaObjectBinder/*!*/ call, ArgumentValues/*!*/ ai, ValidationInfo/*!*/ valInfo) {
             string message;
 
             if (Value.IsSystemType) {
@@ -630,10 +630,10 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static Restrictions GetInstanceRestriction(ArgumentValues ai) {
-            return Restrictions.InstanceRestriction(ai.Self.Expression, ai.Self.Value);
+            return Restrictions.GetInstanceRestriction(ai.Self.Expression, ai.Self.Value);
         }
 
-        private Expression/*!*/ GetFinalizerInitialization(MetaAction/*!*/ action, ParameterExpression/*!*/ variable) {
+        private Expression/*!*/ GetFinalizerInitialization(MetaObjectBinder/*!*/ action, ParameterExpression/*!*/ variable) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("InitializeForFinalization"),
                 Ast.Constant(BinderState.GetBinderState(action).Context),
@@ -641,7 +641,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private bool HasFinalizer(MetaAction/*!*/ action) {
+        private bool HasFinalizer(MetaObjectBinder/*!*/ action) {
             // only user types have finalizers...
             if (Value.IsSystemType) return false;
 
@@ -664,19 +664,19 @@ namespace IronPython.Runtime.Binding {
             return false;
         }
 
-        private bool HasDefaultNew(MetaAction/*!*/ action) {
+        private bool HasDefaultNew(MetaObjectBinder/*!*/ action) {
             PythonTypeSlot newInst;
             Value.TryResolveSlot(BinderState.GetBinderState(action).Context, Symbols.NewInst, out newInst);
             return newInst == InstanceOps.New;
         }
 
-        private bool HasDefaultInit(MetaAction/*!*/ action) {
+        private bool HasDefaultInit(MetaObjectBinder/*!*/ action) {
             PythonTypeSlot init;
             Value.TryResolveSlot(BinderState.GetBinderState(action).Context, Symbols.Init, out init);
             return init == InstanceOps.Init;
         }
 
-        private bool HasDefaultNewAndInit(MetaAction/*!*/ action) {
+        private bool HasDefaultNewAndInit(MetaObjectBinder/*!*/ action) {
             return HasDefaultNew(action) && HasDefaultInit(action);
         }
 
@@ -684,20 +684,20 @@ namespace IronPython.Runtime.Binding {
         /// Checks if we have a default new and init - in this case if we have any
         /// arguments we don't allow the call.
         /// </summary>
-        private bool TooManyArgsForDefaultNew(MetaAction/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        private bool TooManyArgsForDefaultNew(MetaObjectBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             if (args.Length > 0 && HasDefaultNewAndInit(action)) {
-                ArgumentInfo[] infos = BindingHelpers.GetCallSignature(action).GetArgumentInfos();
+                Argument[] infos = BindingHelpers.GetCallSignature(action).GetArgumentInfos();
                 for (int i = 0; i < infos.Length; i++) {
-                    ArgumentInfo curArg = infos[i];
+                    Argument curArg = infos[i];
 
                     switch(curArg.Kind) {
-                        case ArgumentKind.List:
+                        case ArgumentType.List:
                             // Deferral?
                             if (((IList<object>)args[i].Value).Count > 0) {
                                 return true;
                             }
                             break;
-                        case ArgumentKind.Dictionary:
+                        case ArgumentType.Dictionary:
                             // Deferral?
                             if (((IDictionary<object, object>)args[i].Value).Count > 0) {
                                 return true;
@@ -728,7 +728,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private bool IsStandardDotNetType(MetaAction/*!*/ action) {
+        private bool IsStandardDotNetType(MetaObjectBinder/*!*/ action) {
             BinderState bState = BinderState.GetBinderState(action);
 
             return

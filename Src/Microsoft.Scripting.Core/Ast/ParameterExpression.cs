@@ -15,24 +15,47 @@
 using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 using System.Text;
+using System.Diagnostics;
 using System.Collections.ObjectModel;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public sealed class ParameterExpression : Expression {
+    public class ParameterExpression : Expression {
         private readonly string _name;
-        private readonly bool _isByRef;
+        private readonly Type _paramType;
 
-        internal ParameterExpression(Type type, string name, Annotations annotations, bool isByRef)
-            : this(ExpressionType.Parameter, type, name, annotations, isByRef) {
-        }
-
-        internal ParameterExpression(ExpressionType et, Type type, string name, Annotations annotations, bool isByRef)
-            : base(et, type, false, annotations, true, true) {
+        internal ParameterExpression(Type type, string name, Annotations annotations)
+            : base(annotations) {
             _name = name;
-            _isByRef = isByRef;
+            _paramType = type;
         }
 
+        internal static ParameterExpression Make(Type type, string name, Annotations annotations, bool isByRef) {
+            return Make(ExpressionType.Parameter, type, name, annotations, isByRef);
+        }
+
+        internal static ParameterExpression Make(ExpressionType et, Type type, string name, Annotations annotations, bool isByRef) {
+            if (isByRef) {
+                Debug.Assert(et == ExpressionType.Parameter);
+                return new ByRefParameterExpression(type, name, annotations);
+            } else if (et == ExpressionType.Parameter) {
+                return new VariableExpression(type, name, annotations);
+            }
+
+            return new ParameterExpression(type, name, annotations);            
+        }
+
+        protected override Type GetExpressionType() {
+            return _paramType;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead | NodeFlags.CanWrite;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Parameter;
+        }
 
         public string Name {
             get { return _name; }
@@ -40,8 +63,12 @@ namespace Microsoft.Linq.Expressions {
 
         public bool IsByRef {
             get {
-                return _isByRef;
+                return GetIsByRef();
             }
+        }
+
+        internal virtual bool GetIsByRef() {
+            return false;
         }
 
         internal override void BuildString(StringBuilder builder) {
@@ -51,6 +78,26 @@ namespace Microsoft.Linq.Expressions {
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitParameter(this);
+        }
+    }
+
+    internal sealed class ByRefParameterExpression : ParameterExpression {
+        internal ByRefParameterExpression(Type type, string name, Annotations annotations)
+            : base(type, name, annotations) {
+        }
+
+        internal override bool GetIsByRef() {
+            return true;
+        }
+    }
+
+    internal sealed class VariableExpression : ParameterExpression {
+        internal VariableExpression(Type type, string name, Annotations annotations)
+            : base(type, name, annotations) {
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Parameter;
         }
     }
 
@@ -72,7 +119,7 @@ namespace Microsoft.Linq.Expressions {
                 type = type.GetElementType();
             }
 
-            return new ParameterExpression(type, name, annotations, byref);
+            return ParameterExpression.Make(type, name, annotations, byref);
         }
 
         public static ParameterExpression Variable(Type type, string name) {
@@ -82,7 +129,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(type != typeof(void), "type", Strings.ArgumentCannotBeOfTypeVoid);
             ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
-            return new ParameterExpression(ExpressionType.Parameter, type, name, annotations, false);
+            return ParameterExpression.Make(ExpressionType.Parameter, type, name, annotations, false);
         }
 
         //Variables must not be ByRef.
@@ -97,7 +144,8 @@ namespace Microsoft.Linq.Expressions {
             Assert.NotNull(vs);
             Assert.NotNull(collectionName);
             for (int i = 0; i < vs.Count; i++) {
-                if (vs[i] != null) {
+                if (vs[i] != null && vs[i].IsByRef) {
+                    // TODO: Just throw, don't call ContractUtils
                     ContractUtils.Requires(!vs[i].IsByRef, string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0}[{1}]", collectionName, i), Strings.VariableMustNotBeByRef);
                 }
             }

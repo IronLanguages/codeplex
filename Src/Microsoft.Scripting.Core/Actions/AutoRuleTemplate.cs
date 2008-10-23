@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="from">The original rule that is currently stored in the cache.  This rule may
         /// or may not be a templated rule.</param>
         /// <param name="to">The new rule produced by a binder.</param>
-        internal static Rule<T> CopyOrCreateTemplatedRule<T>(Rule<T> from, Rule<T> to) where T : class {
+        internal static CallSiteRule<T> CopyOrCreateTemplatedRule<T>(CallSiteRule<T> from, CallSiteRule<T> to) where T : class {
             List<ConstantExpression> newConstants;   // the constants which need to be replaced in our new rule.
             bool tooSpecific;
 
@@ -63,7 +63,7 @@ namespace Microsoft.Scripting.Actions {
                 // or we are further generalizing an existing rule.  We need to re-write the incoming tree 
                 // to be templated over the necessary constants and return the new rule bound to the template.
 
-                return new Rule<T>(newBody, null, new TemplateData<T>(), to.ReturnLabel, to.Parameters);
+                return new CallSiteRule<T>(newBody, null, new TemplateData<T>());
             }
 
             // we have compatible templated rules, we can just swap out the constant pool and 
@@ -82,10 +82,10 @@ namespace Microsoft.Scripting.Actions {
             }
 
             // create a new rule which is bound to the new delegate w/ the expression tree from the old code.            
-            return new Rule<T>(newBody, dlg, from.Template, to.ReturnLabel, to.Parameters);
+            return new CallSiteRule<T>(newBody, dlg, from.Template);
         }
 
-        private static Rule<T> FindCompatibleRuleForTemplate<T>(Rule<T> from, Rule<T> to, out List<ConstantExpression> newConstants, out bool tooSpecific) where T : class {
+        private static CallSiteRule<T> FindCompatibleRuleForTemplate<T>(CallSiteRule<T> from, CallSiteRule<T> to, out List<ConstantExpression> newConstants, out bool tooSpecific) where T : class {
             // no templates exist for this rule, just compare the raw trees...
             if (TreeComparer.Compare(to.Binding, from.Binding, out newConstants, out tooSpecific)) {
                 // the rules are not compatbile, don't add template values...

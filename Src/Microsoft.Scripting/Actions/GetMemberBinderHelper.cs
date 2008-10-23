@@ -33,12 +33,12 @@ namespace Microsoft.Scripting.Actions {
     /// 
     /// The target of the rule is built up using a series of block statements as the body.  
     /// </summary>
-    public class GetMemberBinderHelper<T> : MemberBinderHelper<T, OldGetMemberAction> where T : class {
+    public class GetMemberBinderHelper : MemberBinderHelper<OldGetMemberAction> {
         private Expression _instance;               // the expression the specifies the instance or null for rule.Parameters[0]
         private bool _isStatic;
 
-        public GetMemberBinderHelper(CodeContext context, OldGetMemberAction action, object[] args)
-            : base(context, action, args) {
+        public GetMemberBinderHelper(CodeContext context, OldGetMemberAction action, object[] args, RuleBuilder rule)
+            : base(context, action, args, rule) {
         }
 
         public Expression MakeMemberRuleTarget(Type instanceType, params MemberInfo[] members) {
@@ -46,11 +46,9 @@ namespace Microsoft.Scripting.Actions {
             return MakeRuleBody(instanceType, members);
         }
 
-        public RuleBuilder<T> MakeNewRule() {
+        public void MakeNewRule() {
             Rule.MakeTest(StrongBoxType ?? CompilerHelpers.GetType(Target));
             Rule.Target = MakeGetMemberTarget();
-
-            return Rule;
         }
 
         public Expression MakeRuleBody(Type type, params MemberInfo[] members) {

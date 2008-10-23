@@ -15,10 +15,9 @@
 
 
 using System; using Microsoft;
+using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
 using Microsoft.Contracts;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -58,8 +57,8 @@ namespace Microsoft.Scripting.Actions {
             get { return DynamicActionKind.Call; }
         }
 
-        public override Rule<T> Bind<T>(object[] args) {
-            return _binder.Bind<T>(this, args);
+        public override Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
+            return Binder.Bind(this, args, parameters, returnLabel);
         }
 
         [StateIndependent]

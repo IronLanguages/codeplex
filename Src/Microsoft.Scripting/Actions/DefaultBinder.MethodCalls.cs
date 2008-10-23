@@ -365,7 +365,7 @@ namespace Microsoft.Scripting.Actions {
         /// Pulls out the right argument to build the splat test.  MakeParamsTest makes the actual test.
         /// </summary>
         private static Restrictions MakeParamsArrayTest(CallTypes callType, CallSignature signature, bool testTypes, IList<MetaObject> args) {
-            int listIndex = signature.IndexOf(ArgumentKind.List);
+            int listIndex = signature.IndexOf(ArgumentType.List);
             Debug.Assert(listIndex != -1);
             if (callType == CallTypes.ImplicitInstance) {
                 listIndex++;
@@ -381,7 +381,7 @@ namespace Microsoft.Scripting.Actions {
         private static Restrictions MakeParamsTest(object paramArg, Expression listArg, bool testTypes) {
             IList<object> coll = (IList<object>)paramArg;
 
-            Restrictions res = Restrictions.ExpressionRestriction(
+            Restrictions res = Restrictions.GetExpressionRestriction(
                 Ast.AndAlso(
                     Ast.TypeIs(listArg, typeof(IList<object>)),
                     Ast.Equal(
@@ -397,7 +397,7 @@ namespace Microsoft.Scripting.Actions {
             if (testTypes) {
                 for (int i = 0; i < coll.Count; i++) {
                     res = res.Merge(
-                        Restrictions.TypeRestriction(
+                        Restrictions.GetTypeRestriction(
                             Ast.Call(
                                 Ast.ConvertHelper(
                                     listArg,
@@ -440,7 +440,7 @@ namespace Microsoft.Scripting.Actions {
                 index++;
             }
 
-            return Restrictions.ExpressionRestriction(
+            return Restrictions.GetExpressionRestriction(
                 Ast.AndAlso(
                     Ast.TypeIs(args[args.Count - 1].Expression, typeof(IDictionary)),
                     Ast.Call(
@@ -485,17 +485,17 @@ namespace Microsoft.Scripting.Actions {
             List<MetaObject> namedObjects = null;
             for (int i = 0; i < args.Count; i++) {
                 switch (signature.GetArgumentKind(i)) {
-                    case ArgumentKind.Named:
+                    case ArgumentType.Named:
                         if (namedObjects == null) {
                             namedObjects = new List<MetaObject>();
                         }
                         namedObjects.Add(args[i]);
                         break;
-                    case ArgumentKind.Simple:
-                    case ArgumentKind.Instance:
+                    case ArgumentType.Simple:
+                    case ArgumentType.Instance:
                         res.Add(args[i]);
                         break;
-                    case ArgumentKind.List:
+                    case ArgumentType.List:
                         IList<object> list = args[i].Value as IList<object>;
                         if (list == null) return null;
 
@@ -516,7 +516,7 @@ namespace Microsoft.Scripting.Actions {
                             );
                         }
                         break;
-                    case ArgumentKind.Dictionary:
+                    case ArgumentType.Dictionary:
                         // caller needs to process these...
                         break;
                     default:

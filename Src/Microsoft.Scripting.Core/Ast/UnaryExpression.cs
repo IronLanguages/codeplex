@@ -24,12 +24,28 @@ namespace Microsoft.Linq.Expressions {
     public sealed class UnaryExpression : Expression {
         private readonly Expression _operand;
         private readonly MethodInfo _method;
+        private readonly ExpressionType _nodeType;
+        private readonly Type _type;
 
         internal UnaryExpression(Annotations annotations, ExpressionType nodeType, Expression expression, Type type, MethodInfo method)
-            : base(nodeType, type, annotations) {
+            : base(annotations) {
 
             _operand = expression;
             _method = method;
+            _nodeType = nodeType;
+            _type = type;
+        }
+
+        protected override Type GetExpressionType() {
+            return _type;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return _nodeType;
         }
 
         public Expression Operand {
@@ -201,48 +217,17 @@ namespace Microsoft.Linq.Expressions {
             }
             throw Error.CoercionOperatorNotDefined(expression.Type, convertToType);
         }
+
         //CONFORMING
         private static UnaryExpression GetUserDefinedCoercion(ExpressionType coercionType, Expression expression, Type convertToType, Annotations annotations) {
-            // check for implicit coercions first
-            Type nnExprType = TypeUtils.GetNonNullableType(expression.Type);
-            Type nnConvType = TypeUtils.GetNonNullableType(convertToType);
-            // try exact match on types
-            MethodInfo[] eMethods = nnExprType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            MethodInfo method = FindConversionOperator(eMethods, expression.Type, convertToType);
+            MethodInfo method = TypeUtils.GetUserDefinedCoercionMethod(expression.Type, convertToType, false);
             if (method != null) {
                 return new UnaryExpression(annotations, coercionType, expression, convertToType, method);
+            } else {
+                return null;
             }
-            MethodInfo[] cMethods = nnConvType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            method = FindConversionOperator(cMethods, expression.Type, convertToType);
-            if (method != null) {
-                return new UnaryExpression(annotations, coercionType, expression, convertToType, method);
-            }
-            // try lifted conversion
-            if (nnExprType != expression.Type || nnConvType != convertToType) {
-                method = FindConversionOperator(eMethods, nnExprType, nnConvType);
-                if (method == null) {
-                    method = FindConversionOperator(cMethods, nnExprType, nnConvType);
-                }
-                if (method != null) {
-                    return new UnaryExpression(annotations, coercionType, expression, convertToType, method);
-                }
-            }
-            return null;
         }
-        //CONFORMING
-        private static MethodInfo FindConversionOperator(MethodInfo[] methods, Type typeFrom, Type typeTo) {
-            foreach (MethodInfo mi in methods) {
-                if (mi.Name != "op_Implicit" && mi.Name != "op_Explicit")
-                    continue;
-                if (mi.ReturnType != typeTo)
-                    continue;
-                ParameterInfo[] pis = mi.GetParametersCached();
-                if (pis[0].ParameterType != typeFrom)
-                    continue;
-                return mi;
-            }
-            return null;
-        }
+
         //CONFORMING
         private static UnaryExpression GetMethodBasedCoercionOperator(ExpressionType unaryType, Expression operand, Type convertToType, MethodInfo method, Annotations annotations) {
             System.Diagnostics.Debug.Assert(method != null);
@@ -269,7 +254,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static UnaryExpression Negate(Expression expression, MethodInfo method) {
             return Negate(expression, method, null);
-        }        
+        }
         public static UnaryExpression Negate(Expression expression, MethodInfo method, Annotations annotations) {
             RequiresCanRead(expression, "expression");
             if (method == null) {

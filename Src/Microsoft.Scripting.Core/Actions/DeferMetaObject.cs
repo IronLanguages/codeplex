@@ -22,37 +22,37 @@ namespace Microsoft.Scripting.Actions {
             : base(expression, restrictions) {
         }
 
-        public override MetaObject Call(CallAction action, MetaObject[] args) {
+        public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args.AddFirst(this));
         }
 
-        public override MetaObject Convert(ConvertAction action) {
+        public override MetaObject BindConvert(ConvertBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(this);
         }
 
-        public override MetaObject Create(CreateAction action, MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args.AddFirst(this));
         }
 
-        public override MetaObject DeleteMember(DeleteMemberAction action) {
+        public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(this);
         }
 
-        public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(args);
         }
 
-        public override MetaObject GetMember(GetMemberAction action) {
+        public override MetaObject BindGetMember(GetMemberBinder action) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(this);
         }
 
-        public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
+        public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
             ContractUtils.RequiresNotNull(action, "action");
             return action.Defer(this, value);
         }

@@ -18,7 +18,7 @@ using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     // TODO: Can it be made internal?
     public sealed class ComTypeLibInfo : IDynamicObject  {
         private readonly ComTypeLibDesc _typeLibDesc;

@@ -23,18 +23,16 @@ namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-    public class DeleteMemberBinderHelper<T> : MemberBinderHelper<T, OldDeleteMemberAction> where T : class {
+    public class DeleteMemberBinderHelper : MemberBinderHelper<OldDeleteMemberAction> {
         private bool _isStatic;
 
-        public DeleteMemberBinderHelper(CodeContext context, OldDeleteMemberAction action, object[] args)
-            : base(context, action, args) {
+        public DeleteMemberBinderHelper(CodeContext context, OldDeleteMemberAction action, object[] args, RuleBuilder rule)
+            : base(context, action, args, rule) {
         }
 
-        public RuleBuilder<T> MakeRule() {
+        public void MakeRule() {
             Rule.MakeTest(StrongBoxType ?? CompilerHelpers.GetType(Target));
             Rule.Target = MakeDeleteMemberTarget();
-
-            return Rule;            
         }
 
         private Expression MakeDeleteMemberTarget() {

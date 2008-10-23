@@ -20,14 +20,31 @@ using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public sealed class NewArrayExpression : Expression {
+    public class NewArrayExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
+        private readonly Type _type;
 
-        internal NewArrayExpression(Annotations annotations, ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(nodeType, type, annotations) {
+        internal NewArrayExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
+            : base(annotations) {
             _expressions = expressions;
+            _type = type;
         }
 
+        internal static NewArrayExpression Make(Annotations annotations, ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions) {
+            if (nodeType == ExpressionType.NewArrayInit) {
+                return new NewArrayInitExpression(annotations, type, expressions);
+            } else {
+                return new NewArrayBoundsExpression(annotations, type, expressions);
+            }
+        }
+
+        protected override Type GetExpressionType() {
+            return _type;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
+        }
 
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
@@ -63,6 +80,28 @@ namespace Microsoft.Linq.Expressions {
         }
     }
 
+    public class NewArrayInitExpression : NewArrayExpression {
+        public NewArrayInitExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
+            : base(annotations, type, expressions) {
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.NewArrayInit;
+        }
+
+    }
+
+    public class NewArrayBoundsExpression : NewArrayExpression {
+        public NewArrayBoundsExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
+            : base(annotations, type, expressions) {
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.NewArrayBounds;
+        }
+
+    }
+    
     /// <summary>
     /// Factory methods.
     /// </summary>
@@ -129,7 +168,7 @@ namespace Microsoft.Linq.Expressions {
                 initializerList = new ReadOnlyCollection<Expression>(newList);
             }
 
-            return new NewArrayExpression(annotations, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
+            return NewArrayExpression.Make(annotations, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
         }
 
         #endregion
@@ -166,7 +205,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return new NewArrayExpression(annotations, ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), bounds.ToReadOnly());
+            return NewArrayExpression.Make(annotations, ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), bounds.ToReadOnly());
         }
 
         #endregion
@@ -209,7 +248,7 @@ namespace Microsoft.Linq.Expressions {
                 initializerList = new ReadOnlyCollection<Expression>(clone);
             }
 
-            return new NewArrayExpression(Annotations.Empty, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
+            return NewArrayExpression.Make(Annotations.Empty, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
         }
 
     }

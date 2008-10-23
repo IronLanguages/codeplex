@@ -20,7 +20,7 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     // First attempt at simple splatting call site helper
     // TODO: move to COM, that's the only place it's used
     public sealed partial class SplatCallSite {

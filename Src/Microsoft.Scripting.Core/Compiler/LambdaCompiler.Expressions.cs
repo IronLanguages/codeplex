@@ -16,6 +16,7 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.SymbolStore;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -56,7 +57,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     Emit((AssignmentExpression)node, EmitAs.Void);
                     break;
                 case ExpressionType.Block:
-                    Emit((Block)node, EmitAs.Void);
+                    Emit((BlockExpression)node, EmitAs.Void);
                     break;
                 default:
                     EmitExpression(node, false);
@@ -354,34 +355,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //CONFORMING
         private void EmitConstant(object value, Type type) {
             // Try to emit the constant directly into IL
-            if (_ilg.TryEmitConstant(value, type)) {
+            if (ILGen.CanEmitConstant(value, type)) {
+                _ilg.EmitConstant(value, type);
                 return;
             }
 
-            if (_boundConstants == null) {
-                throw Error.RtConstRequiresBundDelegate();
-            }
+            Debug.Assert(_dynamicMethod); // constructor enforces this
 
-            type = TypeUtils.GetConstantType(type);
-
-            int index;
-            if (!_constantCache.TryGetValue(value, out index)) {
-                index = _boundConstants.Count;
-                _boundConstants.Add(value);
-                _constantCache.Add(value, index);
-            }
-
-            // TODO: optimize to cache the constant in an IL local
-            // (requires a tree walk before we start compiling)
-            EmitClosureArgument();
-            _ilg.Emit(OpCodes.Ldfld, typeof(Closure).GetField("Constants"));
-            _ilg.EmitInt(index);
-            _ilg.Emit(OpCodes.Ldelem_Ref);
-            if (type.IsValueType) {
-                _ilg.Emit(OpCodes.Unbox_Any, type);
-            } else if (type != typeof(object)) {
-                _ilg.Emit(OpCodes.Castclass, type);
-            }
+            _boundConstants.EmitConstant(this, value, type);
         }
 
         private void EmitDynamicExpression(Expression expr) {
@@ -532,7 +513,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EmitLocalScopeExpression(Expression expr) {
-            LocalScopeExpression node = (LocalScopeExpression)expr;
+            RuntimeVariablesExpression node = (RuntimeVariablesExpression)expr;
             _scope.EmitVariableAccess(this, node.Variables);
         }
 
@@ -639,27 +620,39 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitScopeExpression(Expression expr) {
-            ScopeExpression node = (ScopeExpression)expr;
+        private void EmitDebugInfoExpression(Expression expr) {
+            var node = (DebugInfoExpression)expr;
 
-            // If we merged the scope, just emit the body
-            if (_scope.MergedScopes.Count > 0) {
-                expr = _scope.MergedScopes.Dequeue();
-                Debug.Assert(node == expr);
-
-                EmitExpression(node.Body);
+            if (!_emitDebugSymbols) {
+                // just emit the body
+                EmitExpression(node.Expression);
                 return;
             }
 
-            // bind & push scope
-            _scope = VariableBinder.Bind(_scope, expr);
-            _scope.EnterScope(this);
+            var symbolWriter = GetSymbolWriter(node.Document);
+            _ilg.MarkSequencePoint(symbolWriter, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn);
+            _ilg.Emit(OpCodes.Nop);
 
-            // emit body
-            EmitExpression(node.Body);
+            EmitExpression(node.Expression);
 
-            // pop scope
-            _scope = _scope.Parent;
+            // Clear the sequence point
+            // TODO: we should be smarter and only emit this if needed
+            // Annotations need to go away first though
+            _ilg.MarkSequencePoint(symbolWriter, 0xfeefee, 0, 0xfeefee, 0);
+            _ilg.Emit(OpCodes.Nop);
+        }
+
+        private ISymbolDocumentWriter GetSymbolWriter(SymbolDocumentInfo document) {
+            Debug.Assert(_emitDebugSymbols);
+
+            ISymbolDocumentWriter result;
+            if (!_symbolWriters.TryGetValue(document, out result)) {
+                var module = (ModuleBuilder)_typeBuilder.Module;
+                result = module.DefineDocument(document.FileName, document.Language, document.LanguageVendor, SymbolGuids.DocumentType_Text);
+                _symbolWriters.Add(document, result);
+            }
+
+            return result;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
@@ -958,13 +951,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         _ilg.Emit(OpCodes.Br_S, exit);
 
                         _ilg.MarkLabel(exitAllNull);
-                        // TODO: emitting the bool as constant doesn't seem right
-                        EmitConstant(nodeType == ExpressionType.Equal, typeof(bool));
+                        _ilg.EmitBoolean(nodeType == ExpressionType.Equal);
                         _ilg.Emit(OpCodes.Br_S, exit);
 
                         _ilg.MarkLabel(exitAnyNull);
-                        // TODO: emitting the bool as constant doesn't seem right
-                        EmitConstant(nodeType == ExpressionType.NotEqual, typeof(bool));
+                        _ilg.EmitBoolean(nodeType == ExpressionType.NotEqual);
 
                         _ilg.MarkLabel(exit);
                         return;

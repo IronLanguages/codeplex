@@ -30,12 +30,12 @@ namespace Microsoft.Scripting.Interpretation {
     /// full variable binding pass, something the interpreter doesn't need
     /// today. The only thing that this breaks is Python's func_closure
     /// </summary>
-    internal sealed class InterpreterVariables : ILocalVariables {
+    internal sealed class InterpreterVariables : IRuntimeVariables {
         private readonly InterpreterState _state;
         private readonly ReadOnlyCollection<ParameterExpression> _vars;
         private ReadOnlyCollection<string> _names;
 
-        internal InterpreterVariables(InterpreterState state, LocalScopeExpression node) {
+        internal InterpreterVariables(InterpreterState state, RuntimeVariablesExpression node) {
             _state = state;
             _vars = node.Variables;
         }

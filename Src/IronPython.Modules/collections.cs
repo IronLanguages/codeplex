@@ -699,7 +699,7 @@ namespace IronPython.Modules {
 
             public defaultdict(CodeContext/*!*/ context) {
                 _missingSite = CallSite<Func<CallSite, CodeContext, object, object>>.Create(
-                    new InvokeBinder(
+                    new PythonInvokeBinder(
                         PythonContext.GetContext(context).DefaultBinderState,
                         new CallSignature(0)
                     )

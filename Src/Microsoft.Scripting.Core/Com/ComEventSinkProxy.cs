@@ -24,7 +24,7 @@ using System.Runtime.Remoting.Proxies;
 using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// ComEventSinkProxy class is responsible for handling QIs for sourceIid 
     /// on instances of ComEventSink.

@@ -22,7 +22,7 @@ using System.Text;
 using Marshal = System.Runtime.InteropServices.Marshal;
 using VarEnum = System.Runtime.InteropServices.VarEnum;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     // TODO: Can it be made internal?
     /// <summary>

@@ -23,6 +23,10 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
+    internal enum VariableStorageKind {
+        Local,
+        Hoisted
+    }
 
     /// <summary>
     /// CompilerScope is the data structure which the Compiler keeps information
@@ -32,93 +36,65 @@ namespace Microsoft.Linq.Expressions.Compiler {
     ///   3. Information for resolving closures
     /// 
     /// Instances are produced by VariableBinder, which does a tree walk
-    /// looking for scope nodes: LambdaExpression and ScopeExpression.
+    /// looking for scope nodes: LambdaExpression and BlockExpression.
     /// </summary>
     internal sealed partial class CompilerScope {
-        // parent scope, if any
-        internal readonly CompilerScope Parent;
-        
-        // the expression node for this scope
-        internal readonly Expression Expression;
-
-        // Does this scope (or any inner scope) close over variables from any
-        // parent scope?
-        // TODO: We could simply logic across the system if we removed this,
-        // and always add the Closure parameter to nested lambdas.
-        internal readonly bool IsClosure;
+        /// <summary>
+        /// parent scope, if any
+        /// </summary>
+        private CompilerScope _parent;
 
         /// <summary>
-        /// Scopes that were merged into this one, so we remember not to bind them
+        /// The expression node for this scope
         /// </summary>
-        internal readonly Queue<Expression> MergedScopes;
+        internal readonly Expression Node;
 
-        // The scope's hoisted locals, if any.
-        // Provides storage for variables that are referenced from nested lambdas
-        private readonly HoistedLocals _hoistedLocals;
+        /// <summary>
+        /// Does this scope (or any inner scope) close over variables from any
+        /// parent scope?
+        /// Populated by VariableBinder
+        /// </summary>
+        internal bool NeedsClosure;
+
+        /// <summary>
+        /// Variables defined in this scope, and whether they're hoisted or not
+        /// Populated by VariableBinder
+        /// </summary>
+        internal readonly Dictionary<ParameterExpression, VariableStorageKind> Definitions = new Dictionary<ParameterExpression, VariableStorageKind>();
+
+        /// <summary>
+        /// Each variable referenced within this scope, and how often it was referenced
+        /// Populated by VariableBinder
+        /// </summary>
+        internal readonly Dictionary<ParameterExpression, int> ReferenceCount = new Dictionary<ParameterExpression, int>();
+
+        /// <summary>
+        /// Scopes whose variables were merged into this one
+        /// </summary>
+        internal readonly Set<BlockExpression> MergedScopes = new Set<BlockExpression>();
+
+        /// <summary>
+        /// The scope's hoisted locals, if any.
+        /// Provides storage for variables that are referenced from nested lambdas
+        /// </summary>
+        private HoistedLocals _hoistedLocals;
 
         /// <summary>
         /// The closed over hoisted locals
         /// </summary>
-        private readonly HoistedLocals _closureHoistedLocals;
-
-        // variables defined in this scope but not hoisted
-        private readonly ReadOnlyCollection<ParameterExpression> _localVars;
-
-        // Mutable dictionary that maps non-hoisted variables to either local
-        // slots or argument slots
-        private readonly Dictionary<Expression, Storage> _locals = new Dictionary<Expression, Storage>();
+        private HoistedLocals _closureHoistedLocals;
 
         /// <summary>
-        /// Variables that should be cached into locals, if they're hoisted
+        /// Mutable dictionary that maps non-hoisted variables to either local
+        /// slots or argument slots
         /// </summary>
-        private readonly Set<ParameterExpression> _cachedVars;
+        private readonly Dictionary<ParameterExpression, Storage> _locals = new Dictionary<ParameterExpression, Storage>();
 
-        internal CompilerScope(
-            CompilerScope parent,
-            Expression expression,
-            bool isClosure,
-            ParameterExpression hoistedSelfVar,
-            ReadOnlyCollection<ParameterExpression> hoistedVars,
-            ReadOnlyCollection<ParameterExpression> localVars,
-            Queue<Expression> mergedScopes,
-            Set<ParameterExpression> cachedVars
-        ) {
-            Assert.NotNull(expression, hoistedVars, localVars);
-
-            IsClosure = isClosure;
-            Parent = parent;
-            Expression = expression;
-            MergedScopes = mergedScopes;
-            _localVars = localVars;
-            _cachedVars = cachedVars;
-
-            // No two scopes share the same parent
-            Debug.Assert(Parent == null || Parent.Expression != Expression);
-
-            HoistedLocals locals = null;
-            CompilerScope s = this;
-            while (s.IsClosure && locals == null) {
-                s = s.Parent;
-                Debug.Assert(s != null);
-                locals = s._hoistedLocals;
+        internal CompilerScope(Expression node) {
+            Node = node;
+            foreach (var v in GetVariables(node)) {
+                Definitions.Add(v, VariableStorageKind.Local);
             }
-            _closureHoistedLocals = locals;
-
-            if (hoistedVars.Count > 0) {
-                _hoistedLocals = new HoistedLocals(_closureHoistedLocals, hoistedSelfVar, hoistedVars);
-            }
-
-            DumpScope();
-        }
-
-        /// <summary>
-        /// Indicates that this scope has hoisted variables
-        /// 
-        /// These are either closed over from a parent scope, or hoisted so we
-        /// can provide access via the Expression.LocalVariables() intrinsic.
-        /// </summary>
-        internal bool HasHoistedLocals {
-            get { return _hoistedLocals != null; }
         }
 
         /// <summary>
@@ -129,42 +105,49 @@ namespace Microsoft.Linq.Expressions.Compiler {
             get { return _hoistedLocals ?? _closureHoistedLocals; }
         }
 
-        internal LambdaExpression Lambda {
-            get {
-                CompilerScope cs = this;
-                while (cs.IsScopeExpression) {
-                    cs = cs.Parent;
-                }
-                return (LambdaExpression)cs.Expression;
-            }
-        }
-
         /// <summary>
-        /// Called when entering a lambda. Performs all variable allocation
+        /// Called when entering a lambda/block. Performs all variable allocation
         /// needed, including creating hoisted locals and IL locals for accessing
         /// parent locals
         /// </summary>
-        internal void EnterLambda(LambdaCompiler lc) {            
+        internal CompilerScope Enter(LambdaCompiler lc, CompilerScope parent) {
+            SetParent(lc, parent);
+
             AllocateLocals(lc);
 
-            if (_closureHoistedLocals != null) {
+            if (IsLambda && _closureHoistedLocals != null) {
                 EmitClosureAccess(lc, _closureHoistedLocals);
             }
 
             EmitNewHoistedLocals(lc);
-            EmitCachedVariables();
+
+            if (IsLambda) {
+                EmitCachedVariables();
+            }
+
+            return this;
         }
 
         /// <summary>
-        /// Called when entering a scope. Performs all variable allocation
-        /// needed, including creating hoisted locals and IL locals for accessing
-        /// parent locals
+        /// Frees unnamed locals, clears state associated with this compiler
         /// </summary>
-        internal void EnterScope(LambdaCompiler lc) {
-            Debug.Assert(Expression.NodeType == ExpressionType.Scope);
+        internal CompilerScope Exit() {
+            // free scope's variables
+            if (!IsLambda) {
+                foreach (Storage storage in _locals.Values) {
+                    storage.FreeLocal();
+                }
+            }
+            
+            // Clear state that is associated with this parent
+            // (because the scope can be reused in another context)
+            CompilerScope parent = _parent;
+            _parent = null;
+            _hoistedLocals = null;
+            _closureHoistedLocals = null;
+            _locals.Clear();
 
-            AllocateLocals(lc);
-            EmitNewHoistedLocals(lc);
+            return parent;
         }
 
         #region LocalScopeExpression support
@@ -215,9 +198,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// Adds a new virtual variable corresponding to an IL local
         /// </summary>
         internal void AddLocal(LambdaCompiler gen, ParameterExpression variable) {
-            if (!_locals.ContainsKey(variable)) {
-                _locals.Add(variable, new LocalStorage(gen, variable));
-            }
+            _locals.Add(variable, new LocalStorage(gen, variable));
         }
 
         internal void EmitGet(ParameterExpression variable) {
@@ -242,14 +223,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// </summary>
         private Storage ResolveVariable(ParameterExpression variable, HoistedLocals hoistedLocals) {
             // Search IL locals and arguments, but only in this lambda
-            for (CompilerScope s = this; s != null; s = s.Parent) {
+            for (CompilerScope s = this; s != null; s = s._parent) {
                 Storage storage;
                 if (s._locals.TryGetValue(variable, out storage)) {
                     return storage;
                 }
 
                 // if this is a lambda, we're done
-                if (!s.IsScopeExpression) {
+                if (s.IsLambda) {
                     break;
                 }
             }
@@ -267,21 +248,32 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // If this is a genuine unbound variable, the error should be
-            // thrown in VariableBinder
-            Debug.Assert(
-                false, 
-                Strings.UndefinedVariable(variable.Name, variable.Type, GetName(Expression))
-            );
-
-            throw Error.UndefinedVariable(variable.Name, variable.Type, GetName(Expression));
+            // thrown in VariableBinder.
+            throw Error.UndefinedVariable(variable.Name, variable.Type, CurrentLambdaName);
         }
 
         #endregion
         
         // private methods:
 
-        private bool IsScopeExpression {
-            get { return Expression.NodeType == ExpressionType.Scope; }
+        private bool IsLambda {
+            get { return Node.NodeType == ExpressionType.Lambda; }
+        }
+
+        private void SetParent(LambdaCompiler lc, CompilerScope parent) {
+            Debug.Assert(_parent == null && parent != this);
+            _parent = parent;
+
+            if (NeedsClosure && _parent != null) {
+                _closureHoistedLocals = _parent.NearestHoistedLocals;
+            }
+
+            var hoistedVars = GetVariables().Where(p => Definitions[p] == VariableStorageKind.Hoisted).ToReadOnly();
+
+            if (hoistedVars.Count > 0) {
+                _hoistedLocals = new HoistedLocals(_closureHoistedLocals, hoistedVars);
+                AddLocal(lc, _hoistedLocals.SelfVariable);
+            }
         }
 
         // Emits creation of the hoisted local storage
@@ -317,7 +309,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     lc.IL.Emit(OpCodes.Newobj, boxType.GetConstructor(Type.EmptyTypes));
                 }
                 // if we want to cache this into a local, do it now
-                if (_cachedVars.Contains(v) && !_locals.ContainsKey(v)) {
+                if (ShouldCache(v) && !_locals.ContainsKey(v)) {
                     lc.IL.Emit(OpCodes.Dup);
                     CacheBoxToLocal(lc, v);
                 }
@@ -333,19 +325,28 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // StrongBox<T> in an IL local, which saves an array index and a cast
         // when we go to look it up later
         private void EmitCachedVariables() {
-            foreach (var v in _cachedVars) {
-                if (!_locals.ContainsKey(v)) {
-                    var storage = ResolveVariable(v) as ElementBoxStorage;
-                    if (storage != null) {
-                        storage.EmitLoadBox();
-                        CacheBoxToLocal(storage.Compiler, v);
+            foreach (var v in GetVariables()) {
+                if (ShouldCache(v)) {
+                    if (!_locals.ContainsKey(v)) {
+                        var storage = ResolveVariable(v) as ElementBoxStorage;
+                        if (storage != null) {
+                            storage.EmitLoadBox();
+                            CacheBoxToLocal(storage.Compiler, v);
+                        }
                     }
                 }
             }
         }
 
+        private bool ShouldCache(ParameterExpression v) {
+            // TODO: this caching is probably too aggressive in the face of
+            // conditionals
+            int count;
+            return ReferenceCount.TryGetValue(v, out count) && count > 2;
+        }
+
         private void CacheBoxToLocal(LambdaCompiler lc, ParameterExpression v) {
-            Debug.Assert(_cachedVars.Contains(v) && !_locals.ContainsKey(v));
+            Debug.Assert(ShouldCache(v) && !_locals.ContainsKey(v));
             var local = new LocalBoxStorage(lc, v);
             local.EmitStoreBox();
             _locals.Add(v, local);
@@ -376,70 +377,51 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // Allocates slots for IL locals or IL arguments
         private void AllocateLocals(LambdaCompiler lc) {
-            foreach (ParameterExpression v in _localVars) {
-                Storage s;
-                //If v is in lc.Parameters, it is a parameter.
-                //Otherwise, it is a local variable.
-                if (lc.Parameters.Contains(v)) {
-                    s = new ArgumentStorage(lc, v);
-                } else {
-                    s = new LocalStorage(lc, v);
+            foreach (ParameterExpression v in GetVariables()) {
+                if (Definitions[v] == VariableStorageKind.Local) {
+                    Storage s;
+                    //If v is in lc.Parameters, it is a parameter.
+                    //Otherwise, it is a local variable.
+                    if (lc.Parameters.Contains(v)) {
+                        s = new ArgumentStorage(lc, v);
+                    } else {
+                        s = new LocalStorage(lc, v);
+                    }
+                    _locals.Add(v, s);
                 }
-                _locals.Add(v, s);
             }
         }
 
-        #region helper methods
-
-        // Gets the name of the lambda, scope, or variable
-        internal static string GetName(Expression e) {
-            switch (e.NodeType) {
-                case ExpressionType.Lambda:
-                    return ((LambdaExpression)e).Name;
-                case ExpressionType.Scope:
-                    return ((ScopeExpression)e).Name;
-                default: throw Assert.Unreachable;
+        private IList<ParameterExpression> GetVariables() {
+            var vars = GetVariables(Node);
+            if (MergedScopes.Count == 0) {
+                return vars;
             }
+            var list = new List<ParameterExpression>(vars);
+            foreach (var block in MergedScopes) {
+                list.AddRange(block.Variables);
+            }
+            return list;
         }
 
-
-        [Conditional("DEBUG")]
-        private void DumpScope() {
-            if (!DebugOptions.ShowScopes) {
-                return;
+        private static ReadOnlyCollection<ParameterExpression> GetVariables(Expression scope) {
+            var lambda = scope as LambdaExpression;
+            if (lambda != null) {
+                return lambda.Parameters;
             }
+            return ((BlockExpression)scope).Variables;
+        }
 
-            System.IO.TextWriter output = Console.Out;
-#if !SILVERLIGHT
-            ConsoleColor color = Console.ForegroundColor;
-            try {
-                if (Console.BackgroundColor == ConsoleColor.White) {
-                    Console.ForegroundColor = ConsoleColor.DarkCyan;
-                } else {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                }
-#endif
-                output.WriteLine("scope {0}({1}):", GetName(Expression), (Parent != null) ? GetName(Parent.Expression) : "");
-                if (_localVars.Count > 0) {
-                    output.WriteLine("  locals {0}:", _localVars.Count);
-                    foreach (var v in _localVars) {
-                        output.WriteLine("    {0}", v.Name);
+        private string CurrentLambdaName {
+            get {
+                CompilerScope s = this;
+                while (true) {
+                    var lambda = s.Node as LambdaExpression;
+                    if (lambda != null) {
+                        return lambda.Name;
                     }
                 }
-                if (_hoistedLocals != null) {
-                    output.WriteLine("  hoisted {0}:", _hoistedLocals.Variables.Count);
-                    foreach (var v in _hoistedLocals.Variables) {
-                        output.WriteLine("    {0}", v.Name);
-                    }
-                }
-#if !SILVERLIGHT
-            } finally {
-                Console.ForegroundColor = color;
             }
-#endif
         }
-
-        #endregion
-
     }
 }

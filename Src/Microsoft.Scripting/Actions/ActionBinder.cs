@@ -25,6 +25,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -44,9 +45,10 @@ namespace Microsoft.Scripting.Actions {
             _manager = manager;
         }
 
-        public virtual Rule<T> Bind<T>(OldDynamicAction action, object[] args) where T : class {
-            RuleBuilder<T> builder = MakeRule<T>(action, args);
-            if (builder != null) {
+        public virtual Expression Bind(OldDynamicAction action, object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
+            var builder = new RuleBuilder(parameters, returnLabel);
+            MakeRule(action, args, builder);
+            if (builder.Target != null) {
                 return builder.CreateRule();
             }
             return null;
@@ -61,11 +63,10 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Produces a rule for the specified Action for the given arguments.
         /// </summary>
-        /// <typeparam name="T">The type of the DynamicSite the rule is being produced for.</typeparam>
         /// <param name="action">The Action that is being performed.</param>
         /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
-        /// <returns></returns>
-        protected abstract RuleBuilder<T> MakeRule<T>(OldDynamicAction action, object[] args) where T : class;
+        /// <param name="rule">The rule builder that will hold the result</param>
+        protected abstract void MakeRule(OldDynamicAction action, object[] args, RuleBuilder rule);
 
         /// <summary>
         /// Converts an object at runtime into the specified type.
@@ -352,7 +353,7 @@ namespace Microsoft.Scripting.Actions {
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
         /// </summary>
-        public virtual Expression MakeReadOnlyMemberError<T>(RuleBuilder<T> rule, Type type, string name) where T : class {
+        public virtual Expression MakeReadOnlyMemberError(RuleBuilder rule, Type type, string name) {
             return rule.MakeError(
                 Expression.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
@@ -365,8 +366,8 @@ namespace Microsoft.Scripting.Actions {
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
         /// </summary>
-        public virtual Expression MakeUndeletableMemberError<T>(RuleBuilder<T> rule, Type type, string name) where T : class {
-            return MakeReadOnlyMemberError<T>(rule, type, name);
+        public virtual Expression MakeUndeletableMemberError(RuleBuilder rule, Type type, string name) {
+            return MakeReadOnlyMemberError(rule, type, name);
         }
 
         #endregion

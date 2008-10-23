@@ -18,20 +18,20 @@ using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal class ComClassMetaObject : MetaObject {
         internal ComClassMetaObject(Expression expression, ComTypeClassDesc cls)
             : base(expression, Restrictions.Empty, cls) {
         }
 
-        public override MetaObject Create(CreateAction action, MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
             return new MetaObject(
                 Expression.Call(
                     Expression.ConvertHelper(Expression, typeof(ComTypeClassDesc)),
                     typeof(ComTypeClassDesc).GetMethod("CreateInstance")
                 ),
                 Restrictions.Combine(args).Merge(
-                    Restrictions.TypeRestriction(Expression, typeof(ComTypeClassDesc))
+                    Restrictions.GetTypeRestriction(Expression, typeof(ComTypeClassDesc))
                 )
             );
         }

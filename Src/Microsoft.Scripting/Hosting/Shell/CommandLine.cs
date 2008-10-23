@@ -38,6 +38,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected LanguageContext Language { get { return _language; } }
         protected ConsoleOptions Options { get { return _options; } }
         protected Scope Scope { get { return _scope; } set { _scope = value; } }
+        protected ScriptEngine Engine { get { return _engine; } }
 
         protected virtual string Prompt { get { return ">>> "; } }
         protected virtual string PromptContinuation { get { return "... "; } }

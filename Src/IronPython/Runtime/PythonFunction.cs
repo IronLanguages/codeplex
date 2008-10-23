@@ -529,12 +529,13 @@ namespace IronPython.Runtime {
 
         #region IOldDynamicObject Members
 
-        RuleBuilder<T> IOldDynamicObject.GetRule<T>(OldDynamicAction action, CodeContext context, object[] args) {
+        bool IOldDynamicObject.GetRule(OldDynamicAction action, CodeContext context, object[] args, RuleBuilder rule) {
             switch (action.Kind) {
                 case DynamicActionKind.Call:
-                    return new FunctionBinderHelper<T>(context, (OldCallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
+                    new FunctionBinderHelper(context, (OldCallAction)action, this, rule).MakeRule(ArrayUtils.RemoveFirst(args));
+                    return true;
             }
-            return null;
+            return false;
         }
         
         /// <summary>
@@ -551,33 +552,32 @@ namespace IronPython.Runtime {
         /// in the proper order (first try the list, then the dict, then the defaults).
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        class FunctionBinderHelper<T> : BinderHelper<T, OldCallAction> where T : class {
+        class FunctionBinderHelper : BinderHelper<OldCallAction> {
             private PythonFunction _func;                           // the function we're calling
-            private RuleBuilder<T> _rule = new RuleBuilder<T>();  // the rule we're producing
-            private ParameterExpression _dict, _params, _paramsLen;            // splatted dictionary & params + the initial length of the params array, null if not provided.
-            private List<Expression> _init;                          // a set of initialization code (e.g. creating a list for the params array)
+            private readonly RuleBuilder _rule;                     // the rule we're producing
+            private ParameterExpression _dict, _params, _paramsLen; // splatted dictionary & params + the initial length of the params array, null if not provided.
+            private List<Expression> _init;                         // a set of initialization code (e.g. creating a list for the params array)
             private Expression _error;                              // a custom error expression if the default needs to be overridden.
             private bool _extractedParams;                          // true if we needed to extract a parameter from the parameter list.
             private bool _extractedKeyword;                         // true if we needed to extract a parameter from the kw list.
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
             private Expression _paramlessCheck;                     // tests when we have no parameters
 
-            public FunctionBinderHelper(CodeContext context, OldCallAction action, PythonFunction function)
+            public FunctionBinderHelper(CodeContext context, OldCallAction action, PythonFunction function, RuleBuilder rule)
                 : base(context, action) {
                 _func = function;
+                _rule = rule;
             }
 
-            public RuleBuilder<T> MakeRule(object[] args) {
+            public void MakeRule(object[] args) {
                 //Remove the passed in instance argument if present
-                int instanceIndex = Action.Signature.IndexOf(ArgumentKind.Instance);
+                int instanceIndex = Action.Signature.IndexOf(ArgumentType.Instance);
                 if (instanceIndex > -1) {
                     args = ArrayUtils.RemoveAt(args, instanceIndex);
                 }
 
                 _rule.Target = MakeTarget(args);
                 _rule.Test = MakeTest();
-
-                return _rule;
             }
 
             /// <summary>
@@ -670,22 +670,22 @@ namespace IronPython.Runtime {
                 Expression[] exprArgs = new Expression[_func.NormalArgumentCount + _func.ExtraArguments];
                 List<Expression> extraArgs = null;
                 Dictionary<SymbolId, Expression> namedArgs = null;
-                int instanceIndex = Action.Signature.IndexOf(ArgumentKind.Instance);
+                int instanceIndex = Action.Signature.IndexOf(ArgumentType.Instance);
 
                 // walk all the provided args and find out where they go...
                 for (int i = 0; i < args.Length; i++) {
                     int parameterIndex = (instanceIndex == -1 || i < instanceIndex) ? i + 1 : i + 2;
 
                     switch (Action.Signature.GetArgumentKind(i)) {
-                        case ArgumentKind.Dictionary:
+                        case ArgumentType.Dictionary:
                             MakeDictionaryCopy(_rule.Parameters[parameterIndex]);
                             continue;
 
-                        case ArgumentKind.List:
+                        case ArgumentType.List:
                             _userProvidedParams = _rule.Parameters[parameterIndex];
                             continue;
 
-                        case ArgumentKind.Named:
+                        case ArgumentType.Named:
                             _extractedKeyword = true;
                             bool foundName = false;
                             for (int j = 0; j < _func.NormalArgumentCount; j++) {

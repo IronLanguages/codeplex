@@ -24,7 +24,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     public static class ComRuntimeHelpers {
 
@@ -233,7 +233,7 @@ namespace Microsoft.Scripting.Com {
         private static void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
             VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
             for (int i = 0; i < variantBuilders.Length; i++) {
-                variantBuilders[i].ArgBuilder.UpdateFromReturn(explicitArgs[i], argsForCall[i]);
+                variantBuilders[i].UpdateFromReturn(explicitArgs[i], argsForCall[i]);
             }
         }
 

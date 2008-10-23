@@ -30,10 +30,22 @@ namespace Microsoft.Linq.Expressions {
         private readonly LabelTarget _target;
 
         internal GotoExpression(GotoExpressionKind kind, LabelTarget target, Expression value, Annotations annotations)
-            : base(ExpressionType.Goto, typeof(void), annotations) {
+            : base(annotations) {
             _kind = kind;
             _value = value;
             _target = target;
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(void);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Goto;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
         }
 
         /// <summary>

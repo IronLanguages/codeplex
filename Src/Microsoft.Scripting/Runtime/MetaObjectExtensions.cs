@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Runtime {
             if (type == typeof(None)) {
                 return new MetaObject(
                     Expression.Null(),
-                    self.Restrictions.Merge(Restrictions.InstanceRestriction(self.Expression, null)),
+                    self.Restrictions.Merge(Restrictions.GetInstanceRestriction(self.Expression, null)),
                     self.Value
                 );
             }
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Runtime {
                         self.Expression,
                         CompilerHelpers.GetVisibleType(type)
                     ),
-                    self.Restrictions.Merge(Restrictions.TypeRestriction(self.Expression, type)),
+                    self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, type)),
                     self.Value
                 );
             }
@@ -79,7 +79,7 @@ namespace Microsoft.Scripting.Runtime {
                     self.Expression,
                     CompilerHelpers.GetVisibleType(type)
                 ),
-                self.Restrictions.Merge(Restrictions.TypeRestriction(self.Expression, type))
+                self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, type))
             );
         }
     }

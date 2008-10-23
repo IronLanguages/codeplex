@@ -25,7 +25,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This class implements an event sink for a particular RCW.
     /// Unlike the implementation of events in TlbImp'd assemblies,

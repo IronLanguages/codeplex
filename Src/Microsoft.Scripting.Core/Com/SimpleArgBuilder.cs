@@ -15,13 +15,11 @@
 using System; using Microsoft;
 #if !SILVERLIGHT
 
-using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Globalization;
-using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// SimpleArgBuilder produces the value produced by the user as the argument value.  It
     /// also tracks information about the original parameter and is used to create extended
@@ -29,85 +27,37 @@ namespace Microsoft.Scripting.Com {
     /// </summary>
     internal class SimpleArgBuilder : ArgBuilder {
         private Type _parameterType;
-        protected ParameterExpression _unmanagedTemp;
 
         internal SimpleArgBuilder(Type parameterType) {
             _parameterType = parameterType;
         }
 
-        internal virtual ParameterExpression CreateTemp() {
-            return Expression.Variable(_parameterType, "Temp" + _parameterType.Name);
-        }
-
-        internal override ParameterExpression[] TemporaryVariables {
-            get {
-                if (_unmanagedTemp != null) {
-                    return new ParameterExpression[] { _unmanagedTemp };
-                } else {
-                    return base.TemporaryVariables;
-                }
-            }
-        }
-
-        internal override Expression Unwrap(Expression parameter) {
+        internal override Expression Marshal(Expression parameter) {
             Debug.Assert(parameter != null);
-            return ConvertExpression(parameter, _parameterType);
+            return Expression.ConvertHelper(parameter, _parameterType);
         }
 
-        internal override Expression UnwrapByRef(Expression parameter) {
-            Debug.Assert(parameter != null);
+        // unmarshal new value back to be _parameterType
+        // trivial builder can just return the value.
+        // non trivial builders will override this function.
+        internal virtual Expression UnmarshalFromRef(Expression value) {
+            Debug.Assert(value != null && value.Type == _parameterType);
 
-            if (_unmanagedTemp == null) {
-                _unmanagedTemp = CreateTemp();
-            }
-
-            Debug.Assert(_unmanagedTemp != null);
-
-            return Expression.Comma(
-                Expression.Assign(
-                    _unmanagedTemp,
-                    ConvertExpression(parameter, _unmanagedTemp.Type)
-                ),
-                _unmanagedTemp
-            );
+            return value;
         }
 
-        internal override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
+        internal sealed override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
+            newValue = UnmarshalFromRef(newValue);
             Debug.Assert(newValue != null && newValue.Type == _parameterType);
 
             // parameter = newValue
-            return Expression.Assign(
-                parameter,
-                ConvertExpression(newValue, parameter.Type)
-            );
+            return Expression.Assign(parameter, Expression.ConvertHelper(newValue, parameter.Type));
         }
-
-        internal override Expression UpdateFromReturn(Expression parameter) {
-            if (_unmanagedTemp != null) {
-                return UpdateFromReturn(parameter, _unmanagedTemp);
-            } else {
-                return base.UpdateFromReturn(parameter);
-            }
-        }
-
 
 
 
         internal override object UnwrapForReflection(object arg) {
             return Convert(arg, _parameterType);
-        }
-
-        internal static Expression ConvertExpression(Expression expr, Type toType) {
-            if (TypeUtils.AreReferenceAssignable(toType, expr.Type)) {
-                return expr;
-            }
-            return Expression.ConvertHelper(expr, toType);
-        }
-
-        protected Type ParameterType {
-            get {
-                return _parameterType;
-            }
         }
 
         internal static object Convert(object obj, Type toType) {

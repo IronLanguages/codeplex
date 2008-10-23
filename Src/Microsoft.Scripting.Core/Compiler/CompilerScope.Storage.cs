@@ -24,9 +24,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private abstract class Storage {
             internal readonly LambdaCompiler Compiler;
-            internal readonly Expression Variable;
+            internal readonly ParameterExpression Variable;
 
-            internal Storage(LambdaCompiler compiler, Expression variable) {
+            internal Storage(LambdaCompiler compiler, ParameterExpression variable) {
                 Compiler = compiler;
                 Variable = variable;
             }
@@ -38,6 +38,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
             internal virtual void EmitStore(Storage value) {
                 value.EmitLoad();
                 EmitStore();
+            }
+
+            internal virtual void FreeLocal() {
             }
         }
 
@@ -59,6 +62,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             internal override void EmitAddress() {
                 Compiler.IL.Emit(OpCodes.Ldloca, _local);
+            }
+
+            internal override void FreeLocal() {
+                Compiler.FreeNamedLocal(_local, Variable.Name);
             }
         }
 
@@ -89,7 +96,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             private readonly Type _boxType;
             private readonly FieldInfo _boxValueField;
 
-            internal ElementBoxStorage(Storage array, int index, Expression variable)
+            internal ElementBoxStorage(Storage array, int index, ParameterExpression variable)
                 : base(array.Compiler, variable) {
                 _array = array;
                 _index = index;

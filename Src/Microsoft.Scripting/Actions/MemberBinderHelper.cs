@@ -26,17 +26,16 @@ using Microsoft.Scripting.Runtime;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
-    public class MemberBinderHelper<T, TActionKind> : BinderHelper<T, TActionKind>
-        where T : class
+    public class MemberBinderHelper<TActionKind> : BinderHelper<TActionKind>
         where TActionKind : OldMemberAction {
 
-        private RuleBuilder<T> _rule;              // the rule being produced
+        private readonly RuleBuilder _rule;              // the rule being produced
         private Type _strongBoxType;                // null or the specific instantiated type of StrongBox
         private object[] _args;                     // the arguments we're creating a rule for 
         private Expression _body = Ast.Empty();      // the body of the rule as it's built up
         private object _target;
 
-        public MemberBinderHelper(CodeContext context, TActionKind action, object []args)
+        public MemberBinderHelper(CodeContext context, TActionKind action, object[] args, RuleBuilder rule)
             : base(context, action) {
             ContractUtils.RequiresNotNull(args, "args");
             if (args.Length == 0) throw new ArgumentException("args must have at least one member");
@@ -49,7 +48,7 @@ namespace Microsoft.Scripting.Actions {
                 _target = ((IStrongBox)_target).Value;
             }
 
-            _rule = new RuleBuilder<T>();
+            _rule = rule;
         }
 
         protected object Target {
@@ -79,12 +78,9 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected RuleBuilder<T> Rule {
+        protected RuleBuilder Rule {
             get {
                 return _rule;
-            }
-            set {
-                _rule = value;
             }
         }
 
@@ -164,7 +160,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         /// <param name="expression"></param>
         protected void AddToBody(Expression expression) {
-            if (_body is EmptyStatement) {
+            if (_body is EmptyExpression) {
                 _body = expression;
             } else {
                 _body = Ast.Block(_body, expression);

@@ -13,6 +13,9 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+using System.Collections.ObjectModel;
+using Microsoft.Linq.Expressions;
+
 namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Class responsible for binding dynamic operations on the dynamic site.
@@ -24,14 +27,20 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Key used for the DLR caching
         /// </summary>
-        public abstract object HashCookie { get; }
+        public abstract object CacheIdentity { get; }
 
         /// <summary>
         /// The bind call to produce the binding.
         /// </summary>
-        /// <typeparam name="T">Delegate type</typeparam>
         /// <param name="args">Array of arguments to the call</param>
-        /// <returns>New rule.</returns>
-        public abstract Rule<T> Bind<T>(object[] args) where T : class;
+        /// <param name="parameters">Array of ParameterExpressions that represent to parameters of the call site</param>
+        /// <param name="returnLabel">LabelTarget used to return the result of the call site</param>
+        /// <returns>
+        /// An Expression that performs tests on the arguments, and
+        /// returns a result if the test is valid. If the tests fail, Bind
+        /// will be called again to produce a new Expression for the new
+        /// argument types
+        /// </returns>
+        public abstract Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel);
     }
 }

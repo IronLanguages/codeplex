@@ -20,6 +20,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -53,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
             // Only run this for the top-level lambda
             if (_array == null) {
                 _array = Expression.Variable(typeof(ModuleGlobalWrapper[]), "$globals");
-                Expression body = AddScopedVariable(
+                Expression body = AstUtils.AddScopedVariable(
                     node.Body,
                     _array,
                     Expression.Call(typeof(RuntimeHelpers).GetMethod("GetGlobalArray"), Context)

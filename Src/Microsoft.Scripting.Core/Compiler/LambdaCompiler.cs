@@ -38,6 +38,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private delegate void WriteBack();
 
+        // Information on the entire lambda tree currently being compiled
+        private readonly AnalyzedTree _tree;
+
         // Indicates that the method should logically be treated as a
         // DynamicMethod. We need this because in debuggable code we have to
         // emit into a MethodBuilder, but we still want to pretend it's a
@@ -78,16 +81,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // True if we want to emitting debug symbols
         private readonly bool _emitDebugSymbols;
-        // TODO: can this be readonly?
+
+        // TODO: remove
         private ISymbolDocumentWriter _debugSymbolWriter;
 
-        // Runtime constants bound to the delegate
-        private readonly List<object> _boundConstants;
-        private readonly Dictionary<object, int> _constantCache;
+        // TODO: Make this readonly. Need to put it with other "whole tree" state
+        private Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter> _symbolWriters;
 
+        // Runtime constants bound to the delegate
+        private readonly BoundConstants _boundConstants;
 
         private LambdaCompiler(
-            CompilerScope scope,
+            AnalyzedTree tree,
+            LambdaExpression lambda,
             TypeBuilder typeBuilder,
             MethodInfo method,
             ILGenerator ilg,
@@ -96,13 +102,20 @@ namespace Microsoft.Linq.Expressions.Compiler {
             bool emitDebugSymbols) {
 
             ContractUtils.Requires(dynamicMethod || method.IsStatic, "dynamicMethod");
-            Debug.Assert(scope != null);
-            _lambda = (LambdaExpression)scope.Expression;
+            _tree = tree;
+            _lambda = lambda;
             _typeBuilder = typeBuilder;
             _method = method;
             _paramTypes = new ReadOnlyCollection<Type>(paramTypes);
             _dynamicMethod = dynamicMethod;
-            _scope = scope;
+
+            // These are populated by AnalyzeTree/VariableBinder
+            _scope = tree.Scopes[lambda];
+            _boundConstants = tree.Constants[lambda];
+
+            if (!dynamicMethod && _boundConstants.Count > 0) {
+                throw Error.RtConstRequiresBundDelegate();
+            }
 
             // Create the ILGen instance, debug or not
             if (DebugOptions.DumpIL || DebugOptions.ShowIL) {
@@ -111,24 +124,18 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 _ilg = new ILGen(ilg);
             }
 
-            // Initialize constant pool
-            if (_dynamicMethod) {
-                _boundConstants = new List<object>();
-                _constantCache = new Dictionary<object, int>(ReferenceEqualityComparer<object>.Instance);
-            }
-
             Debug.Assert(!emitDebugSymbols || _typeBuilder != null, "emitting debug symbols requires a TypeBuilder");
             _emitDebugSymbols = emitDebugSymbols;
 
             // See if we can find a return label, so we can emit better IL
             AddReturnLabel(_lambda.Body);
+
+            _boundConstants.EmitCacheConstants(this);
         }
 
         public override string ToString() {
             return _method.ToString();
         }
-
-        #region Properties
 
         internal ILGen IL {
             get { return _ilg; }
@@ -148,9 +155,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             get { return _paramTypes[0] == typeof(Closure); }
         }
 
-        #endregion
-
-        #region Compiler entry point
+        #region Compiler entry points
 
         /// <summary>
         /// Compiler entry point
@@ -169,24 +174,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Type returnType;
             ComputeSignature(lambda, out types, out names, out name, out returnType);
 
-            // 2. Create lambda compiler
-            LambdaCompiler c = CreateDynamicLambdaCompiler(
-                AnalyzeLambda(lambda),
-                name,
-                returnType,
-                types,
-                null, // parameter names
-                false, // closure
-                emitDebugSymbols,
-                forceDynamic
-            );
+            // 2. Bind lambda
+            AnalyzedTree tree = AnalyzeLambda(ref lambda);
 
-            // 3. Emit
-            c.EmitBody();
+            // 3. Create lambda compiler
+            LambdaCompiler c = CreateDynamicCompiler(tree, lambda, name, returnType, types, null, emitDebugSymbols, forceDynamic);
 
-            c.Finish();
+            // 4. Emit
+            c.EmitLambdaBody(null);
 
-            // 4. Return the delegate.
+            // 5. Return the delegate.
             return c.CreateDelegate(delegateType, out method);
         }
 
@@ -215,33 +212,32 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Type returnType;
             ComputeSignature(lambda, out types, out names, out lambdaName, out returnType);
 
-            // don't use generated name
-            lambdaName = lambda.Name ?? "lambda_method";
+            // 2. Bind lambda
+            AnalyzedTree tree = AnalyzeLambda(ref lambda);
 
-            // 2. Create lambda compiler
-            LambdaCompiler lc = CreateStaticLambdaCompiler(
-                AnalyzeLambda(lambda),
+            // 3. Create lambda compiler
+            LambdaCompiler c = CreateStaticCompiler(
+                tree,
+                lambda,
                 type,
-                lambdaName,
+                lambda.Name ?? "lambda_method", // don't use generated name
                 attributes,
                 returnType,
                 types,
                 names,
                 false, // dynamicMethod
-                false, // closure
                 emitDebugSymbols
             );
 
-            // 3. Emit
-            lc.EmitBody();
-            lc.Finish();
+            // 4. Emit
+            c.EmitLambdaBody(null);
 
-            return (MethodBuilder)lc._method;
+            return (MethodBuilder)c._method;
         }
 
         #endregion
 
-        private static CompilerScope AnalyzeLambda(LambdaExpression lambda) {
+        private static AnalyzedTree AnalyzeLambda(ref LambdaExpression lambda) {
             DumpLambda(lambda);
 
             // Spill the stack for any exception handling blocks or other
@@ -251,7 +247,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             DumpLambda(lambda);
 
             // Bind any variable references in this lambda
-            return VariableBinder.Bind(null, lambda);
+            return VariableBinder.Bind(lambda);
         }
 
         [Conditional("DEBUG")]
@@ -281,11 +277,22 @@ namespace Microsoft.Linq.Expressions.Compiler {
         internal LocalBuilder GetNamedLocal(Type type, string name) {
             Assert.NotNull(type);
 
-            LocalBuilder lb = _ilg.DeclareLocal(type);
             if (_emitDebugSymbols && name != null) {
+                LocalBuilder lb = _ilg.DeclareLocal(type);
+                // TODO: we need to set the lexical scope properly, so it can
+                // be freed and reused!
                 lb.SetLocalSymInfo(name);
+                return lb;
             }
-            return lb;
+            return _ilg.GetLocal(type);
+        }
+
+        internal void FreeNamedLocal(LocalBuilder local, string name) {
+            if (_emitDebugSymbols && name != null) {
+                // local has a name, we can't free it
+                return;
+            }
+            _ilg.FreeLocal(local);
         }
 
         private void Finish() {
@@ -351,48 +358,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        internal Delegate CreateDelegate(Type delegateType) {
-            MethodInfo method;
-            return CreateDelegate(delegateType, out method);
-        }
-
-        internal Delegate CreateDelegate(Type delegateType, out MethodInfo method) {
-            ContractUtils.RequiresNotNull(delegateType, "delegateType");
-
+        private Delegate CreateDelegate(Type delegateType, out MethodInfo method) {
             method = CreateDelegateMethodInfo();
 
-            if (_boundConstants != null) {
+            if (_dynamicMethod) {
                 return method.CreateDelegate(delegateType, new Closure(_boundConstants.ToArray(), null));
             } else {
                 return method.CreateDelegate(delegateType);
             }
-        }
-
-        /// <summary>
-        /// Creates a compiler that shares the same characteristic as "this". If compiling into
-        /// DynamicMethod (both fake or real), it will create compiler backed by dynamic method
-        /// (also fake or real), if compiling into a type, it will create compiler linked to
-        /// a new (static) method on the same type.
-        /// </summary>
-        private LambdaCompiler CreateLambdaCompiler(
-            CompilerScope scope,
-            string name,
-            Type retType,
-            IList<Type> paramTypes,
-            string[] paramNames,
-            bool closure) {
-
-            LambdaCompiler lc;
-            if (_dynamicMethod) {
-                lc = CreateDynamicLambdaCompiler(scope, name, retType, paramTypes, paramNames, closure, _emitDebugSymbols, false);
-            } else {
-                lc = CreateStaticLambdaCompiler(scope, _typeBuilder, name, TypeUtils.PublicStatic, retType, paramTypes, paramNames, _dynamicMethod, closure, _emitDebugSymbols);
-            }
-
-            // TODO: better way to flow this in?
-            lc._debugSymbolWriter = _debugSymbolWriter;
-
-            return lc;
         }
 
         #region IL Debugging Support
@@ -428,13 +401,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// method is actually a 'fake' dynamic method and is backed by static type created specifically for
         /// the one method
         /// </summary>
-        private static LambdaCompiler CreateDynamicLambdaCompiler(
-            CompilerScope scope,
+        private static LambdaCompiler CreateDynamicCompiler(
+            AnalyzedTree tree,
+            LambdaExpression lambda,
             string methodName,
             Type returnType,
             IList<Type> paramTypes,
             IList<string> paramNames,
-            bool closure,
             bool emitDebugSymbols,
             bool forceDynamic) {
 
@@ -451,8 +424,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
             //
             if ((DebugOptions.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
                 var typeBuilder = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
-                lc = CreateStaticLambdaCompiler(
-                    scope,
+                lc = CreateStaticCompiler(
+                    tree,
+                    lambda,
                     typeBuilder,
                     methodName,
                     TypeUtils.PublicStatic,
@@ -460,14 +434,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     paramTypes,
                     paramNames,
                     true, // dynamicMethod
-                    closure,
                     emitDebugSymbols
                 );
             } else {
-                Type[] parameterTypes = MakeParameterTypeArray(paramTypes, true /*dynamicMethod*/, closure);
+                Type[] parameterTypes = paramTypes.AddFirst(typeof(Closure));
                 DynamicMethod target = Snippets.Shared.CreateDynamicMethod(methodName, returnType, parameterTypes);
                 lc = new LambdaCompiler(
-                    scope,
+                    tree,
+                    lambda,
                     null, // typeGen
                     target,
                     target.GetILGenerator(),
@@ -483,8 +457,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Creates a LambdaCompiler backed by a method on a static type
         /// </summary>
-        private static LambdaCompiler CreateStaticLambdaCompiler(
-            CompilerScope scope,
+        private static LambdaCompiler CreateStaticCompiler(
+            AnalyzedTree tree,
+            LambdaExpression lambda,
             TypeBuilder typeBuilder,
             string name,
             MethodAttributes attributes,
@@ -492,16 +467,22 @@ namespace Microsoft.Linq.Expressions.Compiler {
             IList<Type> paramTypes,
             IList<string> paramNames,
             bool dynamicMethod,
-            bool closure,
             bool emitDebugSymbols) {
 
             Assert.NotNull(name, retType);
 
-            Type[] parameterTypes = MakeParameterTypeArray(paramTypes, dynamicMethod, closure);
+            bool closure = tree.Scopes[lambda].NeedsClosure;
+            Type[] parameterTypes;
+            if (dynamicMethod || closure) {
+                parameterTypes = paramTypes.AddFirst(typeof(Closure));
+            } else {
+                parameterTypes = paramTypes.ToArray();
+            }
 
             MethodBuilder mb = typeBuilder.DefineMethod(name, attributes, retType, parameterTypes);
             LambdaCompiler lc = new LambdaCompiler(
-                scope,
+                tree,
+                lambda,
                 typeBuilder,
                 mb,
                 mb.GetILGenerator(),

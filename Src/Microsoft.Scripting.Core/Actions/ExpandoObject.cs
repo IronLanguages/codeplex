@@ -185,7 +185,7 @@ namespace Microsoft.Scripting.Actions {
                 : base(expression, Restrictions.Empty, value) {
             }
 
-            public override MetaObject GetMember(GetMemberAction action) {
+            public override MetaObject BindGetMember(GetMemberBinder action) {
                 ExpandoClass klass = Value.Class;
 
                 int index = klass.GetValueIndex(action.Name, action.IgnoreCase);
@@ -225,7 +225,7 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            public override MetaObject SetMember(SetMemberAction action, MetaObject value) {
+            public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
                 ExpandoClass klass;
                 int index;
 
@@ -257,7 +257,7 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            public override MetaObject DeleteMember(DeleteMemberAction action) {
+            public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
                 ExpandoClass klass;
                 int index;
 
@@ -285,7 +285,7 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            public override MetaObject Operation(OperationAction action, MetaObject[] args) {
+            public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
                 if (action.Operation == "GetMemberNames") {
                     return new MetaObject(
                         Expression.Call(
@@ -296,14 +296,14 @@ namespace Microsoft.Scripting.Actions {
                     );
                 }
 
-                return base.Operation(action, args);
+                return base.BindOperation(action, args);
             }
 
             /// <summary>
             /// Adds a dynamic test which checks if the version has changed.  The test is only necessary for
             /// performance as the methods will do the correct thing if called with an incorrect version.
             /// </summary>
-            private Expression AddDynamicTestAndDefer(MetaAction action, MetaObject[] args, ExpandoClass klass, ExpandoClass originalClass, Expression ifTestSucceeds) {
+            private Expression AddDynamicTestAndDefer(MetaObjectBinder action, MetaObject[] args, ExpandoClass klass, ExpandoClass originalClass, Expression ifTestSucceeds) {
                 if (originalClass != null) {
                     // we are accessing a member which has not yet been defined on this class.
                     // We force a class promotion after the type check.  If the class changes the 
@@ -376,7 +376,7 @@ namespace Microsoft.Scripting.Actions {
             private Restrictions GetRestrictions() {
                 Debug.Assert(Restrictions == Restrictions.Empty, "We don't merge, restrictions are always empty");
 
-                return Restrictions.TypeRestriction(Expression, LimitType);
+                return Restrictions.GetTypeRestriction(Expression, LimitType);
             }
 
             public new ExpandoObject Value {

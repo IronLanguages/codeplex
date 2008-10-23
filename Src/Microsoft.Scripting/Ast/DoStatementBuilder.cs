@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
@@ -53,10 +54,12 @@ namespace Microsoft.Scripting.Ast {
             return new DoStatementBuilder(annotations, @break, @continue, Expression.Block(body));
         }
 
+        [Obsolete("use a Do overload without SourceSpan")]
         public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, params Expression[] body) {
             return Do(null, null, Expression.Annotate(statementSpan, location), body);
         }
 
+        [Obsolete("use a Do overload without SourceSpan")]
         public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, LabelTarget @break, LabelTarget @continue, params Expression[] body) {
             return Do(@break, @continue, Expression.Annotate(statementSpan, location), body);
         }

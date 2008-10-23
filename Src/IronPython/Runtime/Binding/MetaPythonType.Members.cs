@@ -36,7 +36,7 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ GetMember(GetMemberAction/*!*/ member) {
+        public override MetaObject/*!*/ BindGetMember(GetMemberBinder/*!*/ member) {
             return GetMemberWorker(member, BinderState.GetCodeContext(member));            
         }
 
@@ -53,7 +53,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public override MetaObject/*!*/ SetMember(SetMemberAction/*!*/ member, MetaObject/*!*/ value) {
+        public override MetaObject/*!*/ BindSetMember(SetMemberBinder/*!*/ member, MetaObject/*!*/ value) {
             BinderState state = BinderState.GetBinderState(member);
 
             if (Value.IsSystemType) {
@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Binding {
                     if (IsProtectedSetter(mt)) {
                         return new MetaObject(
                             BindingHelpers.TypeErrorForProtectedMember(Value.UnderlyingSystemType, member.Name),
-                            Restrictions.Merge(value.Restrictions).Merge(Restrictions.InstanceRestriction(Expression, Value))
+                            Restrictions.Merge(value.Restrictions).Merge(Restrictions.GetInstanceRestriction(Expression, Value))
                         );
                     }
                 }
@@ -83,14 +83,14 @@ namespace IronPython.Runtime.Binding {
                         value,
                         Ast.Constant(state.Context)
                     ).Expression,
-                    Restrictions.Merge(value.Restrictions).Merge(Restrictions.InstanceRestriction(Expression, Value))
+                    Restrictions.Merge(value.Restrictions).Merge(Restrictions.GetInstanceRestriction(Expression, Value))
                 );
             }
 
             return MakeSetMember(member, value);
         }
 
-        public override MetaObject/*!*/ DeleteMember(DeleteMemberAction/*!*/ member) {
+        public override MetaObject/*!*/ BindDeleteMember(DeleteMemberBinder/*!*/ member) {
             if (Value.IsSystemType) {
                 BinderState state = BinderState.GetBinderState(member);
 
@@ -107,7 +107,7 @@ namespace IronPython.Runtime.Binding {
                             tt
                         )
                     ).Expression,
-                    Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions)
+                    Restrictions.GetInstanceRestriction(Expression, Value).Merge(Restrictions)
                 );
             }
 
@@ -118,7 +118,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonGetable Members
 
-        public MetaObject/*!*/ GetMember(GetMemberBinder/*!*/ member, Expression/*!*/ codeContext) {
+        public MetaObject/*!*/ GetMember(PythonGetMemberBinder/*!*/ member, Expression/*!*/ codeContext) {
             return GetMemberWorker(member, codeContext);
         }
 
@@ -126,7 +126,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Gets
 
-        private MetaObject/*!*/ GetMemberWorker(MetaAction/*!*/ member, Expression codeContext) {
+        private MetaObject/*!*/ GetMemberWorker(MetaObjectBinder/*!*/ member, Expression codeContext) {
             switch (GetGetMemberName(member)) {
                 case "__dict__":
                 case "__class__":
@@ -179,11 +179,11 @@ namespace IronPython.Runtime.Binding {
             return ValidationInfo.Empty;
         }
 
-        private MetaObject/*!*/ MakeTypeGetMember(MetaAction/*!*/ member, Expression codeContext) {
+        private MetaObject/*!*/ MakeTypeGetMember(MetaObjectBinder/*!*/ member, Expression codeContext) {
             // normal attribute, need to check the type version
             MetaObject self = new MetaObject(
                 Ast.ConvertHelper(Expression, Value.GetType()),
-                Restrictions.Merge(Restrictions.InstanceRestriction(Expression, Value)),
+                Restrictions.Merge(Restrictions.GetInstanceRestriction(Expression, Value)),
                 Value
             );
 
@@ -256,7 +256,7 @@ namespace IronPython.Runtime.Binding {
             return result;
         }
 
-        private MetaObject/*!*/ GetFallbackGet(MetaAction/*!*/ member, BinderState/*!*/ state, Expression codeContext) {
+        private MetaObject/*!*/ GetFallbackGet(MetaObjectBinder/*!*/ member, BinderState/*!*/ state, Expression codeContext) {
             MemberTracker tt = MemberTracker.FromMemberInfo(Value.UnderlyingSystemType);
 
             string memberName = GetGetMemberName(member);
@@ -272,7 +272,7 @@ namespace IronPython.Runtime.Binding {
                     BindingHelpers.IsNoThrow(member)
 
                 ).Expression,
-                Restrictions.InstanceRestriction(Expression, Value).Merge(Restrictions)
+                Restrictions.GetInstanceRestriction(Expression, Value).Merge(Restrictions)
             );
 
             if (codeContext != null && Value.IsHiddenMember(memberName)) {
@@ -293,7 +293,7 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private Expression MakeSystemTypeGetExpression(PythonType/*!*/ pt, MetaAction/*!*/ member, Expression/*!*/ error) {
+        private Expression MakeSystemTypeGetExpression(PythonType/*!*/ pt, MetaObjectBinder/*!*/ member, Expression/*!*/ error) {
             BinderState state = BinderState.GetBinderState(member);
 
             PythonTypeSlot pts;
@@ -315,7 +315,7 @@ namespace IronPython.Runtime.Binding {
             return MakeMetaTypeRule(member, error);
         }
 
-        private Expression/*!*/ AddClsCheck(MetaAction/*!*/ member, PythonTypeSlot/*!*/ slot, Expression/*!*/ success, Expression/*!*/ error) {
+        private Expression/*!*/ AddClsCheck(MetaObjectBinder/*!*/ member, PythonTypeSlot/*!*/ slot, Expression/*!*/ success, Expression/*!*/ error) {
             BinderState state = BinderState.GetBinderState(member);
 
             if (Value.IsPythonType && !slot.IsAlwaysVisible) {
@@ -333,7 +333,7 @@ namespace IronPython.Runtime.Binding {
             return success;
         }
 
-        private Expression MakeMetaTypeRule(MetaAction/*!*/ member, Expression error) {
+        private Expression MakeMetaTypeRule(MetaObjectBinder/*!*/ member, Expression error) {
             BinderState state = BinderState.GetBinderState(member);
 
             string name = GetGetMemberName(member);
@@ -399,7 +399,7 @@ namespace IronPython.Runtime.Binding {
                             tmp
                         ),
                         Ast.Dynamic(
-                            new InvokeBinder(
+                            new PythonInvokeBinder(
                                 BinderState.GetBinderState(member),
                                 new CallSignature(1)
                             ),
@@ -426,7 +426,7 @@ namespace IronPython.Runtime.Binding {
             );*/
         }
 
-        private Expression/*!*/ GetBoundTrackerOrError(MetaAction/*!*/ member, MemberGroup/*!*/ mg, Expression error) {
+        private Expression/*!*/ GetBoundTrackerOrError(MetaObjectBinder/*!*/ member, MemberGroup/*!*/ mg, Expression error) {
             BinderState state = BinderState.GetBinderState(member);
             MemberTracker tracker = GetTracker(member, mg);
             Expression target = null;
@@ -472,7 +472,7 @@ namespace IronPython.Runtime.Binding {
         }
 #endif
 
-        private MemberTracker GetTracker(MetaAction/*!*/ member, MemberGroup/*!*/ mg) {
+        private MemberTracker GetTracker(MetaObjectBinder/*!*/ member, MemberGroup/*!*/ mg) {
             TrackerTypes mt = GetMemberTypes(mg);
             MemberTracker tracker;
 
@@ -542,7 +542,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Sets
 
-        private MetaObject/*!*/ MakeSetMember(SetMemberAction/*!*/ member, MetaObject/*!*/ value) {
+        private MetaObject/*!*/ MakeSetMember(SetMemberBinder/*!*/ member, MetaObject/*!*/ value) {
             MetaObject self = Restrict(typeof(PythonType));
 
             return BindingHelpers.AddDynamicTestAndDefer(
@@ -586,7 +586,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Deletes
 
-        private MetaObject/*!*/ MakeDeleteMember(DeleteMemberAction/*!*/ member) {
+        private MetaObject/*!*/ MakeDeleteMember(DeleteMemberBinder/*!*/ member) {
             MetaObject self = Restrict(typeof(PythonType));
             return BindingHelpers.AddDynamicTestAndDefer(
                 member,

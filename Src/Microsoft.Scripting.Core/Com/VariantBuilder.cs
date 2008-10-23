@@ -21,101 +21,108 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// VariantBuilder handles packaging of arguments into a Variant for a call to IDispatch.Invoke
     /// </summary>
     internal class VariantBuilder {
 
-        private ArgBuilder _builder;
+        private readonly ArgBuilder _argBuilder;
+        private readonly VarEnum _targetComType;
         private int _variantIndex;
-        private VarEnum _targetComType;
+        internal ParameterExpression TempVariable { get; private set; }
 
         internal VariantBuilder(VarEnum targetComType, ArgBuilder builder) {
             _targetComType = targetComType;
-            _builder = builder;
-        }
-
-        internal ArgBuilder ArgBuilder {
-            get { return _builder; }
+            _argBuilder = builder;
         }
 
         internal bool IsByRef {
             get { return (_targetComType & VarEnum.VT_BYREF) != 0; }
         }
 
-        internal List<Expression> WriteArgumentVariant(
-            ParameterExpression paramVariants, 
-            int variantIndex,
-            Expression parameter) {
-            List<Expression> exprs = new List<Expression>();
-            Expression expr;
-
+        internal Expression WriteArgumentVariant(ParameterExpression paramVariants, int variantIndex, Expression parameter) {
             _variantIndex = variantIndex;
             FieldInfo variantArrayField = VariantArray.GetField(variantIndex);
 
             if (IsByRef) {
-                // paramVariants._elementN.SetAsByrefT(ref argument)
-                expr = Expression.Call(
+                // temp = argument
+                // paramVariants._elementN.SetAsByrefT(ref temp)
+                Debug.Assert(TempVariable == null);
+                var argExpr = _argBuilder.MarshalToRef(parameter);
+
+                TempVariable = Expression.Variable(argExpr.Type, null);
+                return Expression.Block(
+                    Expression.Assign(TempVariable, argExpr),
+                    Expression.Call(
+                        Expression.Field(
+                            paramVariants,
+                            variantArrayField
+                        ),
+                        Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
+                        TempVariable
+                    )
+                );
+            }
+
+            Expression argument = _argBuilder.Marshal(parameter);
+
+            //TODO: we need to make this cleaner.
+            // it is not nice that we need a special case for IConvertible.
+            // we are forced to special case it now since it does not have 
+            // a corresponding _targetComType.
+            if (_argBuilder is ConvertibleArgBuilder) {
+                return Expression.Call(
                     Expression.Field(
                         paramVariants,
                         variantArrayField),
-                    Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
-                    _builder.UnwrapByRef(parameter)
+                    typeof(Variant).GetMethod("SetAsIConvertible"),
+                    argument
                 );
-                exprs.Add(expr);
-                return exprs;
             }
 
-            Expression argument = _builder.Unwrap(parameter);
             if (Variant.IsPrimitiveType(_targetComType) ||
                 (_targetComType == VarEnum.VT_UNKNOWN) ||
                 (_targetComType == VarEnum.VT_DISPATCH)) {
                 // paramVariants._elementN.AsT = (cast)argN
-                expr = Expression.AssignProperty(
+                return Expression.AssignProperty(
                     Expression.Field(
                         paramVariants,
-                        variantArrayField),
+                        variantArrayField
+                    ),
                     Variant.GetAccessor(_targetComType),
                     argument
                 );
-                exprs.Add(expr);
-                return exprs;
             }
 
             switch (_targetComType) {
                 case VarEnum.VT_EMPTY:
-                    return exprs;
+                    return null;
 
                 case VarEnum.VT_NULL:
                     // paramVariants._elementN.SetAsNull();
 
-                    expr = Expression.Call(
+                    return Expression.Call(
                         Expression.Field(
                             paramVariants,
                             variantArrayField),
                         typeof(Variant).GetMethod("SetAsNull")
                     );
-                    exprs.Add(expr);
-                    return exprs;
 
                 default:
                     Debug.Assert(false, "Unexpected VarEnum");
-                    return exprs;
+                    return null;
             }
         }
 
-        internal List<Expression> Clear(ParameterExpression paramVariants) {
-            List<Expression> exprs = new List<Expression>();
-            Expression expr;
-
+        internal Expression Clear(ParameterExpression paramVariants) {
             if (IsByRef) {
-                StringArgBuilder comReferenceArgBuilder = _builder as StringArgBuilder;
-                if (comReferenceArgBuilder != null) {
-                    return comReferenceArgBuilder.Clear();
+                if (_argBuilder is StringArgBuilder) {
+                    Debug.Assert(TempVariable != null);
+                    return Expression.Call(typeof(Marshal).GetMethod("FreeBSTR"), TempVariable);
                 }
-                return exprs;
+                return null;
             }
 
             FieldInfo variantArrayField = VariantArray.GetField(_variantIndex);
@@ -123,32 +130,28 @@ namespace Microsoft.Scripting.Com {
             switch (_targetComType) {
                 case VarEnum.VT_EMPTY:
                 case VarEnum.VT_NULL:
-                    return exprs;
+                    return null;
 
                 case VarEnum.VT_BSTR:
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
                     // paramVariants._elementN.Clear()
-                    expr = Expression.Call(
+                    return Expression.Call(
                         Expression.Field(
                             paramVariants,
-                            variantArrayField),
+                            variantArrayField
+                        ),
                         typeof(Variant).GetMethod("Clear")
                     );
-                    exprs.Add(expr);
-                    return exprs;
 
                 default:
-                    if (Variant.IsPrimitiveType(_targetComType)) {
-                        return exprs;
-                    }
-                    Debug.Assert(false, "Unexpected VarEnum");
-                    return exprs;
+                    Debug.Assert(Variant.IsPrimitiveType(_targetComType), "Unexpected VarEnum");
+                    return null;
             }
         }
 
         internal object Build(object arg) {
-            object result = _builder.UnwrapForReflection(arg);
+            object result = _argBuilder.UnwrapForReflection(arg);
             if (_targetComType == VarEnum.VT_DISPATCH) {
                 // Ensure that the object supports IDispatch to match how WriteArgumentVariant would work
                 // (it would call the Variant.AsDispatch setter). Otherwise, Type.InvokeMember might decide
@@ -158,6 +161,17 @@ namespace Microsoft.Scripting.Com {
             }
 
             return result;
+        }
+
+        internal Expression UpdateFromReturn(Expression parameter) {
+            if (TempVariable == null) {
+                return null;
+            }
+            return _argBuilder.UpdateFromReturn(parameter, TempVariable);
+        }
+
+        internal void UpdateFromReturn(object originalArg, object updatedArg) {
+            _argBuilder.UpdateFromReturn(originalArg, updatedArg);
         }
     }
 }

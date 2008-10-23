@@ -232,6 +232,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Block:
                     result = RewriteBlock(node, stack);
                     break;
+                // DebugInfo
+                case ExpressionType.DebugInfo:
+                    result = RewriteDebugInfoExpression(node, stack);
+                    break;
                 // DoStatement
                 case ExpressionType.DoStatement:
                     result = RewriteDoStatement(node, stack);
@@ -271,10 +275,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
                     result = RewriteReturnStatement(node, stack);
-                    break;
-                // Scope
-                case ExpressionType.Scope:
-                    result = RewriteScopeExpression(node, stack);
                     break;
                 // SwitchStatement
                 case ExpressionType.SwitchStatement:

@@ -130,7 +130,7 @@ namespace Microsoft.Scripting.Actions {
                     foundTargets.Add(mt.Method);
                 }
 
-                return new TargetInfo(null, ArrayUtils.Insert(target, args), Restrictions.InstanceRestriction(target.Expression, mthgrp), foundTargets.ToArray());
+                return new TargetInfo(null, ArrayUtils.Insert(target, args), Restrictions.GetInstanceRestriction(target.Expression, mthgrp), foundTargets.ToArray());
             }
             return null;
         }
@@ -179,7 +179,7 @@ namespace Microsoft.Scripting.Actions {
                 ).Restrict(CompilerHelpers.GetType(bmt.ObjectInstance));
 
                 // we also add a restriction to make sure we're going to the same BoundMemberTracker
-                Restrictions restrictions = Restrictions.ExpressionRestriction(
+                Restrictions restrictions = Restrictions.GetExpressionRestriction(
                     Ast.Equal(
                         Ast.Property(
                             Ast.Convert(self.Expression, typeof(BoundMemberTracker)),
@@ -256,7 +256,7 @@ namespace Microsoft.Scripting.Actions {
                         Ast.Constant(type.Name + " is not callable")
                     )
                 ),
-                self.Restrictions.Merge(Restrictions.TypeRestriction(self.Expression, type))
+                self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, type))
             );
         }
 

@@ -715,35 +715,70 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Emit(OpCodes.Ldc_R4, value);
         }
 
-        private void EmitSimpleConstant(object value) {
-            if (!TryEmitConstant(value, value == null ? typeof(object) : value.GetType())) {
-                throw Error.CanotEmitConstant(value, value.GetType());
+        // matches TryEmitConstant
+        internal static bool CanEmitConstant(object value, Type type) {
+            if (value == null || CanEmitILConstant(type)) {
+                return true;
             }
+
+            Type t = value as Type;
+            if (t != null && ShouldLdtoken(t)) {
+                return true;
+            }
+
+            MethodBase mb = value as MethodBase;
+            if (mb != null && ShouldLdtoken(mb)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // matches TryEmitILConstant
+        private static bool CanEmitILConstant(Type type) {
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Boolean:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Char:
+                case TypeCode.Byte:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                case TypeCode.Decimal:
+                case TypeCode.String:
+                    return true;
+            }
+            return false;
         }
 
         //CONFORMING
         //
-        // Note: we support emitting a lot more things as IL constants than
+        // Note: we support emitting more things as IL constants than
         // Linq does
-        internal bool TryEmitConstant(object value, Type type) {
+        internal void EmitConstant(object value, Type type) {
             if (value == null) {
                 // Smarter than the Linq implementation which uses the initobj
                 // pattern for all value types (works, but requires a local and
                 // more IL)
                 EmitDefault(type);
-                return true;
+                return;
             }
 
             // Handle the easy cases
             if (TryEmitILConstant(value, type)) {
-                return true;
+                return;
             }
 
             // Check for a few more types that we support emitting as constants
             Type t = value as Type;
             if (t != null && ShouldLdtoken(t)) {
                 EmitType(t);
-                return true;
+                return;
             }
 
             MethodBase mb = value as MethodBase;
@@ -760,10 +795,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 if (type != typeof(MethodBase)) {
                     Emit(OpCodes.Castclass, type);
                 }
-                return true;
+                return;
             }
 
-            return false;
+            throw Assert.Unreachable;
         }
 
         // TODO: Can we always ldtoken and let restrictedSkipVisibility sort things out?
@@ -1191,7 +1226,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             for (int i = 0; i < items.Count; i++) {
                 Emit(OpCodes.Dup);
                 EmitInt(i);
-                EmitSimpleConstant(items[i]);
+                EmitConstant(items[i], typeof(T));
                 EmitStoreElement(typeof(T));
             }
         }

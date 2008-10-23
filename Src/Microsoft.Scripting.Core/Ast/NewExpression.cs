@@ -15,6 +15,7 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
@@ -22,17 +23,28 @@ using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public sealed class NewExpression : Expression {
+    public class NewExpression : Expression {
         private readonly ConstructorInfo _constructor;
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly ReadOnlyCollection<MemberInfo> _members;
 
-        internal NewExpression(Annotations annotations, Type type, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
-            : base(ExpressionType.New, type, annotations) {
-
+        internal NewExpression(Annotations annotations, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
+            : base(annotations) {
             _constructor = constructor;
             _arguments = arguments;
             _members = members;
+        }
+
+        protected override Type GetExpressionType() {
+            return _constructor.DeclaringType;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.New;
         }
 
         public ConstructorInfo Constructor {
@@ -73,6 +85,19 @@ namespace Microsoft.Linq.Expressions {
         }
     }
 
+    internal class NewValueTypeExpression : NewExpression {
+        private readonly Type _valueType;
+
+        internal NewValueTypeExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
+            : base(annotations, null, arguments, members) {
+            _valueType = type;
+        }
+
+        protected override Type GetExpressionType() {
+            return _valueType;
+        }
+    }
+
     /// <summary>
     /// Factory methods.
     /// </summary>
@@ -99,7 +124,7 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateArgumentTypes(constructor, ExpressionType.New, ref argList);
 
-            return new NewExpression(annotations, constructor.DeclaringType, constructor, argList, null);
+            return new NewExpression(annotations, constructor, argList, null);
         }
 
         //CONFORMING
@@ -112,7 +137,7 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<MemberInfo> memberList = members.ToReadOnly();
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor, ref argList, ref memberList);
-            return new NewExpression(annotations, constructor.DeclaringType, constructor, argList, memberList);
+            return new NewExpression(annotations, constructor, argList, memberList);
         }
 
         //CONFORMING
@@ -134,7 +159,7 @@ namespace Microsoft.Linq.Expressions {
                 }
                 return New(ci);
             }
-            return new NewExpression(Annotations.Empty, type, null, EmptyReadOnlyCollection<Expression>.Instance, null);
+            return new NewValueTypeExpression(Annotations.Empty, type, EmptyReadOnlyCollection<Expression>.Instance, null);
         }
 
 

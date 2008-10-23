@@ -23,6 +23,6 @@ namespace IronPython.Runtime.Binding {
     /// calling with splatted positional and keyword arguments.
     /// </summary>
     interface IPythonInvokable {
-        MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args);
+        MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args);
     }
 }

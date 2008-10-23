@@ -16,53 +16,40 @@ using System; using Microsoft;
 
 #if !SILVERLIGHT // ComObject
 
-using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
     internal sealed class CurrencyArgBuilder : SimpleArgBuilder {
         internal CurrencyArgBuilder(Type parameterType)
             : base(parameterType) {
             Debug.Assert(parameterType == typeof(CurrencyWrapper));
         }
 
-        internal override ParameterExpression CreateTemp() {
-            return Expression.Variable(typeof(Int64), "TempInt64");
-        }
-
-        internal override Expression Unwrap(Expression parameter) {
+        internal override Expression Marshal(Expression parameter) {
             // parameter.WrappedObject
             return Expression.Property(
-                base.Unwrap(parameter),
+                base.Marshal(parameter),
                 "WrappedObject"
             );
         }
 
-        internal override Expression UnwrapByRef(Expression parameter) {
-            // temp = Decimal.ToOACurrency(parameter.WrappedObject)
-            return base.UnwrapByRef(
-                Expression.Call(
-                    typeof(Decimal).GetMethod("ToOACurrency"),
-                    Unwrap(parameter)
-                )
+        internal override Expression MarshalToRef(Expression parameter) {
+            // Decimal.ToOACurrency(parameter.WrappedObject)
+            return Expression.Call(
+                typeof(Decimal).GetMethod("ToOACurrency"),
+                Marshal(parameter)
             );
         }
 
-        internal override Expression UpdateFromReturn(Expression parameter, Expression temp) {
-            // parameter = new CurrencyWrapper(Decimal.FromOACurrency(temp))
-            return base.UpdateFromReturn(
-                parameter,
-                Expression.New(
-                    typeof(CurrencyWrapper).GetConstructor(new Type[] { typeof(Decimal) }),
-                    Expression.Call(
-                        typeof(Decimal).GetMethod("FromOACurrency"),
-                        temp
-                    )
+        internal override Expression UnmarshalFromRef(Expression value) {
+            // Decimal.FromOACurrency(value)
+            return Expression.New(
+                typeof(CurrencyWrapper).GetConstructor(new Type[] { typeof(Decimal) }),
+                Expression.Call(
+                    typeof(Decimal).GetMethod("FromOACurrency"),
+                    value
                 )
             );
         }

@@ -117,24 +117,12 @@ namespace Microsoft.Linq.Expressions {
             return LambdaCompiler.CompileLambda(this, type, attributes, emitDebugSymbols);
         }
 
-        // TODO: Remove the Compile<T> overloads
-        //
-        // They allow compiling an Expression<T> with a different
-        // (but compatible) delegate signature.
-        //
-        // Instead, Expression<T> should be created with the right
-        // delegate type.
-
-        public T Compile<T>() {
-            return LambdaCompiler.CompileLambda<T>(this, false);
-        }
-
-        public T Compile<T>(bool emitDebugSymbols) {
-            return LambdaCompiler.CompileLambda<T>(this, emitDebugSymbols);
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitLambda(this);
+        }
+
+        internal virtual LambdaExpression CloneWith(string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
+            return Expression.Lambda(NodeType, Type, name, body, annotations, parameters);
         }
     }
 
@@ -151,11 +139,15 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public new TDelegate Compile() {
-            return Compile<TDelegate>();
+            return LambdaCompiler.CompileLambda<TDelegate>(this, false);
         }
 
         public new TDelegate Compile(bool emitDebugSymbols) {
-            return Compile<TDelegate>(emitDebugSymbols);
+            return LambdaCompiler.CompileLambda<TDelegate>(this, emitDebugSymbols);
+        }
+
+        internal override LambdaExpression CloneWith(string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
+            return Lambda<TDelegate>(body, name, annotations, parameters);
         }
     }
 
@@ -187,7 +179,7 @@ namespace Microsoft.Linq.Expressions {
                             Delegate.CreateDelegate(
                                 typeof(Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>),
                                 _lambdaCtorMethod.MakeGenericMethod(delegateType)
-                            );                        
+                            );
                     }
                 }
 
@@ -206,7 +198,7 @@ namespace Microsoft.Linq.Expressions {
 
                 ParameterInfo[] pis = mi.GetParameters();
                 if (pis.Length == 4) {
-                    if(pis[0].ParameterType == typeof(Expression) &&
+                    if (pis[0].ParameterType == typeof(Expression) &&
                         pis[1].ParameterType == typeof(string) &&
                         pis[2].ParameterType == typeof(Annotations) &&
                         pis[3].ParameterType == typeof(IEnumerable<ParameterExpression>)) {
@@ -314,7 +306,7 @@ namespace Microsoft.Linq.Expressions {
             return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, paramList);
         }
 
-        private static CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type,MethodInfo>(40);
+        private static CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type, MethodInfo>(40);
 
         //CONFORMING
         private static void ValidateLambdaArgs(Type delegateType, ref Expression body, ReadOnlyCollection<ParameterExpression> parameters) {

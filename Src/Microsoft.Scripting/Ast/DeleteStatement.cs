@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
@@ -59,6 +60,7 @@ namespace Microsoft.Scripting.Ast {
             return Delete(variable, Annotations.Empty);
         }
 
+        [Obsolete("use Delete overload without SourceSpan")]
         public static DeleteStatement Delete(Expression variable, SourceSpan span) {
             return Delete(variable, Expression.Annotate(span));
         }

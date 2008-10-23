@@ -38,14 +38,14 @@ namespace Microsoft.Scripting.Runtime {
             if (HasValue) {
                 return new RestrictedMetaObject(
                     Expression.ConvertHelper(Expression, type),
-                    Restrictions.TypeRestriction(Expression, type),
+                    Restrictions.GetTypeRestriction(Expression, type),
                     Value
                 );
             }
 
             return new RestrictedMetaObject(
                 Expression.ConvertHelper(Expression, type),
-                Restrictions.TypeRestriction(Expression, type)
+                Restrictions.GetTypeRestriction(Expression, type)
             );
         }
 

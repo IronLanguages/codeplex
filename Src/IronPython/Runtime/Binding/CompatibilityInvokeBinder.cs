@@ -34,18 +34,18 @@ namespace IronPython.Runtime.Binding {
     /// CallSignature which supports splatting position and keyword args into
     /// their expanded form.
     /// </summary>
-    class CompatibilityInvokeBinder : InvokeAction, IPythonSite {
+    class CompatibilityInvokeBinder : InvokeBinder, IPythonSite {
         private readonly BinderState/*!*/ _state;
 
-        public CompatibilityInvokeBinder(BinderState/*!*/ state, params Argument/*!*/[]/*!*/ args)
+        public CompatibilityInvokeBinder(BinderState/*!*/ state, params ArgumentInfo/*!*/[]/*!*/ args)
             : base(args) {
             _state = state;
         }
 
-        public override MetaObject/*!*/ Fallback(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override MetaObject/*!*/ FallbackInvoke(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
             if (target.IsDynamicObject) {
                 // try creating an instance...
-                return target.Create(
+                return target.BindCreateInstance(
                     new CreateFallback(this, Arguments),
                     args
                 );
@@ -74,7 +74,7 @@ namespace IronPython.Runtime.Binding {
             return ob._state.Binder == _state.Binder && base.Equals(obj);
         }
 
-        public override object/*!*/ HashCookie {
+        public override object/*!*/ CacheIdentity {
             get { return this; }
         }
 

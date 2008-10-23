@@ -25,12 +25,26 @@ namespace Microsoft.Linq.Expressions {
     public sealed class InvocationExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly Expression _lambda;
+        private readonly Type _returnType;
 
         internal InvocationExpression(Expression lambda, Annotations annotations, ReadOnlyCollection<Expression> arguments, Type returnType)
-            : base(ExpressionType.Invoke, returnType, annotations) {
+            : base(annotations) {
 
             _lambda = lambda;
             _arguments = arguments;
+            _returnType = returnType;
+        }
+
+        protected override Type GetExpressionType() {
+            return _returnType;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Invoke;
         }
 
         public Expression Expression {

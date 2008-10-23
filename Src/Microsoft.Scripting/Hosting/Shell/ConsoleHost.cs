@@ -333,7 +333,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 result = 1;
             } finally {
                 try {
-                    Snippets.Shared.Dump();
+                    Snippets.SaveAndVerifyAssemblies();
                 } catch (Exception) {
                     result = 1;
                 }
@@ -378,7 +378,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 }
             } finally {
                 try {
-                    Snippets.Shared.Dump();
+                    Snippets.SaveAndVerifyAssemblies();
                 } catch (Exception) {
                     exitCode = 1;
                 }

@@ -12,13 +12,14 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
-        
+        [Obsolete("use Expression.Assign instead")]
         public static AssignmentExpression Assign(Expression variable, Expression value, SourceSpan span) {
             return Expression.Assign(variable, value, Expression.Annotate(span));
         }

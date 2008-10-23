@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Actions {
     /// code delegates here.
     /// </summary>
     internal static partial class Matchmaker {
-        private static Dictionary<Type, WeakReference> _Matchmakers;
+        private static readonly CacheDict<Type, MethodInfo> _Matchmakers = new CacheDict<Type, MethodInfo>(200);
 
         internal static T CreateMatchMakingDelegate<T>(StrongBox<bool> box) where T : class {
             Type target = typeof(T);
@@ -55,22 +55,13 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private static T GetOrCreateCustomMatchmakerDelegate<T>(MethodInfo invoke, StrongBox<bool> box) where T : class {
-            if (_Matchmakers == null) {
-                Interlocked.CompareExchange<Dictionary<Type, WeakReference>>(ref _Matchmakers, new Dictionary<Type, WeakReference>(), null);
-            }
-
-            bool found;
-            WeakReference wr;
+            MethodInfo target;
 
             // LOCK to extract the weak reference with the updater DynamicMethod 
             lock (_Matchmakers) {
-                found = _Matchmakers.TryGetValue(typeof(T), out wr);
-            }
-
-            // Extract the DynamicMethod from the WeakReference, if any
-            MethodInfo target = null;
-            if (found && wr != null) {
-                target = wr.Target as MethodInfo;
+                if (!_Matchmakers.TryGetValue(typeof(T), out target)) {
+                    target = null;
+                }
             }
 
             // No target? Build new one
@@ -79,7 +70,7 @@ namespace Microsoft.Scripting.Actions {
 
                 // Insert into dictionary
                 lock (_Matchmakers) {
-                    _Matchmakers[typeof(T)] = new WeakReference(target);
+                    _Matchmakers[typeof(T)] = target;
                 }
             }
 

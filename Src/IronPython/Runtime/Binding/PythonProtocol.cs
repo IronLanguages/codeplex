@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Binding {
         /// protocol methods.  This code is shared between both our fallback for a site and our MetaObject
         /// for user defined objects.
         /// </summary>
-        internal static MetaObject ConvertToBool(ConvertAction/*!*/ conversion, MetaObject/*!*/ self) {
+        internal static MetaObject ConvertToBool(ConvertBinder/*!*/ conversion, MetaObject/*!*/ self) {
             Assert.NotNull(conversion, self);
 
             SlotOrFunction sf = SlotOrFunction.GetSlotOrFunction(
@@ -107,7 +107,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.NotEqual(callAsInt, Ast.Constant(0));
         }
 
-        internal static MetaObject ConvertToIEnumerable(ConvertAction/*!*/ conversion, MetaObject/*!*/ metaUserObject) {
+        internal static MetaObject ConvertToIEnumerable(ConvertBinder/*!*/ conversion, MetaObject/*!*/ metaUserObject) {
             PythonType pt = MetaPythonObject.GetPythonType(metaUserObject);
             CodeContext context = BinderState.GetBinderState(conversion).Context;
             PythonTypeSlot pts;
@@ -121,7 +121,7 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        internal static MetaObject ConvertToIEnumerator(ConvertAction/*!*/ conversion, MetaObject/*!*/ metaUserObject) {
+        internal static MetaObject ConvertToIEnumerator(ConvertBinder/*!*/ conversion, MetaObject/*!*/ metaUserObject) {
             PythonType pt = MetaPythonObject.GetPythonType(metaUserObject);
             CodeContext context = BinderState.GetBinderState(conversion).Context;
             PythonTypeSlot pts;
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Calls
 
-        internal static MetaObject Call(MetaAction/*!*/ call, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+        internal static MetaObject Call(MetaObjectBinder/*!*/ call, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
             Assert.NotNull(call, args);
             Assert.NotNullItems(args);
 
@@ -192,7 +192,7 @@ namespace IronPython.Runtime.Binding {
                 );
 
                 body = Ast.Dynamic(
-                    new InvokeBinder(
+                    new PythonInvokeBinder(
                         BinderState.GetBinderState(call),
                         BindingHelpers.GetCallSignature(call)
                     ),

@@ -12,13 +12,15 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
-        public static EmptyStatement Empty(SourceSpan span) {
+        [Obsolete("use Expression.Empty instead")]
+        public static EmptyExpression Empty(SourceSpan span) {
             return Expression.Empty(Expression.Annotate(span));
         }
     }

@@ -31,8 +31,7 @@ namespace Microsoft.Scripting.Actions {
 
         // This can produce a IsCallable rule that returns the immutable constant isCallable.
         // Beware that objects can have a mutable callable property. Eg, in Python, assign or delete the __call__ attribute.
-        public static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) where T : class {
-            RuleBuilder<T> rule = new RuleBuilder<T>();
+        public static bool MakeIsCallableRule(CodeContext context, object self, bool isCallable, RuleBuilder rule) {
             rule.MakeTest(CompilerHelpers.GetType(self));
             rule.Target =
                 rule.MakeReturn(
@@ -40,12 +39,11 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Constant(isCallable)
                 );
 
-            return rule;
+            return true;
         }
     }
 
-    public class BinderHelper<T, TAction> : BinderHelper
-        where T : class
+    public class BinderHelper<TAction> : BinderHelper
         where TAction : OldDynamicAction {
 
         private readonly CodeContext _context;
@@ -104,13 +102,13 @@ namespace Microsoft.Scripting.Actions {
             List<Type> res = new List<Type>();
             for (int i = 1; i < args.Length; i++) {
                 switch (action.Signature.GetArgumentKind(i - 1)) {
-                    case ArgumentKind.Simple:
-                    case ArgumentKind.Instance:
-                    case ArgumentKind.Named:
+                    case ArgumentType.Simple:
+                    case ArgumentType.Instance:
+                    case ArgumentType.Named:
                         res.Add(CompilerHelpers.GetType(args[i]));
                         continue;
 
-                    case ArgumentKind.List:
+                    case ArgumentType.List:
                         IList<object> list = args[i] as IList<object>;
                         if (list == null) return null;
 
@@ -119,7 +117,7 @@ namespace Microsoft.Scripting.Actions {
                         }
                         break;
 
-                    case ArgumentKind.Dictionary:
+                    case ArgumentType.Dictionary:
                         // caller needs to process these...
                         break;
 

@@ -21,7 +21,7 @@ using System.Text;
 using System.Globalization;
 using Marshal = System.Runtime.InteropServices.Marshal;
 
-namespace Microsoft.Scripting.Com {
+namespace Microsoft.Scripting.ComInterop {
 
     // TODO: Can it be made internal?
     public class ComMethodDesc {

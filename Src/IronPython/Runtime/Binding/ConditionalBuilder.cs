@@ -29,7 +29,7 @@ namespace IronPython.Runtime.Binding {
     /// branch must be added.
     /// </summary>
     class ConditionalBuilder {
-        private readonly MetaAction/*!*/ _action;
+        private readonly MetaObjectBinder/*!*/ _action;
         private readonly List<Expression/*!*/>/*!*/ _conditions = new List<Expression>();
         private readonly List<Expression/*!*/>/*!*/ _bodies = new List<Expression>();
         private readonly List<ParameterExpression/*!*/>/*!*/ _variables = new List<ParameterExpression>();
@@ -38,7 +38,7 @@ namespace IronPython.Runtime.Binding {
         private Restrictions/*!*/ _restrictions = Restrictions.Empty;
         private ParameterExpression _compareRetBool;
 
-        public ConditionalBuilder(MetaAction/*!*/ action) {
+        public ConditionalBuilder(MetaObjectBinder/*!*/ action) {
             _action = action;
         }
 
@@ -106,7 +106,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public MetaAction/*!*/ Action {
+        public MetaObjectBinder/*!*/ Action {
             get {
                 return _action;
             }

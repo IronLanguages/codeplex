@@ -63,6 +63,12 @@ namespace Microsoft.Scripting.Utils {
             return null;
         }
 
+        internal static void IncrementCount<T>(T key, Dictionary<T, int> dict) {
+            int count;
+            dict.TryGetValue(key, out count);
+            dict[key] = count + 1;
+        }
+
         internal static string ToValidPath(string path) {
             return ToValidPath(path, false, true);
         }

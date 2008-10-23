@@ -24,22 +24,46 @@ using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public sealed class MethodCallExpression : Expression {
+    public class MethodCallExpression : Expression {
         private readonly MethodInfo _method;
-        private readonly Expression _instance;
         private readonly ReadOnlyCollection<Expression> _arguments;
 
         internal MethodCallExpression(
             Annotations annotations,
-            Type returnType,
             MethodInfo method,
-            Expression instance,
             ReadOnlyCollection<Expression> arguments)
-            : base(ExpressionType.Call, returnType, annotations) {
+            : base(annotations) {
 
             _method = method;
-            _instance = instance;
             _arguments = arguments;
+        }
+
+        internal static MethodCallExpression Make(
+            Annotations annotations,
+            MethodInfo method,
+            Expression instance,
+            ReadOnlyCollection<Expression> arguments) {
+            if (instance == null) {
+                return new MethodCallExpression(annotations, method, arguments);
+            } else {
+                return new InstanceMethodCallExpression(annotations, method, instance, arguments);
+            }
+        }
+
+        internal virtual Expression GetInstance() {
+            return null;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Call;
+        }
+
+        protected override Type GetExpressionType() {
+            return _method.ReturnType;
+        }
+
+        internal override Expression.NodeFlags GetFlags() {
+            return NodeFlags.CanRead;
         }
 
         public MethodInfo Method {
@@ -47,7 +71,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public Expression Object {
-            get { return _instance; }
+            get { return GetInstance(); }
         }
 
         public ReadOnlyCollection<Expression> Arguments {
@@ -59,7 +83,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(builder, "builder");
 
             int start = 0;
-            Expression ob = _instance;
+            Expression ob = GetInstance();
 
             if (Attribute.GetCustomAttribute(_method, typeof(ExtensionAttribute)) != null) {
                 start = 1;
@@ -82,6 +106,24 @@ namespace Microsoft.Linq.Expressions {
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitMethodCall(this);
+        }
+    }
+
+    internal class InstanceMethodCallExpression : MethodCallExpression {
+        private readonly Expression _instance;
+
+        internal InstanceMethodCallExpression(
+            Annotations annotations,
+            MethodInfo method,
+            Expression instance,
+            ReadOnlyCollection<Expression> arguments)
+            : base(annotations, method, arguments) {
+
+            _instance = instance;
+        }
+
+        internal override Expression GetInstance() {
+            return _instance;
         }
     }
 
@@ -167,7 +209,7 @@ namespace Microsoft.Linq.Expressions {
         public static MethodCallExpression Call(Expression instance, MethodInfo method, Annotations annotations, IEnumerable<Expression> arguments) {
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateCallArgs(instance, method, ref argList);
-            return new MethodCallExpression(annotations, method.ReturnType, method, instance, argList);
+            return MethodCallExpression.Make(annotations, method, instance, argList);
         }
 
         //CONFORMING
@@ -377,7 +419,7 @@ namespace Microsoft.Linq.Expressions {
 
             // the arguments are now all correct, avoid re-validating the call parameters and
             // directly create the expression.
-            return new MethodCallExpression(Annotations.Empty, method.ReturnType, method, instance, finalArgs);
+            return MethodCallExpression.Make(Annotations.Empty, method, instance, finalArgs);
         }
 
         private static Expression[] ArgumentConvertHelper(Expression[] arguments, ParameterInfo[] parameters) {
