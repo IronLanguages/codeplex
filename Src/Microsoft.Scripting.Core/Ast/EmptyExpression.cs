@@ -31,10 +31,6 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.EmptyStatement;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitEmpty(this);
         }

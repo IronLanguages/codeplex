@@ -358,6 +358,7 @@ class test_exceptions(object):
                         printwith("same", sys.exc_type)
                         continue
                     
+                    retval = None
                     try:
                         retval = d['test' + str(curTest)]()
                         if isinstance(retval, generator_type):

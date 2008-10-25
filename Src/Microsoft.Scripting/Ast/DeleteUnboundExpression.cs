@@ -25,8 +25,20 @@ namespace Microsoft.Scripting.Ast {
         private readonly SymbolId _name;
 
         internal DeleteUnboundExpression(Annotations annotations, SymbolId name)
-            : base(typeof(object), true, annotations) {
+            : base(annotations) {
             _name = name;
+        }
+
+        public override bool CanReduce {
+            get { return true; }
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(object);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         public SymbolId Name {

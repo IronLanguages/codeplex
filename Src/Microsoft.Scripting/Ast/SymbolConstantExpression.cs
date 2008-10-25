@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
@@ -31,11 +32,23 @@ namespace Microsoft.Scripting.Ast {
         private readonly SymbolId _value;
 
         internal SymbolConstantExpression(SymbolId value)
-            : base(typeof(SymbolId), true, null) {
+            : base(Annotations.Empty) {
 
             _value = value;
         }
 
+        public override bool CanReduce {
+            get { return true; }
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(SymbolId);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
+        }
+        
         public SymbolId Value {
             get { return _value; }
         }

@@ -62,10 +62,6 @@ namespace Microsoft.Linq.Expressions {
             return _method.ReturnType;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         public MethodInfo Method {
             get { return _method; }
         }

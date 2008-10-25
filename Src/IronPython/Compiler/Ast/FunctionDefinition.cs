@@ -216,7 +216,7 @@ namespace IronPython.Compiler.Ast {
 
             ag.DisableInterpreter = true;
             MSAst.Expression function = TransformToFunctionExpression(ag);
-            return AstUtils.Assign(_variable.Variable, function, new SourceSpan(Start, Header));
+            return AstUtils.Assign(_variable.Variable, function, Ast.Annotate(new SourceSpan(Start, Header)));
         }
 
         private static int _lambdaId;

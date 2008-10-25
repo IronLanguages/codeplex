@@ -78,7 +78,6 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.Assign: return InterpretAssignmentExpression(state, expr);
                  case ExpressionType.Block: return InterpretBlock(state, expr);
                  case ExpressionType.DebugInfo: return InterpretDebugInfoExpression(state, expr);
-                 case ExpressionType.DoStatement: return InterpretDoStatement(state, expr);
                  case ExpressionType.Dynamic: return InterpretDynamicExpression(state, expr);
                  case ExpressionType.EmptyStatement: return InterpretEmptyStatement(state, expr);
                  case ExpressionType.Extension: return InterpretExtensionExpression(state, expr);
@@ -89,9 +88,20 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.LoopStatement: return InterpretLoopStatement(state, expr);
                  case ExpressionType.ReturnStatement: return InterpretReturnStatement(state, expr);
                  case ExpressionType.SwitchStatement: return InterpretSwitchStatement(state, expr);
-                 case ExpressionType.ThrowStatement: return InterpretThrowStatement(state, expr);
+                 case ExpressionType.Throw: return InterpretThrowUnaryExpression(state, expr);
                  case ExpressionType.TryStatement: return InterpretTryStatement(state, expr);
                  case ExpressionType.Unbox: return InterpretUnboxUnaryExpression(state, expr);
+                 case ExpressionType.AddAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.AndAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.DivideAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.ExclusiveOrAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.LeftShiftAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.ModuloAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.MultiplyAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.OrAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.PowerAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.RightShiftAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.SubtractAssign: return InterpretOpAssignBinaryExpression(state, expr);
 
                 // *** END GENERATED CODE ***
 

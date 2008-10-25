@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Generation {
             );
         }
 
-        protected override Expression RewriteSet(AssignmentExpression node) {
+        protected override Expression RewriteSet(AssignmentExtensionExpression node) {
             GlobalVariableExpression lvalue = (GlobalVariableExpression)node.Expression;
             EnsureUniqueName(lvalue);
 

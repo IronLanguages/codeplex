@@ -47,6 +47,24 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+        private void EmitThrowUnaryExpression(Expression expr) {
+            EmitThrow((UnaryExpression)expr, EmitAs.Default);
+        }
+
+        private void EmitThrow(UnaryExpression expr, EmitAs emitAs) {
+            if (expr.Operand == null) {
+                CheckRethrow();
+
+                _ilg.Emit(OpCodes.Rethrow);
+            } else {
+                EmitExpression(expr.Operand);
+                _ilg.Emit(OpCodes.Throw);
+            }
+            if (emitAs != EmitAs.Void && expr.Type != typeof(void)) {
+                _ilg.EmitDefault(expr.Type);
+            }
+        }
+
         private void EmitUnaryExpression(Expression expr) {
             EmitUnary((UnaryExpression)expr);
         }

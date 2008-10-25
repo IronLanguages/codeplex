@@ -64,64 +64,24 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitDoStatement(Expression expr) {
-            DoStatement node = (DoStatement)expr;
-
-            Label startTarget = _ilg.DefineLabel();
-
-            LabelInfo breakTarget = DefineLabel(node.BreakLabel);
-            LabelInfo continueTarget = DefineLabel(node.ContinueLabel);
-
-            _ilg.MarkLabel(startTarget);
-
-            EmitExpressionAsVoid(node.Body);
-
-            continueTarget.Mark();
-
-            EmitExpressionAndBranch(true, node.Test, startTarget);
-
-            breakTarget.Mark();
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private static void EmitEmptyStatement(Expression expr) {
         }
 
-        private void EmitLoopStatement (Expression expr) {
+        private void EmitLoopStatement(Expression expr) {
             LoopExpression node = (LoopExpression)expr;
-            Label? firstTime = null;
-            Label loopEnd = _ilg.DefineLabel();
 
             PushLabelBlock(LabelBlockKind.Block);
             LabelInfo breakTarget = DefineLabel(node.BreakLabel);
             LabelInfo continueTarget = DefineLabel(node.ContinueLabel);
 
-            if (node.Increment != null) {
-                firstTime = _ilg.DefineLabel();
-                _ilg.Emit(OpCodes.Br, firstTime.Value);
-            }
-
             continueTarget.Mark();
-
-            if (node.Increment != null) {
-                EmitExpressionAsVoid(node.Increment);
-                _ilg.MarkLabel(firstTime.Value);
-            }
-
-            if (node.Test != null) {
-                EmitExpressionAndBranch(false, node.Test, loopEnd);
-            }
 
             EmitExpressionAsVoid(node.Body);
 
             _ilg.Emit(OpCodes.Br, continueTarget.Label);
 
             PopLabelBlock(LabelBlockKind.Block);
-
-            _ilg.MarkLabel(loopEnd);
-            if (node.ElseStatement != null) {
-                EmitExpressionAsVoid(node.ElseStatement);
-            }
 
             breakTarget.Mark();
         }
@@ -195,7 +155,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitConditionalBranches(SwitchExpression node, Label[] labels) {
             LocalBuilder testValueSlot = _ilg.GetLocal(typeof(int));
             _ilg.Emit(OpCodes.Stloc, testValueSlot);
-            
+
             // For all the "cases" create their conditional branches
             for (int i = 0; i < node.SwitchCases.Count; i++) {
                 // Not default case emit the condition
@@ -266,18 +226,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         #endregion
-
-        private void EmitThrowStatement(Expression expr) {
-            ThrowExpression node = (ThrowExpression)expr;
-            if (node.Value == null) {
-                CheckRethrow();
-
-                _ilg.Emit(OpCodes.Rethrow);
-            } else {
-                EmitExpression(node.Value);
-                _ilg.Emit(OpCodes.Throw);
-            }
-        }
 
         private void CheckRethrow() {
             // Rethrow is only valid inside a catch.
@@ -414,7 +362,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 _ilg.Emit(OpCodes.Pop);
             } else {
                 _ilg.BeginCatchBlock(cb.Test);
-                
+
                 EmitSaveExceptionOrPop(cb);
 
                 if (cb.Filter != null) {

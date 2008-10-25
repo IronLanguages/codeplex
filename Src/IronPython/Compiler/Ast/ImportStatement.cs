@@ -63,7 +63,7 @@ namespace IronPython.Compiler.Ast {
                             Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
                             Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
                         ), 
-                        _names[i].Span
+                        Ast.Annotate(_names[i].Span)
                     )
                 );
             }

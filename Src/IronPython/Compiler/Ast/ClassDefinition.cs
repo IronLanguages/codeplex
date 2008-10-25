@@ -116,13 +116,13 @@ namespace IronPython.Compiler.Ast {
 
             // Create the body
             MSAst.Expression bodyStmt = body.Transform(_body);
-            MSAst.Expression modStmt = Ast.Assign(_modVariable.Variable, _modNameVariable.Variable);
+            MSAst.Expression modStmt = AstUtils.Assign(_modVariable.Variable, _modNameVariable.Variable);
 
             MSAst.Expression docStmt;
             string doc = ag.GetDocumentation(_body);
             if (doc != null) {
                 docStmt =
-                    Ast.Assign(
+                    AstUtils.Assign(
                         _docVariable.Variable,
                         Ast.Constant(doc)
                     );
@@ -154,7 +154,7 @@ namespace IronPython.Compiler.Ast {
                 lambda
             );
 
-            return AstUtils.Assign(_variable.Variable, classDef, new SourceSpan(Start, Header));
+            return AstUtils.Assign(_variable.Variable, classDef, Ast.Annotate(new SourceSpan(Start, Header)));
         }
 
         public override void Walk(PythonWalker walker) {

@@ -15,6 +15,7 @@
 using System; using Microsoft;
 #if !SILVERLIGHT
 
+using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
@@ -28,14 +29,32 @@ namespace Microsoft.Scripting.ComInterop {
             _callable = callable;
         }
 
+        public override MetaObject BindGetIndex(GetIndexBinder action, params MetaObject[] args) {
+            if (_callable.ComMethodDesc.IsPropertyGet) {
+                return BindComInvoke(action.Arguments, args);
+            }
+            return base.BindGetIndex(action, args);
+        }
+
+        public override MetaObject BindSetIndex(SetIndexBinder action, params MetaObject[] args) {
+            if (_callable.ComMethodDesc.IsPropertyPut) {
+                return BindComInvoke(action.Arguments, args);
+            }
+            return base.BindSetIndex(action, args);
+        }
+
         public override MetaObject BindInvoke(InvokeBinder action, MetaObject[] args) {
+            return BindComInvoke(action.Arguments, args);
+        }
+
+        private MetaObject BindComInvoke(IList<ArgumentInfo> argInfo, MetaObject[] args) {
             var callable = Expression;
             var dispCall = Expression.Convert(callable, typeof(DispCallable));
             var methodDesc = Expression.Property(dispCall, typeof(DispCallable).GetProperty("ComMethodDesc"));
             var methodRestriction = Expression.Equal(methodDesc, Expression.Constant(_callable.ComMethodDesc));
 
             return new ComInvokeBinder(
-                action.Arguments,
+                argInfo,
                 args,
                 Restrictions.GetTypeRestriction(callable, Value.GetType()).Merge(Restrictions.GetExpressionRestriction(methodRestriction)),
                 methodDesc,
@@ -53,6 +72,20 @@ namespace Microsoft.Scripting.ComInterop {
 
                 case "IsCallable":
                     return IsCallable(args);
+
+                // TODO: remove when Python switches over to GetIndexBinder
+                case "GetItem":
+                    if (_callable.ComMethodDesc.IsPropertyGet) {
+                        return BindComInvoke(new ArgumentInfo[0], args);
+                    }
+                    break;
+
+                // TODO: remove when Python switches over to SetIndexBinder
+                case "SetItem":
+                    if (_callable.ComMethodDesc.IsPropertyPut) {
+                        return BindComInvoke(new ArgumentInfo[0], args);
+                    }
+                    break;
             }
 
             return action.FallbackOperation(this, args);

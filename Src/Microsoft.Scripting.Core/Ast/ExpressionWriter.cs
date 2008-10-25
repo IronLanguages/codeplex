@@ -330,7 +330,8 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private void VisitDeclarations(char open, IList<ParameterExpression> expressions, bool forceMultiline) {
-            VisitExpressions(open, expressions, forceMultiline, (variable) => {
+            VisitExpressions(open, expressions, forceMultiline, (variable) =>
+            {
                 Out(variable.Type.ToString());
                 if (variable.IsByRef) {
                     Out("&");
@@ -339,11 +340,11 @@ namespace Microsoft.Linq.Expressions {
                 Out(variable.Name ?? ".anonymous");
             });
         }
-        
+
         private void VisitExpressions<T>(char open, IList<T> expressions, bool forceMultiline, Action<T> visit) {
 
             bool multiline = expressions != null && (forceMultiline || expressions.Count > 1);
-            
+
             Out(open.ToString());
             if (expressions != null) {
                 Indent();
@@ -376,7 +377,7 @@ namespace Microsoft.Linq.Expressions {
                 Out(close, Flow.Break);
             }
         }
-        
+
         protected internal override Expression VisitDynamic(DynamicExpression node) {
             Out(".site", Flow.Space);
 
@@ -410,19 +411,30 @@ namespace Microsoft.Linq.Expressions {
                     case ExpressionType.GreaterThanOrEqual: op = ">="; break;
                     case ExpressionType.LessThanOrEqual: op = "<="; break;
                     case ExpressionType.Add: op = "+"; break;
+                    case ExpressionType.AddAssign: op = "+="; break;
                     case ExpressionType.AddChecked: op = "+"; isChecked = true; break;
                     case ExpressionType.Subtract: op = "-"; break;
+                    case ExpressionType.SubtractAssign: op = "-="; break;
                     case ExpressionType.SubtractChecked: op = "-"; isChecked = true; break;
                     case ExpressionType.Divide: op = "/"; break;
+                    case ExpressionType.DivideAssign: op = "/="; break;
                     case ExpressionType.Modulo: op = "%"; break;
+                    case ExpressionType.ModuloAssign: op = "%="; break;
                     case ExpressionType.Multiply: op = "*"; break;
+                    case ExpressionType.MultiplyAssign: op = "*="; break;
                     case ExpressionType.MultiplyChecked: op = "*"; isChecked = true; break;
                     case ExpressionType.LeftShift: op = "<<"; break;
+                    case ExpressionType.LeftShiftAssign: op = "<<="; break;
                     case ExpressionType.RightShift: op = ">>"; break;
+                    case ExpressionType.RightShiftAssign: op = ">>="; break;
                     case ExpressionType.And: op = "&"; break;
+                    case ExpressionType.AndAssign: op = "&="; break;
                     case ExpressionType.Or: op = "|"; break;
+                    case ExpressionType.OrAssign: op = "|="; break;
                     case ExpressionType.ExclusiveOr: op = "^"; break;
+                    case ExpressionType.ExclusiveOrAssign: op = "^="; break;
                     case ExpressionType.Power: op = "**"; break;
+                    case ExpressionType.PowerAssign: op = "**="; break;
                     //TODO: need to handle conversion lambda
                     case ExpressionType.Coalesce: op = "??"; break;
 
@@ -458,7 +470,7 @@ namespace Microsoft.Linq.Expressions {
         protected internal override Expression VisitLambda(LambdaExpression node) {
             int id = Enqueue(node);
             Out(
-                String.Format(CultureInfo.CurrentCulture, 
+                String.Format(CultureInfo.CurrentCulture,
                     "{0} ({1} {2} #{3})",
                     ".lambda",
                     node.Name,
@@ -613,6 +625,9 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.Quote:
                     Out("'");
                     break;
+                case ExpressionType.Throw:
+                    Out(".throw (");
+                    break;
             }
 
             Visit(node.Operand);
@@ -620,14 +635,13 @@ namespace Microsoft.Linq.Expressions {
             switch (node.NodeType) {
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
+                case ExpressionType.NegateChecked:
+                case ExpressionType.Throw:
                     Out(")");
                     break;
                 case ExpressionType.TypeAs:
                     Out(Flow.Space, "as", Flow.Space | Flow.Break);
                     Out(node.Type.Name);
-                    Out(")");
-                    break;
-                case ExpressionType.NegateChecked:
                     Out(")");
                     break;
                 case ExpressionType.ArrayLength:
@@ -646,30 +660,6 @@ namespace Microsoft.Linq.Expressions {
 
             VisitExpressions('{', node.Expressions, true);
 
-            return node;
-        }
-
-        protected internal override Expression VisitDoWhile(DoStatement node) {
-            Out(".do", Flow.Space);
-            if (node.BreakLabel != null) {
-                Out("break");
-                DumpLabel(node.BreakLabel);
-                Out(Flow.Space, "");
-            }
-            if (node.ContinueLabel != null) {
-                Out("continue");
-                DumpLabel(node.ContinueLabel);
-                Out(Flow.Space, "");
-            }
-            Out("{", Flow.NewLine);
-            Indent();
-            Visit(node.Body);
-            Dedent();
-            Out(Flow.NewLine, "} .while (", Flow.NewLine);
-            Indent();
-            Visit(node.Test);
-            Dedent();
-            Out(Flow.NewLine, ")", Flow.NewLine);
             return node;
         }
 
@@ -695,7 +685,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal override Expression VisitLoop(LoopExpression node) {
-            Out(".for", Flow.Space);
+            Out(".loop", Flow.Space);
             if (node.BreakLabel != null) {
                 Out("break:");
                 DumpLabel(node.BreakLabel);
@@ -706,11 +696,7 @@ namespace Microsoft.Linq.Expressions {
                 DumpLabel(node.ContinueLabel);
                 Out(Flow.Space, "");
             }
-            Out("(; ");
-            Visit(node.Test);
-            Out("; ");
-            Visit(node.Increment);
-            Out(") {", Flow.NewLine);
+            Out(" {", Flow.NewLine);
             Indent();
             Visit(node.Body);
             Dedent();
@@ -749,13 +735,6 @@ namespace Microsoft.Linq.Expressions {
             Out(") {", Flow.NewLine);
             Visit(node.SwitchCases, VisitSwitchCase);
             Out("}", Flow.NewLine);
-            return node;
-        }
-
-        protected internal override Expression VisitThrow(ThrowExpression node) {
-            Out(Flow.NewLine, ".throw (");
-            Visit(node.Value);
-            Out(")", Flow.NewLine);
             return node;
         }
 
@@ -820,7 +799,7 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        private static string GetLambdaInfo(LambdaExpression lambda) {            
+        private static string GetLambdaInfo(LambdaExpression lambda) {
             return String.Format(CultureInfo.CurrentCulture, ".lambda {0} {1} ()", lambda.ReturnType, lambda.Name);
         }
 

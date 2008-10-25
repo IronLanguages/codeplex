@@ -43,10 +43,6 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.LocalScope;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         /// <summary>
         /// The variables or parameters to provide access to
         /// </summary>

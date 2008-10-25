@@ -23,6 +23,12 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         //CONFORMING
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
+        private static void EmitOpAssignBinaryExpression(Expression expr) {
+            throw Error.OpAssignmentNotReduced();
+        }
+
+        //CONFORMING
         private void EmitBinaryExpression(Expression expr) {
             BinaryExpression b = (BinaryExpression)expr;
 
@@ -68,7 +74,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // and generate null.  If we are not lifted to null then generate a call to HasValue.
             if (isLiftedToNull) {
                 EmitExpressionAsVoid(e);
-                _ilg.EmitConstant(null, typeof(bool?));
+                _ilg.EmitDefault(typeof(bool?));
             } else {
                 EmitAddress(e, e.Type);
                 _ilg.EmitHasValue(e.Type);

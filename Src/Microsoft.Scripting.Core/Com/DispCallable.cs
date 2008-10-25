@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This represents a bound dispmethod on a IDispatch object.
     /// </summary>
-    public abstract partial class DispCallable : IDynamicObject {
+    public sealed class DispCallable : IDynamicObject {
 
         private readonly IDispatchObject _dispatch;
         private readonly ComMethodDesc _methodDesc;

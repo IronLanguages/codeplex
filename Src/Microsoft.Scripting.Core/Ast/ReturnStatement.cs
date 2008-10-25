@@ -30,10 +30,6 @@ namespace Microsoft.Linq.Expressions {
             return typeof(void);
         }
 
-        internal override NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         public Expression Expression {
             get { return _expr; }
         }

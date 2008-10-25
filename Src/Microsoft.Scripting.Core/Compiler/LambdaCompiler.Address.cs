@@ -239,7 +239,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private WriteBack AddressOfWriteBack(MemberExpression node) {
-            if (!node.CanWrite || node.Member.MemberType != MemberTypes.Property) {
+            if (node.Member.MemberType != MemberTypes.Property || !((PropertyInfo)node.Member).CanWrite) {
                 return null;
             }
 
@@ -277,7 +277,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private WriteBack AddressOfWriteBack(IndexExpression node) {
-            if (!node.CanWrite || node.Indexer == null) {
+            if (node.Indexer == null || !node.Indexer.CanWrite) {
                 return null;
             }
 

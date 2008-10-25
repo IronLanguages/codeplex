@@ -58,15 +58,6 @@ namespace Microsoft.Linq.Expressions {
             return _instance.Type.GetElementType();
         }
 
-        internal override NodeFlags GetFlags() {
-            if (_indexer != null) {
-                return (_indexer.CanRead ? NodeFlags.CanRead : NodeFlags.None) |
-                       (_indexer.CanWrite ? NodeFlags.CanWrite : NodeFlags.None);
-            }
-
-            return NodeFlags.CanWrite | NodeFlags.CanRead;
-        }
-
         public Expression Object {
             get { return _instance; }
         }

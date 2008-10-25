@@ -44,10 +44,6 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.Goto;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         /// <summary>
         /// The value passed to the target, or null if the target is of type
         /// System.Void

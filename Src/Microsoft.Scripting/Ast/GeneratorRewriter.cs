@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Ast {
         private List<int> _debugCookies;
 
         private readonly List<ParameterExpression> _vars = new List<ParameterExpression>();
-        
+
         // Possible optimization: reuse temps. Requires scoping them correctly,
         // and then storing them back in a free list
         private readonly List<ParameterExpression> _temps = new List<ParameterExpression>();
@@ -455,7 +455,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.Assign(left, value, node.Annotations);
             }
-            
+
             var block = new List<Expression>();
 
             // If the left hand side did not rewrite itself, we may still need
@@ -496,7 +496,6 @@ namespace Microsoft.Scripting.Ast {
                 block.AddRange(leftBlock.Expressions);
                 block.RemoveAt(block.Count - 1);
             }
-            Debug.Assert(left.CanWrite);
 
             if (value != node.Value) {
                 block.Add(ToTemp(ref value));
@@ -686,22 +685,6 @@ namespace Microsoft.Scripting.Ast {
                 node.Annotations,
                 ToTemp(ref o),
                 Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, null)
-            );
-        }
-
-        protected override Expression VisitThrow(ThrowExpression node) {
-            int yields = _yields.Count;
-            Expression v = Visit(node.Value);
-            if (v == node.Value) {
-                return node;
-            }
-            if (yields == _yields.Count) {
-                return Expression.Throw(v, node.Annotations);
-            }
-            return Expression.Comma(
-                node.Annotations,
-                ToTemp(ref v),
-                Expression.Throw(v, null)
             );
         }
 

@@ -305,20 +305,8 @@ namespace Microsoft.Scripting.ComInterop {
 
         // TODO: Can be internal?
         [Obsolete("Called only from generated code", true)]
-        public static DispPropertyGet CreatePropertyGet(IDispatchObject dispatch, ComMethodDesc method) {
-            return new DispPropertyGet(dispatch, method);
-        }
-
-        // TODO: Can be internal?
-        [Obsolete("Called only from generated code", true)]
-        public static DispPropertyPut CreatePropertyPut(IDispatchObject dispatch, ComMethodDesc method) {
-            return new DispPropertyPut(dispatch, method);
-        }
-
-        // TODO: Can be internal?
-        [Obsolete("Called only from generated code", true)]
-        public static DispMethod CreateMethod(IDispatchObject dispatch, ComMethodDesc method) {
-            return new DispMethod(dispatch, method);
+        public static DispCallable CreateDispCallable(IDispatchObject dispatch, ComMethodDesc method) {
+            return new DispCallable(dispatch, method);
         }
     }
 

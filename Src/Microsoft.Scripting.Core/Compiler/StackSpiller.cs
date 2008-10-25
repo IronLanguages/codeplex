@@ -120,7 +120,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             // if we have Copy, then node type must match
             Debug.Assert(
-                result.Action != RewriteAction.Copy || node.NodeType == result.Node.NodeType || node.NodeType == ExpressionType.Extension,
+                result.Action != RewriteAction.Copy || node.NodeType == result.Node.NodeType || node.NodeType == ExpressionType.Extension || BinaryExpression.IsOpAssignment(node.NodeType),
                 "rewrite action does not match node object kind"
             );
 
@@ -201,6 +201,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(action, expr);
         }
 
+        private Result RewriteOpAssignBinaryExpression(Expression expr, Stack stack) {
+            Debug.Assert(BinaryExpression.IsOpAssignment(expr.NodeType));
+
+            //The binary expression is an OpAssignment expression.
+            //Reduce it before rewriting.
+            Result result = RewriteExpression(expr.ReduceAndCheck(), stack);
+            // it's at least Copy because we reduced the node
+            return new Result(result.Action | RewriteAction.Copy, result.Node);
+        }
+        
         // BinaryExpression
         private Result RewriteBinaryExpression(Expression expr, Stack stack) {
             BinaryExpression node = (BinaryExpression)expr;
@@ -259,13 +269,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(result.Action | RewriteAction.Copy, result.Node);
         }
 
-        // ParameterExpression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteParameterExpression(Expression expr, Stack stack) {
-            // No action necessary, regardless of the stack state
-            return new Result(RewriteAction.None, expr);
-        }
-
         // LambdaExpression
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
         private static Result RewriteLambdaExpression(Expression expr, Stack stack) {
@@ -297,20 +300,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             return new Result(action, expr);
-        }
-
-        // ConstantExpression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteConstantExpression(Expression expr, Stack stack) {
-            // No action necessary, regardless of stack
-            return new Result(RewriteAction.None, expr);
-        }
-
-        // LocalScopeExpression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteLocalScopeExpression(Expression expr, Stack stack) {
-            // No action necessary, regardless of stack
-            return new Result(RewriteAction.None, expr);
         }
 
         // member assignment
@@ -446,16 +435,36 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(expression.Action, expr);
         }
 
+        // Throw
+        private Result RewriteThrowUnaryExpression(Expression expr, Stack stack) {
+            UnaryExpression node = (UnaryExpression)expr;
+
+            // Throw statement itself does not care about the stack
+            // but it will empty the stack and it may cause stack misbalance
+            // it so we need to restore stack after unconditional throw to make JIT happy
+            // this has an effect of executing Throw on an empty stack.
+
+            Result value = RewriteExpressionFreeTemps(node.Operand, Stack.Empty);
+            RewriteAction action = value.Action;
+
+            if (stack != Stack.Empty) {
+                action = RewriteAction.SpillStack;
+            }
+
+            if (action != RewriteAction.None) {
+                expr = Expression.Throw(value.Node, node.Type, node.Annotations);
+            }
+
+            return new Result(action, expr);
+        }
+
         // UnaryExpression
         private Result RewriteUnaryExpression(Expression expr, Stack stack) {
             UnaryExpression node = (UnaryExpression)expr;
-
-            // Do nothing for quoted sub-expressions
-            // We can spill later if it gets compiled
-            if (node.NodeType == ExpressionType.Quote) {
-                return new Result(RewriteAction.None, expr);
-            }
-
+            
+            Debug.Assert(node.NodeType != ExpressionType.Quote, "unexpected Quote");
+            Debug.Assert(node.NodeType != ExpressionType.Throw, "unexpected Throw");
+            
             // Operand is emitted on top of the stack as is
             Result expression = RewriteExpression(node.Operand, stack);
             if (expression.Action != RewriteAction.None) {
@@ -608,37 +617,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return new Result(action, expr);
         }
 
-        // DoStatement
-        private Result RewriteDoStatement(Expression expr, Stack stack) {
-            DoStatement node = (DoStatement)expr;
-
-            // The "do" statement requires empty stack so it can
-            // guarantee it for its child nodes.
-            Result body = RewriteExpression(node.Body, Stack.Empty);
-            Result test = RewriteExpressionFreeTemps(node.Test, Stack.Empty);
-
-            RewriteAction action = body.Action | test.Action;
-
-            // Loop needs empty stack to execute so if the stack is initially
-            // not empty, we rewrite to get empty stack.
-            if (stack != Stack.Empty) {
-                action = RewriteAction.SpillStack;
-            }
-
-            if (action != RewriteAction.None) {
-                expr = new DoStatement(body.Node, test.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
-            }
-
-            return new Result(action, expr);
-        }
-
-        // EmptyStatement
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "stack")]
-        private static Result RewriteEmptyStatement(Expression expr, Stack stack) {
-            // No action necessary, regardless of stack
-            return new Result(RewriteAction.None, expr);
-        }
-
         // LabelExpression
         private Result RewriteLabelExpression(Expression expr, Stack stack) {
             LabelExpression node = (LabelExpression)expr;
@@ -656,12 +634,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             // The loop statement requires empty stack for itself, so it
             // can guarantee it to the child nodes.
-            Result test = RewriteExpressionFreeTemps(node.Test, Stack.Empty);
-            Result incr = RewriteExpressionFreeTemps(node.Increment, Stack.Empty);
             Result body = RewriteExpression(node.Body, Stack.Empty);
-            Result @else = RewriteExpression(node.ElseStatement, Stack.Empty);
 
-            RewriteAction action = test.Action | incr.Action | body.Action | @else.Action;
+            RewriteAction action = body.Action;
 
             // However, the loop itself requires that it executes on an empty stack
             // so we need to rewrite if the stack is not empty.
@@ -670,7 +645,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (action != RewriteAction.None) {
-                expr = new LoopExpression(test.Node, incr.Node, body.Node, @else.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
+                expr = new LoopExpression(body.Node, node.BreakLabel, node.ContinueLabel, node.Annotations);
             }
             return new Result(action, expr);
         }
@@ -776,17 +751,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             return new Result(action, expr);
-        }
-
-        // ThrowStatement
-        private Result RewriteThrowStatement(Expression expr, Stack stack) {
-            ThrowExpression node = (ThrowExpression)expr;
-
-            Result value = RewriteExpressionFreeTemps(node.Value, stack);
-            if (value.Action != RewriteAction.None) {
-                expr = Expression.Throw(value.Node, node.Annotations);
-            }
-            return new Result(value.Action, expr);
         }
 
         // TryStatement

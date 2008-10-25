@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Generation {
             return Expression.ConvertHelper(MapToExpression(node), node.Type);
         }
 
-        protected override Expression RewriteSet(AssignmentExpression node) {
+        protected override Expression RewriteSet(AssignmentExtensionExpression node) {
             GlobalVariableExpression lvalue = (GlobalVariableExpression)node.Expression;
 
             return Expression.ConvertHelper(

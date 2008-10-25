@@ -39,10 +39,6 @@ namespace Microsoft.Linq.Expressions {
             return _returnType;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.Invoke;
         }

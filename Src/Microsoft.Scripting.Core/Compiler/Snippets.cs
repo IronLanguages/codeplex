@@ -53,7 +53,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             get { return _snippetsDirectory; }
         }
 
-        private AssemblyGen GetAssembly(bool emitSymbols, bool isUnsafe) {
+        internal AssemblyGen GetAssembly(bool emitSymbols, bool isUnsafe) {
             // reload options, the may have changed
             if (!_optionsFrozen) {
                 _saveSnippets = DebugOptions.SaveSnippets;

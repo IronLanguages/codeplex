@@ -53,10 +53,6 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.Constant;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         public object Value {
             get { return _value; }
         }

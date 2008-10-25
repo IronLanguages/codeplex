@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -115,7 +116,7 @@ namespace IronPython.Compiler.Ast {
                             Debug.Assert(pv.Kind != VariableKind.HiddenLocal || pv.ReadBeforeInitialized, "Hidden variable is always uninitialized");
 
                             init.Add(
-                                MSAst.Expression.Assign(
+                                AstUtils.Assign(
                                     var,
                                     MSAst.Expression.Field(null, typeof(Uninitialized).GetField("Instance"))
                                 )

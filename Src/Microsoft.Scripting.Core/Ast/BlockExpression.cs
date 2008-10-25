@@ -51,10 +51,6 @@ namespace Microsoft.Linq.Expressions {
             return visitor.VisitBlock(this);
         }
 
-        internal override NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.Block;
         }

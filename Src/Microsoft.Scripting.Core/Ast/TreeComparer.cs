@@ -91,11 +91,6 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitConstant(node);
             }
 
-            protected internal override Expression VisitDoWhile(DoStatement node) {
-                Expressions.Add(node);
-                return base.VisitDoWhile(node);
-            }
-
             protected internal override Expression VisitEmpty(EmptyExpression node) {
                 Expressions.Add(node);
                 return base.VisitEmpty(node);
@@ -161,11 +156,6 @@ namespace Microsoft.Linq.Expressions {
             protected internal override Expression VisitSwitch(SwitchExpression node) {
                 Expressions.Add(node);
                 return base.VisitSwitch(node);
-            }
-
-            protected internal override Expression VisitThrow(ThrowExpression node) {
-                Expressions.Add(node);
-                return base.VisitThrow(node);
             }
 
             protected internal override Expression VisitTry(TryExpression node) {
@@ -357,6 +347,17 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.OrElse:
                 case ExpressionType.RightShift:
                 case ExpressionType.Subtract:
+                case ExpressionType.AddAssign:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.PowerAssign:
+                case ExpressionType.AndAssign:
+                case ExpressionType.OrAssign:
+                case ExpressionType.RightShiftAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.ExclusiveOrAssign:
                     if (!Compare((BinaryExpression)currentLeft, (BinaryExpression)currentRight)) {
                         return false;
                     }
@@ -405,10 +406,9 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.ReturnStatement:
                 case ExpressionType.Assign:
                 case ExpressionType.Goto:
-                case ExpressionType.ThrowStatement:
+                case ExpressionType.Throw:
                 case ExpressionType.LoopStatement:
                 case ExpressionType.EmptyStatement:
-                case ExpressionType.DoStatement:
                 case ExpressionType.Convert:
                 case ExpressionType.TypeAs:
                 case ExpressionType.Unbox:

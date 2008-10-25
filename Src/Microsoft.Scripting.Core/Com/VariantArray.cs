@@ -15,68 +15,126 @@
 using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using Microsoft.Linq.Expressions;
+using Microsoft.Linq.Expressions.Compiler;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.ComInterop {
 
+    // TODO: make these types internal
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
     [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]
-    public struct VariantArray {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element0;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element1;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element2;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element3;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element4;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element5;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element6;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        public Variant _element7;
+    public struct VariantArray1 {
+        [Obsolete("do not use", true)]
+        public Variant Element0;
+    }
 
-        internal const int NumberOfElements = 8;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
+    [CLSCompliant(false)]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VariantArray2 {
+        [Obsolete("do not use", true)]
+        public Variant Element0;
+        [Obsolete("do not use", true)]
+        public Variant Element1;
+    }
 
-        # region FxCop-required APIs
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
+    [CLSCompliant(false)]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VariantArray4 {
+        [Obsolete("do not use", true)]
+        public Variant Element0;
+        [Obsolete("do not use", true)]
+        public Variant Element1;
+        [Obsolete("do not use", true)]
+        public Variant Element2;
+        [Obsolete("do not use", true)]
+        public Variant Element3;
+    }
 
-        public override bool Equals(object obj) {
-            if ((obj == null) || (!(obj is VariantArray))) {
-                return false;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
+    [CLSCompliant(false)]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VariantArray8 {
+        [Obsolete("do not use", true)]
+        public Variant Element0;
+        [Obsolete("do not use", true)]
+        public Variant Element1;
+        [Obsolete("do not use", true)]
+        public Variant Element2;
+        [Obsolete("do not use", true)]
+        public Variant Element3;
+        [Obsolete("do not use", true)]
+        public Variant Element4;
+        [Obsolete("do not use", true)]
+        public Variant Element5;
+        [Obsolete("do not use", true)]
+        public Variant Element6;
+        [Obsolete("do not use", true)]
+        public Variant Element7;
+    }
+
+    //
+    // Helper for getting the right VariantArray struct for a given number of
+    // arguments. Will generate a struct if needed.
+    //
+    // We use this because we don't have stackalloc or pinning in Expression
+    // Trees, so we can't create an array of Variants directly.
+    //
+    internal static class VariantArray {
+        // Don't need a dictionary for this, it will have very few elements
+        // (guarenteed less than 28, in practice 0-2)
+        private static readonly List<Type> _generatedTypes = new List<Type>(0);
+
+        internal static MemberExpression GetStructField(ParameterExpression variantArray, int field) {
+            return Expression.Field(variantArray, "Element" + field);
+        }
+
+        internal static Type GetStructType(int args) {
+            Debug.Assert(args >= 0);
+            if (args <= 1) return typeof(VariantArray1);
+            if (args <= 2) return typeof(VariantArray2);
+            if (args <= 4) return typeof(VariantArray4);
+            if (args <= 8) return typeof(VariantArray8);
+
+            int size = 1;
+            while (args > size) {
+                size *= 2;
             }
 
-            VariantArray other = (VariantArray)obj;
-            return _element0 == other._element0 &&
-                _element1 == other._element1 &&
-                _element2 == other._element2 &&
-                _element3 == other._element3 &&
-                _element4 == other._element4 &&
-                _element5 == other._element5 &&
-                _element6 == other._element6 &&
-                _element7 == other._element7;
+            lock (_generatedTypes) {
+                // See if we can find an existing type
+                foreach (Type t in _generatedTypes) {
+                    int arity = int.Parse(t.Name.Substring("VariantArray".Length), CultureInfo.InvariantCulture);
+                    if (size == arity) {
+                        return t;
+                    }
+                }
+
+                // Else generate a new type
+                Type type = CreateCustomType(size);
+                _generatedTypes.Add(type);
+                return type;
+            }
         }
 
-        public override int GetHashCode() {
-            return _element0.GetHashCode() ^ _element1.GetHashCode() ^ _element2.GetHashCode() ^ _element3.GetHashCode() ^
-                   _element4.GetHashCode() ^ _element5.GetHashCode() ^ _element6.GetHashCode() ^ _element7.GetHashCode();
-        }
-
-        public static bool operator ==(VariantArray a, VariantArray b) {
-            return a.Equals(b);
-        }
-        public static bool operator !=(VariantArray a, VariantArray b) {
-            return !a.Equals(b);
-        }
-
-        #endregion
-
-        internal static System.Reflection.FieldInfo GetField(int index) {
-            Debug.Assert(index < NumberOfElements);
-            return typeof(VariantArray).GetField("_element" + index);
+        // TODO: generate internal type with internal members
+        private static Type CreateCustomType(int size) {
+            var attrs = TypeAttributes.Public | TypeAttributes.SequentialLayout;
+            AssemblyGen asm = Snippets.Shared.GetAssembly(false, false);
+            TypeBuilder type = asm.DefineType("VariantArray" + size, typeof(ValueType), attrs, true);
+            for (int i = 0; i < size; i++) {
+                type.DefineField("Element" + i, typeof(Variant), FieldAttributes.Public);
+            }
+            return type.CreateType();
         }
     }
 }

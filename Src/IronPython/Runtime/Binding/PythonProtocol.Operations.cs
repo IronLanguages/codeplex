@@ -131,7 +131,7 @@ namespace IronPython.Runtime.Binding {
                     res = new MetaObject(
                         Ast.Scope(
                             Ast.Comma(
-                                Ast.Loop(
+                                Utils.Loop(
                                     null,                                                     // test
                                     Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
                                     Ast.Block(                                                // body

@@ -84,7 +84,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             if (variable != null) {
-                assignment = Ast.Assign(variable, AstGenerator.ConvertIfNeeded(right, variable.Type));
+                assignment = AstUtils.Assign(variable, AstGenerator.ConvertIfNeeded(right, variable.Type));
             } else {
                 assignment = AstUtils.Assign(_name, right);
             }

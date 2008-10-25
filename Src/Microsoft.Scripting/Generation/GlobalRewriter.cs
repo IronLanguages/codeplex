@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         protected abstract Expression RewriteGet(GlobalVariableExpression node);
-        protected abstract Expression RewriteSet(AssignmentExpression node);
+        protected abstract Expression RewriteSet(AssignmentExtensionExpression node);
 
         #region rewriter overrides
 
@@ -97,12 +97,17 @@ namespace Microsoft.Scripting.Generation {
                 return Rewrite(ccs);
             }
 
+            AssignmentExtensionExpression aee = node as AssignmentExtensionExpression;
+            if (aee != null) {
+                return Rewrite(aee);
+            }
+
             // Must remove extension nodes because they could contain
             // one of the above node types. See, e.g. DeleteUnboundExpression
             return Visit(node.ReduceExtensions());
         }
 
-        protected override Expression VisitAssignment(AssignmentExpression node) {
+        private Expression Rewrite(AssignmentExtensionExpression node) {
             Expression lvalue = node.Expression;
 
             GlobalVariableExpression global = lvalue as GlobalVariableExpression;
@@ -110,7 +115,7 @@ namespace Microsoft.Scripting.Generation {
                 return RewriteSet(node);
             }
 
-            return base.VisitAssignment(node);
+            return node;
         }
 
         #endregion

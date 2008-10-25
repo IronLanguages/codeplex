@@ -116,7 +116,7 @@ namespace IronPython.Runtime.Binding {
                     ),
                     res.Restrictions
                 );
-            } else if (Value.Template.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.ThrowStatement) {
+            } else if (Value.Template.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
                 // Binary Operators return NotImplemented on failure.
                 res = new MetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),

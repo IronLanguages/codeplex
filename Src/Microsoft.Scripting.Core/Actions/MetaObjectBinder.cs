@@ -121,7 +121,7 @@ namespace Microsoft.Scripting.Actions {
                         AddReturn(conditional.IfTrue, @return),
                         AddReturn(conditional.IfFalse, @return)
                     );
-                case ExpressionType.ThrowStatement:
+                case ExpressionType.Throw:
                     return body;
                 case ExpressionType.Block:
                     // block could have a throw which we need to run through to avoid 

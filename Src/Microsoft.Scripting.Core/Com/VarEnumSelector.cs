@@ -40,9 +40,10 @@ namespace Microsoft.Scripting.ComInterop {
     /// VarEnumSelector implements option # 3
     /// </summary>
     internal class VarEnumSelector {
-        private VariantBuilder[] _variantBuilders;
-        private ReturnBuilder _returnBuilder;
+        private readonly VariantBuilder[] _variantBuilders;
+        private readonly ReturnBuilder _returnBuilder;
         private bool _isSupportedByFastPath = true;
+
         private static readonly Dictionary<VarEnum, Type> _ComToManagedPrimitiveTypes = CreateComToManagedPrimitiveTypes();
         private static readonly IList<IList<VarEnum>> _ComPrimitiveTypeFamilies = CreateComPrimitiveTypeFamilies();
 

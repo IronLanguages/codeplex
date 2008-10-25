@@ -76,10 +76,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Conditional:
                     result = RewriteConditionalExpression(node, stack);
                     break;
-                // Constant
-                case ExpressionType.Constant:
-                    result = RewriteConstantExpression(node, stack);
-                    break;
                 // Convert
                 case ExpressionType.Convert:
                     result = RewriteUnaryExpression(node, stack);
@@ -192,17 +188,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.OrElse:
                     result = RewriteLogicalBinaryExpression(node, stack);
                     break;
-                // Parameter
-                case ExpressionType.Parameter:
-                    result = RewriteParameterExpression(node, stack);
-                    break;
                 // Power
                 case ExpressionType.Power:
                     result = RewriteBinaryExpression(node, stack);
-                    break;
-                // Quote
-                case ExpressionType.Quote:
-                    result = RewriteUnaryExpression(node, stack);
                     break;
                 // RightShift
                 case ExpressionType.RightShift:
@@ -236,17 +224,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.DebugInfo:
                     result = RewriteDebugInfoExpression(node, stack);
                     break;
-                // DoStatement
-                case ExpressionType.DoStatement:
-                    result = RewriteDoStatement(node, stack);
-                    break;
                 // Dynamic
                 case ExpressionType.Dynamic:
                     result = RewriteDynamicExpression(node, stack);
-                    break;
-                // EmptyStatement
-                case ExpressionType.EmptyStatement:
-                    result = RewriteEmptyStatement(node, stack);
                     break;
                 // Extension
                 case ExpressionType.Extension:
@@ -264,10 +244,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Label:
                     result = RewriteLabelExpression(node, stack);
                     break;
-                // LocalScope
-                case ExpressionType.LocalScope:
-                    result = RewriteLocalScopeExpression(node, stack);
-                    break;
                 // LoopStatement
                 case ExpressionType.LoopStatement:
                     result = RewriteLoopStatement(node, stack);
@@ -280,9 +256,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.SwitchStatement:
                     result = RewriteSwitchStatement(node, stack);
                     break;
-                // ThrowStatement
-                case ExpressionType.ThrowStatement:
-                    result = RewriteThrowStatement(node, stack);
+                // Throw
+                case ExpressionType.Throw:
+                    result = RewriteThrowUnaryExpression(node, stack);
                     break;
                 // TryStatement
                 case ExpressionType.TryStatement:
@@ -292,6 +268,61 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Unbox:
                     result = RewriteUnaryExpression(node, stack);
                     break;
+                // AddAssign
+                case ExpressionType.AddAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // AndAssign
+                case ExpressionType.AndAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // DivideAssign
+                case ExpressionType.DivideAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // ExclusiveOrAssign
+                case ExpressionType.ExclusiveOrAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // LeftShiftAssign
+                case ExpressionType.LeftShiftAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // ModuloAssign
+                case ExpressionType.ModuloAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // MultiplyAssign
+                case ExpressionType.MultiplyAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // OrAssign
+                case ExpressionType.OrAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // PowerAssign
+                case ExpressionType.PowerAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // RightShiftAssign
+                case ExpressionType.RightShiftAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // SubtractAssign
+                case ExpressionType.SubtractAssign:
+                    result = RewriteOpAssignBinaryExpression(node, stack);
+                    break;
+                // Quote
+                case ExpressionType.Quote:
+                // Parameter
+                case ExpressionType.Parameter:
+                // Constant
+                case ExpressionType.Constant:
+                // LocalScope
+                case ExpressionType.LocalScope:
+                // EmptyStatement
+                case ExpressionType.EmptyStatement:
+                    return new Result(RewriteAction.None, node);
 
                 // *** END GENERATED CODE ***
 

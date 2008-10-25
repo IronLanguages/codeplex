@@ -169,7 +169,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Conditional:
                 case ExpressionType.Block:
-                case ExpressionType.DoStatement:
                 case ExpressionType.SwitchStatement:
                 case ExpressionType.LoopStatement:
                 case ExpressionType.Goto:

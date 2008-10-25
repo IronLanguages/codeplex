@@ -93,11 +93,6 @@ namespace Microsoft.Linq.Expressions {
         protected override Type GetExpressionType() {
             return _field.FieldType;
         }
-
-        internal override NodeFlags GetFlags() {
-            return NodeFlags.CanRead |
-                   (!(_field.IsLiteral || _field.IsInitOnly) ? NodeFlags.CanWrite : NodeFlags.None);
-        }
     }
 
     internal class PropertyExpression : MemberExpression {
@@ -113,11 +108,6 @@ namespace Microsoft.Linq.Expressions {
 
         protected override Type GetExpressionType() {
             return _property.PropertyType;
-        }
-
-        internal override NodeFlags GetFlags() {
-            return (_property.CanRead ? NodeFlags.CanRead : NodeFlags.None) |
-                   (_property.CanWrite ? NodeFlags.CanWrite : NodeFlags.None);
         }
     }
 

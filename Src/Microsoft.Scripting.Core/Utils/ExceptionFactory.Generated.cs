@@ -1688,6 +1688,15 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "OpAssignment should have been reduced."
+        /// </summary>
+        internal static string OpAssignmentNotReduced {
+            get {
+                return "OpAssignment should have been reduced.";
+            }
+        }
+
+        /// <summary>
         /// A string like  "unknown lift type: '{0}'."
         /// </summary>
         internal static string UnknownLiftType(object p0) {
@@ -2826,6 +2835,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception InvalidMemberType(object p0) {
             return new InvalidOperationException(Strings.InvalidMemberType(p0));
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "OpAssignment should have been reduced."
+        /// </summary>
+        internal static Exception OpAssignmentNotReduced() {
+            return new InvalidOperationException(Strings.OpAssignmentNotReduced);
         }
 
         /// <summary>

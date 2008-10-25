@@ -16,6 +16,7 @@
 using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -23,33 +24,80 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static LoopExpression While(Expression test, Expression body, Expression @else) {
-            return Expression.Loop(test, null, body, @else, null, null);
+            return Loop(test, null, body, @else, null, null);
         }
 
         public static LoopExpression While(Expression test, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue) {
-            return Expression.Loop(test, null, body, @else, @break, @continue);
+            return Loop(test, null, body, @else, @break, @continue);
         }
 
         [Obsolete("use While overload without SourceSpan")]
         public static LoopExpression While(Expression test, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, SourceLocation header, SourceSpan span) {
-            return Expression.Loop(test, null, body, @else, @break, @continue, Expression.Annotate(header, span));
+            return Loop(test, null, body, @else, @break, @continue, Expression.Annotate(header, span));
         }
 
         public static LoopExpression Infinite(Expression body) {
-            return Expression.Loop(null, null, body, null, null, null);
+            return Expression.Loop(body, null, null);
         }
 
         public static LoopExpression Infinite(Expression body, LabelTarget @break, LabelTarget @continue) {
-            return Expression.Loop(null, null, body, null, @break, @continue);
+            return Expression.Loop(body, @break, @continue);
         }
 
         public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else) {
-            return Expression.Loop(test, increment, body, @else, null, null);
+            return Loop(test, increment, body, @else, null, null);
         }
 
         [Obsolete("use Loop overload without SourceSpan")]
         public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, SourceLocation header, SourceSpan span) {
-            return Expression.Loop(test, increment, body, @else, @break, @continue, Expression.Annotate(span, header));
+            return Loop(test, increment, body, @else, @break, @continue, Expression.Annotate(span, header));
+        }
+
+        public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue) {
+            return Loop(test, increment, body, @else, @break, @continue, null);
+        }
+
+        public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, Annotations annotations) {
+            ContractUtils.RequiresNotNull(body, "body");
+            if (test != null) {
+                ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
+                if (@break == null) {
+                    @break = Expression.Label();
+                }
+            }
+
+            // for (;;) {
+            //     if (test) {
+            //     } else {
+            //        else;
+            //        break;
+            //     }
+            //     Body
+            // continue:
+            //     Increment;
+            // }
+
+            // If there is no test, 'else' will never execute and gets simply thrown away.
+            return Expression.Loop(
+                Expression.Block(
+                    test != null
+                        ? (Expression)Expression.Condition(
+                            test,
+                            Expression.Empty(),
+                            Expression.Block(
+                                @else != null ? @else : Expression.Empty(),
+                                Expression.Break(@break)
+                            )
+                        )
+                        : Expression.Empty(),
+                    body,
+                    @continue != null ? (Expression)Expression.Label(@continue) : Expression.Empty(),
+                    increment != null ? increment : Expression.Empty()
+                ),
+                @break,
+                null,
+                annotations
+            );
         }
     }
 }

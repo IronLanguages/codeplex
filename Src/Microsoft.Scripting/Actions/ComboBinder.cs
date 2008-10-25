@@ -52,8 +52,8 @@ namespace Microsoft.Scripting.Actions {
 
                 MetaObject[] tmpargs = GetArguments(args, results, i);
                 MetaObject next = curBinder.Binder.Bind(tmpargs[0], ArrayUtils.RemoveFirst(tmpargs));
-                
-                if (next.Expression.NodeType == ExpressionType.ThrowStatement) {
+
+                if (next.Expression.NodeType == ExpressionType.Throw) {
                     // end of the line... the expression is throwing, none of the other 
                     // binders will have an opportunity to run.
                     steps.Add(next.Expression);

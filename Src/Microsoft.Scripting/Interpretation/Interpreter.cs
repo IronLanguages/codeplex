@@ -315,6 +315,14 @@ namespace Microsoft.Scripting.Interpretation {
             return ret;
         }
 
+        private static object InterpretOpAssignBinaryExpression(InterpreterState state, Expression expr) {
+            Debug.Assert(expr.CanReduce);
+
+            //expr is an OpAssignement expression.
+            //Reduce it before interpreting.
+            return Interpret(state, expr.ReduceAndCheck());
+        }
+
         private static object InterpretBinaryExpression(InterpreterState state, Expression expr) {
             BinaryExpression node = (BinaryExpression)expr;
 
@@ -1154,53 +1162,6 @@ namespace Microsoft.Scripting.Interpretation {
             return ControlFlow.Goto(node.Target, value);
         }
 
-        private static object InterpretDoStatement(InterpreterState state, Expression expr) {
-            DoStatement node = (DoStatement)expr;
-            SetSourceLocation(state, node);
-
-            for (; ; ) {
-                ControlFlow cf;
-
-                object ret = Interpret(state, node.Body);
-
-                if ((cf = ret as ControlFlow) != null) {
-                    if (cf.Kind == ControlFlowKind.Goto) {
-                        if (cf.Label == node.BreakLabel) {
-                            break;
-                        } else if (cf.Label != node.ContinueLabel) {
-                            return cf;
-                        }
-                    } else if (cf.Kind == ControlFlowKind.Return) {
-                        return ret;
-                    }
-                }
-
-                ret = Interpret(state, node.Test);
-                if ((cf = ret as ControlFlow) != null) {
-                    if (cf.Kind == ControlFlowKind.Goto) {
-                        if (cf.Label == node.BreakLabel) {
-                            break;
-                        } else if (cf.Label != node.ContinueLabel) {
-                            return cf;
-                        }
-                    } else if (cf.Kind == ControlFlowKind.Return) {
-                        return ret;
-                    }
-                }
-
-                // Check the condition
-                if (ret != ControlFlow.NextForYield && !(bool)ret) {
-                    break;
-                }
-            }
-
-            if (state.CurrentYield != null) {
-                return ControlFlow.NextForYield;
-            }
-
-            return ControlFlow.NextStatement;
-        }
-
         private static object InterpretEmptyStatement(InterpreterState state, Expression expr) {
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
@@ -1218,10 +1179,13 @@ namespace Microsoft.Scripting.Interpretation {
             LabelExpression node = (LabelExpression)expr;
             SetSourceLocation(state, node);
 
-            object res = Interpret(state, node.DefaultValue);
-            var cf = res as ControlFlow;
-            if (cf != null && cf.Kind == ControlFlowKind.Goto && cf.Label == node.Label) {
-                return ControlFlow.NextStatement;
+            object res = ControlFlow.NextStatement;
+            if (node.DefaultValue != null) {
+                res = Interpret(state, node.DefaultValue);
+                var cf = res as ControlFlow;
+                if (cf != null && cf.Kind == ControlFlowKind.Goto && cf.Label == node.Label) {
+                    res = ControlFlow.NextStatement;
+                }
             }
 
             return res;
@@ -1233,27 +1197,6 @@ namespace Microsoft.Scripting.Interpretation {
 
             for (; ; ) {
                 ControlFlow cf;
-
-                if (node.Test != null) {
-                    object test = Interpret(state, node.Test);
-                    if ((cf = test as ControlFlow) != null) {
-                        if (cf.Kind == ControlFlowKind.Goto) {
-                            if (cf.Label == node.BreakLabel) {
-                                // Break out of the loop and execute next statement outside
-                                return ControlFlow.NextStatement;
-                            } else if (cf.Label != node.ContinueLabel) {
-                                return cf;
-                            }
-                        } else if (cf.Kind == ControlFlowKind.Return) {
-                            return test;
-                        }
-                    }
-
-                    // Test is false, break the loop
-                    if (test != ControlFlow.NextForYield && !(bool)test) {
-                        break;
-                    }
-                }
 
                 object body = Interpret(state, node.Body);
                 if ((cf = body as ControlFlow) != null) {
@@ -1268,33 +1211,7 @@ namespace Microsoft.Scripting.Interpretation {
                         return body;
                     }
                 }
-
-                if (node.Increment != null) {
-                    object increment = Interpret(state, node.Increment);
-                    if ((cf = increment as ControlFlow) != null) {
-                        if (cf.Kind == ControlFlowKind.Goto) {
-                            if (cf.Label == node.BreakLabel) {
-                                // Break out of the loop and execute next statement outside
-                                return ControlFlow.NextStatement;
-                            } else if (cf.Label != node.ContinueLabel) {
-                                return cf;
-                            }
-                        } else if (cf.Kind == ControlFlowKind.Return) {
-                            return increment;
-                        }
-                    }
-                }
             }
-
-            if (node.ElseStatement != null) {
-                return Interpret(state, node.ElseStatement);
-            }
-
-            if (state.CurrentYield != null) {
-                return ControlFlow.NextForYield;
-            }
-
-            return ControlFlow.NextStatement;
         }
 
         private static object InterpretReturnStatement(InterpreterState state, Expression expr) {
@@ -1340,29 +1257,46 @@ namespace Microsoft.Scripting.Interpretation {
 
             try {
                 var expressions = node.Expressions;
-                int lastIndex = expressions.Count - 1;
+                int count = expressions.Count;
 
-                if (lastIndex >= 0) {
-                    object val = null;
+                if (count > 0) {
+                    int current = 0;
 
-                    for (int i = 0; i < lastIndex; i++) {
-                        if (InterpretAndCheckFlow(child, expressions[i], out val)) {
+                    for (; ; ) {
+                        object val = null;
+                        Expression ce = expressions[current];
+
+                        if (InterpretAndCheckFlow(child, ce, out val)) {
+                            // Control flow
                             if (val != ControlFlow.NextStatement) {
-                                return val;
+                                ControlFlow cf = (ControlFlow)val;
+                                if (cf.Kind == ControlFlowKind.Goto) {
+                                    // Is the goto within the block?
+                                    for (int target = 0; target < count; target++) {
+                                        LabelExpression le = expressions[target] as LabelExpression;
+                                        if (le != null && le.Label == cf.Label) {
+                                            // Reset to execute the code from after the label
+                                            // We are going to the label and since label is at the end of the
+                                            // expression, set to target and we'll advance below.
+                                            current = target;
+                                            val = null;
+                                            goto Next;
+                                        }
+                                    }
+                                }
+
+                                return cf;
                             }
                         }
-                    }
 
-                    Expression last = expressions[lastIndex];
+                    Next:
+                        // Next expression
+                        current++;
 
-                    if (InterpretAndCheckFlow(child, last, out val)) {
-                        if (val != ControlFlow.NextStatement) {
-                            return val;
+                        // Last expression?
+                        if (current >= count) {
+                            return node.Type != typeof(void) ? val : ControlFlow.NextStatement;
                         }
-                    }
-
-                    if (node.Type != typeof(void)) {
-                        return val;
                     }
                 }
             } finally {
@@ -1442,15 +1376,15 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
-        private static object InterpretThrowStatement(InterpreterState state, Expression expr) {
-            ThrowExpression node = (ThrowExpression)expr;
+        private static object InterpretThrowUnaryExpression(InterpreterState state, Expression expr) {
+            UnaryExpression node = (UnaryExpression)expr;
             Exception ex;
 
-            if (node.Value == null) {
+            if (node.Operand == null) {
                 ex = LastEvalException;
             } else {
                 object exception;
-                if (InterpretAndCheckFlow(state, node.Value, out exception)) {
+                if (InterpretAndCheckFlow(state, node.Operand, out exception)) {
                     return exception;
                 }
 

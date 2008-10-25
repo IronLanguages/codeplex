@@ -17,6 +17,7 @@ using System; using Microsoft;
 using IronPython.Runtime.Binding;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -55,7 +56,7 @@ namespace IronPython.Compiler.Ast {
                     ag.BinderState,
                     typeof(bool),
                     ConversionResultKind.ExplicitCast,
-                    Ast.Assign(
+                    AstUtils.Assign(
                         tmp,
                         Ast.ConvertHelper(
                             left,
