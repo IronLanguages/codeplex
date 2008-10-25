@@ -30,14 +30,27 @@ namespace Microsoft.Linq.Expressions {
         private readonly int _startLine, _startColumn, _endLine, _endColumn;
         private readonly SymbolDocumentInfo _document;
 
-        internal DebugInfoExpression(Expression body, SymbolDocumentInfo document, int startLine, int startColumn, int endLine, int endColumn)
-            : base(ExpressionType.DebugInfo, body.Type, true, null, true, false) {
+        internal DebugInfoExpression(Expression body, SymbolDocumentInfo document, int startLine, int startColumn, int endLine, int endColumn) {
             _expression = body;
             _document = document;
             _startLine = startLine;
             _startColumn = startColumn;
             _endLine = endLine;
             _endColumn = endColumn;
+        }
+
+        protected override Type GetExpressionType() {
+            return _expression.Type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.DebugInfo;
+        }
+
+        public override bool CanReduce {
+            get {
+                return true;
+            }
         }
 
         public int StartLine {

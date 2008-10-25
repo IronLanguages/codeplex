@@ -53,7 +53,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            switch(action.Operation) {
+            switch (action.Operation) {
                 case StandardOperators.CallSignatures:
                     return PythonProtocol.MakeCallSignatureOperation(this, Value.Targets);
             }
@@ -88,7 +88,7 @@ namespace IronPython.Runtime.Binding {
                 return MakeSelflessCall(call, codeContext, args);
             } else {
                 return MakeSelfCall(call, codeContext, args);
-            }            
+            }
         }
 
         private MetaObject/*!*/ MakeSelflessCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
@@ -119,9 +119,9 @@ namespace IronPython.Runtime.Binding {
                         NarrowingLevel.All,
                 Value.Name,
                 out target
-            );            
+            );
 
-            if (Value.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.ThrowStatement) {
+            if (Value.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
                 // Binary Operators return NotImplemented on failure.
                 res = new MetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),
@@ -132,12 +132,12 @@ namespace IronPython.Runtime.Binding {
             WarningInfo info;
             if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
                 res = info.AddWarning(codeContext, res);
-            } 
-            
+            }
+
             return res;
         }
 
-        private MetaObject/*!*/ MakeSelfCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {            
+        private MetaObject/*!*/ MakeSelfCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
 
             Expression instance = Ast.Property(
@@ -159,7 +159,7 @@ namespace IronPython.Runtime.Binding {
                 ).Merge(
                     Restrictions.GetExpressionRestriction(
                         Value.MakeBoundFunctionTest(
-                            Ast.ConvertHelper(Expression, typeof(BuiltinFunction))                            
+                            Ast.ConvertHelper(Expression, typeof(BuiltinFunction))
                         )
                     )
                 )
@@ -200,7 +200,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            if (Value.IsBinaryOperator && args.Length == 1 && res.Expression.NodeType == ExpressionType.ThrowStatement) { // 1 bound function + 1 arg
+            if (Value.IsBinaryOperator && args.Length == 1 && res.Expression.NodeType == ExpressionType.Throw) { // 1 bound function + 1 arg
                 // binary operators return NotImplemented on a failure to call them
                 res = new MetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),
@@ -212,7 +212,7 @@ namespace IronPython.Runtime.Binding {
             if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
                 res = info.AddWarning(codeContext, res);
             }
-            
+
             return res;
         }
 

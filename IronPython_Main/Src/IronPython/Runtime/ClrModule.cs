@@ -659,6 +659,10 @@ import Namespace.")]
 
             PythonContext pc = PythonContext.GetContext(context);
 
+            for (int i = 0; i < filenames.Length; i++) {
+                filenames[i] = Path.GetFullPath(filenames[i]);
+            }
+
             Dictionary<string, string> packageMap = BuildPackageMap(filenames);
 
             List<ScriptCode> code = new List<ScriptCode>();
@@ -813,17 +817,13 @@ import Namespace.")]
             // finally build up the package names for the dirs...
             Dictionary<string, string> packageMap = new Dictionary<string, string>();
             foreach (string packageName in modules) {
-                string dirName = Path.GetDirectoryName(packageName);
+                string dirName = Path.GetDirectoryName(packageName);    // remove __init__.py
                 string pkgName = String.Empty;
                 string fullName = Path.GetFileName(Path.GetDirectoryName(packageName));
 
-                do {
-                    if (pkgName != string.Empty) {
-                        fullName = pkgName + "." + fullName;
-                    }
-
-                    dirName = Path.GetDirectoryName(dirName);
-                } while (packageMap.TryGetValue(dirName, out pkgName));
+                if (packageMap.TryGetValue(Path.GetDirectoryName(dirName), out pkgName)) {   // remove directory name
+                    fullName = pkgName + "." + fullName;
+                }
 
                 packageMap[Path.GetDirectoryName(packageName)] = fullName;
             }

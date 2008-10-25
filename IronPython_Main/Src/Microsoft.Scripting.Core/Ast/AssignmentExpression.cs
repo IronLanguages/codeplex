@@ -46,10 +46,6 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.Assign;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         public Expression Expression {
             get { return _expression; }
         }
@@ -72,7 +68,6 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-
         public static AssignmentExpression Assign(Expression left, Expression right) {
             return Assign(left, right, Annotations.Empty);
         }

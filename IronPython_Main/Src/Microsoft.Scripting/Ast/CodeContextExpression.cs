@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
@@ -56,9 +57,17 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _body;
 
         internal CodeContextScopeExpression(Annotations annotations, Expression body, Expression newContext)
-            : base(body.Type, false, annotations) {
+            : base(annotations) {
             _body = body;
             _newContext = newContext;
+        }
+
+        protected override Type GetExpressionType() {
+            return _body.Type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         /// <summary>
@@ -101,7 +110,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(newContext, "newContext");
             ContractUtils.Requires(TypeUtils.AreAssignable(typeof(CodeContext), newContext.Type), "newContext");
-            ContractUtils.Requires(newContext.CanRead, "newContext");
+
             return new CodeContextScopeExpression(annotations, body, newContext);
         }
     }

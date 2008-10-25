@@ -202,7 +202,7 @@ namespace Microsoft.Scripting.ComInterop {
                 _comTypeDesc.GetItem = methodDesc;
             }
 
-            value = new DispPropertyGet(_dispatchObject, methodDesc);
+            value = new DispCallable(_dispatchObject, methodDesc);
 
             return true;
         }
@@ -235,7 +235,7 @@ namespace Microsoft.Scripting.ComInterop {
                 _comTypeDesc.SetItem = methodDesc;
             }
 
-            value = new DispPropertyPut(_dispatchObject, methodDesc);
+            value = new DispCallable(_dispatchObject, methodDesc);
 
             return true;
         }
@@ -276,18 +276,6 @@ namespace Microsoft.Scripting.ComInterop {
             } else {
                 throw Error.CouldNotGetDispId(name, string.Format(CultureInfo.InvariantCulture, "0x{1:X})", hresult));
             }
-        }
-
-        [Obsolete("Call from generated code only", true)]
-        public void SetAttr(string name, object value) {
-            Obj.GetType().InvokeMember(
-                name,
-                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance,
-                Type.DefaultBinder,
-                Obj,
-                new object[1] { value },
-                CultureInfo.InvariantCulture
-            );
         }
 
         #endregion

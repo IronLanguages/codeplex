@@ -198,7 +198,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal static MSAst.Expression/*!*/ MakeAssignment(MSAst.ParameterExpression/*!*/ variable, MSAst.Expression/*!*/ right, SourceSpan span) {
-            return AstUtils.Assign(variable, Ast.Convert(right, variable.Type), span);
+            return AstUtils.Assign(variable, Ast.Convert(right, variable.Type), Ast.Annotate(span));
         }
 
         internal static MSAst.Expression/*!*/ ConvertIfNeeded(MSAst.Expression/*!*/ expression, Type/*!*/ type) {
@@ -368,7 +368,7 @@ namespace IronPython.Compiler.Ast {
                 AstUtils.Assign(
                     LineNumberUpdated, 
                     Ast.Constant(preventAdditionalAdds), 
-                    SourceSpan.None
+                    Ast.Annotate(SourceSpan.None)
                 )
             );
         }

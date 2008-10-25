@@ -29,9 +29,21 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
 
         internal YieldExpression(LabelTarget target, Expression value, Annotations annotations)
-            : base(typeof(void), false, annotations) {
+            : base(annotations) {
             _target = target;
             _value = value;
+        }
+
+        public override bool CanReduce {
+            get { return false; }
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(void);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         /// <summary>
@@ -75,8 +87,6 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(target.Type != typeof(void), "target", "generator label must have a non-void type");
             if (value != null) {
-                ContractUtils.Requires(value.CanRead, "value", "must be readable");
-
                 if (!TypeUtils.AreReferenceAssignable(target.Type, value.Type)) {
                     // C# autoquotes generator return values
                     if (target.Type.IsSubclassOf(typeof(Expression)) &&

@@ -35,9 +35,20 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _body;
         private Expression _reduced;
 
-        internal FinallyFlowControlExpression(Expression body)
-            : base(body.Type, true, null) {
+        internal FinallyFlowControlExpression(Expression body) {
             _body = body;
+        }
+
+        public override bool CanReduce {
+            get { return true; }
+        }
+
+        protected override Type GetExpressionType() {
+            return Body.Type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         public Expression Body {

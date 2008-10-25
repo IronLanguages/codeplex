@@ -594,7 +594,7 @@ m0(self) method of win32com.client.CDispatch instance
         #IP w/ preferComDispatch
         else:
             #Merlin 378007
-            expected = """Help on DispMethod in module __builtin__"""
+            expected = """Help on DispCallable in module __builtin__"""
             Assert(expected in fake_stdout.text)
             return
             
@@ -642,7 +642,7 @@ def test_type():
             AreEqual(str(type(m)), "<type 'builtin_function_or_method'>")
         else:
             #Merlin 378011
-            AreEqual(str(type(m)), "<type 'DispMethod'>")
+            AreEqual(str(type(m)), "<type 'DispCallable'>")
     
 def test_isinstance():
     from iptest.type_util import types

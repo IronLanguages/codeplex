@@ -20,13 +20,13 @@ using Microsoft.Linq.Expressions;
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         [Obsolete("use Expression.Rethrow instead")]
-        public static ThrowExpression Rethrow(SourceSpan span) {
-            return Expression.Throw(null, Expression.Annotate(span));
+        public static UnaryExpression Rethrow(SourceSpan span) {
+            return Expression.Throw(null, typeof(void), Expression.Annotate(span));
         }
 
         [Obsolete("use Expression.Throw instead")]
-        public static ThrowExpression Throw(Expression value, SourceSpan span) {
-            return Expression.Throw(value, Expression.Annotate(span));
+        public static UnaryExpression Throw(Expression value, SourceSpan span) {
+            return Expression.Throw(value, typeof(void), Expression.Annotate(span));
         }
     }
 }

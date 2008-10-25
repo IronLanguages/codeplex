@@ -120,7 +120,6 @@ namespace Microsoft.Scripting.Actions {
 
             return new Expression<T>(
                 Annotations.Empty,
-                ExpressionType.Lambda,
                 "_stub_",
                 Expression.Comma(body),
                 new ReadOnlyCollection<ParameterExpression>(@params)

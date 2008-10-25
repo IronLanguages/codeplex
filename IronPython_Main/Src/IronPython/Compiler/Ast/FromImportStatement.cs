@@ -97,7 +97,7 @@ namespace IronPython.Compiler.Ast {
                             Ast.NewArrayInit(typeof(string), names),
                             Ast.Constant(GetLevel())
                         ), 
-                        _root.Span
+                        Ast.Annotate(_root.Span)
                     )
                 );
 
@@ -112,7 +112,7 @@ namespace IronPython.Compiler.Ast {
                                 module,
                                 names[i]
                             ), 
-                            Span
+                            Ast.Annotate(Span)
                         )
                     );
                 }

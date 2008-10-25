@@ -34,7 +34,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -199,7 +199,6 @@
     <Compile Include="Ast\CatchBlock.cs" />
     <Compile Include="Ast\ConditionalExpression.cs" />
     <Compile Include="Ast\ConstantExpression.cs" />
-    <Compile Include="Ast\DoStatement.cs" />
     <Compile Include="Ast\ElementInit.cs" />
     <Compile Include="Ast\EmptyExpression.cs" />
     <Compile Include="Ast\Expression.cs" />
@@ -222,7 +221,6 @@
     <Compile Include="Ast\MethodCallExpression.cs" />
     <Compile Include="Ast\NewArrayExpression.cs" />
     <Compile Include="Ast\NewExpression.cs" />
-    <Compile Include="Ast\OpAssignmentExpression.cs" />
     <Compile Include="Ast\ParameterExpression.cs" />
     <Compile Include="Ast\ReturnStatement.cs" />
     <Compile Include="Ast\SourceFileInformation.cs" />
@@ -230,7 +228,6 @@
     <Compile Include="Ast\SourceSpan.cs" />
     <Compile Include="Ast\SwitchCase.cs" />
     <Compile Include="Ast\SwitchExpression.cs" />
-    <Compile Include="Ast\ThrowExpression.cs" />
     <Compile Include="Ast\TreeComparer.cs" />
     <Compile Include="Ast\TryExpression.cs" />
     <Compile Include="Ast\TypeBinaryExpression.cs" />
@@ -262,9 +259,6 @@
     <Compile Include="Com\ComTypeLibMemberDesc.cs" />
     <Compile Include="Com\DispCallable.cs" />
     <Compile Include="Com\DispCallableMetaObject.cs" />
-    <Compile Include="Com\DispMethod.cs" />
-    <Compile Include="Com\DispPropertyGet.cs" />
-    <Compile Include="Com\DispPropertyPut.cs" />
     <Compile Include="Com\ExcepInfo.cs" />
     <Compile Include="Com\GenericComMetaObject.cs" />
     <Compile Include="Com\GenericComObject.cs" />

@@ -176,17 +176,6 @@ namespace Microsoft.Linq.Expressions {
             return Expression.DebugInfo(e, node.Document, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn);
         }
 
-        protected internal virtual Expression VisitDoWhile(DoStatement node) {
-            LabelTarget @break = VisitLabelTarget(node.BreakLabel);
-            LabelTarget @continue = VisitLabelTarget(node.ContinueLabel);
-            Expression t = Visit(node.Test);
-            Expression e = Visit(node.Body);
-            if (@break == node.BreakLabel && @continue == node.ContinueLabel && t == node.Test && e == node.Body) {
-                return node;
-            }
-            return Expression.DoWhile(e, t, @break, @continue, node.Annotations);
-        }
-
         protected internal virtual Expression VisitDynamic(DynamicExpression node) {
             ReadOnlyCollection<Expression> a = Visit(node.Arguments);
             if (a == node.Arguments) {
@@ -252,19 +241,13 @@ namespace Microsoft.Linq.Expressions {
         protected internal virtual Expression VisitLoop(LoopExpression node) {
             LabelTarget @break = VisitLabelTarget(node.BreakLabel);
             LabelTarget @continue = VisitLabelTarget(node.ContinueLabel);
-            Expression t = Visit(node.Test);
-            Expression i = Visit(node.Increment);
             Expression b = Visit(node.Body);
-            Expression e = Visit(node.ElseStatement);
             if (@break == node.BreakLabel &&
                 @continue == node.ContinueLabel &&
-                t == node.Test &&
-                i == node.Increment &&
-                b == node.Body &&
-                e == node.ElseStatement) {
+                b == node.Body) {
                 return node;
             }
-            return Expression.Loop(t, i, b, e, @break, @continue, node.Annotations);
+            return Expression.Loop(b, @break, @continue, node.Annotations);
         }
 
         protected internal virtual Expression VisitMemberAccess(MemberExpression node) {
@@ -357,14 +340,6 @@ namespace Microsoft.Linq.Expressions {
                 return node;
             }
             return Expression.Switch(t, l, node.Annotations, c);
-        }
-
-        protected internal virtual Expression VisitThrow(ThrowExpression node) {
-            Expression v = Visit(node.Value);
-            if (v == node.Value) {
-                return node;
-            }
-            return Expression.Throw(v, node.Annotations);
         }
 
         protected virtual CatchBlock VisitCatchBlock(CatchBlock node) {

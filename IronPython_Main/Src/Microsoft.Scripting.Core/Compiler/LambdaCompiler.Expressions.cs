@@ -59,6 +59,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Block:
                     Emit((BlockExpression)node, EmitAs.Void);
                     break;
+                case ExpressionType.Throw:
+                    EmitThrow((UnaryExpression)node, EmitAs.Void);
+                    break;
                 default:
                     EmitExpression(node, false);
                     if (node.Type != typeof(void)) {
@@ -852,7 +855,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                             _ilg.Emit(OpCodes.Ldloc, anyNull);
                             _ilg.Emit(OpCodes.Brtrue, exitNull);
                         }
-                        EmitMethodCallExpression( mc);
+                        EmitMethodCallExpression(mc);
                         if (TypeUtils.IsNullableType(resultType) && resultType != mc.Type) {
                             ConstructorInfo ci = resultType.GetConstructor(new Type[] { mc.Type });
                             _ilg.Emit(OpCodes.Newobj, ci);

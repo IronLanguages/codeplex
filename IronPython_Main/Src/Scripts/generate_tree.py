@@ -81,7 +81,6 @@ expressions = [
     Expression("Assign",             "AssignmentExpression"), # TODO: merge to BinaryExpression
     Expression("Block",              "Block"),                # TODO: rename to BlockExpression
     Expression("DebugInfo",          "DebugInfoExpression"),
-    Expression("DoStatement",        "DoStatement"),          # TODO: remove
     Expression("Dynamic",            "DynamicExpression"),
     Expression("EmptyStatement",     "EmptyStatement"),       # TODO: rename to EmptyExpression
     Expression("Extension",          "ExtensionExpression"),
@@ -92,10 +91,24 @@ expressions = [
     Expression("LoopStatement",      "LoopStatement"),        # TODO: LoopExpression
     Expression("ReturnStatement",    "ReturnStatement"),      # TODO: remove
     Expression("SwitchStatement",    "SwitchStatement"),      # TODO: SwitchExpression
-    Expression("ThrowStatement",     "ThrowStatement"),       # TODO: merge with UnaryExpression
+    Expression("Throw",              "UnaryExpression"),      
     Expression("TryStatement",       "TryStatement"),         # TODO: TryExpression
     Expression("Unbox",              "UnaryExpression"),
+    Expression("AddAssign",          "BinaryExpression"),
+    Expression("AndAssign",          "BinaryExpression"),
+    Expression("DivideAssign",       "BinaryExpression"),
+    Expression("ExclusiveOrAssign",  "BinaryExpression"),
+    Expression("LeftShiftAssign",    "BinaryExpression"),
+    Expression("ModuloAssign",       "BinaryExpression"),
+    Expression("MultiplyAssign",     "BinaryExpression"),
+    Expression("OrAssign",           "BinaryExpression"),
+    Expression("PowerAssign",        "BinaryExpression"),
+    Expression("RightShiftAssign",   "BinaryExpression"),
+    Expression("SubtractAssign",     "BinaryExpression"),
+
 ]
+
+op_assignments = ["MultiplyAssign", "SubtractAssign", "ExclusiveOrAssign", "LeftShiftAssign", "RightShiftAssign", "ModuloAssign", "AddAssign", "AndAssign", "OrAssign", "DivideAssign", "PowerAssign"]
 
 def get_unique_types():
     return sorted(list(set(filter(None, map(lambda n: n.type, expressions)))))
@@ -105,27 +118,53 @@ def gen_tree_nodes(cw):
         cw.write(node.kind + ",")
 
 def gen_stackspiller_switch(cw):
+    
+    no_spill_node_kinds =  ["Quote", "Parameter", "Constant", "LocalScope", "EmptyStatement"]
+    
+    # nodes that need spilling
     for node in expressions:
+        if node.kind in no_spill_node_kinds:
+            continue
+    
         method = "Rewrite"
-
+        
+        # special case certain unary expressions
+        if node.kind == "Quote" or node.kind == "Throw":
+            method += node.kind
+        
         #special case AndAlso and OrElse
         if node.kind == "AndAlso" or node.kind == "OrElse":
             method += "Logical"
 
+        #special case OpAssign
+        elif node.kind in op_assignments:
+            method += "OpAssign"
+
         cw.write("// " + node.kind)
         cw.write("case ExpressionType." + node.kind + ":")
-        cw.write("    result = " + method + node.type + "(node, stack);")
+        cw.write("    result = " + method + node.type + "(node, stack);")           
         cw.write("    break;")
+    
+    # no spill nodes
+    for kind in no_spill_node_kinds:
+        cw.write("// " + kind)
+        cw.write("case ExpressionType." + kind + ":")
+
+    cw.write("    return new Result(RewriteAction.None, node);")
+
 
 def gen_compiler(cw):
     for node in expressions:
         method = "Emit"
 
         # special case certain unary/binary expressions
-        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox"]:
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw"]:
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"
+        #special case OpAssign
+        elif node.kind in op_assignments:
+            method += "OpAssign"
 
         cw.write("// " + node.kind)
         cw.write("case ExpressionType." + node.kind + ":")
@@ -137,10 +176,13 @@ def gen_interpreter(cw):
         method = "Interpret"
 
         # special case AndAlso and OrElse
-        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox"]:
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw"]:
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"
+        #special case OpAssign
+        elif node.kind in op_assignments:
+            method += "OpAssign"
 
         method += node.type           
 			

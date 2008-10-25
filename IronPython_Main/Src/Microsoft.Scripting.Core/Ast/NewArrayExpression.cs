@@ -42,10 +42,6 @@ namespace Microsoft.Linq.Expressions {
             return _type;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }

@@ -30,7 +30,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         private readonly ArgBuilder _argBuilder;
         private readonly VarEnum _targetComType;
-        private int _variantIndex;
         internal ParameterExpression TempVariable { get; private set; }
 
         internal VariantBuilder(VarEnum targetComType, ArgBuilder builder) {
@@ -42,10 +41,7 @@ namespace Microsoft.Scripting.ComInterop {
             get { return (_targetComType & VarEnum.VT_BYREF) != 0; }
         }
 
-        internal Expression WriteArgumentVariant(ParameterExpression paramVariants, int variantIndex, Expression parameter) {
-            _variantIndex = variantIndex;
-            FieldInfo variantArrayField = VariantArray.GetField(variantIndex);
-
+        internal Expression WriteArgumentVariant(MemberExpression variant, Expression parameter) {
             if (IsByRef) {
                 // temp = argument
                 // paramVariants._elementN.SetAsByrefT(ref temp)
@@ -56,10 +52,7 @@ namespace Microsoft.Scripting.ComInterop {
                 return Expression.Block(
                     Expression.Assign(TempVariable, argExpr),
                     Expression.Call(
-                        Expression.Field(
-                            paramVariants,
-                            variantArrayField
-                        ),
+                        variant,
                         Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
                         TempVariable
                     )
@@ -74,9 +67,7 @@ namespace Microsoft.Scripting.ComInterop {
             // a corresponding _targetComType.
             if (_argBuilder is ConvertibleArgBuilder) {
                 return Expression.Call(
-                    Expression.Field(
-                        paramVariants,
-                        variantArrayField),
+                    variant,
                     typeof(Variant).GetMethod("SetAsIConvertible"),
                     argument
                 );
@@ -87,10 +78,7 @@ namespace Microsoft.Scripting.ComInterop {
                 (_targetComType == VarEnum.VT_DISPATCH)) {
                 // paramVariants._elementN.AsT = (cast)argN
                 return Expression.AssignProperty(
-                    Expression.Field(
-                        paramVariants,
-                        variantArrayField
-                    ),
+                    variant,
                     Variant.GetAccessor(_targetComType),
                     argument
                 );
@@ -102,13 +90,7 @@ namespace Microsoft.Scripting.ComInterop {
 
                 case VarEnum.VT_NULL:
                     // paramVariants._elementN.SetAsNull();
-
-                    return Expression.Call(
-                        Expression.Field(
-                            paramVariants,
-                            variantArrayField),
-                        typeof(Variant).GetMethod("SetAsNull")
-                    );
+                    return Expression.Call(variant, typeof(Variant).GetMethod("SetAsNull"));
 
                 default:
                     Debug.Assert(false, "Unexpected VarEnum");
@@ -116,7 +98,7 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        internal Expression Clear(ParameterExpression paramVariants) {
+        internal Expression Clear(MemberExpression variant) {
             if (IsByRef) {
                 if (_argBuilder is StringArgBuilder) {
                     Debug.Assert(TempVariable != null);
@@ -124,8 +106,6 @@ namespace Microsoft.Scripting.ComInterop {
                 }
                 return null;
             }
-
-            FieldInfo variantArrayField = VariantArray.GetField(_variantIndex);
 
             switch (_targetComType) {
                 case VarEnum.VT_EMPTY:
@@ -136,13 +116,7 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
                     // paramVariants._elementN.Clear()
-                    return Expression.Call(
-                        Expression.Field(
-                            paramVariants,
-                            variantArrayField
-                        ),
-                        typeof(Variant).GetMethod("Clear")
-                    );
+                    return Expression.Call(variant, typeof(Variant).GetMethod("Clear"));
 
                 default:
                     Debug.Assert(Variant.IsPrimitiveType(_targetComType), "Unexpected VarEnum");

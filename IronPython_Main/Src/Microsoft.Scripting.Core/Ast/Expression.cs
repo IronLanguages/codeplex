@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Microsoft.Scripting.Utils;
 using System.Text;
+using System.Reflection;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -24,66 +25,24 @@ namespace Microsoft.Linq.Expressions {
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract partial class Expression {
-        // TODO: expose this to derived classes, so ctor doesn't take three booleans?
-        [Flags]
-        internal enum NodeFlags : byte {
-            None = 0,
-            CanReduce = 1,
-            CanRead = 2,
-            CanWrite = 4,
-        }
-
         private readonly Annotations _annotations;        
         // protected ctors are part of API surface area
 
         // LinqV1 ctor
-        [Obsolete("use a different constructor that does not take ExpressionType")]
+        [Obsolete("use a different constructor that does not take ExpressionType.  Then override GetExpressionType and GetNodeKind to provide the values that would be specified to this constructor.")]
         protected Expression(ExpressionType nodeType, Type type) {
             // Can't enforce anything that V1 didn't
             _annotations = Annotate(new ExtensionInfo(nodeType, type));
-        }
-
-        // LinqV2: ctor for extension nodes
-        protected Expression(Type type, bool canReduce, Annotations annotations)
-            : this(ExpressionType.Extension, type, canReduce, annotations, true, false) {
-        }
-
-        // LinqV2: ctor for extension nodes with read/write flags
-        protected Expression(Type type, bool canReduce, Annotations annotations, bool canRead, bool canWrite)
-            : this(ExpressionType.Extension, type, canReduce, annotations, canRead, canWrite) {
         }
 
         protected Expression(Annotations annotations) {
             _annotations = annotations ?? Annotations.Empty;
         }
 
-        // internal ctor -- not exposed API
-        internal Expression(ExpressionType nodeType, Type type, Annotations annotations)
-            : this(nodeType, type, false, annotations, true, false) {
+        protected Expression() {
+            _annotations = Annotations.Empty;
         }
-
-        // internal ctor -- not exposed API
-        // but it is called from protected ctors, so we validate parameters
-        // that could be passed from those
-        internal Expression(ExpressionType nodeType, Type type, bool canReduce, Annotations annotations, bool canRead, bool canWrite) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(canRead || canWrite, "canRead", Strings.MustBeReadableOrWriteable);
-
-            ExtensionInfo ei = new ExtensionInfo(
-                nodeType,
-                type,
-                (canReduce ? NodeFlags.CanReduce : 0) | (canRead ? NodeFlags.CanRead : 0) | (canWrite ? NodeFlags.CanWrite : 0)
-            );
-
-            if (annotations != null) {
-                _annotations = annotations.Remove<ExtensionInfo>().Add(ei);
-            } else {
-#pragma warning disable 618
-                _annotations = Annotate(ei);
-#pragma warning restore 618
-            }            
-        }
-
+        
         //CONFORMING
         public ExpressionType NodeType {
             get { return GetNodeKind(); }
@@ -105,22 +64,8 @@ namespace Microsoft.Linq.Expressions {
         /// Indicates that the node can be reduced to a simpler node. If this 
         /// returns true, Reduce() can be called to produce the reduced form.
         /// </summary>
-        public bool CanReduce {
-            get { return (GetFlags() & NodeFlags.CanReduce) != 0; }
-        }
-
-        /// <summary>
-        /// Indicates that the node can be read
-        /// </summary>
-        public bool CanRead {
-            get { return (GetFlags() & NodeFlags.CanRead) != 0; }
-        }
-
-        /// <summary>
-        /// Indicates that the node can be written
-        /// </summary>
-        public bool CanWrite {
-            get { return (GetFlags() & NodeFlags.CanWrite) != 0; }
+        public virtual bool CanReduce {
+            get { return false; }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
@@ -131,15 +76,6 @@ namespace Microsoft.Linq.Expressions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         protected virtual Type GetExpressionType() {
             return _annotations.Get<ExtensionInfo>().Type;
-        }
-
-        internal virtual NodeFlags GetFlags() {
-            ExtensionInfo info;
-            if (_annotations != null && _annotations.TryGet<ExtensionInfo>(out info)) {
-                return info.Flags;
-            }
-
-            return NodeFlags.CanRead;
         }
 
         /// <summary>
@@ -191,11 +127,8 @@ namespace Microsoft.Linq.Expressions {
 
             // 1. Reduction must return a new, non-null node
             // 2. Reduction must return a new node whose result type can be assigned to the type of the original node
-            // 3. Reduction must return a node that can be read/written to if the original node could
             ContractUtils.Requires(newNode != null && newNode != this, "this", Strings.MustReduceToDifferent);
             ContractUtils.Requires(TypeUtils.AreReferenceAssignable(Type, newNode.Type), "this", Strings.ReducedNotCompatible);
-            ContractUtils.Requires(!CanRead || newNode.CanRead, "this", Strings.MustReduceToReadable);
-            ContractUtils.Requires(!CanWrite || newNode.CanWrite, "this", Strings.MustReduceToWriteable);
             return newNode;
         }
 
@@ -242,10 +175,28 @@ namespace Microsoft.Linq.Expressions {
             if (expression == null) {
                 throw new ArgumentNullException(paramName);
             }
-            if (!expression.CanRead) {
-                throw new ArgumentException(Strings.ExpressionMustBeReadable, paramName);
+
+            // validate that we can read the node
+            switch (expression.NodeType) {
+                case ExpressionType.Index:
+                    IndexExpression index = (IndexExpression)expression;
+                    if (index.Indexer != null && !index.Indexer.CanRead) {
+                        throw new ArgumentException(Strings.ExpressionMustBeReadable, paramName);
+                    }
+                    break;
+                case ExpressionType.MemberAccess:
+                    MemberExpression member = (MemberExpression)expression;
+                    MemberInfo memberInfo = member.Member;
+                    if (memberInfo.MemberType == MemberTypes.Property) {
+                        PropertyInfo prop = (PropertyInfo)memberInfo;
+                        if (!prop.CanRead) {
+                            throw new ArgumentException(Strings.ExpressionMustBeReadable, paramName);
+                        }
+                    }
+                    break;
             }
         }
+
         internal static void RequiresCanRead(IEnumerable<Expression> items, string paramName) {
             if (items != null) {
                 // this is called a lot, avoid allocating an enumerator if we can...
@@ -266,7 +217,37 @@ namespace Microsoft.Linq.Expressions {
             if (expression == null) {
                 throw new ArgumentNullException(paramName);
             }
-            if (!expression.CanWrite) {
+
+            bool canWrite = false;
+            switch (expression.NodeType) {
+                case ExpressionType.Index:
+                    IndexExpression index = (IndexExpression)expression;
+                    if (index.Indexer != null) {
+                        canWrite = index.Indexer.CanWrite;
+                    } else {
+                        canWrite = true;
+                    }
+                    break;
+                case ExpressionType.MemberAccess:
+                    MemberExpression member = (MemberExpression)expression;
+                    switch (member.Member.MemberType) {
+                        case MemberTypes.Property:
+                            PropertyInfo prop = (PropertyInfo)member.Member;
+                            canWrite = prop.CanWrite;
+                            break;
+                        case MemberTypes.Field:
+                            FieldInfo field = (FieldInfo)member.Member;
+                            canWrite = !(field.IsInitOnly || field.IsLiteral);
+                            break;
+                    }
+                    break;
+                case ExpressionType.Parameter:
+                case ExpressionType.ArrayIndex:
+                    canWrite = true;
+                    break;
+            }
+
+            if (!canWrite) {
                 throw new ArgumentException(Strings.ExpressionMustBeWriteable, paramName);
             }
         }
@@ -275,18 +256,9 @@ namespace Microsoft.Linq.Expressions {
             public ExtensionInfo(ExpressionType nodeType, Type type) {
                 NodeType = nodeType;
                 Type = type;
-                Flags = NodeFlags.CanRead;
             }
 
-            public ExtensionInfo(ExpressionType nodeType, Type type, NodeFlags flags) {
-                NodeType = nodeType;
-                Type = type;
-                Flags = flags;
-            }
-
-            // TODO: remove NodeFlags
             internal readonly ExpressionType NodeType;
-            internal readonly NodeFlags Flags;
             internal readonly Type Type;
         }
     }

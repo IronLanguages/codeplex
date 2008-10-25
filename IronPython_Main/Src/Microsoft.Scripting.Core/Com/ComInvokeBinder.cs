@@ -86,10 +86,6 @@ namespace Microsoft.Scripting.ComInterop {
             get { return EnsureVariable(ref _dispParams, typeof(ComTypes.DISPPARAMS), "dispParams"); }
         }
 
-        private ParameterExpression ParamVariantsVariable {
-            get { return EnsureVariable(ref _paramVariants, typeof(VariantArray), "paramVariants"); }
-        }
-
         private ParameterExpression InvokeResultVariable {
             get { return EnsureVariable(ref _invokeResult, typeof(Variant), "invokeResult"); }
         }
@@ -104,6 +100,15 @@ namespace Microsoft.Scripting.ComInterop {
 
         private ParameterExpression PropertyPutDispIdVariable {
             get { return EnsureVariable(ref _propertyPutDispId, typeof(int), "propertyPutDispId"); }
+        }
+
+        private ParameterExpression ParamVariantsVariable {
+            get {
+                if (_paramVariants == null) {
+                    _paramVariants = Expression.Variable(VariantArray.GetStructType(_args.Length), "paramVariants");
+                }
+                return _paramVariants;
+            }
         }
 
         private static ParameterExpression EnsureVariable(ref ParameterExpression var, Type type, string name) {
@@ -122,33 +127,22 @@ namespace Microsoft.Scripting.ComInterop {
             Expression[] explicitArgExprs = _args.Map(a => a.Expression);
             _totalExplicitArgs = explicitArgTypes.Length;
 
-            bool hasAmbiguousMatch = false;
-            try {
-                _varEnumSelector = new VarEnumSelector(typeof(object), marshalArgTypes);
-            } catch (AmbiguousMatchException) {
-                hasAmbiguousMatch = true;
-            }
+            _varEnumSelector = new VarEnumSelector(typeof(object), marshalArgTypes);
 
             // We already tested the instance, so no need to test it again
             for (int i = 0; i < explicitArgTypes.Length; i++) {
                 _restrictions = _restrictions.Merge(Restrictions.GetTypeRestriction(explicitArgExprs[i], explicitArgTypes[i]));
             }
 
-            if (explicitArgTypes.Length > VariantArray.NumberOfElements ||
-                hasAmbiguousMatch ||
-                !_varEnumSelector.IsSupportedByFastPath) {
+            if (!_varEnumSelector.IsSupportedByFastPath) {
                 return new MetaObject(
-                    CreateScope(
-                        MakeUnoptimizedInvokeTarget()
-                    ),
+                    CreateScope(MakeUnoptimizedInvokeTarget()),
                     Restrictions.Combine(_args).Merge(_restrictions)
                 );
             }
 
             return new MetaObject(
-                CreateScope(
-                    MakeIDispatchInvokeTarget()
-                ),
+                CreateScope(MakeIDispatchInvokeTarget()),
                 Restrictions.Combine(_args).Merge(_restrictions)
             );
         }
@@ -223,8 +217,7 @@ namespace Microsoft.Scripting.ComInterop {
                 }
                 VariantBuilder variantBuilder = _varEnumSelector.VariantBuilders[i];
                 Expression marshal = variantBuilder.WriteArgumentVariant(
-                    ParamVariantsVariable,
-                    variantIndex,
+                    VariantArray.GetStructField(ParamVariantsVariable, variantIndex),
                     parameters[i + 1]
                 );
                 if (marshal != null) {
@@ -308,8 +301,10 @@ namespace Microsoft.Scripting.ComInterop {
             //
             // Clear memory allocated for marshalling
             //
-            foreach (VariantBuilder variantBuilder in _varEnumSelector.VariantBuilders) {
-                Expression clear = variantBuilder.Clear(ParamVariantsVariable);
+            for (int i = 0, n = _varEnumSelector.VariantBuilders.Length; i < n; i++) {
+                Expression clear = _varEnumSelector.VariantBuilders[i].Clear(
+                    VariantArray.GetStructField(ParamVariantsVariable, i)
+                );
                 if (clear != null) {
                     finallyStatements.Add(clear);
                 }
@@ -353,74 +348,85 @@ namespace Microsoft.Scripting.ComInterop {
             //
             // _dispId = ((DispCallable)this).ComMethodDesc.DispId;
             //
-            Expression expr = Expression.Assign(
-                DispIdVariable,
-                Expression.Property(
-                    _method,
-                    typeof(ComMethodDesc).GetProperty("DispId")));
-            exprs.Add(expr);
+            exprs.Add(
+                Expression.Assign(
+                    DispIdVariable,
+                    Expression.Property(_method, typeof(ComMethodDesc).GetProperty("DispId"))
+                )
+            );
 
             //
             // _dispParams.rgvararg = RuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref _paramVariants._element0)
             //
             if (_totalExplicitArgs != 0) {
-                MethodCallExpression addrOfParamVariants = Expression.Call(
-                    typeof(UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
-                    Expression.Field(
-                        ParamVariantsVariable,
-                        VariantArray.GetField(0)));
-                expr = Expression.AssignField(
-                    DispParamsVariable,
-                    typeof(ComTypes.DISPPARAMS).GetField("rgvarg"),
-                    addrOfParamVariants);
-
-                exprs.Add(expr);
+                exprs.Add(
+                    Expression.AssignField(
+                        DispParamsVariable,
+                        typeof(ComTypes.DISPPARAMS).GetField("rgvarg"),
+                        Expression.Call(
+                            typeof(UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
+                            VariantArray.GetStructField(ParamVariantsVariable, 0)
+                        )    
+                    )
+                );
             }
 
             //
             // _dispParams.cArgs = <number_of_params>;
             //
-            expr = Expression.AssignField(
-                DispParamsVariable,
-                typeof(ComTypes.DISPPARAMS).GetField("cArgs"),
-                Expression.Constant(_totalExplicitArgs));
-            exprs.Add(expr);
+            exprs.Add(
+                Expression.AssignField(
+                    DispParamsVariable,
+                    typeof(ComTypes.DISPPARAMS).GetField("cArgs"),
+                    Expression.Constant(_totalExplicitArgs)
+                )
+            );
 
             if (_methodDesc.IsPropertyPut) {
                 //
                 // dispParams.cNamedArgs = 1;
                 // dispParams.rgdispidNamedArgs = RuntimeHelpers.UnsafeMethods.GetNamedArgsForPropertyPut()
                 //
-                expr = Expression.AssignField(
-                    DispParamsVariable,
-                    typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
-                    Expression.Constant(1));
-                exprs.Add(expr);
-
-                expr = Expression.Assign(
-                    PropertyPutDispIdVariable,
-                    Expression.Constant(ComDispIds.DISPID_PROPERTYPUT));
-                exprs.Add(expr);
-
-                MethodCallExpression rgdispidNamedArgs = Expression.Call(
-                    typeof(UnsafeMethods).GetMethod("ConvertInt32ByrefToPtr"),
-                    PropertyPutDispIdVariable
+                exprs.Add(
+                    Expression.Assign(
+                        Expression.Field(
+                            DispParamsVariable,
+                            typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs")
+                        ),
+                        Expression.Constant(1)
+                    )
                 );
 
-                expr = Expression.AssignField(
-                    DispParamsVariable,
-                    typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs"),
-                    rgdispidNamedArgs);
-                exprs.Add(expr);
+                exprs.Add(
+                    Expression.Assign(
+                        PropertyPutDispIdVariable,
+                        Expression.Constant(ComDispIds.DISPID_PROPERTYPUT)
+                    )
+                );
+
+                exprs.Add(
+                    Expression.Assign(
+                        Expression.Field(
+                            DispParamsVariable,
+                            typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs")
+                        ),
+                        Expression.Call(
+                            typeof(UnsafeMethods).GetMethod("ConvertInt32ByrefToPtr"),
+                            PropertyPutDispIdVariable
+                        )
+                    )
+                );
             } else {
                 //
                 // _dispParams.cNamedArgs = N;
                 //
-                expr = Expression.AssignField(
-                    DispParamsVariable,
-                    typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
-                    Expression.Constant(_keywordArgNames.Length));
-                exprs.Add(expr);
+                exprs.Add(
+                    Expression.AssignField(
+                        DispParamsVariable,
+                        typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
+                        Expression.Constant(_keywordArgNames.Length)
+                    )
+                );
             }
 
             //
@@ -428,22 +434,22 @@ namespace Microsoft.Scripting.ComInterop {
             // _dispatchPointer = dispatchObject.GetDispatchPointerInCurrentApartment();
             //
 
-            expr = Expression.Assign(DispatchObjectVariable, _dispatch);
-            exprs.Add(expr);
+            exprs.Add(Expression.Assign(DispatchObjectVariable, _dispatch));
 
-            expr = Expression.Assign(
-                DispatchPointerVariable,
-                Expression.Call(
-                    DispatchObjectVariable,
-                    typeof(IDispatchObject).GetMethod("GetDispatchPointerInCurrentApartment")));
-            exprs.Add(expr);
+            exprs.Add(
+                Expression.Assign(
+                    DispatchPointerVariable,
+                    Expression.Call(
+                        DispatchObjectVariable,
+                        typeof(IDispatchObject).GetMethod("GetDispatchPointerInCurrentApartment")
+                    )
+                )
+            );
 
             Expression tryStatements = GenerateTryBlock();
-
             Expression finallyStatements = GenerateFinallyBlock();
 
-            expr = Expression.TryFinally(tryStatements, finallyStatements);
-            exprs.Add(expr);
+            exprs.Add(Expression.TryFinally(tryStatements, finallyStatements));
 
             exprs.Add(ReturnValueVariable);
             var vars = new List<ParameterExpression>();

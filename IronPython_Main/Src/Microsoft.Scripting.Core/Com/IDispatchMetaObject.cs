@@ -101,8 +101,6 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         private MetaObject BindGetMember(ComMethodDesc method) {
-            string helper;
-
             Restrictions restrictions = IDispatchRestriction();
             Expression dispatch =
                 Expression.Property(
@@ -110,10 +108,7 @@ namespace Microsoft.Scripting.ComInterop {
                     typeof(IDispatchComObject).GetProperty("DispatchObject")
                 );
 
-            if (method.DispId == ComDispIds.DISPID_NEWENUM) {
-                // says it's a property but it needs to be called
-                helper = "CreateMethod";
-            } else if (method.IsPropertyGet) {
+            if (method.DispId != ComDispIds.DISPID_NEWENUM && method.IsPropertyGet) {
                 if (method.Parameters.Length == 0) {                    
                     return new ComInvokeBinder(
                         new ArgumentInfo[0],
@@ -124,21 +119,16 @@ namespace Microsoft.Scripting.ComInterop {
                         method
                     ).Invoke();
                 }
-                helper = "CreatePropertyGet";
-            } else if (method.IsPropertyPut) {
-                helper = "CreatePropertyPut";
-            } else {
-                helper = "CreateMethod";
             }
 
-            Expression result =
+            return new MetaObject(
                 Expression.Call(
-                    typeof(ComRuntimeHelpers).GetMethod(helper),
+                    typeof(ComRuntimeHelpers).GetMethod("CreateDispCallable"),
                     dispatch,
                     Expression.Constant(method)
-                );
-
-            return new MetaObject(result, restrictions);
+                ),
+                restrictions
+            );
         }
 
         private MetaObject BindEvent(ComEventDesc @event) {
@@ -265,18 +255,22 @@ namespace Microsoft.Scripting.ComInterop {
 
         private MetaObject TryPropertyPut(SetMemberBinder action, MetaObject value) {
             ComMethodDesc method;
-            if (_self.TryGetPropertySetter(action.Name, out method) || _self.TryGetIDOfName(action.Name)) {
-                Expression result = Expression.Call(
-                    Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
-                    typeof(IDispatchComObject).GetMethod("SetAttr"),
-                    Expression.Constant(action.Name),
-                    Expression.ConvertHelper(value.Expression, typeof(object))
-                );
+            if (_self.TryGetPropertySetter(action.Name, out method)) {
+                Restrictions restrictions = IDispatchRestriction();
+                Expression dispatch =
+                    Expression.Property(
+                        Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
+                        typeof(IDispatchComObject).GetProperty("DispatchObject")
+                    );
 
-                return new MetaObject(
-                     result,
-                     value.Restrictions.Merge(IDispatchRestriction())
-                 );
+                return new ComInvokeBinder(
+                    new ArgumentInfo[0],
+                    new[] { value },
+                    restrictions,
+                    Expression.Constant(method),
+                    dispatch,
+                    method
+                ).Invoke();
             }
 
             return null;

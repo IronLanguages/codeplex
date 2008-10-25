@@ -187,8 +187,8 @@ namespace IronPython.Compiler.Ast {
                 Debug.Assert(pco.ModuleName != null);
 
                 ag.Block.Body = Ast.Block(
-                    Ast.Assign(_fileVariable.Variable, Ast.Constant(name)),
-                    Ast.Assign(_nameVariable.Variable, Ast.Constant(pco.ModuleName)),
+                    AstUtils.Assign(_fileVariable.Variable, Ast.Constant(name)),
+                    AstUtils.Assign(_nameVariable.Variable, Ast.Constant(pco.ModuleName)),
                     ag.Block.Body
                 );
 
@@ -221,7 +221,7 @@ namespace IronPython.Compiler.Ast {
             string doc = ag.GetDocumentation(_body);
 
             if (_isModule && doc != null) {
-                docStmt = Ast.Assign(
+                docStmt = AstUtils.Assign(
                     _docVariable.Variable,
                     Ast.Constant(doc)
                 );

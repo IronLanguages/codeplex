@@ -27,13 +27,27 @@ namespace Microsoft.Scripting.Ast {
     public sealed class GlobalVariableExpression : Expression {
         private readonly string _name;
         private readonly bool _local;
+        private readonly Type _type;
 
         internal GlobalVariableExpression(Type type, string name, bool local, Annotations annotations)
-            : base(type, false, annotations, true, true) {
+            : base(annotations) {
             Debug.Assert(type != typeof(void));
 
             _name = name;
             _local = local;
+            _type = type;
+        }
+
+        public override bool CanReduce {
+            get { return false; }
+        }
+
+        protected override Type GetExpressionType() {
+            return _type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         public string Name {

@@ -100,14 +100,14 @@ namespace IronPython.Compiler.Ast {
                                                     Statement else_, SourceSpan span, SourceLocation header,
                                                     MSAst.LabelTarget breakLabel, MSAst.LabelTarget continueLabel) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
-            MSAst.AssignmentExpression init = AstUtils.Assign(
+            MSAst.Expression init = AstUtils.Assign(
                 enumerator, 
                 Ast.Call(
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
                     AstUtils.CodeContext(),
                     ag.TransformAsObject(list)
                 ), 
-                list.Span
+                Ast.Annotate(list.Span)
             );
 
             // while enumerator.MoveNext():

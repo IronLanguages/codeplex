@@ -28,8 +28,20 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _variable;
 
         internal DeleteStatement(Annotations annotations, Expression variable)
-            : base(typeof(void), true, annotations) {
+            : base(annotations) {
             _variable = variable;
+        }
+
+        public override bool CanReduce {
+            get { return true; }
+        }
+
+        protected override Type GetExpressionType() {
+            return typeof(void);
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         public Expression Expression {
@@ -38,7 +50,7 @@ namespace Microsoft.Scripting.Ast {
 
         public override Expression Reduce() {
             return Expression.Void(
-                Expression.Assign(
+                Utils.Assign(
                     _variable,
                     Expression.Field(null, typeof(Uninitialized).GetField("Instance")),
                     Annotations

@@ -32,11 +32,25 @@ namespace Microsoft.Scripting.Ast {
         private readonly LabelTarget _label;
         private readonly Expression _body;
         private Expression _reduced;
+        private readonly Type _type;
 
         internal GeneratorExpression(Type type, LabelTarget label, Expression body, Annotations annotations)
-            : base(type, true, annotations) {
+            : base(annotations) {
             _label = label;
             _body = body;
+            _type = type;
+        }
+
+        public override bool CanReduce {
+            get { return true; }
+        }
+
+        protected override Type GetExpressionType() {
+            return _type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
         }
 
         /// <summary>
@@ -86,7 +100,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(label, "label");
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.Requires(label.Type != typeof(void), "label", "label must have a non-void type");
-            ContractUtils.Requires(body.CanRead, "body", "must be readable");
+
             return new GeneratorExpression(typeof(IEnumerable<>).MakeGenericType(label.Type), label, body, annotations);
         }
         public static GeneratorExpression Generator(LabelTarget label, Expression body, Type type) {
@@ -110,7 +124,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             ContractUtils.RequiresNotNull(body, "body");
-            ContractUtils.Requires(body.CanRead, "body", "must be readable");
+
             return new GeneratorExpression(type, label, body, annotations);
         }
 

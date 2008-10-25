@@ -31,15 +31,8 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal static ParameterExpression Make(Type type, string name, Annotations annotations, bool isByRef) {
-            return Make(ExpressionType.Parameter, type, name, annotations, isByRef);
-        }
-
-        internal static ParameterExpression Make(ExpressionType et, Type type, string name, Annotations annotations, bool isByRef) {
             if (isByRef) {
-                Debug.Assert(et == ExpressionType.Parameter);
                 return new ByRefParameterExpression(type, name, annotations);
-            } else if (et == ExpressionType.Parameter) {
-                return new VariableExpression(type, name, annotations);
             }
 
             return new ParameterExpression(type, name, annotations);            
@@ -47,10 +40,6 @@ namespace Microsoft.Linq.Expressions {
 
         protected override Type GetExpressionType() {
             return _paramType;
-        }
-
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead | NodeFlags.CanWrite;
         }
 
         protected override ExpressionType GetNodeKind() {
@@ -91,16 +80,6 @@ namespace Microsoft.Linq.Expressions {
         }
     }
 
-    internal sealed class VariableExpression : ParameterExpression {
-        internal VariableExpression(Type type, string name, Annotations annotations)
-            : base(type, name, annotations) {
-        }
-
-        protected override ExpressionType GetNodeKind() {
-            return ExpressionType.Parameter;
-        }
-    }
-
     public partial class Expression {
         public static ParameterExpression Parameter(Type type, string name) {
             return Parameter(type, name, Annotations.Empty);
@@ -129,7 +108,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(type != typeof(void), "type", Strings.ArgumentCannotBeOfTypeVoid);
             ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
-            return ParameterExpression.Make(ExpressionType.Parameter, type, name, annotations, false);
+            return ParameterExpression.Make(type, name, annotations, false);
         }
 
         //Variables must not be ByRef.

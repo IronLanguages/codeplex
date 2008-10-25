@@ -33,10 +33,6 @@ namespace Microsoft.Linq.Expressions {
             return typeof(bool);
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.TypeIs;
         }

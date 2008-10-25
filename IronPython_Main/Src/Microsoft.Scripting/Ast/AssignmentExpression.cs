@@ -16,12 +16,71 @@
 using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Ast {
+
+    /// <summary>
+    /// Evaluates to the CodeContext that's currently in scope
+    /// 
+    /// TODO: this should go away as an intrinsic in favor of languages
+    ///       tracking their own scope chain explicitly
+    /// </summary>
+    public sealed class AssignmentExtensionExpression : Expression {
+        private readonly Expression _left, _right;
+
+        internal AssignmentExtensionExpression(Expression left, Expression right, Annotations annotations)
+            : base(annotations) {
+            Debug.Assert(left is GlobalVariableExpression);
+
+            _left = left;
+            _right = right;
+        }
+
+        protected override System.Type GetExpressionType() {
+            return _right.Type;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Extension;
+        }
+
+        public Expression Value {
+            get {
+                return _right;
+            }
+        }
+
+        public Expression Expression {
+            get {
+                return _left;
+            }
+        }
+
+        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+            Expression left = visitor.Visit(_left);
+            Expression right = visitor.Visit(_right);
+
+            if (left != _left || right != _right) {
+                return new AssignmentExtensionExpression(left, right, Annotations);
+            }
+
+            return this;
+        }
+    }
+   
     public static partial class Utils {
-        [Obsolete("use Expression.Assign instead")]
-        public static AssignmentExpression Assign(Expression variable, Expression value, SourceSpan span) {
-            return Expression.Assign(variable, value, Expression.Annotate(span));
+        public static Expression Assign(Expression left, Expression right) {
+            return Assign(left, right, Annotations.Empty);
+        }
+
+        public static Expression Assign(Expression left, Expression right, Annotations annotations) {
+            GlobalVariableExpression assignable = left as GlobalVariableExpression;
+            if (assignable != null) {
+                return new AssignmentExtensionExpression(left, right, annotations);
+            }
+
+            return Expression.Assign(left, right, annotations);
         }
     }
 }

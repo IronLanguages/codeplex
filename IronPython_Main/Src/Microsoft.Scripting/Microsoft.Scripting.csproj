@@ -229,7 +229,6 @@
     <Compile Include="Ast\ContinueStatement.cs" />
     <Compile Include="Ast\DeleteStatement.cs" />
     <Compile Include="Ast\DeleteUnboundExpression.cs" />
-    <Compile Include="Ast\DoStatementBuilder.cs" />
     <Compile Include="Ast\EmptyStatements.cs" />
     <Compile Include="Ast\LabeledStatement.cs" />
     <Compile Include="Ast\LambdaBuilder.cs" />

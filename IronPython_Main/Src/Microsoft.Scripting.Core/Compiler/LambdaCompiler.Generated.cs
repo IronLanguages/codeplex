@@ -227,10 +227,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.DebugInfo:
                     EmitDebugInfoExpression(node);
                     break;
-                // DoStatement
-                case ExpressionType.DoStatement:
-                    EmitDoStatement(node);
-                    break;
                 // Dynamic
                 case ExpressionType.Dynamic:
                     EmitDynamicExpression(node);
@@ -271,9 +267,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.SwitchStatement:
                     EmitSwitchStatement(node);
                     break;
-                // ThrowStatement
-                case ExpressionType.ThrowStatement:
-                    EmitThrowStatement(node);
+                // Throw
+                case ExpressionType.Throw:
+                    EmitThrowUnaryExpression(node);
                     break;
                 // TryStatement
                 case ExpressionType.TryStatement:
@@ -282,6 +278,50 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // Unbox
                 case ExpressionType.Unbox:
                     EmitUnboxUnaryExpression(node);
+                    break;
+                // AddAssign
+                case ExpressionType.AddAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // AndAssign
+                case ExpressionType.AndAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // DivideAssign
+                case ExpressionType.DivideAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // ExclusiveOrAssign
+                case ExpressionType.ExclusiveOrAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // LeftShiftAssign
+                case ExpressionType.LeftShiftAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // ModuloAssign
+                case ExpressionType.ModuloAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // MultiplyAssign
+                case ExpressionType.MultiplyAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // OrAssign
+                case ExpressionType.OrAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // PowerAssign
+                case ExpressionType.PowerAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // RightShiftAssign
+                case ExpressionType.RightShiftAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // SubtractAssign
+                case ExpressionType.SubtractAssign:
+                    EmitOpAssignBinaryExpression(node);
                     break;
 
                 // *** END GENERATED CODE ***

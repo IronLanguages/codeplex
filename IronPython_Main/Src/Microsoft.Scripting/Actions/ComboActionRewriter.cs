@@ -38,12 +38,25 @@ namespace Microsoft.Scripting.Actions {
         class ComboDynamicSiteExpression : Expression {
             private readonly Expression[] _inputs;
             private readonly List<BinderMappingInfo> _binders;
+            private readonly Type _type;
 
-            public ComboDynamicSiteExpression(Type type, List<BinderMappingInfo> binders, Expression[] inputs)
-                : base(type, true, null) {
+            public ComboDynamicSiteExpression(Type type, List<BinderMappingInfo> binders, Expression[] inputs) {
 
                 _binders = binders;
                 _inputs = inputs;
+                _type = type;
+            }
+
+            public override bool CanReduce {
+                get { return true; }
+            }
+
+            protected override Type GetExpressionType() {
+                return _type;
+            }
+
+            protected override ExpressionType GetNodeKind() {
+                return ExpressionType.Extension;
             }
 
             public Expression[] Inputs {

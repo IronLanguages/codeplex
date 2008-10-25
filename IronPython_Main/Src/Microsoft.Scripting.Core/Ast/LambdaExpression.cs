@@ -37,22 +37,31 @@ namespace Microsoft.Linq.Expressions {
         private readonly string _name;
         private readonly Expression _body;
         private readonly ReadOnlyCollection<ParameterExpression> _parameters;
+        private readonly Type _delegateType;
 
         internal LambdaExpression(
             Annotations annotations,
-            ExpressionType nodeType,
             Type delegateType,
             string name,
             Expression body,
             ReadOnlyCollection<ParameterExpression> parameters
         )
-            : base(nodeType, delegateType, annotations) {
+            : base(annotations) {
 
             Assert.NotNull(delegateType);
 
             _name = name;
             _body = body;
             _parameters = parameters;
+            _delegateType = delegateType;
+        }
+
+        protected override Type GetExpressionType() {
+            return _delegateType;
+        }
+
+        protected override ExpressionType GetNodeKind() {
+            return ExpressionType.Lambda;
         }
 
         public ReadOnlyCollection<ParameterExpression> Parameters {
@@ -130,12 +139,11 @@ namespace Microsoft.Linq.Expressions {
     public sealed class Expression<TDelegate> : LambdaExpression {
         internal Expression(
             Annotations annotations,
-            ExpressionType nodeType,
             string name,
             Expression body,
             ReadOnlyCollection<ParameterExpression> parameters
         )
-            : base(annotations, nodeType, typeof(TDelegate), name, body, parameters) {
+            : base(annotations, typeof(TDelegate), name, body, parameters) {
         }
 
         public new TDelegate Compile() {
@@ -231,7 +239,7 @@ namespace Microsoft.Linq.Expressions {
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
             ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
             ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
-            return new Expression<TDelegate>(annotations, ExpressionType.Lambda, name, body, parameterList);
+            return new Expression<TDelegate>(annotations, name, body, parameterList);
         }
 
 

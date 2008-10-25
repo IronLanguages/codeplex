@@ -40,10 +40,6 @@ namespace Microsoft.Linq.Expressions {
             return _type;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         protected override ExpressionType GetNodeKind() {
             return _nodeType;
         }
@@ -58,7 +54,7 @@ namespace Microsoft.Linq.Expressions {
 
         public bool IsLifted {
             get {
-                if (NodeType == ExpressionType.TypeAs || NodeType == ExpressionType.Quote) {
+                if (NodeType == ExpressionType.TypeAs || NodeType == ExpressionType.Quote || NodeType == ExpressionType.Throw) {
                     return false;
                 }
                 bool operandIsNullable = TypeUtils.IsNullableType(_operand.Type);
@@ -106,6 +102,12 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.Quote:
                     _operand.BuildString(builder);
                     break;
+                case ExpressionType.Throw:
+                    builder.Append("throw");
+                    builder.Append("(");
+                    _operand.BuildString(builder);
+                    builder.Append(")");
+                    break;
                 default:
                     builder.Append(this.NodeType);
                     builder.Append("(");
@@ -147,6 +149,8 @@ namespace Microsoft.Linq.Expressions {
                     return Expression.Convert(operand, type, method, annotations);
                 case ExpressionType.ConvertChecked:
                     return Expression.ConvertChecked(operand, type, method, annotations);
+                case ExpressionType.Throw:
+                    return Expression.Throw(operand, type, annotations);
                 case ExpressionType.TypeAs:
                     return Expression.TypeAs(operand, type, annotations);
                 case ExpressionType.Quote:
@@ -435,6 +439,34 @@ namespace Microsoft.Linq.Expressions {
         public static Expression Void(Expression expression) {
             RequiresCanRead(expression, "expression");
             return ConvertHelper(expression, typeof(void));
+        }
+
+
+
+        public static UnaryExpression Rethrow() {
+            return Throw(null);
+        }
+
+        public static UnaryExpression Throw(Expression value) {
+            return Throw(value, typeof(void), Annotations.Empty);
+        }
+
+        public static UnaryExpression Throw(Expression value, Type type) {
+            return Throw(value, type, Annotations.Empty);
+        }
+
+        public static UnaryExpression Throw(Expression value, Type type, Annotations annotations) {
+            ContractUtils.RequiresNotNull(type, "type");
+
+            if (value != null) {
+                RequiresCanRead(value, "value");
+                ContractUtils.Requires(
+                    TypeUtils.AreReferenceAssignable(typeof(Exception), value.Type),
+                    "value",
+                    Strings.ArgumentMustBeException
+                );
+            }
+            return new UnaryExpression(annotations, ExpressionType.Throw, value, type, null);
         }
     }
 }

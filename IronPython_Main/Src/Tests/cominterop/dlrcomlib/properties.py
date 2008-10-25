@@ -48,12 +48,11 @@ def test_ref_properties():
     AreEqual(com_obj.RefProperty, com_obj)
     AreEqual(com_obj.RefProperty, com_obj)
     
-    if preferComDispatch: #Merlin XXXXXX
-        com_obj.PutAndPutRefProperty = 2.0
-        AreEqual(com_obj.PutAndPutRefProperty, 4.0) #The set_ multiples the value by 2 but the let_ does not in the com object.
-    if not preferComDispatch: #Merlin 380784
-        com_obj.let_PutAndPutRefProperty(2.0)
-        AreEqual(com_obj.PutAndPutRefProperty, 2.0)
+    # We'll always prefer a put to a putref
+    com_obj.PutAndPutRefProperty = 2.0
+    
+    # if we call the putref by accident this will end up as 4.0, which is incorrect
+    AreEqual(com_obj.PutAndPutRefProperty, 2.0)
 
 #Verify that readonly and writeonly properties work as expected.
 def test_restricted_properties():

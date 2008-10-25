@@ -39,8 +39,10 @@ namespace Microsoft.Linq.Expressions {
             return _newExpression.Type;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead | NodeFlags.CanReduce;
+        public override bool CanReduce {
+            get {
+                return true;
+            }
         }
 
         public NewExpression NewExpression {

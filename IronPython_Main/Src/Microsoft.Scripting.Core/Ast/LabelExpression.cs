@@ -40,10 +40,6 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.Label;
         }
 
-        internal override Expression.NodeFlags GetFlags() {
-            return NodeFlags.CanRead;
-        }
-
         new public LabelTarget Label {
             get { return _label; }
         }
