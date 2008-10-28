@@ -252,7 +252,7 @@ namespace IronPython.Runtime.Binding {
 
             if (!nonzero.Success && !length.Success) {
                 // always False or True for None
-                notExpr = self.LimitType == typeof(None) ? Ast.True() : Ast.False();
+                notExpr = self.LimitType == typeof(Null) ? Ast.True() : Ast.False();
             } else {
                 SlotOrFunction target = nonzero.Success ? nonzero : length;
 

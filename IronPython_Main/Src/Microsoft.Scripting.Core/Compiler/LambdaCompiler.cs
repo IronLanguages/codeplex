@@ -346,15 +346,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.EmitLoadArg(_method.IsStatic ? 0 : 1);
         }
 
-        internal MethodInfo CreateDelegateMethodInfo() {
+        private MethodInfo CreateDelegateMethodInfo() {
             if (_method is DynamicMethod) {
                 return (MethodInfo)_method;
-            } else if (_method is MethodBuilder) {
-                MethodBuilder mb = _method as MethodBuilder;
+            } else {
+                var mb = (MethodBuilder)_method;
                 Type methodType = _typeBuilder.CreateType();
                 return methodType.GetMethod(mb.Name);
-            } else {
-                throw new InvalidOperationException();
             }
         }
 

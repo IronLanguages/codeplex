@@ -106,7 +106,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // 2. create the new compiler
             LambdaCompiler impl;
             if (_dynamicMethod) {
-                impl = CreateDynamicCompiler(_tree, lambda, implName, returnType, paramTypes, paramNames, _emitDebugSymbols, false);
+                impl = CreateDynamicCompiler(_tree, lambda, implName, returnType, paramTypes, paramNames, _emitDebugSymbols, _method is DynamicMethod);
             } else {
                 impl = CreateStaticCompiler(_tree, lambda, _typeBuilder, implName, TypeUtils.PublicStatic, returnType, paramTypes, paramNames, _dynamicMethod, _emitDebugSymbols);
             }

@@ -15,9 +15,12 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -75,14 +78,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private T MakeTarget() {
-            if (_rules.Length == 1 && this != _rules[0].RuleSet) {
-                // Use the the rule's own set if we only have 1 rule
-                return _rules[0].RuleSet.GetTarget();
-            }
+            Debug.Assert(_rules.Length > 1 || this == _rules[0].RuleSet);
 
-            Expression<T> stitched = Stitch(_rules);
             MethodInfo method;
-            T t = LambdaCompiler.CompileLambda<T>(stitched, !typeof(T).IsVisible, out method);
+            T t = LambdaCompiler.CompileLambda<T>(Stitch(), !typeof(T).IsVisible, out method);
 
             if (_rules.Length == 1) {
                 _rules[0].TemplateMethod = method;
@@ -91,22 +90,22 @@ namespace Microsoft.Scripting.Actions {
             return t;
         }
 
-        private static Expression<T> Stitch(CallSiteRule<T>[] rules) {
+        private Expression<T> Stitch() {
             Type targetType = typeof(T);
             Type siteType = typeof(CallSite<T>);
 
             // TODO: we could cache this on Rule<T>
             MethodInfo invoke = targetType.GetMethod("Invoke");
 
-            int length = rules.Length;
+            int length = _rules.Length;
             Expression[] body = new Expression[length + 1];
             for (int i = 0; i < length; i++) {
-                body[i] = rules[i].Binding;
+                body[i] = _rules[i].Binding;
             }
 
             var @params = CallSiteRule<T>.Parameters.AddFirst(Expression.Parameter(typeof(CallSite), "$site"));
 
-            body[rules.Length] = Expression.Label(
+            body[_rules.Length] = Expression.Label(
                 CallSiteRule<T>.ReturnLabel,
                 Expression.Call(
                     Expression.Field(
@@ -124,10 +123,6 @@ namespace Microsoft.Scripting.Actions {
                 Expression.Comma(body),
                 new ReadOnlyCollection<ParameterExpression>(@params)
             );
-        }
-
-        internal void SetRawTarget(T target) {
-            _target = target;
         }
     }
 }

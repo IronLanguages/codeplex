@@ -31,14 +31,14 @@ namespace Microsoft.Scripting.ComInterop {
             _self = self;
         }
 
-        public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
+        public override MetaObject BindInvokeMemberl(InvokeMemberBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
 
             ComMethodDesc methodDesc;
 
-            if (_wrapperType.Funcs.TryGetValue(action.Name, out methodDesc)) {
+            if (_wrapperType.Funcs.TryGetValue(binder.Name, out methodDesc)) {
                 return new ComInvokeBinder(
-                    action.Arguments,
+                    binder.Arguments,
                     args,
                     IDispatchRestriction(),
                     Expression.Constant(methodDesc),
@@ -50,20 +50,20 @@ namespace Microsoft.Scripting.ComInterop {
                 ).Invoke();
             }
 
-            return action.FallbackInvokeMember(UnwrapSelf(), args);
+            return binder.FallbackInvokeMember(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindConvert(ConvertBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
+        public override MetaObject BindConvert(ConvertBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
 
-            if (action.Type.IsInterface) {
+            if (binder.Type.IsInterface) {
                 Expression result =
                     Expression.Convert(
                         Expression.Property(
                             Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
                             typeof(ComObject).GetProperty("Obj")
                         ),
-                        action.Type
+                        binder.Type
                     );
 
                 return new MetaObject(
@@ -72,32 +72,32 @@ namespace Microsoft.Scripting.ComInterop {
                 );
             }
 
-            return base.BindConvert(action);
+            return base.BindConvert(binder);
         }
 
-        public override MetaObject BindGetMember(GetMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
+        public override MetaObject BindGetMember(GetMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
 
             ComMethodDesc method;
             ComEventDesc @event;
 
             // 1. Try methods
-            if (_self.TryGetMemberMethod(action.Name, out method)) {
+            if (_self.TryGetMemberMethod(binder.Name, out method)) {
                 return BindGetMember(method);
             }
 
             // 2. Try events
-            if (_self.TryGetMemberEvent(action.Name, out @event)) {
+            if (_self.TryGetMemberEvent(binder.Name, out @event)) {
                 return BindEvent(@event);
             }
 
             // 3. Try methods explicitly by name
-            if (_self.TryGetMemberMethodExplicit(action.Name, out method)) {
+            if (_self.TryGetMemberMethodExplicit(binder.Name, out method)) {
                 return BindGetMember(method);
             }
 
             // 4. Fallback
-            return action.FallbackGetMember(UnwrapSelf());
+            return binder.FallbackGetMember(UnwrapSelf());
         }
 
         private MetaObject BindGetMember(ComMethodDesc method) {
@@ -150,14 +150,15 @@ namespace Microsoft.Scripting.ComInterop {
             );
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
 
-            switch (action.Operation) {
+            switch (binder.Operation) {
                 case "GetItem":
-                    return IndexOperation(action, args, "TryGetGetItem");
+                    return IndexOperation(binder, args, "TryGetGetItem");
                 case "SetItem":
-                    return IndexOperation(action, args, "TryGetSetItem");
+                    return IndexOperation(binder, args, "TryGetSetItem");
                 case "Documentation":
                     return DocumentationOperation(args);
                 case "Equals":
@@ -165,12 +166,13 @@ namespace Microsoft.Scripting.ComInterop {
                 case "GetMemberNames":
                     return GetMemberNames(args);
                 default:
-                    return base.BindOperation(action, args);
+                    return base.BindOperation(binder, args);
             }
         }
 
-        private MetaObject IndexOperation(OperationBinder action, MetaObject[] args, string method) {
-            MetaObject fallback = action.FallbackOperation(UnwrapSelf(), args);
+        [Obsolete("Use UnaryOperationBinder or BinaryOperationBinder")]
+        private MetaObject IndexOperation(OperationBinder binder, MetaObject[] args, string method) {
+            MetaObject fallback = binder.FallbackOperation(UnwrapSelf(), args);
 
             ParameterExpression callable = Expression.Variable(typeof(DispCallable), "callable");
 
@@ -239,23 +241,23 @@ namespace Microsoft.Scripting.ComInterop {
             );
         }
 
-        public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
-            ContractUtils.RequiresNotNull(action, "action");
+        public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
+            ContractUtils.RequiresNotNull(binder, "binder");
 
             return 
                 // 1. Check for simple property put
-                TryPropertyPut(action, value) ??
+                TryPropertyPut(binder, value) ??
 
                 // 2. Check for event handler hookup where the put is dropped
-                TryEventHandlerNoop(action, value) ??
+                TryEventHandlerNoop(binder, value) ??
 
                 // 3. Go back to language
-                action.FallbackSetMember(UnwrapSelf(), value);
+                binder.FallbackSetMember(UnwrapSelf(), value);
         }
 
-        private MetaObject TryPropertyPut(SetMemberBinder action, MetaObject value) {
+        private MetaObject TryPropertyPut(SetMemberBinder binder, MetaObject value) {
             ComMethodDesc method;
-            if (_self.TryGetPropertySetter(action.Name, out method)) {
+            if (_self.TryGetPropertySetter(binder.Name, out method)) {
                 Restrictions restrictions = IDispatchRestriction();
                 Expression dispatch =
                     Expression.Property(
@@ -276,9 +278,9 @@ namespace Microsoft.Scripting.ComInterop {
             return null;
         }
 
-        private MetaObject TryEventHandlerNoop(SetMemberBinder action, MetaObject value) {
+        private MetaObject TryEventHandlerNoop(SetMemberBinder binder, MetaObject value) {
             ComEventDesc @event;
-            if (_self.TryGetEventHandler(action.Name, out @event) && value.LimitType == typeof(BoundDispEvent)) {
+            if (_self.TryGetEventHandler(binder.Name, out @event) && value.LimitType == typeof(BoundDispEvent)) {
                 // Drop the event property set.
                 return new MetaObject(
                     Expression.Null(),

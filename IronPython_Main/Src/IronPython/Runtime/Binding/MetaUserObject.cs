@@ -82,6 +82,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
+        [Obsolete]
         public override MetaObject/*!*/ BindOperation(OperationBinder/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
             return PythonProtocol.Operation(operation, ArrayUtils.Insert(this, args));
         }

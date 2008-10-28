@@ -25,13 +25,13 @@ namespace Microsoft.Scripting.Utils {
     internal static class Helpers {
 
         internal static DynamicMethod CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
-#if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
+#if SILVERLIGHT // restrictedSkipVisibility is not available in SILVERLIGHT
             return new DynamicMethod(name, returnType, parameterTypes);
 #else
             //
-            // WARNING: we set restrictedSkipVisibility == true  (last parameter)
-            //          setting this bit will allow accessing nonpublic members
-            //          for more information see http://msdn.microsoft.com/en-us/library/bb348332.aspx
+            // We set restrictedSkipVisibility == true  (last parameter)
+            // setting this bit will allow accessing nonpublic members
+            // for more information see http://msdn.microsoft.com/en-us/library/bb348332.aspx
             //
             return new DynamicMethod(name, returnType, parameterTypes, true);
 #endif

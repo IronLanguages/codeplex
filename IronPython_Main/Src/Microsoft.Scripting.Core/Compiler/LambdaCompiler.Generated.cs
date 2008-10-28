@@ -221,7 +221,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     break;
                 // Block
                 case ExpressionType.Block:
-                    EmitBlock(node);
+                    EmitBlockExpression(node);
                     break;
                 // DebugInfo
                 case ExpressionType.DebugInfo:
@@ -231,9 +231,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Dynamic:
                     EmitDynamicExpression(node);
                     break;
-                // EmptyStatement
-                case ExpressionType.EmptyStatement:
-                    EmitEmptyStatement(node);
+                // Default
+                case ExpressionType.Default:
+                    EmitEmptyExpression(node);
                     break;
                 // Extension
                 case ExpressionType.Extension:
@@ -251,29 +251,29 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Label:
                     EmitLabelExpression(node);
                     break;
-                // LocalScope
-                case ExpressionType.LocalScope:
-                    EmitLocalScopeExpression(node);
+                // RuntimeVariables
+                case ExpressionType.RuntimeVariables:
+                    EmitRuntimeVariablesExpression(node);
                     break;
-                // LoopStatement
-                case ExpressionType.LoopStatement:
-                    EmitLoopStatement(node);
+                // Loop
+                case ExpressionType.Loop:
+                    EmitLoopExpression(node);
                     break;
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
                     EmitReturnStatement(node);
                     break;
-                // SwitchStatement
-                case ExpressionType.SwitchStatement:
-                    EmitSwitchStatement(node);
+                // Switch
+                case ExpressionType.Switch:
+                    EmitSwitchExpression(node);
                     break;
                 // Throw
                 case ExpressionType.Throw:
                     EmitThrowUnaryExpression(node);
                     break;
-                // TryStatement
-                case ExpressionType.TryStatement:
-                    EmitTryStatement(node);
+                // Try
+                case ExpressionType.Try:
+                    EmitTryExpression(node);
                     break;
                 // Unbox
                 case ExpressionType.Unbox:

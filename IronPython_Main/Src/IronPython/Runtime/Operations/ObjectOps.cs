@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Operations {
             get {
                 if (_nativelyPickleableTypes == null) {
                     Dictionary<PythonType, object> typeDict = new Dictionary<PythonType, object>();
-                    typeDict.Add(TypeCache.None, null);
+                    typeDict.Add(TypeCache.Null, null);
                     typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(bool)), null);
                     typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(int)), null);
                     typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(double)), null);

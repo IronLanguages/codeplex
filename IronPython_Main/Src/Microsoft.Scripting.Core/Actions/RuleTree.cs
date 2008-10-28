@@ -15,6 +15,9 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -25,21 +28,17 @@ namespace Microsoft.Scripting.Actions {
     internal class RuleTree<T> where T : class {
         private RuleTable _ruleTable = new RuleTable();
 
-        internal static RuleTree<T> MakeRuleTree() {
-            return new RuleTree<T>();
-        }
-
-        private RuleTree() {
+        internal RuleTree() {
         }
 
         /// <summary>
         /// Looks through the rule list, prunes invalid rules and returns rules that apply
         /// </summary>
-        internal CallSiteRule<T>[] FindApplicableRules(Type[] types) {
+        internal CallSiteRule<T>[] FindApplicableRules(object[] args) {
             //
             // 1. Get the rule list that would apply to the arguments at hand
             //
-            LinkedList<CallSiteRule<T>> list = GetRuleList(types);
+            LinkedList<CallSiteRule<T>> list = GetRuleList(args);
 
             lock (list) {
                 //
@@ -67,11 +66,12 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private LinkedList<CallSiteRule<T>> GetRuleList(Type[] types) {
+        private LinkedList<CallSiteRule<T>> GetRuleList(object[] args) {
             LinkedList<CallSiteRule<T>> ruleList;
             lock (_ruleTable) {
                 RuleTable curTable = _ruleTable;
-                foreach (Type objType in types) {
+                foreach (object arg in args) {
+                    Type objType = TypeUtils.GetTypeForBinding(arg);
                     if (curTable.NextTable == null) {
                         curTable.NextTable = new Dictionary<Type, RuleTable>(1);
                     }
@@ -93,14 +93,14 @@ namespace Microsoft.Scripting.Actions {
             return ruleList;
         }
 
-        internal void AddRule(Type[] args, CallSiteRule<T> rule) {
+        internal void AddRule(object[] args, CallSiteRule<T> rule) {
             LinkedList<CallSiteRule<T>> list = GetRuleList(args);
             lock (list) {
                 list.AddLast(rule);
             }
         }
 
-        internal void RemoveRule(Type[] args, CallSiteRule<T> rule) {
+        internal void RemoveRule(object[] args, CallSiteRule<T> rule) {
             LinkedList<CallSiteRule<T>> list = GetRuleList(args);
             lock (list) {
                 LinkedListNode<CallSiteRule<T>> node = list.First;

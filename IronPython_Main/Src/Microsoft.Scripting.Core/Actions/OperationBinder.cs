@@ -17,11 +17,11 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class OperationBinder : StandardAction {
+    [Obsolete("Use BinaryOperationBinder or UnaryOperationBinder")]
+    public abstract class OperationBinder : MetaObjectBinder {
         private string _operation;
 
-        protected OperationBinder(string operation)
-            : base(MetaObjectBinderKind.Operation) {
+        protected OperationBinder(string operation) {
             _operation = operation;
         }
 
@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return (int)Kind << 28 ^ _operation.GetHashCode();
+            return OperationBinderHash << 28 ^ _operation.GetHashCode();
         }
     }
 }

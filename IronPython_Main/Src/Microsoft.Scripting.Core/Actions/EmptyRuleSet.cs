@@ -13,6 +13,9 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 namespace Microsoft.Scripting.Actions {
     internal sealed class EmptyRuleSet<T> : RuleSet<T> where T : class {
         internal static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);
@@ -30,6 +33,17 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 return this;
             }
+        }
+
+        internal override CallSiteRule<T>[] GetRules() {
+            // TODO: could return an empty array, which would save the null
+            // check in UpdateAndExecute
+            return null;
+        }
+
+        internal override T GetTarget() {
+            // Return null so CallSiteOps.SetPolymorphicTarget won't update the target
+            return null;
         }
     }
 }

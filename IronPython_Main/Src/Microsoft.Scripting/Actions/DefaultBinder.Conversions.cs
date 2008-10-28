@@ -82,7 +82,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private static MetaObject TryAssignableConversion(Type toType, Type type, Restrictions restrictions, MetaObject arg) {
             if (toType.IsAssignableFrom(type) ||
-                (type == typeof(None) && (toType.IsClass || toType.IsInterface))) {
+                (type == typeof(Null) && (toType.IsClass || toType.IsInterface))) {
                 // MakeSimpleConversionTarget handles the ConversionResultKind check
                 return MakeSimpleConversionTarget(toType, restrictions, arg);
             }
@@ -204,7 +204,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private MetaObject TryNullableConversion(Type toType, ConversionResultKind kind, Type knownType, Restrictions restrictions, MetaObject arg) {
             if (toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
-                if (knownType == typeof(None)) {
+                if (knownType == typeof(Null)) {
                     // null -> Nullable<T>
                     return MakeNullToNullableOfTTarget(toType, restrictions);
                 } else if (knownType == toType.GetGenericArguments()[0]) {
@@ -224,7 +224,7 @@ namespace Microsoft.Scripting.Actions {
         /// Checks to see if there's a conversion of null to a reference type
         /// </summary>
         private static MetaObject TryNullConversion(Type toType, Type knownType, Restrictions restrictions) {
-            if (knownType == typeof(None) && !toType.IsValueType) {
+            if (knownType == typeof(Null) && !toType.IsValueType) {
                 return MakeNullTarget(toType, restrictions);
             }
             return null;

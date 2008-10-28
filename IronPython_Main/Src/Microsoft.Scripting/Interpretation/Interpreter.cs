@@ -654,7 +654,7 @@ namespace Microsoft.Scripting.Interpretation {
             }
         }
 
-        private static object InterpretLocalScopeExpression(InterpreterState state, Expression expr) {
+        private static object InterpretRuntimeVariablesExpression(InterpreterState state, Expression expr) {
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
             }
@@ -830,7 +830,7 @@ namespace Microsoft.Scripting.Interpretation {
 
             return callSiteInfo;
         }
-
+        
         // The ReflectiveCaller cache
         private static readonly Dictionary<ValueArray<Type>, ReflectedCaller> _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
 
@@ -1162,7 +1162,7 @@ namespace Microsoft.Scripting.Interpretation {
             return ControlFlow.Goto(node.Target, value);
         }
 
-        private static object InterpretEmptyStatement(InterpreterState state, Expression expr) {
+        private static object InterpretEmptyExpression(InterpreterState state, Expression expr) {
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
             }
@@ -1191,7 +1191,7 @@ namespace Microsoft.Scripting.Interpretation {
             return res;
         }
 
-        private static object InterpretLoopStatement(InterpreterState state, Expression expr) {
+        private static object InterpretLoopExpression(InterpreterState state, Expression expr) {
             LoopExpression node = (LoopExpression)expr;
             SetSourceLocation(state, node);
 
@@ -1242,7 +1242,7 @@ namespace Microsoft.Scripting.Interpretation {
             return Interpret(state, node.Expression);
         }
 
-        private static object InterpretBlock(InterpreterState state, Expression expr) {
+        private static object InterpretBlockExpression(InterpreterState state, Expression expr) {
             BlockExpression node = (BlockExpression)expr;
             SetSourceLocation(state, node);
 
@@ -1311,7 +1311,7 @@ namespace Microsoft.Scripting.Interpretation {
             return ControlFlow.NextStatement;
         }
 
-        private static object InterpretSwitchStatement(InterpreterState state, Expression expr) {
+        private static object InterpretSwitchExpression(InterpreterState state, Expression expr) {
             // TODO: yield aware switch
             SwitchExpression node = (SwitchExpression)expr;
             SetSourceLocation(state, node);
@@ -1401,7 +1401,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2219:DoNotRaiseExceptionsInExceptionClauses")]
-        private static object InterpretTryStatement(InterpreterState state, Expression expr) {
+        private static object InterpretTryExpression(InterpreterState state, Expression expr) {
             // TODO: Yield aware
             TryExpression node = (TryExpression)expr;
             bool rethrow = false, catchFaulted = false;

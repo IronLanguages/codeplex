@@ -27,6 +27,24 @@ using ComMetaObject = Microsoft.Scripting.ComInterop.ComMetaObject;
 namespace Microsoft.Scripting.Actions {
     public abstract class MetaObjectBinder : CallSiteBinder {
 
+        #region Standard Binder Kinds
+
+        internal const int OperationBinderHash = 0x10000000;
+        internal const int UnaryOperationBinderHash = 0x20000000;
+        internal const int BinaryOperationBinderHash = 0x30000000;
+        internal const int GetMemberBinderHash = 0x40000000;
+        internal const int SetMemberBinderHash = 0x50000000;
+        internal const int DeleteMemberBinderHash = 0x60000000;
+        internal const int GetIndexBinderHash = 0x70000000;
+        internal const int SetIndexBinderHash = unchecked((int)0x80000000);
+        internal const int DeleteIndexBinderHash = unchecked((int)0x90000000);
+        internal const int InvokeMemberBinderHash = unchecked((int)0xA0000000);
+        internal const int ConvertBinderHash = unchecked((int)0xB0000000);
+        internal const int CreateInstanceBinderHash = unchecked((int)0xC0000000);
+        internal const int InvokeBinderHash = unchecked((int)0xD0000000);
+
+        #endregion
+
         #region Public APIs
 
         public sealed override Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {

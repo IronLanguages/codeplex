@@ -20,15 +20,14 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class DeleteIndexBinder : StandardAction {
+    public abstract class DeleteIndexBinder : MetaObjectBinder {
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 
         protected DeleteIndexBinder(params ArgumentInfo[] arguments)
             : this((IEnumerable<ArgumentInfo>)arguments) {
         }
 
-        protected DeleteIndexBinder(IEnumerable<ArgumentInfo> arguments)
-            : base(MetaObjectBinderKind.DeleteIndex) {
+        protected DeleteIndexBinder(IEnumerable<ArgumentInfo> arguments) {
             _arguments = arguments.ToReadOnly();
         }
 
@@ -44,7 +43,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _arguments.ListHashCode();
+            return DeleteIndexBinderHash ^ _arguments.ListHashCode();
         }
 
         public sealed override MetaObject Bind(MetaObject target, MetaObject[] args) {

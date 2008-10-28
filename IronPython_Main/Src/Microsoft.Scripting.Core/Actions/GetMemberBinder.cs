@@ -17,12 +17,11 @@ using Microsoft.Contracts;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class GetMemberBinder : StandardAction {
+    public abstract class GetMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
 
-        protected GetMemberBinder(string name, bool ignoreCase)
-            : base(MetaObjectBinderKind.GetMember) {
+        protected GetMemberBinder(string name, bool ignoreCase) {
             ContractUtils.RequiresNotNull(name, "name");
 
             _name = name;
@@ -62,7 +61,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);
+            return GetMemberBinderHash ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);
         }
     }
 }

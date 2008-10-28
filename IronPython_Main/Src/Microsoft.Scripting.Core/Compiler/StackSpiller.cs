@@ -584,7 +584,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region Statements
 
         // Block
-        private Result RewriteBlock(Expression expr, Stack stack) {
+        private Result RewriteBlockExpression(Expression expr, Stack stack) {
             BlockExpression node = (BlockExpression)expr;
 
             ReadOnlyCollection<Expression> expressions = node.Expressions;
@@ -629,7 +629,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // LoopStatement
-        private Result RewriteLoopStatement(Expression expr, Stack stack) {
+        private Result RewriteLoopExpression(Expression expr, Stack stack) {
             LoopExpression node = (LoopExpression)expr;
 
             // The loop statement requires empty stack for itself, so it
@@ -712,7 +712,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // SwitchStatement
-        private Result RewriteSwitchStatement(Expression expr, Stack stack) {
+        private Result RewriteSwitchExpression(Expression expr, Stack stack) {
             SwitchExpression node = (SwitchExpression)expr;
 
             // The switch statement test is emitted on the stack in current state
@@ -754,7 +754,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // TryStatement
-        private Result RewriteTryStatement(Expression expr, Stack stack) {
+        private Result RewriteTryExpression(Expression expr, Stack stack) {
             TryExpression node = (TryExpression)expr;
 
             // Try statement definitely needs an empty stack so its

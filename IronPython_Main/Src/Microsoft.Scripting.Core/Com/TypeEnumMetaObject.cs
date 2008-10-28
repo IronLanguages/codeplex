@@ -27,14 +27,14 @@ namespace Microsoft.Scripting.ComInterop {
             _desc = desc;
         }
 
-        public override MetaObject BindGetMember(GetMemberBinder action) {
-            if (_desc.HasMember(action.Name)) {
+        public override MetaObject BindGetMember(GetMemberBinder binder) {
+            if (_desc.HasMember(binder.Name)) {
                 return new MetaObject(
                     // return (.bound $arg0).GetValue("<name>")
                     Expression.Call(
                         Expression.ConvertHelper(Expression, typeof(ComTypeEnumDesc)),
                         typeof(ComTypeEnumDesc).GetMethod("GetValue"),
-                        Expression.Constant(action.Name)
+                        Expression.Constant(binder.Name)
                     ),
                     EnumRestrictions()
                 );
@@ -43,8 +43,9 @@ namespace Microsoft.Scripting.ComInterop {
             throw new NotImplementedException();
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            if (action.Operation == "GetMemberNames" || action.Operation == "MemberNames") {
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            if (binder.Operation == "GetMemberNames" || binder.Operation == "MemberNames") {
                 // return (arg).GetMemberNames()
                 return new MetaObject(
                     Expression.Call(

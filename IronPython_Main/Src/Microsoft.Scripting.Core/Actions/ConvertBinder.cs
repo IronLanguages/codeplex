@@ -17,12 +17,11 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class ConvertBinder : StandardAction {
+    public abstract class ConvertBinder : MetaObjectBinder {
         private readonly Type _type;
         private readonly bool _explicit;
 
-        protected ConvertBinder(Type type, bool @explicit)
-            : base(MetaObjectBinderKind.Convert) {
+        protected ConvertBinder(Type type, bool @explicit) {
             _type = type;
             _explicit = @explicit;
         }
@@ -61,7 +60,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _type.GetHashCode() ^ (_explicit ? 0x8000000 : 0);
+            return ConvertBinderHash ^ _type.GetHashCode() ^ (_explicit ? 0x8000000 : 0);
         }
     }
 }

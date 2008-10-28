@@ -29,22 +29,22 @@ namespace Microsoft.Scripting.ComInterop {
             _callable = callable;
         }
 
-        public override MetaObject BindGetIndex(GetIndexBinder action, params MetaObject[] args) {
+        public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
             if (_callable.ComMethodDesc.IsPropertyGet) {
-                return BindComInvoke(action.Arguments, args);
+                return BindComInvoke(binder.Arguments, args);
             }
-            return base.BindGetIndex(action, args);
+            return base.BindGetIndex(binder, args);
         }
 
-        public override MetaObject BindSetIndex(SetIndexBinder action, params MetaObject[] args) {
+        public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
             if (_callable.ComMethodDesc.IsPropertyPut) {
-                return BindComInvoke(action.Arguments, args);
+                return BindComInvoke(binder.Arguments, args);
             }
-            return base.BindSetIndex(action, args);
+            return base.BindSetIndex(binder, args);
         }
 
-        public override MetaObject BindInvoke(InvokeBinder action, MetaObject[] args) {
-            return BindComInvoke(action.Arguments, args);
+        public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
+            return BindComInvoke(binder.Arguments, args);
         }
 
         private MetaObject BindComInvoke(IList<ArgumentInfo> argInfo, MetaObject[] args) {
@@ -63,9 +63,10 @@ namespace Microsoft.Scripting.ComInterop {
             ).Invoke();
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            switch (action.Operation) {
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            switch (binder.Operation) {
                 case "CallSignatures":
                 case "Documentation":
                     return Documentation(args);
@@ -88,7 +89,7 @@ namespace Microsoft.Scripting.ComInterop {
                     break;
             }
 
-            return action.FallbackOperation(this, args);
+            return binder.FallbackOperation(this, args);
         }
 
         private MetaObject Documentation(MetaObject[] args) {

@@ -163,6 +163,8 @@
     <Compile Include="Actions\Calls\ReturnReferenceArgBuilder.cs" />
     <Compile Include="Actions\Calls\SimpleArgBuilder.cs" />
     <Compile Include="Actions\Calls\SiteLocalStorageBuilder.cs" />
+    <Compile Include="Actions\ExtensionBinaryOperationBinder.cs" />
+    <Compile Include="Actions\ExtensionUnaryOperationBinder.cs" />
     <Compile Include="ArgumentTypeException.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
     <Compile Include="Ast\FinallyFlowControlExpression.cs" />

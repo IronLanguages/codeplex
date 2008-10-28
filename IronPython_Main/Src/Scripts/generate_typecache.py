@@ -69,7 +69,7 @@ data = [
     TypeData('Super'),
     TypeData('OldClass'),
     TypeData('OldInstance'),
-    TypeData('None', 'noneType', entryName='None'),
+    TypeData('Null', 'nullType', entryName='Null'),
     TypeData('Boolean', 'boolType'),
 	TypeData('PythonExceptions.BaseException', name='baseException', entryName = 'BaseException'),
 ]

@@ -14,9 +14,9 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.ComInterop;
 using System.Reflection;
+using Microsoft.Scripting.ComInterop;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public class MetaObject {
@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Actions {
                     if (_value != null) {
                         return _value.GetType();
                     } else {
-                        return typeof(None);    // TODO: Return something else ???
+                        return typeof(Null);    // TODO: Return something else ???
                     }
                 } else {
                     return null;                // TODO: Return something else ???
@@ -104,60 +104,75 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public virtual MetaObject BindConvert(ConvertBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackConvert(this);
+        public virtual MetaObject BindConvert(ConvertBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackConvert(this);
         }
 
-        public virtual MetaObject BindGetMember(GetMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackGetMember(this);
+        public virtual MetaObject BindGetMember(GetMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackGetMember(this);
         }
 
-        public virtual MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackSetMember(this, value);
+        public virtual MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackSetMember(this, value);
         }
 
-        public virtual MetaObject BindDeleteMember(DeleteMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackDeleteMember(this);
+        public virtual MetaObject BindDeleteMember(DeleteMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackDeleteMember(this);
         }
 
-        public virtual MetaObject BindGetIndex(GetIndexBinder action, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackGetIndex(this, args);
+        public virtual MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackGetIndex(this, args);
         }
 
-        public virtual MetaObject BindSetIndex(SetIndexBinder action, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackSetIndex(this, args);
+        public virtual MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackSetIndex(this, args);
         }
 
-        public virtual MetaObject BindDeleteIndex(DeleteIndexBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackDeleteIndex(this, args);
+        public virtual MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackDeleteIndex(this, args);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")]
-        public virtual MetaObject BindInvokeMemberl(InvokeMemberBinder action, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackInvokeMember(this, args);
+        public virtual MetaObject BindInvokeMemberl(InvokeMemberBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackInvokeMember(this, args);
         }
 
-        public virtual MetaObject BindInvoke(InvokeBinder action, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackInvoke(this, args);
+        public virtual MetaObject BindInvoke(InvokeBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackInvoke(this, args);
         }
 
-        public virtual MetaObject BindCreateInstance(CreateInstanceBinder action, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackCreateInstance(this, args);
+        public virtual MetaObject BindCreateInstance(CreateInstanceBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackCreateInstance(this, args);
         }
 
-        public virtual MetaObject BindOperation(OperationBinder action, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackOperation(this, args);
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public virtual MetaObject BindOperation(OperationBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackOperation(this, args);
+        }
+
+        public virtual MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackUnaryOperation(this);
+        }
+
+        public virtual MetaObject BindBinaryOperation(BinaryOperationBinder binder, MetaObject arg) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackBinaryOperation(this, arg);
+        }
+
+        public virtual string[] GetMemberNames() {
+            return EmptyArray<string>.Instance;
         }
 
         // Internal helpers

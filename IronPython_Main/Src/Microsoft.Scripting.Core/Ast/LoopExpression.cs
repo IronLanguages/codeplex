@@ -36,7 +36,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override ExpressionType GetNodeKind() {
-            return ExpressionType.LoopStatement;
+            return ExpressionType.Loop;
         }
 
         public Expression Body {

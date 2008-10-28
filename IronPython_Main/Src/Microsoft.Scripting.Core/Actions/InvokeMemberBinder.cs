@@ -20,13 +20,12 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class InvokeMemberBinder : StandardAction {
+    public abstract class InvokeMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 
-        protected InvokeMemberBinder(string name, bool ignoreCase, IEnumerable<ArgumentInfo> arguments)
-            : base(MetaObjectBinderKind.Call) {
+        protected InvokeMemberBinder(string name, bool ignoreCase, IEnumerable<ArgumentInfo> arguments) {
             _name = name;
             _ignoreCase = ignoreCase;
             _arguments = arguments.ToReadOnly();
@@ -76,7 +75,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28 ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0) ^ _arguments.ListHashCode());
+            return InvokeMemberBinderHash ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0) ^ _arguments.ListHashCode();
         }
     }
 }

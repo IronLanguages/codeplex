@@ -62,6 +62,7 @@ namespace IronPython.Runtime.Binding {
             return conversion.FallbackConvert(this);
         }
 
+        [Obsolete]
         public override MetaObject/*!*/ BindOperation(OperationBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:

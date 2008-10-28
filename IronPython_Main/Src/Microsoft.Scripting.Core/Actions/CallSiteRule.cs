@@ -17,10 +17,14 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
-    internal sealed class CallSiteRule<T> where T : class {
+namespace Microsoft.Runtime.CompilerServices {
+    /// <summary>
+    /// This type is only used by CallSite internally. Do not use
+    /// </summary>
+    public sealed class CallSiteRule<T> where T : class {
 
         internal static readonly ReadOnlyCollection<ParameterExpression> Parameters;
         internal static readonly LabelTarget ReturnLabel;
@@ -52,7 +56,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// The rule set that includes only this rule.
         /// </summary>
-        private readonly SmallRuleSet<T> _mySet;
+        internal readonly SmallRuleSet<T> RuleSet;
 
         /// <summary>
         /// The binding expression tree
@@ -68,23 +72,13 @@ namespace Microsoft.Scripting.Actions {
 
         internal CallSiteRule(Expression binding) {
             _binding = binding;
-            _mySet = new SmallRuleSet<T>(new[] { this });
+            RuleSet = new SmallRuleSet<T>(new[] { this });
         }
 
         internal CallSiteRule(Expression binding, T target, TemplateData<T> template) {
             _binding = binding;
-            _mySet = new SmallRuleSet<T>(target, new CallSiteRule<T>[] { this });
+            RuleSet = new SmallRuleSet<T>(target, new CallSiteRule<T>[] { this });
             _template = template;
-        }
-
-        /// <summary>
-        /// Each rule holds onto an immutable RuleSet that contains this rule only.
-        /// This should heavily optimize monomorphic call sites.
-        /// </summary>
-        internal SmallRuleSet<T> RuleSet {
-            get {
-                return _mySet;
-            }
         }
 
         /// <summary>

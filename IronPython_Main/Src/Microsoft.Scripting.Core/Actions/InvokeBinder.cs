@@ -20,15 +20,14 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class InvokeBinder : StandardAction {
+    public abstract class InvokeBinder : MetaObjectBinder {
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 
         protected InvokeBinder(params ArgumentInfo[] arguments)
             : this((IEnumerable<ArgumentInfo>)arguments) {
         }
 
-        protected InvokeBinder(IEnumerable<ArgumentInfo> arguments)
-            : base(MetaObjectBinderKind.Invoke) {
+        protected InvokeBinder(IEnumerable<ArgumentInfo> arguments) {
             _arguments = arguments.ToReadOnly();
         }
 
@@ -57,7 +56,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _arguments.ListHashCode();
+            return InvokeBinderHash ^ _arguments.ListHashCode();
         }
     }
 }

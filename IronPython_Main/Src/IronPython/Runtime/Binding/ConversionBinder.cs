@@ -264,7 +264,7 @@ namespace IronPython.Runtime.Binding {
                     self = self.Restrict(self.RuntimeType);
                 } 
 
-                if (self.LimitType == typeof(None)) {
+                if (self.LimitType == typeof(Null)) {
                     // None has no __nonzero__ and no __len__ but it's always false
                     res = MakeNoneToBoolConversion(self);
                 } else if (self.LimitType == typeof(bool)) {

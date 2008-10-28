@@ -13,22 +13,27 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-namespace Microsoft.Linq.Expressions {
-    // TODO: It seems overkill to have a full expression just for this.
-    // Can we just reuse ConstantExpression?
-    public sealed class EmptyExpression : Expression {
-        internal static readonly EmptyExpression Instance = new EmptyExpression(Annotations.Empty);
+using Microsoft.Scripting.Utils;
 
-        internal EmptyExpression(Annotations annotations)
+namespace Microsoft.Linq.Expressions {
+    // Represents default(T) in the tree
+    // TODO: rename to DefaultExpression
+    public sealed class EmptyExpression : Expression {
+        internal static readonly EmptyExpression VoidInstance = new EmptyExpression(typeof(void), Annotations.Empty);
+
+        private readonly Type _type;
+
+        internal EmptyExpression(Type type, Annotations annotations)
             : base(annotations) {
+            _type = type;
         }
 
         protected override Type GetExpressionType() {
-            return typeof(void);
+            return _type;
         }
 
         protected override ExpressionType GetNodeKind() {
-            return ExpressionType.EmptyStatement;
+            return ExpressionType.Default;
         }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
@@ -38,11 +43,18 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
         public static EmptyExpression Empty() {
-            return EmptyExpression.Instance;
+            return EmptyExpression.VoidInstance;
         }
 
         public static EmptyExpression Empty(Annotations annotations) {
-            return new EmptyExpression(annotations);
+            return new EmptyExpression(typeof(void), annotations);
+        }
+
+        public static EmptyExpression Empty(Type type) {
+            if (type == typeof(void)) {
+                return Empty();
+            }
+            return new EmptyExpression(type, null);
         }
     }
 }

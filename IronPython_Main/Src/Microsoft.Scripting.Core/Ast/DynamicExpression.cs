@@ -77,14 +77,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _arguments; }
         }
 
-        /// <summary>
-        /// If the CallSiteBinder is a StandardAction, this returns it.
-        /// Otherwise, returns null.
-        /// </summary>
-        public StandardAction StandardAction {
-            get { return _binder as StandardAction; }
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitDynamic(this);
         }
@@ -172,20 +164,20 @@ namespace Microsoft.Linq.Expressions {
         }
 
         [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder action, Type resultType, params Expression[] arguments) {
-            return Dynamic(action, resultType, null, (IEnumerable<Expression>)arguments);
+        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, params Expression[] arguments) {
+            return Dynamic(binder, resultType, null, (IEnumerable<Expression>)arguments);
         }
         [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder action, Type resultType, IEnumerable<Expression> arguments) {
-            return Dynamic(action, resultType, null, arguments);
+        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, IEnumerable<Expression> arguments) {
+            return Dynamic(binder, resultType, null, arguments);
         }
         [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder action, Type resultType, Annotations annotations, params Expression[] arguments) {
-            return Dynamic(action, resultType, annotations, (IEnumerable<Expression>)arguments);
+        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, Annotations annotations, params Expression[] arguments) {
+            return Dynamic(binder, resultType, annotations, (IEnumerable<Expression>)arguments);
         }
         [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder action, Type resultType, Annotations annotations, IEnumerable<Expression> arguments) {
-            return Dynamic(action, resultType, annotations, arguments);
+        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, Annotations annotations, IEnumerable<Expression> arguments) {
+            return Dynamic(binder, resultType, annotations, arguments);
         }
     }
 }

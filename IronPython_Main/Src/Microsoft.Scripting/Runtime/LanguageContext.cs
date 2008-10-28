@@ -468,6 +468,7 @@ namespace Microsoft.Scripting.Runtime {
             return onBindingError ?? MetaObject.CreateThrow(target, args, typeof(NotImplementedException), ArrayUtils.EmptyObjects);
         }
 
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
         private class DefaultOperationAction : OperationBinder {
             internal DefaultOperationAction(string operation)
                 : base(operation) {
@@ -482,6 +483,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
         public virtual OperationBinder CreateOperationBinder(string operation) {
             return new DefaultOperationAction(operation);
         }

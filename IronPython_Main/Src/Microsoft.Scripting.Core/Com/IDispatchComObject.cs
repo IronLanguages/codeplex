@@ -538,7 +538,7 @@ namespace Microsoft.Scripting.ComInterop {
                     funcs.Add(method.Name, method);
 
                     // for the special dispId == 0, we need to store the method descriptor 
-                    // for the Do(GetItem) action. 
+                    // for the Do(GetItem) binder. 
                     if (funcDesc.memid == ComDispIds.DISPID_VALUE) {
                         getItem = method;
                     }
@@ -586,7 +586,7 @@ namespace Microsoft.Scripting.ComInterop {
                 }
 
                 // for the special dispId == 0, we need to store
-                // the method descriptor for the Do(SetItem) action. 
+                // the method descriptor for the Do(SetItem) binder. 
                 if (method.DispId == ComDispIds.DISPID_VALUE && setItem == null) {
                     setItem = method;
                 }

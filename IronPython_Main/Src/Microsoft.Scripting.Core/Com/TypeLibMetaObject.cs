@@ -27,8 +27,8 @@ namespace Microsoft.Scripting.ComInterop {
             _lib = lib;
         }
 
-        public override MetaObject BindGetMember(GetMemberBinder action) {
-            if (_lib.HasMember(action.Name)) {
+        public override MetaObject BindGetMember(GetMemberBinder binder) {
+            if (_lib.HasMember(binder.Name)) {
                 Restrictions restrictions =
                     Restrictions.GetTypeRestriction(
                         Expression, typeof(ComTypeLibDesc)
@@ -50,17 +50,18 @@ namespace Microsoft.Scripting.ComInterop {
                     Expression.Call(
                         Expression.ConvertHelper(Expression, typeof(ComTypeLibDesc)),
                         typeof(ComTypeLibDesc).GetMethod("GetTypeLibObjectDesc"),
-                        Expression.Constant(action.Name.ToString())
+                        Expression.Constant(binder.Name.ToString())
                     ),
                     restrictions
                 );
             }
 
-            return base.BindGetMember(action);
+            return base.BindGetMember(binder);
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            switch (action.Operation) {
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            switch (binder.Operation) {
                 case "GetMemberNames":
                 case "MemberNames":
                     return new MetaObject(
@@ -72,7 +73,7 @@ namespace Microsoft.Scripting.ComInterop {
                     );
 
                 default:
-                    return base.BindOperation(action, args);
+                    return base.BindOperation(binder, args);
             }
         }
     }

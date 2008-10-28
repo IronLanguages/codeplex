@@ -357,7 +357,7 @@ namespace Microsoft.Scripting.ComInterop {
         /// Get the COM Variant type that argument should be marshaled as for a call to COM
         /// </summary>
         private VariantBuilder GetVariantBuilder(Type argumentType) {
-            if (argumentType == None.Type) {
+            if (argumentType == Null.Type) {
                 return new VariantBuilder(VarEnum.VT_EMPTY, new NullArgBuilder());
             }
 

@@ -20,11 +20,10 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class CreateInstanceBinder : StandardAction {
+    public abstract class CreateInstanceBinder : MetaObjectBinder {
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 
-        protected CreateInstanceBinder(IEnumerable<ArgumentInfo> arguments)
-            : base(MetaObjectBinderKind.Create) {
+        protected CreateInstanceBinder(IEnumerable<ArgumentInfo> arguments) {
             _arguments = arguments.ToReadOnly();
         }
 
@@ -59,7 +58,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28 ^ _arguments.ListHashCode());
+            return CreateInstanceBinderHash ^ _arguments.ListHashCode();
         }
     }
 }
