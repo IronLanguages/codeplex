@@ -22,6 +22,10 @@ from iptest.cominterop_util import *
 import clr
 from System import Type, Activator
 
+print "Disabling this test due to Codeplex 18525"
+from sys import exit
+exit(0)
+
 if not file_exists_in_path("tlbimp.exe"):
     from sys import exit
     print "tlbimp.exe is not in the path!"
