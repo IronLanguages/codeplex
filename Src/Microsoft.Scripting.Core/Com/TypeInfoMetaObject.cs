@@ -54,44 +54,45 @@ namespace Microsoft.Scripting.ComInterop {
             return MakeComRestrictions(typeof(ComObjectWithTypeInfo), typeof(ComObjectWithTypeInfo).GetProperty("ComType"), _comType);
         }
 
-        public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackInvokeMember(UnwrapSelf(), args);
+        public override MetaObject BindInvokeMemberl(InvokeMemberBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackInvokeMember(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindConvert(ConvertBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackConvert(UnwrapSelf());
+        public override MetaObject BindConvert(ConvertBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackConvert(UnwrapSelf());
         }
 
-        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackCreateInstance(UnwrapSelf(), args);
+        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackCreateInstance(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackDeleteMember(UnwrapSelf());
+        public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackDeleteMember(UnwrapSelf());
         }
 
-        public override MetaObject BindGetMember(GetMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackGetMember(UnwrapSelf());
+        public override MetaObject BindGetMember(GetMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackGetMember(UnwrapSelf());
         }
 
-        public override MetaObject BindInvoke(InvokeBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackInvoke(UnwrapSelf(), args);
+        public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackInvoke(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackOperation(UnwrapSelf(), args);
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackOperation(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.FallbackSetMember(UnwrapSelf(), value);
+        public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackSetMember(UnwrapSelf(), value);
         }
 
         private MetaObject UnwrapSelf() {

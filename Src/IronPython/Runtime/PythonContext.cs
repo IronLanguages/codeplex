@@ -1655,6 +1655,7 @@ namespace IronPython.Runtime {
             return new CompatibilityInvokeBinder(DefaultBinderState, arguments);
         }
 
+        [Obsolete]
         public override OperationBinder/*!*/ CreateOperationBinder(string/*!*/ operation) {
             return new PythonOperationBinder(DefaultBinderState, operation);
         }

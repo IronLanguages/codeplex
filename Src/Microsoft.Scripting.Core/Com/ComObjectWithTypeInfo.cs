@@ -267,7 +267,7 @@ namespace Microsoft.Scripting.ComInterop {
         /// When an (interop) assembly is loaded, we scan it to discover the GUIDs of COM interfaces so that we can
         /// associate the type definition with COM objects with that GUID.
         /// Since scanning all loaded assemblies can be expensive, in the future, we might consider a more explicit 
-        /// user action to trigger scanning of COM types.
+        /// user binder to trigger scanning of COM types.
         /// </summary>
         public static void PublishComTypes(Assembly interopAssembly) {
             Dictionary<Guid, Type> rawComTypeCache = _comTypeCache.UnderlyingDictionary;

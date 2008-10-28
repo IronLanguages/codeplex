@@ -223,7 +223,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
-            if (rt == typeof(None)) {
+            if (rt == typeof(Null)) {
                 return Expression.Equal(expression, Expression.Null(expression.Type));
             }
 

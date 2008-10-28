@@ -704,7 +704,7 @@ namespace IronPython.Runtime.Binding {
             res[typeof(Complex64)] = new ExtensionTypeInfo(typeof(ComplexOps), "complex");
 
             // DLR types
-            res[typeof(None)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
+            res[typeof(Null)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
             res[typeof(BaseSymbolDictionary)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(IAttributesCollection)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(NamespaceTracker)] = new ExtensionTypeInfo(typeof(ReflectedPackageOps), "namespace#");

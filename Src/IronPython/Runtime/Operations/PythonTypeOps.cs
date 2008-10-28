@@ -218,7 +218,7 @@ namespace IronPython.Runtime.Operations {
 
         private static Type ConvertToType(PythonType pythonType) {
             if (pythonType.IsNull) {
-                return None.Type;
+                return Null.Type;
             } else {
                 return pythonType.UnderlyingSystemType;
             }
@@ -651,7 +651,7 @@ namespace IronPython.Runtime.Operations {
                 return ((DocumentationAttribute)docAttr[0]).Documentation;
             }
 
-            if (type == typeof(None)) return null;
+            if (type == typeof(Null)) return null;
 
             // Auto Doc (XML or otherwise)
             string autoDoc = DocBuilder.CreateAutoDoc(type);

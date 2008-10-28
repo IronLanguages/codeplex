@@ -13,21 +13,33 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    // TODO: Rename
-    public abstract class StandardAction : MetaObjectBinder {
-        private readonly MetaObjectBinderKind _kind;
+    public abstract class ExtensionBinaryOperationBinder : BinaryOperationBinder {
+        private readonly string _operation;
 
-        internal StandardAction(MetaObjectBinderKind kind) {
-            _kind = kind;
+        protected ExtensionBinaryOperationBinder(string operation)
+            : base(ExpressionType.Extension) {
+            ContractUtils.RequiresNotNull(operation, "operation");
+            _operation = operation;
         }
 
-        public MetaObjectBinderKind Kind {
+        public string ExtensionOperation {
             get {
-                return _kind;
+                return _operation;
             }
-        }        
+        }
+
+        public override int GetHashCode() {
+            return base.GetHashCode() ^ _operation.GetHashCode();
+        }
+
+        public override bool Equals(object obj) {
+            var ebob = obj as ExtensionBinaryOperationBinder;
+            return ebob != null && base.Equals(obj) && _operation == ebob._operation;
+        }
     }
 }

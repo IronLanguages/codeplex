@@ -107,7 +107,7 @@ namespace Microsoft.Scripting.Actions {
 
             Type toType = toParameter.Type;
 
-            if (fromType == None.Type) {
+            if (fromType == Null.Type) {
                 if (toParameter.ProhibitNull) {
                     return false;
                 }

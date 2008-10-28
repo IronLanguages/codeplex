@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Hosting {
             get { return _engine; }
         }
 
-
+#pragma warning disable 618
 
         #region Local Operations
 
@@ -443,6 +443,8 @@ namespace Microsoft.Scripting.Hosting {
         public IList<string> GetCallSignatures(object obj) {
             return _ops.DoOperation<object, IList<string>>(StandardOperators.CallSignatures, obj);
         }
+
+#pragma warning restore 618
 
         #endregion
 

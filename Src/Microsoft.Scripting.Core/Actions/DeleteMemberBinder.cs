@@ -16,12 +16,11 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class DeleteMemberBinder : StandardAction {
+    public abstract class DeleteMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
 
-        protected DeleteMemberBinder(string name, bool ignoreCase)
-            : base(MetaObjectBinderKind.DeleteMember) {
+        protected DeleteMemberBinder(string name, bool ignoreCase) {
             ContractUtils.RequiresNotNull(name, "name");
 
             _name = name;
@@ -54,7 +53,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0); ;
+            return DeleteMemberBinderHash ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0); ;
         }
 
         public override bool Equals(object obj) {

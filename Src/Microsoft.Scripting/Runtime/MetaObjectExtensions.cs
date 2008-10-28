@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Runtime {
                 }
             }
 
-            if (type == typeof(None)) {
+            if (type == typeof(Null)) {
                 return new MetaObject(
                     Expression.Null(),
                     self.Restrictions.Merge(Restrictions.GetInstanceRestriction(self.Expression, null)),

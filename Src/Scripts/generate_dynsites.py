@@ -17,6 +17,7 @@ from generate import generate
 import clr
 from System import *
 
+
 #This is currently set as MAX_CALL_ARGS + 1 to include the target function as well
 MaxSiteArity = 14
 
@@ -50,6 +51,226 @@ def gonlyargs(size):
     if size == 0: return ''
     
     return ", ".join(["arg%d" % i for i in range(size)])
+
+
+
+#
+# Pregenerated UpdateAndExecute methods for Func, Action delegate types
+#
+# Sample argument values:
+#
+# * methodDeclaration:
+#       "TRet UpdateAndExecute1<T0, T1, TRet>(CallSite site, T0 arg0, T1 arg1)"
+#       "void UpdateAndExecuteVoid1<T0, T1>(CallSite site, T0 arg0, T1 arg1)"
+#
+# * funcType:
+#       "Func<CallSite, T0, T1, TRet>"
+#       "Action<CallSite, T0, T1>"
+#
+# * setResult
+#       "result =" or ""
+#
+# * returnResult
+#       "return result" or "return"
+#
+# * returnDefault
+#       "return default(TRet)" or "return"
+#
+# * declareResult
+#       Either "TRet result;\n" or ""
+#
+# * matchmakerArgs
+#       "mm_arg0, mm_arg1"
+#
+# * args
+#       "arg0, arg1"
+#
+# * argsTypes
+#       "GetTypeForBinding(arg0), GetTypeForBinding(arg1)"
+#
+
+def gen_update_targets(cw):
+    maxArity = 11
+
+    def argList(size):
+        return ", ".join(["arg%d" % i for i in range(size)])
+    
+    def mmArgList(size):
+        return ", ".join(["mm_arg%d" % i for i in range(size)])
+    
+    #def argTypeList(size):
+    #    return ", ".join(["GetTypeForBinding(arg%d)" % i for i in range(size)])
+
+    replace = {}
+    for n in xrange(1, maxArity):
+        replace['setResult'] = 'result ='
+        replace['returnResult'] = 'return result'
+        replace['returnDefault'] = 'return default(TRet)'
+        replace['declareResult'] = 'TRet result;\n'
+        replace['args'] = argList(n)
+        #replace['argTypes'] = argTypeList(n)
+        replace['matchmakerArgs'] = mmArgList(n)
+        replace['funcType'] = 'Func<CallSite, %s>' % gsig(n)
+        replace['methodDeclaration'] = 'TRet UpdateAndExecute%d<%s>(CallSite site%s)' % (n, gsig(n), gparms(n))
+        cw.write(updateAndExecute, **replace)
+
+    for n in xrange(1, maxArity):
+        replace['setResult'] = ''
+        replace['returnResult'] = 'return'
+        replace['returnDefault'] = 'return'
+        replace['declareResult'] = ''
+        replace['args'] = argList(n)
+        #replace['argTypes'] = argTypeList(n)
+        replace['matchmakerArgs'] = mmArgList(n)
+        replace['funcType'] = 'Action<CallSite, %s>' % gsig_noret(n)
+        replace['methodDeclaration'] = 'void UpdateAndExecuteVoid%d<%s>(CallSite site%s)' % (n, gsig_noret(n), gparms(n))
+        cw.write(updateAndExecute, **replace)
+
+#
+# WARNING: If you're changing the generated C# code, make sure you update the
+# expression tree representation as well, which lives in UpdateDelegate.cs
+# The two implementations *must* be kept in sync!
+#
+updateAndExecute = '''
+[Obsolete("pregenerated CallSite<T>.Update delegate", true)]
+internal static %(methodDeclaration)s {
+    //
+    // Declare the locals here upfront. It actually saves JIT stack space.
+    //
+    var @this = (CallSite<%(funcType)s>)site;
+    CallSiteRule<%(funcType)s>[] applicable;
+    CallSiteRule<%(funcType)s> rule;
+    %(funcType)s ruleTarget, startingTarget = @this.Target;
+    %(declareResult)s
+    int count, index;
+    CallSiteRule<%(funcType)s> originalRule = null;
+
+    //
+    // Create matchmaker and its site. We'll need them regardless.
+    //
+    bool match = true;
+    site = CallSiteOps.CreateMatchmaker(
+        @this,
+        (mm_site, %(matchmakerArgs)s) => {
+            match = false;
+            %(returnDefault)s;
+        }
+    );
+
+    //
+    // Level 1 cache lookup
+    //
+    if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+        for (index = 0, count = applicable.Length; index < count; index++) {
+            rule = applicable[index];
+
+            //
+            // Execute the rule
+            //
+            ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+            try {
+                %(setResult)s ruleTarget(site, %(args)s);
+                if (match) {
+                    %(returnResult)s;
+                }
+            } finally {
+                if (match) {
+                    //
+                    // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                    // see them again. The site is polymorphic. Update the delegate and keep running
+                    //
+                    CallSiteOps.SetPolymorphicTarget(@this);
+                }
+            }
+
+            if (startingTarget == ruleTarget) {
+                // our rule was previously monomorphic, if we produce another monomorphic
+                // rule we should try and share code between the two.
+                originalRule = rule;
+            }
+            
+            // Rule didn't match, try the next one
+            match = true;            
+        }
+    }
+
+    //
+    // Level 2 cache lookup
+    //
+    var args = new object[] { %(args)s };
+
+    //
+    // Any applicable rules in level 2 cache?
+    //
+    if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+        for (index = 0, count = applicable.Length; index < count; index++) {
+            rule = applicable[index];
+
+            //
+            // Execute the rule
+            //
+            ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+            try {
+                %(setResult)s ruleTarget(site, %(args)s);
+                if (match) {
+                    %(returnResult)s;
+                }
+            } finally {
+                if (match) {
+                    //
+                    // Rule worked. Add it to level 1 cache
+                    //
+                    CallSiteOps.AddRule(@this, rule);
+                }
+            }
+
+            if (startingTarget == ruleTarget) {
+                // If we've gone megamorphic we can still template off the L2 cache
+                originalRule = rule;
+            }
+            
+            // Rule didn't match, try the next one
+            match = true;
+        }
+    }
+
+
+    //
+    // Miss on Level 0, 1 and 2 caches. Create new rule
+    //
+
+    rule = null;
+    
+    for (; ; ) {
+        rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+
+        //
+        // Execute the rule on the matchmaker site
+        //
+
+        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+        try {
+            %(setResult)s ruleTarget(site, %(args)s);
+            if (match) {
+                %(returnResult)s;
+            }
+        } finally {
+            if (match) {
+                //
+                // The rule worked. Add it to level 1 cache.
+                //
+                CallSiteOps.AddRule(@this, rule);
+            }
+        }
+
+        // Rule we got back didn't work, try another one
+        match = true;
+    }
+}
+'''
 
 easy_sites="""/// <summary>
 /// Dynamic site - arity %(arity)d
@@ -167,24 +388,6 @@ internal static TRet Update%(arity)d<T, %(ts)s>(CallSite site%(tparams)s) where 
 }
 """
 
-def gen_update_targets(cw):
-    for n in range(1, MaxSiteArity + 2):
-        cw.write(update_target, ts = gsig(n), tparams = gparms(n), targs = gonlyargs(n), arity = n)
-
-update_target_void = """/// <summary>
-/// Site update code - arity %(arity)d
-/// </summary>
-internal static void UpdateVoid%(arity)d<T, %(ts)s>(CallSite site%(tparams)s) where T : class {
-    ((CallSite<T>)site).UpdateAndExecute(new object[] { %(targs)s });
-}
-"""
-
-def gen_void_update_targets(cw):
-    for n in range(1, MaxSiteArity + 2):
-        cw.write(update_target_void, ts = gsig_noret(n), tparams = gparms(n), targs = gonlyargs(n), arity = n)
-
-
-
 matchcaller_target="""/// Matchcaller - arity %(arity)d
 internal static object Call%(arity)d<%(ts)s>(Func<CallSite, %(ts)s> target, CallSite site, object[] args) {
     return (object)target(site%(targs)s);
@@ -208,16 +411,11 @@ def gen_void_matchcaller_targets(cw):
 
 def main():
     return generate(
+        ("UpdateAndExecute Methods", gen_update_targets),
         ("Delegate Action Types", gen_delegate_action),
         ("Delegate Func Types", gen_delegate_func),
         ("Maximum Delegate Arity", gen_max_delegate_arity),
-        ("Predefined Update Targets", gen_update_targets),
-        ("Predefined Void Update Targets", gen_void_update_targets),
         ("Easy Dynamic Sites", gen_easy_sites),
-        ("Matchmaker", gen_matchmaker),
-        ("Void Matchmaker", gen_void_matchmaker),
-        ("Matchcaller Targets", gen_matchcaller_targets),
-        ("Matchcaller Void Targets", gen_void_matchcaller_targets),
         ("SplatCallSite call helpers", gen_splatsite),
         ("Dynamic Sites Construction Helpers", gen_construction_helpers),
     )

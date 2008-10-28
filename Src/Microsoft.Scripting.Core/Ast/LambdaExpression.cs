@@ -277,17 +277,17 @@ namespace Microsoft.Linq.Expressions {
 
             ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
 
-            bool action = body.Type == typeof(void);
+            bool binder = body.Type == typeof(void);
 
             int paramCount = parameterList.Count;
-            Type[] typeArgs = new Type[paramCount + (action ? 0 : 1)];
+            Type[] typeArgs = new Type[paramCount + (binder ? 0 : 1)];
             for (int i = 0; i < paramCount; i++) {
                 ContractUtils.RequiresNotNull(parameterList[i], "parameter");
                 typeArgs[i] = parameterList[i].Type;
             }
 
             Type delegateType;
-            if (action)
+            if (binder)
                 delegateType = GetActionType(typeArgs);
             else {
                 typeArgs[paramCount] = body.Type;
@@ -373,13 +373,21 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
-            return DelegateHelpers.GetFuncType(typeArgs);
+            Type result = DelegateHelpers.GetFuncType(typeArgs);
+            if (result == null) {
+                throw Error.IncorrectNumberOfTypeArgsForFunc();
+            }
+            return result;
         }
 
         //CONFORMING
         public static Type GetActionType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
-            return DelegateHelpers.GetActionType(typeArgs);
+            Type result = DelegateHelpers.GetActionType(typeArgs);
+            if (result == null) {
+                throw Error.IncorrectNumberOfTypeArgsForAction();
+            }
+            return result;
         }
     }
 }

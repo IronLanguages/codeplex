@@ -391,7 +391,7 @@ namespace Microsoft.Linq.Expressions {
                         return false;
                     }
                     break;
-                case ExpressionType.TryStatement:
+                case ExpressionType.Try:
                     // compare catch finally blocks and their handler types
                     if (!Compare(varInfo, (TryExpression)currentLeft, (TryExpression)currentRight)) {
                         return false;
@@ -407,8 +407,8 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.Assign:
                 case ExpressionType.Goto:
                 case ExpressionType.Throw:
-                case ExpressionType.LoopStatement:
-                case ExpressionType.EmptyStatement:
+                case ExpressionType.Loop:
+                case ExpressionType.Default:
                 case ExpressionType.Convert:
                 case ExpressionType.TypeAs:
                 case ExpressionType.Unbox:
@@ -423,7 +423,7 @@ namespace Microsoft.Linq.Expressions {
                     break;
                 case ExpressionType.Label:
                 // TODO: cache and compare labels
-                case ExpressionType.SwitchStatement:
+                case ExpressionType.Switch:
                 // TODO: compare case values
                 case ExpressionType.Extension:
 

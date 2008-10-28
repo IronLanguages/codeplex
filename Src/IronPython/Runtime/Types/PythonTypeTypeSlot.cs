@@ -22,7 +22,7 @@ namespace IronPython.Runtime.Types {
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             if (instance == null) {
-                if (owner == TypeCache.None) {
+                if (owner == TypeCache.Null) {
                     value = owner;
                 } else {
                     value = DynamicHelpers.GetPythonType(owner);

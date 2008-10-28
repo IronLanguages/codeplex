@@ -18,10 +18,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
-using System.CodeDom.Compiler;
 
 namespace Microsoft.Linq.Expressions {
     // TODO: debug builds only!
@@ -295,29 +296,51 @@ namespace Microsoft.Linq.Expressions {
 
         // More proper would be to make this a virtual method on Action
         private static string FormatBinder(CallSiteBinder binder) {
-            var action = binder as StandardAction;
-            if (action == null) {
-                return "CallSiteBinder(" + binder.ToString() + ") ";
-            }
+            ConvertBinder convert;
+            GetMemberBinder getMember;
+            SetMemberBinder setMember;
+            DeleteMemberBinder deleteMember;
+            GetIndexBinder getIndex;
+            SetIndexBinder setIndex;
+            DeleteIndexBinder deleteIndex;
+            InvokeMemberBinder call;
+            InvokeBinder invoke;
+            CreateInstanceBinder create;
+            UnaryOperationBinder unary;
+            BinaryOperationBinder binary;
 
-            switch (action.Kind) {
-                case MetaObjectBinderKind.Call:
-                    return "Call " + ((InvokeMemberBinder)action).Name;
-                case MetaObjectBinderKind.Convert:
-                    return "Convert " + ((ConvertBinder)action).Type;
-                case MetaObjectBinderKind.Create:
-                    return "Create";
-                case MetaObjectBinderKind.DeleteMember:
-                    return "DeleteMember " + ((DeleteMemberBinder)action).Name;
-                case MetaObjectBinderKind.GetMember:
-                    return "GetMember " + ((GetMemberBinder)action).Name;
-                case MetaObjectBinderKind.Invoke:
-                    return "Invoke";
-                case MetaObjectBinderKind.Operation:
-                    return "Operation " + ((OperationBinder)action).Operation;
-                case MetaObjectBinderKind.SetMember:
-                    return "SetMember " + ((SetMemberBinder)action).Name;
-                default: throw Assert.Unreachable;
+#pragma warning disable 618
+            OperationBinder operation;
+            if ((operation = binder as OperationBinder) != null) {
+                return "Operation " + operation.Operation;
+            } else 
+#pragma warning restore 618
+            if ((convert = binder as ConvertBinder) != null) {
+                return "Convert " + convert.Type;
+            } else if ((getMember = binder as GetMemberBinder) != null) {
+                return "GetMember " + getMember.Name;
+            } else if ((setMember = binder as SetMemberBinder) != null) {
+                return "SetMember " + setMember.Name;
+            } else if ((deleteMember = binder as DeleteMemberBinder) != null) {
+                return "DeleteMember " + deleteMember.Name;
+            } else if ((getIndex = binder as GetIndexBinder) != null) {
+                return "GetIndex";
+            } else if ((setIndex = binder as SetIndexBinder) != null) {
+                return "SetIndex";
+            } else if ((deleteIndex = binder as DeleteIndexBinder) != null) {
+                return "DeleteIndex";
+            } else if ((call = binder as InvokeMemberBinder) != null) {
+                return "Call " + call.Name;
+            } else if ((invoke = binder as InvokeBinder) != null) {
+                return "Invoke";
+            } else if ((create = binder as CreateInstanceBinder) != null) {
+                return "Create ";
+            } else if ((unary = binder as UnaryOperationBinder) != null) {
+                return "UnaryOperation " + unary.Operation;
+            } else if ((binary = binder as BinaryOperationBinder) != null) {
+                return "BinaryOperation " + binary.Operation;
+            } else {
+                return "CallSiteBinder(" + binder.ToString() + ") ";
             }
         }
 
@@ -462,8 +485,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal override Expression VisitParameter(ParameterExpression node) {
-            Out(".var", Flow.Space);
-            Out(node.Name ?? "");
+            Out("$" + node.Name);
             return node;
         }
 
@@ -664,7 +686,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal override Expression VisitEmpty(EmptyExpression node) {
-            Out("/*empty*/");
+            if (node.Type == typeof(void)) {
+                Out("/*empty*/");
+            } else {
+                Out(".default(" + node.Type + ")");
+            }
             return node;
         }
 

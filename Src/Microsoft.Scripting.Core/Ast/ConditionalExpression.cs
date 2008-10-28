@@ -29,7 +29,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal static ConditionalExpression Make(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse) {
-            if (ifFalse == EmptyExpression.Instance) {
+            if (ifFalse == EmptyExpression.VoidInstance) {
                 return new ConditionalExpression(annotations, test, ifTrue);
             } else {
                 return new FullConditionalExpression(annotations, test, ifTrue, ifFalse);
@@ -57,7 +57,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal virtual Expression GetFalse() {
-            return EmptyExpression.Instance;
+            return EmptyExpression.VoidInstance;
         }
 
         internal override void BuildString(StringBuilder builder) {
@@ -109,6 +109,15 @@ namespace Microsoft.Linq.Expressions {
             }
 
             return ConditionalExpression.Make(annotations, test, ifTrue, ifFalse);
+        }
+
+        /// <summary>
+        /// Behaves like an "if" statement in imperative languages. The type is
+        /// always treated as void regardless of the body's type. The else
+        /// branch is empty
+        /// </summary>
+        public static ConditionalExpression IfThen(Expression test, Expression ifTrue) {
+            return Expression.Condition(test, Expression.Void(ifTrue), Expression.Empty());
         }
     }
 }

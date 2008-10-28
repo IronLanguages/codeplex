@@ -218,7 +218,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     break;
                 // Block
                 case ExpressionType.Block:
-                    result = RewriteBlock(node, stack);
+                    result = RewriteBlockExpression(node, stack);
                     break;
                 // DebugInfo
                 case ExpressionType.DebugInfo:
@@ -244,25 +244,25 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Label:
                     result = RewriteLabelExpression(node, stack);
                     break;
-                // LoopStatement
-                case ExpressionType.LoopStatement:
-                    result = RewriteLoopStatement(node, stack);
+                // Loop
+                case ExpressionType.Loop:
+                    result = RewriteLoopExpression(node, stack);
                     break;
                 // ReturnStatement
                 case ExpressionType.ReturnStatement:
                     result = RewriteReturnStatement(node, stack);
                     break;
-                // SwitchStatement
-                case ExpressionType.SwitchStatement:
-                    result = RewriteSwitchStatement(node, stack);
+                // Switch
+                case ExpressionType.Switch:
+                    result = RewriteSwitchExpression(node, stack);
                     break;
                 // Throw
                 case ExpressionType.Throw:
                     result = RewriteThrowUnaryExpression(node, stack);
                     break;
-                // TryStatement
-                case ExpressionType.TryStatement:
-                    result = RewriteTryStatement(node, stack);
+                // Try
+                case ExpressionType.Try:
+                    result = RewriteTryExpression(node, stack);
                     break;
                 // Unbox
                 case ExpressionType.Unbox:
@@ -318,10 +318,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Parameter:
                 // Constant
                 case ExpressionType.Constant:
-                // LocalScope
-                case ExpressionType.LocalScope:
-                // EmptyStatement
-                case ExpressionType.EmptyStatement:
+                // RuntimeVariables
+                case ExpressionType.RuntimeVariables:
+                // Default
+                case ExpressionType.Default:
                     return new Result(RewriteAction.None, node);
 
                 // *** END GENERATED CODE ***

@@ -344,6 +344,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Performs a generic unary operation on the specified target and returns the result.
         /// </summary>
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
         public object DoOperation(string op, object target) {
             return DoOperation<object, object>(op, target);
         }
@@ -351,6 +352,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Performs a generic unary operation on the strongly typed target and returns the value as the specified type
         /// </summary>
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
         public TResult DoOperation<TTarget, TResult>(string op, TTarget target) {
             CallSite<Func<CallSite, TTarget, TResult>> site;
             site = GetSite<TTarget, TResult>(_lc.CreateOperationBinder(op));
@@ -360,6 +362,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary>
         /// Performs the generic binary operation on the specified targets and returns the result.
         /// </summary>
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
         public object DoOperation(Operators op, object target, object other) {
             return DoOperation<object, object, object>(op.ToString(), target, other);
         }
@@ -368,6 +371,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Peforms the generic binary operation on the specified strongly typed targets and returns
         /// the strongly typed result.
         /// </summary>
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
         public TResult DoOperation<TTarget, TOther, TResult>(string op, TTarget target, TOther other) {
             CallSite<Func<CallSite, TTarget, TOther, TResult>> site;
             site = GetSite<TTarget, TOther, TResult>(_lc.CreateOperationBinder(op));

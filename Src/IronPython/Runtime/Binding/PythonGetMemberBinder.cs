@@ -99,7 +99,7 @@ namespace IronPython.Runtime.Binding {
             bool isNoThrow = ((options & GetMemberOptions.IsNoThrow) != 0) ? true : false;
             Type limitType = self.LimitType;
 
-            if (limitType == typeof(None) || PythonBinder.IsPythonType(limitType)) {
+            if (limitType == typeof(Null) || PythonBinder.IsPythonType(limitType)) {
                 // look up in the PythonType so that we can 
                 // get our custom method names (e.g. string.startswith)            
                 PythonType argType = DynamicHelpers.GetPythonTypeFromType(limitType);

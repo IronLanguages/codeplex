@@ -20,15 +20,13 @@ namespace Microsoft.Scripting {
     /// handling of methods that expect a Type or Type[].  This type can also be used by
     /// languages that support methods on null objects by adding extension methods with a
     /// Null/None this.
-    /// 
-    /// TODO Should be renamed to Null to reflect the standard .NET name rather than Python name
     /// </summary>
-    public sealed class None {
-        public static readonly Type Type = typeof(None);
+    public sealed class Null {
+        public static readonly Type Type = typeof(Null);
 
         /// <summary>
         /// Private constructor is never called since 'null' is the only valid instance.
         /// </summary>
-        private None() { }
+        private Null() { }
     }
 }

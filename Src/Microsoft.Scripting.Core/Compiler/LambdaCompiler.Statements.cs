@@ -18,7 +18,7 @@ using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
-        private void EmitBlock(Expression expr) {
+        private void EmitBlockExpression(Expression expr) {
             // emit body
             Emit((BlockExpression)expr, EmitAs.Default);
         }
@@ -64,11 +64,15 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static void EmitEmptyStatement(Expression expr) {
+        private void EmitEmptyExpression(Expression expr) {
+            var node = (EmptyExpression)expr;
+            if (node.Type != typeof(void)) {
+                // emit default(T)
+                _ilg.EmitDefault(node.Type);
+            }
         }
 
-        private void EmitLoopStatement(Expression expr) {
+        private void EmitLoopExpression(Expression expr) {
             LoopExpression node = (LoopExpression)expr;
 
             PushLabelBlock(LabelBlockKind.Block);
@@ -105,7 +109,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #region SwitchStatement
 
-        private void EmitSwitchStatement(Expression expr) {
+        private void EmitSwitchExpression(Expression expr) {
             SwitchExpression node = (SwitchExpression)expr;
 
             LabelInfo breakTarget = DefineLabel(node.BreakLabel);
@@ -239,7 +243,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
             throw Error.RethrowRequiresCatch();
         }
-
         #region TryStatement
 
         private void EmitSaveExceptionOrPop(CatchBlock cb) {
@@ -253,7 +256,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitTryStatement(Expression expr) {
+        private void EmitTryExpression(Expression expr) {
             var node = (TryExpression)expr;
 
             //******************************************************************

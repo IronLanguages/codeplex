@@ -40,7 +40,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override ExpressionType GetNodeKind() {
-            return ExpressionType.LocalScope;
+            return ExpressionType.RuntimeVariables;
         }
 
         /// <summary>

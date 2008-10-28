@@ -16,9 +16,10 @@
 from generate import generate
 
 class Expression:
-    def __init__(self, kind, type):
+    def __init__(self, kind, type, interop=False):
         self.kind = kind
         self.type = type
+        self.interop = interop
 
 expressions = [
     #
@@ -29,9 +30,11 @@ expressions = [
     #   DO NOT REORDER THESE, THEY COME FROM THE LINQ V1 ENUM
     #
 
-    Expression("Add",                "BinaryExpression"),
+    #          Enum Value            Expression Class                   Interop
+
+    Expression("Add",                "BinaryExpression",                True),
     Expression("AddChecked",         "BinaryExpression"),
-    Expression("And",                "BinaryExpression"),
+    Expression("And",                "BinaryExpression",                True),
     Expression("AndAlso",            "BinaryExpression"),
     Expression("ArrayLength",        "UnaryExpression"),
     Expression("ArrayIndex",         "BinaryExpression"),
@@ -41,37 +44,37 @@ expressions = [
     Expression("Constant",           "ConstantExpression"),
     Expression("Convert",            "UnaryExpression"),
     Expression("ConvertChecked",     "UnaryExpression"),
-    Expression("Divide",             "BinaryExpression"),
-    Expression("Equal",              "BinaryExpression"),
-    Expression("ExclusiveOr",        "BinaryExpression"),
-    Expression("GreaterThan",        "BinaryExpression"),
-    Expression("GreaterThanOrEqual", "BinaryExpression"),
+    Expression("Divide",             "BinaryExpression",                True),
+    Expression("Equal",              "BinaryExpression",                True),
+    Expression("ExclusiveOr",        "BinaryExpression",                True),
+    Expression("GreaterThan",        "BinaryExpression",                True),
+    Expression("GreaterThanOrEqual", "BinaryExpression",                True),
     Expression("Invoke",             "InvocationExpression"),
     Expression("Lambda",             "LambdaExpression"),
-    Expression("LeftShift",          "BinaryExpression"),
-    Expression("LessThan",           "BinaryExpression"),
-    Expression("LessThanOrEqual",    "BinaryExpression"),
+    Expression("LeftShift",          "BinaryExpression",                True),
+    Expression("LessThan",           "BinaryExpression",                True),
+    Expression("LessThanOrEqual",    "BinaryExpression",                True),
     Expression("ListInit",           "ListInitExpression"),
     Expression("MemberAccess",       "MemberExpression"),
     Expression("MemberInit",         "MemberInitExpression"),
-    Expression("Modulo",             "BinaryExpression"),
-    Expression("Multiply",           "BinaryExpression"),
+    Expression("Modulo",             "BinaryExpression",                True),
+    Expression("Multiply",           "BinaryExpression",                True),
     Expression("MultiplyChecked",    "BinaryExpression"),
-    Expression("Negate",             "UnaryExpression"),
-    Expression("UnaryPlus",          "UnaryExpression"),
+    Expression("Negate",             "UnaryExpression",                 True),
+    Expression("UnaryPlus",          "UnaryExpression",                 True),
     Expression("NegateChecked",      "UnaryExpression"),
     Expression("New",                "NewExpression"),
     Expression("NewArrayInit",       "NewArrayExpression"),
     Expression("NewArrayBounds",     "NewArrayExpression"),
-    Expression("Not",                "UnaryExpression"),
-    Expression("NotEqual",           "BinaryExpression"),
-    Expression("Or",                 "BinaryExpression"),
+    Expression("Not",                "UnaryExpression",                 True),
+    Expression("NotEqual",           "BinaryExpression",                True),
+    Expression("Or",                 "BinaryExpression",                True),
     Expression("OrElse",             "BinaryExpression"),
     Expression("Parameter",          "ParameterExpression"),
-    Expression("Power",              "BinaryExpression"),
+    Expression("Power",              "BinaryExpression",                True),
     Expression("Quote",              "UnaryExpression"),
-    Expression("RightShift",         "BinaryExpression"),
-    Expression("Subtract",           "BinaryExpression"),
+    Expression("RightShift",         "BinaryExpression",                True),
+    Expression("Subtract",           "BinaryExpression",                True),
     Expression("SubtractChecked",    "BinaryExpression"),
     Expression("TypeAs",             "UnaryExpression"),
     Expression("TypeIs",             "TypeBinaryExpression"),
@@ -79,33 +82,32 @@ expressions = [
     # New types in LINQ V2
 
     Expression("Assign",             "AssignmentExpression"), # TODO: merge to BinaryExpression
-    Expression("Block",              "Block"),                # TODO: rename to BlockExpression
+    Expression("Block",              "BlockExpression"),
     Expression("DebugInfo",          "DebugInfoExpression"),
     Expression("Dynamic",            "DynamicExpression"),
-    Expression("EmptyStatement",     "EmptyStatement"),       # TODO: rename to EmptyExpression
+    Expression("Default",            "EmptyExpression"),
     Expression("Extension",          "ExtensionExpression"),
     Expression("Goto",               "GotoExpression"),
     Expression("Index",              "IndexExpression"),
     Expression("Label",              "LabelExpression"),
-    Expression("LocalScope",         "LocalScopeExpression"), # TODO: RuntimeVariablesExpression
-    Expression("LoopStatement",      "LoopStatement"),        # TODO: LoopExpression
+    Expression("RuntimeVariables",   "RuntimeVariablesExpression"),
+    Expression("Loop",               "LoopExpression"),
     Expression("ReturnStatement",    "ReturnStatement"),      # TODO: remove
-    Expression("SwitchStatement",    "SwitchStatement"),      # TODO: SwitchExpression
-    Expression("Throw",              "UnaryExpression"),      
-    Expression("TryStatement",       "TryStatement"),         # TODO: TryExpression
+    Expression("Switch",             "SwitchExpression"),
+    Expression("Throw",              "UnaryExpression"),
+    Expression("Try",                "TryExpression"),
     Expression("Unbox",              "UnaryExpression"),
-    Expression("AddAssign",          "BinaryExpression"),
-    Expression("AndAssign",          "BinaryExpression"),
-    Expression("DivideAssign",       "BinaryExpression"),
-    Expression("ExclusiveOrAssign",  "BinaryExpression"),
-    Expression("LeftShiftAssign",    "BinaryExpression"),
-    Expression("ModuloAssign",       "BinaryExpression"),
-    Expression("MultiplyAssign",     "BinaryExpression"),
-    Expression("OrAssign",           "BinaryExpression"),
-    Expression("PowerAssign",        "BinaryExpression"),
-    Expression("RightShiftAssign",   "BinaryExpression"),
-    Expression("SubtractAssign",     "BinaryExpression"),
-
+    Expression("AddAssign",          "BinaryExpression",                True),
+    Expression("AndAssign",          "BinaryExpression",                True),
+    Expression("DivideAssign",       "BinaryExpression",                True),
+    Expression("ExclusiveOrAssign",  "BinaryExpression",                True),
+    Expression("LeftShiftAssign",    "BinaryExpression",                True),
+    Expression("ModuloAssign",       "BinaryExpression",                True),
+    Expression("MultiplyAssign",     "BinaryExpression",                True),
+    Expression("OrAssign",           "BinaryExpression",                True),
+    Expression("PowerAssign",        "BinaryExpression",                True),
+    Expression("RightShiftAssign",   "BinaryExpression",                True),
+    Expression("SubtractAssign",     "BinaryExpression",                True),
 ]
 
 op_assignments = ["MultiplyAssign", "SubtractAssign", "ExclusiveOrAssign", "LeftShiftAssign", "RightShiftAssign", "ModuloAssign", "AddAssign", "AndAssign", "OrAssign", "DivideAssign", "PowerAssign"]
@@ -119,7 +121,7 @@ def gen_tree_nodes(cw):
 
 def gen_stackspiller_switch(cw):
     
-    no_spill_node_kinds =  ["Quote", "Parameter", "Constant", "LocalScope", "EmptyStatement"]
+    no_spill_node_kinds =  ["Quote", "Parameter", "Constant", "RuntimeVariables", "Default"]
     
     # nodes that need spilling
     for node in expressions:
@@ -198,12 +200,25 @@ def gen_ast_dispatch(cw, name):
 def gen_ast_writer(cw):
     gen_ast_dispatch(cw, "Write")
 
+def gen_op_validator(type, cw):
+    for node in expressions:
+        if node.interop and node.type == type:
+             cw.write("case ExpressionType.%s:" % node.kind)
+
+def gen_binop_validator(cw):
+    gen_op_validator("BinaryExpression", cw)
+    
+def gen_unop_validator(cw):
+    gen_op_validator("UnaryExpression", cw)
+
 def main():
     return generate(
+        ("Binary Operation Binder Validator", gen_binop_validator),
+        ("Unary Operation Binder Validator", gen_unop_validator),
         ("Expression Tree Node Types", gen_tree_nodes),
         ("StackSpiller Switch", gen_stackspiller_switch),
         ("Ast Interpreter", gen_interpreter),
-        ("Expression Compiler", gen_compiler),
+        ("Expression Compiler", gen_compiler)
     )
 
 if __name__ == "__main__":

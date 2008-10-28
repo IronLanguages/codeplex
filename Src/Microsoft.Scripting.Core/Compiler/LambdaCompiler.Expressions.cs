@@ -62,6 +62,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Throw:
                     EmitThrow((UnaryExpression)node, EmitAs.Void);
                     break;
+                case ExpressionType.Default:
+                    // no-op
+                    break;
                 default:
                     EmitExpression(node, false);
                     if (node.Type != typeof(void)) {
@@ -515,7 +518,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitDelegateConstruction(node, node.Type);
         }
 
-        private void EmitLocalScopeExpression(Expression expr) {
+        private void EmitRuntimeVariablesExpression(Expression expr) {
             RuntimeVariablesExpression node = (RuntimeVariablesExpression)expr;
             _scope.EmitVariableAccess(this, node.Variables);
         }

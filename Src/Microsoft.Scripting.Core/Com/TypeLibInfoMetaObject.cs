@@ -28,9 +28,9 @@ namespace Microsoft.Scripting.ComInterop {
             _info = info;
         }
 
-        public override MetaObject BindGetMember(GetMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            string name = action.Name;
+        public override MetaObject BindGetMember(GetMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            string name = binder.Name;
 
             if (name == _info.Name) {
                 name = "TypeLibDesc";
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.ComInterop {
                 name != "VersionMajor" &&
                 name != "VersionMinor") {
 
-                return action.FallbackGetMember(this);
+                return binder.FallbackGetMember(this);
             }
 
             return new MetaObject(
@@ -51,10 +51,11 @@ namespace Microsoft.Scripting.ComInterop {
             );
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
 
-            if (action.Operation == "GetMemberNames" || action.Operation == "MemberNames") {
+            if (binder.Operation == "GetMemberNames" || binder.Operation == "MemberNames") {
                 return new MetaObject(
                     Expression.Call(
                         Expression.ConvertHelper(Expression, typeof(ComTypeLibInfo)),
@@ -64,7 +65,7 @@ namespace Microsoft.Scripting.ComInterop {
                 );
             }
 
-            return action.FallbackOperation(RestrictThisToType(), args);
+            return binder.FallbackOperation(RestrictThisToType(), args);
         }
 
         private Restrictions ComTypeLibInfoRestrictions(params MetaObject[] args) {

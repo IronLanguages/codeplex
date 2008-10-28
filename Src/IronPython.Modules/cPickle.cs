@@ -358,7 +358,7 @@ namespace IronPython.Modules {
                 dispatchTable = new Dictionary<PythonType, PickleFunction>();
                 dispatchTable[TypeCache.Boolean] = SaveBoolean;
                 dispatchTable[TypeCache.Int32] = SaveInteger;
-                dispatchTable[TypeCache.None] = SaveNone;
+                dispatchTable[TypeCache.Null] = SaveNone;
                 dispatchTable[TypeCache.Dict] = SaveDict;
                 dispatchTable[TypeCache.BigInteger] = SaveLong;
                 dispatchTable[TypeCache.Double] = SaveFloat;
@@ -666,7 +666,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveNone(CodeContext/*!*/ context, object obj) {
-                Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.None), "arg must be None");
+                Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Null), "arg must be None");
                 Write(context, Opcode.NoneValue);
             }
 

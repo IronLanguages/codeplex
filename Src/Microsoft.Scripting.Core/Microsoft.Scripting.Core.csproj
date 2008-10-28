@@ -136,7 +136,9 @@
     <Compile Include="..\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
+    <Compile Include="Actions\CallSiteOps.cs" />
     <Compile Include="Actions\InvokeMemberBinder.cs" />
+    <Compile Include="Actions\BinaryOperationBinder.cs" />
     <Compile Include="Actions\CallSite.cs" />
     <Compile Include="Actions\CallSiteBinder.cs" />
     <Compile Include="Actions\CallSiteRule.cs" />
@@ -146,7 +148,6 @@
     <Compile Include="Actions\ExpandoObject.cs" />
     <Compile Include="Actions\ExpandoClass.cs" />
     <Compile Include="Actions\GetIndexBinder.cs" />
-    <Compile Include="Actions\MatchCaller.Generated.cs" />
     <Compile Include="Actions\CreateInstanceBinder.cs" />
     <Compile Include="Actions\DeferMetaObject.cs" />
     <Compile Include="Actions\DeleteMemberBinder.cs" />
@@ -155,20 +156,17 @@
     <Compile Include="Actions\GetMemberBinder.cs" />
     <Compile Include="Actions\IDynamicObject.cs" />
     <Compile Include="Actions\InvokeBinder.cs" />
-    <Compile Include="Actions\MatchCaller.cs" />
-    <Compile Include="Actions\Matchmaker.Generated.cs" />
-    <Compile Include="Actions\Matchmaker.cs" />
-    <Compile Include="Actions\MetaObjectBinder.cs" />
     <Compile Include="Actions\MetaObject.cs" />
+    <Compile Include="Actions\MetaObjectBinder.cs" />
     <Compile Include="Actions\OperationBinder.cs" />
     <Compile Include="Actions\ParameterMetaObject.cs" />
     <Compile Include="Actions\Restrictions.cs" />
-    <Compile Include="Actions\RuleCache.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
     <Compile Include="Actions\SetIndexBinder.cs" />
     <Compile Include="Actions\SetMemberBinder.cs" />
     <Compile Include="Actions\SmallRuleSet.cs" />
+    <Compile Include="Actions\UnaryOperationBinder.cs" />
     <Compile Include="Compiler\BoundConstants.cs" />
     <Compile Include="Ast\DebugInfoExpression.cs" />
     <Compile Include="Ast\SymbolDocumentInfo.cs" />
@@ -184,8 +182,6 @@
     <Compile Include="Com\ConvertibleArgBuilder.cs" />
     <Compile Include="Com\SplatCallSite.Generated.cs" />
     <Compile Include="Com\SplatCallSite.cs" />
-    <Compile Include="Actions\StandardAction.cs" />
-    <Compile Include="Actions\MetaObjectBinderKind.cs" />
     <Compile Include="Actions\TemplatedValue.cs" />
     <Compile Include="Actions\UpdateDelegates.Generated.cs" />
     <Compile Include="Actions\UpdateDelegates.cs" />
@@ -329,7 +325,7 @@
     <Compile Include="Utils\SynchronizedDictionary.cs" />
     <Compile Include="Utils\TypeExtensions.cs" />
     <Compile Include="DebugOptions.cs" />
-    <Compile Include="None.cs" />
+    <Compile Include="Null.cs" />
     <Compile Include="Stubs.cs" />
   </ItemGroup>
   <ItemGroup>

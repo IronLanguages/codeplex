@@ -27,9 +27,9 @@ namespace Microsoft.Scripting.ComInterop {
 
         #region MetaObject
 
-        public override MetaObject BindConvert(ConvertBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            if (action.Type.IsInterface) {
+        public override MetaObject BindConvert(ConvertBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            if (binder.Type.IsInterface) {
                 // Converting a COM object to any interface is always considered possible - it will result in 
                 // a QueryInterface at runtime
                 return new MetaObject(
@@ -38,13 +38,13 @@ namespace Microsoft.Scripting.ComInterop {
                              Expression.ConvertHelper(Expression, typeof(GenericComObject)),
                              typeof(ComObject).GetProperty("Obj")
                          ),
-                         action.Type
+                         binder.Type
                      ),
                     Restrictions.Merge(Restrictions.GetTypeRestriction(Expression, LimitType))
                 );
             }
 
-            return base.BindConvert(action);
+            return base.BindConvert(binder);
         }
 
         #endregion

@@ -52,27 +52,6 @@ namespace Microsoft.Scripting.Actions {
             return (CallSite)ctor(binder);
         }
 
-        internal static bool SimpleSignature(MethodInfo invoke, out Type[] sig) {
-            ParameterInfo[] pis = invoke.GetParametersCached();
-            ContractUtils.Requires(pis.Length > 0 && pis[0].ParameterType == typeof(CallSite), "T");
-
-            Type[] args = new Type[invoke.ReturnType != typeof(void) ? pis.Length : pis.Length - 1];
-            bool supported = true;
-
-            for (int i = 1; i < pis.Length; i++) {
-                ParameterInfo pi = pis[i];
-                if (pi.IsByRefParameter()) {
-                    supported = false;
-                }
-                args[i - 1] = pi.ParameterType;
-            }
-            if (invoke.ReturnType != typeof(void)) {
-                args[args.Length - 1] = invoke.ReturnType;
-            }
-            sig = args;
-            return supported;
-        }
-
         /// <summary>
         /// Dynamic code generation required by dynamic sites needs to be able to call the delegate by which the
         /// call site is parametrized. If the delegate type is visible, we can generate into assembly (if saving

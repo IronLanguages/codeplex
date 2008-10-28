@@ -46,7 +46,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override ExpressionType GetNodeKind() {
-            return ExpressionType.TryStatement;
+            return ExpressionType.Try;
         }
 
         public Expression Body {

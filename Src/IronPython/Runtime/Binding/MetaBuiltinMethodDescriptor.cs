@@ -53,6 +53,7 @@ namespace IronPython.Runtime.Binding {
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
+        [Obsolete]
         public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:

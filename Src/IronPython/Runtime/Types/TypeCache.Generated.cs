@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Types {
         private static PythonType super;
         private static PythonType oldclass;
         private static PythonType oldinstance;
-        private static PythonType noneType;
+        private static PythonType nullType;
         private static PythonType boolType;
         private static PythonType baseException;
 
@@ -233,10 +233,10 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static PythonType None {
+        public static PythonType Null {
             get {
-                if (noneType == null) noneType = DynamicHelpers.GetPythonTypeFromType(typeof(None));
-                return noneType;
+                if (nullType == null) nullType = DynamicHelpers.GetPythonTypeFromType(typeof(Null));
+                return nullType;
             }
         }
 

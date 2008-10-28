@@ -185,11 +185,11 @@ namespace Microsoft.Scripting.Actions {
                 : base(expression, Restrictions.Empty, value) {
             }
 
-            public override MetaObject BindGetMember(GetMemberBinder action) {
+            public override MetaObject BindGetMember(GetMemberBinder binder) {
                 ExpandoClass klass = Value.Class;
 
-                int index = klass.GetValueIndex(action.Name, action.IgnoreCase);
-                string methodName = action.IgnoreCase ? "ExpandoGetValueIgnoreCase" : "ExpandoGetValue";
+                int index = klass.GetValueIndex(binder.Name, binder.IgnoreCase);
+                string methodName = binder.IgnoreCase ? "ExpandoGetValueIgnoreCase" : "ExpandoGetValue";
 
                 Expression target;
                 if (index == -1) {
@@ -198,7 +198,7 @@ namespace Microsoft.Scripting.Actions {
                         Expression.Throw(
                             Expression.New(
                                 typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                                Expression.Constant(action.Name)
+                                Expression.Constant(binder.Name)
                             )
                         ),
                         typeof(object)                        
@@ -215,7 +215,7 @@ namespace Microsoft.Scripting.Actions {
                 // add the dynamic test for the target
                 return new MetaObject(
                     AddDynamicTestAndDefer(
-                        action,
+                        binder,
                         new MetaObject[] { this },
                         klass,
                         null,
@@ -225,17 +225,17 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
+            public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
                 ExpandoClass klass;
                 int index;
 
-                ExpandoClass originalClass = GetClassEnsureIndex(action.Name, action.IgnoreCase, out klass, out index);
+                ExpandoClass originalClass = GetClassEnsureIndex(binder.Name, binder.IgnoreCase, out klass, out index);
 
-                string methodName = action.IgnoreCase ? "ExpandoSetValueIgnoreCase" : "ExpandoSetValue";
+                string methodName = binder.IgnoreCase ? "ExpandoSetValueIgnoreCase" : "ExpandoSetValue";
 
                 return new MetaObject(
                     AddDynamicTestAndDefer(
-                        action,
+                        binder,
                         new MetaObject[] { this, value },
                         klass,
                         originalClass,
@@ -257,17 +257,17 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
+            public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
                 ExpandoClass klass;
                 int index;
 
-                ExpandoClass originalClass = GetClassEnsureIndex(action.Name, action.IgnoreCase, out klass, out index);
+                ExpandoClass originalClass = GetClassEnsureIndex(binder.Name, binder.IgnoreCase, out klass, out index);
 
-                string methodName = action.IgnoreCase ? "ExpandoDeleteValueIgnoreCase" : "ExpandoDeleteValue";
+                string methodName = binder.IgnoreCase ? "ExpandoDeleteValueIgnoreCase" : "ExpandoDeleteValue";
 
                 return new MetaObject(
                     AddDynamicTestAndDefer(
-                        action, 
+                        binder, 
                         new MetaObject[] { this }, 
                         klass, 
                         originalClass,
@@ -285,8 +285,9 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-                if (action.Operation == "GetMemberNames") {
+            [Obsolete("Use UnaryOperation or BinaryOperation")]
+            public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+                if (binder.Operation == "GetMemberNames") {
                     return new MetaObject(
                         Expression.Call(
                             typeof(RuntimeOps).GetMethod("ExpandoGetMemberNames"),
@@ -296,14 +297,14 @@ namespace Microsoft.Scripting.Actions {
                     );
                 }
 
-                return base.BindOperation(action, args);
+                return base.BindOperation(binder, args);
             }
 
             /// <summary>
             /// Adds a dynamic test which checks if the version has changed.  The test is only necessary for
             /// performance as the methods will do the correct thing if called with an incorrect version.
             /// </summary>
-            private Expression AddDynamicTestAndDefer(MetaObjectBinder action, MetaObject[] args, ExpandoClass klass, ExpandoClass originalClass, Expression ifTestSucceeds) {
+            private Expression AddDynamicTestAndDefer(MetaObjectBinder binder, MetaObject[] args, ExpandoClass klass, ExpandoClass originalClass, Expression ifTestSucceeds) {
                 if (originalClass != null) {
                     // we are accessing a member which has not yet been defined on this class.
                     // We force a class promotion after the type check.  If the class changes the 
@@ -331,7 +332,7 @@ namespace Microsoft.Scripting.Actions {
                         Expression.Constant(originalClass ?? klass)
                     ),
                     ifTestSucceeds,
-                    action.Defer(args).Expression
+                    binder.Defer(args).Expression
                 );
             }
 

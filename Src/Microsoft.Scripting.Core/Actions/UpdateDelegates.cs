@@ -14,122 +14,420 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.ObjectModel;
+using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
-using System.Threading;
 
 namespace Microsoft.Scripting.Actions {
     internal static partial class UpdateDelegates {
-        private static readonly CacheDict<Type, Delegate> _Updaters = new CacheDict<Type, Delegate>(200);
-
         internal static T MakeUpdateDelegate<T>() where T : class {
             Type target = typeof(T);
 
-            lock (_Updaters) {
-                Delegate ret;
+            Type[] args;
+            MethodInfo invoke = target.GetMethod("Invoke");
 
-                if (!_Updaters.TryGetValue(target, out ret)) {
-                    Type[] args;
-                    MethodInfo invoke = target.GetMethod("Invoke");
-
-                    MethodInfo method = null;
-                    if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
-                        if (invoke.ReturnType == typeof(void)) {
-                            method = typeof(UpdateDelegates).GetMethod("UpdateVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
-                        } else {
-                            method = typeof(UpdateDelegates).GetMethod("Update" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
-                        }
-                        if (method != null) {
-                            ret = Delegate.CreateDelegate(target, method.MakeGenericMethod(args.AddFirst(target)));
-                        }
+            MethodInfo method = null;
+            // TODO: faster way to test if target is a Func<...> or Action<...>
+            if (target.IsGenericType && IsSimpleSignature(invoke, out args)) {
+                if (invoke.ReturnType == typeof(void)) {
+                    if (target == DelegateHelpers.GetActionType(args.AddFirst(typeof(CallSite)))) {
+                        method = typeof(UpdateDelegates).GetMethod("UpdateAndExecuteVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
                     }
-
-                    if (method == null) {
-                        ret = CreateCustomUpdateDelegate<T>(invoke);
+                } else {
+                    if (target == DelegateHelpers.GetFuncType(args.AddFirst(typeof(CallSite)))) {
+                        method = typeof(UpdateDelegates).GetMethod("UpdateAndExecute" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
                     }
-
-                    Debug.Assert(ret != null);
-                    _Updaters[target] = ret;
                 }
-
-                return (T)(object)ret;
+                if (method != null) {
+                    return method.MakeGenericMethod(args).CreateDelegate<T>();
+                }
             }
+
+            return CreateCustomUpdateDelegate<T>(invoke);
         }
 
-        private static Delegate CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
-            Type siteOfT = typeof(CallSite<T>);
+        private static bool IsSimpleSignature(MethodInfo invoke, out Type[] sig) {
+            ParameterInfo[] pis = invoke.GetParametersCached();
+            ContractUtils.Requires(pis.Length > 0 && pis[0].ParameterType == typeof(CallSite), "T");
 
-            ParameterInfo[] parameters = invoke.GetParameters();
-            Type[] signature = parameters.Map(p => p.ParameterType);
+            Type[] args = new Type[invoke.ReturnType != typeof(void) ? pis.Length : pis.Length - 1];
+            bool supported = true;
 
-            DynamicILGen il = DynamicSiteHelpers.CreateDynamicMethod(siteOfT.IsVisible, "Update", invoke.ReturnType, signature);
-            LocalBuilder array = il.DeclareLocal(typeof(object[]));
-
-            il.EmitLoadArg(0);
-            il.Emit(OpCodes.Castclass, siteOfT);
-            il.EmitInt(signature.Length - 1);
-            il.Emit(OpCodes.Newarr, typeof(object));
-            il.Emit(OpCodes.Stloc, array);
-
-            bool byref = false;
-
-            for (int arg = 1; arg < signature.Length; arg++) {
-                il.Emit(OpCodes.Ldloc_S, array);
-                il.EmitInt(arg - 1);            // index into array
-                il.EmitLoadArg(arg);            // argument
-
-                Type type = signature[arg];
-
-                if (type.IsByRef) {
-                    byref = true;
-                    type = type.GetElementType();
-                    il.EmitLoadValueIndirect(type);
+            for (int i = 1; i < pis.Length; i++) {
+                ParameterInfo pi = pis[i];
+                if (pi.IsByRefParameter()) {
+                    supported = false;
                 }
+                args[i - 1] = pi.ParameterType;
+            }
+            if (invoke.ReturnType != typeof(void)) {
+                args[args.Length - 1] = invoke.ReturnType;
+            }
+            sig = args;
+            return supported;
+        }
 
-                il.EmitBoxing(type);
-                il.Emit(OpCodes.Stelem_Ref);
+        //
+        // WARNING: If you're changing this method, make sure you update the
+        // pregenerated versions as well, which are generated by
+        // generate_dynsites.py
+        // The two implementations *must* be kept in sync!
+        //
+        private static T CreateCustomUpdateDelegate<T>(MethodInfo invoke) where T : class {
+            var body = new List<Expression>();
+            var vars = new List<ParameterExpression>();
+            var @params = invoke.GetParametersCached().Map(p => Expression.Parameter(p.ParameterType, p.Name));
+            var @return = Expression.Label(invoke.GetReturnType());
+            var typeArgs = new[] { typeof(T) };
+
+            var site = @params[0];
+            var arguments = @params.RemoveFirst();
+
+            //var @this = (CallSite<T>)site;
+            var @this = Expression.Variable(typeof(CallSite<T>), "this");
+            vars.Add(@this);
+            body.Add(Expression.Assign(@this, Expression.Convert(site, @this.Type)));
+
+            //CallSiteRule<T>[] applicable;
+            var applicable = Expression.Variable(typeof(CallSiteRule<T>[]), "applicable");
+            vars.Add(applicable);
+
+            //CallSiteRule<T> rule;
+            var rule = Expression.Variable(typeof(CallSiteRule<T>), "rule");
+            vars.Add(rule);
+
+            //T ruleTarget, startingTarget = @this.Target;
+            var ruleTarget = Expression.Variable(typeof(T), "ruleTarget");
+            vars.Add(ruleTarget);
+            var startingTarget = Expression.Variable(typeof(T), "startingTarget");
+            vars.Add(startingTarget);
+            body.Add(Expression.Assign(startingTarget, Expression.Field(@this, "Target")));
+
+            //TRet result;
+            ParameterExpression result = null;
+            if (@return.Type != typeof(void)) {
+                vars.Add(result = Expression.Variable(@return.Type, "result"));
             }
 
-            // CallSite<T>.UpdateAndExecute(array)
-            il.Emit(OpCodes.Ldloc_S, array);
+            //int count, index;
+            var count = Expression.Variable(typeof(int), "count");
+            vars.Add(count);
+            var index = Expression.Variable(typeof(int), "index");
+            vars.Add(index);
 
-            // Only if no more instructions follow after call can we do tail call
-            if (invoke.ReturnType == typeof(object) && !byref) {
-                il.Emit(OpCodes.Tailcall);
+            //CallSiteRule<T> originalRule = null;
+            var originalRule = Expression.Variable(typeof(CallSiteRule<T>), "originalRule");
+            vars.Add(originalRule);
+
+            ////
+            //// Create matchmaker and its site. We'll need them regardless.
+            ////
+            //bool match = true;
+            //site = CreateMatchmaker(
+            //    @this,
+            //    (mm_site, %(matchmakerArgs)s) => {
+            //        match = false;
+            //        %(returnDefault)s;
+            //    }
+            //);
+            var match = Expression.Variable(typeof(bool), "match");
+            vars.Add(match);
+            var resetMatch = Expression.Assign(match, Expression.True());
+            body.Add(resetMatch);
+            body.Add(
+                Expression.Assign(
+                    site,
+                    Expression.Call(
+                        typeof(CallSiteOps),
+                        "CreateMatchmaker",
+                        typeArgs,
+                        @this,
+                        Expression.Lambda<T>(
+                            Expression.Comma(
+                                Expression.Assign(match, Expression.False()),
+                                Expression.Empty(@return.Type)
+                            ),
+                            new ReadOnlyCollection<ParameterExpression>(@params)
+                        )
+                    )
+                )
+            );
+
+            ////
+            //// Level 1 cache lookup
+            ////
+            //if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+            //    for (index = 0, count = applicable.Length; index < count; index++) {
+            //        rule = applicable[index];
+
+            //        //
+            //        // Execute the rule
+            //        //
+            //        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+            //        try {
+            //            %(setResult)s ruleTarget(site, %(args)s);
+            //            if (match) {
+            //                %(returnResult)s;
+            //            }
+            //        } finally {
+            //            if (match) {
+            //                //
+            //                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+            //                // see them again. The site is polymorphic. Update the delegate and keep running
+            //                //
+            //                CallSiteOps.SetPolymorphicTarget(@this);
+            //            }
+            //        }
+
+            //        if (startingTarget == ruleTarget) {
+            //            // our rule was previously monomorphic, if we produce another monomorphic
+            //            // rule we should try and share code between the two.
+            //            originalRule = rule;
+            //        }
+                    
+            //        // Rule didn't match, try the next one
+            //        match = true;            
+            //    }
+            //}
+            Expression invokeRule;
+            if (@return.Type == typeof(void)) {
+                invokeRule = Expression.Comma(
+                    Expression.Invoke(ruleTarget, new ReadOnlyCollection<Expression>(@params)),
+                    Expression.IfThen(match, Expression.Return(@return))
+                );
+            } else {
+                invokeRule = Expression.Comma(
+                    Expression.Assign(result, Expression.Invoke(ruleTarget, new ReadOnlyCollection<Expression>(@params))),
+                    Expression.IfThen(match, Expression.Return(@return, result))
+                );
             }
-            il.Emit(OpCodes.Call, siteOfT.GetMethod("UpdateAndExecute", BindingFlags.Instance | BindingFlags.Public));
-            if (invoke.ReturnType == typeof(void)) {
-                il.Emit(OpCodes.Pop);
-            } else if (invoke.ReturnType != typeof(object)) {
-                il.Emit(OpCodes.Unbox_Any, invoke.ReturnType);
+
+            var getRule = Expression.Assign(
+                ruleTarget,
+                Expression.Call(
+                    typeof(CallSiteOps),
+                    "SetTarget",
+                    typeArgs,
+                    @this,
+                    Expression.Assign(rule, Expression.ArrayAccess(applicable, index))
+                )
+            );
+
+            var checkOriginalRule = Expression.IfThen(
+                Expression.Equal(startingTarget, ruleTarget),
+                Expression.Assign(originalRule, rule)
+            );
+
+            var tryRule = Expression.TryFinally(
+                invokeRule,
+                Expression.IfThen(
+                    match,
+                    Expression.Call(typeof(CallSiteOps), "SetPolymorphicTarget", typeArgs, @this)
+                )
+            );
+
+            var @break = Expression.Label();
+
+            var breakIfDone = Expression.IfThen(
+                Expression.Equal(index, count),
+                Expression.Break(@break)
+            );
+
+            // TODO: use PostIncrement unary once available
+            var incrementIndex = Expression.Assign(index, Expression.Add(index, Expression.Constant(1)));
+
+            body.Add(
+                Expression.IfThen(
+                    Expression.NotEqual(
+                        Expression.Assign(applicable, Expression.Call(typeof(CallSiteOps), "GetRules", typeArgs, @this)),
+                        Expression.Null(applicable.Type)
+                    ),
+                    Expression.Comma(
+                        Expression.Assign(count, Expression.ArrayLength(applicable)),
+                        Expression.Assign(index, Expression.Zero()),
+                        Expression.Loop(
+                            Expression.Comma(
+                                breakIfDone,
+                                getRule,
+                                tryRule,
+                                checkOriginalRule,
+                                resetMatch,
+                                incrementIndex
+                            ),
+                            @break,
+                            null
+                        )
+                    )
+                )
+            );
+
+            ////
+            //// Level 2 cache lookup
+            ////
+            //var args = new object[] { arg0, arg1, ... };
+            var args = Expression.Variable(typeof(object[]), "args");
+            vars.Add(args);
+            body.Add(
+                Expression.Assign(
+                    args,
+                    Expression.NewArrayInit(typeof(object), arguments.Map(p => Convert(p, typeof(object))))
+                )
+            );
+            
+            ////
+            //// Any applicable rules in level 2 cache?
+            ////
+            //if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+            //    count = applicable.Length;
+            //    for (index = 0; index < count; index++) {
+            //        rule = applicable[index];
+            //
+            //        //
+            //        // Execute the rule
+            //        //
+            //        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+            //
+            //        try {
+            //            result = ruleTarget(site, arg0);
+            //            if (match) {
+            //                return result;
+            //            }
+            //        } finally {
+            //            if (match) {
+            //                //
+            //                // Rule worked. Add it to level 1 cache
+            //                //
+            //
+            //                CallSiteOps.AddRule(@this, rule);
+            //            }
+            //        }
+            //
+            //        if (startingTarget == ruleTarget) {
+            //            // If we've gone megamorphic we can still template off the L2 cache
+            //            originalRule = rule;
+            //        }
+            //
+            //        // Rule didn't match, try the next one
+            //        match = true;
+            //    }
+            //}
+
+            tryRule = Expression.TryFinally(
+                invokeRule,
+                Expression.IfThen(match, Expression.Call(typeof(CallSiteOps), "AddRule", typeArgs, @this, rule))
+            );
+
+            body.Add(
+                Expression.IfThen(
+                    Expression.NotEqual(
+                        Expression.Assign(
+                            applicable,
+                            Expression.Call(typeof(CallSiteOps), "FindApplicableRules", typeArgs, @this, args)
+                        ),
+                        Expression.Null(applicable.Type)
+                    ),
+                    Expression.Comma(
+                        Expression.Assign(count, Expression.ArrayLength(applicable)),
+                        Expression.Assign(index, Expression.Zero()),
+                        Expression.Loop(
+                            Expression.Comma(
+                                breakIfDone,
+                                getRule,
+                                tryRule,
+                                checkOriginalRule,
+                                resetMatch,
+                                incrementIndex
+                            ),
+                            @break,
+                            null
+                        )
+                    )
+                )
+            );
+
+            ////
+            //// Miss on Level 0, 1 and 2 caches. Create new rule
+            ////
+            
+            //rule = null;
+            //for (; ; ) {
+            //    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+
+            //    //
+            //    // Execute the rule on the matchmaker site
+            //    //
+            //    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+            //    try {
+            //        %(setResult)s ruleTarget(site, %(args)s);
+            //        if (match) {
+            //            %(returnResult)s;
+            //        }
+            //    } finally {
+            //        if (match) {
+            //            //
+            //            // The rule worked. Add it to level 1 cache.
+            //            //
+            //            CallSiteOps.AddRule(@this, rule);
+            //        }
+            //    }
+
+            //    // Rule we got back didn't work, try another one
+            //    match = true;
+            //}
+            body.Add(Expression.Assign(rule, Expression.Null(rule.Type)));
+
+            getRule = Expression.Assign(
+                ruleTarget,
+                Expression.Call(
+                    typeof(CallSiteOps),
+                    "SetTarget",
+                    typeArgs,
+                    @this,
+                    Expression.Assign(
+                        rule,
+                        Expression.Call(typeof(CallSiteOps), "CreateNewRule", typeArgs, @this, rule, originalRule, args)
+                    )
+                )
+            );
+
+            body.Add(
+                Expression.Loop(
+                    Expression.Comma(getRule, tryRule, resetMatch),
+                    null, null
+                )
+            );
+
+            body.Add(Expression.Empty(@return.Type));
+            
+            var lambda = Expression.Lambda<T>(
+                Expression.Label(
+                    @return,
+                    Expression.Comma(
+                        new ReadOnlyCollection<ParameterExpression>(vars),
+                        new ReadOnlyCollection<Expression>(body)
+                    )
+                ),
+                // TODO: fix the name '_stub_', for now it's the easy way to
+                // get languages to skip this frame in backtraces
+                "_stub_",
+                null,
+                new ReadOnlyCollection<ParameterExpression>(@params)
+            );
+
+            return LambdaCompiler.CompileLambda<T>(lambda, false);
+        }
+
+        private static Expression Convert(Expression arg, Type type) {
+            if (TypeUtils.AreReferenceAssignable(type, arg.Type)) {
+                return arg;
             }
-
-            if (byref) {
-                for (int arg = 1; arg < signature.Length; arg++) {
-                    Type type = signature[arg];
-                    if (type.IsByRef) {
-                        type = type.GetElementType();
-
-                        il.EmitLoadArg(arg);
-                        il.Emit(OpCodes.Ldloc_S, array);
-                        il.EmitInt(arg - 1);
-                        il.Emit(OpCodes.Ldelem_Ref);
-                        if (type.IsValueType) {
-                            il.Emit(OpCodes.Unbox_Any, type);
-                        } else if (type != typeof(object)) {
-                            il.Emit(OpCodes.Castclass, type);
-                        }
-                        il.EmitStoreValueIndirect(type);
-                    }
-                }
-            }
-
-            il.Emit(OpCodes.Ret);
-
-            return il.Finish().CreateDelegate(typeof(T));
+            return Expression.Convert(arg, type);
         }
     }
 }

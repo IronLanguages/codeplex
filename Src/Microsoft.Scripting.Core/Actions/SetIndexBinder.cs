@@ -20,15 +20,14 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class SetIndexBinder : StandardAction {
+    public abstract class SetIndexBinder : MetaObjectBinder {
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 
         protected SetIndexBinder(params ArgumentInfo[] arguments)
             : this((IEnumerable<ArgumentInfo>)arguments) {
         }
 
-        protected SetIndexBinder(IEnumerable<ArgumentInfo> arguments)
-            : base(MetaObjectBinderKind.SetIndex) {
+        protected SetIndexBinder(IEnumerable<ArgumentInfo> arguments) {
             _arguments = arguments.ToReadOnly();
         }
 
@@ -44,7 +43,7 @@ namespace Microsoft.Scripting.Actions {
 
         [Confined]
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _arguments.ListHashCode();
+            return SetMemberBinderHash ^ _arguments.ListHashCode();
         }
 
         public sealed override MetaObject Bind(MetaObject target, MetaObject[] args) {

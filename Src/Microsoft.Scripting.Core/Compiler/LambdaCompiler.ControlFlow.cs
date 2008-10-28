@@ -169,8 +169,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Conditional:
                 case ExpressionType.Block:
-                case ExpressionType.SwitchStatement:
-                case ExpressionType.LoopStatement:
+                case ExpressionType.Switch:
+                case ExpressionType.Loop:
                 case ExpressionType.Goto:
                 case ExpressionType.ReturnStatement:
                     PushLabelBlock(LabelBlockKind.Block);

@@ -500,7 +500,7 @@ namespace IronPython.Runtime.Types {
 
         internal bool IsNull {
             get {
-                return UnderlyingSystemType == typeof(None);
+                return UnderlyingSystemType == typeof(Null);
             }
         }
 

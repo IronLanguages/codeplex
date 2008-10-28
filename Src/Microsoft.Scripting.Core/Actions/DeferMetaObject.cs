@@ -22,39 +22,40 @@ namespace Microsoft.Scripting.Actions {
             : base(expression, restrictions) {
         }
 
-        public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(args.AddFirst(this));
+        public override MetaObject BindInvokeMemberl(InvokeMemberBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(args.AddFirst(this));
         }
 
-        public override MetaObject BindConvert(ConvertBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(this);
+        public override MetaObject BindConvert(ConvertBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(this);
         }
 
-        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(args.AddFirst(this));
+        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(args.AddFirst(this));
         }
 
-        public override MetaObject BindDeleteMember(DeleteMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(this);
+        public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(this);
         }
 
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(args);
+        [Obsolete("Use UnaryOperation or BinaryOperation")]
+        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(args);
         }
 
-        public override MetaObject BindGetMember(GetMemberBinder action) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(this);
+        public override MetaObject BindGetMember(GetMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(this);
         }
 
-        public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
-            ContractUtils.RequiresNotNull(action, "action");
-            return action.Defer(this, value);
+        public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(this, value);
         }
     }
 }

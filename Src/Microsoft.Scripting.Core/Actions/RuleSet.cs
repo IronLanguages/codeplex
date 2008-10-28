@@ -14,6 +14,8 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -24,13 +26,7 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     internal abstract class RuleSet<T> where T : class {
         internal abstract RuleSet<T> AddRule(CallSiteRule<T> newRule);
-
-        internal virtual CallSiteRule<T>[] GetRules() {
-            return null;
-        }
-
-        internal virtual T GetTarget() {
-            throw Error.EmptyRuleSetTarget();
-        }
+        internal abstract CallSiteRule<T>[] GetRules();
+        internal abstract T GetTarget();
     }
 }

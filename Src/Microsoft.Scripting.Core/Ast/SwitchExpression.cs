@@ -40,7 +40,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override ExpressionType GetNodeKind() {
-            return ExpressionType.SwitchStatement;
+            return ExpressionType.Switch;
         }
 
         public Expression Test {

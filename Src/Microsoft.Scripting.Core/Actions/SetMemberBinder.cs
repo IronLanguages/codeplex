@@ -16,12 +16,11 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class SetMemberBinder : StandardAction {
+    public abstract class SetMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
 
-        protected SetMemberBinder(string name, bool ignoreCase)
-            : base(MetaObjectBinderKind.SetMember) {
+        protected SetMemberBinder(string name, bool ignoreCase) {
             ContractUtils.RequiresNotNull(name, "name");
 
             _name = name;
@@ -55,7 +54,7 @@ namespace Microsoft.Scripting.Actions {
         public abstract MetaObject FallbackSetMember(MetaObject target, MetaObject value, MetaObject errorSuggestion);
 
         public override int GetHashCode() {
-            return ((int)Kind << 28) ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0);
+            return SetMemberBinderHash ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0);
         }
 
         public override bool Equals(object obj) {

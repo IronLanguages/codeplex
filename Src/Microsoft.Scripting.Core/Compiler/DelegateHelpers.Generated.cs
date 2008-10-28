@@ -145,14 +145,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return MakeCustomDelegate(types);
             }
 
-            Type returnType = types[types.Length - 1];
-            if (returnType == typeof(void)) {
-                types = types.RemoveLast();
-                return GetActionType(types);
+            Type result;
+            if (types[types.Length - 1] == typeof(void)) {
+                result = GetActionType(types.RemoveLast());
             } else {
-                return GetFuncType(types);
+                result = GetFuncType(types);
             }
-            throw Assert.Unreachable;
+            Debug.Assert(result != null);
+            return result;
         }
 
         internal static Type GetFuncType(Type[] types) {
@@ -184,8 +184,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 #endregion
 
-                default:
-                    throw Error.IncorrectNumberOfTypeArgsForFunc();
+                default: return null;
             }
         }
 
@@ -218,8 +217,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 #endregion
 
-                default:
-                    throw Error.IncorrectNumberOfTypeArgsForAction();
+                default: return null;
             }
         }
     }

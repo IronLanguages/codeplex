@@ -54,7 +54,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         ///   * we are emitting debug symbols
         /// </summary>
         private bool Significant(Expression node) {
-            if (node.NodeType != ExpressionType.EmptyStatement) {
+            var empty = node as EmptyExpression;
+            if (empty == null || empty.Type != typeof(void)) {
                 // non-empty expression is significant
                 return true;
             }

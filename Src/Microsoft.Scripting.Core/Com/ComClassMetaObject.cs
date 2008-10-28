@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.ComInterop {
             : base(expression, Restrictions.Empty, cls) {
         }
 
-        public override MetaObject BindCreateInstance(CreateInstanceBinder action, MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
             return new MetaObject(
                 Expression.Call(
                     Expression.ConvertHelper(Expression, typeof(ComTypeClassDesc)),

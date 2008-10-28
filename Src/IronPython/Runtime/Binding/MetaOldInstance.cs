@@ -76,6 +76,7 @@ namespace IronPython.Runtime.Binding {
             return MakeMemberAccess(member, member.Name, MemberAccess.Delete, this);
         }
 
+        [Obsolete]
         public override MetaObject/*!*/ BindOperation(OperationBinder/*!*/ operation, params MetaObject/*!*/[]/*!*/ args) {
             if (operation.Operation == StandardOperators.IsCallable) {
                 return MakeIsCallable(operation);

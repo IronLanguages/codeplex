@@ -234,7 +234,7 @@ namespace Microsoft.Scripting.Utils {
             // 
             // None conversion. 
             // None always has a value of "null" so it should be convertible to any reference type
-            if (source == typeof(None) && (dest.IsClass || dest.IsInterface)) {
+            if (source == typeof(Null) && (dest.IsClass || dest.IsInterface)) {
                 return true;
             }
             return false;
@@ -632,7 +632,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         internal static Type GetNonNoneType(Type type) {
-            return (type == typeof(None)) ? typeof(object) : type;
+            return (type == typeof(Null)) ? typeof(object) : type;
         }
 
         // When emitting constants, we generally emit as the real type, even if
@@ -692,7 +692,7 @@ namespace Microsoft.Scripting.Utils {
         /// result of Object.GetType
         /// </summary>
         internal static Type GetTypeForBinding(object obj) {
-            return obj == null ? None.Type : obj.GetType();
+            return obj == null ? Null.Type : obj.GetType();
         }
 
         /// <summary>

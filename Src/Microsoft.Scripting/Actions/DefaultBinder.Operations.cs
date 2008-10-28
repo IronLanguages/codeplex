@@ -169,7 +169,7 @@ namespace Microsoft.Scripting.Actions {
 
             Restrictions restrictions = Restrictions.GetTypeRestriction(args[0].Expression, args[0].LimitType).Merge(Restrictions.Combine(args));
 
-            if (args[0].LimitType == typeof(None)) {
+            if (args[0].LimitType == typeof(Null)) {
                 if (!otherType.IsValueType) {
                     return new MetaObject(
                         Ast.Equal(args[0].Expression, Ast.Constant(null)),
@@ -181,7 +181,7 @@ namespace Microsoft.Scripting.Actions {
                         restrictions
                     );
                 }
-            } else if (otherType == typeof(None)) {
+            } else if (otherType == typeof(Null)) {
                 if (!args[0].LimitType.IsValueType) {
                     return new MetaObject(
                         Ast.Equal(args[0].Expression, Ast.Constant(null)),
@@ -723,7 +723,7 @@ namespace Microsoft.Scripting.Actions {
 
                     // don't call object methods for None type, but if someone added
                     // methods to null we'd call those.
-                    if (method.DeclaringType != typeof(object) || t != typeof(None)) {
+                    if (method.DeclaringType != typeof(object) || t != typeof(Null)) {
                         methods.Add(method);
                     }
                 }

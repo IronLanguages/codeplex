@@ -32,6 +32,12 @@ def test_imp_new_module():
     x.foo = 'bar'
     import abc
     AreEqual(abc.foo, 'bar')
+    
+    y = imp.new_module('\r\n')
+    sys.modules['xyz'] = y
+    y.foo = 'foo'
+    import xyz
+    AreEqual(xyz.foo, 'foo')
 
 @skip("silverlight")
 def test_imp_in_exec():
@@ -968,6 +974,42 @@ def test_module_subtype():
             if name == 'baz': return type(sys).__getattribute__(self, name)
             return 23
 
+
+    a = x()
+    AreEqual(a.foo, 42)
+    AreEqual(a.bar, 23)
+    AreEqual(a.baz, 100)
+    AssertError(AttributeError, lambda : a.qux)
+    
+    #Real *.py file
+    import iptest.assert_util
+    class x(type(iptest.assert_util)):
+        def __init__(self): self.baz = 100
+        def __getattr__(self, name):
+            if name == 'qux': raise AttributeError
+            return 42
+        def __getattribute__(self, name):
+            if name == 'foo' or name == 'qux': raise AttributeError
+            if name == 'baz': return type(sys).__getattribute__(self, name)
+            return 23
+
+    a = x()
+    AreEqual(a.foo, 42)
+    AreEqual(a.bar, 23)
+    AreEqual(a.baz, 100)
+    AssertError(AttributeError, lambda : a.qux)
+
+    #Package
+    import iptest
+    class x(type(iptest)):
+        def __init__(self): self.baz = 100
+        def __getattr__(self, name):
+            if name == 'qux': raise AttributeError
+            return 42
+        def __getattribute__(self, name):
+            if name == 'foo' or name == 'qux': raise AttributeError
+            if name == 'baz': return type(sys).__getattribute__(self, name)
+            return 23
 
     a = x()
     AreEqual(a.foo, 42)
