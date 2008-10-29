@@ -18,6 +18,7 @@ Smokescreen test for the -X:Interpret ipy.exe mode.
 '''
 
 from iptest.assert_util import *
+skiptest("win32")
 import sys
 
 load_iron_python_test()

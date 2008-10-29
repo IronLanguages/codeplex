@@ -131,7 +131,7 @@ namespace Microsoft.Scripting.Ast {
                         vars.Add(info.Variable);
                     }
                 }
-                node = Expression.Comma(vars, node);
+                node = Expression.Block(vars, node);
             }
             _blocks.Pop();
             return node;
@@ -165,7 +165,7 @@ namespace Microsoft.Scripting.Ast {
             return base.VisitExtension(node);
         }
 
-        protected override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression VisitLambda<T>(Expression<T> node) {
             // don't recurse into nested lambdas
             return node;
         }
@@ -236,7 +236,7 @@ namespace Microsoft.Scripting.Ast {
                 @finally = Expression.Block(
                     @finally,
                     Expression.Condition(
-                        Expression.NotEqual(all, Expression.Null(all.Type)),
+                        Expression.NotEqual(all, Expression.Constant(null, all.Type)),
                         Expression.Throw(all),
                         Expression.Empty()
                     )
@@ -291,7 +291,7 @@ namespace Microsoft.Scripting.Ast {
             }
             // Got here without needing flow, reset the flag and emit the real goto
             return Expression.Block(
-                Expression.Assign(_flowVariable, Expression.Zero()),
+                Expression.Assign(_flowVariable, Expression.Constant(0)),
                 Expression.Goto(target, _labels[target].Variable)
             );
         }
@@ -351,7 +351,7 @@ namespace Microsoft.Scripting.Ast {
                     }
                     return Expression.Block(
                         node.Annotations,
-                        Expression.Assign(_returnVariable, Expression.ConvertHelper(Visit(node.Expression), typeof(object))),
+                        Expression.Assign(_returnVariable, Utils.Convert(Visit(node.Expression), typeof(object))),
                         Expression.Assign(_flowVariable, Expression.Constant(ReturnMarker)),
                         Expression.Goto(block.FlowLabel)
                     );

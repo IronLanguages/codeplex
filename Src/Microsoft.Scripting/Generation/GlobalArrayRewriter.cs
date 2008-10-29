@@ -31,8 +31,9 @@ namespace Microsoft.Scripting.Generation {
         internal GlobalArrayRewriter() {
         }
 
-        internal GlobalArrayRewriter(Dictionary<SymbolId, FieldBuilder> symbolDict)
+        internal GlobalArrayRewriter(Dictionary<SymbolId, FieldBuilder> symbolDict, TypeGen typeGen)
             : base(symbolDict) {
+            TypeGen = typeGen;
         }
 
         // This starts as a List<string>, but becomes readonly when we're finished allocating
@@ -50,7 +51,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        protected override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression VisitLambda<T>(Expression<T> node) {
             // Only run this for the top-level lambda
             if (_array == null) {
                 _array = Expression.Variable(typeof(ModuleGlobalWrapper[]), "$globals");
@@ -60,8 +61,7 @@ namespace Microsoft.Scripting.Generation {
                     Expression.Call(typeof(RuntimeHelpers).GetMethod("GetGlobalArray"), Context)
                 );
                 Debug.Assert(node.NodeType == ExpressionType.Lambda);
-                node = Expression.Lambda(
-                    node.Type,
+                node = Expression.Lambda<T>(
                     body,
                     node.Name,
                     node.Annotations,

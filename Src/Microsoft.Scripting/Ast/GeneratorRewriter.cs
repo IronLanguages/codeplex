@@ -94,7 +94,7 @@ namespace Microsoft.Scripting.Ast {
             var allVars = new List<ParameterExpression>(_vars);
             allVars.AddRange(_temps);
 
-            body = Expression.Comma(
+            body = Expression.Block(
                 allVars,
                 Expression.Lambda(
                     generatorNextOfT,
@@ -250,8 +250,8 @@ namespace Microsoft.Scripting.Ast {
 
                     block.Add(
                         Expression.Condition(
-                            Expression.NotEqual(deferredVar, Expression.Null(deferredVar.Type)),
-                            catchBody,
+                            Expression.NotEqual(deferredVar, Expression.Constant(null, deferredVar.Type)),
+                            Expression.Void(catchBody),
                             Expression.Empty()
                         )
                     );
@@ -296,7 +296,7 @@ namespace Microsoft.Scripting.Ast {
                         Expression.Block(
                             inTryRouter,
                             @try,
-                            Expression.Assign(exception, Expression.Null(exception.Type)),
+                            Expression.Assign(exception, Expression.Constant(null, exception.Type)),
                             Expression.Label(tryEnd)
                         ),
                         Expression.Block(
@@ -304,7 +304,7 @@ namespace Microsoft.Scripting.Ast {
                             inFinallyRouter,
                             @finally,
                             Expression.Condition(
-                                Expression.NotEqual(exception, Expression.Null(exception.Type)),
+                                Expression.NotEqual(exception, Expression.Constant(null, exception.Type)),
                                 Expression.Throw(exception),
                                 Expression.Empty()
                             ),
@@ -411,6 +411,7 @@ namespace Microsoft.Scripting.Ast {
             block.Add(Expression.Goto(_returnLabels.Peek()));
             block.Add(Expression.Label(marker.Label));
             block.Add(Expression.Assign(_gotoRouter, Expression.Constant(GotoRouterNone)));
+            block.Add(Expression.Empty());
             return Expression.Block(node.Annotations, block);
         }
 
@@ -421,7 +422,7 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Comma(node.Annotations, node.Variables, b);
+                return Expression.Block(node.Annotations, node.Variables, b);
             }
 
             // save the variables for later
@@ -432,13 +433,15 @@ namespace Microsoft.Scripting.Ast {
             //all the variables are removed. The type of the result block is the same
             //as the input block.
             if (node.Type == typeof(void)) {
-                return Expression.Block(node.Annotations, null, b);
+#pragma warning disable 618
+                return Expression.BlockVoid(node.Annotations, null, b);
+#pragma warning restore 618
             } else {
-                return Expression.Comma(node.Annotations, null, b);
+                return Expression.Block(node.Annotations, null, b);
             }
         }
 
-        protected override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression VisitLambda<T>(Expression<T> node) {
             // don't recurse into nested lambdas
             return node;
         }
@@ -502,7 +505,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             block.Add(Expression.Assign(left, value, null));
-            return Expression.Comma(node.Annotations, block);
+            return Expression.Block(node.Annotations, block);
         }
 
         protected override Expression VisitDynamic(DynamicExpression node) {
@@ -514,7 +517,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.MakeDynamic(node.DelegateType, node.Binder, node.Annotations, a);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref a),
                 Expression.MakeDynamic(node.DelegateType, node.Binder, null, a)
@@ -531,7 +534,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.MakeIndex(o, node.Indexer, node.Annotations, a);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref o),
                 ToTemp(ref a),
@@ -549,7 +552,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.Invoke(e, node.Annotations, a);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref e),
                 ToTemp(ref a),
@@ -568,13 +571,13 @@ namespace Microsoft.Scripting.Ast {
                 return Expression.Call(o, node.Method, node.Annotations, a);
             }
             if (o == null) {
-                return Expression.Comma(
+                return Expression.Block(
                     node.Annotations,
                     ToTemp(ref a),
                     Expression.Call(null, node.Method, null, a)
                 );
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref o),
                 ToTemp(ref a),
@@ -593,7 +596,7 @@ namespace Microsoft.Scripting.Ast {
                     ? Expression.New(node.Constructor, a, node.Annotations, node.Members)
                     : Expression.New(node.Constructor, node.Annotations, a);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref a),
                 (node.Members != null)
@@ -613,7 +616,7 @@ namespace Microsoft.Scripting.Ast {
                     ? Expression.NewArrayInit(node.Type.GetElementType(), node.Annotations, e)
                     : Expression.NewArrayBounds(node.Type.GetElementType(), node.Annotations, e);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref e),
                 (node.NodeType == ExpressionType.NewArrayInit)
@@ -631,7 +634,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.MakeMemberAccess(e, node.Member, node.Annotations);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref e),
                 Expression.MakeMemberAccess(e, node.Member, null)
@@ -648,7 +651,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, node.Method, node.Conversion, node.Annotations);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref left),
                 ToTemp(ref right),
@@ -665,7 +668,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.TypeIs(e, node.TypeOperand, node.Annotations);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref e),
                 Expression.TypeIs(e, node.TypeOperand, null)
@@ -681,7 +684,7 @@ namespace Microsoft.Scripting.Ast {
             if (yields == _yields.Count) {
                 return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, node.Annotations);
             }
-            return Expression.Comma(
+            return Expression.Block(
                 node.Annotations,
                 ToTemp(ref o),
                 Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, null)

@@ -135,8 +135,8 @@ namespace IronPython.Compiler.Ast {
             body.Block.Dictionary = true;
             body.Block.Visible = false;
             body.Block.Body = body.WrapScopeStatements(
-                Ast.Block(
-                    Ast.Block(init),
+                Ast.BlockVoid(
+                    Ast.BlockVoid(init),
                     modStmt,
                     docStmt,
                     bodyStmt,

@@ -53,7 +53,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             return new MetaObject(
-                    Expression.Comma(
+                    Expression.Block(
                     warn,
                     result.Expression
                 ),

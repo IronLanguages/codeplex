@@ -110,14 +110,5 @@ namespace Microsoft.Linq.Expressions {
 
             return ConditionalExpression.Make(annotations, test, ifTrue, ifFalse);
         }
-
-        /// <summary>
-        /// Behaves like an "if" statement in imperative languages. The type is
-        /// always treated as void regardless of the body's type. The else
-        /// branch is empty
-        /// </summary>
-        public static ConditionalExpression IfThen(Expression test, Expression ifTrue) {
-            return Expression.Condition(test, Expression.Void(ifTrue), Expression.Empty());
-        }
     }
 }

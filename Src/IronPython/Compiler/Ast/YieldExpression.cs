@@ -69,7 +69,7 @@ namespace IronPython.Compiler.Ast {
             //    $gen.CheckThrowable() // <-- has return result from send            
             //  }
 
-            return Ast.Comma(
+            return Ast.Block(
                 AstUtils.YieldReturn(
                     ag.GeneratorLabel,
                     Ast.ConvertHelper(ag.Transform(_expression), typeof(object)),

@@ -14,13 +14,14 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using System.Diagnostics;
     using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class FieldTracker : MemberTracker {
@@ -105,9 +106,9 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return Ast.Call(
-                Ast.ConvertHelper(Ast.Constant(Field), typeof(FieldInfo)),
+                AstUtils.Convert(Ast.Constant(Field), typeof(FieldInfo)),
                 typeof(FieldInfo).GetMethod("GetValue"),
-                Ast.Null()
+                Ast.Constant(null)
             );
         }
 

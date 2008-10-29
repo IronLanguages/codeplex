@@ -108,8 +108,10 @@ namespace Microsoft.Scripting.Ast {
         }
         public static GeneratorExpression Generator(LabelTarget label, Expression body, Type type, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(label, "label");
             ContractUtils.Requires(label.Type != typeof(void), "label", "label must have a non-void type");
+            ContractUtils.Requires(body.Type == typeof(void), "body", "generator body must have a void type");
 
             // Generator type must be one of: IEnumerable, IEnumerator,
             // IEnumerable<T>, or IEnumerator<T>, where T is label.Ttpe
@@ -231,7 +233,7 @@ namespace Microsoft.Scripting.Ast {
                 block[i] = Expression.Assign(vars[i], param);
             }
             block[count] = new LambdaParameterRewriter(map).Visit(body);
-            return Expression.Comma(
+            return Expression.Block(
                 new ReadOnlyCollection<ParameterExpression>(vars), 
                 new ReadOnlyCollection<Expression>(block)
             );

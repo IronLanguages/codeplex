@@ -15,15 +15,16 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Actions;
+using System.Threading;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using System.Threading;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -43,16 +44,16 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public LambdaExpression RewriteLambda(LambdaExpression lambda) {
-            return (LambdaExpression)VisitLambda(lambda);
+            return (LambdaExpression)Visit(lambda);
         }
 
-        protected override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression VisitLambda<T>(Expression<T> node) {
             _depth++;
             try {
 
                 // Visit the lambda first, so we walk the tree and find any
                 // constants we need to rewrite.
-                node = (LambdaExpression)base.VisitLambda(node);
+                node = (Expression<T>)base.VisitLambda(node);
 
                 if (_depth != 1) {
                     return node;
@@ -76,8 +77,7 @@ namespace Microsoft.Scripting.Generation {
                 }
 
                 // Rewrite the lambda
-                return Expression.Lambda(
-                    node.Type,
+                return Expression.Lambda<T>(
                     body,
                     node.Name + "$" + Interlocked.Increment(ref _uniqueNameId),
                     node.Annotations,
@@ -100,14 +100,24 @@ namespace Microsoft.Scripting.Generation {
         }
 
         protected override Expression VisitConstant(ConstantExpression node) {
-            CallSite site = node.Value as CallSite;
+            var site = node.Value as CallSite;
             if (site != null) {
                 return RewriteCallSite(site);
             }
 
-            IExpressionSerializable exprSerializable = node.Value as IExpressionSerializable;
+            var exprSerializable = node.Value as IExpressionSerializable;
             if (exprSerializable != null) {
                 return Visit(exprSerializable.CreateExpression());
+            }
+
+            var symbols = node.Value as SymbolId[];
+            if (symbols != null) {
+                return Expression.NewArrayInit(
+                     typeof(SymbolId),
+                     new ReadOnlyCollection<Expression>(
+                         symbols.Map(s => SymbolConstantExpression.GetExpression(s))
+                     )
+                 );
             }
 
             return base.VisitConstant(node);
@@ -194,7 +204,7 @@ namespace Microsoft.Scripting.Generation {
 
             // rewrite the node...
             return Visit(
-                Expression.ConvertHelper(
+                AstUtils.Convert(
                     Expression.ArrayAccess(_constantPool, Expression.Constant(_constants.Count - 1)),
                     siteType
                 )

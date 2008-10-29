@@ -33,7 +33,7 @@ namespace Microsoft.Linq.Expressions {
             return (node == null) ? null : node.Accept(this);
         }
 
-        protected ReadOnlyCollection<Expression> Visit(ReadOnlyCollection<Expression> nodes) {
+        public ReadOnlyCollection<Expression> Visit(ReadOnlyCollection<Expression> nodes) {
             Expression[] newNodes = null;
             for (int i = 0, n = nodes.Count; i < n; i++) {
                 Expression node = nodes[i].Accept(this);
@@ -148,9 +148,11 @@ namespace Microsoft.Linq.Expressions {
                 return node;
             }
             if (node.Type == typeof(void)) {
-                return Expression.Block(node.Annotations, v, e);
+#pragma warning disable 618
+                return Expression.BlockVoid(node.Annotations, v, e);
+#pragma warning restore 618
             } else {
-                return Expression.Comma(node.Annotations, v, e);
+                return Expression.Block(node.Annotations, v, e);
             }
         }
 
@@ -229,13 +231,13 @@ namespace Microsoft.Linq.Expressions {
             return Expression.Label(l, d, node.Annotations);
         }
 
-        protected internal virtual Expression VisitLambda(LambdaExpression node) {
+        protected internal virtual Expression VisitLambda<T>(Expression<T> node) {
             Expression b = Visit(node.Body);
             var p = VisitAndConvert(node.Parameters, "VisitLambda");
             if (b == node.Body && p == node.Parameters) {
                 return node;
             }
-            return node.CloneWith(node.Name, b, node.Annotations, p);
+            return Expression.Lambda<T>(b, node.Name, node.Annotations, p);
         }
 
         protected internal virtual Expression VisitLoop(LoopExpression node) {
@@ -317,7 +319,7 @@ namespace Microsoft.Linq.Expressions {
             if (v == node.Variables) {
                 return node;
             }
-            return Expression.AllVariables(node.Annotations, v);
+            return Expression.RuntimeVariables(node.Annotations, v);
         }
 
         protected virtual SwitchCase VisitSwitchCase(SwitchCase node) {

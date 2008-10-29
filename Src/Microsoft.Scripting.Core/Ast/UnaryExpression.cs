@@ -426,6 +426,7 @@ namespace Microsoft.Linq.Expressions {
             return new UnaryExpression(annotations, ExpressionType.Quote, expression, expression.GetType(), null);
         }
 
+        [Obsolete("use Expression.Convert or Utils.Convert instead")]
         public static Expression ConvertHelper(Expression expression, Type type) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
@@ -436,12 +437,15 @@ namespace Microsoft.Linq.Expressions {
             return expression;
         }
 
+        // TODO: should we just always wrap it in a convert?
+        // Do we need this factory at all?
         public static Expression Void(Expression expression) {
             RequiresCanRead(expression, "expression");
-            return ConvertHelper(expression, typeof(void));
+            if (expression.Type == typeof(void)) {
+                return expression;
+            }
+            return Expression.Convert(expression, typeof(void));
         }
-
-
 
         public static UnaryExpression Rethrow() {
             return Throw(null);

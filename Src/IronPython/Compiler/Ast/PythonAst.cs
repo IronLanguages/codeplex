@@ -172,7 +172,7 @@ namespace IronPython.Compiler.Ast {
             AstGenerator ag = new AstGenerator(context, annotations, name, false, _printExpressions);            
             ag.Block.Global = true;
 
-            ag.Block.Body = Ast.Block(
+            ag.Block.Body = Ast.BlockVoid(
                 Ast.Call(
                     AstGenerator.GetHelperMethod("ModuleStarted"),
                     AstUtils.CodeContext(),
@@ -186,7 +186,7 @@ namespace IronPython.Compiler.Ast {
             if (_isModule) {
                 Debug.Assert(pco.ModuleName != null);
 
-                ag.Block.Body = Ast.Block(
+                ag.Block.Body = Ast.BlockVoid(
                     AstUtils.Assign(_fileVariable.Variable, Ast.Constant(name)),
                     AstUtils.Assign(_nameVariable.Variable, Ast.Constant(pco.ModuleName)),
                     ag.Block.Body
@@ -229,8 +229,8 @@ namespace IronPython.Compiler.Ast {
                 docStmt = Ast.Empty();
             }
 
-            return Ast.Block(
-                Ast.Block(init),
+            return Ast.BlockVoid(
+                Ast.BlockVoid(init),
                 docStmt,
                 bodyStmt ?? Ast.Empty() //  bodyStmt could be null if we have an error - e.g. a top level break
             );

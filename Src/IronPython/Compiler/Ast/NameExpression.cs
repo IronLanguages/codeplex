@@ -98,7 +98,7 @@ namespace IronPython.Compiler.Ast {
             if (variable != null && !ag.Block.Global) {
                 // keep the variable alive until we hit the del statement to
                 // better match CPython's lifetimes
-                MSAst.Expression del = Ast.Comma(
+                MSAst.Expression del = Ast.Block(
                     Ast.Call(                                   
                         typeof(GC).GetMethod("KeepAlive"),
                         variable
@@ -107,7 +107,7 @@ namespace IronPython.Compiler.Ast {
                 );
                     
                 if (!_assigned) {
-                    del = Ast.Block(
+                    del = Ast.BlockVoid(
                         Transform(ag, variable.Type),
                         del
                     );

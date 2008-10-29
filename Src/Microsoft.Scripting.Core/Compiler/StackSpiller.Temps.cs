@@ -195,7 +195,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 if (_action == RewriteAction.SpillStack) {
                     Debug.Assert(_comma.Capacity == _comma.Count + 1);
                     _comma.Add(expr);
-                    expr = Expression.Comma(new ReadOnlyCollection<Expression>(_comma));
+                    expr = Expression.Block(new ReadOnlyCollection<Expression>(_comma));
                 }
 
                 return new Result(_action, expr);

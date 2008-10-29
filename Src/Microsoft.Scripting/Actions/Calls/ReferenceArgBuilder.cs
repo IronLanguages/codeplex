@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
 
@@ -58,21 +59,23 @@ namespace Microsoft.Scripting.Actions.Calls {
                 Expression.Assign(
                     _tmp,
                     Expression.Field(
-                        Expression.ConvertHelper(parameters[Index], boxType),
+                        AstUtils.Convert(parameters[Index], boxType),
                         boxType.GetField("Value")
                     )
                 ),
                 Expression.Call(
                     typeof(RuntimeHelpers).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
-                    Expression.ConvertHelper(parameters[Index], typeof(object))
+                    AstUtils.Convert(parameters[Index], typeof(object))
                 )
             );
         }
 
         internal override Expression UpdateFromReturn(ParameterBinder parameterBinder, IList<Expression> parameters) {
-            return Expression.AssignField(
-                Expression.Convert(parameters[Index], Type),
-                Type.GetField("Value"),
+            return Expression.Assign(
+                Expression.Field(
+                    Expression.Convert(parameters[Index], Type),
+                    Type.GetField("Value")
+                ),
                 _tmp
             );
         }

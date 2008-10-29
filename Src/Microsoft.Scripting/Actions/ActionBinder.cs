@@ -26,6 +26,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
 using System.Collections.ObjectModel;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -265,7 +266,7 @@ namespace Microsoft.Scripting.Actions {
                     PropertyTracker pt = (PropertyTracker)assigning;
                     MethodInfo setter = pt.GetSetMethod() ?? pt.GetSetMethod(true);
                     return ErrorInfo.FromValueNoError(
-                        Expression.SimpleCallHelper(
+                        AstUtils.SimpleCallHelper(
                             setter,
                             ConvertExpression(
                                 assignedValue,
@@ -278,9 +279,8 @@ namespace Microsoft.Scripting.Actions {
                 case TrackerTypes.Field:
                     FieldTracker ft = (FieldTracker)assigning;
                     return ErrorInfo.FromValueNoError(
-                        Expression.AssignField(
-                            null,
-                            ft.Field,
+                        Expression.Assign(
+                            Expression.Field(null, ft.Field),
                             ConvertExpression(assignedValue, ft.FieldType, ConversionResultKind.ExplicitCast, context)
                         )
                     );
@@ -498,7 +498,7 @@ namespace Microsoft.Scripting.Actions {
             Expression[] callArgs = new Expression[infos.Length];
 
             if (!method.IsStatic) {
-                callInst = Expression.ConvertHelper(parameters[0], method.DeclaringType);
+                callInst = AstUtils.Convert(parameters[0], method.DeclaringType);
                 parameter = 1;
             }
             if (infos.Length > 0 && typeof(CodeContext).IsAssignableFrom(infos[0].ParameterType)) {
@@ -524,7 +524,7 @@ namespace Microsoft.Scripting.Actions {
                 return null;
             }
 
-            return Expression.SimpleCallHelper(callInst, method, callArgs);
+            return AstUtils.SimpleCallHelper(callInst, method, callArgs);
         }
 
 

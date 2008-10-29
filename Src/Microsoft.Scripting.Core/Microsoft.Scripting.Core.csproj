@@ -175,6 +175,7 @@
     <Compile Include="Ast\GotoExpression.cs" />
     <Compile Include="Compiler\LabelInfo.cs" />
     <Compile Include="Compiler\AnalyzedTree.cs" />
+    <Compile Include="Compiler\RuntimeVariableList.cs" />
     <Compile Include="Com\BoolArgBuilder.cs" />
     <Compile Include="Com\ConversionArgBuilder.cs" />
     <Compile Include="Com\CurrencyArgBuilder.cs" />
@@ -199,7 +200,6 @@
     <Compile Include="Ast\EmptyExpression.cs" />
     <Compile Include="Ast\Expression.cs" />
     <Compile Include="Ast\ExpressionType.cs" />
-    <Compile Include="Ast\IRuntimeVariables.cs" />
     <Compile Include="Ast\IndexExpression.cs" />
     <Compile Include="Ast\InvocationExpression.cs" />
     <Compile Include="Ast\LabelTarget.cs" />
@@ -308,7 +308,6 @@
     <Compile Include="Compiler\Snippets.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Compiler\LocalVariableAccess.cs" />
     <Compile Include="Utils\Action.cs" />
     <Compile Include="Utils\Assert.cs" />
     <Compile Include="Utils\CacheDict.cs" />

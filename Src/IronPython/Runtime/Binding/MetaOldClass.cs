@@ -113,7 +113,7 @@ namespace IronPython.Runtime.Binding {
 
             return new MetaObject(
                 Ast.Scope(
-                    Ast.Comma(
+                    Ast.Block(
                         Ast.Assign(
                             instTmp,
                             Ast.New(
@@ -258,7 +258,7 @@ namespace IronPython.Runtime.Binding {
             string memberName = GetGetMemberName(member);
             switch (memberName) {
                 case "__dict__":
-                    target = Ast.Comma(
+                    target = Ast.Block(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("OldClassDictionaryIsPublic"),
                             self.Expression

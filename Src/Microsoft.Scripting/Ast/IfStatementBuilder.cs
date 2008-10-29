@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
 
         public IfStatementBuilder ElseIf(Expression test, params Expression[] body) {
             ContractUtils.RequiresNotNullItems(body, "body");
-            return ElseIf(test, Expression.Block(body));
+            return ElseIf(test, Utils.BlockVoid(body));
         }
 
         public IfStatementBuilder ElseIf(Expression test, Expression body) {
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Else(params Expression[] body) {
             ContractUtils.RequiresNotNullItems(body, "body");
-            return Else(Expression.Block(body));
+            return Else(Utils.BlockVoid(body));
         }
 
         public Expression Else(Expression body) {
@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Expression IfThen(Expression test, params Expression[] body) {
-            return IfThenElse(test, Expression.Block(body), null);
+            return IfThenElse(test, Utils.BlockVoid(body), null);
         }
 
         public static Expression IfThenElse(Expression test, Expression body, Expression @else) {

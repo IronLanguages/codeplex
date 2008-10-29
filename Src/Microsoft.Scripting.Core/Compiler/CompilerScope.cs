@@ -155,8 +155,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         internal void EmitVariableAccess(LambdaCompiler lc, ReadOnlyCollection<ParameterExpression> vars) {
             if (NearestHoistedLocals != null) {
                 // Find what array each variable is on & its index
-                List<string> names = new List<string>(vars.Count);
-                List<long> indexes = new List<long>(vars.Count);
+                var indexes = new List<long>(vars.Count);
 
                 foreach (var variable in vars) {
                     // For each variable, find what array it's defined on
@@ -172,21 +171,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     // real index of variable to get the index to emit.
                     ulong index = (parents << 32) | (uint)locals.Indexes[variable];
 
-                    names.Add(variable.Name);
                     indexes.Add((long)index);
                 }
 
-                if (names.Count > 0) {
+                if (indexes.Count > 0) {
                     EmitGet(NearestHoistedLocals.SelfVariable);
-                    lc.EmitConstantArray(names.ToArray());
                     lc.EmitConstantArray(indexes.ToArray());
-                    lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateVariableAccess"));
+                    lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateRuntimeVariables", new[] { typeof(object[]), typeof(long[]) }));
                     return;
                 }
             }
 
             // No visible variables
-            lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateEmptyVariableAccess"));
+            lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateRuntimeVariables", Type.EmptyTypes));
             return;
         }
 

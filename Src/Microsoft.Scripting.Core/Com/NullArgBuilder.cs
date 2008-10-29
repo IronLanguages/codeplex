@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal override Expression Marshal(Expression parameter) {
-            return Expression.Null();
+            return Expression.Constant(null);
         }
     }
 }

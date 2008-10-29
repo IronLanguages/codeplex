@@ -206,6 +206,7 @@ namespace Microsoft.Linq.Expressions {
 
         #endregion
 
+        [Obsolete("use Expression.NewArrayInit, Expression.NewArrayBounds, or Utils.NewArrayHelper instead")]
         public static NewArrayExpression NewArrayHelper(Type type, IEnumerable<Expression> initializers) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(initializers, "initializers");

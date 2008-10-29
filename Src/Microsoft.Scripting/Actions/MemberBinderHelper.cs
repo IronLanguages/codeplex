@@ -18,10 +18,11 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Utils;
 using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -63,7 +64,7 @@ namespace Microsoft.Scripting.Actions {
                 if (_strongBoxType == null) return _rule.Parameters[0];
 
                 return Ast.Field(
-                    Ast.ConvertHelper(_rule.Parameters[0], _strongBoxType),
+                    AstUtils.Convert(_rule.Parameters[0], _strongBoxType),
                     _strongBoxType.GetField("Value")
                 );
             }
@@ -163,7 +164,7 @@ namespace Microsoft.Scripting.Actions {
             if (_body is EmptyExpression) {
                 _body = expression;
             } else {
-                _body = Ast.Block(_body, expression);
+                _body = Ast.Block(_body, Expression.Void(expression));
             }
         }
 

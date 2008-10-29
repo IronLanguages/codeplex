@@ -902,10 +902,10 @@ namespace IronPython.Runtime {
                         ParameterExpression temp = _rule.GetTemporary(last.Type, "$temp");
                         tests.Insert(0, Ast.Assign(temp, last));
                         tests.Add(temp);
-                        exprArgs[exprArgs.Length - 1] = Ast.Comma(tests.ToArray());
+                        exprArgs[exprArgs.Length - 1] = Ast.Block(tests.ToArray());
                     } else {
                         // otherwise run them right before the method call
-                        _paramlessCheck = Ast.Comma(tests.ToArray());
+                        _paramlessCheck = Ast.Block(tests.ToArray());
                     }
                 }
             }
@@ -1144,7 +1144,7 @@ namespace IronPython.Runtime {
 
                 dictCreator[count] = dictRef;
 
-                return Ast.Comma(dictCreator);
+                return Ast.Block(dictCreator);
             }
 
             /// <summary>
@@ -1245,7 +1245,7 @@ namespace IronPython.Runtime {
                         comma[count++] = invoke;
                     }
 
-                    invoke = Expression.Comma(comma);
+                    invoke = Expression.Block(comma);
                 }
 
                 return _rule.MakeReturn(Context.LanguageContext.Binder, invoke);
@@ -1259,7 +1259,7 @@ namespace IronPython.Runtime {
 
                 List<Expression> res = new List<Expression>(_init);
                 res.Add(body);
-                return Ast.Block(res);
+                return Ast.BlockVoid(res);
             }
 
             private void MakeUnexpectedKeywordError(Dictionary<SymbolId, Expression> namedArgs) {

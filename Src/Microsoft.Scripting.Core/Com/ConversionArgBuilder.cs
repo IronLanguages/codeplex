@@ -33,15 +33,15 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal override Expression Marshal(Expression parameter) {
-            return _innerBuilder.Marshal(Expression.ConvertHelper(parameter, _parameterType));
+            return _innerBuilder.Marshal(Helpers.Convert(parameter, _parameterType));
         }
 
         internal override Expression MarshalToRef(Expression parameter) {
-            return _innerBuilder.MarshalToRef(Expression.ConvertHelper(parameter, _parameterType));
+            return _innerBuilder.MarshalToRef(Helpers.Convert(parameter, _parameterType));
         }
 
         internal override Expression UpdateFromReturn(Expression parameter, Expression value) {
-            Expression convertedToOriginalType = Expression.ConvertHelper(
+            Expression convertedToOriginalType = Helpers.Convert(
                 _innerBuilder.UnmarshalFromRef(value),
                 _parameterType
             );
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.ComInterop {
             // parameter = UpdatedValue
             return Expression.Assign(
                 parameter,
-                Expression.ConvertHelper(
+                Helpers.Convert(
                     convertedToOriginalType,
                     parameter.Type
                 )

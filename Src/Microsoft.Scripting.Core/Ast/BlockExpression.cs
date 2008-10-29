@@ -76,29 +76,91 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// Creates a list of expressions whose value is void.
         /// </summary>
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(IEnumerable<Expression> expressions) {
+            return BlockVoid(Annotations.Empty, expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Expression arg0, Expression arg1) {
+            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Expression arg0, Expression arg1, Expression arg2) {
+            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Expression arg0, Expression arg1, Expression arg2, Expression arg3) {
+            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3 }));
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) {
+            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3, arg4 }));
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(params Expression[] expressions) {
+            return BlockVoid(Annotations.Empty, expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Annotations annotations, params Expression[] expressions) {
+            return BlockVoid(annotations, (IEnumerable<Expression>)expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Annotations annotations, IEnumerable<Expression> expressions) {
+            return BlockVoid(annotations, EmptyReadOnlyCollection<ParameterExpression>.Instance, expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(IEnumerable<ParameterExpression> variables, params Expression[] expressions) {
+            return BlockVoid(Annotations.Empty, variables, expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
+            return BlockVoid(Annotations.Empty, variables, expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Annotations annotations, IEnumerable<ParameterExpression> variables, params Expression[] expressions) {
+            return BlockVoid(annotations, variables, (IEnumerable<Expression>)expressions);
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        public static BlockExpression BlockVoid(Annotations annotations, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
+            RequiresCanRead(expressions, "expressions");
+            var varList = variables.ToReadOnly();
+            ContractUtils.RequiresNotNullItems(varList, "variables");
+            Expression.RequireVariablesNotByRef(varList, "variables");
 
+            // TODO: we shouldn't allow creating an empty block
+            // When fixed, remove the check in LambdaCompiler.AddReturnLabel
+            return new BlockExpression(annotations, variables.ToReadOnly(), expressions.ToReadOnly());
+        }
+        [Obsolete("Do not use. Use Block instead.")]
+        private static BlockExpression MakeBlock(Annotations annotations, ReadOnlyCollection<Expression> expressions) {
+            return new BlockExpression(annotations, EmptyReadOnlyCollection<ParameterExpression>.Instance, expressions);
+        }
+
+        /// <summary>
+        /// Creates a list of expressions whose value is the value of the last expression.
+        /// </summary>
         public static BlockExpression Block(IEnumerable<Expression> expressions) {
             return Block(Annotations.Empty, expressions);
         }
 
+        public static BlockExpression Block(params Expression[] expressions) {
+            return Block(Annotations.Empty, (IEnumerable<Expression>)expressions);
+        }
+
         public static BlockExpression Block(Expression arg0, Expression arg1) {
-            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
+            return Block(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
         }
 
         public static BlockExpression Block(Expression arg0, Expression arg1, Expression arg2) {
-            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
+            return Block(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
         }
 
         public static BlockExpression Block(Expression arg0, Expression arg1, Expression arg2, Expression arg3) {
-            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3 }));
+            return Block(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3 }));
         }
 
         public static BlockExpression Block(Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) {
-            return MakeBlock(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3, arg4 }));
-        }
-
-        public static BlockExpression Block(params Expression[] expressions) {
-            return Block(Annotations.Empty, expressions);
+            return Block(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3, arg4 }));
         }
 
         public static BlockExpression Block(Annotations annotations, params Expression[] expressions) {
@@ -110,7 +172,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) {
-            return Block(Annotations.Empty, variables, expressions);
+            return Block(Annotations.Empty, variables, (IEnumerable<Expression>)expressions);
         }
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
@@ -122,68 +184,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public static BlockExpression Block(Annotations annotations, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
-            RequiresCanRead(expressions, "expressions");
-            var varList = variables.ToReadOnly();
-            ContractUtils.RequiresNotNullItems(varList, "variables");
-            Expression.RequireVariablesNotByRef(varList, "variables");
-
-            // TODO: we shouldn't allow creating an empty block
-            // When fixed, remove the check in LambdaCompiler.AddReturnLabel
-            return new BlockExpression(annotations, variables.ToReadOnly(), expressions.ToReadOnly());
-        }
-
-        private static BlockExpression MakeBlock(Annotations annotations, ReadOnlyCollection<Expression> expressions) {
-            return new BlockExpression(annotations, EmptyReadOnlyCollection<ParameterExpression>.Instance, expressions);
-        }
-
-        /// <summary>
-        /// Creates a list of expressions whose value is the value of the last expression.
-        /// </summary>
-        public static BlockExpression Comma(IEnumerable<Expression> expressions) {
-            return Comma(Annotations.Empty, expressions);
-        }
-
-        public static BlockExpression Comma(params Expression[] expressions) {
-            return Comma(Annotations.Empty, (IEnumerable<Expression>)expressions);
-        }
-
-        public static BlockExpression Comma(Expression arg0, Expression arg1) {
-            return Comma(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
-        }
-
-        public static BlockExpression Comma(Expression arg0, Expression arg1, Expression arg2) {
-            return Comma(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
-        }
-
-        public static BlockExpression Comma(Expression arg0, Expression arg1, Expression arg2, Expression arg3) {
-            return Comma(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3 }));
-        }
-
-        public static BlockExpression Comma(Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) {
-            return Comma(Annotations.Empty, new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2, arg3, arg4 }));
-        }
-
-        public static BlockExpression Comma(Annotations annotations, params Expression[] expressions) {
-            return Comma(annotations, (IEnumerable<Expression>)expressions);
-        }
-
-        public static BlockExpression Comma(Annotations annotations, IEnumerable<Expression> expressions) {
-            return Comma(annotations, EmptyReadOnlyCollection<ParameterExpression>.Instance, expressions);
-        }
-
-        public static BlockExpression Comma(IEnumerable<ParameterExpression> variables, params Expression[] expressions) {
-            return Comma(Annotations.Empty, variables, (IEnumerable<Expression>)expressions);
-        }
-
-        public static BlockExpression Comma(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
-            return Comma(Annotations.Empty, variables, expressions);
-        }
-
-        public static BlockExpression Comma(Annotations annotations, IEnumerable<ParameterExpression> variables, params Expression[] expressions) {
-            return Comma(annotations, variables, (IEnumerable<Expression>)expressions);
-        }
-
-        public static BlockExpression Comma(Annotations annotations, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
             RequiresCanRead(expressions, "expressions");
             var expressionList = expressions.ToReadOnly();
             ContractUtils.RequiresNotEmpty(expressionList, "expressions");

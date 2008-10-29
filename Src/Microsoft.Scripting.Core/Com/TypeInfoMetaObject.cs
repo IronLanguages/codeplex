@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.ComInterop {
             Restrictions r2 = Restrictions.GetExpressionRestriction(
                 Expression.Equal(
                     Expression.Property(
-                        Expression.ConvertHelper(Expression, type),
+                        Helpers.Convert(Expression, type),
                         testProperty
                     ),
                     Expression.Constant(targetObject)
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.ComInterop {
                 typeof(ComObject).GetProperty("Obj")
             );
             return new MetaObject(
-                Expression.ConvertHelper(self, _comType),
+                Helpers.Convert(self, _comType),
                 MakeRestrictions(),
                 ((ComObject)Value).Obj
             );

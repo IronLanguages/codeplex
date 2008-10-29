@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 _tmp = parameterBinder.GetTemporary(Type, "outParam");
             }
 
-            return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(parameterBinder, parameters, hasBeenUsed)), _tmp);
+            return Ast.Block(Ast.Assign(_tmp, base.ToExpression(parameterBinder, parameters, hasBeenUsed)), _tmp);
         }
 
         protected override SimpleArgBuilder Copy(int newIndex) {

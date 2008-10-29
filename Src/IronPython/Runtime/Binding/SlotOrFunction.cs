@@ -145,7 +145,7 @@ namespace IronPython.Runtime.Binding {
                 return new SlotOrFunction(
                     new MetaObject(
                         Ast.Scope(
-                            Ast.Comma(
+                            Ast.Block(
                                 MetaPythonObject.MakeTryGetTypeMember(
                                     state,
                                     slot,

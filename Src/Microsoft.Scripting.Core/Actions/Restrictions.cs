@@ -203,7 +203,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
-            return test ?? Expression.True();
+            return test ?? Expression.Constant(true);
         }
 
         /// <summary>
@@ -219,19 +219,19 @@ namespace Microsoft.Scripting.Actions {
                 }
                 if (ct.IsSealed) {
                     // Sealed type is easy, just check for null
-                    return Expression.NotEqual(expression, Expression.Null());
+                    return Expression.NotEqual(expression, Expression.Constant(null));
                 }
             }
 
             if (rt == typeof(Null)) {
-                return Expression.Equal(expression, Expression.Null(expression.Type));
+                return Expression.Equal(expression, Expression.Constant(null, expression.Type));
             }
 
             return Expression.AndAlso(
-                Expression.NotEqual(expression, Expression.Null()),
+                Expression.NotEqual(expression, Expression.Constant(null)),
                 Expression.Equal(
                     Expression.Call(
-                        Expression.ConvertHelper(expression, typeof(object)),
+                        Helpers.Convert(expression, typeof(object)),
                         typeof(object).GetMethod("GetType")
                     ),
                     Expression.Constant(rt)
@@ -243,7 +243,7 @@ namespace Microsoft.Scripting.Actions {
             if (value == null) {
                 return Expression.Equal(
                     expression,
-                    Expression.Null(expression.Type)
+                    Expression.Constant(null, expression.Type)
                 );
             }
 

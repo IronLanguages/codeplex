@@ -23,6 +23,7 @@ using System.Runtime.Serialization;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -254,11 +255,11 @@ namespace Microsoft.Scripting.Hosting {
                 var fallback = action.FallbackGetMember(this);
 
                 return new MetaObject(
-                    Expression.Comma(
+                    Expression.Block(
                         new ParameterExpression[] { result },
                         Expression.Condition(
                             Expression.Call(
-                                Expression.ConvertHelper(Expression, typeof(ScriptScope)),
+                                AstUtils.Convert(Expression, typeof(ScriptScope)),
                                 typeof(ScriptScope).GetMethod("TryGetVariable", new[] { typeof(string), typeof(object).MakeByRefType() }),
                                 Expression.Constant(action.Name),
                                 result
@@ -275,7 +276,7 @@ namespace Microsoft.Scripting.Hosting {
             public override MetaObject BindSetMember(SetMemberBinder action, MetaObject value) {
                 return new MetaObject(
                     Expression.Call(
-                        Expression.ConvertHelper(Expression, typeof(ScriptScope)),
+                        AstUtils.Convert(Expression, typeof(ScriptScope)),
                         typeof(ScriptScope).GetMethod("SetVariable", new[] { typeof(string), typeof(object) }),
                         Expression.Constant(action.Name),
                         Expression.Convert(value.Expression, typeof(object))
@@ -290,7 +291,7 @@ namespace Microsoft.Scripting.Hosting {
                 return new MetaObject(
                     Expression.Condition(
                         Expression.Call(
-                            Expression.ConvertHelper(Expression, typeof(ScriptScope)),
+                            AstUtils.Convert(Expression, typeof(ScriptScope)),
                             typeof(ScriptScope).GetMethod("RemoveVariable"),
                             Expression.Constant(action.Name)
                         ),
@@ -309,11 +310,11 @@ namespace Microsoft.Scripting.Hosting {
                 var fallbackInvoke = action.FallbackInvoke(new MetaObject(result, Restrictions.Empty), args, null);
 
                 return new MetaObject(
-                    Expression.Comma(
+                    Expression.Block(
                         new ParameterExpression[] { result },
                         Expression.Condition(
                             Expression.Call(
-                                Expression.ConvertHelper(Expression, typeof(ScriptScope)),
+                                AstUtils.Convert(Expression, typeof(ScriptScope)),
                                 typeof(ScriptScope).GetMethod("TryGetVariable", new[] { typeof(string), typeof(object).MakeByRefType() }),
                                 Expression.Constant(action.Name),
                                 result

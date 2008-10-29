@@ -218,7 +218,7 @@ namespace IronPython.Runtime.Binding {
         private static Expression/*!*/ AddExtensibleSelfCheck(ConvertBinder/*!*/ convertToAction, MetaObject/*!*/ self, Expression/*!*/ callExpr) {
             ParameterExpression tmp = Ast.Variable(callExpr.Type, "tmp");
             callExpr = Ast.Scope(
-                Ast.Comma(
+                Ast.Block(
                     Ast.Assign(tmp, callExpr),
                     Ast.Condition(
                         Ast.Equal(tmp, self.Expression),

@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Ast {
                 condition = Expression.Call(isTrue, Expression.Assign(temp, left));
             } else {
                 ContractUtils.Requires(TypeUtils.CanCompareToNull(left.Type), "left", "Incorrect left expression type");
-                condition = Expression.Equal(Expression.Assign(temp, left), Expression.Null(left.Type));
+                condition = Expression.Equal(Expression.Assign(temp, left), Expression.Constant(null, left.Type));
             }
 
             Expression t, f;

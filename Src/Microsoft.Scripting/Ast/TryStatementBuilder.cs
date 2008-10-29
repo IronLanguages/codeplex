@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Catch(Type type, ParameterExpression holder, params Expression[] body) {
-            return Catch(type, holder, Expression.Block(body));
+            return Catch(type, holder, Utils.BlockVoid(body));
         }
 
         public TryStatementBuilder Catch(Type type, ParameterExpression holder, Expression body) {
@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Filter(Type type, ParameterExpression holder, Expression condition, params Expression[] body) {
-            return Filter(type, holder, condition, Expression.Block(body));
+            return Filter(type, holder, condition, Utils.BlockVoid(body));
         }
 
         public TryStatementBuilder Filter(Type type, ParameterExpression holder, Expression condition, Expression body) {
@@ -77,7 +77,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Finally(params Expression[] body) {
-            return Finally(Expression.Block(body));
+            return Finally(Utils.BlockVoid(body));
         }
 
         public TryStatementBuilder Finally(Expression body) {
@@ -104,7 +104,7 @@ namespace Microsoft.Scripting.Ast {
             if (body.Length == 1) {
                 _fault = body[0];
             } else {
-                _fault = Expression.Block(body);
+                _fault = Utils.BlockVoid(body);
             }
 
             return this;
@@ -133,11 +133,11 @@ namespace Microsoft.Scripting.Ast {
     public partial class Utils {
         public static TryStatementBuilder Try(Annotations annotations, params Expression[] body) {
             ContractUtils.RequiresNotNull(body, "body");
-            return new TryStatementBuilder(annotations, Expression.Block(body));
+            return new TryStatementBuilder(annotations, Utils.BlockVoid(body));
         }
 
         public static TryStatementBuilder Try(params Expression[] body) {
-            return Try(Annotations.Empty, Expression.Block(body));
+            return Try(Annotations.Empty, Utils.BlockVoid(body));
         }
 
         public static TryStatementBuilder Try(Expression body) {

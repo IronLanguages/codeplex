@@ -14,6 +14,7 @@
 #####################################################################################
 
 from iptest.assert_util import *
+skiptest("win32")
 
 # our built in types shouldn't show CLS methods
 

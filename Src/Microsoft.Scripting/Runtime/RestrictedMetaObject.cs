@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Actions;
 using Microsoft.Linq.Expressions;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     public class RestrictedMetaObject : MetaObject, IRestrictedMetaObject {
@@ -37,14 +38,14 @@ namespace Microsoft.Scripting.Runtime {
 
             if (HasValue) {
                 return new RestrictedMetaObject(
-                    Expression.ConvertHelper(Expression, type),
+                    AstUtils.Convert(Expression, type),
                     Restrictions.GetTypeRestriction(Expression, type),
                     Value
                 );
             }
 
             return new RestrictedMetaObject(
-                Expression.ConvertHelper(Expression, type),
+                AstUtils.Convert(Expression, type),
                 Restrictions.GetTypeRestriction(Expression, type)
             );
         }

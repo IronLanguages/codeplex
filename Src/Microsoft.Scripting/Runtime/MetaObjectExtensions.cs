@@ -19,6 +19,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     public static class MetaObjectExtensions {
@@ -57,7 +58,7 @@ namespace Microsoft.Scripting.Runtime {
 
             if (type == typeof(Null)) {
                 return new MetaObject(
-                    Expression.Null(),
+                    Expression.Constant(null),
                     self.Restrictions.Merge(Restrictions.GetInstanceRestriction(self.Expression, null)),
                     self.Value
                 );
@@ -65,7 +66,7 @@ namespace Microsoft.Scripting.Runtime {
 
             if (self.HasValue) {
                 return new MetaObject(
-                    Expression.ConvertHelper(
+                    AstUtils.Convert(
                         self.Expression,
                         CompilerHelpers.GetVisibleType(type)
                     ),
@@ -75,7 +76,7 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             return new MetaObject(
-                Expression.ConvertHelper(
+                AstUtils.Convert(
                     self.Expression,
                     CompilerHelpers.GetVisibleType(type)
                 ),

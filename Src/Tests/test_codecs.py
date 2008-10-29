@@ -393,6 +393,42 @@ def test_file_encodings():
         #cleanup
         sys.path.remove(nt.getcwd() + "\\tmp_encodings")
 
+@skip("silverlight")
+def test_cp11334():
+    
+    #--Test that not using "# coding ..." results in a warning
+    t_in, t_out, t_err = nt.popen3(sys.executable + " " + nt.getcwd() + r"\encoded_files\cp11334_warn.py")
+    t_err_lines = t_err.readlines()
+    t_out_lines = t_out.readlines()
+    t_err.close()
+    t_out.close()
+    t_in.close()
+    
+    if not is_cli:
+        AreEqual(len(t_out_lines), 0)
+        Assert(t_err_lines[0].startswith("  File"))
+        Assert(t_err_lines[1].startswith("SyntaxError: Non-ASCII character '\\xb5' in file"))
+    else:
+        print "CodePlex 11334"
+        AreEqual(len(t_out_lines), 1)
+    
+    #--Test that using "# coding ..." is OK
+    t_in, t_out, t_err = nt.popen3(sys.executable + " " + nt.getcwd() + r"\encoded_files\cp11334_ok.py")
+    t_err_lines = t_err.readlines()
+    t_out_lines = t_out.readlines()
+    t_err.close()
+    t_out.close()
+    t_in.close()
+    
+    AreEqual(len(t_err_lines), 0)
+    if not is_cli:
+        AreEqual(t_out_lines[0], "\xb5ble\n")
+    else:
+        print "CodePlex 11334"
+        AreEqual(t_out_lines[0], "\xe6ble\n")
+    AreEqual(len(t_out_lines), 1)
+
+
 @skip("silverlight", "multiple_execute")
 def test_file_encodings_negative():
     '''

@@ -24,6 +24,7 @@ using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -144,13 +145,13 @@ namespace Microsoft.Scripting.Actions {
                 Expression conv = binder.ConvertExpression(variable, ReturnType, ConversionResultKind.ExplicitCast, Context);
                 if (conv == variable) return MakeReturn(expr);
 
-                return MakeReturn(Ast.Comma(Ast.Assign(variable, expr), conv));
+                return MakeReturn(Ast.Block(Ast.Assign(variable, expr), conv));
             }
             return MakeReturn(binder.ConvertExpression(expr, ReturnType, ConversionResultKind.ExplicitCast, Context));
         }
 
         private Expression MakeReturn(Expression expression) {
-            return Ast.Return(_return, Ast.ConvertHelper(expression, _return.Type));
+            return Ast.Return(_return, AstUtils.Convert(expression, _return.Type));
         }
 
         public Expression MakeError(Expression expr) {
@@ -196,18 +197,18 @@ namespace Microsoft.Scripting.Actions {
             //TODO there's a question about nulls here
             if (CompilerHelpers.IsSealed(t) && t == expr.Type) {
                 if (t.IsValueType) {
-                    return Ast.True();
+                    return Ast.Constant(true);
                 }
-                return Ast.NotEqual(expr, Ast.Null());
+                return Ast.NotEqual(expr, Ast.Constant(null));
             }
 
             return Ast.AndAlso(
                 Ast.NotEqual(
                     expr,
-                    Ast.Null()),
+                    Ast.Constant(null)),
                 Ast.Equal(
                     Ast.Call(
-                        Ast.ConvertHelper(expr, typeof(object)),
+                        AstUtils.Convert(expr, typeof(object)),
                         typeof(object).GetMethod("GetType")
                     ),
                     Ast.Constant(t)
@@ -238,7 +239,7 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public Expression MakeTypeTest(Type type, Expression tested) {
             if (type == null || type == typeof(Null)) {
-                return Ast.Equal(tested, Ast.Null());
+                return Ast.Equal(tested, Ast.Constant(null));
             }
 
             return MakeTypeTestExpression(type, tested);
@@ -275,11 +276,11 @@ namespace Microsoft.Scripting.Actions {
                     throw Error.MissingTarget();
                 }
 
-                _binding = Expression.Comma(
+                _binding = Expression.Block(
                     _temps != null ? _temps.ToArray() : new ParameterExpression[0],
                     Expression.Condition(
                         _test,
-                        Ast.ConvertHelper(_target, typeof(void)),
+                        AstUtils.Convert(_target, typeof(void)),
                         Ast.Empty()
                     )
                 );

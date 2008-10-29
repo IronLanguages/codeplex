@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return new MetaObject(
-                Expression.Comma(
+                Expression.Block(
                     temps.ToArray(),
                     steps.ToArray()
                 ),

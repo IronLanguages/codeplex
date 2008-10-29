@@ -15,6 +15,7 @@
 
 import sys
 from iptest.assert_util import *
+skiptest("win32")
 
 load_iron_python_test()
 from IronPythonTest import *

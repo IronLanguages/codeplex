@@ -558,7 +558,7 @@ namespace Microsoft.Scripting.Generation {
         public static Expression GetTryConvertReturnValue(Type type) {
             Expression res;
             if (type.IsInterface || type.IsClass || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))) {
-                res = Ast.Null(type);
+                res = Ast.Constant(null, type);
             } else {
                 res = Ast.Constant(Activator.CreateInstance(type));
             }

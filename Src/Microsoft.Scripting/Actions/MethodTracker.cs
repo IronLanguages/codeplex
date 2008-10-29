@@ -18,6 +18,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -97,8 +98,9 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Call(
                         Ast.Constant(Method),
                         typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
-                        Ast.Null(),
-                        Ast.NewArrayHelper(typeof(object), arguments)),
+                        Ast.Constant(null),
+                        AstUtils.NewArrayHelper(typeof(object), arguments)
+                    ),
                     Method.ReturnType);
             }
 
@@ -109,7 +111,8 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Constant(Method),
                     typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
                     arguments[0],
-                    Ast.NewArrayHelper(typeof(object), ArrayUtils.RemoveFirst(arguments))),
+                    AstUtils.NewArrayHelper(typeof(object), ArrayUtils.RemoveFirst(arguments))
+                ),
                 Method.ReturnType);
         }
     }

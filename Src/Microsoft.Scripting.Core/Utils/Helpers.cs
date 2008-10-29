@@ -19,10 +19,18 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection.Emit;
 using System.Text;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Utils {
     // Miscellaneous helpers that don't belong anywhere else
     internal static class Helpers {
+
+        internal static Expression Convert(Expression expression, Type type) {
+            if (expression.Type == type) {
+                return expression;
+            }
+            return Expression.Convert(expression, type);
+        }
 
         internal static DynamicMethod CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
 #if SILVERLIGHT // restrictedSkipVisibility is not available in SILVERLIGHT

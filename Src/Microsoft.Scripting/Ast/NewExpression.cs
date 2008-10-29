@@ -13,19 +13,20 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using System.Collections.ObjectModel;
+using Microsoft.Linq.Expressions;
+using System.Reflection;
+using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace Microsoft.Scripting.Ast {
+    public static partial class Utils {
+        public static NewExpression SimpleNewHelper(ConstructorInfo constructor, params Expression[] arguments) {
+            ContractUtils.RequiresNotNull(constructor, "constructor");
+            ContractUtils.RequiresNotNullItems(arguments, "arguments");
 
-    /// <summary>
-    /// Provides read/write access to variables in a scope.
-    /// Created by LocalScopeExpression
-    /// 
-    /// TODO: review public API
-    /// </summary>
-    public interface IRuntimeVariables {
-        int Count { get; } // equivalent to Names.Count
-        ReadOnlyCollection<string> Names { get; }
-        IStrongBox this[int index] { get; }
+            ParameterInfo[] parameters = constructor.GetParameters();
+            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", "Incorrect number of arguments");
+
+            return Expression.New(constructor, ArgumentConvertHelper(arguments, parameters));
+        }
     }
 }

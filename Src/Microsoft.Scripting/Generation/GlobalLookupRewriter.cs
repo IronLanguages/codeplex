@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Generation {
         protected override Expression RewriteGet(GlobalVariableExpression node) {
             EnsureUniqueName(node);
 
-            return Expression.ConvertHelper(
+            return AstUtils.Convert(
                 Expression.Call(
                     typeof(RuntimeHelpers).GetMethod(node.IsLocal ? "LookupName" : "LookupGlobalName"),
                     node.Annotations,
@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Generation {
             GlobalVariableExpression lvalue = (GlobalVariableExpression)node.Expression;
             EnsureUniqueName(lvalue);
 
-            return Expression.ConvertHelper(
+            return AstUtils.Convert(
                 Expression.Call(
                     typeof(RuntimeHelpers).GetMethod(lvalue.IsLocal ? "SetName" : "SetGlobalName"),
                     lvalue.Annotations,

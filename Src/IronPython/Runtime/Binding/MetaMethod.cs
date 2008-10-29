@@ -95,7 +95,7 @@ namespace IronPython.Runtime.Binding {
                 } else {
                     // this may or may not be an error
                     call = new MetaObject(
-                        Ast.Comma(
+                        Ast.Block(
                             MakeCheckSelf(signature, args),
                             Ast.Dynamic(
                                 new PythonInvokeBinder(

@@ -21,7 +21,6 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     partial class LambdaCompiler {
         private void EmitAddress(Expression node, Type type) {
             EmitAddress(node, type, true);

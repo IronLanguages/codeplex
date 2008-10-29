@@ -25,13 +25,14 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
     public partial class DefaultBinder : ActionBinder {
         public MetaObject DoOperation(string operation, params MetaObject[] args) {
-            return DoOperation(operation, Ast.Null(typeof(CodeContext)), args);
+            return DoOperation(operation, Ast.Constant(null, typeof(CodeContext)), args);
         }
 
         public MetaObject DoOperation(string operation, Expression codeContext, params MetaObject[] args) {
@@ -104,7 +105,7 @@ namespace Microsoft.Scripting.Actions {
         private static MetaObject MakeOperatorError(OperatorInfo info, MetaObject[] args) {
             return new MetaObject(
                 Ast.Throw(
-                    Ast.ComplexCallHelper(
+                    AstUtils.ComplexCallHelper(
                         typeof(BinderOps).GetMethod("BadArgumentsForOperation"),
                         ArrayUtils.Insert((Expression)Ast.Constant(info.Operator), MetaObject.GetExpressions(args))
                     )
@@ -125,7 +126,7 @@ namespace Microsoft.Scripting.Actions {
                 MethodBinder mb = MethodBinder.MakeBinder(this, targets[0].Name, targets);
                 BindingTarget target = mb.MakeBindingTarget(CallTypes.None, args);
                 if (target.Success) {
-                    Expression call = Ast.ConvertHelper(target.MakeExpression(), typeof(int));
+                    Expression call = AstUtils.Convert(target.MakeExpression(), typeof(int));
                     switch (info.Operator) {
                         case Operators.GreaterThan: call = Ast.GreaterThan(call, Ast.Constant(0)); break;
                         case Operators.LessThan: call = Ast.LessThan(call, Ast.Constant(0)); break;
@@ -397,7 +398,7 @@ namespace Microsoft.Scripting.Actions {
                 Ast.Call(
                     typeof(BinderOps).GetMethod("GetStringMembers"),
                     Ast.Call(
-                        Ast.ConvertHelper(target.Expression, typeof(IMembersList)),
+                        AstUtils.Convert(target.Expression, typeof(IMembersList)),
                         typeof(IMembersList).GetMethod("GetMemberNames"),
                         codeContext
                     )
@@ -475,7 +476,7 @@ namespace Microsoft.Scripting.Actions {
                         );
                     } else {
                         return new MetaObject(
-                            Ast.Comma(
+                            Ast.Block(
                                 new ParameterExpression[] { arg2 },
                                 target.MakeExpression(),
                                 arg2
@@ -508,9 +509,11 @@ namespace Microsoft.Scripting.Actions {
                     );
                 } else {
                     return new MetaObject(
-                        Ast.AssignArrayIndex(
-                            args[0].Expression,
-                            ConvertIfNeeded(args[1].Expression, typeof(int)),
+                        Ast.Assign(
+                            Ast.ArrayAccess(
+                                args[0].Expression,
+                                ConvertIfNeeded(args[1].Expression, typeof(int))
+                            ),
                             ConvertIfNeeded(args[2].Expression, args[0].LimitType.GetElementType())
                         ),
                         restrictions.Merge(args[1].Restrictions)
@@ -605,7 +608,7 @@ namespace Microsoft.Scripting.Actions {
             Assert.NotNull(expression, type);
 
             if (expression.Type != type) {
-                return ConvertExpression(expression, type, ConversionResultKind.ExplicitCast, Ast.Null(typeof(CodeContext)));
+                return ConvertExpression(expression, type, ConversionResultKind.ExplicitCast, Ast.Constant(null, typeof(CodeContext)));
             }
             return expression;
         }

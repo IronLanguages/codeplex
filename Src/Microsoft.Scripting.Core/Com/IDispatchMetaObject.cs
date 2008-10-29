@@ -60,7 +60,7 @@ namespace Microsoft.Scripting.ComInterop {
                 Expression result =
                     Expression.Convert(
                         Expression.Property(
-                            Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
+                            Helpers.Convert(Expression, typeof(IDispatchComObject)),
                             typeof(ComObject).GetProperty("Obj")
                         ),
                         binder.Type
@@ -104,7 +104,7 @@ namespace Microsoft.Scripting.ComInterop {
             Restrictions restrictions = IDispatchRestriction();
             Expression dispatch =
                 Expression.Property(
-                    Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
+                    Helpers.Convert(Expression, typeof(IDispatchComObject)),
                     typeof(IDispatchComObject).GetProperty("DispatchObject")
                 );
 
@@ -137,7 +137,7 @@ namespace Microsoft.Scripting.ComInterop {
                 Expression.Call(
                     typeof(ComRuntimeHelpers).GetMethod("CreateComEvent"),
                     Expression.Property(
-                        Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
+                        Helpers.Convert(Expression, typeof(IDispatchComObject)),
                         typeof(ComObject).GetProperty("Obj")
                     ),
                     Expression.Constant(@event.sourceIID),
@@ -182,7 +182,7 @@ namespace Microsoft.Scripting.ComInterop {
             }
             callArgs[0] = callable;
 
-            Expression result = Expression.Comma(
+            Expression result = Expression.Block(
                 new ParameterExpression[] { callable },
                 Expression.Condition(
                     Expression.Call(
@@ -191,7 +191,7 @@ namespace Microsoft.Scripting.ComInterop {
                         callable
                     ),
                     Expression.Dynamic(new ComInvokeAction(), typeof(object), callArgs),
-                    Expression.ConvertHelper(fallback.Expression, typeof(object))
+                    Helpers.Convert(fallback.Expression, typeof(object))
                 )
             );
 
@@ -204,7 +204,7 @@ namespace Microsoft.Scripting.ComInterop {
         private MetaObject DocumentationOperation(MetaObject[] args) {
             Expression result =
                 Expression.Property(
-                    Expression.ConvertHelper(args[0].Expression, typeof(ComObject)),
+                    Helpers.Convert(args[0].Expression, typeof(ComObject)),
                     typeof(ComObject).GetProperty("Documentation")
                 );
 
@@ -217,9 +217,9 @@ namespace Microsoft.Scripting.ComInterop {
         private MetaObject EqualsOperation(MetaObject[] args) {
             Expression result =
                 Expression.Call(
-                    Expression.ConvertHelper(args[0].Expression, typeof(ComObject)),
+                    Helpers.Convert(args[0].Expression, typeof(ComObject)),
                     typeof(ComObject).GetMethod("Equals"),
-                    Expression.ConvertHelper(args[1].Expression, typeof(object))
+                    Helpers.Convert(args[1].Expression, typeof(object))
                 );
 
             return new MetaObject(
@@ -231,7 +231,7 @@ namespace Microsoft.Scripting.ComInterop {
         private MetaObject GetMemberNames(MetaObject[] args) {
             Expression result =
                 Expression.Property(
-                    Expression.ConvertHelper(args[0].Expression, typeof(ComObject)),
+                    Helpers.Convert(args[0].Expression, typeof(ComObject)),
                     typeof(ComObject).GetProperty("MemberNames")
                 );
 
@@ -261,7 +261,7 @@ namespace Microsoft.Scripting.ComInterop {
                 Restrictions restrictions = IDispatchRestriction();
                 Expression dispatch =
                     Expression.Property(
-                        Expression.ConvertHelper(Expression, typeof(IDispatchComObject)),
+                        Helpers.Convert(Expression, typeof(IDispatchComObject)),
                         typeof(IDispatchComObject).GetProperty("DispatchObject")
                     );
 
@@ -283,7 +283,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (_self.TryGetEventHandler(binder.Name, out @event) && value.LimitType == typeof(BoundDispEvent)) {
                 // Drop the event property set.
                 return new MetaObject(
-                    Expression.Null(),
+                    Expression.Constant(null),
                     value.Restrictions.Merge(IDispatchRestriction()).Merge(Restrictions.GetTypeRestriction(value.Expression, typeof(BoundDispEvent)))
                 );
             }
@@ -311,7 +311,7 @@ namespace Microsoft.Scripting.ComInterop {
         private MetaObject UnwrapSelf() {
             return new MetaObject(
                 Expression.Property(
-                    Expression.ConvertHelper(Expression, typeof(ComObject)),
+                    Helpers.Convert(Expression, typeof(ComObject)),
                     typeof(ComObject).GetProperty("Obj")
                 ),
                 IDispatchRestriction(),

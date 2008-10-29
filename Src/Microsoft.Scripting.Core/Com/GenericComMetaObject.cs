@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.ComInterop {
                 return new MetaObject(
                      Expression.Convert(
                          Expression.Property(
-                             Expression.ConvertHelper(Expression, typeof(GenericComObject)),
+                             Helpers.Convert(Expression, typeof(GenericComObject)),
                              typeof(ComObject).GetProperty("Obj")
                          ),
                          binder.Type

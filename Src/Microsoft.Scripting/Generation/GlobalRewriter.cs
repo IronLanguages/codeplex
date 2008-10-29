@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
             ParameterExpression contextVariable = Expression.Variable(typeof(CodeContext), "$globalContext");
 
             _context = contextVariable;
-            lambda = (LambdaExpression)VisitLambda(lambda);
+            lambda = (LambdaExpression)Visit(lambda);
 
             return Expression.Lambda<DlrMainCallTarget>(
                 AstUtils.AddScopedVariable(

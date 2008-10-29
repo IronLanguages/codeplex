@@ -21,6 +21,7 @@ using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -39,7 +40,7 @@ namespace Microsoft.Scripting.Actions {
         /// The MetaObject from which the member is retrieved.
         /// </param>
         public MetaObject GetMember(string name, MetaObject target) {
-            return GetMember(name, target, Ast.Null(typeof(CodeContext)));
+            return GetMember(name, target, Ast.Constant(null, typeof(CodeContext)));
         }
 
         /// <summary>
@@ -155,7 +156,7 @@ namespace Microsoft.Scripting.Actions {
             // if lookup failed try the strong-box type if available.
             if (members.Count == 0 && typeof(IStrongBox).IsAssignableFrom(type)) {
                 // properties/fields need the direct value, methods hold onto the strong box.
-                propSelf = Ast.Field(Ast.ConvertHelper(self, type), type.GetField("Value"));
+                propSelf = Ast.Field(AstUtils.Convert(self, type), type.GetField("Value"));
 
                 type = type.GetGenericArguments()[0];
 
@@ -281,7 +282,7 @@ namespace Microsoft.Scripting.Actions {
                             MakeCallExpression(
                                 getMemInfo.CodeContext,
                                 getMem,
-                                Ast.ConvertHelper(instance, type),
+                                AstUtils.Convert(instance, type),
                                 Ast.Constant(getMemInfo.Name)
                             )
                         ),

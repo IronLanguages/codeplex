@@ -269,6 +269,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+        [Obsolete("use Expression.New or Utils.SimpleNewHelper instead")]
         public static NewExpression SimpleNewHelper(ConstructorInfo constructor, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");

@@ -337,6 +337,16 @@ namespace IronPythonTest {
             AreEqual(2, (int)scope3.GetVariable("x"));
         }
 
+        public void ScenarioCP712() {
+            ScriptScope scope1 = _env.CreateScope();
+            _pe.CreateScriptSourceFromString("max(3, 4)", SourceCodeKind.InteractiveCode).Execute(scope1);
+            //CompiledCode compiledCode = _pe.CreateScriptSourceFromString("max(3,4)", SourceCodeKind.InteractiveCode).Compile();
+            //compiledCode.Execute(scope1);
+            //AreEqual(4, scope1.GetVariable<int>("__builtins__._"));
+            //TODO - this currently fails.
+            //AreEqual(4, scope1.GetVariable<int>("_"));
+        }
+
         public void ScenarioEvaluateInPublishedEngineModule() {
             PythonContext pc = DefaultContext.DefaultPythonContext;
 

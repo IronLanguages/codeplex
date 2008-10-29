@@ -91,7 +91,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression ret;
 
                 if (delMem.ReturnType == typeof(bool)) {
-                    ret = AstUtils.If(call, Rule.MakeReturn(Binder, Ast.Null()));
+                    ret = AstUtils.If(call, Rule.MakeReturn(Binder, Ast.Constant(null)));
                 } else {
                     ret = Rule.MakeReturn(Binder, call);
                 }

@@ -1053,6 +1053,24 @@ def test_comparison_operators():
     for oper in ('__lt__', '__gt__', '__le__', '__ge__'):
         for data in (y, None, 1, 1.0, 1L, (), [], 1j, "abc"):
             AreEqual(getattr(x, oper)(data), NotImplemented)
+
+@skip("silverlight") #CodePlex 16519    
+def test_cp16519():
+    import __main__
+    __main__.Dict = {"1": "a"}
+    AreEqual(__main__.Dict["1"], "a")
+    del __main__.Dict
     
+    import sys
+    sys.Dict = {"1": "b"}
+    AreEqual(sys.Dict["1"], "b")
+    del sys.Dict
+
+    #TODO: use some other module
+    import iptest
+    iptest.Dict = {"1": "c"}
+    AreEqual(iptest.Dict["1"], "c")
+    del iptest.Dict
+
 
 run_test(__name__)
