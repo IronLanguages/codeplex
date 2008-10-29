@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal override Expression Marshal(Expression parameter) {
-            return Expression.ConvertHelper(parameter, typeof(IConvertible));
+            return Helpers.Convert(parameter, typeof(IConvertible));
         }
 
         internal override Expression MarshalToRef(Expression parameter) {

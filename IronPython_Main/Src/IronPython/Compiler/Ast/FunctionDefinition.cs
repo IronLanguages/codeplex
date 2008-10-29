@@ -274,7 +274,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            MSAst.Expression body = Ast.Block(statements);
+            MSAst.Expression body = Ast.BlockVoid(statements);
 
             // If this function can modify sys.exc_info() (_canSetSysExcInfo), then it must restore the result on finish.
             // 

@@ -77,9 +77,11 @@ namespace Microsoft.Scripting.ComInterop {
                 (_targetComType == VarEnum.VT_UNKNOWN) ||
                 (_targetComType == VarEnum.VT_DISPATCH)) {
                 // paramVariants._elementN.AsT = (cast)argN
-                return Expression.AssignProperty(
-                    variant,
-                    Variant.GetAccessor(_targetComType),
+                return Expression.Assign(
+                    Expression.Property(
+                        variant,
+                        Variant.GetAccessor(_targetComType)
+                    ),
                     argument
                 );
             }

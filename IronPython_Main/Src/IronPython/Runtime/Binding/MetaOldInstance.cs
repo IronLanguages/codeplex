@@ -152,7 +152,7 @@ namespace IronPython.Runtime.Binding {
                             AstUtils.Constant(Symbols.Call),
                             tmp
                         ),
-                        Ast.Comma(
+                        Ast.Block(
                             Utils.Try(
                                 Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
                                 Ast.Assign(

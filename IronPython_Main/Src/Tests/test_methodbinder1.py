@@ -19,6 +19,7 @@
 
 from iptest.assert_util import *
 from iptest.type_util import *
+skiptest("win32")
 
 load_iron_python_test()
 from IronPythonTest.BinderTest import *

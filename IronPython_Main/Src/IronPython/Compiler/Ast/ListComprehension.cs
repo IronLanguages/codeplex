@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
                 body = iterator.Transform(ag, body);
             }
 
-            return Ast.Comma(
+            return Ast.Block(
                 initialize,
                 body,
                 list                        // result

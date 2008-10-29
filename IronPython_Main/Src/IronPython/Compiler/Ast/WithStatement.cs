@@ -166,7 +166,7 @@ namespace IronPython.Compiler.Ast {
                 // BLOCK
                         ag.Transform(_body) // except:, // try statement location
                 ).Catch(typeof(Exception), exception,
-                    Ast.Block(
+                    Ast.BlockVoid(
                 // Python specific exception handling code
                         Ast.Call(
                             AstGenerator.GetHelperMethod("ClearDynamicStackFrames")

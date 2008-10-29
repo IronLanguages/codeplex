@@ -18,53 +18,54 @@ using System.Collections.Generic;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Collections.ObjectModel;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
-        [Obsolete("use Expression.Block instead")]
+        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
         public static BlockExpression Block(SourceSpan span, IEnumerable<Expression> expressions) {
-            return Expression.Block(Expression.Annotate(span), expressions);
+            return Expression.BlockVoid(Expression.Annotate(span), expressions);
         }
 
-        [Obsolete("use Expression.Block instead")]
+        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
         public static BlockExpression Block(SourceSpan span, params Expression[] expressions) {
-            return Expression.Block(Expression.Annotate(span), (IList<Expression>)expressions);
+            return Expression.BlockVoid(Expression.Annotate(span), (IList<Expression>)expressions);
         }
 
-        [Obsolete("use Expression.Block instead")]
+        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
         public static BlockExpression Block(SourceSpan span, Expression arg0) {
-            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
+            return Expression.BlockVoid(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
         }
 
-        [Obsolete("use Expression.Block instead")]
+        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
         public static BlockExpression Block(SourceSpan span, Expression arg0, Expression arg1) {
-            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
+            return Expression.BlockVoid(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
         }
 
-        [Obsolete("use Expression.Block instead")]
+        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
         public static BlockExpression Block(SourceSpan span, Expression arg0, Expression arg1, Expression arg2) {
-            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
+            return Expression.BlockVoid(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
         }
 
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
-        [Obsolete("use Expression.Comma instead")]
+        [Obsolete("use Expression.Block instead")]
         public static BlockExpression Comma(SourceSpan span, IEnumerable<Expression> expressions) {
-            return Expression.Comma(Expression.Annotate(span), expressions);
+            return Expression.Block(Expression.Annotate(span), expressions);
         }
 
-        [Obsolete("use Expression.Comma instead")]
+        [Obsolete("use Expression.Block instead")]
         public static BlockExpression Comma(SourceSpan span, params Expression[] expressions) {
-            return Expression.Comma(Expression.Annotate(span), (IList<Expression>)expressions);
+            return Expression.Block(Expression.Annotate(span), (IList<Expression>)expressions);
         }
 
-        [Obsolete("use Expression.Comma instead")]
+        [Obsolete("use Expression.Block instead")]
         public static BlockExpression Comma(SourceSpan span, Expression arg0) {
-            return Expression.Comma(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
+            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
         }
 
         // Helper to add a variable to a block
@@ -88,11 +89,18 @@ namespace Microsoft.Scripting.Ast {
             newBody.Add(Expression.Assign(variable, variableInit));
             newBody.AddRange(exprs);
             vars.Add(variable);
-            return Expression.Comma(
+            return Expression.Block(
                 annotations,
                 vars,
                 newBody.ToArray()
             );
+        }
+
+        internal static BlockExpression BlockVoid(Expression[] expressions) {
+            if (expressions.Length == 0 || expressions[expressions.Length - 1].Type != typeof(void)) {
+                expressions = expressions.AddLast(Expression.Empty());
+            }
+            return Expression.Block(expressions);
         }
     }
 }

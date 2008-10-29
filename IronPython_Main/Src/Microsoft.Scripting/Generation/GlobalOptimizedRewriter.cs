@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -38,16 +39,16 @@ namespace Microsoft.Scripting.Generation {
         protected abstract Expression MakeWrapper(GlobalVariableExpression variable);
 
         protected override Expression RewriteGet(GlobalVariableExpression node) {
-            return Expression.ConvertHelper(MapToExpression(node), node.Type);
+            return AstUtils.Convert(MapToExpression(node), node.Type);
         }
 
         protected override Expression RewriteSet(AssignmentExtensionExpression node) {
             GlobalVariableExpression lvalue = (GlobalVariableExpression)node.Expression;
 
-            return Expression.ConvertHelper(
+            return AstUtils.Convert(
                 Expression.Assign(
                     MapToExpression(lvalue),
-                    Expression.ConvertHelper(Visit(node.Value), typeof(object)),
+                    AstUtils.Convert(Visit(node.Value), typeof(object)),
                     node.Annotations
                 ),
                 node.Type

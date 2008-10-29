@@ -17,6 +17,7 @@ using System; using Microsoft;
 
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
     internal class TypeEnumMetaObject : MetaObject {
@@ -32,7 +33,7 @@ namespace Microsoft.Scripting.ComInterop {
                 return new MetaObject(
                     // return (.bound $arg0).GetValue("<name>")
                     Expression.Call(
-                        Expression.ConvertHelper(Expression, typeof(ComTypeEnumDesc)),
+                        Helpers.Convert(Expression, typeof(ComTypeEnumDesc)),
                         typeof(ComTypeEnumDesc).GetMethod("GetValue"),
                         Expression.Constant(binder.Name)
                     ),
@@ -49,7 +50,7 @@ namespace Microsoft.Scripting.ComInterop {
                 // return (arg).GetMemberNames()
                 return new MetaObject(
                     Expression.Call(
-                        Expression.ConvertHelper(Expression, typeof(ComTypeEnumDesc)),
+                        Helpers.Convert(Expression, typeof(ComTypeEnumDesc)),
                         typeof(ComTypeEnumDesc).GetMethod("GetMemberNames")
                     ),
                     Restrictions.Combine(args).Merge(EnumRestrictions())
@@ -68,7 +69,7 @@ namespace Microsoft.Scripting.ComInterop {
                     Expression.Equal(
                         Expression.Property(
                             Expression.Property(
-                                Expression.ConvertHelper(Expression, typeof(ComTypeEnumDesc)),
+                                Helpers.Convert(Expression, typeof(ComTypeEnumDesc)),
                                 typeof(ComTypeDesc).GetProperty("TypeLib")),
                             typeof(ComTypeLibDesc).GetProperty("Guid")),
                         Expression.Constant(_desc.TypeLib.Guid)
@@ -78,7 +79,7 @@ namespace Microsoft.Scripting.ComInterop {
                 Restrictions.GetExpressionRestriction(
                     Expression.Equal(
                         Expression.Property(
-                            Expression.ConvertHelper(Expression, typeof(ComTypeEnumDesc)),
+                            Helpers.Convert(Expression, typeof(ComTypeEnumDesc)),
                             typeof(ComTypeEnumDesc).GetProperty("TypeName")
                         ),
                         Expression.Constant(_desc.TypeName)

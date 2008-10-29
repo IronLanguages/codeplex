@@ -80,34 +80,26 @@ namespace Microsoft.Linq.Expressions {
         internal static Expression ReduceMemberInit(Expression objExpression, ReadOnlyCollection<MemberBinding> bindings, bool keepOnStack, Annotations annotations) {
             var objVar = Expression.Variable(objExpression.Type, null);
             int count = bindings.Count;
-            var block = new Expression[count + 1 + (keepOnStack ? 1 : 0)];
+            var block = new Expression[count + 2];
             block[0] = Expression.Assign(objVar, objExpression);
             for (int i = 0; i < count; i++) {
                 block[i + 1] = ReduceMemberBinding(objVar, bindings[i]);
             }
-            if (keepOnStack) {
-                block[count + 1] = objVar;
-                return Expression.Comma(annotations, new ReadOnlyCollection<Expression>(block));
-            } else {
-                return Expression.Block(annotations, new ReadOnlyCollection<Expression>(block));
-            }
+            block[count + 1] = keepOnStack ? (Expression)objVar : Expression.Empty();
+            return Expression.Block(annotations, new ReadOnlyCollection<Expression>(block));
         }
 
         internal static Expression ReduceListInit(Expression listExpression, ReadOnlyCollection<ElementInit> initializers, bool keepOnStack, Annotations annotations) {
             var listVar = Expression.Variable(listExpression.Type, null);
             int count = initializers.Count;
-            var block = new Expression[count + 1 + (keepOnStack ? 1 : 0)];
+            var block = new Expression[count + 2];
             block[0] = Expression.Assign(listVar, listExpression);
             for (int i = 0; i < count; i++) {
                 ElementInit element = initializers[i];
                 block[i + 1] = Expression.Call(listVar, element.AddMethod, element.Arguments);
             }
-            if (keepOnStack) {
-                block[count + 1] = listVar;
-                return Expression.Comma(annotations, new ReadOnlyCollection<Expression>(block));
-            } else {
-                return Expression.Block(annotations, new ReadOnlyCollection<Expression>(block));
-            }
+            block[count + 1] = keepOnStack ? (Expression)listVar : Expression.Empty();
+            return Expression.Block(annotations, new ReadOnlyCollection<Expression>(block));
         }
 
         internal static Expression ReduceMemberBinding(ParameterExpression objVar, MemberBinding binding) {

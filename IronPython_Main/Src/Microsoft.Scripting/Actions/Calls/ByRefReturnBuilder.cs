@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -34,7 +35,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 if (_returnArgs[0] == -1) {
                     return ret;
                 }
-                return Ast.Comma(ret, args[_returnArgs[0]].ToReturnExpression(parameterBinder));
+                return Ast.Block(ret, args[_returnArgs[0]].ToReturnExpression(parameterBinder));
             }
 
             Expression[] retValues = new Expression[_returnArgs.Count];
@@ -49,9 +50,9 @@ namespace Microsoft.Scripting.Actions.Calls {
                 }
             }
 
-            Expression retArray = Ast.NewArrayHelper(typeof(object), retValues);
+            Expression retArray = AstUtils.NewArrayHelper(typeof(object), retValues);
             if (!usesRet) {
-                retArray = Ast.Comma(ret, retArray);
+                retArray = Ast.Block(ret, retArray);
             }
 
             return parameterBinder.Binder.GetByRefArrayExpression(retArray);

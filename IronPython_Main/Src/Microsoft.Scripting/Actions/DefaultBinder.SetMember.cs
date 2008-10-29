@@ -22,6 +22,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -42,7 +43,7 @@ namespace Microsoft.Scripting.Actions {
         /// The value being assigned to the target member.
         /// </param>
         public MetaObject SetMember(string name, MetaObject target, MetaObject value) {
-            return SetMember(name, target, value, Ast.Null(typeof(CodeContext)));
+            return SetMember(name, target, value, Ast.Constant(null, typeof(CodeContext)));
         }
 
         /// <summary>
@@ -114,7 +115,7 @@ namespace Microsoft.Scripting.Actions {
 
             // if lookup failed try the strong-box type if available.
             if (members.Count == 0 && typeof(IStrongBox).IsAssignableFrom(type)) {
-                self = Ast.Field(Ast.ConvertHelper(self, type), type.GetField("Value"));
+                self = Ast.Field(AstUtils.Convert(self, type), type.GetField("Value"));
                 type = type.GetGenericArguments()[0];
 
                 members = GetMember(act, type, memInfo.Name);
@@ -219,7 +220,7 @@ namespace Microsoft.Scripting.Actions {
                 } else if (setter.IsPublic && !setter.DeclaringType.IsValueType) {
                     if (instance == null) {
                         memInfo.Body.FinishCondition(
-                            Ast.SimpleCallHelper(
+                            AstUtils.SimpleCallHelper(
                                 setter,
                                 ConvertExpression(
                                     target.Expression,
@@ -244,8 +245,8 @@ namespace Microsoft.Scripting.Actions {
                             Ast.Call(
                                 Ast.Constant(((ReflectedPropertyTracker)info).Property), // TODO: Private binding on extension properties
                                 typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
-                                instance == null ? Ast.Null() : Ast.ConvertHelper(instance, typeof(object)),
-                                Ast.ConvertHelper(target.Expression, typeof(object)),
+                                instance == null ? Ast.Constant(null) : AstUtils.Convert(instance, typeof(object)),
+                                AstUtils.Convert(target.Expression, typeof(object)),
                                 Ast.NewArrayInit(typeof(object))
                             ),
                             target
@@ -270,10 +271,12 @@ namespace Microsoft.Scripting.Actions {
                 Type[] generic = field.DeclaringType.GetGenericArguments();
                 memInfo.Body.FinishCondition(
                     MakeReturnValue(
-                        Ast.AssignField(
-                            Ast.ConvertHelper(instance, field.DeclaringType),
-                            field.DeclaringType.GetField("Value"),
-                            Ast.ConvertHelper(target.Expression, generic[0])
+                        Ast.Assign(
+                            Ast.Field(
+                                AstUtils.Convert(instance, field.DeclaringType),
+                                field.DeclaringType.GetField("Value")
+                            ),
+                            AstUtils.Convert(target.Expression, generic[0])
                         ),
                         target
                     )
@@ -302,11 +305,13 @@ namespace Microsoft.Scripting.Actions {
             } else if (field.IsPublic && field.DeclaringType.IsVisible) {
                 memInfo.Body.FinishCondition(
                     MakeReturnValue(
-                        Ast.AssignField(
-                            field.IsStatic ?
-                                null :
-                                Ast.Convert(instance, field.DeclaringType),
-                            field.Field,
+                        Ast.Assign(
+                            Ast.Field(
+                                field.IsStatic ?
+                                    null :
+                                    Ast.Convert(instance, field.DeclaringType),
+                                field.Field
+                            ),
                             ConvertExpression(target.Expression, field.FieldType, ConversionResultKind.ExplicitCast, memInfo.CodeContext)
                         ),
                         target
@@ -316,12 +321,12 @@ namespace Microsoft.Scripting.Actions {
                 memInfo.Body.FinishCondition(
                     MakeReturnValue(
                         Ast.Call(
-                            Ast.ConvertHelper(Ast.Constant(field.Field), typeof(FieldInfo)),
+                            AstUtils.Convert(Ast.Constant(field.Field), typeof(FieldInfo)),
                             typeof(FieldInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object) }),
                             field.IsStatic ?
-                                Ast.Null() :
-                                (Expression)Ast.ConvertHelper(instance, typeof(object)),
-                            Ast.ConvertHelper(target.Expression, typeof(object))
+                                Ast.Constant(null) :
+                                (Expression)AstUtils.Convert(instance, typeof(object)),
+                            AstUtils.Convert(target.Expression, typeof(object))
                         ),
                         target
                     )
@@ -330,7 +335,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Expression MakeReturnValue(Expression expression, MetaObject target) {
-            return Ast.Comma(
+            return Ast.Block(
                 expression,
                 target.Expression
             );
@@ -344,9 +349,9 @@ namespace Microsoft.Scripting.Actions {
                     ParameterExpression tmp = Ast.Variable(target.Expression.Type, "setValue");
                     memInfo.Body.AddVariable(tmp);
 
-                    Expression call = MakeCallExpression(memInfo.CodeContext, setMem, Ast.ConvertHelper(self, type), Ast.Constant(memInfo.Name), tmp);
+                    Expression call = MakeCallExpression(memInfo.CodeContext, setMem, AstUtils.Convert(self, type), Ast.Constant(memInfo.Name), tmp);
 
-                    call = Ast.Comma(Ast.Assign(tmp, target.Expression), call);
+                    call = Ast.Block(Ast.Assign(tmp, target.Expression), call);
 
                     if (setMem.ReturnType == typeof(bool)) {
                         memInfo.Body.AddCondition(
@@ -354,7 +359,7 @@ namespace Microsoft.Scripting.Actions {
                             tmp
                         );
                     } else {
-                        memInfo.Body.FinishCondition(Ast.Comma(call, tmp));
+                        memInfo.Body.FinishCondition(Ast.Block(call, tmp));
                     }
 
                     return setMem.ReturnType != typeof(bool);

@@ -478,10 +478,10 @@ namespace IronPython.Runtime.Binding {
 
                         tests.Insert(0, Ast.Assign(temp, last));
                         tests.Add(temp);
-                        exprArgs[exprArgs.Length - 1] = Ast.Comma(tests.ToArray());
+                        exprArgs[exprArgs.Length - 1] = Ast.Block(tests.ToArray());
                     } else {
                         // otherwise run them right before the method call
-                        _paramlessCheck = Ast.Comma(tests.ToArray());
+                        _paramlessCheck = Ast.Block(tests.ToArray());
                     }
                 }
             }
@@ -493,7 +493,7 @@ namespace IronPython.Runtime.Binding {
             private Expression ValidateNotDuplicate(Expression value, string name, int position) {
                 EnsureParams();
 
-                return Ast.Comma(
+                return Ast.Block(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("VerifyUnduplicatedByPosition"),
                         Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),    // function
@@ -761,7 +761,7 @@ namespace IronPython.Runtime.Binding {
 
                 dictCreator[count] = dictRef;
 
-                return Ast.Comma(dictCreator);
+                return Ast.Block(dictCreator);
             }
 
             /// <summary>
@@ -866,7 +866,7 @@ namespace IronPython.Runtime.Binding {
                         comma[count++] = invoke;
                     }
 
-                    invoke = Expression.Comma(comma);
+                    invoke = Expression.Block(comma);
                 }
 
                 return invoke;
@@ -880,7 +880,7 @@ namespace IronPython.Runtime.Binding {
 
                 List<Expression> res = new List<Expression>(_init);
                 res.Add(body);
-                return Ast.Comma(res);
+                return Ast.Block(res);
             }
 
             private void MakeUnexpectedKeywordError(Dictionary<SymbolId, Expression> namedArgs) {

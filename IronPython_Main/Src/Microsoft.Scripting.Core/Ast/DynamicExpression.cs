@@ -162,22 +162,5 @@ namespace Microsoft.Linq.Expressions {
             // we can skip delegate and argument validation
             return DynamicExpression.Make(returnType, annotations, delegateType, binder, args);
         }
-
-        [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, params Expression[] arguments) {
-            return Dynamic(binder, resultType, null, (IEnumerable<Expression>)arguments);
-        }
-        [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, IEnumerable<Expression> arguments) {
-            return Dynamic(binder, resultType, null, arguments);
-        }
-        [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, Annotations annotations, params Expression[] arguments) {
-            return Dynamic(binder, resultType, annotations, (IEnumerable<Expression>)arguments);
-        }
-        [Obsolete("use Dynamic instead")]
-        public static DynamicExpression ActionExpression(CallSiteBinder binder, Type resultType, Annotations annotations, IEnumerable<Expression> arguments) {
-            return Dynamic(binder, resultType, annotations, arguments);
-        }
     }
 }

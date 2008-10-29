@@ -74,17 +74,17 @@ namespace Microsoft.Scripting.ComInterop {
             return new MetaObject(
                 Expression.Call(
                     typeof(ComObject).GetMethod("ObjectToComObject"),
-                    Expression.ConvertHelper(Expression, typeof(object))
+                    Helpers.Convert(Expression, typeof(object))
                 ),
                 Restrictions.GetExpressionRestriction(
                     Expression.AndAlso(
                         Expression.NotEqual(
-                            Expression.ConvertHelper(Expression, typeof(object)),
-                            Expression.Null()
+                            Helpers.Convert(Expression, typeof(object)),
+                            Expression.Constant(null)
                         ),
                         Expression.Call(
                             typeof(System.Runtime.InteropServices.Marshal).GetMethod("IsComObject"),
-                            Expression.ConvertHelper(Expression, typeof(object))
+                            Helpers.Convert(Expression, typeof(object))
                         )
                     )
                 )

@@ -96,6 +96,7 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="field">Field represented by this Member expression.</param>
         /// <param name="value">Value to set this field to.</param>
         /// <returns>New instance of Member expression</returns>
+        [Obsolete("use Expression.Assign(Expression.Field(field), value) instead")]
         public static AssignmentExpression AssignField(Expression expression, FieldInfo field, Expression value) {
             return Assign(Field(expression, field), value);
         }
@@ -110,11 +111,12 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="property">PropertyInfo of the property to access</param>
         /// <param name="value">Value to set this property to.</param>
         /// <returns>New instance of the MemberExpression.</returns>
+        [Obsolete("use Expression.Assign(Expression.Property(field), value) instead")]
         public static AssignmentExpression AssignProperty(Expression expression, PropertyInfo property, Expression value) {
             return Assign(Property(expression, property), value);
         }
 
-        // TODO: remove or rename to 'AssignArrayAccess', allow multiple indexes
+        [Obsolete("use Expression.Assign(Expression.ArrayAccess(field), value) instead")]
         public static AssignmentExpression AssignArrayIndex(Expression array, Expression index, Expression value) {
             return Assign(ArrayAccess(array, index), value);
         }

@@ -18,9 +18,7 @@ Simple script which executes tests written for IP (and relevant for CPython) und
 CPython to ensure compatibility.
 
 Parameters:
-- first parameter is the directory containing test lists
-- directories containing generic test files which should *not*
-be run (e.g., they're only relevant for .NET). This is entirely optional
+- 
 
 Assumptions:
 - we start out in the "Tests" directory
@@ -33,30 +31,29 @@ Assumptions:
 
 from sys import exit
 from sys import executable
-from sys import argv
 from sys import path
 
 from os  import system
 from os  import listdir
 from os  import getcwd
-from os  import environ
 
 #------------------------------------------------------------------------------
 #--GLOBALS
 
 #tests we do not wish to run. These should be in the "Tests" directory
-EXCLUDE_LIST = ['test_winforms.py', 'test_fuzz_parser.py']
+EXCLUDE_LIST = ["test_fuzz_parser.py"]
 
 #For some reason test_math is taking extraordinary amounts of time to run
 #under CPython 2.5.  For now, this is just disabled.
 EXCLUDE_LIST.append("test_math.py")
 
+#CPython parser bug - exec's within nested functions break if there's a range/xrange object
+#being used.  See http://bugs.python.org/?@action=confrego&otk=0OBxdGSFLQ23ML6hbXxCOiRetuge1EpJ
+EXCLUDE_LIST.append("test_methoddispatch.py")
+
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
 #These WILL be run.
-EXTRA_INCLUDE_LIST = []
-
-#Directory containing VSTS test lists
-TEST_LIST_DIR = argv[1]
+EXTRA_INCLUDE_LIST = ["regressions.py"]
 
 #Debugging...
 DEBUG = False
@@ -76,26 +73,6 @@ if DEBUG:
     print "test_list:", test_list
     print
 
-#figure out which tests we should ignore based on test list directories provided
-#from the command line
-for exclude_dir in argv[2:]:
-    t_list = []
-    for x in listdir(TEST_LIST_DIR + "\\" + exclude_dir):
-        x = x.lower()
-        x = x.replace("_1x.generictest", ".py")
-        x = x.replace("_2x.generictest", ".py")
-        x = x.replace("_20.generictest", ".py")
-        
-        if x.endswith(".py"):
-            t_list.append(x)
-        
-    if DEBUG:
-        print "exclude_dir:", exclude_dir, ", t_list:", t_list
-        print
-    
-    #strip out IP-only tests
-    test_list = [ x for x in test_list if t_list.count(x)==0 ]
-
 #strip out all IP-only tests
 test_list = [ x for x in test_list if EXCLUDE_LIST.count(x)==0 ]
 
@@ -103,6 +80,9 @@ test_list = [ x for x in test_list if EXCLUDE_LIST.count(x)==0 ]
 #ensure no duplicates...
 EXTRA_INCLUDE_LIST = [ x for x in EXTRA_INCLUDE_LIST if test_list.count(x)==0 ]
 test_list = EXTRA_INCLUDE_LIST + test_list
+if len(test_list)<50:
+    print "Should have been more than 50 tests:", test_list
+    raise Exception("Something's wrong with RunAgainstCpy.py")
 
 #------------------------------------------------------------------------------
 failed_tests = []

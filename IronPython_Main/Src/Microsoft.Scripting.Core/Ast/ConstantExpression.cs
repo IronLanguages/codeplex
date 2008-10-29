@@ -22,11 +22,11 @@ namespace Microsoft.Linq.Expressions {
     public class ConstantExpression : Expression {
         internal static readonly ConstantExpression TrueLiteral = ConstantExpression.Make(null, true, typeof(bool));
         internal static readonly ConstantExpression FalseLiteral = ConstantExpression.Make(null, false, typeof(bool));
-        internal static readonly ConstantExpression ZeroLiteral = ConstantExpression.Make(null, 0, typeof(int));
         internal static readonly ConstantExpression NullLiteral = ConstantExpression.Make(null, null, typeof(object));
         internal static readonly ConstantExpression EmptyStringLiteral = ConstantExpression.Make(null, String.Empty, typeof(string));
         internal static readonly ConstantExpression[] IntCache = new ConstantExpression[100];
 
+        // TODO: Constant<T> subclass that stores the unboxed value?
         private readonly object _value;
 
         internal ConstantExpression(Annotations annotations, object value)
@@ -96,44 +96,46 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
+        [Obsolete("use Constant(true) instead")]
         public static ConstantExpression True() {
-            return ConstantExpression.TrueLiteral;
+            return Constant(true);
         }
 
+        [Obsolete("use Constant(false) instead")]
         public static ConstantExpression False() {
-            return ConstantExpression.FalseLiteral;
+            return Constant(false);
         }
 
+        [Obsolete("use Constant(0) instead")]
         public static ConstantExpression Zero() {
-            return ConstantExpression.ZeroLiteral;
+            return Constant(0);
         }
 
+        [Obsolete("use Constant(null) instead")]
         public static ConstantExpression Null() {
-            return ConstantExpression.NullLiteral;
+            return Constant(null);
         }
 
+        [Obsolete("use Constant(null, type) instead")]
         public static ConstantExpression Null(Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-            if (type.IsValueType && !TypeUtils.IsNullableType(type)) {
-                throw Error.ArgumentTypesMustMatch();
-            }
-            return ConstantExpression.Make(Annotations.Empty, null, type);
+            return Constant(null, type);
+        }
+
+        public static ConstantExpression Constant(bool value) {
+             return value ? ConstantExpression.TrueLiteral : ConstantExpression.FalseLiteral;
         }
         
         //CONFORMING
         public static ConstantExpression Constant(object value) {
             if (value == null) {
-                return Null();
+                return ConstantExpression.NullLiteral;
             }
 
             Type t = value.GetType();
             if (!t.IsEnum) {
                 switch (Type.GetTypeCode(t)) {
                     case TypeCode.Boolean:
-                        if ((bool)value == true) {
-                            return True();
-                        }
-                        return False();
+                        return Constant((bool)value);
                     case TypeCode.Int32:
                         int x = (int)value;
                         int cacheIndex = x + 2;
@@ -170,29 +172,6 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.ArgumentTypesMustMatch();
             }
             return ConstantExpression.Make(annotations, value, type);
-        }
-
-        [Obsolete("use Expression.Constant instead")]
-        public static ConstantExpression RuntimeConstant(object value) {
-            return Constant(value);
-        }
-
-        [Obsolete("use Expression.Constant instead")]
-        public static ConstantExpression RuntimeConstant(object value, Type type) {
-            return Constant(value, type);
-        }
-
-        /// <summary>
-        /// Wraps the given value in a WeakReference and returns a tree that will retrieve
-        /// the value from the WeakReference.
-        /// </summary>
-        [Obsolete("use Utils.WeakConstant in Microsoft.Scripting instead")]
-        public static MemberExpression WeakConstant(object value) {
-            System.Diagnostics.Debug.Assert(!(value is Expression));
-            return Expression.Property(
-                Expression.Constant(new WeakReference(value)),
-                typeof(WeakReference).GetProperty("Target")
-            );
         }
     }
 }

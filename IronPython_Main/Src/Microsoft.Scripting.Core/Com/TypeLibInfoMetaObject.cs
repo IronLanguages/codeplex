@@ -44,7 +44,7 @@ namespace Microsoft.Scripting.ComInterop {
 
             return new MetaObject(
                 Expression.Property(
-                    Expression.ConvertHelper(Expression, typeof(ComTypeLibInfo)),
+                    Helpers.Convert(Expression, typeof(ComTypeLibInfo)),
                     typeof(ComTypeLibInfo).GetProperty(name)
                 ),
                 ComTypeLibInfoRestrictions(this)
@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (binder.Operation == "GetMemberNames" || binder.Operation == "MemberNames") {
                 return new MetaObject(
                     Expression.Call(
-                        Expression.ConvertHelper(Expression, typeof(ComTypeLibInfo)),
+                        Helpers.Convert(Expression, typeof(ComTypeLibInfo)),
                         typeof(ComTypeLibInfo).GetMethod("GetMemberNames")
                     ),
                     ComTypeLibInfoRestrictions(args)
@@ -74,7 +74,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         private MetaObject RestrictThisToType() {
             return new MetaObject(
-                Expression.ConvertHelper(
+                Helpers.Convert(
                     Expression,
                     typeof(ComTypeLibInfo)
                 ),

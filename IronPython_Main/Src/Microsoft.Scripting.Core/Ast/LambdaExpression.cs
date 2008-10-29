@@ -33,7 +33,7 @@ namespace Microsoft.Linq.Expressions {
     /// the delegate. This is the primary unit used for passing around
     /// Expression Trees in LINQ and the DLR.
     /// </summary>
-    public class LambdaExpression : Expression {
+    public abstract class LambdaExpression : Expression {
         private readonly string _name;
         private readonly Expression _body;
         private readonly ReadOnlyCollection<ParameterExpression> _parameters;
@@ -126,13 +126,7 @@ namespace Microsoft.Linq.Expressions {
             return LambdaCompiler.CompileLambda(this, type, attributes, emitDebugSymbols);
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
-            return visitor.VisitLambda(this);
-        }
-
-        internal virtual LambdaExpression CloneWith(string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
-            return Expression.Lambda(NodeType, Type, name, body, annotations, parameters);
-        }
+        internal abstract LambdaExpression Accept(StackSpiller spiller);
     }
 
     //CONFORMING
@@ -154,8 +148,12 @@ namespace Microsoft.Linq.Expressions {
             return LambdaCompiler.CompileLambda<TDelegate>(this, emitDebugSymbols);
         }
 
-        internal override LambdaExpression CloneWith(string name, Expression body, Annotations annotations, ReadOnlyCollection<ParameterExpression> parameters) {
-            return Lambda<TDelegate>(body, name, annotations, parameters);
+        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+            return visitor.VisitLambda(this);
+        }
+
+        internal override LambdaExpression Accept(StackSpiller spiller) {
+            return spiller.Rewrite(this);
         }
     }
 

@@ -247,7 +247,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression[] paramArgs = MetaObject.GetExpressions(args);
 
                 for (int i = 0; i < paramArgs.Length; i++) {
-                    paramArgs[i] = Expression.ConvertHelper(args[i].Expression, typeof(object));
+                    paramArgs[i] = Helpers.Convert(args[i].Expression, typeof(object));
                 }
 
                 return new Expression[] { 
@@ -287,7 +287,7 @@ namespace Microsoft.Scripting.Actions {
             /// Returns our Expression converted to our known LimitType
             /// </summary>
             private Expression GetLimitedSelf() {
-                return Expression.ConvertHelper(
+                return Helpers.Convert(
                     Expression,
                     LimitType
                 );

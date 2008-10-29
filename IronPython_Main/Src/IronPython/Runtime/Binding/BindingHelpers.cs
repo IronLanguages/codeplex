@@ -277,7 +277,7 @@ namespace IronPython.Runtime.Binding {
             if (temps.Length > 0) {
                 // finally add the scoped variables
                 res = new MetaObject(
-                    Ast.Comma(temps, res.Expression),
+                    Ast.Block(temps, res.Expression),
                     res.Restrictions,
                     null
                 );
@@ -408,7 +408,7 @@ namespace IronPython.Runtime.Binding {
                 ParameterExpression tmp = Ast.Variable(expr.Type, "callres");
 
                 expr = 
-                    Ast.Comma(
+                    Ast.Block(
                         new [] { tmp },
                         AstUtils.Try(
                             Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),

@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Ast {
             ContractUtils.RequiresNotNull(marker, "marker");
 
 #if DEBUG
-            return Expression.Comma(
+            return Expression.Block(
                 CallDebugWriteLine(marker),
                 expression
             );

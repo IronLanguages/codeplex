@@ -24,6 +24,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -308,7 +309,7 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Call(
                         typeof(RuntimeHelpers).GetMethod("GetStringMembers"),
                         Ast.Call(
-                            Ast.ConvertHelper(_rule.Parameters[0], typeof(IMembersList)),
+                            AstUtils.Convert(_rule.Parameters[0], typeof(IMembersList)),
                             typeof(IMembersList).GetMethod("GetMemberNames"),
                             _rule.Context
                         )
@@ -352,9 +353,11 @@ namespace Microsoft.Scripting.Actions {
                         );
                     } else {
                         _rule.Target = _rule.MakeReturn(Binder,
-                            Ast.AssignArrayIndex(
-                                Param0,
-                                ConvertIfNeeded(Param1, typeof(int)),
+                            Ast.Assign(
+                                Ast.ArrayAccess(
+                                    Param0,
+                                    ConvertIfNeeded(Param1, typeof(int))
+                                ),
                                 ConvertIfNeeded(Param2, _types[0].GetElementType())
                             )
                         );
@@ -377,7 +380,7 @@ namespace Microsoft.Scripting.Actions {
                     } else {
 
                         _rule.Target = _rule.MakeReturn(Binder,
-                            Ast.Comma(
+                            Ast.Block(
                                 target.MakeExpression(_rule, _rule.Parameters),
                                 _rule.Parameters[2]
                             )
@@ -498,7 +501,7 @@ namespace Microsoft.Scripting.Actions {
         private void SetErrorTarget(OperatorInfo info) {
             _rule.Target =
                 _rule.MakeError(
-                    Ast.ComplexCallHelper(
+                    AstUtils.ComplexCallHelper(
                         typeof(BinderOps).GetMethod("BadArgumentsForOperation"),
                         ArrayUtils.Insert((Expression)Ast.Constant(info.Operator), _rule.Parameters)
                     )

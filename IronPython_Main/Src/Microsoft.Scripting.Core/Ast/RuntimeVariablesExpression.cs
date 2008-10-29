@@ -36,7 +36,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override Type GetExpressionType() {
-            return typeof(IRuntimeVariables);
+            return typeof(IList<IStrongBox>);
         }
 
         protected override ExpressionType GetNodeKind() {
@@ -57,18 +57,16 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
 
-        // TODO: rename to RuntimeVariables
-
-        public static RuntimeVariablesExpression AllVariables(params ParameterExpression[] variables) {
-            return AllVariables(Annotations.Empty, (IEnumerable<ParameterExpression>)variables);
+        public static RuntimeVariablesExpression RuntimeVariables(params ParameterExpression[] variables) {
+            return RuntimeVariables(Annotations.Empty, (IEnumerable<ParameterExpression>)variables);
         }
-        public static RuntimeVariablesExpression AllVariables(IEnumerable<ParameterExpression> variables) {
-            return AllVariables(Annotations.Empty, variables);
+        public static RuntimeVariablesExpression RuntimeVariables(IEnumerable<ParameterExpression> variables) {
+            return RuntimeVariables(Annotations.Empty, variables);
         }
-        public static RuntimeVariablesExpression AllVariables(Annotations annotations, params ParameterExpression[] variables) {
-            return AllVariables(annotations, (IEnumerable<ParameterExpression>)variables);
+        public static RuntimeVariablesExpression RuntimeVariables(Annotations annotations, params ParameterExpression[] variables) {
+            return RuntimeVariables(annotations, (IEnumerable<ParameterExpression>)variables);
         }
-        public static RuntimeVariablesExpression AllVariables(Annotations annotations, IEnumerable<ParameterExpression> variables) {
+        public static RuntimeVariablesExpression RuntimeVariables(Annotations annotations, IEnumerable<ParameterExpression> variables) {
             ContractUtils.RequiresNotNull(variables, "variables");
 
             var vars = variables.ToReadOnly();

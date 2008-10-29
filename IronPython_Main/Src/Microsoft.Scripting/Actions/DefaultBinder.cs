@@ -23,6 +23,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -210,9 +211,9 @@ namespace Microsoft.Scripting.Actions {
 
                     return ErrorInfo.FromValueNoError(
                         Ast.Call(
-                            Ast.ConvertHelper(Ast.Constant(ft.Field), typeof(FieldInfo)),
+                            AstUtils.Convert(Ast.Constant(ft.Field), typeof(FieldInfo)),
                             typeof(FieldInfo).GetMethod("GetValue"),
-                            Ast.ConvertHelper(instance, typeof(object))
+                            AstUtils.Convert(instance, typeof(object))
                         )
                     );
                 case TrackerTypes.Property:

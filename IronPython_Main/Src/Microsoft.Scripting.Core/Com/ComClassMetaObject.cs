@@ -17,6 +17,7 @@ using System; using Microsoft;
 
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
     internal class ComClassMetaObject : MetaObject {
@@ -27,7 +28,7 @@ namespace Microsoft.Scripting.ComInterop {
         public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
             return new MetaObject(
                 Expression.Call(
-                    Expression.ConvertHelper(Expression, typeof(ComTypeClassDesc)),
+                    Helpers.Convert(Expression, typeof(ComTypeClassDesc)),
                     typeof(ComTypeClassDesc).GetMethod("CreateInstance")
                 ),
                 Restrictions.Combine(args).Merge(

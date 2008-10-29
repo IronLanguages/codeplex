@@ -351,7 +351,7 @@ namespace IronPython.Compiler.Ast {
         /// Gets the expression for the actual updating of the line number for stack traces to be available
         /// </summary>
         internal MSAst.Expression GetLineNumberUpdateExpression(bool preventAdditionalAdds) {
-            return Ast.Block(
+            return Ast.BlockVoid(
                 AstUtils.If(
                     Ast.Not(
                         LineNumberUpdated
@@ -479,7 +479,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression toExpr = fromStmt.Transform(this);
 
             if (toExpr != null && updateLine) {
-                toExpr = Ast.Block(
+                toExpr = Ast.BlockVoid(
                     Ast.Assign(
                         LineNumberExpression,
                         Ast.Constant(fromStmt.Start.Line)

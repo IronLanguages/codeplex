@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
-            return Ast.Null();
+            return Ast.Constant(null);
         }
     }
 }

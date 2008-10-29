@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.ComInterop {
                 // this.ComMethodDesc.Signature 
                 Expression.Property(
                     Expression.Property(
-                        Expression.ConvertHelper(Expression, typeof(DispCallable)),
+                        Helpers.Convert(Expression, typeof(DispCallable)),
                         typeof(DispCallable).GetProperty("ComMethodDesc")
                     ),
                     typeof(ComMethodDesc).GetProperty("Signature")
@@ -109,7 +109,7 @@ namespace Microsoft.Scripting.ComInterop {
         private MetaObject IsCallable(MetaObject[] args) {
             return new MetaObject(
                 // DispCallable is always callable
-                Expression.True(),
+                Expression.Constant(true),
                 Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, Value.GetType()))
             );
         }

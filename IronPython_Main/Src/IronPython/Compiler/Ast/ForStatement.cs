@@ -121,7 +121,7 @@ namespace IronPython.Compiler.Ast {
                     typeof(IEnumerator).GetMethod("MoveNext")
                 ), 
                 null, 
-                Ast.Block(
+                Ast.BlockVoid(
                     left.TransformSet(
                         ag,
                         SourceSpan.None,
@@ -144,7 +144,7 @@ namespace IronPython.Compiler.Ast {
                 new SourceSpan(left.Start, span.End)
             );
 
-            return Ast.Block(
+            return Ast.BlockVoid(
                 init,
                 ls
             );

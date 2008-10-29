@@ -106,7 +106,7 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitLabel(node);
             }
 
-            protected internal override Expression VisitLambda(LambdaExpression node) {
+            protected internal override Expression VisitLambda<T>(Expression<T> node) {
                 Expressions.Add(node);
                 return base.VisitLambda(node);
             }

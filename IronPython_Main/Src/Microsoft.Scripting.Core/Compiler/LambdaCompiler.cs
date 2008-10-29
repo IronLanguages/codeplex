@@ -33,7 +33,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
     /// contain multiple lambdas, the Compiler class is reponsible for compiling the whole tree, individual
     /// lambdas are then compiled by the LambdaCompiler.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")] // TODO: fix
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     internal sealed partial class LambdaCompiler {
 
         private delegate void WriteBack();

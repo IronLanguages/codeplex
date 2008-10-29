@@ -19,11 +19,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace Microsoft.Scripting.Ast {
@@ -481,7 +479,7 @@ namespace Microsoft.Scripting.Ast {
                     preambuleExpressions.Add(
                         Expression.Assign(
                             backingVariable,
-                            Expression.ConvertHelper(
+                            AstUtils.Convert(
                                 Expression.ArrayAccess(
                                     delegateParamarray,
                                     Expression.Constant(i)
@@ -507,7 +505,7 @@ namespace Microsoft.Scripting.Ast {
                     preambuleExpressions.Add(
                         Expression.Assign(
                             backingVariable,
-                            Expression.ConvertHelper(
+                            AstUtils.Convert(
                                 Expression.Call(
                                     shifter,
                                     delegateParamarray,
@@ -524,7 +522,7 @@ namespace Microsoft.Scripting.Ast {
             Expression newBody = new LambdaParameterRewriter(paramMapping).Visit(_body);
 
             preambuleExpressions.Add(newBody);
-            _body = Expression.Comma(preambuleExpressions);
+            _body = Expression.Block(preambuleExpressions);
 
             _paramsArray = null;
             _locals.AddRange(backingVars);
@@ -585,7 +583,7 @@ namespace Microsoft.Scripting.Ast {
                         body,
                         Expression.Call(
                             typeof(RuntimeHelpers).GetMethod("CreateNestedCodeContext"),
-                            Expression.AllVariables(vars),
+                            Utils.VariableDictionary(vars),
                             Utils.CodeContext(),
                             Expression.Constant(_visible)
                         )
@@ -595,7 +593,7 @@ namespace Microsoft.Scripting.Ast {
 
             // wrap a scope if needed
             if (_locals != null && _locals.Count > 0) {
-                body = Expression.Comma(new ReadOnlyCollection<ParameterExpression>(_locals.ToArray()), body);
+                body = Expression.Block(new ReadOnlyCollection<ParameterExpression>(_locals.ToArray()), body);
             }
             return body;
         }
@@ -625,25 +623,6 @@ namespace Microsoft.Scripting.Ast {
 
         private static T[] ToArray<T>(List<T> list) {
             return list != null ? list.ToArray() : new T[0];
-        }
-
-        internal static void ValidateContextFactory(MethodInfo factory, string paramName) {
-            ContractUtils.RequiresNotNull(factory, "factory");
-            ContractUtils.Requires(
-                IsValidScopeFactory(factory),
-                paramName,
-                "Factory must have signature compatible with: CodeContext Factory(ILocalVariables, CodeContext, bool)"
-            );
-        }
-
-        internal static bool IsValidScopeFactory(MethodInfo factory) {
-            ParameterInfo[] ps = factory.GetParameters();
-            return !factory.IsGenericMethod &&
-                (typeof(CodeContext).IsAssignableFrom(factory.ReturnType)) &&
-                (ps.Length == 3) &&
-                (ps[0].ParameterType == typeof(IRuntimeVariables)) &&
-                (ps[1].ParameterType == typeof(CodeContext)) &&
-                (ps[2].ParameterType == typeof(bool));
         }
     }
 
@@ -678,9 +657,9 @@ namespace Microsoft.Scripting.Ast {
 
 namespace Microsoft.Scripting.Runtime {
     public static partial class RuntimeHelpers {
-        public static CodeContext CreateNestedCodeContext(IRuntimeVariables locals, CodeContext context, bool visible) {
-            Debug.Assert(locals.Count != 0);
-            return new CodeContext(new Scope(context.Scope, new LocalsDictionary(locals), visible), context.LanguageContext, context);
+        public static CodeContext CreateNestedCodeContext(CustomSymbolDictionary variables, CodeContext context, bool visible) {
+            Debug.Assert(variables.Count > 0);
+            return new CodeContext(new Scope(context.Scope, variables, visible), context.LanguageContext, context);
         }
 
         /// <summary>

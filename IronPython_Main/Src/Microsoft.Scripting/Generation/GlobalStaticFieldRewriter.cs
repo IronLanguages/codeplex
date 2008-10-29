@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
             TypeGen = typeGen;
         }
 
-        protected override Expression VisitLambda(LambdaExpression node) {
+        protected override Expression VisitLambda<T>(Expression<T> node) {
             // only run this for top lambda
             if (_contextField == null) {
                 // Optimization: use the static field codecontext rather than

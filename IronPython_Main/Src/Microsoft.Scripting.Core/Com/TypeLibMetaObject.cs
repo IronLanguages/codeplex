@@ -17,6 +17,7 @@ using System; using Microsoft;
 
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
     internal class TypeLibMetaObject : MetaObject {
@@ -36,7 +37,7 @@ namespace Microsoft.Scripting.ComInterop {
                         Restrictions.GetExpressionRestriction(
                             Expression.Equal(
                                 Expression.Property(
-                                    Expression.ConvertHelper(
+                                    Helpers.Convert(
                                         Expression, typeof(ComTypeLibDesc)
                                     ),
                                     typeof(ComTypeLibDesc).GetProperty("Guid")
@@ -48,7 +49,7 @@ namespace Microsoft.Scripting.ComInterop {
 
                 return new MetaObject(
                     Expression.Call(
-                        Expression.ConvertHelper(Expression, typeof(ComTypeLibDesc)),
+                        Helpers.Convert(Expression, typeof(ComTypeLibDesc)),
                         typeof(ComTypeLibDesc).GetMethod("GetTypeLibObjectDesc"),
                         Expression.Constant(binder.Name.ToString())
                     ),
@@ -66,7 +67,7 @@ namespace Microsoft.Scripting.ComInterop {
                 case "MemberNames":
                     return new MetaObject(
                         Expression.Call(
-                            Expression.ConvertHelper(Expression, typeof(ComTypeLibDesc)),
+                            Helpers.Convert(Expression, typeof(ComTypeLibDesc)),
                             typeof(ComTypeLibDesc).GetMethod("GetMemberNames")
                         ),
                         Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, typeof(ComTypeLibDesc)))

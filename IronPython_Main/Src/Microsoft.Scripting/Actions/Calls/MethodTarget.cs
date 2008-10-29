@@ -24,6 +24,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -126,33 +127,33 @@ namespace Microsoft.Scripting.Actions.Calls {
                 // public method
                 if (mi != null) {
                     Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
-                    call = Ast.SimpleCallHelper(instance, mi, args);
+                    call = AstUtils.SimpleCallHelper(instance, mi, args);
                 } else {
-                    call = Ast.SimpleNewHelper(ci, args);
+                    call = AstUtils.SimpleNewHelper(ci, args);
                 }
             } else {
                 // Private binding, invoke via reflection
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? Ast.Null() : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
+                    Expression instance = mi.IsStatic ? Ast.Constant(null) : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
                     Debug.Assert(instance != null, "Can't skip instance expression");
 
                     call = Ast.Call(
                         typeof(BinderOps).GetMethod("InvokeMethod"),
                         Ast.Constant(mi),
-                        Ast.ConvertHelper(instance, typeof(object)),
-                        Ast.NewArrayHelper(typeof(object), args)
+                        AstUtils.Convert(instance, typeof(object)),
+                        AstUtils.NewArrayHelper(typeof(object), args)
                     );
                 } else {
                     call = Ast.Call(
                         typeof(BinderOps).GetMethod("InvokeConstructor"),
                         Ast.Constant(ci),
-                        Ast.NewArrayHelper(typeof(object), args)
+                        AstUtils.NewArrayHelper(typeof(object), args)
                     );
                 }
             }
 
             if (spilledArgs != null) {
-                call = Expression.Comma(spilledArgs.AddLast(call));
+                call = Expression.Block(spilledArgs.AddLast(call));
             }
 
             ret = _returnBuilder.ToExpression(parameterBinder, _argBuilders, parameters, call);
@@ -173,18 +174,18 @@ namespace Microsoft.Scripting.Actions.Calls {
                     ParameterExpression temp = Ast.Variable(ret.Type, "$ret");
                     updates.Insert(0, Ast.Assign(temp, ret));
                     updates.Add(temp);
-                    ret = Ast.Comma(new [] { temp }, updates.ToArray());
+                    ret = Ast.Block(new [] { temp }, updates.ToArray());
                 } else {
                     updates.Insert(0, ret);
                     ret = Ast.Convert(
-                        Ast.Comma(updates.ToArray()),
+                        Ast.Block(updates.ToArray()),
                         typeof(void)
                     );
                 }
             }
 
             if (parameterBinder.Temps != null) {
-                ret = Ast.Comma(parameterBinder.Temps, ret);
+                ret = Ast.Block(parameterBinder.Temps, ret);
             }
 
             return ret;

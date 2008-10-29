@@ -120,7 +120,7 @@ namespace IronPython.Compiler.Ast {
                 //      else_body
                 //  }
                 result =
-                    Ast.Block(
+                    Ast.BlockVoid(
                         Ast.Assign(runElse, Ast.True()),
                         Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated, we could choose to do this only for nested exception handlers.
                         Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
@@ -146,7 +146,7 @@ namespace IronPython.Compiler.Ast {
                 //
                 result = AstUtils.Try(
                         Ast.Annotate(Span, _header),
-                        Ast.Block(
+                        Ast.BlockVoid(
                             Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
                             Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
                             body
@@ -301,7 +301,7 @@ namespace IronPython.Compiler.Ast {
                                 Ast.Assign(converted, test),
                                 Ast.Null()
                             ),
-                            Ast.Block(
+                            Ast.BlockVoid(
                                 tsh.Target.TransformSet(ag, SourceSpan.None, converted, Operators.None),
                                 GetTracebackHeader(
                                     new SourceSpan(tsh.Start, tsh.Header),
@@ -379,7 +379,7 @@ namespace IronPython.Compiler.Ast {
             // Codegen becomes:
             //     extracted = PythonOps.SetCurrentException(exception)
             //      < dynamic exception analysis >
-            return Ast.Block(
+            return Ast.BlockVoid(
                 Ast.Assign(
                     extracted,
                     Ast.Call(

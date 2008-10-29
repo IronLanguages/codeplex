@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -69,12 +70,12 @@ namespace Microsoft.Scripting.Actions {
 
                 body = Ast.Condition(
                     _conditions[i],
-                    Ast.ConvertHelper(_bodies[i], t),
-                    Ast.ConvertHelper(body, t)
+                    AstUtils.Convert(_bodies[i], t),
+                    AstUtils.Convert(body, t)
                 );
             }
 
-            _body = Ast.Comma(
+            _body = Ast.Block(
                 _variables,
                 body
             );

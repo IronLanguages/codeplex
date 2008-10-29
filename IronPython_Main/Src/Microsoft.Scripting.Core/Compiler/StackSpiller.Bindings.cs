@@ -91,16 +91,21 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 MemberExpression member = Expression.MakeMemberAccess(target, _binding.Member);
                 ParameterExpression memberTemp = _spiller.MakeTemp(member.Type);
 
-                int copyback = memberTemp.Type.IsValueType ? 1 : 0;
-                Expression[] block = new Expression[_bindings.Count + 1 + copyback];
+                Expression[] block = new Expression[_bindings.Count + 2];
                 block[0] = Expression.Assign(memberTemp, member);
 
                 for (int i = 0; i < _bindings.Count; i++) {
                     BindingRewriter br = _bindingRewriters[i];
                     block[i + 1] = br.AsExpression(memberTemp);
                 }
-                if (copyback != 0) {
-                    block[_bindings.Count + 1] = Expression.Assign(Expression.MakeMemberAccess(target, _binding.Member), memberTemp);
+
+                // We need to copy back value types
+                if (memberTemp.Type.IsValueType) {
+                    block[_bindings.Count + 1] = Expression.Void(
+                        Expression.Assign(Expression.MakeMemberAccess(target, _binding.Member), memberTemp)
+                    );
+                } else {
+                    block[_bindings.Count + 1] = Expression.Empty();
                 }
                 return Expression.Block(block);
             }
@@ -154,8 +159,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 MemberExpression member = Expression.MakeMemberAccess(target, _binding.Member);
                 ParameterExpression memberTemp = _spiller.MakeTemp(member.Type);
 
-                int copyback = memberTemp.Type.IsValueType ? 1 : 0;
-                Expression[] block = new Expression[_inits.Count + 1 + copyback];
+                Expression[] block = new Expression[_inits.Count + 2];
                 block[0] = Expression.Assign(memberTemp, member);
 
                 for (int i = 0; i < _inits.Count; i++) {
@@ -163,8 +167,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     Result add = cr.Finish(Expression.Call(memberTemp, _inits[i].AddMethod, cr[0, -1]));
                     block[i + 1] = add.Node;
                 }
-                if (copyback != 0) {
-                    block[_inits.Count + 1] = Expression.Assign(Expression.MakeMemberAccess(target, _binding.Member), memberTemp);
+
+                // We need to copy back value types
+                if (memberTemp.Type.IsValueType) {
+                    block[_inits.Count + 1] = Expression.Void(
+                        Expression.Assign(Expression.MakeMemberAccess(target, _binding.Member), memberTemp)
+                    );
+                } else {
+                    block[_inits.Count + 1] = Expression.Empty();
                 }
                 return Expression.Block(block);
             }
@@ -192,15 +202,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             internal override Expression AsExpression(Expression target) {
-                Expression[] block = new Expression[2];
-
                 MemberExpression member = Expression.MakeMemberAccess(target, _binding.Member);
                 ParameterExpression memberTemp = _spiller.MakeTemp(member.Type);
 
-                block[0] = Expression.Assign(memberTemp, _rhs);
-                block[1] = Expression.Assign(member, memberTemp);
-
-                return Expression.Block(block);
+                return Expression.Block(
+                    Expression.Assign(memberTemp, _rhs),
+                    Expression.Assign(member, memberTemp),
+                    Expression.Empty()
+                );
             }
         }
 

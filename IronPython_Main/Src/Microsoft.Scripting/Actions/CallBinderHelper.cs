@@ -24,10 +24,11 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
-    
+
     /// <summary>
     /// Creates rules for performing method calls.  Currently supports calling built-in functions, built-in method descriptors (w/o 
     /// a bound value) and bound built-in method descriptors (w/ a bound value), delegates, types defining a "Call" method marked
@@ -228,7 +229,7 @@ namespace Microsoft.Scripting.Actions {
                             Expression dictExpr = _rule.Parameters[_rule.Parameters.Count - 1];
                             exprargs.Add(
                                 Ast.Call(
-                                    Ast.ConvertHelper(dictExpr, typeof(IDictionary)),
+                                    AstUtils.Convert(dictExpr, typeof(IDictionary)),
                                     typeof(IDictionary).GetMethod("get_Item"),
                                     Ast.Constant(strKey)
                                 )
@@ -327,7 +328,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MethodBase[] GetDelegateTargets(Delegate d) {
-            _instance = Ast.ConvertHelper(_rule.Parameters[0], d.GetType());
+            _instance = AstUtils.Convert(_rule.Parameters[0], d.GetType());
             return new MethodBase[] { d.GetType().GetMethod("Invoke") };
         }
 

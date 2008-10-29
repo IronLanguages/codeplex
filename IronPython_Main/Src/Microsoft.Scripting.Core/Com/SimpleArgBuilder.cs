@@ -18,6 +18,7 @@ using System; using Microsoft;
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
     /// <summary>
@@ -34,7 +35,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         internal override Expression Marshal(Expression parameter) {
             Debug.Assert(parameter != null);
-            return Expression.ConvertHelper(parameter, _parameterType);
+            return Helpers.Convert(parameter, _parameterType);
         }
 
         // unmarshal new value back to be _parameterType
@@ -51,7 +52,7 @@ namespace Microsoft.Scripting.ComInterop {
             Debug.Assert(newValue != null && newValue.Type == _parameterType);
 
             // parameter = newValue
-            return Expression.Assign(parameter, Expression.ConvertHelper(newValue, parameter.Type));
+            return Expression.Assign(parameter, Helpers.Convert(newValue, parameter.Type));
         }
 
 

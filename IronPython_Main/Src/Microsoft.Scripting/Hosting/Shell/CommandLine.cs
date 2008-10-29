@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         protected ScriptEngine Engine { get { return _engine; } }
 
         protected virtual string Prompt { get { return ">>> "; } }
-        protected virtual string PromptContinuation { get { return "... "; } }
+        public virtual string PromptContinuation { get { return "... "; } }
         protected virtual string Logo { get { return null; } }
 
         public CommandLine() {
@@ -233,9 +233,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         /// <summary>
-        /// Parses a single interactive command and executes it.  
+        /// Parses a single interactive command or a set of statements and executes it.  
         /// 
         /// Returns null if successful and execution should continue, or the appropiate exit code.
+        /// 
+        /// We check if the code read is an interactive command or statements is by checking for NewLine
+        /// If the code contains NewLine, it's a set of statements (most probably from SendToConsole)
+        /// If the code does not contain a NewLine, it's an interactive command typed by the user at the prompt
         /// </summary>
         private int? RunOneInteraction() {
             bool continueInteraction;
@@ -250,7 +254,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 return null;
             }
 
-            ExecuteCommand(_language.CreateSnippet(s, SourceCodeKind.InteractiveCode));
+            ExecuteCommand(_language.CreateSnippet(s, 
+                (s.Contains(Environment.NewLine))? SourceCodeKind.Statements : SourceCodeKind.InteractiveCode));
             return null;
         }
 
@@ -303,7 +308,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
                 string code = b.ToString();
 
-                SourceUnit command = _language.CreateSnippet(code, SourceCodeKind.InteractiveCode);
+                SourceUnit command = _language.CreateSnippet(code, 
+                    (code.Contains(Environment.NewLine))? SourceCodeKind.Statements : SourceCodeKind.InteractiveCode);
                 ScriptCodeParseResult props = command.GetCodeProperties(_language.GetCompilerOptions(_scope));
 
                 if (SourceCodePropertiesUtils.IsCompleteOrInvalid(props, allowIncompleteStatement)) {

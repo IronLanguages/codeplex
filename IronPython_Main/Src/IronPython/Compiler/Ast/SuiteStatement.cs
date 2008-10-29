@@ -42,7 +42,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            return Ast.Block(new ReadOnlyCollection<MSAst.Expression>(stmts));
+            return Ast.BlockVoid(new ReadOnlyCollection<MSAst.Expression>(stmts));
         }
        
         public override void Walk(PythonWalker walker) {

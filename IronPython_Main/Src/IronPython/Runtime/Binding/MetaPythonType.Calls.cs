@@ -191,7 +191,7 @@ namespace IronPython.Runtime.Binding {
                 res = createExpr.Expression;
             } else {
                 body.Add(allocatedInst);
-                res = Ast.Comma(body);
+                res = Ast.Block(body);
             }
             res = Ast.Scope(res, allocatedInst);
 

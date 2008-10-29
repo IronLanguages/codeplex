@@ -95,7 +95,7 @@ namespace IronPython.Runtime.Types {
                     Ast.ConvertHelper(error, typeof(object))
                 );
             } else {
-                call = Ast.Comma(call, tmp);
+                call = Ast.Block(call, tmp);
             }
 
             return Ast.Scope(

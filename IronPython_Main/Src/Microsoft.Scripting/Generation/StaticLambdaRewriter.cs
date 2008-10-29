@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
             var siteVar = Expression.Variable(siteExpr.Type, "$site");
 
             // ($site = siteExpr).Target.Invoke($site, *args)
-            return Expression.Comma(
+            return Expression.Block(
                 new [] { siteVar },
                 Expression.Call(
                     Expression.Field(

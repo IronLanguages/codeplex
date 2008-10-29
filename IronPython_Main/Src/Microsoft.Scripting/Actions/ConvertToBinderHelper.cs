@@ -420,7 +420,7 @@ namespace Microsoft.Scripting.Actions {
                 _rule.Target =
                     _rule.MakeReturn(
                         Binder,
-                        Ast.ConvertHelper(arg, CompilerHelpers.GetVisibleType(toType))
+                        AstUtils.Convert(arg, CompilerHelpers.GetVisibleType(toType))
                     );
             }
         }
@@ -436,7 +436,7 @@ namespace Microsoft.Scripting.Actions {
             _rule.Target =
                 _rule.MakeReturn(
                     Binder,
-                    Ast.ConvertHelper(
+                    AstUtils.Convert(
                         GetExtensibleValue(extType),
                         toType
                     )
@@ -475,7 +475,7 @@ namespace Microsoft.Scripting.Actions {
                     Binder,
                     Ast.New(
                         toType.GetConstructor(new Type[] { knownType }),
-                        Ast.ConvertHelper(_rule.Parameters[0], knownType)
+                        AstUtils.Convert(_rule.Parameters[0], knownType)
                     )
                 );
         }
@@ -532,7 +532,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private Expression GetExtensibleValue(Type extType) {
             return Ast.Property(
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     _rule.Parameters[0],
                     extType
                 ),
@@ -573,7 +573,7 @@ namespace Microsoft.Scripting.Actions {
                 _rule.Target =
                     _rule.MakeReturn(Binder,
                         Ast.Call(
-                            Ast.ConvertHelper(_rule.Parameters[0], typeof(IEnumerable)),
+                            AstUtils.Convert(_rule.Parameters[0], typeof(IEnumerable)),
                             typeof(IEnumerable).GetMethod("GetEnumerator")
                         )
                     );
@@ -591,7 +591,7 @@ namespace Microsoft.Scripting.Actions {
                 _rule.Target =
                     _rule.MakeReturn(Binder,
                         Ast.Call(
-                            Ast.ConvertHelper(_rule.Parameters[0], enumType),
+                            AstUtils.Convert(_rule.Parameters[0], enumType),
                             toType.GetMethod("GetEnumerator")
                         )
                     );
@@ -605,7 +605,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         /// <param name="toType"></param>
         private void MakeNullTarget(Type toType) {
-            _rule.Target = _rule.MakeReturn(Binder, Ast.Convert(Ast.Null(), toType));
+            _rule.Target = _rule.MakeReturn(Binder, Ast.Convert(Ast.Constant(null), toType));
         }
 
         /// <summary>

@@ -285,7 +285,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce a conversion rule by calling the helper method to do the convert
         /// </summary>
         private static MetaObject MakeConversionTarget(ConversionResultKind kind, MethodTracker method, Type fromType, bool isImplicit, Restrictions restrictions, MetaObject arg) {
-            Expression param = Ast.ConvertHelper(arg.Expression, fromType);
+            Expression param = AstUtils.Convert(arg.Expression, fromType);
 
             return MakeConversionTargetWorker(kind, method, isImplicit, restrictions, param);
         }
@@ -306,7 +306,7 @@ namespace Microsoft.Scripting.Actions {
                 WrapForThrowingTry(
                     kind,
                     isImplicit,
-                    Ast.SimpleCallHelper(
+                    AstUtils.SimpleCallHelper(
                         method.Method,
                         param
                     ),
@@ -324,10 +324,10 @@ namespace Microsoft.Scripting.Actions {
             if (!isImplicit && kind == ConversionResultKind.ExplicitTry) {
                 Expression convFailed = GetTryConvertReturnValue(retType);
                 ParameterExpression tmp = Ast.Variable(convFailed.Type == typeof(object) ? typeof(object) : ret.Type, "tmp");
-                ret = Ast.Comma(
+                ret = Ast.Block(
                         new ParameterExpression[] { tmp },
                         AstUtils.Try(
-                            Ast.Assign(tmp, Ast.ConvertHelper(ret, tmp.Type))
+                            Ast.Assign(tmp, AstUtils.Convert(ret, tmp.Type))
                         ).Catch(
                             typeof(Exception),
                             Ast.Assign(tmp, convFailed)
@@ -344,7 +344,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private static MetaObject MakeSimpleConversionTarget(Type toType, Restrictions restrictions, MetaObject arg) {
             return new MetaObject(
-                Ast.ConvertHelper(arg.Expression, CompilerHelpers.GetVisibleType(toType)),
+                AstUtils.Convert(arg.Expression, CompilerHelpers.GetVisibleType(toType)),
                 restrictions);
 
             /*
@@ -370,7 +370,7 @@ namespace Microsoft.Scripting.Actions {
             Type extType = typeof(Extensible<>).MakeGenericType(toType);
 
             return new MetaObject(
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     GetExtensibleValue(extType, arg),
                     toType
                 ),
@@ -406,7 +406,7 @@ namespace Microsoft.Scripting.Actions {
             return new MetaObject(
                 Ast.New(
                     toType.GetConstructor(new Type[] { knownType }),
-                    Ast.ConvertHelper(arg.Expression, knownType)
+                    AstUtils.Convert(arg.Expression, knownType)
                 ),
                 restrictions
             );
@@ -421,7 +421,7 @@ namespace Microsoft.Scripting.Actions {
             // ConvertSelfToT -> Nullable<T>
             if (kind == ConversionResultKind.ExplicitCast) {
                 // if the conversion to T fails we just throw
-                Expression conversion = ConvertExpression(arg.Expression, valueType, kind, Ast.Null(typeof(CodeContext)));
+                Expression conversion = ConvertExpression(arg.Expression, valueType, kind, Ast.Constant(null, typeof(CodeContext)));
 
                 return new MetaObject(
                     Ast.New(
@@ -431,12 +431,12 @@ namespace Microsoft.Scripting.Actions {
                     restrictions
                 );
             } else {
-                Expression conversion = ConvertExpression(arg.Expression, valueType, kind, Ast.Null(typeof(CodeContext)));
+                Expression conversion = ConvertExpression(arg.Expression, valueType, kind, Ast.Constant(null, typeof(CodeContext)));
 
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
                 ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
                 return new MetaObject(
-                    Ast.Comma(
+                    Ast.Block(
                         new ParameterExpression[] { tmp },
                         Ast.Condition(
                             Ast.NotEqual(
@@ -465,9 +465,9 @@ namespace Microsoft.Scripting.Actions {
         public static Expression GetTryConvertReturnValue(Type type) {
             Expression res;
             if (type.IsInterface || type.IsClass) {
-                res = Ast.Null(type);
+                res = Ast.Constant(null, type);
             } else {
-                res = Ast.Null();
+                res = Ast.Constant(null);
             }
 
             return res;
@@ -479,7 +479,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private static Expression GetExtensibleValue(Type extType, MetaObject arg) {
             return Ast.Property(
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     arg.Expression,
                     extType
                 ),
@@ -509,7 +509,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private static MetaObject MakeNullTarget(Type toType, Restrictions restrictions) {
             return new MetaObject(
-                Ast.Convert(Ast.Null(), toType),
+                Ast.Convert(Ast.Constant(null), toType),
                 restrictions
             );
         }
@@ -522,7 +522,7 @@ namespace Microsoft.Scripting.Actions {
             return new MetaObject(
                 Ast.Call(
                     typeof(BinderOps).GetMethod("GetDelegate"),
-                    Ast.Null(typeof(CodeContext)),
+                    Ast.Constant(null, typeof(CodeContext)),
                     arg.Expression,
                     Ast.Constant(toType)
                 ),

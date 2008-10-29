@@ -15,6 +15,7 @@
 
 from iptest.assert_util import *
 skiptest("silverlight")
+skiptest("win32")
 
 from   time import sleep
 import sys
@@ -514,6 +515,22 @@ def test_cp4299():
         AreEqual(lines[i], expected_lines[i])
     AreEqual(len(lines), len(expected_lines))            
     
+def test_cp16520():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('min{(}2,{ENTER}')
+    superConsole.SendKeys('3{)}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    
+    #verification
+    lines = getTestOutput()[0]
+    expected_lines = [  ">>> min(2,\n",
+                        "... 3)\n",
+                        "2\n",
+                        ">>> outputRedirectStop()\n"]
+                   
+    AreEqual(len(lines), len(expected_lines))
+    for i in xrange(0, len(lines)):
+        AreEqual(lines[i], expected_lines[i])                        
     
 #------------------------------------------------------------------------------
 #--__main__

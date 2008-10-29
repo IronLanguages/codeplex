@@ -136,7 +136,7 @@ namespace Microsoft.Scripting.Actions {
             //);
             var match = Expression.Variable(typeof(bool), "match");
             vars.Add(match);
-            var resetMatch = Expression.Assign(match, Expression.True());
+            var resetMatch = Expression.Assign(match, Expression.Constant(true));
             body.Add(resetMatch);
             body.Add(
                 Expression.Assign(
@@ -147,8 +147,8 @@ namespace Microsoft.Scripting.Actions {
                         typeArgs,
                         @this,
                         Expression.Lambda<T>(
-                            Expression.Comma(
-                                Expression.Assign(match, Expression.False()),
+                            Expression.Block(
+                                Expression.Assign(match, Expression.Constant(false)),
                                 Expression.Empty(@return.Type)
                             ),
                             new ReadOnlyCollection<ParameterExpression>(@params)
@@ -196,14 +196,14 @@ namespace Microsoft.Scripting.Actions {
             //}
             Expression invokeRule;
             if (@return.Type == typeof(void)) {
-                invokeRule = Expression.Comma(
+                invokeRule = Expression.Block(
                     Expression.Invoke(ruleTarget, new ReadOnlyCollection<Expression>(@params)),
-                    Expression.IfThen(match, Expression.Return(@return))
+                    IfThen(match, Expression.Return(@return))
                 );
             } else {
-                invokeRule = Expression.Comma(
+                invokeRule = Expression.Block(
                     Expression.Assign(result, Expression.Invoke(ruleTarget, new ReadOnlyCollection<Expression>(@params))),
-                    Expression.IfThen(match, Expression.Return(@return, result))
+                    IfThen(match, Expression.Return(@return, result))
                 );
             }
 
@@ -218,14 +218,14 @@ namespace Microsoft.Scripting.Actions {
                 )
             );
 
-            var checkOriginalRule = Expression.IfThen(
+            var checkOriginalRule = IfThen(
                 Expression.Equal(startingTarget, ruleTarget),
                 Expression.Assign(originalRule, rule)
             );
 
             var tryRule = Expression.TryFinally(
                 invokeRule,
-                Expression.IfThen(
+                IfThen(
                     match,
                     Expression.Call(typeof(CallSiteOps), "SetPolymorphicTarget", typeArgs, @this)
                 )
@@ -233,7 +233,7 @@ namespace Microsoft.Scripting.Actions {
 
             var @break = Expression.Label();
 
-            var breakIfDone = Expression.IfThen(
+            var breakIfDone = IfThen(
                 Expression.Equal(index, count),
                 Expression.Break(@break)
             );
@@ -242,16 +242,16 @@ namespace Microsoft.Scripting.Actions {
             var incrementIndex = Expression.Assign(index, Expression.Add(index, Expression.Constant(1)));
 
             body.Add(
-                Expression.IfThen(
+                IfThen(
                     Expression.NotEqual(
                         Expression.Assign(applicable, Expression.Call(typeof(CallSiteOps), "GetRules", typeArgs, @this)),
-                        Expression.Null(applicable.Type)
+                        Expression.Constant(null, applicable.Type)
                     ),
-                    Expression.Comma(
+                    Expression.Block(
                         Expression.Assign(count, Expression.ArrayLength(applicable)),
-                        Expression.Assign(index, Expression.Zero()),
+                        Expression.Assign(index, Expression.Constant(0)),
                         Expression.Loop(
-                            Expression.Comma(
+                            Expression.Block(
                                 breakIfDone,
                                 getRule,
                                 tryRule,
@@ -319,23 +319,23 @@ namespace Microsoft.Scripting.Actions {
 
             tryRule = Expression.TryFinally(
                 invokeRule,
-                Expression.IfThen(match, Expression.Call(typeof(CallSiteOps), "AddRule", typeArgs, @this, rule))
+                IfThen(match, Expression.Call(typeof(CallSiteOps), "AddRule", typeArgs, @this, rule))
             );
 
             body.Add(
-                Expression.IfThen(
+                IfThen(
                     Expression.NotEqual(
                         Expression.Assign(
                             applicable,
                             Expression.Call(typeof(CallSiteOps), "FindApplicableRules", typeArgs, @this, args)
                         ),
-                        Expression.Null(applicable.Type)
+                        Expression.Constant(null, applicable.Type)
                     ),
-                    Expression.Comma(
+                    Expression.Block(
                         Expression.Assign(count, Expression.ArrayLength(applicable)),
-                        Expression.Assign(index, Expression.Zero()),
+                        Expression.Assign(index, Expression.Constant(0)),
                         Expression.Loop(
-                            Expression.Comma(
+                            Expression.Block(
                                 breakIfDone,
                                 getRule,
                                 tryRule,
@@ -380,7 +380,7 @@ namespace Microsoft.Scripting.Actions {
             //    // Rule we got back didn't work, try another one
             //    match = true;
             //}
-            body.Add(Expression.Assign(rule, Expression.Null(rule.Type)));
+            body.Add(Expression.Assign(rule, Expression.Constant(null, rule.Type)));
 
             getRule = Expression.Assign(
                 ruleTarget,
@@ -398,7 +398,7 @@ namespace Microsoft.Scripting.Actions {
 
             body.Add(
                 Expression.Loop(
-                    Expression.Comma(getRule, tryRule, resetMatch),
+                    Expression.Block(getRule, tryRule, resetMatch),
                     null, null
                 )
             );
@@ -408,7 +408,7 @@ namespace Microsoft.Scripting.Actions {
             var lambda = Expression.Lambda<T>(
                 Expression.Label(
                     @return,
-                    Expression.Comma(
+                    Expression.Block(
                         new ReadOnlyCollection<ParameterExpression>(vars),
                         new ReadOnlyCollection<Expression>(body)
                     )
@@ -423,6 +423,15 @@ namespace Microsoft.Scripting.Actions {
             return LambdaCompiler.CompileLambda<T>(lambda, false);
         }
 
+        // TODO: is this general enough that it should be on Expression?
+        /// <summary>
+        /// Behaves like an "if" statement in imperative languages. The type is
+        /// always treated as void regardless of the body's type. The else
+        /// branch is empty
+        /// </summary>
+        private static ConditionalExpression IfThen(Expression test, Expression ifTrue) {
+            return Expression.Condition(test, Expression.Void(ifTrue), Expression.Empty());
+        }
         private static Expression Convert(Expression arg, Type type) {
             if (TypeUtils.AreReferenceAssignable(type, arg.Type)) {
                 return arg;

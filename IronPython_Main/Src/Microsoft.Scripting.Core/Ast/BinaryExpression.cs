@@ -191,7 +191,7 @@ namespace Microsoft.Linq.Expressions {
             // 3. temp2
             Expression e4 = temp2;
 
-            return Expression.Comma(
+            return Expression.Block(
                 new ParameterExpression[] { temp1, temp2 },
                 e1, e2, e3, e4
             );
@@ -238,7 +238,7 @@ namespace Microsoft.Linq.Expressions {
             // tempObj[tempArg0, ... tempArgN] = tempValue
             exprs.Add(Expression.Assign(tempIndex, tempValue));
 
-            return Expression.Comma(vars, exprs);
+            return Expression.Block(vars, exprs);
         }
 
         public LambdaExpression Conversion {

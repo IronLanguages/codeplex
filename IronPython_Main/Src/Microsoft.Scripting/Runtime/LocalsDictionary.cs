@@ -22,39 +22,21 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Runtime {
 
     /// <summary>
-    /// Wraps ILocalVariables in a dictionary
+    /// Creates a dictionary of locals in this scope
     /// </summary>
     public sealed class LocalsDictionary : CustomSymbolDictionary {
-        private readonly IRuntimeVariables _locals;
-
-        // TODO: remove, lazily created stuff for CustomSymbolDictionary
+        private readonly IList<IStrongBox> _locals;
+        private readonly SymbolId[] _symbols;
         private Dictionary<SymbolId, IStrongBox> _boxes;
-        private SymbolId[] _symbols;
 
-        public LocalsDictionary(IRuntimeVariables locals) {
-            Assert.NotNull(locals);
+        public LocalsDictionary(IList<IStrongBox> locals, SymbolId[] symbols) {
+            Assert.NotNull(locals, symbols);
             _locals = locals;
-        }
-
-        public ReadOnlyCollection<string> Names {
-            get { return _locals.Names; }
-        }
-
-        private void EnsureSymbols() {
-            if (_symbols == null) {
-                int count = _locals.Names.Count;
-                SymbolId[] symbols = new SymbolId[count];
-                for (int i = 0; i < count; i++) {
-                    symbols[i] = SymbolTable.StringToId(_locals.Names[i]);
-                }
-                _symbols = symbols;
-            }
+            _symbols = symbols;
         }
         
         private void EnsureBoxes() {
             if (_boxes == null) {
-                EnsureSymbols();
-
                 int count = _symbols.Length;
                 Dictionary<SymbolId, IStrongBox> boxes = new Dictionary<SymbolId, IStrongBox>(count);
                 for (int i = 0; i < count; i++) {
@@ -65,7 +47,6 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public override SymbolId[] GetExtraKeys() {
-            EnsureSymbols();
             return _symbols;
         }
 

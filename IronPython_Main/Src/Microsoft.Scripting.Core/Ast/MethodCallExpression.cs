@@ -377,6 +377,7 @@ namespace Microsoft.Linq.Expressions {
         /// The helper to create the AST method call node. Will add conversions (Expression.Convert())
         /// to parameters and instance if necessary.
         /// </summary>
+        [Obsolete("use Expression.Call or Utils.SimpleCallHelper instead")]
         public static MethodCallExpression SimpleCallHelper(MethodInfo method, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.Requires(method.IsStatic, "method", Strings.MustBeStatic);
@@ -387,7 +388,7 @@ namespace Microsoft.Linq.Expressions {
         /// The helper to create the AST method call node. Will add conversions (Expression.Convert())
         /// to parameters and instance if necessary.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
+        [Obsolete("use Expression.Call or Utils.SimpleCallHelper instead")]
         public static MethodCallExpression SimpleCallHelper(Expression instance, MethodInfo method, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.Requires(instance != null ^ method.IsStatic, "instance");
@@ -418,6 +419,7 @@ namespace Microsoft.Linq.Expressions {
             return MethodCallExpression.Make(Annotations.Empty, method, instance, finalArgs);
         }
 
+        [Obsolete("do not use")]
         private static Expression[] ArgumentConvertHelper(Expression[] arguments, ParameterInfo[] parameters) {
             Debug.Assert(arguments != null);
             Debug.Assert(arguments != null);
@@ -445,6 +447,7 @@ namespace Microsoft.Linq.Expressions {
             return clone ?? arguments;
         }
 
+        [Obsolete("do not use")]
         private static Expression ArgumentConvertHelper(Expression argument, Type type) {
             if (argument.Type != type) {
                 if (type.IsByRef) {
@@ -457,6 +460,7 @@ namespace Microsoft.Linq.Expressions {
             return argument;
         }
 
+        [Obsolete("do not use")]
         private static bool CompatibleParameterTypes(Type parameter, Type argument) {
             if (parameter == argument || 
                 (!parameter.IsValueType && !argument.IsValueType && parameter.IsAssignableFrom(argument))) {
@@ -472,14 +476,14 @@ namespace Microsoft.Linq.Expressions {
         /// The complex call helper to create the AST method call node.
         /// Will add conversions (Expression.Convert()), deals with default parameter values and params arrays.
         /// </summary>
+        [Obsolete("use Expression.Call or Utils.ComplexCallHelper instead")]
         public static Expression ComplexCallHelper(MethodInfo method, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.Requires(method.IsStatic, "method", Strings.MustBeStatic);
             return ComplexCallHelper(null, method, arguments);
         }
 
-        // FxCop is just wrong on this one. "method" is required as MethodInfo by the call to "Call" factory
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
+        [Obsolete("use Expression.Call or Utils.ComplexCallHelper instead")]
         public static Expression ComplexCallHelper(Expression instance, MethodInfo method, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNullItems(arguments, "arguments");
@@ -556,6 +560,7 @@ namespace Microsoft.Linq.Expressions {
             return Call(instance, method, clone != null ? clone : arguments);
         }
 
+        [Obsolete("do not use")]
         private static Expression CreateDefaultValueExpression(ParameterInfo parameter) {
             if (parameter.HasDefaultValue()) {
                 return Constant(parameter.DefaultValue, parameter.ParameterType);

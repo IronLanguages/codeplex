@@ -13,9 +13,10 @@
 #
 #####################################################################################
 
-import clr
 from iptest.assert_util import *
+skiptest("win32")
 
+import clr
 import System
 
 load_iron_python_test()

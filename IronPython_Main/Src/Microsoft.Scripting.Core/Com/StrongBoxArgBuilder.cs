@@ -47,13 +47,13 @@ namespace Microsoft.Scripting.ComInterop {
 
         internal override Expression MarshalToRef(Expression parameter) {
             return _innerBuilder.MarshalToRef(
-                Expression.Field(Expression.ConvertHelper(parameter, _parameterType), "Value")
+                Expression.Field(Helpers.Convert(parameter, _parameterType), "Value")
             );
         }
 
         internal override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
             return _innerBuilder.UpdateFromReturn(
-                Expression.Field(Expression.ConvertHelper(parameter, _parameterType), "Value"),
+                Expression.Field(Helpers.Convert(parameter, _parameterType), "Value"),
                 newValue
             );
         }

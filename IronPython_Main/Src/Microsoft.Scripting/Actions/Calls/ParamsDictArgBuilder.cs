@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             Expression res = Ast.Call(
                 typeof(BinderOps).GetMethod("MakeSymbolDictionary"),
                 Ast.NewArrayInit(typeof(SymbolId), ConstantNames()),
-                Ast.NewArrayHelper(typeof(object), GetParameters(parameters, hasBeenUsed))
+                AstUtils.NewArrayHelper(typeof(object), GetParameters(parameters, hasBeenUsed))
             );
 
             return res;

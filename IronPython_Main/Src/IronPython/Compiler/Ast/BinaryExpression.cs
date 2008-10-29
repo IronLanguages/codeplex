@@ -169,7 +169,7 @@ namespace IronPython.Compiler.Ast {
                     (ag.DivisionOptions == PythonDivisionOptions.Warn || ag.DivisionOptions == PythonDivisionOptions.WarnAll)) {
                     MSAst.ParameterExpression tempLeft = ag.GetTemporary("left", left.Type);
                     MSAst.ParameterExpression tempRight = ag.GetTemporary("right", right.Type);
-                    return Ast.Comma(
+                    return Ast.Block(
                         Ast.Call(
                             AstGenerator.GetHelperMethod("WarnDivision"),
                             AstUtils.CodeContext(),

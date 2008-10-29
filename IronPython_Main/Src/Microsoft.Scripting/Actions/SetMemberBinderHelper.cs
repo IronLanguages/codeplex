@@ -133,7 +133,7 @@ namespace Microsoft.Scripting.Actions {
                         AddToBody(
                             Rule.MakeReturn(
                                 Binder, 
-                                Ast.SimpleCallHelper(
+                                AstUtils.SimpleCallHelper(
                                     setter, 
                                     Binder.ConvertExpression(
                                         Rule.Parameters[1],
@@ -156,8 +156,8 @@ namespace Microsoft.Scripting.Actions {
                                 Ast.Call(
                                     Ast.Constant(((ReflectedPropertyTracker)info).Property), // TODO: Private binding on extension properties
                                     typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
-                                    Ast.ConvertHelper(Instance, typeof(object)),
-                                    Ast.ConvertHelper(Rule.Parameters[1], typeof(object)),
+                                    AstUtils.Convert(Instance, typeof(object)),
+                                    AstUtils.Convert(Rule.Parameters[1], typeof(object)),
                                     Ast.NewArrayInit(typeof(object))
                                 )
                             )
@@ -178,10 +178,12 @@ namespace Microsoft.Scripting.Actions {
                 AddToBody(
                     Rule.MakeReturn(Binder,
                         MakeReturnValue(
-                            Ast.AssignField(
-                                Ast.ConvertHelper(Instance, field.DeclaringType),
-                                field.DeclaringType.GetField("Value"),
-                                Ast.ConvertHelper(Rule.Parameters[1], generic[0])
+                            Ast.Assign(
+                                Ast.Field(
+                                    AstUtils.Convert(Instance, field.DeclaringType),
+                                    field.DeclaringType.GetField("Value")
+                                ),
+                                AstUtils.Convert(Rule.Parameters[1], generic[0])
                             )
                         )
                     )
@@ -197,11 +199,13 @@ namespace Microsoft.Scripting.Actions {
                     Rule.MakeReturn(
                         Binder,
                         MakeReturnValue(
-                            Ast.AssignField(
-                                field.IsStatic ?
-                                    null :
-                                    Ast.Convert(Rule.Parameters[0], field.DeclaringType),
-                                field.Field,
+                            Ast.Assign(
+                                Ast.Field(
+                                    field.IsStatic ?
+                                        null :
+                                        Ast.Convert(Rule.Parameters[0], field.DeclaringType),
+                                    field.Field
+                                ),                                
                                 Binder.ConvertExpression(Rule.Parameters[1], field.FieldType, ConversionResultKind.ExplicitCast, Rule.Context)
                             )
                         )
@@ -213,12 +217,12 @@ namespace Microsoft.Scripting.Actions {
                         Binder,
                         MakeReturnValue(
                             Ast.Call(
-                                Ast.ConvertHelper(Ast.Constant(field.Field), typeof(FieldInfo)),
+                                AstUtils.Convert(Ast.Constant(field.Field), typeof(FieldInfo)),
                                 typeof(FieldInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object) }),
                                 field.IsStatic ?
-                                    Ast.Null() :
-                                    (Expression)Ast.ConvertHelper(Instance, typeof(object)),
-                                Ast.ConvertHelper(Rule.Parameters[1], typeof(object))
+                                    Ast.Constant(null) :
+                                    (Expression)AstUtils.Convert(Instance, typeof(object)),
+                                AstUtils.Convert(Rule.Parameters[1], typeof(object))
                             )
                         )
                     )
@@ -227,7 +231,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Expression MakeReturnValue(Expression expression) {
-            return Ast.Comma(
+            return Ast.Block(
                 expression,
                 Rule.Parameters[1]
             );
@@ -243,7 +247,7 @@ namespace Microsoft.Scripting.Actions {
                 if (setMem.ReturnType == typeof(bool)) {
                     ret = AstUtils.If(call, Rule.MakeReturn(Binder, Rule.Parameters[1]));
                 } else {
-                    ret = Rule.MakeReturn(Binder, Ast.Comma(call, Rule.Parameters[1]));
+                    ret = Rule.MakeReturn(Binder, Ast.Block(call, Rule.Parameters[1]));
                 }
                 AddToBody(ret);
                 return setMem.ReturnType != typeof(bool);

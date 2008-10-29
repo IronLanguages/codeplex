@@ -489,7 +489,7 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitLambda(LambdaExpression node) {
+        protected internal override Expression VisitLambda<T>(Expression<T> node) {
             int id = Enqueue(node);
             Out(
                 String.Format(CultureInfo.CurrentCulture,

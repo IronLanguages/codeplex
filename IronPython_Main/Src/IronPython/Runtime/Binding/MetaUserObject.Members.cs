@@ -188,7 +188,7 @@ namespace IronPython.Runtime.Binding {
             MetaObject res = bindingInfo.Body.GetMetaObject(this);
             res = new MetaObject(
                 Ast.Scope(
-                    Ast.Comma(
+                    Ast.Block(
                         Ast.Assign(bindingInfo.Self, self.Expression),
                         res.Expression
                     ),
@@ -305,7 +305,7 @@ namespace IronPython.Runtime.Binding {
 
             if (dts.GetAlwaysSucceeds) {
                 info.Body.FinishCondition(
-                    Ast.Comma(tryGet, info.Result)
+                    Ast.Block(tryGet, info.Result)
                 );
             } else {
                 info.Body.AddCondition(
@@ -383,7 +383,7 @@ namespace IronPython.Runtime.Binding {
                 ParameterExpression tmp = Ast.Variable(t, "getAttrRes");
 
                 expr = Ast.Scope(
-                    Ast.Comma(
+                    Ast.Block(
                         Utils.Try(
                             Ast.Assign(tmp, Ast.ConvertHelper(expr, t))
                         ).Catch(
@@ -517,7 +517,7 @@ namespace IronPython.Runtime.Binding {
             info.Body.AddVariable(tmp);
 
             info.Body.FinishCondition(
-                Ast.Comma(
+                Ast.Block(
                     Ast.Assign(
                         tmp,
                         Ast.Convert(
@@ -546,7 +546,7 @@ namespace IronPython.Runtime.Binding {
             Debug.Assert(context != null);
 
             info.Body.AddCondition(
-                Ast.Comma(
+                Ast.Block(
                     Ast.Assign(tmp, info.Args[1].Expression),
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTrySetValue"),

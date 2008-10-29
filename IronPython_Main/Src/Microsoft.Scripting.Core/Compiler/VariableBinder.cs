@@ -31,7 +31,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         internal static AnalyzedTree Bind(LambdaExpression lambda) {
             var binder = new VariableBinder();
-            binder.VisitLambda(lambda);
+            binder.Visit(lambda);
             return binder._tree;
         }
 
@@ -66,7 +66,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return node;
         }
 
-        protected internal override Expression VisitLambda(LambdaExpression node) {
+        protected internal override Expression VisitLambda<T>(Expression<T> node) {
             _scopes.Push(_tree.Scopes[node] = new CompilerScope(node));
             _constants.Push(_tree.Constants[node] = new BoundConstants());
             Visit(MergeScopes(node));

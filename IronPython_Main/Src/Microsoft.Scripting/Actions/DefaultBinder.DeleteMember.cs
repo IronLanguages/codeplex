@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Actions {
             return DeleteMember(
                 name,
                 target,
-                Ast.Null(typeof(CodeContext))
+                Ast.Constant(null, typeof(CodeContext))
             );
         }
 
@@ -120,7 +120,7 @@ namespace Microsoft.Scripting.Actions {
                 if (delMem.ReturnType == typeof(bool)) {
                     delInfo.Body.AddCondition(
                         call,
-                        Ast.Null()
+                        Ast.Constant(null)
                     );
                 } else {
                     delInfo.Body.FinishCondition(call);

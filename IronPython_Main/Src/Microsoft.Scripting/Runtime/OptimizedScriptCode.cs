@@ -192,7 +192,7 @@ namespace Microsoft.Scripting.Runtime {
             LambdaExpression lambda = diskRewriter.RewriteLambda(Code);
             
             // rewrite global variables:
-            var globalRewriter = new GlobalArrayRewriter(symbolDict);
+            var globalRewriter = new GlobalArrayRewriter(symbolDict, typeGen);
             lambda = globalRewriter.RewriteLambda(lambda);
             
             MethodBuilder builder = lambda.CompileToMethod(typeGen.TypeBuilder, CompilerHelpers.PublicStatic | MethodAttributes.SpecialName, false);

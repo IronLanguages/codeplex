@@ -20,6 +20,7 @@ using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -59,9 +60,8 @@ namespace Microsoft.Scripting.Actions.Calls {
                         FieldInfo fi = (FieldInfo)_membersSet[i];
                         if (!fi.IsLiteral && !fi.IsInitOnly) {
                             sets.Add(
-                                Ast.AssignField(
-                                    tmp,
-                                    fi,
+                                Ast.Assign(
+                                    Ast.Field(tmp, fi),
                                     ConvertToHelper(parameterBinder, value, fi.FieldType)
                                 )
                             );
@@ -84,9 +84,8 @@ namespace Microsoft.Scripting.Actions.Calls {
                         PropertyInfo pi = (PropertyInfo)_membersSet[i];
                         if (pi.GetSetMethod(_privateBinding) != null) {
                             sets.Add(
-                                Ast.AssignProperty(
-                                    tmp,
-                                    pi,
+                                Ast.Assign(
+                                    Ast.Property(tmp, pi),
                                     ConvertToHelper(parameterBinder, value, pi.PropertyType)
                                 )
                             );
@@ -111,7 +110,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 tmp
             );
 
-            Expression newCall = Ast.Comma(
+            Expression newCall = Ast.Block(
                 sets.ToArray()
             );
 
@@ -124,7 +123,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             if (type.IsAssignableFrom(value.Type)) {
-                return Ast.ConvertHelper(value, type);
+                return AstUtils.Convert(value, type);
             }
 
             return parameterBinder.GetDynamicConversion(value, type);

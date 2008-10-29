@@ -148,5 +148,12 @@ namespace Microsoft.Scripting {
                 return _idDict.ContainsKey(symbol);
             }
         }
+
+        internal static SymbolId StringToIdOrEmpty(string value) {
+            if (value == null) {
+                return SymbolId.Empty;
+            }
+            return StringToId(value);
+        }
     }
 }

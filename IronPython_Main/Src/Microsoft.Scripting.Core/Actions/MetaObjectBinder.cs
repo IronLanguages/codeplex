@@ -124,13 +124,13 @@ namespace Microsoft.Scripting.Actions {
                     if (IsDeferExpression(conditional.IfTrue)) {
                         return Expression.Condition(
                             Expression.Not(conditional.Test),
-                            Expression.Return(@return, Expression.ConvertHelper(conditional.IfFalse, @return.Type)),
+                            Expression.Return(@return, Helpers.Convert(conditional.IfFalse, @return.Type)),
                             Expression.Empty()
                         );
                     } else if (IsDeferExpression(conditional.IfFalse)) {
                         return Expression.Condition(
                             conditional.Test,
-                            Expression.Return(@return, Expression.ConvertHelper(conditional.IfTrue, @return.Type)),
+                            Expression.Return(@return, Helpers.Convert(conditional.IfTrue, @return.Type)),
                             Expression.Empty()
                         );
                     }
@@ -146,22 +146,15 @@ namespace Microsoft.Scripting.Actions {
                     // trying to convert it
                     BlockExpression block = (BlockExpression)body;
                     if (block.Expressions.Count > 0) {
-                        Expression[] nodes = new Expression[block.Expressions.Count];
-                        for (int i = 0; i < nodes.Length - 1; i++) {
-                            nodes[i] = block.Expressions[i];
-                        }
-                        nodes[nodes.Length - 1] = AddReturn(block.Expressions[block.Expressions.Count - 1], @return);
+                        Expression[] nodes = block.Expressions.ToArray();
+                        nodes[nodes.Length - 1] = AddReturn(nodes[nodes.Length - 1], @return);
 
-                        if (block.Type == typeof(void)) {
-                            return Expression.Block(block.Variables, nodes);
-                        } else {
-                            return Expression.Comma(block.Variables, nodes);
-                        }
+                        return Expression.Block(block.Variables, nodes);
                     }
 
                     goto default;
                 default:
-                    return Expression.Return(@return, Expression.ConvertHelper(body, @return.Type));
+                    return Expression.Return(@return, Helpers.Convert(body, @return.Type));
             }
         }
 

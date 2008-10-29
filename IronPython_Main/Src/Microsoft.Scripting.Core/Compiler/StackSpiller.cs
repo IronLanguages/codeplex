@@ -63,7 +63,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// The source of temporary variables
         /// </summary>
-        private readonly TempMaker _tm;
+        private readonly TempMaker _tm = new TempMaker();
 
         #region StackSpiller entry points
 
@@ -74,16 +74,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// entering a try statement).
         /// </summary>
         internal static LambdaExpression AnalyzeLambda(LambdaExpression lambda) {
-            return new StackSpiller(new TempMaker()).Rewrite(lambda);
+            return lambda.Accept(new StackSpiller());
         }
 
         #endregion
 
-        private StackSpiller(TempMaker tm) {
-            _tm = tm;
+        private StackSpiller() {
         }
 
-        private LambdaExpression Rewrite(LambdaExpression lambda) {
+        // called by Expression<T>.Accept
+        internal Expression<T> Rewrite<T>(Expression<T> lambda) {
             VerifyTemps();
 
             // Lambda starts with an empty stack
@@ -96,11 +96,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // (none of these will be hoisted so there is no closure impact)
                 Expression newBody = body.Node;
                 if (_tm.Temps.Count > 0) {
-                    newBody = Expression.Comma(_tm.Temps, newBody);
+                    newBody = Expression.Block(_tm.Temps, newBody);
                 }
 
                 // Clone the lambda, replacing the body & variables
-                return lambda.CloneWith(lambda.Name, newBody, lambda.Annotations, lambda.Parameters);
+                return new Expression<T>(lambda.Annotations, lambda.Name, newBody, lambda.Parameters);
             }
 
             return lambda;
@@ -523,7 +523,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         comma[i + 1] = add.Node;
                     }
                     comma[inits.Count + 1] = tempNew;
-                    expr = Expression.Comma(comma);
+                    expr = Expression.Block(comma);
                     break;
                 default:
                     throw Assert.Unreachable;
@@ -571,7 +571,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         comma[i + 1] = initExpr;
                     }
                     comma[bindings.Count + 1] = tempNew;
-                    expr = Expression.Comma(comma);
+                    expr = Expression.Block(comma);
                     break;
                 default:
                     throw Assert.Unreachable;

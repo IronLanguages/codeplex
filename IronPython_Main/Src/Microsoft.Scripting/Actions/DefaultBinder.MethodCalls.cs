@@ -24,6 +24,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -399,7 +400,7 @@ namespace Microsoft.Scripting.Actions {
                     res = res.Merge(
                         Restrictions.GetTypeRestriction(
                             Ast.Call(
-                                Ast.ConvertHelper(
+                                AstUtils.Convert(
                                     listArg,
                                     typeof(IList<object>)
                                 ),
@@ -447,7 +448,7 @@ namespace Microsoft.Scripting.Actions {
                         typeof(BinderOps).GetMethod("CheckDictionaryMembers"),
                         Ast.Convert(args[args.Count - 1].Expression, typeof(IDictionary)),
                         Ast.Constant(names),
-                        testTypes ? Ast.Constant(types) : Ast.Null(typeof(Type[]))
+                        testTypes ? Ast.Constant(types) : Ast.Constant(null, typeof(Type[]))
                     )
                 )
             );
@@ -546,7 +547,7 @@ namespace Microsoft.Scripting.Actions {
                     types.Add(
                         new MetaObject(
                             Ast.Call(
-                                Ast.ConvertHelper(dictMo.Expression, typeof(IDictionary)),
+                                AstUtils.Convert(dictMo.Expression, typeof(IDictionary)),
                                 typeof(IDictionary).GetMethod("get_Item"),
                                 Ast.Constant(de.Key as string)
                             ),

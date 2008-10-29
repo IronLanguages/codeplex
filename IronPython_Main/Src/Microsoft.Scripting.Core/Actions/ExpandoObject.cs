@@ -12,7 +12,6 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,6 +20,7 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -245,7 +245,7 @@ namespace Microsoft.Scripting.Actions {
                                 GetLimitedSelf(),
                                 Expression.Constant(klass),
                                 Expression.Constant(index),
-                                Expression.ConvertHelper(
+                                Helpers.Convert(
                                     value.Expression,
                                     typeof(object)
                                 )
@@ -312,7 +312,7 @@ namespace Microsoft.Scripting.Actions {
                     // class to discover the name.
                     Debug.Assert(originalClass != klass);
 
-                    ifTestSucceeds = Expression.Comma(
+                    ifTestSucceeds = Expression.Block(
                         Expression.Call(
                             null,
                             typeof(RuntimeOps).GetMethod("ExpandoPromoteClass"),
@@ -364,7 +364,7 @@ namespace Microsoft.Scripting.Actions {
             /// Returns our Expression converted to our known LimitType
             /// </summary>
             private Expression GetLimitedSelf() {
-                return Expression.ConvertHelper(
+                return Helpers.Convert(
                     Expression,
                     LimitType
                 );

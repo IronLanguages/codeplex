@@ -14,7 +14,6 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 
@@ -58,12 +57,16 @@ namespace Microsoft.Scripting.Ast {
         private static readonly ConstructorInfo _SymbolIdCtor = typeof(SymbolId).GetConstructor(new[] { typeof(int) });
 
         public override Expression Reduce() {
-            if (_value == SymbolId.Empty) {
+            return GetExpression(_value);
+        }
+
+        internal static Expression GetExpression(SymbolId value) {
+            if (value == SymbolId.Empty) {
                 return _SymbolIdEmpty;
-            } else if (_value == SymbolId.Invalid) {
+            } else if (value == SymbolId.Invalid) {
                 return _SymbolIdInvalid;
             } else {
-                return Expression.New(_SymbolIdCtor, Expression.Constant(_value.Id));
+                return Expression.New(_SymbolIdCtor, Expression.Constant(value.Id));
             }
         }
 

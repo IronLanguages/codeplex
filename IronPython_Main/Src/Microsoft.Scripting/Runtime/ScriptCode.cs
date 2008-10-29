@@ -33,6 +33,7 @@ namespace Microsoft.Scripting {
     /// scopes. Hosting API counterpart for this class is <c>CompiledCode</c>.
     /// </summary>
     public class ScriptCode {
+        // TODO: should probably store this as Expression<DlrMainCallTarget>
         private readonly LambdaExpression _code;
         private readonly SourceUnit _sourceUnit;
         private DlrMainCallTarget _target;
@@ -91,9 +92,11 @@ namespace Microsoft.Scripting {
 
         private DlrMainCallTarget EnsureTarget(LambdaExpression code) {
             if (_target == null) {
-                Expression<DlrMainCallTarget> lambda = code as Expression<DlrMainCallTarget>;
+                var lambda = code as Expression<DlrMainCallTarget>;
                 if (lambda == null) {
-                    lambda = (new GlobalLookupRewriter().RewriteLambda(code));
+                    // If language APIs produced the wrong delegate type,
+                    // rewrite the lambda with the correct type
+                    lambda = Expression.Lambda<DlrMainCallTarget>(code.Body, code.Name, code.Annotations, code.Parameters);
                 }
                 Interlocked.CompareExchange(ref _target, lambda.Compile(SourceUnit.EmitDebugSymbols), null);
             }
@@ -254,13 +257,11 @@ namespace Microsoft.Scripting {
 
                     Debug.Assert(infos.Item001[i].Length == infos.Item002[i].Length);
 
-                    for (int j = 0; j < infos.Item001[i].Length; j++) {
-                        DlrMainCallTarget[] methods = infos.Item001[i];
-                        string[] names = infos.Item002[i];
+                    DlrMainCallTarget[] methods = infos.Item001[i];
+                    string[] names = infos.Item002[i];
 
-                        for(int k = 0; k<methods.Length; k++) {
-                            codes.Add(lc.LoadCompiledCode(methods[k], names[k]));
-                        }
+                    for (int j = 0; j < methods.Length; j++) {                        
+                        codes.Add(lc.LoadCompiledCode(methods[j], names[j]));                        
                     }
                 }
             }

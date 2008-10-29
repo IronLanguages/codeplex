@@ -18,6 +18,7 @@
 ##
 
 from iptest.assert_util import *
+skiptest("win32")
 import System
 
 if not is_silverlight:

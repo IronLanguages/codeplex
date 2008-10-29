@@ -130,11 +130,11 @@ namespace IronPython.Runtime.Binding {
                     LabelTarget target = Ast.Label();
                     res = new MetaObject(
                         Ast.Scope(
-                            Ast.Comma(
+                            Ast.Block(
                                 Utils.Loop(
                                     null,                                                     // test
                                     Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
-                                    Ast.Block(                                                // body
+                                    Ast.BlockVoid(                                                // body
                         // getItemRes = param0.__getitem__(curIndex)
                                         Utils.Try(
                                             Ast.Assign(
@@ -1406,7 +1406,7 @@ namespace IronPython.Runtime.Binding {
                 if (target.Success) {
                     if (IsSetter) {
                         res = new MetaObject(
-                            Ast.Comma(res.Expression, args[args.Length - 1].Expression),
+                            Ast.Block(res.Expression, args[args.Length - 1].Expression),
                             res.Restrictions
                         );
                     }
@@ -1457,7 +1457,7 @@ namespace IronPython.Runtime.Binding {
                 );
 
                 if (IsSetter) {
-                    retVal = Ast.Comma(retVal, args[args.Length - 1].Expression);
+                    retVal = Ast.Block(retVal, args[args.Length - 1].Expression);
                 }
 
                 return new MetaObject(
@@ -1580,7 +1580,7 @@ namespace IronPython.Runtime.Binding {
 
                     return new MetaObject(
                         Ast.Scope(
-                            Ast.Comma(
+                            Ast.Block(
                                 Ast.Assign(_lengthVar, Ast.Constant(null, _lengthVar.Type)),
                                 res.Expression
                             ),

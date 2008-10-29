@@ -162,7 +162,7 @@ namespace Microsoft.Scripting.ComInterop {
             AddNotNull(vars, _returnValue);
             AddNotNull(vars, _dispIdsOfKeywordArgsPinned);
             AddNotNull(vars, _propertyPutDispId);
-            return vars.Count > 0 ? Expression.Comma(vars, expression) : expression;
+            return vars.Count > 0 ? Expression.Block(vars, expression) : expression;
         }
 
         private Expression GenerateTryBlock() {
@@ -179,17 +179,20 @@ namespace Microsoft.Scripting.ComInterop {
             if (_keywordArgNames.Length > 0) {
                 string[] names = _keywordArgNames.AddFirst(_methodDesc.Name);
 
-                expr = Expression.AssignField(
-                    DispParamsVariable,
-                    typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs"),
-                    Expression.Call(typeof(UnsafeMethods).GetMethod("GetIdsOfNamedParameters"),
-                        DispatchObjectVariable,
-                        Expression.Constant(names),
-                        DispIdVariable,
-                        DispIdsOfKeywordArgsPinnedVariable
+                tryStatements.Add(
+                    Expression.Assign(
+                        Expression.Field(
+                            DispParamsVariable,
+                            typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs")
+                        ),
+                        Expression.Call(typeof(UnsafeMethods).GetMethod("GetIdsOfNamedParameters"),
+                            DispatchObjectVariable,
+                            Expression.Constant(names),
+                            DispIdVariable,
+                            DispIdsOfKeywordArgsPinnedVariable
+                        )
                     )
                 );
-                tryStatements.Add(expr);
             }
 
             //
@@ -268,8 +271,7 @@ namespace Microsoft.Scripting.ComInterop {
 
             Expression[] parametersForUpdates = MakeArgumentExpressions();
             Expression returnValues = _varEnumSelector.ReturnBuilder.ToExpression(invokeResultObject);
-            expr = Expression.Assign(ReturnValueVariable, returnValues);
-            tryStatements.Add(expr);
+            tryStatements.Add(Expression.Assign(ReturnValueVariable, returnValues));
 
             for (int i = 0, n = variants.Length; i < n; i++) {
                 Expression updateFromReturn = variants[i].UpdateFromReturn(parametersForUpdates[i + 1]);
@@ -278,10 +280,9 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
 
-            return Expression.Block(
-                new ParameterExpression[] { excepInfo, argErr, hresult },
-                tryStatements
-            );
+            tryStatements.Add(Expression.Empty());
+
+            return Expression.Block(new[] { excepInfo, argErr, hresult }, tryStatements);
         }
 
         private Expression GenerateFinallyBlock() {
@@ -333,6 +334,7 @@ namespace Microsoft.Scripting.ComInterop {
                 );
             }
 
+            finallyStatements.Add(Expression.Empty());
             return Expression.Block(finallyStatements);
         }
 
@@ -360,9 +362,11 @@ namespace Microsoft.Scripting.ComInterop {
             //
             if (_totalExplicitArgs != 0) {
                 exprs.Add(
-                    Expression.AssignField(
-                        DispParamsVariable,
-                        typeof(ComTypes.DISPPARAMS).GetField("rgvarg"),
+                    Expression.Assign(
+                        Expression.Field(
+                            DispParamsVariable,
+                            typeof(ComTypes.DISPPARAMS).GetField("rgvarg")
+                        ),
                         Expression.Call(
                             typeof(UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
                             VariantArray.GetStructField(ParamVariantsVariable, 0)
@@ -375,9 +379,11 @@ namespace Microsoft.Scripting.ComInterop {
             // _dispParams.cArgs = <number_of_params>;
             //
             exprs.Add(
-                Expression.AssignField(
-                    DispParamsVariable,
-                    typeof(ComTypes.DISPPARAMS).GetField("cArgs"),
+                Expression.Assign(
+                    Expression.Field(
+                        DispParamsVariable,
+                        typeof(ComTypes.DISPPARAMS).GetField("cArgs")
+                    ),
                     Expression.Constant(_totalExplicitArgs)
                 )
             );
@@ -421,9 +427,11 @@ namespace Microsoft.Scripting.ComInterop {
                 // _dispParams.cNamedArgs = N;
                 //
                 exprs.Add(
-                    Expression.AssignField(
-                        DispParamsVariable,
-                        typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
+                    Expression.Assign(
+                        Expression.Field(
+                            DispParamsVariable,
+                            typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs")
+                        ),
                         Expression.Constant(_keywordArgNames.Length)
                     )
                 );
@@ -458,13 +466,13 @@ namespace Microsoft.Scripting.ComInterop {
                     vars.Add(variant.TempVariable);
                 }
             }
-            return Expression.Comma(vars, exprs);
+            return Expression.Block(vars, exprs);
         }
 
         private Expression MakeUnoptimizedInvokeTarget() {
             Expression[] args = new Expression[_args.Length];
             for (int i = 0; i < args.Length; i++) {
-                args[i] = Expression.ConvertHelper(_args[i].Expression, typeof(object));
+                args[i] = Helpers.Convert(_args[i].Expression, typeof(object));
             }
 
             // UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs)
