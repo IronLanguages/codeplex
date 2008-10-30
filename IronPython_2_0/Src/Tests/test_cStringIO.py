@@ -281,6 +281,17 @@ def test_empty():
     i.close()
     AssertError(ValueError, i.truncate)
     
+def test_cp8567():
+    for x in ["", "1", "12", "12345", 
+                #u"123", #CodePlex 19220
+                ]:
+        for i in [5, 6, 7, 2**8, 100, 2**16-1, 2**16, 2**16, 2**31-2, 2**31-1]:
+            cio = cStringIO.StringIO(x)
+            cio.truncate(i)
+            AreEqual(cio.tell(), len(x))
+            cio.close()
+    
+    
     
 def test_i_o():
     for t in [  call_close,

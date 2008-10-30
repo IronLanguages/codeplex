@@ -658,6 +658,8 @@ def test_stat_result():
     AreEqual(object.st_mtime,8)
     AreEqual(object.st_ctime,9)
     
+    AreEqual(str(nt.stat_result(range(12))), "(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)") #CodePlex 8755
+    
     #negative tests
     statResult = [0,1,2,3,4,5,6,7,8,]
     AssertError(TypeError,nt.stat_result,statResult)

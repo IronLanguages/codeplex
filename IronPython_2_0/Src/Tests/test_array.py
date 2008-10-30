@@ -270,6 +270,41 @@ def test_array_array_B():
     
     AreEqual(array.array('b', 'foo'), array.array('b', [102, 111, 111]))
 
+
+def test_cp9348():
+    test_cases = {  ('c', "a") : "array('c', 'a')",
+                    ('b', "a") : "array('b', [97])",
+                    ('B', "a") : "array('B', [97])",
+                    #('u', u"a") : "array('u', u'a')", #CodePlex 19215
+                    ('h', "\x12\x34") : "array('h', [13330])",
+                    ('H', "\x12\x34") : "array('H', [13330])",
+                    ('i', "\x12\x34\x45\x67") : "array('i', [1732588562])",
+                    #('I', "\x12\x34\x45\x67") : "array('I', [1732588562L])", #CodePlex 19216
+                    #('l', "\x12\x34\x45\x67") : "array('l', [1732588562])", #CodePlex 19217
+                    ('L', "\x12\x34\x45\x67") : "array('L', [1732588562L])",
+                    ('f', "\x12\x34\x45\x67") : "array('f', [9.3126672485384569e+023])",
+                    ('d', "\x12\x34\x45\x67\x12\x34\x45\x67") : "array('d', [2.9522485325887698e+189])",
+                }
+    for key in test_cases.keys():
+        type_code, param = key
+        temp_val = array.array(type_code, param)
+        AreEqual(str(temp_val), test_cases[key]) 
+
+def test_cp8736():
+    a = array.array('b')
+    for i in [-1, -2, -3, -(2**8), -1000, -(2**16)+1, -(2**16), -(2**16)-1, -(2**64)]:
+        a[:i] = a
+        AreEqual(str(a), "array('b')")
+
+    a2 = array.array('b', 'a')
+    a2[:-1] = a2
+    AreEqual(str(a2), "array('b', [97, 97])")
+    a2[:-(2**64)-1] = a2
+    if is_cli or is_silverlight:
+        print "CodePlex 8736"
+    else:        
+        AreEqual(str(a2), "array('b', [97, 97, 97, 97])")  
+    
 def test_array_typecode():
     x = array.array('i')
     AreEqual(type(x.typecode), str)
@@ -285,7 +320,27 @@ def test_copy():
     y = x.__copy__()
     Assert(id(x) != id(y), "copy should copy")
     
-    y = x.__deepcopy__()
+    if is_cli or is_silverlight:
+        #CodePlex 19200
+        y = x.__deepcopy__()
+    else:
+        y = x.__deepcopy__(x)
     Assert(id(x) != id(y), "copy should copy")
+
+def test_cp9350():
+    for i in [1, 1L]:
+        a = array.array('B', [0]) * i
+        AreEqual(a, array.array('B', [0]))
+
+    for i in [2, 2L]:
+        a = array.array('B', [0]) * i
+        AreEqual(a, array.array('B', [0, 0]))
+    
+    for i in [2**8, long(2**8)]:
+        a = array.array('B', [1]) * i
+        AreEqual(a, array.array('B', [1]*2**8))
+    
+
+
 
 run_test(__name__)

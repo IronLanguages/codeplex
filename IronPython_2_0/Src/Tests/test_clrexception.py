@@ -14,6 +14,7 @@
 #####################################################################################
 
 from iptest.assert_util import *
+skiptest("win32")
 import System
 import System.IO
 import System.ComponentModel

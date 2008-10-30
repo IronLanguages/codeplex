@@ -15,6 +15,7 @@
 
 from iptest.assert_util import *
 skiptest("silverlight")
+skiptest("win32")
 from iptest.console_util import IronPythonInstance
 import sys
 import nt
@@ -357,3 +358,5 @@ run_test(__name__)
 if is_cli:
     # in save assemblies we have too many files being written... give time for things to settle down.
     Threading.Thread.CurrentThread.Join(10000)
+
+

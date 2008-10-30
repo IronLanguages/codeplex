@@ -40,7 +40,10 @@ def test_assemblybuilder_instance():
     name.Name = 'Test'
     assemblyBuilder = System.AppDomain.CurrentDomain.DefineDynamicAssembly(name, System.Reflection.Emit.AssemblyBuilderAccess.Run)    
     
-    AreEqual(len(dir(assemblyBuilder)), 75)
+    asm_builder_dir = dir(assemblyBuilder)
+    AreEqual(len(asm_builder_dir), 75)
+    Assert("AddResourceFile" in asm_builder_dir)
+    Assert("CreateInstance" in asm_builder_dir)
     
 def test_type():
     mscorlib = Assembly.Load("mscorlib")
