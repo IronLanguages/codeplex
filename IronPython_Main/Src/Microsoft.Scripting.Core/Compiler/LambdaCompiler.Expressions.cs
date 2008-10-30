@@ -54,7 +54,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             switch (node.NodeType) {
                 case ExpressionType.Assign:
-                    Emit((AssignmentExpression)node, EmitAs.Void);
+                    EmitAssign((BinaryExpression)node, EmitAs.Void);
                     break;
                 case ExpressionType.Block:
                     Emit((BlockExpression)node, EmitAs.Void);
@@ -163,8 +163,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitGetIndexCall(node, objectType);
         }
 
-        private void EmitIndexAssignment(AssignmentExpression node, EmitAs emitAs) {
-            var index = (IndexExpression)node.Expression;
+        private void EmitIndexAssignment(BinaryExpression node, EmitAs emitAs) {
+            var index = (IndexExpression)node.Left;
 
             // Emit instance, if calling an instance method
             Type objectType = null;
@@ -179,7 +179,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // Emit value
-            EmitExpression(node.Value);
+            EmitExpression(node.Right);
 
             // Save the expression value, if needed
             LocalBuilder temp = null;
@@ -460,10 +460,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Cgt_Un);
         }
 
-        private void EmitVariableAssignment(AssignmentExpression node, EmitAs emitAs) {
-            var variable = (ParameterExpression)node.Expression;
+        private void EmitVariableAssignment(BinaryExpression node, EmitAs emitAs) {
+            var variable = (ParameterExpression)node.Left;
 
-            EmitExpression(node.Value);
+            EmitExpression(node.Right);
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Dup);
             }
@@ -485,12 +485,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitAssignmentExpression(Expression expr) {
-            Emit((AssignmentExpression)expr, EmitAs.Default);
+        private void EmitAssignBinaryExpression(Expression expr) {
+            EmitAssign((BinaryExpression)expr, EmitAs.Default);
         }
 
-        private void Emit(AssignmentExpression node, EmitAs emitAs) {
-            switch (node.Expression.NodeType) {
+        private void EmitAssign(BinaryExpression node, EmitAs emitAs) {
+            switch (node.Left.NodeType) {
                 case ExpressionType.Index:
                     EmitIndexAssignment(node, emitAs);
                     return;
@@ -501,7 +501,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitVariableAssignment(node, emitAs);
                     return;
                 default:
-                    throw Error.InvalidLvalue(node.Expression.NodeType);
+                    throw Error.InvalidLvalue(node.Left.NodeType);
             }
         }
 
@@ -523,8 +523,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _scope.EmitVariableAccess(this, node.Variables);
         }
 
-        private void EmitMemberAssignment(AssignmentExpression node, EmitAs emitAs) {
-            MemberExpression lvalue = (MemberExpression)node.Expression;
+        private void EmitMemberAssignment(BinaryExpression node, EmitAs emitAs) {
+            MemberExpression lvalue = (MemberExpression)node.Left;
             MemberInfo member = lvalue.Member;
 
             // emit "this", if any
@@ -534,7 +534,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             // emit value
-            EmitExpression(node.Value);
+            EmitExpression(node.Right);
 
             LocalBuilder temp = null;
             if (emitAs != EmitAs.Void) {

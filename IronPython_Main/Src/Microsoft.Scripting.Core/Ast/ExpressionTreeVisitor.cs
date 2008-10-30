@@ -121,15 +121,6 @@ namespace Microsoft.Linq.Expressions {
             return new ReadOnlyCollection<T>(newNodes);
         }
 
-        protected internal virtual Expression VisitAssignment(AssignmentExpression node) {
-            Expression e = Visit(node.Expression);
-            Expression v = Visit(node.Value);
-            if (e == node.Expression && v == node.Value) {
-                return node;
-            }
-            return Expression.Assign(e, v, node.Annotations);
-        }
-
         protected internal virtual Expression VisitBinary(BinaryExpression node) {
             // Walk children in evaluation order: left, conversion, right
             Expression l = Visit(node.Left);

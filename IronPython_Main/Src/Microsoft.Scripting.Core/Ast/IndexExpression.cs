@@ -74,30 +74,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _arguments; }
         }
 
-        internal override void BuildString(StringBuilder builder) {            
-            Debug.Assert(builder != null);
-
-            if (_instance != null) {
-                _instance.BuildString(builder);
-            } else {
-                Debug.Assert(_indexer != null);
-                builder.Append(_indexer.DeclaringType.Name);
-            }
-
-            if (_indexer != null) {
-                builder.Append(".");
-                builder.Append(_indexer.Name);
-            }
-            builder.Append("[");
-            for (int i = 0, n = _arguments.Count; i < n; i++) {
-                if (i > 0) {
-                    builder.Append(", ");
-                }
-                _arguments[i].BuildString(builder);
-            }
-            builder.Append("]");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitIndex(this);
         }

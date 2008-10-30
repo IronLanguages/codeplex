@@ -31,17 +31,6 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<MemberBinding> Bindings {
             get { return _bindings; }
         }
-        internal override void BuildString(StringBuilder builder) {
-            builder.Append(Member.Name);
-            builder.Append(" = {");
-            for (int i = 0, n = _bindings.Count; i < n; i++) {
-                if (i > 0) {
-                    builder.Append(", ");
-                }
-                _bindings[i].BuildString(builder);
-            }
-            builder.Append("}");
-        }
     }
     
 

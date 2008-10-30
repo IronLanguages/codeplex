@@ -166,7 +166,8 @@
     <Compile Include="Actions\SetIndexBinder.cs" />
     <Compile Include="Actions\SetMemberBinder.cs" />
     <Compile Include="Actions\SmallRuleSet.cs" />
-    <Compile Include="Actions\UnaryOperationBinder.cs" />
+    <Compile Include="Actions\UnaryOperationBinder.cs" />
+    <Compile Include="Ast\ExpressionStringBuilder.cs" />
     <Compile Include="Compiler\BoundConstants.cs" />
     <Compile Include="Ast\DebugInfoExpression.cs" />
     <Compile Include="Ast\SymbolDocumentInfo.cs" />
@@ -189,7 +190,6 @@
     <Compile Include="Ast\DynamicExpression.cs" />
     <Compile Include="Ast\Annotations.cs" />
     <Compile Include="Ast\ArgumentInfo.cs" />
-    <Compile Include="Ast\AssignmentExpression.cs" />
     <Compile Include="Actions\AutoRuleTemplate.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\BlockExpression.cs" />

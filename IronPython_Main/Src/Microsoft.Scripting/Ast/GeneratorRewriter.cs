@@ -139,7 +139,7 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
-        private AssignmentExpression ToTemp(ref Expression e) {
+        private BinaryExpression ToTemp(ref Expression e) {
             Debug.Assert(e != null);
             var temp = Expression.Variable(e.Type, "$temp$" + _temps.Count);
             _temps.Add(temp);
@@ -448,15 +448,15 @@ namespace Microsoft.Scripting.Ast {
 
         #region stack spilling (to permit yield in the middle of an expression)
 
-        protected override Expression VisitAssignment(AssignmentExpression node) {
+        private Expression VisitAssign(BinaryExpression node) {
             int yields = _yields.Count;
-            Expression left = Visit(node.Expression);
-            Expression value = Visit(node.Value);
-            if (left == node.Expression && value == node.Value) {
+            Expression left = Visit(node.Left);
+            Expression right = Visit(node.Right);
+            if (left == node.Left && right == node.Right) {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Assign(left, value, node.Annotations);
+                return Expression.Assign(left, right, node.Annotations);
             }
 
             var block = new List<Expression>();
@@ -465,16 +465,16 @@ namespace Microsoft.Scripting.Ast {
             // to rewrite to ensure proper evaluation order. Essentially, we
             // want all of the left side evaluated first, then the value, then
             // the assignment
-            if (left == node.Expression) {
+            if (left == node.Left) {
                 switch (left.NodeType) {
                     case ExpressionType.MemberAccess:
-                        var member = (MemberExpression)node.Expression;
+                        var member = (MemberExpression)node.Left;
                         Expression e = Visit(member.Expression);
                         block.Add(ToTemp(ref e));
                         left = Expression.MakeMemberAccess(e, member.Member, member.Annotations);
                         break;
                     case ExpressionType.Index:
-                        var index = (IndexExpression)node.Expression;
+                        var index = (IndexExpression)node.Left;
                         Expression o = Visit(index.Object);
                         ReadOnlyCollection<Expression> a = Visit(index.Arguments);
                         if (o == index.Object && a == index.Arguments) {
@@ -500,11 +500,11 @@ namespace Microsoft.Scripting.Ast {
                 block.RemoveAt(block.Count - 1);
             }
 
-            if (value != node.Value) {
-                block.Add(ToTemp(ref value));
+            if (right != node.Right) {
+                block.Add(ToTemp(ref right));
             }
 
-            block.Add(Expression.Assign(left, value, null));
+            block.Add(Expression.Assign(left, right, null));
             return Expression.Block(node.Annotations, block);
         }
 
@@ -642,6 +642,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected override Expression VisitBinary(BinaryExpression node) {
+            if (node.NodeType == ExpressionType.Assign) {
+                return VisitAssign(node);
+            }
+
             int yields = _yields.Count;
             Expression left = Visit(node.Left);
             Expression right = Visit(node.Right);

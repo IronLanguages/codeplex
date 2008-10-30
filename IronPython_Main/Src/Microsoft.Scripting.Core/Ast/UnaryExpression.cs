@@ -73,50 +73,6 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            switch (this.NodeType) {
-                case ExpressionType.TypeAs:
-                    builder.Append("(");
-                    _operand.BuildString(builder);
-                    builder.Append(" As ");
-                    builder.Append(this.Type.Name);
-                    builder.Append(")");
-                    break;
-                case ExpressionType.Not:
-                    builder.Append("Not");
-                    builder.Append("(");
-                    _operand.BuildString(builder);
-                    builder.Append(")");
-                    break;
-                case ExpressionType.Negate:
-                case ExpressionType.NegateChecked:
-                    builder.Append("-");
-                    _operand.BuildString(builder);
-                    break;
-                case ExpressionType.UnaryPlus:
-                    builder.Append("+");
-                    _operand.BuildString(builder);
-                    break;
-                case ExpressionType.Quote:
-                    _operand.BuildString(builder);
-                    break;
-                case ExpressionType.Throw:
-                    builder.Append("throw");
-                    builder.Append("(");
-                    _operand.BuildString(builder);
-                    builder.Append(")");
-                    break;
-                default:
-                    builder.Append(this.NodeType);
-                    builder.Append("(");
-                    _operand.BuildString(builder);
-                    builder.Append(")");
-                    break;
-            }
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitUnary(this);
         }

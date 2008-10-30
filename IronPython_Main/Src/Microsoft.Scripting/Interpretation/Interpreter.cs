@@ -924,8 +924,8 @@ namespace Microsoft.Scripting.Interpretation {
             return (CallSite)rc.Invoke(node.Binder);
         }
 
-        private static object InterpretIndexAssignment(InterpreterState state, AssignmentExpression node) {
-            var index = (IndexExpression)node.Expression;
+        private static object InterpretIndexAssignment(InterpreterState state, BinaryExpression node) {
+            var index = (IndexExpression)node.Left;
 
             object instance, value;
             var args = new object[index.Arguments.Count];
@@ -942,7 +942,7 @@ namespace Microsoft.Scripting.Interpretation {
                 args[i] = arg;
             }
 
-            if (InterpretAndCheckFlow(state, node.Value, out value)) {
+            if (InterpretAndCheckFlow(state, node.Right, out value)) {
                 return value;
             }
 
@@ -965,10 +965,10 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretVariableAssignment(InterpreterState state, Expression expr) {
-            AssignmentExpression node = (AssignmentExpression)expr;
+            var node = (BinaryExpression)expr;
             SetSourceLocation(state, expr);
             object value;
-            if (InterpretAndCheckFlow(state, node.Value, out value)) {
+            if (InterpretAndCheckFlow(state, node.Right, out value)) {
                 return value;
             }
 
@@ -976,13 +976,13 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            EvaluateAssignVariable(state, node.Expression, value);
+            EvaluateAssignVariable(state, node.Left, value);
             return value;
         }
 
-        private static object InterpretAssignmentExpression(InterpreterState state, Expression expr) {
-            AssignmentExpression node = (AssignmentExpression)expr;
-            switch (node.Expression.NodeType) {
+        private static object InterpretAssignBinaryExpression(InterpreterState state, Expression expr) {
+            var node = (BinaryExpression)expr;
+            switch (node.Left.NodeType) {
                 case ExpressionType.Index:
                     return InterpretIndexAssignment(state, node);
                 case ExpressionType.MemberAccess:
@@ -991,7 +991,7 @@ namespace Microsoft.Scripting.Interpretation {
                 case ExpressionType.Extension:
                     return InterpretVariableAssignment(state, node);
                 default:
-                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
+                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Left.NodeType);
             }
         }
 
@@ -1012,16 +1012,16 @@ namespace Microsoft.Scripting.Interpretation {
             return GetDelegateForInterpreter(state, node);
         }
 
-        private static object InterpretMemberAssignment(InterpreterState state, AssignmentExpression node) {
-            MemberExpression lvalue = (MemberExpression)node.Expression;
+        private static object InterpretMemberAssignment(InterpreterState state, BinaryExpression node) {
+            var left = (MemberExpression)node.Left;
 
             object target = null, value;
-            if (lvalue.Expression != null) {
-                if (InterpretAndCheckFlow(state, lvalue.Expression, out target)) {
+            if (left.Expression != null) {
+                if (InterpretAndCheckFlow(state, left.Expression, out target)) {
                     return target;
                 }
             }
-            if (InterpretAndCheckFlow(state, node.Value, out value)) {
+            if (InterpretAndCheckFlow(state, node.Right, out value)) {
                 return value;
             }
 
@@ -1029,13 +1029,13 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            switch (lvalue.Member.MemberType) {
+            switch (left.Member.MemberType) {
                 case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)lvalue.Member;
+                    FieldInfo field = (FieldInfo)left.Member;
                     field.SetValue(target, value);
                     break;
                 case MemberTypes.Property:
-                    PropertyInfo property = (PropertyInfo)lvalue.Member;
+                    PropertyInfo property = (PropertyInfo)left.Member;
                     property.SetValue(target, value, null);
                     break;
                 default:
@@ -1552,17 +1552,14 @@ namespace Microsoft.Scripting.Interpretation {
                 case ExpressionType.Parameter:
                 case ExpressionType.Extension:
                     return EvaluateAssignVariable(state, node, value);
+                // TODO: this is wierd, why are we supporting assign to assignment?
                 case ExpressionType.Assign:
-                    return EvaluateAssign(state, (AssignmentExpression)node, value);
+                    return EvaluateAssignVariable(state, ((BinaryExpression)node).Left, value);
                 case ExpressionType.MemberAccess:
                     return EvaluateAssign(state, (MemberExpression)node, value);
                 default:
                     return value;
             }
-        }
-
-        private static object EvaluateAssign(InterpreterState state, AssignmentExpression node, object value) {
-            return EvaluateAssignVariable(state, node.Expression, value);
         }
 
         private static object EvaluateAssignVariable(InterpreterState state, Expression var, object value) {

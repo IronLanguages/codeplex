@@ -74,32 +74,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _arguments; }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            Debug.Assert(_arguments != null, "arguments should not be null");
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            int start = 0;
-            Expression ob = GetInstance();
-
-            if (Attribute.GetCustomAttribute(_method, typeof(ExtensionAttribute)) != null) {
-                start = 1;
-                ob = _arguments[0];
-            }
-
-            if (ob != null) {
-                ob.BuildString(builder);
-                builder.Append(".");
-            }
-            builder.Append(_method.Name);
-            builder.Append("(");
-            for (int i = start, n = _arguments.Count; i < n; i++) {
-                if (i > start)
-                    builder.Append(", ");
-                _arguments[i].BuildString(builder);
-            }
-            builder.Append(")");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitMethodCall(this);
         }

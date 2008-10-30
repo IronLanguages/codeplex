@@ -20,7 +20,7 @@ namespace Microsoft.Scripting.ComInterop {
     public class ComTypeLibMemberDesc {
         readonly ComType _kind;
 
-        public ComTypeLibMemberDesc(ComType kind) {
+        internal ComTypeLibMemberDesc(ComType kind) {
             _kind = kind;
         }
 

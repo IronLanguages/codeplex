@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         #region Constructor(s)/Initialization
 
-        protected ComObject(object rcw) {
+        internal ComObject(object rcw) {
             Debug.Assert(ComMetaObject.IsComObject(rcw));
             _rcw = rcw;
         }

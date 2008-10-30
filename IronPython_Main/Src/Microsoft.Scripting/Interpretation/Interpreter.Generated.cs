@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.SubtractChecked: return InterpretBinaryExpression(state, expr);
                  case ExpressionType.TypeAs: return InterpretUnaryExpression(state, expr);
                  case ExpressionType.TypeIs: return InterpretTypeBinaryExpression(state, expr);
-                 case ExpressionType.Assign: return InterpretAssignmentExpression(state, expr);
+                 case ExpressionType.Assign: return InterpretAssignBinaryExpression(state, expr);
                  case ExpressionType.Block: return InterpretBlockExpression(state, expr);
                  case ExpressionType.DebugInfo: return InterpretDebugInfoExpression(state, expr);
                  case ExpressionType.Dynamic: return InterpretDynamicExpression(state, expr);
@@ -102,6 +102,9 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.PowerAssign: return InterpretOpAssignBinaryExpression(state, expr);
                  case ExpressionType.RightShiftAssign: return InterpretOpAssignBinaryExpression(state, expr);
                  case ExpressionType.SubtractAssign: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.AddAssignChecked: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.MultiplyAssignChecked: return InterpretOpAssignBinaryExpression(state, expr);
+                 case ExpressionType.SubtractAssignChecked: return InterpretOpAssignBinaryExpression(state, expr);
 
                 // *** END GENERATED CODE ***
 
