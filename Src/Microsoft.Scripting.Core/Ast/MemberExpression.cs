@@ -61,18 +61,6 @@ namespace Microsoft.Linq.Expressions {
             throw new NotImplementedException();
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            if (_expression != null) {
-                _expression.BuildString(builder);
-            } else {
-                builder.Append(GetMember().DeclaringType.Name);
-            }
-            builder.Append(".");
-            builder.Append(GetMember().Name);
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitMemberAccess(this);
         }

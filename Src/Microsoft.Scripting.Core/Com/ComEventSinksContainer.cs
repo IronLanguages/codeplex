@@ -25,7 +25,9 @@ namespace Microsoft.Scripting.ComInterop {
     /// This list is usually attached as a custom data for RCW object and 
     /// is finalized whenever RCW is finalized.
     /// </summary>
-    public class ComEventSinksContainer : List<ComEventSink>, IDisposable {
+    internal class ComEventSinksContainer : List<ComEventSink>, IDisposable {
+        private ComEventSinksContainer() {
+        }
 
         private static readonly object _ComObjectEventSinksKey = new object();
 

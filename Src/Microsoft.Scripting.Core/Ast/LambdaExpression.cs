@@ -80,33 +80,6 @@ namespace Microsoft.Linq.Expressions {
             get { return Type.GetMethod("Invoke").ReturnType; }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            if (Parameters.Count == 1) {
-                ParameterExpression pe = Parameters[0];
-                if (pe.IsByRef) {
-                    builder.Append("ref ");
-                }
-                pe.BuildString(builder);
-            } else {
-                builder.Append("(");
-                for (int i = 0, n = Parameters.Count; i < n; i++) {
-                    if (i > 0) {
-                        builder.Append(", ");
-                    }
-                    ParameterExpression pe = Parameters[i];
-                    if (pe.IsByRef) {
-                        builder.Append("ref ");
-                    }
-                    pe.BuildString(builder);
-                }
-                builder.Append(")");
-            }
-            builder.Append(" => ");
-            _body.BuildString(builder);
-        }
-
         public Delegate Compile() {
             return LambdaCompiler.CompileLambda(this, false);
         }

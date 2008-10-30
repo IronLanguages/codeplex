@@ -51,18 +51,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _arguments; }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-            
-            builder.Append("Invoke(");
-            _lambda.BuildString(builder);
-            for (int i = 0, n = _arguments.Count; i < n; i++) {
-                builder.Append(", ");
-                _arguments[i].BuildString(builder);
-            }
-            builder.Append(")");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitInvocation(this);
         }

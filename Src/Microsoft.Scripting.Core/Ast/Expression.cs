@@ -147,17 +147,7 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public override string ToString() {
-            StringBuilder builder = new StringBuilder();
-            this.BuildString(builder);
-            return builder.ToString();
-        }
-
-        //CONFORMING
-        internal virtual void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-            builder.Append("[");
-            builder.Append(GetNodeKind().ToString());
-            builder.Append("]");
+            return ExpressionStringBuilder.ExpressionToString(this);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]

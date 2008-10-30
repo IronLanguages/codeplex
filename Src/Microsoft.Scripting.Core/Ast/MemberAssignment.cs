@@ -29,13 +29,6 @@ namespace Microsoft.Linq.Expressions {
         public Expression Expression {
             get { return _expression; }
         }
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            builder.Append(Member.Name);
-            builder.Append(" = ");
-            _expression.BuildString(builder);
-        }
     }
 
 

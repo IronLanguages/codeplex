@@ -151,17 +151,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return cr.Finish(cr.Rewrite ? DynamicExpression.Make(node.Type, node.Annotations, node.DelegateType, node.Binder, cr[0, -1]) : expr);
         }
 
-        private Result RewriteIndexAssignment(AssignmentExpression node, Stack stack) {
-            IndexExpression index = (IndexExpression)node.Expression;
+        private Result RewriteIndexAssignment(BinaryExpression node, Stack stack) {
+            IndexExpression index = (IndexExpression)node.Left;
 
             ChildRewriter cr = new ChildRewriter(this, stack, 2 + index.Arguments.Count);
 
             cr.Add(index.Object);
             cr.Add(index.Arguments);
-            cr.Add(node.Value);
+            cr.Add(node.Right);
 
             if (cr.Rewrite) {
-                node = new AssignmentExpression(
+                node = new AssignBinaryExpression(
                     node.Annotations,
                     new IndexExpression(
                         cr[0],                              // Object
@@ -188,7 +188,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             RewriteAction action = left.Action | right.Action | conversion.Action;
             if (action != RewriteAction.None) {
-                expr = new BinaryExpression(
+                expr = BinaryExpression.Create(
                     node.Annotations,
                     node.NodeType,
                     left.Node,
@@ -224,7 +224,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             cr.Add(node.Conversion);
 
             return cr.Finish(cr.Rewrite ?
-                                    new BinaryExpression(node.Annotations,
+                                    BinaryExpression.Create(node.Annotations,
                                             node.NodeType,
                                             cr[0],
                                             cr[1],
@@ -235,20 +235,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // variable assignment
-        private Result RewriteVariableAssignment(AssignmentExpression node, Stack stack) {
+        private Result RewriteVariableAssignment(BinaryExpression node, Stack stack) {
             // Expression is evaluated on a stack in current state
-            Result value = RewriteExpression(node.Value, stack);
-            if (value.Action != RewriteAction.None) {
-                node = Expression.Assign(node.Expression, value.Node, node.Annotations);
+            Result right = RewriteExpression(node.Right, stack);
+            if (right.Action != RewriteAction.None) {
+                node = Expression.Assign(node.Left, right.Node, node.Annotations);
             }
-            return new Result(value.Action, node);
+            return new Result(right.Action, node);
         }
 
-        // AssignmentExpression
-        private Result RewriteAssignmentExpression(Expression expr, Stack stack) {
-            AssignmentExpression node = (AssignmentExpression)expr;
+        private Result RewriteAssignBinaryExpression(Expression expr, Stack stack) {
+            var node = (BinaryExpression)expr;
 
-            switch (node.Expression.NodeType) {
+            switch (node.Left.NodeType) {
                 case ExpressionType.Index:
                     return RewriteIndexAssignment(node, stack);
                 case ExpressionType.MemberAccess:
@@ -258,13 +257,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Extension:
                     return RewriteExtensionAssignment(node, stack);
                 default:
-                    throw Error.InvalidLvalue(node.Expression.NodeType);
+                    throw Error.InvalidLvalue(node.Left.NodeType);
             }
         }
 
-        private Result RewriteExtensionAssignment(AssignmentExpression node, Stack stack) {
-            node = Expression.Assign(node.Expression.ReduceExtensions(), node.Value, node.Annotations);
-            Result result = RewriteAssignmentExpression(node, stack);
+        private Result RewriteExtensionAssignment(BinaryExpression node, Stack stack) {
+            node = Expression.Assign(node.Left.ReduceExtensions(), node.Right, node.Annotations);
+            Result result = RewriteAssignBinaryExpression(node, stack);
             // it's at least Copy because we reduced the node
             return new Result(result.Action | RewriteAction.Copy, result.Node);
         }
@@ -303,8 +302,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         // member assignment
-        private Result RewriteMemberAssignment(AssignmentExpression node, Stack stack) {
-            MemberExpression lvalue = (MemberExpression)node.Expression;
+        private Result RewriteMemberAssignment(BinaryExpression node, Stack stack) {
+            MemberExpression lvalue = (MemberExpression)node.Left;
 
             ChildRewriter cr = new ChildRewriter(this, stack, 2);
 
@@ -313,11 +312,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Otherwise the stack is left unchaged.
             cr.Add(lvalue.Expression);
 
-            cr.Add(node.Value);
+            cr.Add(node.Right);
 
             if (cr.Rewrite) {
                 return cr.Finish(
-                    new AssignmentExpression(
+                    new AssignBinaryExpression(
                         node.Annotations,
                         MemberExpression.Make(cr[0], lvalue.Member, lvalue.Annotations),
                         cr[1]

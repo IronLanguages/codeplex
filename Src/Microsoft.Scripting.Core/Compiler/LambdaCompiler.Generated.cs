@@ -217,7 +217,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     break;
                 // Assign
                 case ExpressionType.Assign:
-                    EmitAssignmentExpression(node);
+                    EmitAssignBinaryExpression(node);
                     break;
                 // Block
                 case ExpressionType.Block:
@@ -321,6 +321,18 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     break;
                 // SubtractAssign
                 case ExpressionType.SubtractAssign:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // AddAssignChecked
+                case ExpressionType.AddAssignChecked:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // MultiplyAssignChecked
+                case ExpressionType.MultiplyAssignChecked:
+                    EmitOpAssignBinaryExpression(node);
+                    break;
+                // SubtractAssignChecked
+                case ExpressionType.SubtractAssignChecked:
                     EmitOpAssignBinaryExpression(node);
                     break;
 

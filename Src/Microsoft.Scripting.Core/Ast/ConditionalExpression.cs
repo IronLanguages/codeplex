@@ -60,18 +60,6 @@ namespace Microsoft.Linq.Expressions {
             return EmptyExpression.VoidInstance;
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            builder.Append("IIF(");
-            _test.BuildString(builder);
-            builder.Append(", ");
-            _true.BuildString(builder);
-            builder.Append(", ");
-            IfFalse.BuildString(builder);
-            builder.Append(")");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitConditional(this);
         }

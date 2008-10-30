@@ -95,6 +95,9 @@ namespace Microsoft.Linq.Expressions {
         PowerAssign,
         RightShiftAssign,
         SubtractAssign,
+        AddAssignChecked,
+        MultiplyAssignChecked,
+        SubtractAssignChecked,
 
         // *** END GENERATED CODE ***
 

@@ -41,11 +41,8 @@ namespace Microsoft.Linq.Expressions {
         public MemberInfo Member {
             get { return _member; }
         }
-        internal abstract void BuildString(StringBuilder builder);
         public override string ToString() {
-            StringBuilder sb = new StringBuilder();
-            BuildString(sb);
-            return sb.ToString();
+            return ExpressionStringBuilder.MemberBindingToString(this);
         }
     }
 }

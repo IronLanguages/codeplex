@@ -45,11 +45,6 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitDynamic(node);
             }
 
-            protected internal override Expression VisitAssignment(AssignmentExpression node) {
-                Expressions.Add(node);
-                return base.VisitAssignment(node);
-            }
-
             protected internal override Expression VisitBinary(BinaryExpression node) {
                 Expressions.Add(node);
                 return base.VisitBinary(node);
@@ -350,6 +345,9 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.AddAssign:
                 case ExpressionType.SubtractAssign:
                 case ExpressionType.MultiplyAssign:
+                case ExpressionType.AddAssignChecked:
+                case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.MultiplyAssignChecked:
                 case ExpressionType.DivideAssign:
                 case ExpressionType.ModuloAssign:
                 case ExpressionType.PowerAssign:

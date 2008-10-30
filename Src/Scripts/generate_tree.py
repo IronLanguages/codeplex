@@ -30,87 +30,90 @@ expressions = [
     #   DO NOT REORDER THESE, THEY COME FROM THE LINQ V1 ENUM
     #
 
-    #          Enum Value            Expression Class                   Interop
+    #          Enum Value               Expression Class                   Interop
 
-    Expression("Add",                "BinaryExpression",                True),
-    Expression("AddChecked",         "BinaryExpression"),
-    Expression("And",                "BinaryExpression",                True),
-    Expression("AndAlso",            "BinaryExpression"),
-    Expression("ArrayLength",        "UnaryExpression"),
-    Expression("ArrayIndex",         "BinaryExpression"),
-    Expression("Call",               "MethodCallExpression"),
-    Expression("Coalesce",           "BinaryExpression"),
-    Expression("Conditional",        "ConditionalExpression"),
-    Expression("Constant",           "ConstantExpression"),
-    Expression("Convert",            "UnaryExpression"),
-    Expression("ConvertChecked",     "UnaryExpression"),
-    Expression("Divide",             "BinaryExpression",                True),
-    Expression("Equal",              "BinaryExpression",                True),
-    Expression("ExclusiveOr",        "BinaryExpression",                True),
-    Expression("GreaterThan",        "BinaryExpression",                True),
-    Expression("GreaterThanOrEqual", "BinaryExpression",                True),
-    Expression("Invoke",             "InvocationExpression"),
-    Expression("Lambda",             "LambdaExpression"),
-    Expression("LeftShift",          "BinaryExpression",                True),
-    Expression("LessThan",           "BinaryExpression",                True),
-    Expression("LessThanOrEqual",    "BinaryExpression",                True),
-    Expression("ListInit",           "ListInitExpression"),
-    Expression("MemberAccess",       "MemberExpression"),
-    Expression("MemberInit",         "MemberInitExpression"),
-    Expression("Modulo",             "BinaryExpression",                True),
-    Expression("Multiply",           "BinaryExpression",                True),
-    Expression("MultiplyChecked",    "BinaryExpression"),
-    Expression("Negate",             "UnaryExpression",                 True),
-    Expression("UnaryPlus",          "UnaryExpression",                 True),
-    Expression("NegateChecked",      "UnaryExpression"),
-    Expression("New",                "NewExpression"),
-    Expression("NewArrayInit",       "NewArrayExpression"),
-    Expression("NewArrayBounds",     "NewArrayExpression"),
-    Expression("Not",                "UnaryExpression",                 True),
-    Expression("NotEqual",           "BinaryExpression",                True),
-    Expression("Or",                 "BinaryExpression",                True),
-    Expression("OrElse",             "BinaryExpression"),
-    Expression("Parameter",          "ParameterExpression"),
-    Expression("Power",              "BinaryExpression",                True),
-    Expression("Quote",              "UnaryExpression"),
-    Expression("RightShift",         "BinaryExpression",                True),
-    Expression("Subtract",           "BinaryExpression",                True),
-    Expression("SubtractChecked",    "BinaryExpression"),
-    Expression("TypeAs",             "UnaryExpression"),
-    Expression("TypeIs",             "TypeBinaryExpression"),
+    Expression("Add",                   "BinaryExpression",                True),
+    Expression("AddChecked",            "BinaryExpression"),
+    Expression("And",                   "BinaryExpression",                True),
+    Expression("AndAlso",               "BinaryExpression"),
+    Expression("ArrayLength",           "UnaryExpression"),
+    Expression("ArrayIndex",            "BinaryExpression"),
+    Expression("Call",                  "MethodCallExpression"),
+    Expression("Coalesce",              "BinaryExpression"),
+    Expression("Conditional",           "ConditionalExpression"),
+    Expression("Constant",              "ConstantExpression"),
+    Expression("Convert",               "UnaryExpression"),
+    Expression("ConvertChecked",        "UnaryExpression"),
+    Expression("Divide",                "BinaryExpression",                True),
+    Expression("Equal",                 "BinaryExpression",                True),
+    Expression("ExclusiveOr",           "BinaryExpression",                True),
+    Expression("GreaterThan",           "BinaryExpression",                True),
+    Expression("GreaterThanOrEqual",    "BinaryExpression",                True),
+    Expression("Invoke",                "InvocationExpression"),
+    Expression("Lambda",                "LambdaExpression"),
+    Expression("LeftShift",             "BinaryExpression",                True),
+    Expression("LessThan",              "BinaryExpression",                True),
+    Expression("LessThanOrEqual",       "BinaryExpression",                True),
+    Expression("ListInit",              "ListInitExpression"),
+    Expression("MemberAccess",          "MemberExpression"),
+    Expression("MemberInit",            "MemberInitExpression"),
+    Expression("Modulo",                "BinaryExpression",                True),
+    Expression("Multiply",              "BinaryExpression",                True),
+    Expression("MultiplyChecked",       "BinaryExpression"),
+    Expression("Negate",                "UnaryExpression",                 True),
+    Expression("UnaryPlus",             "UnaryExpression",                 True),
+    Expression("NegateChecked",         "UnaryExpression"),
+    Expression("New",                   "NewExpression"),
+    Expression("NewArrayInit",          "NewArrayExpression"),
+    Expression("NewArrayBounds",        "NewArrayExpression"),
+    Expression("Not",                   "UnaryExpression",                 True),
+    Expression("NotEqual",              "BinaryExpression",                True),
+    Expression("Or",                    "BinaryExpression",                True),
+    Expression("OrElse",                "BinaryExpression"),
+    Expression("Parameter",             "ParameterExpression"),
+    Expression("Power",                 "BinaryExpression",                True),
+    Expression("Quote",                 "UnaryExpression"),
+    Expression("RightShift",            "BinaryExpression",                True),
+    Expression("Subtract",              "BinaryExpression",                True),
+    Expression("SubtractChecked",       "BinaryExpression"),
+    Expression("TypeAs",                "UnaryExpression"),
+    Expression("TypeIs",                "TypeBinaryExpression"),
 
     # New types in LINQ V2
 
-    Expression("Assign",             "AssignmentExpression"), # TODO: merge to BinaryExpression
-    Expression("Block",              "BlockExpression"),
-    Expression("DebugInfo",          "DebugInfoExpression"),
-    Expression("Dynamic",            "DynamicExpression"),
-    Expression("Default",            "EmptyExpression"),
-    Expression("Extension",          "ExtensionExpression"),
-    Expression("Goto",               "GotoExpression"),
-    Expression("Index",              "IndexExpression"),
-    Expression("Label",              "LabelExpression"),
-    Expression("RuntimeVariables",   "RuntimeVariablesExpression"),
-    Expression("Loop",               "LoopExpression"),
-    Expression("ReturnStatement",    "ReturnStatement"),      # TODO: remove
-    Expression("Switch",             "SwitchExpression"),
-    Expression("Throw",              "UnaryExpression"),
-    Expression("Try",                "TryExpression"),
-    Expression("Unbox",              "UnaryExpression"),
-    Expression("AddAssign",          "BinaryExpression",                True),
-    Expression("AndAssign",          "BinaryExpression",                True),
-    Expression("DivideAssign",       "BinaryExpression",                True),
-    Expression("ExclusiveOrAssign",  "BinaryExpression",                True),
-    Expression("LeftShiftAssign",    "BinaryExpression",                True),
-    Expression("ModuloAssign",       "BinaryExpression",                True),
-    Expression("MultiplyAssign",     "BinaryExpression",                True),
-    Expression("OrAssign",           "BinaryExpression",                True),
-    Expression("PowerAssign",        "BinaryExpression",                True),
-    Expression("RightShiftAssign",   "BinaryExpression",                True),
-    Expression("SubtractAssign",     "BinaryExpression",                True),
+    Expression("Assign",                "BinaryExpression"),
+    Expression("Block",                 "BlockExpression"),
+    Expression("DebugInfo",             "DebugInfoExpression"),
+    Expression("Dynamic",               "DynamicExpression"),
+    Expression("Default",               "EmptyExpression"),
+    Expression("Extension",             "ExtensionExpression"),
+    Expression("Goto",                  "GotoExpression"),
+    Expression("Index",                 "IndexExpression"),
+    Expression("Label",                 "LabelExpression"),
+    Expression("RuntimeVariables",      "RuntimeVariablesExpression"),
+    Expression("Loop",                  "LoopExpression"),
+    Expression("ReturnStatement",       "ReturnStatement"),      # TODO: remove
+    Expression("Switch",                "SwitchExpression"),
+    Expression("Throw",                 "UnaryExpression"),
+    Expression("Try",                   "TryExpression"),
+    Expression("Unbox",                 "UnaryExpression"),
+    Expression("AddAssign",             "BinaryExpression",                True),
+    Expression("AndAssign",             "BinaryExpression",                True),
+    Expression("DivideAssign",          "BinaryExpression",                True),
+    Expression("ExclusiveOrAssign",     "BinaryExpression",                True),
+    Expression("LeftShiftAssign",       "BinaryExpression",                True),
+    Expression("ModuloAssign",          "BinaryExpression",                True),
+    Expression("MultiplyAssign",        "BinaryExpression",                True),
+    Expression("OrAssign",              "BinaryExpression",                True),
+    Expression("PowerAssign",           "BinaryExpression",                True),
+    Expression("RightShiftAssign",      "BinaryExpression",                True),
+    Expression("SubtractAssign",        "BinaryExpression",                True),
+    Expression("AddAssignChecked",      "BinaryExpression",                True),
+    Expression("MultiplyAssignChecked", "BinaryExpression",                True),
+    Expression("SubtractAssignChecked", "BinaryExpression",                True),
 ]
 
-op_assignments = ["MultiplyAssign", "SubtractAssign", "ExclusiveOrAssign", "LeftShiftAssign", "RightShiftAssign", "ModuloAssign", "AddAssign", "AndAssign", "OrAssign", "DivideAssign", "PowerAssign"]
+op_assignments = ["MultiplyAssign", "MultiplyAssignChecked", "SubtractAssign", "SubtractAssignChecked", "ExclusiveOrAssign", "LeftShiftAssign", "RightShiftAssign", "ModuloAssign", "AddAssign", "AddAssignChecked", "AndAssign", "OrAssign", "DivideAssign", "PowerAssign"]
 
 def get_unique_types():
     return sorted(list(set(filter(None, map(lambda n: n.type, expressions)))))
@@ -130,8 +133,8 @@ def gen_stackspiller_switch(cw):
     
         method = "Rewrite"
         
-        # special case certain unary expressions
-        if node.kind == "Quote" or node.kind == "Throw":
+        # special case certain expressions
+        if node.kind in ["Quote", "Throw", "Assign"]:
             method += node.kind
         
         #special case AndAlso and OrElse
@@ -160,7 +163,7 @@ def gen_compiler(cw):
         method = "Emit"
 
         # special case certain unary/binary expressions
-        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw"]:
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw", "Assign"]:
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"
@@ -178,7 +181,7 @@ def gen_interpreter(cw):
         method = "Interpret"
 
         # special case AndAlso and OrElse
-        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw"]:
+        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw", "Assign"]:
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"

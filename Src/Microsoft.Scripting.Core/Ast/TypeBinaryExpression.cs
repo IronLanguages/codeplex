@@ -45,17 +45,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _typeOperand; }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            System.Diagnostics.Debug.Assert(this.NodeType == ExpressionType.TypeIs);
-            builder.Append("(");
-            _expression.BuildString(builder);
-            builder.Append(" Is ");
-            builder.Append(_typeOperand.Name);
-            builder.Append(")");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitTypeBinary(this);
         }

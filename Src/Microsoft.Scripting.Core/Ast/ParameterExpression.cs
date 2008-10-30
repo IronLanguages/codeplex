@@ -60,11 +60,6 @@ namespace Microsoft.Linq.Expressions {
             return false;
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-            builder.Append(_name ?? "<param>");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitParameter(this);
         }

@@ -57,26 +57,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _value; }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            if (_value != null) {
-                if (_value is string) {
-                    builder.Append("\"");
-                    builder.Append(_value);
-                    builder.Append("\"");
-                } else if (_value.ToString() == _value.GetType().ToString()) {
-                    builder.Append("value(");
-                    builder.Append(_value);
-                    builder.Append(")");
-                } else {
-                    builder.Append(_value);
-                }
-            } else {
-                builder.Append("null");
-            }
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitConstant(this);
         }

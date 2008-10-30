@@ -45,57 +45,30 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }
-        internal override void BuildString(StringBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-
-            switch (this.NodeType) {
-                case ExpressionType.NewArrayBounds:
-                    builder.Append("new ");
-                    builder.Append(this.Type.ToString());
-                    builder.Append("(");
-                    for (int i = 0, n = _expressions.Count; i < n; i++) {
-                        if (i > 0) builder.Append(", ");
-                        _expressions[i].BuildString(builder);
-                    }
-                    builder.Append(")");
-                    break;
-                case ExpressionType.NewArrayInit:
-                    builder.Append("new ");
-                    builder.Append("[] {");
-                    for (int i = 0, n = _expressions.Count; i < n; i++) {
-                        if (i > 0) builder.Append(", ");
-                        _expressions[i].BuildString(builder);
-                    }
-                    builder.Append("}");
-                    break;
-            }
-        }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitNewArray(this);
         }
     }
 
-    public class NewArrayInitExpression : NewArrayExpression {
-        public NewArrayInitExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
+    internal sealed class NewArrayInitExpression : NewArrayExpression {
+        internal NewArrayInitExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
             : base(annotations, type, expressions) {
         }
 
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.NewArrayInit;
         }
-
     }
 
-    public class NewArrayBoundsExpression : NewArrayExpression {
-        public NewArrayBoundsExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
+    internal sealed class NewArrayBoundsExpression : NewArrayExpression {
+        internal NewArrayBoundsExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
             : base(annotations, type, expressions) {
         }
 
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.NewArrayBounds;
         }
-
     }
     
     /// <summary>

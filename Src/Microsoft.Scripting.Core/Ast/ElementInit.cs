@@ -38,24 +38,9 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<Expression> Arguments {
             get { return _arguments; }
         }
-        internal void BuildString(StringBuilder builder) {
-            builder.Append(AddMethod);
-            builder.Append("(");
-            bool first = true;
-            foreach (Expression argument in _arguments) {
-                if (first) {
-                    first = false;
-                } else {
-                    builder.Append(",");
-                }
-                argument.BuildString(builder);
-            }
-            builder.Append(")");
-        }
+
         public override string ToString() {
-            StringBuilder sb = new StringBuilder();
-            BuildString(sb);
-            return sb.ToString();
+            return ExpressionStringBuilder.ElementInitBindingToString(this);
         }
     }
 

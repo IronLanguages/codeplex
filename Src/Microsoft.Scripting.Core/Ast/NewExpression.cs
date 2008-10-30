@@ -55,27 +55,6 @@ namespace Microsoft.Linq.Expressions {
             get { return _members; }
         }
 
-        internal override void BuildString(StringBuilder builder) {
-            Type type = (_constructor == null) ? type = this.Type : _constructor.DeclaringType;
-            builder.Append("new ");
-            int n = _arguments.Count;
-            builder.Append(type.Name);
-            builder.Append("(");
-            if (n > 0) {
-                for (int i = 0; i < n; i++) {
-                    if (i > 0) {
-                        builder.Append(", ");
-                    }
-                    if (_members != null) {
-                        builder.Append(_members[i].Name);
-                        builder.Append(" = ");
-                    }
-                    _arguments[i].BuildString(builder);
-                }
-            }
-            builder.Append(")");
-        }
-
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitNew(this);
         }

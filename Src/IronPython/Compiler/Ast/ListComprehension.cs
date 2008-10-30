@@ -47,7 +47,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.ParameterExpression list = ag.GetTemporary("list_comprehension_list", typeof(List));
 
             // 1. Initialization code - create list and store it in the temp variable
-            MSAst.AssignmentExpression initialize =
+            MSAst.Expression initialize =
                 Ast.Assign(
                     list,
                     Ast.Call(

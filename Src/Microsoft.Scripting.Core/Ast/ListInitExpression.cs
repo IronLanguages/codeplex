@@ -51,17 +51,6 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<ElementInit> Initializers {
             get { return _initializers; }
         }
-        internal override void BuildString(StringBuilder builder) {
-            _newExpression.BuildString(builder);
-            builder.Append(" {");
-            for (int i = 0, n = _initializers.Count; i < n; i++) {
-                if (i > 0) {
-                    builder.Append(", ");
-                }
-                _initializers[i].BuildString(builder);
-            }
-            builder.Append("}");
-        }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitListInit(this);

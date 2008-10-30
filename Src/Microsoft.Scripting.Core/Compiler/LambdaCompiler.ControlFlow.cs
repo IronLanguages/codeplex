@@ -160,8 +160,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Assign:
                     // Assignment where left side is a variable/parameter is
                     // safe to jump into
-                    var assign = (AssignmentExpression)node;
-                    if (assign.Expression.NodeType == ExpressionType.Parameter) {
+                    var assign = (BinaryExpression)node;
+                    if (assign.Left.NodeType == ExpressionType.Parameter) {
                         PushLabelBlock(LabelBlockKind.Block);
                         return true;
                     }

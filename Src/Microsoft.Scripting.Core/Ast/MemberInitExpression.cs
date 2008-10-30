@@ -50,24 +50,6 @@ namespace Microsoft.Linq.Expressions {
         public ReadOnlyCollection<MemberBinding> Bindings {
             get { return _bindings; }
         }
-        internal override void BuildString(StringBuilder builder) {
-            if (_newExpression.Arguments.Count == 0 &&
-                _newExpression.Type.Name.Contains("<")) {
-                // anonymous type constructor
-                builder.Append("new");
-            } else {
-                _newExpression.BuildString(builder);
-            }
-            builder.Append(" {");
-            for (int i = 0, n = _bindings.Count; i < n; i++) {
-                MemberBinding b = _bindings[i];
-                if (i > 0) {
-                    builder.Append(", ");
-                }
-                b.BuildString(builder);
-            }
-            builder.Append("}");
-        }
 
         internal override Expression Accept(ExpressionTreeVisitor visitor) {
             return visitor.VisitMemberInit(this);
