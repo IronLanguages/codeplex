@@ -18,15 +18,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
-
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -279,7 +278,7 @@ namespace IronPython.Runtime.Operations {
             where T : IValueEquality {
             if (!(y is T)) return NotImplementedType.Value;
 
-            return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
+            return ScriptingRuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
 
         [return: MaybeNotImplemented]
@@ -287,7 +286,7 @@ namespace IronPython.Runtime.Operations {
             where T : IValueEquality {
             if (!(y is T)) return NotImplementedType.Value;
 
-            return RuntimeHelpers.BooleanToObject(!x.ValueEquals(y));
+            return ScriptingRuntimeHelpers.BooleanToObject(!x.ValueEquals(y));
         }
 
         [return: MaybeNotImplemented]
@@ -295,7 +294,7 @@ namespace IronPython.Runtime.Operations {
             where T : IValueEquality {
             if (!(y is T)) return NotImplementedType.Value;
 
-            return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
+            return ScriptingRuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
 
         [return: MaybeNotImplemented]
@@ -303,7 +302,7 @@ namespace IronPython.Runtime.Operations {
             where T : IValueEquality {
             if (!(y is T)) return NotImplementedType.Value;
 
-            return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
+            return ScriptingRuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
 
         // TODO: Remove me

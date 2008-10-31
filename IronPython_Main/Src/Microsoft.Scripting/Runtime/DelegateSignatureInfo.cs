@@ -15,19 +15,20 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using Microsoft.Scripting;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using System.Text;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
-    /// Used as the key for the RuntimeHelpers.GetDelegate method caching system
+    /// Used as the key for the ScriptingRuntimeHelpers.GetDelegate method caching system
     /// </summary>
     internal sealed class DelegateSignatureInfo {
         private readonly LanguageContext _context;

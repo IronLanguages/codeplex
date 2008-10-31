@@ -47,23 +47,9 @@ namespace Microsoft.Scripting.ComInterop {
         /// Provides an Expression which will update the provided value after a call to the method.
         /// May return null if no update is required.
         /// </summary>
-        internal virtual Expression UpdateFromReturn(Expression parameter, Expression newValue) {
-            return null;
+        internal virtual Expression UnmarshalFromRef(Expression newValue) {
+            return newValue;
         }
-
-
-        /// <summary>
-        /// Builds the value of the argument to be passed for a call via reflection.
-        /// </summary>
-        internal abstract object UnwrapForReflection(object arg);
-
-        /// <summary>
-        /// If the argument produces a return value (e.g. a ref or out value) this
-        /// provides the additional value to be returned.
-        /// This will not be called if the method call throws an exception, and so it should not
-        /// be used for cleanup that is required to be done.
-        /// </summary>
-        internal virtual void UpdateFromReturn(object originalArg, object updatedArg) { }
     }
 }
 

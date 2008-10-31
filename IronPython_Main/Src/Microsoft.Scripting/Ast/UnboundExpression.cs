@@ -15,8 +15,8 @@
 
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -46,7 +46,7 @@ namespace Microsoft.Scripting.Ast {
 
         public override Expression Reduce() {
             return Expression.Call(
-                typeof(RuntimeHelpers).GetMethod("LookupName"),
+                typeof(ScriptingRuntimeHelpers).GetMethod("LookupName"),
                 Utils.CodeContext(),
                 AstUtils.Constant(_name)
             );

@@ -50,9 +50,9 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         protected static object ConvertToObject(object ret) {
             if (ret is bool) {
-                return RuntimeHelpers.BooleanToObject((bool)ret);
+                return ScriptingRuntimeHelpers.BooleanToObject((bool)ret);
             } else if (ret is int) {
-                return RuntimeHelpers.Int32ToObject((int)ret);
+                return ScriptingRuntimeHelpers.Int32ToObject((int)ret);
             }
             return ret;
         }

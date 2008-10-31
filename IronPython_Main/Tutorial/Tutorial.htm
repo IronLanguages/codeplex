@@ -1824,9 +1824,11 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="TypedExample">a.GetCharacter(cid.Value, c)</p>
 	<p class="HiddenOutput"></p>
 	<p class="Code-Background"></p>
-	<p class="TypedExample">c.Value.Show(0, reqid)</p>
+	<p class="TypedExample">character = c.Value.WrappedObject</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
+	<p class="TypedExample">character.Show(0, reqid)</p>
+	<p class="HiddenOutput"></p>
+	<p class="TypedExample">character.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
 	<p class="HiddenOutput"></p>
 	<ol start="8">
 		<li>
@@ -1837,9 +1839,11 @@ Registering self.on_Clear to handle Clear.Click</p>
 	</ol>
 	<p class="TypedExample">enum = clr.StrongBox[object](UnknownWrapper(None))</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.GetAnimationNames(enum)</p>
+	<p class="TypedExample">character.GetAnimationNames(enum)</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">for n in enum.Value: print n</p>
+	<p class="TypedExample">animations = enum.Value.WrappedObject</p>
+	<p class="HiddenOutput"></p>
+	<p class="TypedExample">for n in animations: print n</p>
 	<p class="HiddenOutput">RestPose<br>
 Blink<br>
 Idle2_2<br>
@@ -1913,18 +1917,20 @@ GetAttentionContinued<br>
 Process<br>
 Search<br>
 Think<br></p>
-	<p class="TypedExample">c.Value.Play(&quot;Read&quot;, reqid)</p>
+	<p class="TypedExample">character.Play(&quot;Read&quot;, reqid)</p>
 	<p class="HiddenOutput"></p>
 	<ol start="9">
 		<li>
-		<p class="Step">(Optional) To call a series of animations, we could call c.Play(animation_name, reqid)
+		<p class="Step">(Optional) To call a series of animations, we could call character.Play(animation_name, reqid)
 		for each animation.&nbsp; Python&#39;s lamda functions can simplify this process.&nbsp; We can create global functions and assign them names based on the animation
 		name:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">c.Value.GetAnimationNames(enum)</p>
+	<p class="TypedExample">character.GetAnimationNames(enum)</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">for n in enum.Value: globals()[n] = lambda name=n: c.Value.Play(name, reqid)</p>
+	<p class="TypedExample">animations = enum.Value.WrappedObject</p>
+	<p class="HiddenOutput"></p>
+	<p class="TypedExample">for n in animations: globals()[n] = lambda name=n: character.Play(name, reqid)</p>
 	<p class="HiddenOutput"></p>
 	<p class="Stepnonumbering">At this point we can have Merlin play animations
 	simply by calling a function from global namespace:</p>
@@ -1936,9 +1942,9 @@ Think<br></p>
 		<p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
 		</li>
 	</ol>
-	<p class="TypedExample">c.Value.StopAll(0)</p>
+	<p class="TypedExample">character.StopAll(0)</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.Hide(0, reqid)</p>
+	<p class="TypedExample">character.Hide(0, reqid)</p>
 	<p class="HiddenOutput"></p>
 	<h2><a name="T3.2">Exercise 2: Use Word for Spell Checking</a></h2>
 	<p class="Body">In this exercise you will create an instance of Microsoft

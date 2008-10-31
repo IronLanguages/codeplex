@@ -42,18 +42,9 @@ namespace Microsoft.Scripting.ComInterop {
     internal class VarEnumSelector {
         private readonly VariantBuilder[] _variantBuilders;
         private readonly ReturnBuilder _returnBuilder;
-        private bool _isSupportedByFastPath = true;
 
         private static readonly Dictionary<VarEnum, Type> _ComToManagedPrimitiveTypes = CreateComToManagedPrimitiveTypes();
         private static readonly IList<IList<VarEnum>> _ComPrimitiveTypeFamilies = CreateComPrimitiveTypeFamilies();
-
-        /// <summary>
-        /// This constructor infers the COM types to marshal the arguments to based on
-        /// the conversions supported for the given argument type.
-        /// </summary>
-        internal VarEnumSelector(Type returnType, object[] explicitArgs)
-            : this(returnType, TypeUtils.GetTypesForBinding(explicitArgs)) {
-        }
 
         internal VarEnumSelector(Type returnType, Type[] explicitArgTypes) {
             _variantBuilders = new VariantBuilder[explicitArgTypes.Length];
@@ -63,16 +54,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             _returnBuilder = new ReturnBuilder(returnType);
-        }
-
-        /// <summary>
-        /// Can IDispatchCallBinderHelper generate an optimized DynamicSite, or should we fall back
-        /// to the slow DispCallable.UpoptimizedInvoke
-        /// </summary>
-        internal bool IsSupportedByFastPath {
-            get {
-                return _isSupportedByFastPath;
-            }
         }
 
         internal ReturnBuilder ReturnBuilder {
@@ -85,25 +66,6 @@ namespace Microsoft.Scripting.ComInterop {
             get {
                 return _variantBuilders;
             }
-        }
-
-        /// <summary>
-        /// Gets the arguments ready for marshaling to COM
-        /// </summary>
-        internal object[] BuildArguments(object[] explicitArgs, out ParameterModifier parameterModifiers) {
-            object[] convertedArguments = new object[_variantBuilders.Length];
-            if (_variantBuilders.Length != 0) {
-                parameterModifiers = new ParameterModifier(_variantBuilders.Length);
-            } else {
-                parameterModifiers = new ParameterModifier();
-            }
-
-            for (int i = 0; i < _variantBuilders.Length; i++) {
-                convertedArguments[i] = _variantBuilders[i].Build(explicitArgs[i]);
-                parameterModifiers[i] = _variantBuilders[i].IsByRef;
-            }
-
-            return convertedArguments;
         }
 
         /// <summary>
@@ -169,12 +131,16 @@ namespace Microsoft.Scripting.ComInterop {
             dict[VarEnum.VT_DECIMAL] = typeof(Decimal);
             dict[VarEnum.VT_DATE] = typeof(DateTime);
             dict[VarEnum.VT_BSTR] = typeof(String);
+            dict[VarEnum.VT_VARIANT] = typeof(Object);
 
             // *** END GENERATED CODE ***
 
             #endregion
 
             dict[VarEnum.VT_CY] = typeof(CurrencyWrapper);
+            dict[VarEnum.VT_ERROR] = typeof(ErrorWrapper);
+            dict[VarEnum.VT_DISPATCH] = typeof(DispatchWrapper);
+            dict[VarEnum.VT_UNKNOWN] = typeof(UnknownWrapper);
 
             return dict;
         }
@@ -192,10 +158,16 @@ namespace Microsoft.Scripting.ComInterop {
                 new VarEnum[] { VarEnum.VT_INT },
                 new VarEnum[] { VarEnum.VT_UINT },
                 new VarEnum[] { VarEnum.VT_BOOL },
-                new VarEnum[] { VarEnum.VT_DATE, VarEnum.VT_R8, VarEnum.VT_R4 },
+                new VarEnum[] { VarEnum.VT_DATE },
+                new VarEnum[] { VarEnum.VT_R8, VarEnum.VT_R4 },
                 new VarEnum[] { VarEnum.VT_DECIMAL },
                 new VarEnum[] { VarEnum.VT_BSTR },
-                new VarEnum[] { VarEnum.VT_CY }
+
+                // wrappers
+                new VarEnum[] { VarEnum.VT_CY },
+                new VarEnum[] { VarEnum.VT_ERROR },
+                new VarEnum[] { VarEnum.VT_DISPATCH },
+                new VarEnum[] { VarEnum.VT_UNKNOWN },
             };
 
             return typeFamilies;
@@ -244,9 +216,6 @@ namespace Microsoft.Scripting.ComInterop {
             throw Error.AmbiguousConversion(argumentType.Name, typeNames);
         }
 
-        /// <summary>
-        /// Is there a unique primitive type that has the best conversion for the argument
-        /// </summary>
         private static bool TryGetPrimitiveComType(Type argumentType, out VarEnum primitiveVarEnum) {
             // Look for an exact match with a COM primitive type
 
@@ -257,6 +226,14 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
 
+            primitiveVarEnum = VarEnum.VT_VOID; // error
+            return false;
+        }
+
+        /// <summary>
+        /// Is there a unique primitive type that has the best conversion for the argument
+        /// </summary>
+        private static bool TryGetPrimitiveComTypeViaConversion(Type argumentType, out VarEnum primitiveVarEnum) {
             // Look for a unique type family that the argument can be converted to.
             List<VarEnum> compatibleComTypes = GetConversionsToComPrimitiveTypeFamilies(argumentType);
             CheckForAmbiguousMatch(argumentType, compatibleComTypes);
@@ -277,20 +254,26 @@ namespace Microsoft.Scripting.ComInterop {
         // to do the QueryInterface if needed
         const VarEnum VT_DISPATCH_OR_UNKNOWN = VarEnum.VT_DISPATCH;
 
-        private VarEnum GetComTypeNonArray(Type argumentType) {
-            Debug.Assert(!argumentType.IsArray);
+        private VarEnum GetComType(Type argumentType) {
+            if (argumentType == typeof(Missing)) {
+                //TODO: consider specialcasing marshaling for Missing as VT_ERROR | E_PARAMNOTFOUND 
+                return VarEnum.VT_VARIANT;
+            }
+
+            if (argumentType.IsArray) {
+                //TODO: consider specialcasing marshaling for Arrays as VT_ARRAY
+                return VarEnum.VT_VARIANT;
+            }
 
             if (argumentType == typeof(UnknownWrapper)) {
-                _isSupportedByFastPath = false;
                 return VarEnum.VT_UNKNOWN;
             } else if (argumentType == typeof(DispatchWrapper)) {
-                _isSupportedByFastPath = false;
                 return VarEnum.VT_DISPATCH;
+            } else if (argumentType == typeof(VariantWrapper)) {
+                return VarEnum.VT_VARIANT;
             } else if (argumentType == typeof(BStrWrapper)) {
-                _isSupportedByFastPath = false;
                 return VarEnum.VT_BSTR;
             } else if (argumentType == typeof(ErrorWrapper)) {
-                _isSupportedByFastPath = false;
                 return VarEnum.VT_ERROR;
             } else if (argumentType == typeof(CurrencyWrapper)) {
                 return VarEnum.VT_CY;
@@ -302,11 +285,8 @@ namespace Microsoft.Scripting.ComInterop {
             // TODO: This will not be needed once we enable loading type libraries and using the enum
             // definition from the type library. We need to revisit this and decide if we want to allow enums to be used as the underlying type even if the language does not support the conversion
             if (argumentType.IsEnum) {
-                // The slow path automatically supports such a conversion since Type.InvokeMember supports it.
-                _isSupportedByFastPath = false;
-
                 Type underlyingType = Enum.GetUnderlyingType(argumentType);
-                return GetComTypeNonArray(underlyingType);
+                return GetComType(underlyingType);
             }
 
             if (argumentType.IsCOMObject) {
@@ -318,39 +298,19 @@ namespace Microsoft.Scripting.ComInterop {
                 return primitiveVarEnum;
             }
 
+            if (argumentType.IsValueType) {
+                //TODO: consider specialcasing structs as VT_RECORD
+                return VarEnum.VT_VARIANT;
+            }
+
             // We could not find a way to marshal the type as a specific COM type
             // So we just indicate that it is an unknown value type (VT_RECORD) 
             // or unknown reference type (VT_DISPATCH_OR_UNKNOWN)
             // Note that callers may still find a less generic marshalling method if
             // the type implements IConvertible and if it is applicable
 
-            if (argumentType.IsValueType) {
-                _isSupportedByFastPath = false;
-                return VarEnum.VT_RECORD;
-            }
-
-            // Marshal as an RCW (Runtime-callable wrapper)
+            //default marshal type
             return VT_DISPATCH_OR_UNKNOWN;
-        }
-
-        private VarEnum GetComType(Type argumentType) {
-            if (argumentType == typeof(Missing)) {
-                _isSupportedByFastPath = false;
-                return VarEnum.VT_ERROR;
-            }
-
-            if (argumentType.IsArray) {
-                Type elementType = argumentType.GetElementType();
-
-                // Arrays of arrays will get marshaled as VT_ARRAY|VT_DISPATCH. We will not support marshaling
-                // of the inner arrays as VT_ARRAY.
-                VarEnum elementComType = GetComTypeNonArray(elementType);
-
-                _isSupportedByFastPath = false;
-                return (VarEnum.VT_ARRAY | elementComType);
-            }
-
-            return GetComTypeNonArray(argumentType);
         }
 
         /// <summary>
@@ -369,67 +329,85 @@ namespace Microsoft.Scripting.ComInterop {
 
             if (argumentType.IsByRef) {
                 Type elementType = argumentType.GetElementType();
-                VarEnum elementVarEnum = GetComType(elementType);
-                argBuilder = GetArgBuilder(elementType, elementVarEnum);
+
+                VarEnum elementVarEnum;
+                if (elementType == typeof(object)) {
+                    //no type information known for a ref argument. 
+                    //This parameter must accept any value including primitives so it should be a VT_VARIANT.
+                    elementVarEnum = VarEnum.VT_VARIANT;
+                } else {
+                    elementVarEnum = GetComType(elementType);
+                }
+
+                argBuilder = GetSimpleArgBuilder(elementType, elementVarEnum);
                 return new VariantBuilder(elementVarEnum | VarEnum.VT_BYREF, argBuilder);
             }
 
-            if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
-                Type elementType = argumentType.GetGenericArguments()[0];
-                VarEnum elementVarEnum = GetComType(elementType);
-                argBuilder = new StrongBoxArgBuilder(argumentType, GetArgBuilder(elementType, elementVarEnum));
-                return new VariantBuilder(elementVarEnum | VarEnum.VT_BYREF, argBuilder);
-            }
+            Debug.Assert(!(argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)), "should not have StrongBox here");
 
             VarEnum varEnum = GetComType(argumentType);
-            argBuilder = GetByValArgBuilder(argumentType, varEnum);
+            argBuilder = GetByValArgBuilder(argumentType, ref varEnum);
 
             return new VariantBuilder(varEnum, argBuilder);
         }
 
 
         // This helper is called when we are looking for a ByVal marhsalling
-        // In a ByVal case we can take into account IConvertible if all other 
+        // In a ByVal case we can take into account conversions or IConvertible if all other 
         // attempts to find marshalling type failed 
-        private ArgBuilder GetByValArgBuilder(Type elementType, VarEnum elementVarEnum) {
-            // check for IConvertible if VT indicates that marshalling type is basically unknown
-            if ((elementVarEnum == VT_DISPATCH_OR_UNKNOWN || elementVarEnum == VarEnum.VT_RECORD) &&
-                  typeof(IConvertible).IsAssignableFrom(elementType)) {
+        private static ArgBuilder GetByValArgBuilder(Type elementType, ref VarEnum elementVarEnum) {
+            // if VT indicates that marshalling type is unknown
+            if (elementVarEnum == VarEnum.VT_VARIANT || elementVarEnum == VT_DISPATCH_OR_UNKNOWN) {
+                //trying to find a conversion.
+                VarEnum convertibleTo;
+                if (TryGetPrimitiveComTypeViaConversion(elementType, out convertibleTo)) {
+                    elementVarEnum = convertibleTo;
+                    Type marshalType = GetManagedMarshalType(elementVarEnum);
+                    return new ConversionArgBuilder(elementType, GetSimpleArgBuilder(marshalType, elementVarEnum));
+                }
 
-                return new ConvertibleArgBuilder();
+                //checking for IConvertible.
+                if (typeof(IConvertible).IsAssignableFrom(elementType)) {
+                    return new ConvertibleArgBuilder();
+                }
             }
-
-            return GetArgBuilder(elementType, elementVarEnum);
-        }
-
-        // This helper can produce a builder that marshals via an implicit conversion
-        private ArgBuilder GetArgBuilder(Type elementType, VarEnum elementVarEnum) {
-            Type marshalType = GetManagedMarshalType(elementVarEnum);
-            if (!marshalType.IsAssignableFrom(elementType)) {
-                return new ConversionArgBuilder(elementType, GetSimpleArgBuilder(marshalType, elementVarEnum));
-            }
-
             return GetSimpleArgBuilder(elementType, elementVarEnum);
         }
 
         // This helper can produce a builder for types that are directly supported by Variant.
-        private SimpleArgBuilder GetSimpleArgBuilder(Type elementType, VarEnum elementVarEnum) {
+        private static SimpleArgBuilder GetSimpleArgBuilder(Type elementType, VarEnum elementVarEnum) {
             SimpleArgBuilder argBuilder;
 
-            if (elementType == typeof(string)) {
-                argBuilder = new StringArgBuilder(elementType);
-            } else if (elementType == typeof(bool)) {
-                argBuilder = new BoolArgBuilder(elementType);
-            } else if (elementType == typeof(DateTime)) {
-                argBuilder = new DateTimeArgBuilder(elementType);
-            } else if (elementType == typeof(CurrencyWrapper)) {
-                argBuilder = new CurrencyArgBuilder(elementType);
-            } else {
-                if (!Variant.HasCommonLayout(elementVarEnum)) {
-                    _isSupportedByFastPath = false;
-                }
-                argBuilder = new SimpleArgBuilder(elementType);
+            switch (elementVarEnum) {
+                case VarEnum.VT_BSTR:
+                    argBuilder = new StringArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_BOOL:
+                    argBuilder = new BoolArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_DATE:
+                    argBuilder = new DateTimeArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_CY:
+                    argBuilder = new CurrencyArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_DISPATCH:
+                    argBuilder = new DispatchArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_UNKNOWN:
+                    argBuilder = new UnknownArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_VARIANT:
+                    argBuilder = new VariantArgBuilder(elementType);
+                    break;
+                case VarEnum.VT_ERROR:
+                    argBuilder = new ErrorArgBuilder(elementType);
+                    break;
+                default:
+                    argBuilder = new SimpleArgBuilder(elementType);
+                    break;
             }
+
             return argBuilder;
         }
     }

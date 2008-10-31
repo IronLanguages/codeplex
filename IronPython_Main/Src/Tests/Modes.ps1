@@ -571,14 +571,12 @@ function test-dlrmodes($dlrexe)
 
 	#------------------------------------------------------------------------------
 	echo "The following modes are (or will soon be) undocumented and will not be tested:"
-	echo "    -X:DumpIL"
 	echo "    -X:PassExceptions"
 	echo ""
 	
 	#------------------------------------------------------------------------------
 	echo "The following modes are or will soon be removed and will not be tested:"
 	echo "    -X:ColorfulConsole (likely to be merged)"
-	echo "    -X:Frames (probably gone)"
 	echo ""
 
 	#------------------------------------------------------------------------------
@@ -628,40 +626,6 @@ function test-dlrmodes($dlrexe)
 	echo ""
 	echo "Testing -X:ShowClrExceptions ..."
 	showclrexceptions-helper $dlrexe
-	
-	#------------------------------------------------------------------------------
-	#-- -X:ShowTrees
-	echo ""
-	echo "-X:ShowTrees needs more coverage"
-	
-	if ($global:IS_DEBUG)
-	{
-		$stuff = dlrexe "-X:ShowTrees" $global:HELLO
-		#just check to make sure it does not throw for now
-		if (! $?) {show-failure "Failed."; }
-	}
-	
-	#------------------------------------------------------------------------------
-	#-- -X:DumpTrees
-	echo "-X:DumpTrees needs more coverage"
-
-	if ($global:IS_DEBUG)
-	{
-		$stuff = dlrexe "-X:DumpTrees" $global:HELLO
-		#just check to make sure it does not throw for now
-		if (! $?) {show-failure "Failed."; }
-	}
-
-	#------------------------------------------------------------------------------
-	#-- -X:ShowRules
-	echo "-X:ShowRules needs more coverage"
-	
-	if ($global:IS_DEBUG)
-	{
-		$stuff = dlrexe "-X:ShowRules" $global:HELLO
-		#just check to make sure it does not throw for now
-		if (! $?) {show-failure "Failed."; }
-	}
 }
 
 ###############################################################################
@@ -704,7 +668,7 @@ function test-relatedpy($pyexe)
 		$host.ui.write("-X:AssembliesDir unsupported with non-debug builds")
 	}
 	else {
-		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:LightweightScopes" "-X:DumpIL" "-X:MaxRecursion" 5 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
+		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:LightweightScopes" "-X:MaxRecursion" 5 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
 	}
 }
 	

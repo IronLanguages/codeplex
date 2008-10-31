@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Operations {
         [return: MaybeNotImplemented]
         public object __eq__(object other) {
             if (other is string || other is ExtensibleString)
-                return RuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
+                return ScriptingRuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
 
             return NotImplementedType.Value;
         }
@@ -89,7 +89,7 @@ namespace IronPython.Runtime.Operations {
         #region ISequence Members
 
         public virtual object this[int index] {
-            get { return RuntimeHelpers.CharToString(Value[index]); }
+            get { return ScriptingRuntimeHelpers.CharToString(Value[index]); }
         }
 
         public object this[Slice slice] {
@@ -204,7 +204,7 @@ namespace IronPython.Runtime.Operations {
         [StaticExtensionMethod]
         public static object __new__(CodeContext/*!*/ context, PythonType cls, char @object) {
             if (cls == TypeCache.String) {
-                return CheckAsciiString(context, RuntimeHelpers.CharToString(@object));
+                return CheckAsciiString(context, ScriptingRuntimeHelpers.CharToString(@object));
             } else {
                 return cls.CreateInstance(context, @object);
             }
@@ -298,7 +298,7 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static string GetItem(string s, int index) {
-            return RuntimeHelpers.CharToString(s[PythonOps.FixIndex(index, s.Length)]);
+            return ScriptingRuntimeHelpers.CharToString(s[PythonOps.FixIndex(index, s.Length)]);
         }
 
         [SpecialName]
@@ -1184,7 +1184,7 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName, ImplicitConversionMethod]
         public static string ConvertFromChar(char c) {
-            return RuntimeHelpers.CharToString(c);
+            return ScriptingRuntimeHelpers.CharToString(c);
         }
 
         [SpecialName, ExplicitConversionMethod]
@@ -2019,7 +2019,7 @@ namespace IronPython.Runtime.Operations {
 
         internal static IEnumerator<string> StringEnumerator(string str) {
             for (int i = 0; i < str.Length; i++) {
-                yield return RuntimeHelpers.CharToString(str[i]);
+                yield return ScriptingRuntimeHelpers.CharToString(str[i]);
             }
         }
 

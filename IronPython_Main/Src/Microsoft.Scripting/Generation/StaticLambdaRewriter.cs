@@ -14,14 +14,11 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;    
+using Microsoft.Scripting.Utils;    
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

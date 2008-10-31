@@ -38,47 +38,10 @@ namespace Microsoft.Scripting.ComInterop {
             return Helpers.Convert(parameter, _parameterType);
         }
 
-        // unmarshal new value back to be _parameterType
-        // trivial builder can just return the value.
-        // non trivial builders will override this function.
-        internal virtual Expression UnmarshalFromRef(Expression value) {
-            Debug.Assert(value != null && value.Type == _parameterType);
+        internal override Expression UnmarshalFromRef(Expression newValue) {
+            Debug.Assert(newValue != null && newValue.Type.IsAssignableFrom(_parameterType));
 
-            return value;
-        }
-
-        internal sealed override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
-            newValue = UnmarshalFromRef(newValue);
-            Debug.Assert(newValue != null && newValue.Type == _parameterType);
-
-            // parameter = newValue
-            return Expression.Assign(parameter, Helpers.Convert(newValue, parameter.Type));
-        }
-
-
-
-        internal override object UnwrapForReflection(object arg) {
-            return Convert(arg, _parameterType);
-        }
-
-        internal static object Convert(object obj, Type toType) {
-            if (obj == null) {
-                if (!toType.IsValueType) {
-                    return null;
-                }
-            } else {
-                if (toType.IsValueType) {
-                    if (toType == obj.GetType()) {
-                        return obj;
-                    }
-                } else {
-                    if (toType.IsAssignableFrom(obj.GetType())) {
-                        return obj;
-                    }
-                }
-            }
-
-            return System.Convert.ChangeType(obj, toType, CultureInfo.InvariantCulture);
+            return base.UnmarshalFromRef(newValue);
         }
     }
 }

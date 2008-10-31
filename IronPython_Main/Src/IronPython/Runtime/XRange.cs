@@ -16,8 +16,8 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
@@ -97,7 +97,7 @@ namespace IronPython.Runtime {
                     throw PythonOps.IndexError("xrange object index out of range");
 
                 int ind = index * _step + _start;
-                return RuntimeHelpers.Int32ToObject(ind);
+                return ScriptingRuntimeHelpers.Int32ToObject(ind);
             }
         }
 
@@ -148,7 +148,7 @@ namespace IronPython.Runtime {
 
             public object Current {
                 get {
-                    return RuntimeHelpers.Int32ToObject(_value);
+                    return ScriptingRuntimeHelpers.Int32ToObject(_value);
                 }
             }
 

@@ -14,8 +14,6 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Collections;
-using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
@@ -393,7 +391,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private static MetaObject MakeNullToNullableOfTTarget(Type toType, Restrictions restrictions) {
             return new MetaObject(
-                Ast.Call(typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(toType)),
+                Ast.Call(typeof(ScriptingRuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(toType)),
                 restrictions
             );
         }

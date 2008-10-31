@@ -26,10 +26,6 @@ namespace Microsoft.Scripting.ComInterop {
     internal sealed class NullArgBuilder : ArgBuilder {
         internal NullArgBuilder() { }
 
-        internal override object UnwrapForReflection(object arg) {
-            return null;
-        }
-
         internal override Expression Marshal(Expression parameter) {
             return Expression.Constant(null);
         }

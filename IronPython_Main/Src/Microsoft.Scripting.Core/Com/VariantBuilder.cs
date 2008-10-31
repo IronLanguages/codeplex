@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
 
@@ -28,6 +29,7 @@ namespace Microsoft.Scripting.ComInterop {
     /// </summary>
     internal class VariantBuilder {
 
+        private MemberExpression _variant;
         private readonly ArgBuilder _argBuilder;
         private readonly VarEnum _targetComType;
         internal ParameterExpression TempVariable { get; private set; }
@@ -41,7 +43,13 @@ namespace Microsoft.Scripting.ComInterop {
             get { return (_targetComType & VarEnum.VT_BYREF) != 0; }
         }
 
-        internal Expression WriteArgumentVariant(MemberExpression variant, Expression parameter) {
+        internal Expression InitializeArgumentVariant(MemberExpression variant, Expression parameter) {
+            //NOTE: we must remember our variant
+            //the reason is that argument order does not map exactly to the order of varians for invoke
+            //and when we are doing clean-up we must be sure we are cleaning the variant we have initialized.
+
+            _variant = variant;
+
             if (IsByRef) {
                 // temp = argument
                 // paramVariants._elementN.SetAsByrefT(ref temp)
@@ -74,8 +82,9 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             if (Variant.IsPrimitiveType(_targetComType) ||
-                (_targetComType == VarEnum.VT_UNKNOWN) ||
-                (_targetComType == VarEnum.VT_DISPATCH)) {
+               (_targetComType == VarEnum.VT_UNKNOWN) ||
+               (_targetComType == VarEnum.VT_VARIANT) ||
+               (_targetComType == VarEnum.VT_DISPATCH)) {
                 // paramVariants._elementN.AsT = (cast)argN
                 return Expression.Assign(
                     Expression.Property(
@@ -100,14 +109,28 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        internal Expression Clear(MemberExpression variant) {
+        private static Expression Release(Expression pUnk) {
+            return Expression.Call(typeof(UnsafeMethods).GetMethod("IUnknownReleaseNotZero"), pUnk);
+        }
+
+        internal Expression Clear() {
             if (IsByRef) {
                 if (_argBuilder is StringArgBuilder) {
                     Debug.Assert(TempVariable != null);
                     return Expression.Call(typeof(Marshal).GetMethod("FreeBSTR"), TempVariable);
+                } else if (_argBuilder is DispatchArgBuilder) {
+                    Debug.Assert(TempVariable != null);
+                    return Release(TempVariable);
+                } else if (_argBuilder is UnknownArgBuilder) {
+                    Debug.Assert(TempVariable != null);
+                    return Release(TempVariable);
+                } else if (_argBuilder is VariantArgBuilder) {
+                    Debug.Assert(TempVariable != null);
+                    return Expression.Call(TempVariable, typeof(Variant).GetMethod("Clear"));
                 }
                 return null;
             }
+
 
             switch (_targetComType) {
                 case VarEnum.VT_EMPTY:
@@ -117,8 +140,9 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_BSTR:
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
+                case VarEnum.VT_VARIANT:
                     // paramVariants._elementN.Clear()
-                    return Expression.Call(variant, typeof(Variant).GetMethod("Clear"));
+                    return Expression.Call(_variant, typeof(Variant).GetMethod("Clear"));
 
                 default:
                     Debug.Assert(Variant.IsPrimitiveType(_targetComType), "Unexpected VarEnum");
@@ -126,28 +150,17 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        internal object Build(object arg) {
-            object result = _argBuilder.UnwrapForReflection(arg);
-            if (_targetComType == VarEnum.VT_DISPATCH) {
-                // Ensure that the object supports IDispatch to match how WriteArgumentVariant would work
-                // (it would call the Variant.AsDispatch setter). Otherwise, Type.InvokeMember might decide
-                // to marshal it as IUknown which would result in a difference in behavior.
-                IntPtr dispatch = Marshal.GetIDispatchForObject(result);
-                Marshal.Release(dispatch);
-            }
-
-            return result;
-        }
-
         internal Expression UpdateFromReturn(Expression parameter) {
             if (TempVariable == null) {
                 return null;
             }
-            return _argBuilder.UpdateFromReturn(parameter, TempVariable);
-        }
-
-        internal void UpdateFromReturn(object originalArg, object updatedArg) {
-            _argBuilder.UpdateFromReturn(originalArg, updatedArg);
+            return Expression.Assign(
+                parameter,
+                Helpers.Convert(
+                    _argBuilder.UnmarshalFromRef(TempVariable),
+                    parameter.Type
+                )
+            );
         }
     }
 }

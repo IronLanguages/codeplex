@@ -16,10 +16,12 @@
 using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Ast = Microsoft.Linq.Expressions.Expression;

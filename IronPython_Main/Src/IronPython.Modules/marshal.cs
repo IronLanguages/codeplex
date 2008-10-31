@@ -17,13 +17,11 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("marshal", typeof(IronPython.Modules.PythonMarshal))]
 namespace IronPython.Modules {
@@ -140,8 +138,8 @@ namespace IronPython.Modules {
                 infinite.Add(o);
                 try {
                     if (o == null) _bytes.Add((byte)'N');
-                    else if (o == RuntimeHelpers.True) _bytes.Add((byte)'T');
-                    else if (o == RuntimeHelpers.False) _bytes.Add((byte)'F');
+                    else if (o == ScriptingRuntimeHelpers.True) _bytes.Add((byte)'T');
+                    else if (o == ScriptingRuntimeHelpers.False) _bytes.Add((byte)'F');
                     else if (o is string) WriteString(o as string);
                     else if (o is int) WriteInt((int)o);
                     else if (o is float) WriteFloat((float)o);
@@ -552,8 +550,8 @@ namespace IronPython.Modules {
                     // simple ops to be read in
                     case 'i': res = ReadInt(); break;
                     case 'l': res = ReadBigInteger(); break;
-                    case 'T': res = RuntimeHelpers.True; break;
-                    case 'F': res = RuntimeHelpers.False; break;
+                    case 'T': res = ScriptingRuntimeHelpers.True; break;
+                    case 'F': res = ScriptingRuntimeHelpers.False; break;
                     case 'f': res = ReadFloat(); break;
                     case 't': res = ReadAsciiString(); break;
                     case 'u': res = ReadUnicodeString(); break;
@@ -620,7 +618,7 @@ namespace IronPython.Modules {
                 b4 = ReadIntPart();
                 
                 byte[] bytes = new byte[] { b1, b2, b3, b4 };
-                return RuntimeHelpers.Int32ToObject(BitConverter.ToInt32(bytes, 0));
+                return ScriptingRuntimeHelpers.Int32ToObject(BitConverter.ToInt32(bytes, 0));
                 //return Ops.int2object(b1 | (b2 << 8) | (b3 << 16) | (b4 << 24));
             }
 

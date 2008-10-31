@@ -30,19 +30,8 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal override Expression MarshalToRef(Expression parameter) {
+            //we are not supporting convertible InOut
             throw Assert.Unreachable;
-        }
-
-        internal override Expression UpdateFromReturn(Expression parameter, Expression newValue) {
-            //nothing to update as we do not support ByRef for IConvertible.
-            return null;
-        }
-
-        internal override object UnwrapForReflection(object arg) {
-            IConvertible icon = (IConvertible)arg;
-            TypeCode tc = icon.GetTypeCode();
-
-            return System.Convert.ChangeType(arg, tc, CultureInfo.CurrentCulture);
         }
     }
 }

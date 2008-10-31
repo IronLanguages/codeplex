@@ -16,9 +16,9 @@
 using System; using Microsoft;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
 
@@ -1063,7 +1063,7 @@ namespace IronPython.Runtime.Operations {
         public static object Add(Int32 x, Int32 y) {
             long result = (long) x + y;
             if (Int32.MinValue <= result && result <= Int32.MaxValue) {
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.Int32ToObject((Int32)(result));
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.Int32ToObject((Int32)(result));
             } 
             return BigIntegerOps.Add((BigInteger)x, (BigInteger)y);
 
@@ -1072,7 +1072,7 @@ namespace IronPython.Runtime.Operations {
         public static object Subtract(Int32 x, Int32 y) {
             long result = (long) x - y;
             if (Int32.MinValue <= result && result <= Int32.MaxValue) {
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.Int32ToObject((Int32)(result));
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.Int32ToObject((Int32)(result));
             } 
             return BigIntegerOps.Subtract((BigInteger)x, (BigInteger)y);
 
@@ -1081,7 +1081,7 @@ namespace IronPython.Runtime.Operations {
         public static object Multiply(Int32 x, Int32 y) {
             long result = (long) x * y;
             if (Int32.MinValue <= result && result <= Int32.MaxValue) {
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.Int32ToObject((Int32)(result));
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.Int32ToObject((Int32)(result));
             } 
             return BigIntegerOps.Multiply((BigInteger)x, (BigInteger)y);
 

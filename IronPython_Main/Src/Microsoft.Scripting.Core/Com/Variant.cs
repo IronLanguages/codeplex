@@ -186,6 +186,9 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_CY:
                 case VarEnum.VT_DATE:
                 case VarEnum.VT_BSTR:
+                case VarEnum.VT_UNKNOWN:
+                case VarEnum.VT_DISPATCH:
+                case VarEnum.VT_VARIANT:
 
                 // *** END GENERATED CODE ***
 
@@ -234,6 +237,7 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_BSTR: return AsBstr;
                 case VarEnum.VT_UNKNOWN: return AsUnknown;
                 case VarEnum.VT_DISPATCH: return AsDispatch;
+                case VarEnum.VT_VARIANT: return AsVariant;
 
                 // *** END GENERATED CODE ***
 
@@ -268,6 +272,7 @@ namespace Microsoft.Scripting.ComInterop {
                 ((vt) == VarEnum.VT_BSTR) ||
                 ((vt) == VarEnum.VT_UNKNOWN) ||
                 ((vt) == VarEnum.VT_DISPATCH) ||
+                ((vt) == VarEnum.VT_VARIANT) ||
                 ((vt) == VarEnum.VT_RECORD)
                 ) {
                 IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
@@ -744,6 +749,13 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+        public void SetAsByrefUnknown(ref IntPtr value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            VariantType = (VarEnum.VT_UNKNOWN | VarEnum.VT_BYREF);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
+        }
+
         // VT_DISPATCH
 
         public Object AsDispatch {
@@ -758,11 +770,38 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+        public void SetAsByrefDispatch(ref IntPtr value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            VariantType = (VarEnum.VT_DISPATCH | VarEnum.VT_BYREF);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
+        }
+
+        // VT_VARIANT
+
+        public Object AsVariant {
+            get {
+                Debug.Assert(VariantType == VarEnum.VT_VARIANT);
+                return Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));
+            }
+            set {
+                Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+                VariantType = VarEnum.VT_VARIANT;
+                Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));
+            }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+        public void SetAsByrefVariant(ref Variant value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            VariantType = (VarEnum.VT_VARIANT | VarEnum.VT_BYREF);
+            _typeUnion._unionTypes._byref = UnsafeMethods.ConvertVariantByrefToPtr(ref value);
+        }
+
 
         // *** END GENERATED CODE ***
 
         #endregion
-
 
         internal static System.Reflection.PropertyInfo GetAccessor(VarEnum varType) {
             switch (varType) {
@@ -792,6 +831,7 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_BSTR: return typeof(Variant).GetProperty("AsBstr");
                 case VarEnum.VT_UNKNOWN: return typeof(Variant).GetProperty("AsUnknown");
                 case VarEnum.VT_DISPATCH: return typeof(Variant).GetProperty("AsDispatch");
+                case VarEnum.VT_VARIANT: return typeof(Variant).GetProperty("AsVariant");
 
                 // *** END GENERATED CODE ***
 
@@ -828,6 +868,9 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_CY: return typeof(Variant).GetMethod("SetAsByrefCy");
                 case VarEnum.VT_DATE: return typeof(Variant).GetMethod("SetAsByrefDate");
                 case VarEnum.VT_BSTR: return typeof(Variant).GetMethod("SetAsByrefBstr");
+                case VarEnum.VT_UNKNOWN: return typeof(Variant).GetMethod("SetAsByrefUnknown");
+                case VarEnum.VT_DISPATCH: return typeof(Variant).GetMethod("SetAsByrefDispatch");
+                case VarEnum.VT_VARIANT: return typeof(Variant).GetMethod("SetAsByrefVariant");
 
                 // *** END GENERATED CODE ***
 
@@ -836,39 +879,6 @@ namespace Microsoft.Scripting.ComInterop {
                 default:
                     throw Error.VariantGetAccessorNYI(varType);
             }
-        }
-
-        internal static bool HasCommonLayout(VarEnum varEnum) {
-            switch (varEnum) {
-
-                #region Generated HasCommonLayout
-
-                // *** BEGIN GENERATED CODE ***
-                // generated by function: gen_hasCommonLayout from: generate_comdispatch.py
-
-                case VarEnum.VT_I1: // SByte
-                case VarEnum.VT_I2: // Int16
-                case VarEnum.VT_I4: // Int32
-                case VarEnum.VT_I8: // Int64
-                case VarEnum.VT_UI1: // Byte
-                case VarEnum.VT_UI2: // UInt16
-                case VarEnum.VT_UI4: // UInt32
-                case VarEnum.VT_UI8: // UInt64
-                case VarEnum.VT_INT: // IntPtr
-                case VarEnum.VT_UINT: // UIntPtr
-                case VarEnum.VT_ERROR: // Int32
-                case VarEnum.VT_R4: // Single
-                case VarEnum.VT_R8: // Double
-                case VarEnum.VT_DECIMAL: // Decimal
-
-                // *** END GENERATED CODE ***
-
-                #endregion
-
-                    return true;
-            }
-
-            return false;
         }
     }
 }

@@ -17,9 +17,7 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
@@ -70,7 +68,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                             sets.Add(
                                 Ast.Convert(
                                     Ast.Call(
-                                        typeof(RuntimeHelpers).GetMethod("ReadOnlyAssignError"),
+                                        typeof(ScriptingRuntimeHelpers).GetMethod("ReadOnlyAssignError"),
                                         Ast.Constant(true),
                                         Ast.Constant(fi.Name)
                                     ),
@@ -94,7 +92,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                             sets.Add(
                                 Ast.Convert(
                                     Ast.Call(
-                                        typeof(RuntimeHelpers).GetMethod("ReadOnlyAssignError"),
+                                        typeof(ScriptingRuntimeHelpers).GetMethod("ReadOnlyAssignError"),
                                         Ast.Constant(false),
                                         Ast.Constant(pi.Name)
                                     ),

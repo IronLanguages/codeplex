@@ -20,8 +20,8 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
+using RuntimeHelpers = Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers;
 
 namespace Microsoft.Scripting.Actions.Calls {
 

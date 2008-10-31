@@ -212,7 +212,7 @@ namespace IronPython.Runtime {
         // Convert a byte array into a string by casting each byte into a character.
         internal static String PackDataIntoString(byte[] data, int count) {
             if (count == 1) {
-                return RuntimeHelpers.CharToString((char)data[0]);
+                return ScriptingRuntimeHelpers.CharToString((char)data[0]);
             }
 
             StringBuilder sb = new StringBuilder(count);
@@ -308,7 +308,7 @@ namespace IronPython.Runtime {
                 if (c == '\r' && Peek() == '\n') {
                     c = Read();
                 }
-                return RuntimeHelpers.CharToString((char)c);
+                return ScriptingRuntimeHelpers.CharToString((char)c);
             }
 
             StringBuilder sb = new StringBuilder(size);
@@ -441,7 +441,7 @@ namespace IronPython.Runtime {
                     return String.Empty;
                 }
                 if (c == '\r') c = '\n';
-                return RuntimeHelpers.CharToString((char)c);
+                return ScriptingRuntimeHelpers.CharToString((char)c);
             }
 
             StringBuilder sb = new StringBuilder(size);
@@ -532,7 +532,7 @@ namespace IronPython.Runtime {
                     return String.Empty;
                 }
 
-                return RuntimeHelpers.CharToString((char)c);
+                return ScriptingRuntimeHelpers.CharToString((char)c);
             }
 
             StringBuilder sb = new StringBuilder(size);
@@ -638,7 +638,7 @@ namespace IronPython.Runtime {
                     return String.Empty;
                 }
 
-                return RuntimeHelpers.CharToString((char)c);
+                return ScriptingRuntimeHelpers.CharToString((char)c);
             }
 
             StringBuilder sb = new StringBuilder(size);

@@ -158,8 +158,7 @@ namespace Microsoft.Scripting.ComInterop {
             ComTypes.ITypeInfo typeInfo = null;
             try {
                 typeInfo = Marshal.GetObjectForIUnknown(typeInfoPtr) as ComTypes.ITypeInfo;
-            }
-            finally {
+            } finally {
                 Marshal.Release(typeInfoPtr);
             }
 
@@ -206,8 +205,7 @@ namespace Microsoft.Scripting.ComInterop {
 
             try {
                 return (ComTypes.TYPEATTR)Marshal.PtrToStructure(pAttrs, typeof(ComTypes.TYPEATTR));
-            }
-            finally {
+            } finally {
                 typeInfo.ReleaseTypeAttr(pAttrs);
             }
         }
@@ -224,76 +222,8 @@ namespace Microsoft.Scripting.ComInterop {
 
             try {
                 return (ComTypes.TYPELIBATTR)Marshal.PtrToStructure(pAttrs, typeof(ComTypes.TYPELIBATTR));
-            }
-            finally {
+            } finally {
                 typeLib.ReleaseTLibAttr(pAttrs);
-            }
-        }
-
-        private static void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
-            VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
-            for (int i = 0; i < variantBuilders.Length; i++) {
-                variantBuilders[i].UpdateFromReturn(explicitArgs[i], argsForCall[i]);
-            }
-        }
-
-        public static object UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs) {
-            try {
-                VarEnumSelector varEnumSelector = new VarEnumSelector(typeof(object), explicitArgs);
-                ParameterModifier parameterModifiers;
-                object[] argsForCall = varEnumSelector.BuildArguments(explicitArgs, out parameterModifiers);
-
-                BindingFlags bindingFlags = BindingFlags.Instance;
-                if (method.IsPropertyGet) {
-                    bindingFlags |= BindingFlags.GetProperty;
-                } else if (method.IsPropertyPut) {
-                    bindingFlags |= BindingFlags.SetProperty;
-                } else {
-                    bindingFlags |= BindingFlags.InvokeMethod;
-                }
-
-                string memberName = method.DispIdString; // Use the "[DISPID=N]" format to avoid a call to GetIDsOfNames
-                string[] namedParams = null;
-                if (keywordArgNames.Length > 0) {
-                    // InvokeMember does not allow the method name to be in "[DISPID=N]" format if there are namedParams
-                    memberName = method.Name;
-
-                    namedParams = keywordArgNames;
-                    argsForCall = argsForCall.RotateRight(namedParams.Length);
-                }
-
-                // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
-                // have to worry about marshalling the arguments. Type.InvokeMember will use
-                // IDispatch.Invoke under the hood.
-                object retVal = dispatch.DispatchObject.GetType().InvokeMember(
-                    memberName,
-                    bindingFlags,
-                    Type.DefaultBinder,
-                    dispatch.DispatchObject,
-                    argsForCall,
-                    new ParameterModifier[] { parameterModifiers },
-                    null,
-                    namedParams
-                    );
-
-                UpdateByrefArguments(explicitArgs, argsForCall, varEnumSelector);
-
-                return retVal;
-            } catch (TargetInvocationException e) {
-                COMException comException = e.InnerException as COMException;
-                if (comException != null) {
-                    int errorCode = comException.ErrorCode;
-                    if (errorCode > ComHresults.DISP_E_UNKNOWNINTERFACE && errorCode < ComHresults.DISP_E_PARAMNOTOPTIONAL) {
-                        // If the current exception was caused because of a DISP_E_* errorcode, call
-                        // ComRuntimeHelpers.CheckThrowException which handles these errorcodes specially. This ensures
-                        // that we preserve identical behavior in both cases.
-                        ExcepInfo excepInfo = new ExcepInfo();
-                        ComRuntimeHelpers.CheckThrowException(comException.ErrorCode, ref excepInfo, UInt32.MaxValue, method.Name);
-                    }
-                }
-
-                // Unwrap the real (inner) exception and raise it
-                throw e.InnerException;
             }
         }
 
@@ -390,8 +320,25 @@ namespace Microsoft.Scripting.ComInterop {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")] // TODO: fix
         public static IntPtr ConvertVariantByrefToPtr(ref Variant value) { return _ConvertVariantByrefToPtr(ref value); }
 
+        public static Variant GetVariantForObject(object obj) {
+            Variant variant = default(Variant);
+            System.Runtime.InteropServices.Marshal.GetNativeVariantForObject(obj, UnsafeMethods.ConvertVariantByrefToPtr(ref variant));
+            return variant;
+        }
+
+        public static object GetObjectForVariant(Variant variant) {
+            IntPtr ptr = UnsafeMethods.ConvertVariantByrefToPtr(ref variant);
+            return System.Runtime.InteropServices.Marshal.GetObjectForNativeVariant(ptr);
+        }
+
         public static int IUnknownRelease(IntPtr interfacePointer) {
             return _IUnknownRelease(interfacePointer);
+        }
+
+        public static void IUnknownReleaseNotZero(IntPtr interfacePointer) {
+            if (interfacePointer != IntPtr.Zero) {
+                IUnknownRelease(interfacePointer);
+            }
         }
 
         public static readonly IntPtr NullInterfaceId = GetNullInterfaceId();
@@ -520,8 +467,8 @@ namespace Microsoft.Scripting.ComInterop {
             method.Emit(OpCodes.Ldarg_0);
             method.Emit(OpCodes.Conv_I);
 #if DEBUG
-                method.Emit(OpCodes.Dup);
-                method.Emit(OpCodes.Call, typeof(UnsafeMethods).GetMethod("AssertByrefPointsToStack"));
+            method.Emit(OpCodes.Dup);
+            method.Emit(OpCodes.Call, typeof(UnsafeMethods).GetMethod("AssertByrefPointsToStack"));
 #endif
             method.Emit(OpCodes.Ret);
 

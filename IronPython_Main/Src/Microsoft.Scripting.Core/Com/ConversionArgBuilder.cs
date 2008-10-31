@@ -37,27 +37,8 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal override Expression MarshalToRef(Expression parameter) {
-            return _innerBuilder.MarshalToRef(Helpers.Convert(parameter, _parameterType));
-        }
-
-        internal override Expression UpdateFromReturn(Expression parameter, Expression value) {
-            Expression convertedToOriginalType = Helpers.Convert(
-                _innerBuilder.UnmarshalFromRef(value),
-                _parameterType
-            );
-
-            // parameter = UpdatedValue
-            return Expression.Assign(
-                parameter,
-                Helpers.Convert(
-                    convertedToOriginalType,
-                    parameter.Type
-                )
-            );
-        }
-
-        internal override object UnwrapForReflection(object arg) {
-            return _innerBuilder.UnwrapForReflection(SimpleArgBuilder.Convert(arg, _parameterType));
+            //we are not supporting conversion InOut
+            throw Assert.Unreachable;
         }
     }
 }

@@ -74,16 +74,22 @@ def test_documentation():
     else:
         AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
 
-def test_methodEquality():
+def test_method_equality():
     AreEqual(com_obj.SumArgs, com_obj.SumArgs)
     Assert(com_obj.SumArgs != com_obj.IntArguments)
     com_obj2 = getRCWFromProgID(com_type_name)
     Assert(com_obj.SumArgs != com_obj2.SumArgs)
+    
+    #Use COM methods as dicitonary keys
     d = {}
     d[com_obj.SumArgs] = "SumArgs"
+    AreEqual(d[com_obj.SumArgs], "SumArgs")    
     d[com_obj.IntArguments] = "IntArguments"
+    AreEqual(d[com_obj.IntArguments], "IntArguments")
     d[com_obj.SumArgs] = "SumArgs2"
+    AreEqual(d[com_obj.SumArgs], "SumArgs2")
     d[com_obj2.SumArgs] = "obj2_SumArgs"
+    AreEqual(d[com_obj2.SumArgs], "obj2_SumArgs")
     AreEqual(d, {com_obj.SumArgs:"SumArgs2", com_obj.IntArguments:"IntArguments", com_obj2.SumArgs:"obj2_SumArgs"})
 
 def test_namedArgs():

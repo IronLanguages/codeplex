@@ -20,14 +20,12 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -597,28 +595,28 @@ namespace IronPython.Modules {
             public static object operator >(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator >=(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <=(date self, object other) {
                 if (!self.CheckType(other)) return NotImplementedType.Value;
 
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
             }
 
             public bool __eq__(object other) {

@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Generation {
 
             return AstUtils.Convert(
                 Expression.Call(
-                    typeof(RuntimeHelpers).GetMethod(node.IsLocal ? "LookupName" : "LookupGlobalName"),
+                    typeof(ScriptingRuntimeHelpers).GetMethod(node.IsLocal ? "LookupName" : "LookupGlobalName"),
                     node.Annotations,
                     new Expression[]{
                         Context,
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Generation {
 
             return AstUtils.Convert(
                 Expression.Call(
-                    typeof(RuntimeHelpers).GetMethod(lvalue.IsLocal ? "SetName" : "SetGlobalName"),
+                    typeof(ScriptingRuntimeHelpers).GetMethod(lvalue.IsLocal ? "SetName" : "SetGlobalName"),
                     lvalue.Annotations,
                     new Expression[]{
                         Context,
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Generation {
 
 namespace Microsoft.Scripting.Runtime {
     // TODO: move these to Microsoft.Scripting
-    public static partial class RuntimeHelpers {
+    public static partial class ScriptingRuntimeHelpers {
         /// <summary>
         /// Called from generated code, helper to do a global name lookup
         /// </summary>

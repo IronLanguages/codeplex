@@ -17,18 +17,17 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
+using RuntimeHelpers = Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Linq.Expressions.Expression;
-    using System.Reflection.Emit;
 
     public static class CompilerHelpers {
         public static readonly MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
@@ -642,7 +641,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static Type MakeCallSiteType(params Type[] types) {
-            return typeof(Microsoft.Scripting.Actions.CallSite<>).MakeGenericType(DelegateHelpers.MakeDelegate(types));
+            return typeof(CallSite<>).MakeGenericType(DelegateHelpers.MakeDelegate(types));
         }
 
         public static Type MakeCallSiteDelegateType(Type[] types) {

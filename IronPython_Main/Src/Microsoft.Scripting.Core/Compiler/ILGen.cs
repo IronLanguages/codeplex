@@ -42,14 +42,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Begins a catch block.
         /// </summary>
-        internal virtual void BeginCatchBlock(Type exceptionType) {
+        internal void BeginCatchBlock(Type exceptionType) {
             _ilg.BeginCatchBlock(exceptionType);
         }
 
         /// <summary>
         /// Begins an exception block for a filtered exception.
         /// </summary>
-        internal virtual void BeginExceptFilterBlock() {
+        internal void BeginExceptFilterBlock() {
             _ilg.BeginExceptFilterBlock();
         }
 
@@ -57,49 +57,49 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// Begins an exception block for a non-filtered exception.
         /// </summary>
         /// <returns></returns>
-        internal virtual Label BeginExceptionBlock() {
+        internal Label BeginExceptionBlock() {
             return _ilg.BeginExceptionBlock();
         }
 
         /// <summary>
         /// Begins an exception fault block
         /// </summary>
-        internal virtual void BeginFaultBlock() {
+        internal void BeginFaultBlock() {
             _ilg.BeginFaultBlock();
         }
 
         /// <summary>
         /// Begins a finally block
         /// </summary>
-        internal virtual void BeginFinallyBlock() {
+        internal void BeginFinallyBlock() {
             _ilg.BeginFinallyBlock();
         }
 
         /// <summary>
         /// Ends an exception block.
         /// </summary>
-        internal virtual void EndExceptionBlock() {
+        internal void EndExceptionBlock() {
             _ilg.EndExceptionBlock();
         }
 
         /// <summary>
         /// Begins a lexical scope.
         /// </summary>
-        internal virtual void BeginScope() {
+        internal void BeginScope() {
             _ilg.BeginScope();
         }
 
         /// <summary>
         /// Ends a lexical scope.
         /// </summary>
-        internal virtual void EndScope() {
+        internal void EndScope() {
             _ilg.EndScope();
         }
 
         /// <summary>
         /// Declares a local variable of the specified type.
         /// </summary>
-        internal virtual LocalBuilder DeclareLocal(Type localType) {
+        internal LocalBuilder DeclareLocal(Type localType) {
             return _ilg.DeclareLocal(localType);
         }
 
@@ -107,119 +107,119 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// Declares a local variable of the specified type, optionally
         /// pinning the object referred to by the variable.
         /// </summary>
-        internal virtual LocalBuilder DeclareLocal(Type localType, bool pinned) {
+        internal LocalBuilder DeclareLocal(Type localType, bool pinned) {
             return _ilg.DeclareLocal(localType, pinned);
         }
 
         /// <summary>
         /// Declares a new label.
         /// </summary>
-        internal virtual Label DefineLabel() {
+        internal Label DefineLabel() {
             return _ilg.DefineLabel();
         }
 
         /// <summary>
         /// Marks the label at the current position.
         /// </summary>
-        internal virtual void MarkLabel(Label loc) {
+        internal void MarkLabel(Label loc) {
             _ilg.MarkLabel(loc);
         }
 
         /// <summary>
         /// Emits an instruction.
         /// </summary>
-        internal virtual void Emit(OpCode opcode) {
+        internal void Emit(OpCode opcode) {
             _ilg.Emit(opcode);
         }
 
         /// <summary>
         /// Emits an instruction with a byte argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, byte arg) {
+        internal void Emit(OpCode opcode, byte arg) {
             _ilg.Emit(opcode, arg);
         }
 
         /// <summary>
         /// Emits an instruction with the metadata token for the specified contructor.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, ConstructorInfo con) {
+        internal void Emit(OpCode opcode, ConstructorInfo con) {
             _ilg.Emit(opcode, con);
         }
 
         /// <summary>
         /// Emits an instruction with a double argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, double arg) {
+        internal void Emit(OpCode opcode, double arg) {
             _ilg.Emit(opcode, arg);
         }
 
         /// <summary>
         /// Emits an instruction with the metadata token for the specified field.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, FieldInfo field) {
+        internal void Emit(OpCode opcode, FieldInfo field) {
             _ilg.Emit(opcode, field);
         }
 
         /// <summary>
         /// Emits an instruction with a float argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, float arg) {
+        internal void Emit(OpCode opcode, float arg) {
             _ilg.Emit(opcode, arg);
         }
 
         /// <summary>
         /// Emits an instruction with an int argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, int arg) {
+        internal void Emit(OpCode opcode, int arg) {
             _ilg.Emit(opcode, arg);
         }
 
         /// <summary>
         /// Emits an instruction with a label argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, Label label) {
+        internal void Emit(OpCode opcode, Label label) {
             _ilg.Emit(opcode, label);
         }
 
         /// <summary>
         /// Emits an instruction with multiple target labels (switch).
         /// </summary>
-        internal virtual void Emit(OpCode opcode, Label[] labels) {
+        internal void Emit(OpCode opcode, Label[] labels) {
             _ilg.Emit(opcode, labels);
         }
 
         /// <summary>
         /// Emits an instruction with a reference to a local variable.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, LocalBuilder local) {
+        internal void Emit(OpCode opcode, LocalBuilder local) {
             _ilg.Emit(opcode, local);
         }
 
         /// <summary>
         /// Emits an instruction with a long argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, long arg) {
+        internal void Emit(OpCode opcode, long arg) {
             _ilg.Emit(opcode, arg);
         }
 
         /// <summary>
         /// Emits an instruction with the metadata token for a specified method.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, MethodInfo meth) {
+        internal void Emit(OpCode opcode, MethodInfo meth) {
             _ilg.Emit(opcode, meth);
         }
 
         /// <summary>
         /// Emits an instruction with a signed byte argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, sbyte arg) {
+        internal void Emit(OpCode opcode, sbyte arg) {
             _ilg.Emit(opcode, arg);
         }
 
         /// <summary>
         /// Emits an instruction with a short argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, short arg) {
+        internal void Emit(OpCode opcode, short arg) {
             _ilg.Emit(opcode, arg);
         }
 
@@ -227,7 +227,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Emits an instruction with a signature token.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, SignatureHelper signature) {
+        internal void Emit(OpCode opcode, SignatureHelper signature) {
             _ilg.Emit(opcode, signature);
         }
 #endif
@@ -235,21 +235,21 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Emits an instruction with a string argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, string str) {
+        internal void Emit(OpCode opcode, string str) {
             _ilg.Emit(opcode, str);
         }
 
         /// <summary>
         /// Emits an instruction with the metadata token for a specified type argument.
         /// </summary>
-        internal virtual void Emit(OpCode opcode, Type cls) {
+        internal void Emit(OpCode opcode, Type cls) {
             _ilg.Emit(opcode, cls);
         }
 
         /// <summary>
         /// Emits a call or a virtual call to the varargs method.
         /// </summary>
-        internal virtual void EmitCall(OpCode opcode, MethodInfo methodInfo, Type[] optionalParameterTypes) {
+        internal void EmitCall(OpCode opcode, MethodInfo methodInfo, Type[] optionalParameterTypes) {
             _ilg.EmitCall(opcode, methodInfo, optionalParameterTypes);
         }
 
@@ -257,14 +257,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Emits an unmanaged indirect call instruction.
         /// </summary>
-        internal virtual void EmitCalli(OpCode opcode, CallingConvention unmanagedCallConv, Type returnType, Type[] parameterTypes) {
+        internal void EmitCalli(OpCode opcode, CallingConvention unmanagedCallConv, Type returnType, Type[] parameterTypes) {
             _ilg.EmitCalli(opcode, unmanagedCallConv, returnType, parameterTypes);
         }
 
         /// <summary>
         /// Emits a managed indirect call instruction.
         /// </summary>
-        internal virtual void EmitCalli(OpCode opcode, CallingConventions callingConvention, Type returnType, Type[] parameterTypes, Type[] optionalParameterTypes) {
+        internal void EmitCalli(OpCode opcode, CallingConventions callingConvention, Type returnType, Type[] parameterTypes, Type[] optionalParameterTypes) {
             _ilg.EmitCalli(opcode, callingConvention, returnType, parameterTypes, optionalParameterTypes);
         }
 #endif
@@ -272,7 +272,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Marks a sequence point.
         /// </summary>
-        internal virtual void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
+        internal void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
             _ilg.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
         }
 
@@ -281,7 +281,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         ///     current active lexical scope.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")] // TODO: fix
-        internal virtual void UsingNamespace(string usingNamespace) {
+        internal void UsingNamespace(string usingNamespace) {
             _ilg.UsingNamespace(usingNamespace);
         }
 

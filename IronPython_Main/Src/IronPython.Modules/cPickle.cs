@@ -20,16 +20,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
@@ -1419,8 +1417,8 @@ namespace IronPython.Modules {
 
             private object ReadIntFromString(CodeContext/*!*/ context) {
                 string raw = ReadLineNoNewline(context);
-                if ("00" == raw) return RuntimeHelpers.False;
-                else if ("01" == raw) return RuntimeHelpers.True;
+                if ("00" == raw) return ScriptingRuntimeHelpers.False;
+                else if ("01" == raw) return ScriptingRuntimeHelpers.True;
                 return Int32Ops.__new__(context, TypeCache.Int32, raw);
             }
 
@@ -1706,7 +1704,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadNewFalse(CodeContext/*!*/ context) {
-                _stack.append(RuntimeHelpers.False);
+                _stack.append(ScriptingRuntimeHelpers.False);
             }
 
             private void LoadNewObj(CodeContext/*!*/ context) {
@@ -1736,7 +1734,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadNewTrue(CodeContext/*!*/ context) {
-                _stack.append(RuntimeHelpers.True);
+                _stack.append(ScriptingRuntimeHelpers.True);
             }
 
             private void LoadNoneValue(CodeContext/*!*/ context) {

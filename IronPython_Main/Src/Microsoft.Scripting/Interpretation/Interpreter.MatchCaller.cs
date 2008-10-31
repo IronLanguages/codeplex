@@ -17,7 +17,8 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Actions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.Scripting.Generation;
 

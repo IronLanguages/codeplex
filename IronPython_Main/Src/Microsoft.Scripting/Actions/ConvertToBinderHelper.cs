@@ -19,9 +19,9 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -461,7 +461,7 @@ namespace Microsoft.Scripting.Actions {
             _rule.Target =
                 _rule.MakeReturn(
                     Binder,
-                    Ast.Call(typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(toType))
+                    Ast.Call(typeof(ScriptingRuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(toType))
                 );
         }
 

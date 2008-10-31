@@ -93,17 +93,17 @@ def test_sanity():
     #Interface Types    
     strongVar = StrongBox[object](DispatchWrapper(None))
     com_obj.mIDispatch(com_obj, strongVar)
-    AreEqual(strongVar.Value, com_obj)
+    AreEqual(strongVar.Value.WrappedObject, com_obj)
 
     strongVar = StrongBox[object](UnknownWrapper(None))
     com_obj.mIUnknown(com_obj, strongVar)
-    AreEqual(strongVar.Value, com_obj)    
+    AreEqual(strongVar.Value.WrappedObject, com_obj)    
     
     #Complex Types
     if preferComDispatch:
         strongVar = StrongBox[object](CurrencyWrapper(444))
         com_obj.mCy(CurrencyWrapper(123), strongVar)
-        AreEqual(strongVar.Value, 123)    
+        AreEqual(strongVar.Value.WrappedObject, 123)    
     
     now = DateTime.Now
     AreEqual(str(callMethodWithStrongBox(com_obj.mDate, now, DateTime)), str(now))        

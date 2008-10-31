@@ -17,14 +17,11 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.Serialization;
 using System.Security;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
 
@@ -460,7 +457,7 @@ namespace IronPython.Runtime {
             if (!(other is PythonDictionary || other is IDictionary<object, object>))
                 return NotImplementedType.Value;
 
-            return RuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
+            return ScriptingRuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
         }
 
         [return: MaybeNotImplemented]

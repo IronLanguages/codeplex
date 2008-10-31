@@ -15,11 +15,9 @@
 
 using System; using Microsoft;
 using System.Globalization;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
@@ -35,7 +33,7 @@ namespace IronPython.Runtime.Operations {
                 BigInteger bi = o as BigInteger;
                 int res;
                 if (bi.AsInt32(out res)) {
-                    return RuntimeHelpers.Int32ToObject(res);
+                    return ScriptingRuntimeHelpers.Int32ToObject(res);
                 }
                 return o;
             }
@@ -43,7 +41,7 @@ namespace IronPython.Runtime.Operations {
             if ((el = o as Extensible<BigInteger>) != null) {
                 int res;
                 if (el.Value.AsInt32(out res)) {
-                    return RuntimeHelpers.Int32ToObject(res);
+                    return ScriptingRuntimeHelpers.Int32ToObject(res);
                 }
                 return el.Value;
             }
@@ -166,7 +164,7 @@ namespace IronPython.Runtime.Operations {
             if (y == -1 && x == Int32.MinValue) {
                 return -BigInteger.Create(Int32.MinValue);
             }
-            return RuntimeHelpers.Int32ToObject(FloorDivideImpl(x, y));
+            return ScriptingRuntimeHelpers.Int32ToObject(FloorDivideImpl(x, y));
         }
 
         internal static int FloorDivideImpl(int x, int y) {
@@ -275,7 +273,7 @@ namespace IronPython.Runtime.Operations {
                 (x < 0 && x < (Int32.MinValue >> y))) {
                 return Int64Ops.LeftShift((long)x, y);
             }
-            return RuntimeHelpers.Int32ToObject(x << y);
+            return ScriptingRuntimeHelpers.Int32ToObject(x << y);
         }
 
         [SpecialName]

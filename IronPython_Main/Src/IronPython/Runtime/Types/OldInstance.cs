@@ -21,14 +21,11 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.Serialization;
 using Microsoft.Scripting.Actions;
-
+using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Operations;
-
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
@@ -322,10 +319,10 @@ namespace IronPython.Runtime.Types {
 
             IEnumerator ie = PythonOps.GetEnumerator(this);
             while (ie.MoveNext()) {
-                if (PythonOps.EqualRetBool(context, ie.Current, index)) return RuntimeHelpers.True;
+                if (PythonOps.EqualRetBool(context, ie.Current, index)) return ScriptingRuntimeHelpers.True;
             }
 
-            return RuntimeHelpers.False;
+            return ScriptingRuntimeHelpers.False;
         }
         
         [SpecialName]
@@ -399,12 +396,12 @@ namespace IronPython.Runtime.Types {
                 value = PythonOps.CallWithContext(context, value);
                 // Convert resulting object to the desired type
                 if (value is Int32 || value is BigInteger) {
-                    return RuntimeHelpers.BooleanToObject(Converter.ConvertToBoolean(value));
+                    return ScriptingRuntimeHelpers.BooleanToObject(Converter.ConvertToBoolean(value));
                 }
                 throw PythonOps.TypeError("an integer is required, got {0}", PythonTypeOps.GetName(value));
             }
 
-            return RuntimeHelpers.True;
+            return ScriptingRuntimeHelpers.True;
         }
 
         public object __hex__(CodeContext context) {

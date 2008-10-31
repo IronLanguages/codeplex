@@ -12,11 +12,9 @@
  *
  *
  * ***************************************************************************/
-
-using Microsoft.Scripting.Actions;
-using System.Reflection;
-using Microsoft.Linq.Expressions;
 using System; using Microsoft;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Interpretation {
     public static class InterpreterHelpers {

@@ -13,11 +13,12 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Runtime;
 using System.Collections.Generic;
-using Microsoft.Scripting.Actions;
+using Microsoft.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Threading;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Interpretation {
     internal sealed class CallSiteInfo {

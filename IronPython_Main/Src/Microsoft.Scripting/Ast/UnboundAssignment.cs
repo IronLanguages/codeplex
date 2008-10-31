@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
+using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using System; using Microsoft;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundAssignment : Expression {
@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Ast {
         public override Expression Reduce() {
             return Expression.Call(
                 null,
-                typeof(RuntimeHelpers).GetMethod("SetName"),
+                typeof(ScriptingRuntimeHelpers).GetMethod("SetName"),
                 Annotations,
                 new Expression[] {
                     Utils.CodeContext(), 

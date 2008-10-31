@@ -13,46 +13,36 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-
 #if !SILVERLIGHT // ComObject
 
-using System.Diagnostics;
+using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
-    internal sealed class CurrencyArgBuilder : SimpleArgBuilder {
-        internal CurrencyArgBuilder(Type parameterType)
+    internal class ErrorArgBuilder : SimpleArgBuilder {
+        internal ErrorArgBuilder(Type parameterType)
             : base(parameterType) {
-            Debug.Assert(parameterType == typeof(CurrencyWrapper));
+
+            Debug.Assert(parameterType == typeof(ErrorWrapper));
         }
 
         internal override Expression Marshal(Expression parameter) {
-            // parameter.WrappedObject
+            // parameter.ErrorCode
             return Expression.Property(
-                Helpers.Convert(base.Marshal(parameter), typeof(CurrencyWrapper)),
-                "WrappedObject"
-            );
-        }
-
-        internal override Expression MarshalToRef(Expression parameter) {
-            // Decimal.ToOACurrency(parameter.WrappedObject)
-            return Expression.Call(
-                typeof(Decimal).GetMethod("ToOACurrency"),
-                Marshal(parameter)
+                Helpers.Convert(base.MarshalToRef(parameter), typeof(ErrorWrapper)),
+                "ErrorCode"
             );
         }
 
         internal override Expression UnmarshalFromRef(Expression value) {
-            // Decimal.FromOACurrency(value)
+            // new ErrorWrapper(value)
             return base.UnmarshalFromRef(
                 Expression.New(
-                    typeof(CurrencyWrapper).GetConstructor(new Type[] { typeof(Decimal) }),
-                    Expression.Call(
-                        typeof(Decimal).GetMethod("FromOACurrency"),
-                        value
-                    )
+                    typeof(ErrorWrapper).GetConstructor(new Type[] { typeof(int) }),
+                    value
                 )
             );
         }

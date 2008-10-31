@@ -63,7 +63,6 @@ namespace Microsoft.Runtime.CompilerServices {
             }
 
             var rule = new CallSiteRule<T>(binding);
-            ExpressionWriter.Dump(rule, site.Binder);
 
             if (originalRule != null) {
                 // compare our new rule and our original monomorphic rule.  If they only differ from constants

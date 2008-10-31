@@ -20,13 +20,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-
-using Microsoft.Scripting.Math;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
@@ -553,7 +551,7 @@ namespace IronPython.Modules {
             }
 
             public string/*!*/ typecode {
-                get { return RuntimeHelpers.CharToString(_typeCode); }
+                get { return ScriptingRuntimeHelpers.CharToString(_typeCode); }
             }
 
             private abstract class ArrayData {
@@ -851,7 +849,7 @@ namespace IronPython.Modules {
                     return NotImplementedType.Value;
                 }
 
-                return RuntimeHelpers.Int32ToObject(res);
+                return ScriptingRuntimeHelpers.Int32ToObject(res);
             }
 
             [return: MaybeNotImplemented]
@@ -861,7 +859,7 @@ namespace IronPython.Modules {
                     return NotImplementedType.Value;
                 }
 
-                return RuntimeHelpers.BooleanToObject(res > 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(res > 0);
             }
 
             [return: MaybeNotImplemented]
@@ -871,7 +869,7 @@ namespace IronPython.Modules {
                     return NotImplementedType.Value;
                 }
 
-                return RuntimeHelpers.BooleanToObject(res < 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(res < 0);
             }
 
             [return: MaybeNotImplemented]
@@ -881,7 +879,7 @@ namespace IronPython.Modules {
                     return NotImplementedType.Value;
                 }
 
-                return RuntimeHelpers.BooleanToObject(res >= 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(res >= 0);
             }
 
             [return: MaybeNotImplemented]
@@ -891,7 +889,7 @@ namespace IronPython.Modules {
                     return NotImplementedType.Value;
                 }
 
-                return RuntimeHelpers.BooleanToObject(res <= 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(res <= 0);
             }
 
             #endregion

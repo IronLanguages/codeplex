@@ -16,9 +16,8 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.Scripting.Runtime;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
 
@@ -49,7 +48,7 @@ namespace IronPython.Runtime.Types {
             MethodBase[] newTargets = FindMatchingTargets(sig, targets);
 
             if (targets == null)
-                throw RuntimeHelpers.SimpleTypeError(String.Format("No match found for the method signature {0}", sig));    // TODO: Sig to usable display
+                throw ScriptingRuntimeHelpers.SimpleTypeError(String.Format("No match found for the method signature {0}", sig));    // TODO: Sig to usable display
 
             BuiltinFunction bf = new BuiltinFunction(_function.Name, newTargets, Function.DeclaringType, _function.FunctionType);
 

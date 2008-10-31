@@ -12,15 +12,12 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
@@ -60,7 +57,7 @@ namespace Microsoft.Scripting.Generation {
                 AstUtils.AddScopedVariable(
                     lambda.Body,
                     contextVariable,
-                    Expression.Call(typeof(RuntimeHelpers).GetMethod("CreateTopLevelCodeContext"), scopeParameter, languageParameter)
+                    Expression.Call(typeof(ScriptingRuntimeHelpers).GetMethod("CreateTopLevelCodeContext"), scopeParameter, languageParameter)
                 ),
                 name,
                 lambda.Annotations,
@@ -161,7 +158,7 @@ namespace Microsoft.Scripting.Generation {
 }
 
 namespace Microsoft.Scripting.Runtime {
-    public static partial class RuntimeHelpers {
+    public static partial class ScriptingRuntimeHelpers {
         // emitted by GlobalRewriter
         // TODO: Python and JScript should do this
         public static CodeContext CreateTopLevelCodeContext(Scope scope, LanguageContext context) {
