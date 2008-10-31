@@ -17,9 +17,9 @@ using System; using Microsoft;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
 
@@ -370,7 +370,7 @@ namespace IronPython.Runtime.Operations {
             // The python spec says __int__  should return a long if needed, rather than overflow.
             int i32;
             if (x.AsInt32(out i32)) {
-                return Microsoft.Scripting.Runtime.RuntimeHelpers.Int32ToObject(i32);
+                return Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.Int32ToObject(i32);
             }
 
             return x;

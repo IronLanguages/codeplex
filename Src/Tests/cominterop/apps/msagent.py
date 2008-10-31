@@ -39,7 +39,7 @@ def test_merlin():
 
     character = StrongBox[object](DispatchWrapper(None))
     com_obj.GetCharacter(cid, character)
-    c = character.Value
+    c = character.Value.WrappedObject
     sleep(1)
     
     if is_snap or testpath.basePyDir.lower()=='src':

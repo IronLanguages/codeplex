@@ -14,12 +14,11 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
-using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
-using System.Threading;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {

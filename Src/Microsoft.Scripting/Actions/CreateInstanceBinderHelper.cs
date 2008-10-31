@@ -16,7 +16,6 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
@@ -38,7 +37,7 @@ namespace Microsoft.Scripting.Actions {
                 if (typeof(Delegate).IsAssignableFrom(t) && Arguments.Length == 2) {
                     MethodInfo dc = GetDelegateCtor(t);
 
-                    // RuntimeHelpers.CreateDelegate<T>(CodeContext context, object callable);
+                    // ScriptingRuntimeHelpers.CreateDelegate<T>(CodeContext context, object callable);
 
                     Rule.IsError = false;
                     Rule.Target = Rule.MakeReturn(

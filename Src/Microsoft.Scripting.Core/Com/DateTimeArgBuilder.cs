@@ -40,10 +40,12 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal override Expression UnmarshalFromRef(Expression value) {
-            // DateTime.FromOADate(temp)
-            return Expression.Call(
-                typeof(DateTime).GetMethod("FromOADate"),
-                value
+            // DateTime.FromOADate(value)
+            return base.UnmarshalFromRef(
+                Expression.Call(
+                    typeof(DateTime).GetMethod("FromOADate"),
+                    value
+                )
             );
         }
     }

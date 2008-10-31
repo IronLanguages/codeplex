@@ -22,17 +22,13 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
-
-    internal class StringArgBuilder : SimpleArgBuilder {
+    internal class VariantArgBuilder : SimpleArgBuilder {
         private bool _isWrapper;
 
-        internal StringArgBuilder(Type parameterType)
+        internal VariantArgBuilder(Type parameterType)
             : base(parameterType) {
 
-            Debug.Assert(parameterType == typeof(string) ||
-                        parameterType == typeof(BStrWrapper));
-
-            _isWrapper = parameterType == typeof(BStrWrapper);
+            _isWrapper = parameterType == typeof(VariantWrapper);
         }
 
         internal override Expression MarshalToRef(Expression parameter) {
@@ -40,32 +36,34 @@ namespace Microsoft.Scripting.ComInterop {
 
             if (_isWrapper) {
                 parameter = Expression.Property(
-                    Helpers.Convert(parameter, typeof(BStrWrapper)),
-                    typeof(BStrWrapper).GetProperty("WrappedObject")
+                    Helpers.Convert(parameter, typeof(VariantWrapper)),
+                    typeof(VariantWrapper).GetProperty("WrappedOject")
                 );
             };
 
-            // Marshal.StringToBSTR(parameter)
-            return Expression.Call(
-                typeof(Marshal).GetMethod("StringToBSTR"),
-                parameter
+            // parameter == null ? IntPtr.Zero : UnsafeMethods.GetVariantForObject(parameter);
+            return Expression.Condition(
+                Expression.Equal(parameter, Expression.Constant(null)),
+                Expression.Constant(new Variant()),
+                Expression.Call(
+                    typeof(UnsafeMethods).GetMethod("GetVariantForObject"),
+                    parameter
+                )
             );
         }
 
+
         internal override Expression UnmarshalFromRef(Expression value) {
-            // value == IntPtr.Zero ? null : Marshal.PtrToStringBSTR(value);
-            Expression unmarshal = Expression.Condition(
-                Expression.Equal(value, Expression.Constant(IntPtr.Zero)),
-                Expression.Constant(null, typeof(string)),   // default value
-                Expression.Call(
-                    typeof(Marshal).GetMethod("PtrToStringBSTR"),
-                    value
-                )
+            // value == IntPtr.Zero ? null : Marshal.GetObjectForNativeVariant(value);
+
+            Expression unmarshal = Expression.Call(
+                typeof(UnsafeMethods).GetMethod("GetObjectForVariant"),
+                value
             );
 
             if (_isWrapper) {
                 unmarshal = Expression.New(
-                    typeof(BStrWrapper).GetConstructor(new Type[] { typeof(object) }),
+                    typeof(VariantWrapper).GetConstructor(new Type[] { typeof(object) }),
                     unmarshal
                 );
             };

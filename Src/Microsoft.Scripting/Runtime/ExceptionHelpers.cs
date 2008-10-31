@@ -16,7 +16,6 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
 using System.Threading;
@@ -168,7 +167,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         public static IEnumerable<DynamicStackFrame> GetStackFrames(Exception e, bool reverseOrder) {
             IList<StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
-            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(RuntimeHelpers.GetDynamicStackFrames(e));
+            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(ScriptingRuntimeHelpers.GetDynamicStackFrames(e));
             // dynamicFrames is stored in the opposite order that we are walking,
             // so we can always pop them from the back of the List<T>, which is O(1)
             if (!reverseOrder) {

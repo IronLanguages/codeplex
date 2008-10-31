@@ -2061,7 +2061,7 @@ namespace IronPython.Runtime.Binding {
 
                 Expression error = Ast.Throw(
                     Ast.Call(
-                        typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                        typeof(ScriptingRuntimeHelpers).GetMethod("SimpleTypeError"),
                         Ast.ComplexCallHelper(
                             typeof(String).GetMethod("Format", typeArgs),
                             formatArgs

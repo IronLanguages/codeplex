@@ -21,16 +21,12 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-
 using Ast = Microsoft.Linq.Expressions.Expression;
-using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace IronPython.Runtime.Binding {
     
@@ -317,7 +313,7 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Throw(
                     Ast.Call(
-                        typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                        typeof(ScriptingRuntimeHelpers).GetMethod("SimpleTypeError"),
                         Ast.Constant("Can't convert a Reference<> instance to a bool")
                     )
                 ),

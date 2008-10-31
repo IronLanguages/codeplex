@@ -246,7 +246,7 @@ namespace Microsoft.Scripting.Silverlight {
                 ContractUtils.RequiresNotNull(e, "e");
 
                 _exception = e;
-                _dynamicStackFrames = RuntimeHelpers.GetDynamicStackFrames(e);
+                _dynamicStackFrames = ScriptingRuntimeHelpers.GetDynamicStackFrames(e);
 
                 // We can get the source code context either from the DynamicStackFrame or from
                 // a SyntaxErrorException

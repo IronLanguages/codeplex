@@ -19,6 +19,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
@@ -356,18 +358,18 @@ namespace Microsoft.Scripting.Interpretation {
                     return array.GetValue(index);
 
                 case ExpressionType.GreaterThan:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) > 0);
+                    return ScriptingRuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) > 0);
                 case ExpressionType.LessThan:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) < 0);
+                    return ScriptingRuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) < 0);
                 case ExpressionType.GreaterThanOrEqual:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) >= 0);
+                    return ScriptingRuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) >= 0);
                 case ExpressionType.LessThanOrEqual:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) <= 0);
+                    return ScriptingRuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) <= 0);
                 case ExpressionType.Equal:
-                    return RuntimeHelpers.BooleanToObject(TestEquals(l, r));
+                    return ScriptingRuntimeHelpers.BooleanToObject(TestEquals(l, r));
 
                 case ExpressionType.NotEqual:
-                    return RuntimeHelpers.BooleanToObject(!TestEquals(l, r));
+                    return ScriptingRuntimeHelpers.BooleanToObject(!TestEquals(l, r));
 
                 case ExpressionType.Multiply:
                     return EvalMultiply(l, r);
@@ -400,7 +402,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalMultiply(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l * (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l * (int)r);
             if (l is uint) return (uint)l * (uint)r;
             if (l is short) return (short)((short)l * (short)r);
             if (l is ushort) return (ushort)((ushort)l * (ushort)r);
@@ -411,7 +413,7 @@ namespace Microsoft.Scripting.Interpretation {
             throw new InvalidOperationException("multiply: {0} " + CompilerHelpers.GetType(l).Name);
         }
         private static object EvalMultiplyChecked(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject(checked((int)l * (int)r));
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject(checked((int)l * (int)r));
             if (l is uint) return checked((uint)l * (uint)r);
             if (l is short) return checked((short)((short)l * (short)r));
             if (l is ushort) return checked((ushort)((ushort)l * (ushort)r));
@@ -423,7 +425,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalAdd(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l + (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l + (int)r);
             if (l is uint) return (uint)l + (uint)r;
             if (l is short) return (short)((short)l + (short)r);
             if (l is ushort) return (ushort)((ushort)l + (ushort)r);
@@ -435,7 +437,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalAddChecked(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject(checked((int)l + (int)r));
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject(checked((int)l + (int)r));
             if (l is uint) return checked((uint)l + (uint)r);
             if (l is short) return checked((short)((short)l + (short)r));
             if (l is ushort) return checked((ushort)((ushort)l + (ushort)r));
@@ -447,7 +449,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalSub(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l - (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l - (int)r);
             if (l is uint) return (uint)l - (uint)r;
             if (l is short) return (short)((short)l - (short)r);
             if (l is ushort) return (ushort)((ushort)l - (ushort)r);
@@ -458,7 +460,7 @@ namespace Microsoft.Scripting.Interpretation {
             throw new InvalidOperationException("sub: {0} " + CompilerHelpers.GetType(l).Name);
         }
         private static object EvalSubChecked(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject(checked((int)l - (int)r));
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject(checked((int)l - (int)r));
             if (l is uint) return checked((uint)l - (uint)r);
             if (l is short) return checked((short)((short)l - (short)r));
             if (l is ushort) return checked((ushort)((ushort)l - (ushort)r));
@@ -470,7 +472,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalMod(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l % (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l % (int)r);
             if (l is uint) return (uint)l % (uint)r;
             if (l is short) return (short)((short)l % (short)r);
             if (l is ushort) return (ushort)((ushort)l % (ushort)r);
@@ -482,7 +484,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalDiv(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l / (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l / (int)r);
             if (l is uint) return (uint)l / (uint)r;
             if (l is short) return (short)((short)l / (short)r);
             if (l is ushort) return (ushort)((ushort)l / (ushort)r);
@@ -494,7 +496,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalAnd(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l & (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l & (int)r);
             if (l is uint) return (uint)l & (uint)r;
             if (l is short) return (short)((short)l & (short)r);
             if (l is ushort) return (ushort)((ushort)l & (ushort)r);
@@ -504,7 +506,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalOr(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l | (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l | (int)r);
             if (l is uint) return (uint)l | (uint)r;
             if (l is short) return (short)((short)l | (short)r);
             if (l is ushort) return (ushort)((ushort)l | (ushort)r);
@@ -514,7 +516,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object EvalXor(object l, object r) {
-            if (l is int) return RuntimeHelpers.Int32ToObject((int)l ^ (int)r);
+            if (l is int) return ScriptingRuntimeHelpers.Int32ToObject((int)l ^ (int)r);
             if (l is uint) return (uint)l ^ (uint)r;
             if (l is short) return (short)((short)l ^ (short)r);
             if (l is ushort) return (ushort)((ushort)l ^ (ushort)r);
@@ -607,8 +609,8 @@ namespace Microsoft.Scripting.Interpretation {
                     }
 
                 case ExpressionType.Not:
-                    if (value is bool) return (bool)value ? RuntimeHelpers.False : RuntimeHelpers.True;
-                    if (value is int) return RuntimeHelpers.Int32ToObject((int)~(int)value);
+                    if (value is bool) return (bool)value ? ScriptingRuntimeHelpers.False : ScriptingRuntimeHelpers.True;
+                    if (value is int) return ScriptingRuntimeHelpers.Int32ToObject((int)~(int)value);
                     if (value is long) return (long)~(long)value;
                     if (value is short) return (short)~(short)value;
                     if (value is uint) return (uint)~(uint)value;
@@ -619,7 +621,7 @@ namespace Microsoft.Scripting.Interpretation {
                     throw new InvalidOperationException("can't perform unary not on type " + CompilerHelpers.GetType(value).Name);
 
                 case ExpressionType.Negate:
-                    if (value is int) return RuntimeHelpers.Int32ToObject((int)(-(int)value));
+                    if (value is int) return ScriptingRuntimeHelpers.Int32ToObject((int)(-(int)value));
                     if (value is long) return (long)(-(long)value);
                     if (value is short) return (short)(-(short)value);
                     if (value is float) return -(float)value;
@@ -627,7 +629,7 @@ namespace Microsoft.Scripting.Interpretation {
                     throw new InvalidOperationException("can't negate type " + CompilerHelpers.GetType(value).Name);
 
                 case ExpressionType.UnaryPlus:
-                    if (value is int) return RuntimeHelpers.Int32ToObject((int)+(int)value);
+                    if (value is int) return ScriptingRuntimeHelpers.Int32ToObject((int)+(int)value);
                     if (value is long) return (long)+(long)value;
                     if (value is short) return (short)+(short)value;
                     if (value is uint) return (uint)+(uint)value;
@@ -638,7 +640,7 @@ namespace Microsoft.Scripting.Interpretation {
                     throw new InvalidOperationException("can't perform unary plus on type " + CompilerHelpers.GetType(value).Name);
 
                 case ExpressionType.NegateChecked:
-                    if (value is int) return RuntimeHelpers.Int32ToObject(checked((int)(-(int)value)));
+                    if (value is int) return ScriptingRuntimeHelpers.Int32ToObject(checked((int)(-(int)value)));
                     if (value is long) return checked((long)(-(long)value));
                     if (value is short) return checked((short)(-(short)value));
                     if (value is float) return checked(-(float)value);
@@ -707,7 +709,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            return RuntimeHelpers.BooleanToObject(
+            return ScriptingRuntimeHelpers.BooleanToObject(
                 node.TypeOperand.IsInstanceOfType(value)
             );
         }

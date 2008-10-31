@@ -17,8 +17,9 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
 using System.Text;
 using IronPython.Compiler;
 using IronPython.Runtime;
@@ -27,10 +28,10 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
 namespace IronPython.Runtime {
@@ -38,13 +39,13 @@ namespace IronPython.Runtime {
     public static partial class Builtin {
         public static object True {
             get {
-                return RuntimeHelpers.True;
+                return ScriptingRuntimeHelpers.True;
             }
         }
 
         public static object False {
             get {
-                return RuntimeHelpers.False;
+                return ScriptingRuntimeHelpers.False;
             }
         }
 
@@ -205,7 +206,7 @@ namespace IronPython.Runtime {
             if (value < 0 || value > 0xFF) {
                 throw PythonOps.ValueError("{0} is not in required range", value);
             }
-            return RuntimeHelpers.CharToString((char)value);
+            return ScriptingRuntimeHelpers.CharToString((char)value);
         }
 
         internal static object TryCoerce(CodeContext/*!*/ context, object x, object y) {
@@ -393,7 +394,7 @@ namespace IronPython.Runtime {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            if (locals != null && PythonOps.IsMappingType(context, locals) == RuntimeHelpers.False) {
+            if (locals != null && PythonOps.IsMappingType(context, locals) == ScriptingRuntimeHelpers.False) {
                 throw PythonOps.TypeError("locals must be mapping");
             }
 
@@ -467,7 +468,7 @@ namespace IronPython.Runtime {
 
             StringBuilder sb = new StringBuilder();
             foreach (char c in list) {
-                if (PythonOps.IsTrue(PythonCalls.Call(context, function, RuntimeHelpers.CharToString(c)))) sb.Append(c);
+                if (PythonOps.IsTrue(PythonCalls.Call(context, function, ScriptingRuntimeHelpers.CharToString(c)))) sb.Append(c);
             }
 
             return sb.ToString();
@@ -957,9 +958,9 @@ namespace IronPython.Runtime {
 
             foreach (char o in enumerator) {
                 if (func == null) {
-                    ret.AddNoLock(RuntimeHelpers.CharToString(o));
+                    ret.AddNoLock(ScriptingRuntimeHelpers.CharToString(o));
                 } else {
-                    ret.AddNoLock(mapSite.Target(mapSite, context, func, RuntimeHelpers.CharToString(o)));
+                    ret.AddNoLock(mapSite.Target(mapSite, context, func, ScriptingRuntimeHelpers.CharToString(o)));
                 }
             }
 
@@ -991,7 +992,7 @@ namespace IronPython.Runtime {
 
             List ret = new List();
             foreach (char o in enumerator) {
-                ret.AddNoLock(mapSite.Target(mapSite, context, func, RuntimeHelpers.CharToString(o)));
+                ret.AddNoLock(mapSite.Target(mapSite, context, func, ScriptingRuntimeHelpers.CharToString(o)));
             }
             return ret;
         }
@@ -1001,7 +1002,7 @@ namespace IronPython.Runtime {
 
             List ret = new List();
             foreach (char o in enumerator) {
-                ret.AddNoLock(mapSite.Target(mapSite, context, func, RuntimeHelpers.CharToString(o)));
+                ret.AddNoLock(mapSite.Target(mapSite, context, func, ScriptingRuntimeHelpers.CharToString(o)));
             }
             return ret;
         }
@@ -1305,7 +1306,7 @@ namespace IronPython.Runtime {
             }
 
             List ret = PythonOps.MakeEmptyList(stop);
-            for (int i = 0; i < stop; i++) ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
+            for (int i = 0; i < stop; i++) ret.AddNoLock(ScriptingRuntimeHelpers.Int32ToObject(i));
             return ret;
         }
 
@@ -1336,7 +1337,7 @@ namespace IronPython.Runtime {
             long length = (long)stop - (long)start;
             if (Int32.MinValue <= length && length <= Int32.MaxValue) {
                 List ret = PythonOps.MakeEmptyList(stop - start);
-                for (int i = start; i < stop; i++) ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
+                for (int i = start; i < stop; i++) ret.AddNoLock(ScriptingRuntimeHelpers.Int32ToObject(i));
                 return ret;
             }
             throw PythonOps.OverflowError("too many items in the list");
@@ -1376,13 +1377,13 @@ namespace IronPython.Runtime {
                 if (start > stop) stop = start;
                 ret = PythonOps.MakeEmptyList((stop - start) / step);
                 for (int i = start; i < stop; i += step) {
-                    ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
+                    ret.AddNoLock(ScriptingRuntimeHelpers.Int32ToObject(i));
                 }
             } else {
                 if (start < stop) stop = start;
                 ret = PythonOps.MakeEmptyList((stop - start) / step);
                 for (int i = start; i > stop; i += step) {
-                    ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
+                    ret.AddNoLock(ScriptingRuntimeHelpers.Int32ToObject(i));
                 }
             }
             return ret;
@@ -1594,7 +1595,7 @@ namespace IronPython.Runtime {
             if (i < Char.MinValue || i > Char.MaxValue) {
                 throw PythonOps.ValueError("{0} is not in required range", i);
             }
-            return RuntimeHelpers.CharToString((char)i);
+            return ScriptingRuntimeHelpers.CharToString((char)i);
         }
 
         public static PythonType unicode {
@@ -1748,7 +1749,7 @@ namespace IronPython.Runtime {
 
         [SpecialName]
         public static void PerformModuleReload(PythonContext context, IAttributesCollection dict) {
-            dict[SymbolTable.StringToId("__debug__")] = RuntimeHelpers.BooleanToObject(context.DomainManager.Configuration.DebugMode);
+            dict[SymbolTable.StringToId("__debug__")] = ScriptingRuntimeHelpers.BooleanToObject(context.DomainManager.Configuration.DebugMode);
         }
     }
 }

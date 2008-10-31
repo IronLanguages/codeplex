@@ -17,7 +17,8 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Utils;
 

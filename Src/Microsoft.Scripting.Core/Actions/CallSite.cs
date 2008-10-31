@@ -14,9 +14,10 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
+using Microsoft.Scripting.Actions;
 using System.Threading;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Runtime.CompilerServices {
 
     //
     // A CallSite provides a fast mechanism for call-site caching of dynamic dispatch

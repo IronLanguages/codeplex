@@ -248,12 +248,6 @@ def test_X_TrackPerformance():
     
     TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "")
 
-# Test -X:Frames
-def test_X_Frames():
-    if not is_debug: return #Mode not supported in Release
-    
-    TestCommandLine(("-X:Frames", "-c", "2+2"), "")
-
 # Test -u (Unbuffered stdout & stderr): only test this can be passed in
 def test_u():
     TestCommandLine(('-u', '-c', 'print 2+2'), "4\n")
@@ -263,22 +257,6 @@ def test_X_MaxRecursion():
     TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
     TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
     TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
-
-# Test -X:DumpIL
-def test_DumpIL():
-    if not is_debug: return #Mode not supported in Release
-    
-    ildir = IO.Path.Combine(IO.Path.GetTempPath(), "__DLRIL")
-    print "IL directory is " + ildir
-    
-    if IO.Directory.Exists(ildir):
-        IO.Directory.Delete(ildir, True)
-    
-    TestCommandLine(("-X:DumpIL", "-c", "def f(): pass"), None)
-    
-    Assert(IO.Directory.Exists(ildir))
-    Assert(len([fName for fName in nt.listdir(ildir) if re.match('.*\.il', fName)]) > 0)
-    IO.Directory.Delete(ildir, True)
 
 # Test -x (ignore first line)
 def test_x():

@@ -31,6 +31,9 @@ namespace Microsoft.Scripting.ComInterop {
 
         public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
             if (_callable.ComMethodDesc.IsPropertyGet) {
+                if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
+                    return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args);
+                }
                 return BindComInvoke(binder.Arguments, args);
             }
             return base.BindGetIndex(binder, args);
@@ -38,12 +41,18 @@ namespace Microsoft.Scripting.ComInterop {
 
         public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
             if (_callable.ComMethodDesc.IsPropertyPut) {
+                if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
+                    return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args);
+                }
                 return BindComInvoke(binder.Arguments, args);
             }
             return base.BindSetIndex(binder, args);
         }
 
         public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
+            if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
+                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args);
+            }
             return BindComInvoke(binder.Arguments, args);
         }
 

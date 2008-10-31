@@ -350,7 +350,7 @@ namespace IronPython.Runtime.Operations {
             
             if (type.IsValueType && !hasDefaultConstructor && type != typeof(void)) {
                 try {
-                    MethodInfo mi = typeof(RuntimeHelpers).GetMethod("CreateInstance", Type.EmptyTypes).MakeGenericMethod(type);
+                    MethodInfo mi = typeof(ScriptingRuntimeHelpers).GetMethod("CreateInstance", Type.EmptyTypes).MakeGenericMethod(type);
 
                     reflectedCtors = BuiltinFunction.MakeOrAdd(reflectedCtors, name, mi, type, FunctionType.Function);
                 } catch (BadImageFormatException) {

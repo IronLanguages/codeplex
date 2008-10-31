@@ -105,24 +105,20 @@ import Namespace.")]
 #if !SILVERLIGHT // files, paths
 
         public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, object rcw) {
-            CheckPreferComDispatch();
             return ComTypeLibDesc.CreateFromObject(rcw);
         }
 
         public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
-            CheckPreferComDispatch();
             return ComTypeLibDesc.CreateFromGuid(typeLibGuid);
         }
 
         public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, object rcw) {
-            CheckPreferComDispatch();
             ComTypeLibInfo typeLibInfo;
             typeLibInfo = ComTypeLibDesc.CreateFromObject(rcw);
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
         }
 
         public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
-            CheckPreferComDispatch();
             ComTypeLibInfo typeLibInfo;
             typeLibInfo = ComTypeLibDesc.CreateFromGuid(typeLibGuid);
             PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
@@ -315,14 +311,6 @@ the assembly object.")]
             SymbolId symbol = SymbolTable.StringToId(typeLibDesc.Name);
             context.LanguageContext.DomainManager.Globals.SetName(symbol, typeLibDesc);
         }
-
-        private static void CheckPreferComDispatch() {
-            string envVar = Environment.GetEnvironmentVariable("DLR_PreferComInteropAssembly");
-            if (envVar != null && envVar.ToLowerInvariant() == "true") {
-                throw new InvalidOperationException("this method is only available in ComDispatch mode");
-            }
-        }
-
 #endif
         private static void AddReferenceByName(CodeContext/*!*/ context, string name) {
             if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");

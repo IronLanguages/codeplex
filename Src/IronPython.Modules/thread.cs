@@ -17,16 +17,13 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
@@ -130,17 +127,17 @@ namespace IronPython.Modules {
             }
             
             public object acquire() {
-                return (acquire(RuntimeHelpers.True));
+                return (acquire(ScriptingRuntimeHelpers.True));
             }
 
             public object acquire(object waitflag) {
                 bool fWait = PythonOps.IsTrue(waitflag);
                 for (; ; ) {
                     if (Interlocked.CompareExchange<Thread>(ref curHolder, Thread.CurrentThread, null) == null) {
-                        return RuntimeHelpers.True;
+                        return ScriptingRuntimeHelpers.True;
                     }
                     if (!fWait) {
-                        return RuntimeHelpers.False;
+                        return ScriptingRuntimeHelpers.False;
                     }
                     if (blockEvent == null) {
                         // try again in case someone released us, checked the block

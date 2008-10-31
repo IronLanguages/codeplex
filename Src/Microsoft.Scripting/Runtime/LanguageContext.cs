@@ -18,11 +18,12 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using System.Text;
-
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Interpretation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>

@@ -20,24 +20,23 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using System.Text;
 using System.Threading;
-
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Hosting.Shell;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Hosting.Providers;
-
 using IronPython.Compiler;
 using IronPython.Hosting;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Hosting.Providers;
+using Microsoft.Scripting.Hosting.Shell;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Operations {
 
@@ -221,7 +220,7 @@ namespace IronPython.Runtime.Operations {
             else if (o is Complex64) return o;
             else if (o is long) return o;
             else if (o is float) return o;
-            else if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? 1 : 0);
+            else if (o is bool) return ScriptingRuntimeHelpers.Int32ToObject((bool)o ? 1 : 0);
 
             if (PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, o, Symbols.Positive, out ret) && 
                 ret != NotImplementedType.Value) {
@@ -238,7 +237,7 @@ namespace IronPython.Runtime.Operations {
             else if (o is BigInteger) return BigIntegerOps.Negate((BigInteger)o);
             else if (o is Complex64) return -(Complex64)o;
             else if (o is float) return DoubleOps.Negate((float)o);
-            else if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? -1 : 0);
+            else if (o is bool) return ScriptingRuntimeHelpers.Int32ToObject((bool)o ? -1 : 0);
 
             object ret;
             if (PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, o, Symbols.OperatorNegate, out ret) &&
@@ -420,7 +419,7 @@ namespace IronPython.Runtime.Operations {
             if (o is int) return ~(int)o;
             if (o is long) return ~(long)o;
             if (o is BigInteger) return ~((BigInteger)o);
-            if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? -2 : -1);
+            if (o is bool) return ScriptingRuntimeHelpers.Int32ToObject((bool)o ? -2 : -1);
 
             object ret;
             if (PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, o, Symbols.OperatorOnesComplement, out ret) &&
@@ -432,11 +431,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object Not(object o) {
-            return IsTrue(o) ? RuntimeHelpers.False : RuntimeHelpers.True;
+            return IsTrue(o) ? ScriptingRuntimeHelpers.False : ScriptingRuntimeHelpers.True;
         }
 
         public static object Is(object x, object y) {
-            return x == y ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return x == y ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static bool IsRetBool(object x, object y) {
@@ -444,7 +443,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object IsNot(object x, object y) {
-            return x != y ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return x != y ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static bool IsNotRetBool(object x, object y) {
@@ -526,27 +525,27 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object CompareEqual(int res) {
-            return res == 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return res == 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static object CompareNotEqual(int res) {
-            return res == 0 ? RuntimeHelpers.False : RuntimeHelpers.True;
+            return res == 0 ? ScriptingRuntimeHelpers.False : ScriptingRuntimeHelpers.True;
         }
 
         public static object CompareGreaterThan(int res) {
-            return res > 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return res > 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static object CompareGreaterThanOrEqual(int res) {
-            return res >= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return res >= 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static object CompareLessThan(int res) {
-            return res < 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return res < 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static object CompareLessThanOrEqual(int res) {
-            return res <= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return res <= 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         public static bool CompareTypesEqual(object x, object y) {
@@ -1118,7 +1117,7 @@ namespace IronPython.Runtime.Operations {
 
         public static object IsMappingType(CodeContext/*!*/ context, object o) {
             if (o is IDictionary || o is PythonDictionary || o is IDictionary<object, object> || o is IAttributesCollection) {
-                return RuntimeHelpers.True;
+                return ScriptingRuntimeHelpers.True;
             }
             object getitem;
             if ((o is IPythonObject || o is OldInstance) && PythonOps.TryGetBoundAttr(context, o, Symbols.GetItem, out getitem)) {
@@ -1126,11 +1125,11 @@ namespace IronPython.Runtime.Operations {
                     // in standard Python methods aren't mapping types, therefore
                     // if the user hasn't broken out of that box yet don't treat 
                     // them as mapping types.
-                    if (o is BuiltinFunction) return RuntimeHelpers.False;
+                    if (o is BuiltinFunction) return ScriptingRuntimeHelpers.False;
                 }
-                return RuntimeHelpers.True;
+                return ScriptingRuntimeHelpers.True;
             }
-            return RuntimeHelpers.False;
+            return ScriptingRuntimeHelpers.False;
         }
 
         public static int FixSliceIndex(int v, int len) {
@@ -1431,7 +1430,7 @@ namespace IronPython.Runtime.Operations {
 
         public static void WriteSoftspace(CodeContext/*!*/ context, object f) {
             if (CheckSoftspace(f)) {
-                SetSoftspace(f, RuntimeHelpers.False);
+                SetSoftspace(f, ScriptingRuntimeHelpers.False);
                 Write(context, f, " ");
             }
         }
@@ -1491,7 +1490,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="dest"></param>
         public static void PrintNewlineWithDest(CodeContext/*!*/ context, object dest) {
             PythonOps.Write(context, dest, "\n");
-            PythonOps.SetSoftspace(dest, RuntimeHelpers.False);
+            PythonOps.SetSoftspace(dest, ScriptingRuntimeHelpers.False);
         }
 
         /// <summary>
@@ -1764,7 +1763,7 @@ namespace IronPython.Runtime.Operations {
             if (locals == null) locals = globals;
             if (globals == null) globals = new PythonDictionary(new GlobalScopeDictionaryStorage(context.Scope));
 
-            if (locals != null && PythonOps.IsMappingType(context, locals) != RuntimeHelpers.True) {
+            if (locals != null && PythonOps.IsMappingType(context, locals) != ScriptingRuntimeHelpers.True) {
                 throw PythonOps.TypeError("exec: arg 3 must be mapping or None");
             }
 
@@ -1933,7 +1932,7 @@ namespace IronPython.Runtime.Operations {
                 return (TraceBack)e.Data[typeof(TraceBack)];
             }
 
-            DynamicStackFrame[] frames = RuntimeHelpers.GetDynamicStackFrames(e, false);
+            DynamicStackFrame[] frames = ScriptingRuntimeHelpers.GetDynamicStackFrames(e, false);
             TraceBack tb = null;
             for (int i = 0; i < frames.Length; i++) {
                 DynamicStackFrame frame = frames[i];
@@ -2872,7 +2871,7 @@ namespace IronPython.Runtime.Operations {
         [NoSideEffects]
         public static object CheckUninitialized(object value, SymbolId name) {
             if (value == Uninitialized.Instance) {
-                RuntimeHelpers.ThrowUnboundLocalError(name);
+                ScriptingRuntimeHelpers.ThrowUnboundLocalError(name);
             }
             return value;
         }

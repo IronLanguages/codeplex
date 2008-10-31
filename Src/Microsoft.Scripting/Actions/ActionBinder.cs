@@ -16,16 +16,15 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions.Calls;
-using System.Collections.ObjectModel;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -319,7 +318,7 @@ namespace Microsoft.Scripting.Actions {
         public virtual ErrorInfo MakeConversionError(Type toType, Expression value) {
             return ErrorInfo.FromException(
                 Expression.Call(
-                    typeof(RuntimeHelpers).GetMethod("CannotConvertError"),
+                    typeof(ScriptingRuntimeHelpers).GetMethod("CannotConvertError"),
                     Expression.Constant(toType),
                     Expression.Convert(
                         value,
@@ -378,7 +377,7 @@ namespace Microsoft.Scripting.Actions {
             // handles in place addition of events - this validates the user did the right thing.
             return ErrorInfo.FromValueNoError(
                 Expression.Call(
-                    typeof(RuntimeHelpers).GetMethod("SetEvent"),
+                    typeof(ScriptingRuntimeHelpers).GetMethod("SetEvent"),
                     Expression.Constant(ev),
                     rule.Parameters[1]
                 )

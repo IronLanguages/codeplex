@@ -117,12 +117,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 throw Error.RtConstRequiresBundDelegate();
             }
 
-            // Create the ILGen instance, debug or not
-            if (DebugOptions.DumpIL || DebugOptions.ShowIL) {
-                _ilg = CreateDebugILGen(ilg, method, paramTypes);
-            } else {
-                _ilg = new ILGen(ilg);
-            }
+            _ilg = new ILGen(ilg);
 
             Debug.Assert(!emitDebugSymbols || _typeBuilder != null, "emitting debug symbols requires a TypeBuilder");
             _emitDebugSymbols = emitDebugSymbols;
@@ -238,21 +233,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #endregion
 
         private static AnalyzedTree AnalyzeLambda(ref LambdaExpression lambda) {
-            DumpLambda(lambda);
-
             // Spill the stack for any exception handling blocks or other
             // constructs which require entering with an empty stack
             lambda = StackSpiller.AnalyzeLambda(lambda);
 
-            DumpLambda(lambda);
-
             // Bind any variable references in this lambda
             return VariableBinder.Bind(lambda);
-        }
-
-        [Conditional("DEBUG")]
-        private static void DumpLambda(LambdaExpression lambda) {
-            ExpressionWriter.Dump(lambda, lambda.Name);
         }
 
         private void EmitSequencePointNone() {
@@ -365,32 +351,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return method.CreateDelegate(delegateType);
             }
         }
-
-        #region IL Debugging Support
-
-        private static DebugILGen CreateDebugILGen(ILGenerator il, MethodBase method, IList<Type> paramTypes) {
-            TextWriter txt = Console.Out;
-#if !SILVERLIGHT
-            if (DebugOptions.DumpIL) {
-                txt = new StreamWriter(Snippets.Shared.GetMethodILDumpFile(method));
-            }
-#endif
-            DebugILGen dig = new DebugILGen(il, txt);
-
-            StringBuilder sb = new StringBuilder("\n\n");
-            sb.Append(method.GetReturnType().FormatTypeName());
-            sb.AppendFormat(" {0} {1} (\n", method.Name, method.Attributes);
-            foreach (Type type in paramTypes) {
-                sb.Append("\t");
-                sb.Append(type.FormatTypeName());
-                sb.Append("\n");
-            }
-            sb.Append(")\n");
-            dig.WriteLine(sb.ToString());
-            return dig;
-        }
-
-        #endregion
 
         #region Factory methods
 

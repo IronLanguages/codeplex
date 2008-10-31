@@ -19,11 +19,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions.Calls;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -402,7 +401,7 @@ namespace Microsoft.Scripting.Actions {
                 Ast.AndAlso(
                     Ast.TypeIs(_rule.Parameters[_rule.Parameters.Count - 1], typeof(IDictionary)),
                     Ast.Call(
-                        typeof(RuntimeHelpers).GetMethod("CheckDictionaryMembers"),
+                        typeof(ScriptingRuntimeHelpers).GetMethod("CheckDictionaryMembers"),
                         Ast.Convert(_rule.Parameters[_rule.Parameters.Count - 1], typeof(IDictionary)),
                         Ast.Constant(names)
                     )

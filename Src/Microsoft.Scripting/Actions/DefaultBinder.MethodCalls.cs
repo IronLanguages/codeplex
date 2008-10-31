@@ -20,10 +20,10 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions.Calls;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -432,7 +432,7 @@ namespace Microsoft.Scripting.Actions {
             while (dictEnum.MoveNext()) {
                 string name = dictEnum.Entry.Key as string;
                 if (name == null) {
-                    throw RuntimeHelpers.SimpleTypeError(String.Format("expected string for dictionary argument got {0}", dictEnum.Entry.Key));
+                    throw ScriptingRuntimeHelpers.SimpleTypeError(String.Format("expected string for dictionary argument got {0}", dictEnum.Entry.Key));
                 }
                 names[index] = name;
                 if (types != null) {

@@ -23,16 +23,14 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -555,7 +553,7 @@ namespace IronPython.Modules {
                 _st_mtime = _mtime = TryShrinkToInt(st_mtime);
                 _st_ctime = _ctime = TryShrinkToInt(st_ctime);
 
-                _ino = _dev = _nlink = _uid = _gid = RuntimeHelpers.Int32ToObject(0);                
+                _ino = _dev = _nlink = _uid = _gid = ScriptingRuntimeHelpers.Int32ToObject(0);                
             }
 
             public stat_result(CodeContext/*!*/ context, ISequence statResult, [DefaultParameterValue(null)]PythonDictionary dict) {

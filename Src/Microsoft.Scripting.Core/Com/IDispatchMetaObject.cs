@@ -34,6 +34,10 @@ namespace Microsoft.Scripting.ComInterop {
         public override MetaObject BindInvokeMemberl(InvokeMemberBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
+            if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
+                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args);
+            }
+
             ComMethodDesc methodDesc;
 
             if (_wrapperType.Funcs.TryGetValue(binder.Name, out methodDesc)) {
@@ -109,7 +113,7 @@ namespace Microsoft.Scripting.ComInterop {
                 );
 
             if (method.DispId != ComDispIds.DISPID_NEWENUM && method.IsPropertyGet) {
-                if (method.Parameters.Length == 0) {                    
+                if (method.Parameters.Length == 0) {
                     return new ComInvokeBinder(
                         new ArgumentInfo[0],
                         MetaObject.EmptyMetaObjects,
@@ -244,7 +248,7 @@ namespace Microsoft.Scripting.ComInterop {
         public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
-            return 
+            return
                 // 1. Check for simple property put
                 TryPropertyPut(binder, value) ??
 

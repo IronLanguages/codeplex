@@ -102,13 +102,10 @@ class VariantType:
     def write_byref_setters(self, cw):
         if self.unmanagedRepresentationType == self.managedType or self.isPrimitiveType :
             cw.write('case VarEnum.VT_%s: return typeof(Variant).GetMethod("SetAsByref%s");' % (self.variantType, self.name))
-        
-    def write_hasCommonLayout(self, cw):
-        if self.unmanagedRepresentationType == self.managedType:
-            cw.write('case VarEnum.VT_%s: // %s' % (self.variantType, self.managedType))
-        
+
     def write_ComToManagedPrimitiveTypes(self, cw):
-        if not self.isPrimitiveType or self.variantType == "CY": return
+        wrapper_types = ["CY", "DISPATCH", "UNKNOWN", "ERROR"]           
+        if not self.isPrimitiveType or (self.variantType in wrapper_types) : return
         cw.write("dict[VarEnum.VT_%s] = typeof(%s);" % (self.variantType, self.managedType))
 
     def write_IsPrimitiveType(self, cw):
@@ -173,15 +170,19 @@ variantTypes = [
         getStatements=["return (string)Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
         setStatements=["Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));"]),
     VariantType("UNKNOWN", "Object", 
-        isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
         getStatements=["return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._unknown);"],
         setStatements=["_typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);"]),
     VariantType("DISPATCH", "Object", 
-        isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
         getStatements=["return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._dispatch);"],
-        setStatements=["_typeUnion._unionTypes._dispatch = Marshal.GetIDispatchForObject(value);"])
+        setStatements=["_typeUnion._unionTypes._dispatch = Marshal.GetIDispatchForObject(value);"]),
+    VariantType("VARIANT", "Object", 
+        unmanagedRepresentationType="Variant",
+        includeInUnionTypes=False,              # will use "this" 
+        getStatements=["return Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
+        setStatements=["Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));"])
+
 ]
 
 def gen_UnionTypes(cw):
@@ -203,10 +204,6 @@ def gen_accessor_propertyinfo(cw):
 def gen_byref_setters(cw):
     for variantType in variantTypes:
         variantType.write_byref_setters(cw)
-
-def gen_hasCommonLayout(cw):
-    for variantType in variantTypes:
-        variantType.write_hasCommonLayout(cw)
 
 def gen_ComToManagedPrimitiveTypes(cw):
     for variantType in variantTypes:
@@ -231,7 +228,6 @@ def main():
         ("Variant accessors", gen_accessors),
         ("Variant accessors PropertyInfos", gen_accessor_propertyinfo),
         ("Variant byref setter", gen_byref_setters),
-        ("HasCommonLayout", gen_hasCommonLayout),
         ("ComToManagedPrimitiveTypes", gen_ComToManagedPrimitiveTypes),
         ("Variant IsPrimitiveType", gen_IsPrimitiveType),
         ("ConvertByrefToPtr", gen_ConvertByrefToPtr),

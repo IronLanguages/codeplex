@@ -20,10 +20,10 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
 using System.Text;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions.Calls;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -307,7 +307,7 @@ namespace Microsoft.Scripting.Actions {
                 _rule.MakeReturn(
                     Binder, 
                     Ast.Call(
-                        typeof(RuntimeHelpers).GetMethod("GetStringMembers"),
+                        typeof(ScriptingRuntimeHelpers).GetMethod("GetStringMembers"),
                         Ast.Call(
                             AstUtils.Convert(_rule.Parameters[0], typeof(IMembersList)),
                             typeof(IMembersList).GetMethod("GetMemberNames"),
@@ -560,12 +560,12 @@ namespace Microsoft.Scripting.Actions {
             if(t == typeof(EventTracker)){
                 //
                 // Test Generated:
-                //   RuntimeHelpers.GetEventHandlerType(((EventTracker)args[0]).Event) == et.Event.EventHandlerType
+                //   ScriptingRuntimeHelpers.GetEventHandlerType(((EventTracker)args[0]).Event) == et.Event.EventHandlerType
                 //
                 _rule.AddTest(
                     Ast.Equal(
                         Ast.Call(
-                            typeof(RuntimeHelpers).GetMethod("GetEventHandlerType"),
+                            typeof(ScriptingRuntimeHelpers).GetMethod("GetEventHandlerType"),
                             Ast.Property(
                                 Ast.Convert(
                                     _rule.Parameters[0],
@@ -580,12 +580,12 @@ namespace Microsoft.Scripting.Actions {
             } else if( t == typeof(BoundMemberTracker)){
                 //
                 // Test Generated:
-                //   RuntimeHelpers.GetEventHandlerType(((EventTracker)((BoundMemberTracker)args[0]).BountTo).Event) == et.Event.EventHandlerType
+                //   ScriptingRuntimeHelpers.GetEventHandlerType(((EventTracker)((BoundMemberTracker)args[0]).BountTo).Event) == et.Event.EventHandlerType
                 //
                 _rule.AddTest(
                     Ast.Equal(
                         Ast.Call(
-                            typeof(RuntimeHelpers).GetMethod("GetEventHandlerType"),
+                            typeof(ScriptingRuntimeHelpers).GetMethod("GetEventHandlerType"),
                             Ast.Property(
                                 Ast.Convert(
                                     Ast.Property(

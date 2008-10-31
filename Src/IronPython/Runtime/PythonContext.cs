@@ -20,24 +20,23 @@ using System.Diagnostics;
 using System.IO;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using System.Security;
 using System.Text;
 using System.Threading;
-
+using IronPython.Compiler;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Interpretation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Compiler;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-
 using PyAst = IronPython.Compiler.Ast;
 
 namespace IronPython.Runtime {
@@ -1161,7 +1160,7 @@ namespace IronPython.Runtime {
 
             StringBuilder result = new StringBuilder();
             result.AppendLine("Traceback (most recent call last):");
-            DynamicStackFrame[] dfs = RuntimeHelpers.GetDynamicStackFrames(e);
+            DynamicStackFrame[] dfs = ScriptingRuntimeHelpers.GetDynamicStackFrames(e);
             for (int i = 0; i < dfs.Length; ++i) {
                 DynamicStackFrame frame = dfs[i];
                 result.AppendFormat("  at {0} in {1}, line {2}\n", frame.GetMethodName(), frame.GetFileName(), frame.GetFileLineNumber());

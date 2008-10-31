@@ -95,63 +95,6 @@ namespace Microsoft.Linq.Expressions {
             _flow = Flow.NewLine;
         }
 
-#if !SILVERLIGHT
-        private static ConsoleColor GetAstColor() {
-            if (Console.BackgroundColor == ConsoleColor.White) {
-                return ConsoleColor.DarkCyan;
-            } else {
-                return ConsoleColor.Cyan;
-            }
-        }
-#endif
-
-        /// <summary>
-        /// Write out the given AST (only if ShowTrees or DumpTrees is enabled)
-        /// </summary>
-        [Conditional("DEBUG")]
-        internal static void Dump(Expression expression, string description) {
-            Debug.Assert(expression != null);
-
-            if (DebugOptions.ShowTrees) {
-#if !SILVERLIGHT
-                ConsoleColor color = Console.ForegroundColor;
-                try {
-                    Console.ForegroundColor = GetAstColor();
-#endif
-                    Dump(expression, description, System.Console.Out);
-#if !SILVERLIGHT
-                } finally {
-                    Console.ForegroundColor = color;
-                }
-#endif
-            } else if (DebugOptions.DumpTrees) {
-                StreamWriter sw = new StreamWriter(GetFilePath(description), true);
-                using (sw) {
-                    Dump(expression, description, sw);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Write out the given rule's AST (only if ShowRules is enabled)
-        /// </summary>
-        [Conditional("DEBUG")]
-        internal static void Dump<T>(CallSiteRule<T> rule, CallSiteBinder binder) where T : class {
-            if (DebugOptions.ShowRules) {
-#if !SILVERLIGHT
-                ConsoleColor color = Console.ForegroundColor;
-                try {
-                    Console.ForegroundColor = GetAstColor();
-#endif
-                    ExpressionWriter.Dump(rule.Binding, "Rule for " + binder.ToString(), System.Console.Out);
-#if !SILVERLIGHT
-                } finally {
-                    Console.ForegroundColor = color;
-                }
-#endif
-            }
-        }
-
         /// <summary>
         /// Write out the given AST
         /// </summary>
@@ -163,18 +106,6 @@ namespace Microsoft.Linq.Expressions {
 
             ExpressionWriter dv = new ExpressionWriter(writer);
             dv.DoDump(node, descr);
-        }
-
-        private static string GetFilePath(string path) {
-            Debug.Assert(path != null);
-
-#if !SILVERLIGHT // GetInvalidFileNameChars does not exist in CoreCLR
-            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
-            foreach (char ch in invalid) {
-                path = path.Replace(ch, '_');
-            }
-#endif
-            return path + ".ast";
         }
 
         private void DoDump(Expression node, string description) {

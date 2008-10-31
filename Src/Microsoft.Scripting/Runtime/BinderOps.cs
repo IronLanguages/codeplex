@@ -17,9 +17,8 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.Scripting;
-using System.Text;
 using Microsoft.Scripting.Actions;
+using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -51,7 +50,7 @@ namespace Microsoft.Scripting.Runtime {
             Delegate result = callableObject as Delegate;
             if (result != null) {
                 if (!delegateType.IsAssignableFrom(result.GetType())) {
-                    throw RuntimeHelpers.SimpleTypeError(String.Format("Cannot cast {0} to {1}.", result.GetType(), delegateType));
+                    throw ScriptingRuntimeHelpers.SimpleTypeError(String.Format("Cannot cast {0} to {1}.", result.GetType(), delegateType));
                 }
 
                 return result;
@@ -63,7 +62,7 @@ namespace Microsoft.Scripting.Runtime {
                 MethodInfo invoke;
 
                 if (!typeof(Delegate).IsAssignableFrom(delegateType) || (invoke = delegateType.GetMethod("Invoke")) == null) {
-                    throw RuntimeHelpers.SimpleTypeError("A specific delegate type is required.");
+                    throw ScriptingRuntimeHelpers.SimpleTypeError("A specific delegate type is required.");
                 }
 
                 ParameterInfo[] parameters = invoke.GetParameters();
@@ -86,7 +85,7 @@ namespace Microsoft.Scripting.Runtime {
                 }
             }
 
-            throw RuntimeHelpers.SimpleTypeError("Object is not callable.");
+            throw ScriptingRuntimeHelpers.SimpleTypeError("Object is not callable.");
         }
 
         #endregion
@@ -226,7 +225,7 @@ namespace Microsoft.Scripting.Runtime {
                     formalCount = maxFormalNormalArgumentCount;
                 }
             } else if (minFormalNormalArgumentCount == 0) {
-                return RuntimeHelpers.SimpleTypeError(string.Format("{0}() takes no arguments ({1} given)", methodName, providedArgumentCount));
+                return ScriptingRuntimeHelpers.SimpleTypeError(string.Format("{0}() takes no arguments ({1} given)", methodName, providedArgumentCount));
             } else {
                 formalCountQualifier = "exactly";
                 formalCount = minFormalNormalArgumentCount;

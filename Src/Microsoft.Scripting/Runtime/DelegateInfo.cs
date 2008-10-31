@@ -20,7 +20,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
-    /// Used as the value for the RuntimeHelpers.GetDelegate method caching system
+    /// Used as the value for the ScriptingRuntimeHelpers.GetDelegate method caching system
     /// </summary>
     internal sealed class DelegateInfo {
         private readonly MethodInfo _method;

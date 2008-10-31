@@ -18,21 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
 using System.Text;
 using System.Threading;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
-using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
 
@@ -84,7 +79,7 @@ namespace IronPython.Runtime {
             _size = sequence.Length;
 
             for (int i = 0; i < sequence.Length; i++) {
-                _data[i] = RuntimeHelpers.CharToString(sequence[i]);
+                _data[i] = ScriptingRuntimeHelpers.CharToString(sequence[i]);
             }
         }
 
@@ -1276,7 +1271,7 @@ namespace IronPython.Runtime {
             List l = other as List;
             if (l == null) return NotImplementedType.Value;
 
-            return self.CompareTo(l) > 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return self.CompareTo(l) > 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         [return: MaybeNotImplemented]
@@ -1284,7 +1279,7 @@ namespace IronPython.Runtime {
             List l = other as List;
             if (l == null) return NotImplementedType.Value;
 
-            return self.CompareTo(l) < 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return self.CompareTo(l) < 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         [return: MaybeNotImplemented]
@@ -1292,7 +1287,7 @@ namespace IronPython.Runtime {
             List l = other as List;
             if (l == null) return NotImplementedType.Value;
 
-            return self.CompareTo(l) >= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return self.CompareTo(l) >= 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         [return: MaybeNotImplemented]
@@ -1300,7 +1295,7 @@ namespace IronPython.Runtime {
             List l = other as List;
             if (l == null) return NotImplementedType.Value;
 
-            return self.CompareTo(l) <= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+            return self.CompareTo(l) <= 0 ? ScriptingRuntimeHelpers.True : ScriptingRuntimeHelpers.False;
         }
 
         #endregion

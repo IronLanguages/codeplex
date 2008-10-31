@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
@@ -36,7 +35,7 @@ namespace Microsoft.Scripting.Runtime {
     /// should be here.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-    public static partial class RuntimeHelpers {
+    public static partial class ScriptingRuntimeHelpers {
         private static readonly string[] chars = MakeSingleCharStrings();
 
         private static string[] MakeSingleCharStrings() {
@@ -116,7 +115,7 @@ namespace Microsoft.Scripting.Runtime {
             frames = new List<DynamicStackFrame>(frames);
             List<DynamicStackFrame> res = new List<DynamicStackFrame>();
 
-            // the list of _stackFrames we build up in RuntimeHelpers can have
+            // the list of _stackFrames we build up in ScriptingRuntimeHelpers can have
             // too many frames if exceptions are thrown from script code and
             // caught outside w/o calling GetDynamicStackFrames.  Therefore we
             // filter down to only script frames which we know are associated

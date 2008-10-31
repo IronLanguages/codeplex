@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Generation {
                 Expression body = AstUtils.AddScopedVariable(
                     node.Body,
                     _array,
-                    Expression.Call(typeof(RuntimeHelpers).GetMethod("GetGlobalArray"), Context)
+                    Expression.Call(typeof(ScriptingRuntimeHelpers).GetMethod("GetGlobalArray"), Context)
                 );
                 Debug.Assert(node.NodeType == ExpressionType.Lambda);
                 node = Expression.Lambda<T>(
@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Generation {
 }
 
 namespace Microsoft.Scripting.Runtime {
-    public static partial class RuntimeHelpers {
+    public static partial class ScriptingRuntimeHelpers {
         // TODO: remove and get the array some other way
         public static ModuleGlobalWrapper[] GetGlobalArray(CodeContext context) {
             return ((GlobalsDictionary)context.GlobalScope.Dict).Data;

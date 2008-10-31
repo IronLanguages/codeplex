@@ -13,7 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using Microsoft.Scripting.Actions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.ComInterop {
 

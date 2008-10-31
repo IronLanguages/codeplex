@@ -34,7 +34,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -178,10 +178,13 @@
     <Compile Include="Compiler\AnalyzedTree.cs" />
     <Compile Include="Compiler\RuntimeVariableList.cs" />
     <Compile Include="Com\BoolArgBuilder.cs" />
+    <Compile Include="Com\ComBinderHelpers.cs" />
     <Compile Include="Com\ConversionArgBuilder.cs" />
     <Compile Include="Com\CurrencyArgBuilder.cs" />
     <Compile Include="Com\DateTimeArgBuilder.cs" />
     <Compile Include="Com\ConvertibleArgBuilder.cs" />
+    <Compile Include="Com\DispatchArgBuilder.cs" />
+    <Compile Include="Com\ErrorArgBuilder.cs" />
     <Compile Include="Com\SplatCallSite.Generated.cs" />
     <Compile Include="Com\SplatCallSite.cs" />
     <Compile Include="Actions\TemplatedValue.cs" />
@@ -266,13 +269,14 @@
     <Compile Include="Com\ReturnBuilder.cs" />
     <Compile Include="Com\SimpleArgBuilder.cs" />
     <Compile Include="Com\StringArgBuilder.cs" />
-    <Compile Include="Com\StrongBoxArgBuilder.cs" />
     <Compile Include="Com\TypeEnumMetaObject.cs" />
     <Compile Include="Com\TypeInfoMetaObject.cs" />
     <Compile Include="Com\TypeLibInfoMetaObject.cs" />
     <Compile Include="Com\TypeLibMetaObject.cs" />
+    <Compile Include="Com\UnknownArgBuilder.cs" />
     <Compile Include="Com\VarEnumSelector.cs" />
     <Compile Include="Com\Variant.cs" />
+    <Compile Include="Com\VariantArgBuilder.cs" />
     <Compile Include="Com\VariantArray.cs" />
     <Compile Include="Com\VariantBuilder.cs" />
     <Compile Include="Compiler\CatchRecord.cs" />
@@ -302,7 +306,6 @@
     <Compile Include="Compiler\StackSpiller.cs" />
     <Compile Include="Compiler\VariableBinder.cs" />
     <Compile Include="Compiler\AssemblyGen.cs" />
-    <Compile Include="Compiler\DebugILGen.cs" />
     <Compile Include="Compiler\DynamicILGen.cs" />
     <Compile Include="Compiler\ILGen.cs" />
     <Compile Include="Compiler\Snippets.cs" />

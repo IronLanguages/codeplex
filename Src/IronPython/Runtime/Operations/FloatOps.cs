@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Operations {
                 } else if (x is Extensible<string>) {
                     return ParseFloat(((Extensible<string>)x).Value);
                 } else if (x is char) {
-                    return ParseFloat(RuntimeHelpers.CharToString((char)x));
+                    return ParseFloat(ScriptingRuntimeHelpers.CharToString((char)x));
                 }
 
                 double doubleVal;

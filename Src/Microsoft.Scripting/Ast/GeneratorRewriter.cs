@@ -115,9 +115,9 @@ namespace Microsoft.Scripting.Ast {
                 body = Expression.Lambda(body);
             }
 
-            // Generate a call to RuntimeHelpers.MakeGenerator<T>(args)
+            // Generate a call to ScriptingRuntimeHelpers.MakeGenerator<T>(args)
             return Expression.Call(
-                typeof(RuntimeHelpers),
+                typeof(ScriptingRuntimeHelpers),
                 "MakeGenerator",
                 new[] { _generator.Label.Type },
                 (_debugCookies != null)

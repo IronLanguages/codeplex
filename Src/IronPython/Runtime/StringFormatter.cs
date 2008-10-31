@@ -18,13 +18,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 using System.Text;
-
-using Microsoft.Scripting.Math;
-
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -333,7 +331,7 @@ namespace IronPython.Runtime {
             if (map == null) {
                 IAttributesCollection iac = _data as IAttributesCollection;
                 if (iac == null) {
-                    if (PythonOps.IsMappingType(DefaultContext.Default, _data) == RuntimeHelpers.True) {
+                    if (PythonOps.IsMappingType(DefaultContext.Default, _data) == ScriptingRuntimeHelpers.True) {
                         return PythonOps.GetIndex(_context, _data, key);
                     }
 
@@ -387,7 +385,7 @@ namespace IronPython.Runtime {
         }
 
         private void CheckDataUsed() {
-            if (PythonOps.IsMappingType(DefaultContext.Default, _data) == RuntimeHelpers.False) {
+            if (PythonOps.IsMappingType(DefaultContext.Default, _data) == ScriptingRuntimeHelpers.False) {
                 if ((!(_data is PythonTuple) && _dataIndex != 1) ||
                     (_data is PythonTuple && _dataIndex != ((PythonTuple)_data).__len__())) {
                     throw PythonOps.TypeError("not all arguments converted during string formatting");

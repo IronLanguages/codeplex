@@ -71,12 +71,12 @@ namespace IronPython.Hosting {
                 case "-tt": LanguageSetup.Options["IndentationInconsistencySeverity"] = Severity.Error; break;
 
                 case "-O":
-                    LanguageSetup.Options["Optimize"] = RuntimeHelpers.True;
+                    LanguageSetup.Options["Optimize"] = ScriptingRuntimeHelpers.True;
                     break;
 
                 case "-OO":
-                    LanguageSetup.Options["Optimize"] = RuntimeHelpers.True;
-                    LanguageSetup.Options["StripDocStrings"] = RuntimeHelpers.True;
+                    LanguageSetup.Options["Optimize"] = ScriptingRuntimeHelpers.True;
+                    LanguageSetup.Options["StripDocStrings"] = ScriptingRuntimeHelpers.True;
                     break;
 
                 case "-Q":

@@ -24,18 +24,15 @@ namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// The object used to cache information about an IDispatch RCW object. This will be associated with
     /// every IDispatch RCW that is handled by the DLR.
+    /// 
+    /// #TODO: The class can go away.
     /// </summary>
     public class IDispatchObject {
 
         private readonly IDispatch _dispatchObject;  // The RCW object
-        private Dictionary<Thread, IntPtr> _dispatchPointersByApartment;  // This is valid only if ScriptDomainManager.Options.CachePointersInApartment==true
 
         internal IDispatchObject(IDispatch rcw) {
             _dispatchObject = rcw;
-
-            if (DebugOptions.CachePointersInApartment) {
-                _dispatchPointersByApartment = new Dictionary<Thread,IntPtr>();
-            }
         }
 
         [CLSCompliant(false)]
@@ -47,34 +44,13 @@ namespace Microsoft.Scripting.ComInterop {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         [Obsolete("Called from generated code only", true)]
         public IntPtr GetDispatchPointerInCurrentApartment() {
-            if (!DebugOptions.CachePointersInApartment) {
-                return Marshal.GetIDispatchForObject(_dispatchObject);
-            }
-
-            lock (this) {
-                Thread currentThread = Thread.CurrentThread;
-                IntPtr dispatchPointerInApartment;
-                if (_dispatchPointersByApartment.TryGetValue(currentThread, out dispatchPointerInApartment)) {
-                    return dispatchPointerInApartment;
-                }
-
-                // We will hold onto the dispatch pointer until the RCW stays alive, and release it in Finalize
-                dispatchPointerInApartment = Marshal.GetIDispatchForObject(_dispatchObject);
-                _dispatchPointersByApartment[currentThread] = dispatchPointerInApartment;
-                return dispatchPointerInApartment;
-            }
+            return Marshal.GetIDispatchForObject(_dispatchObject);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         [Obsolete("Called from generated code only", true)]
         public void ReleaseDispatchPointer(IntPtr dispatchPointer) {
-            if (DebugOptions.CachePointersInApartment) {
-                // Nothing to do here. This will leak the COM object.
-                Debug.Assert(_dispatchPointersByApartment[Thread.CurrentThread] == dispatchPointer);
-                return;
-            } else {
-                UnsafeMethods.IUnknownRelease(dispatchPointer);
-            }
+            UnsafeMethods.IUnknownRelease(dispatchPointer);
         }
 
     }

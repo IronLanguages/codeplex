@@ -71,16 +71,7 @@ namespace Microsoft.Scripting {
         // Can it be debug-only, or moved to Python?
         private readonly static bool _lightweightScopes = ReadOption("LightweightScopes");
 
-        private readonly static bool _frames = ReadDebugOption("Frames");
         private readonly static bool _trackPerformance = ReadDebugOption("TrackPerformance");
-
-        /// <summary>
-        /// Generate functions using custom frames. Allocate the locals on frames.
-        /// When custom frames are turned on, we emit dictionaries everywhere
-        /// </summary>
-        internal static bool Frames {
-            get { return _frames; }
-        }
 
         /// <summary>
         /// Generate optimized scopes that can be garbage collected

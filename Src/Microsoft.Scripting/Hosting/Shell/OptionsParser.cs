@@ -17,7 +17,6 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -194,7 +193,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 //#endif
 
                 case "-X:LightweightScopes":
-                case "-X:PreferComInteropAssembly":
                     SetDlrOption(arg.Substring(3));
                     break;
 
@@ -204,28 +202,20 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     break;
 
                 case "-X:SaveAssemblies":
-                case "-X:Frames":
-                case "-X:CachePointersInApartment":
-                case "-X:DumpIL":
-                case "-X:ShowIL":
-                case "-X:ShowRules":
-                case "-X:DumpTrees":
-                case "-X:ShowTrees":
-                case "-X:ShowScopes":
                 case "-X:TrackPerformance":
                     SetDlrOption(arg.Substring(3));
                     break;
 #endif
 
                 case "-X:Interpret":
-                    LanguageSetup.Options["InterpretedMode"] = RuntimeHelpers.True;
+                    LanguageSetup.Options["InterpretedMode"] = ScriptingRuntimeHelpers.True;
                     break;
                 
                 case "-X:ExceptionDetail":
                 case "-X:ShowClrExceptions":
                 case "-X:PerfStats":
                     // TODO: separate options dictionary?
-                    LanguageSetup.Options[arg.Substring(3)] = RuntimeHelpers.True; 
+                    LanguageSetup.Options[arg.Substring(3)] = ScriptingRuntimeHelpers.True; 
                     break;
 
                 default:
@@ -274,16 +264,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "-X:ColorfulConsole",          "Enable ColorfulConsole" },
 #endif
 #if DEBUG
-                { "-X:Frames",                   "Generate custom frames" },
                 { "-X:AssembliesDir",            "Set the directory for saving generated assemblies" },
                 { "-X:SaveAssemblies",           "Save generated assemblies" },
-                { "-X:DumpIL",                   "Output generated IL code to a text file for debugging" },
-                { "-X:ShowTrees",                "Print all ASTs to the console" }, 
-                { "-X:DumpTrees",                "Dump all ASTs generated to a file"},
-                { "-X:ShowRules",                "Show the AST for rules generated" },
-                { "-X:ShowScopes",               "Print all scopes and closures to the console" }, 
                 { "-X:TrackPerformance",         "Track performance sensitive areas" },
-                { "-X:CachePointersInApartment", "Cache COM pointers per apartment (prototype)" },
 #endif
            };
 

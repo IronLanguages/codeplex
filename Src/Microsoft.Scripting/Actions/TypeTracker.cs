@@ -66,7 +66,7 @@ namespace Microsoft.Scripting.Actions {
             if (tg != null) {
                 Type res;
                 if (!tg.TryGetNonGenericType(out res)) {
-                    throw RuntimeHelpers.SimpleTypeError("expected non-generic type, got generic-only type");
+                    throw ScriptingRuntimeHelpers.SimpleTypeError("expected non-generic type, got generic-only type");
                 }
                 return res;
             }

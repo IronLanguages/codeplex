@@ -16,6 +16,8 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
@@ -51,12 +53,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // CallSite
                 curTypeInfo = NextTypeInfo(typeof(CallSite), curTypeInfo);
-                
+
                 // arguments
                 for (int i = 0; i < types.Count; i++) {
                     curTypeInfo = NextTypeInfo(types[i].Type, curTypeInfo);
                 }
-                
+
                 // return type
                 curTypeInfo = NextTypeInfo(returnType, curTypeInfo);
 
@@ -78,6 +80,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+        /// <summary>
+        /// Finds a delegate type for a CallSite using the MetaObject array. 
+        /// 
+        /// We take the array of MetaObject explicitly to avoid allocating memory (an array of types) on
+        /// lookup of delegate types.
+        /// </summary>
         internal static Type MakeDeferredSiteDelegate(MetaObject[] args, Type returnType) {
             lock (_DelegateCache) {
                 TypeInfo curTypeInfo = _DelegateCache;
@@ -112,6 +120,39 @@ namespace Microsoft.Linq.Expressions.Compiler {
                             paramType = paramType.MakeByRefType();
                         }
                         paramTypes[i + 1] = paramType;
+                    }
+
+                    curTypeInfo.DelegateType = MakeDelegate(paramTypes);
+                }
+
+                return curTypeInfo.DelegateType;
+            }
+        }
+
+        internal static Type MakeDeferredSiteDelegate(Type[] types, Type returnType) {
+            lock (_DelegateCache) {
+                TypeInfo curTypeInfo = _DelegateCache;
+
+                // CallSite
+                curTypeInfo = NextTypeInfo(typeof(CallSite), curTypeInfo);
+
+                // arguments
+                for (int i = 0; i < types.Length; i++) {
+                    curTypeInfo = NextTypeInfo(types[i], curTypeInfo);
+                }
+
+                // return type
+                curTypeInfo = NextTypeInfo(returnType, curTypeInfo);
+
+                // see if we have the delegate already
+                if (curTypeInfo.DelegateType == null) {
+                    // nope, go ahead and create it and spend the
+                    // cost of creating the array.
+                    Type[] paramTypes = new Type[types.Length + 2];
+                    paramTypes[0] = typeof(CallSite);
+                    paramTypes[paramTypes.Length - 1] = returnType;
+                    for (int i = 0; i < types.Length; i++) {
+                        paramTypes[i + 1] = types[i];
                     }
 
                     curTypeInfo.DelegateType = MakeDelegate(paramTypes);

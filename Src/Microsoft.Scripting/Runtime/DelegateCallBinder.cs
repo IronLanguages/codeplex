@@ -14,11 +14,12 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Linq.Expressions;
 using System.Collections.ObjectModel;
+using Microsoft.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

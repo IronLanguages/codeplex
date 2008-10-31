@@ -14,18 +14,18 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 using System.Threading;
 using IronPython.Compiler;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting.Shell;
-using System.Collections.Generic;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Hosting {
 #if !SILVERLIGHT
@@ -126,7 +126,7 @@ namespace IronPython.Hosting {
                     PythonOps.CallWithKeywordArgs(
                         ctx,
                         runMod,
-                        new object[] { Options.ModuleToRun, "__main__", RuntimeHelpers.True },
+                        new object[] { Options.ModuleToRun, "__main__", ScriptingRuntimeHelpers.True },
                         new string[] { "run_name", "alter_sys" }
                     );
                 } catch (SystemExitException e) {

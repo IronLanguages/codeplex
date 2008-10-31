@@ -22,7 +22,7 @@ using System.Reflection;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
+using RuntimeHelpers = Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -562,7 +562,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private bool EmitDictionary {
-            get { return _dictionary || DebugOptions.Frames; }
+            get { return _dictionary; }
         }
 
         private Expression MakeBody() {
@@ -656,7 +656,7 @@ namespace Microsoft.Scripting.Ast {
 }
 
 namespace Microsoft.Scripting.Runtime {
-    public static partial class RuntimeHelpers {
+    public static partial class ScriptingRuntimeHelpers {
         public static CodeContext CreateNestedCodeContext(CustomSymbolDictionary variables, CodeContext context, bool visible) {
             Debug.Assert(variables.Count > 0);
             return new CodeContext(new Scope(context.Scope, variables, visible), context.LanguageContext, context);

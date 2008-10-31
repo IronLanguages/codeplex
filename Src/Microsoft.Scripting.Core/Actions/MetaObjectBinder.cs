@@ -15,14 +15,11 @@
 using System; using Microsoft;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Reflection;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions.Compiler;
-
-#if !SILVERLIGHT
-using ComMetaObject = Microsoft.Scripting.ComInterop.ComMetaObject;
-#endif
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public abstract class MetaObjectBinder : CallSiteBinder {

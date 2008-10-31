@@ -16,7 +16,7 @@ using System; using Microsoft;
 using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Runtime.CompilerServices {
     /// <summary>
     /// Class responsible for binding dynamic operations on the dynamic site.
     /// </summary>

@@ -17,7 +17,6 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Scripting.Ast;
-using System.Diagnostics;
 
 // Suppress these for GeneratorNext<T>. It's not a public API for users so the warning is irrelevant
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#", Scope = "member", Target = "Microsoft.Scripting.Runtime.GeneratorNext`1.#Invoke(System.Int32&,!0&)")]
@@ -120,7 +119,7 @@ namespace Microsoft.Scripting.Runtime {
         }
     }
 
-    public partial class RuntimeHelpers {
+    public partial class ScriptingRuntimeHelpers {
         [Obsolete("do not call this method", true)]
         public static IEnumerable<T> MakeGenerator<T>(Func<GeneratorNext<T>> next) {
             return new GeneratorEnumerable<T>(next);

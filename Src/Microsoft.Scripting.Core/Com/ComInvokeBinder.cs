@@ -18,7 +18,6 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
@@ -118,11 +117,23 @@ namespace Microsoft.Scripting.ComInterop {
             return var = Expression.Variable(type, name);
         }
 
+        private static Type MarshalType(MetaObject mo) {
+            Type marshalType = mo.LimitType;
+            if (mo.IsByRef) {
+                // None just means that no value was supplied.
+                if (marshalType == typeof(Null)) {
+                    marshalType = mo.Expression.Type;
+                }
+                marshalType = marshalType.MakeByRefType();
+            }
+            return marshalType;
+        }
+
         internal MetaObject Invoke() {
             _keywordArgNames = GetArgumentNames();
             // will not include implicit instance argument (if any)
             Type[] explicitArgTypes = _args.Map(a => a.LimitType);
-            Type[] marshalArgTypes = _args.Map(a => a.IsByRef ? a.LimitType.MakeByRefType() : a.LimitType);
+            Type[] marshalArgTypes = _args.Map(a => MarshalType(a));
 
             Expression[] explicitArgExprs = _args.Map(a => a.Expression);
             _totalExplicitArgs = explicitArgTypes.Length;
@@ -132,13 +143,6 @@ namespace Microsoft.Scripting.ComInterop {
             // We already tested the instance, so no need to test it again
             for (int i = 0; i < explicitArgTypes.Length; i++) {
                 _restrictions = _restrictions.Merge(Restrictions.GetTypeRestriction(explicitArgExprs[i], explicitArgTypes[i]));
-            }
-
-            if (!_varEnumSelector.IsSupportedByFastPath) {
-                return new MetaObject(
-                    CreateScope(MakeUnoptimizedInvokeTarget()),
-                    Restrictions.Combine(_args).Merge(_restrictions)
-                );
             }
 
             return new MetaObject(
@@ -207,6 +211,7 @@ namespace Microsoft.Scripting.ComInterop {
             //   rgdispidNamedArgs: dx, dz (the dispids of x and z respectively)
 
             Expression[] parameters = MakeArgumentExpressions();
+
             int reverseIndex = _varEnumSelector.VariantBuilders.Length - 1;
             int positionalArgs = _varEnumSelector.VariantBuilders.Length - _keywordArgNames.Length; // args passed by position order and not by name
             for (int i = 0; i < _varEnumSelector.VariantBuilders.Length; i++, reverseIndex--) {
@@ -219,31 +224,45 @@ namespace Microsoft.Scripting.ComInterop {
                     variantIndex = reverseIndex;
                 }
                 VariantBuilder variantBuilder = _varEnumSelector.VariantBuilders[i];
-                Expression marshal = variantBuilder.WriteArgumentVariant(
+                
+                Expression marshal = variantBuilder.InitializeArgumentVariant(
                     VariantArray.GetStructField(ParamVariantsVariable, variantIndex),
                     parameters[i + 1]
                 );
+                
                 if (marshal != null) {
                     tryStatements.Add(marshal);
                 }
             }
 
+
             //
             // Call Invoke
             //
+
+            ComTypes.INVOKEKIND invokeKind;
+            if (_methodDesc.IsPropertyPut) {
+                if (_methodDesc.IsPropertyPutRef) {
+                    invokeKind = ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF;
+                } else {
+                    invokeKind = ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT;
+                }
+            } else {
+                // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
+                invokeKind = ComTypes.INVOKEKIND.INVOKE_FUNC | ComTypes.INVOKEKIND.INVOKE_PROPERTYGET;
+            }
+
             MethodCallExpression invoke = Expression.Call(
                 typeof(UnsafeMethods).GetMethod("IDispatchInvoke"),
                 DispatchPointerVariable,
                 DispIdVariable,
-                Expression.Constant(
-                    _methodDesc.IsPropertyPut ?
-                        ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT :
-                        ComTypes.INVOKEKIND.INVOKE_FUNC | ComTypes.INVOKEKIND.INVOKE_PROPERTYGET
-                ), // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
+                Expression.Constant(invokeKind),
                 DispParamsVariable,
                 InvokeResultVariable,
                 excepInfo,
-                argErr);
+                argErr
+            );
+
             expr = Expression.Assign(hresult, invoke);
             tryStatements.Add(expr);
 
@@ -303,9 +322,7 @@ namespace Microsoft.Scripting.ComInterop {
             // Clear memory allocated for marshalling
             //
             for (int i = 0, n = _varEnumSelector.VariantBuilders.Length; i < n; i++) {
-                Expression clear = _varEnumSelector.VariantBuilders[i].Clear(
-                    VariantArray.GetStructField(ParamVariantsVariable, i)
-                );
+                Expression clear = _varEnumSelector.VariantBuilders[i].Clear();                
                 if (clear != null) {
                     finallyStatements.Add(clear);
                 }
@@ -370,7 +387,7 @@ namespace Microsoft.Scripting.ComInterop {
                         Expression.Call(
                             typeof(UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
                             VariantArray.GetStructField(ParamVariantsVariable, 0)
-                        )    
+                        )
                     )
                 );
             }
@@ -467,22 +484,6 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
             return Expression.Block(vars, exprs);
-        }
-
-        private Expression MakeUnoptimizedInvokeTarget() {
-            Expression[] args = new Expression[_args.Length];
-            for (int i = 0; i < args.Length; i++) {
-                args[i] = Helpers.Convert(_args[i].Expression, typeof(object));
-            }
-
-            // UnoptimizedInvoke(ComMethodDesc method, IDispatchObject dispatch, string[] keywordArgNames, object[] explicitArgs)
-            return Expression.Call(
-                typeof(ComRuntimeHelpers).GetMethod("UnoptimizedInvoke"),
-                _method,
-                _dispatch,
-                Expression.Constant(_keywordArgNames),
-                Expression.NewArrayInit(typeof(object), args)
-            );
         }
 
         /// <summary>

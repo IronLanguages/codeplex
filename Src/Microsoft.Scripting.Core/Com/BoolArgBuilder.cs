@@ -42,9 +42,11 @@ namespace Microsoft.Scripting.ComInterop {
 
         internal override Expression UnmarshalFromRef(Expression value) {
             //parameter = temp != 0
-            return Expression.NotEqual(
+            return base.UnmarshalFromRef(
+                Expression.NotEqual(
                      value,
                      Expression.Constant((Int16)0)
+                )
             );
         }
     }

@@ -23,16 +23,13 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    internal class StringArgBuilder : SimpleArgBuilder {
+    internal class DispatchArgBuilder : SimpleArgBuilder {
         private bool _isWrapper;
 
-        internal StringArgBuilder(Type parameterType)
+        internal DispatchArgBuilder(Type parameterType)
             : base(parameterType) {
 
-            Debug.Assert(parameterType == typeof(string) ||
-                        parameterType == typeof(BStrWrapper));
-
-            _isWrapper = parameterType == typeof(BStrWrapper);
+            _isWrapper = parameterType == typeof(DispatchWrapper);
         }
 
         internal override Expression MarshalToRef(Expression parameter) {
@@ -40,37 +37,42 @@ namespace Microsoft.Scripting.ComInterop {
 
             if (_isWrapper) {
                 parameter = Expression.Property(
-                    Helpers.Convert(parameter, typeof(BStrWrapper)),
-                    typeof(BStrWrapper).GetProperty("WrappedObject")
+                    Helpers.Convert(parameter, typeof(DispatchWrapper)),
+                    typeof(DispatchWrapper).GetProperty("WrappedObject")
                 );
             };
 
-            // Marshal.StringToBSTR(parameter)
-            return Expression.Call(
-                typeof(Marshal).GetMethod("StringToBSTR"),
-                parameter
+            // parameter == null ? IntPtr.Zero : Marshal.GetIDispatchForObject(parameter);
+            return Expression.Condition(
+                Expression.Equal(parameter, Expression.Constant(null)),
+                Expression.Constant(IntPtr.Zero),
+                Expression.Call(
+                    typeof(Marshal).GetMethod("GetIDispatchForObject"),
+                    parameter
+                )
             );
         }
 
         internal override Expression UnmarshalFromRef(Expression value) {
-            // value == IntPtr.Zero ? null : Marshal.PtrToStringBSTR(value);
+            // value == IntPtr.Zero ? null : Marshal.GetObjectForIUnknown(value);
             Expression unmarshal = Expression.Condition(
                 Expression.Equal(value, Expression.Constant(IntPtr.Zero)),
-                Expression.Constant(null, typeof(string)),   // default value
+                Expression.Constant(null),
                 Expression.Call(
-                    typeof(Marshal).GetMethod("PtrToStringBSTR"),
+                    typeof(Marshal).GetMethod("GetObjectForIUnknown"),
                     value
                 )
             );
 
             if (_isWrapper) {
                 unmarshal = Expression.New(
-                    typeof(BStrWrapper).GetConstructor(new Type[] { typeof(object) }),
+                    typeof(DispatchWrapper).GetConstructor(new Type[] { typeof(object) }),
                     unmarshal
                 );
-            };
+            }
 
             return base.UnmarshalFromRef(unmarshal);
+
         }
     }
 }

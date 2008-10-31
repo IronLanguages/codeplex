@@ -112,7 +112,7 @@ namespace Microsoft.Scripting.Generation {
                 ILGen init = TypeGen.TypeInitializer;
                 if (_indirectSymbolIds.Count == 0) {
                     init.EmitType(TypeGen.TypeBuilder);
-                    init.EmitCall(typeof(RuntimeHelpers), "InitializeSymbols");
+                    init.EmitCall(typeof(ScriptingRuntimeHelpers), "InitializeSymbols");
                 }
                 _indirectSymbolIds[id] = value;
             }

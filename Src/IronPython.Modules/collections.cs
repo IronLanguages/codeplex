@@ -16,13 +16,15 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Scripting.Actions;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
 using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
@@ -305,10 +307,10 @@ namespace IronPython.Modules {
 
             public object __contains__(object o) {
                 lock (_lockObj) {
-                    object res = RuntimeHelpers.False;
+                    object res = ScriptingRuntimeHelpers.False;
                     WalkDeque(delegate(int index) {
                         if (PythonOps.Equals(_data[index], o)) {
-                            res = RuntimeHelpers.True;
+                            res = ScriptingRuntimeHelpers.True;
                             return false;
                         }
                         return true;
@@ -639,7 +641,7 @@ namespace IronPython.Modules {
                 deque otherDeque = other as deque;
                 if (otherDeque == null) return NotImplementedType.Value;
 
-                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) > 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) > 0);
             }
 
             [SpecialName]
@@ -648,7 +650,7 @@ namespace IronPython.Modules {
                 deque otherDeque = other as deque;
                 if (otherDeque == null) return NotImplementedType.Value;
 
-                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) < 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) < 0);
             }
 
             [SpecialName]
@@ -657,7 +659,7 @@ namespace IronPython.Modules {
                 deque otherDeque = other as deque;
                 if (otherDeque == null) return NotImplementedType.Value;
 
-                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) >= 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) >= 0);
             }
 
             [SpecialName]
@@ -666,7 +668,7 @@ namespace IronPython.Modules {
                 deque otherDeque = other as deque;
                 if (otherDeque == null) return NotImplementedType.Value;
 
-                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) <= 0);
+                return ScriptingRuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) <= 0);
             }
 
             #endregion

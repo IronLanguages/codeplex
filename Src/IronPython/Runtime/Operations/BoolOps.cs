@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
@@ -24,7 +24,7 @@ namespace IronPython.Runtime.Operations {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls")]
         [StaticExtensionMethod]
         public static object __new__(object cls) {
-            return RuntimeHelpers.False;
+            return ScriptingRuntimeHelpers.False;
         }
 
         [StaticExtensionMethod]

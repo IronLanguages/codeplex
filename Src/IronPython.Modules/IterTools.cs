@@ -16,15 +16,10 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Scripting.Actions;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Runtime;
-
-
 using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
@@ -126,7 +121,7 @@ namespace IronPython.Modules {
             #region IEnumerator Members
 
             object IEnumerator.Current {
-                get { return RuntimeHelpers.Int32ToObject(_cur); }
+                get { return ScriptingRuntimeHelpers.Int32ToObject(_cur); }
             }
 
             bool IEnumerator.MoveNext() {

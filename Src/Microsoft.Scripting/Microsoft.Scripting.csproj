@@ -430,7 +430,7 @@
     <Compile Include="Runtime\OptimizedScriptCode.cs" />
     <Compile Include="Runtime\PropertyMethodAttribute.cs" />
     <Compile Include="Runtime\ReflectionCache.cs" />
-    <Compile Include="Runtime\RuntimeHelpers.cs" />
+    <Compile Include="Runtime\ScriptingRuntimeHelpers.cs" />
     <Compile Include="Runtime\Scope.cs" />
     <Compile Include="Runtime\ScopeExtension.cs" />
     <Compile Include="Runtime\ScopeMemberAttributes.cs" />
